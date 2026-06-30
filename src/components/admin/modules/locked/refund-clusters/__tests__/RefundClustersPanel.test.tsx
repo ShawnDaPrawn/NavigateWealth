@@ -86,7 +86,7 @@ describe('RefundClustersPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
     expect(mockCreateMutate).toHaveBeenCalledWith(
-      { name: 'New Cluster', description: 'Desc', vatPeriod: '' },
+      { name: 'New Cluster', description: 'Desc', vatPeriod: '', vatYearEndMonth: 2 },
       expect.anything(),
     );
   });

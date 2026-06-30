@@ -50,6 +50,7 @@ export function RefundClustersPanel({
     name: string;
     description: string;
     vatPeriod: RefundCluster['vatPeriod'];
+    vatYearEndMonth: number;
   }) => {
     createCluster.mutate(values, { onSuccess: () => setFormOpen(false) });
   };

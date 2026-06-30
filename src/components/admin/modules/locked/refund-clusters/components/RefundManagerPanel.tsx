@@ -123,7 +123,7 @@ export function RefundManagerPanel() {
 
   const rows: ClusterPositionRow[] = activeClusters.map((cluster, index) => {
     const entities = detailResults[index]?.data?.entities ?? [];
-    const period = currentVatPeriod(cluster.vatPeriod);
+    const period = currentVatPeriod(cluster.vatPeriod, undefined, cluster.vatYearEndMonth);
     let outputVat = 0;
     let inputVat = 0;
     for (const entity of entities) {

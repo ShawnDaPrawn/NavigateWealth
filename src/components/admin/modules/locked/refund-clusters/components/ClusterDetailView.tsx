@@ -53,7 +53,13 @@ import {
   AlertDialogTitle,
 } from '../../../../../ui/alert-dialog';
 import { Skeleton } from '../../../../../ui/skeleton';
-import { ENTITY_TYPE_LABELS, VAT_PERIOD_OPTIONS, vatPeriodDescription } from '../constants';
+import {
+  ENTITY_TYPE_LABELS,
+  MONTH_OPTIONS,
+  VAT_PERIOD_OPTIONS,
+  YEAR_END_DEPENDENT_CATEGORIES,
+  vatPeriodDescription,
+} from '../constants';
 import { entityDisplayName, entityMatchesSearch } from '../formState';
 import {
   useClusterManagers,
@@ -77,7 +83,13 @@ import {
   vatSubmissionDueDate,
   type VatSummary,
 } from '../vat';
-import type { RefundCluster, RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
+import type {
+  RefundCluster,
+  RefundEntity,
+  RefundEntityInput,
+  RefundEntityType,
+  VatPeriodCategory,
+} from '../types';
 import { ClusterFormDialog } from './ClusterFormDialog';
 import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
@@ -282,6 +294,7 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
         onOpenChange={setTransactionsOpen}
         entity={transactionsEntity}
         vatPeriod={cluster.vatPeriod}
+        vatYearEndMonth={cluster.vatYearEndMonth}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
@@ -326,7 +339,10 @@ function ClusterVatOverview({
   entities: RefundEntity[];
   managerNames: Map<string, string>;
 }) {
-  const period = useMemo(() => currentVatPeriod(cluster.vatPeriod), [cluster.vatPeriod]);
+  const period = useMemo(
+    () => currentVatPeriod(cluster.vatPeriod, undefined, cluster.vatYearEndMonth),
+    [cluster.vatPeriod, cluster.vatYearEndMonth],
+  );
   const dueDate = period ? vatSubmissionDueDate(period) : null;
 
   const entityIds = useMemo(() => entities.map((e) => e.id), [entities]);
@@ -464,7 +480,10 @@ function ClusterDetailsTab({
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const clusterPeriod = useMemo(() => currentVatPeriod(cluster.vatPeriod), [cluster.vatPeriod]);
+  const clusterPeriod = useMemo(
+    () => currentVatPeriod(cluster.vatPeriod, undefined, cluster.vatYearEndMonth),
+    [cluster.vatPeriod, cluster.vatYearEndMonth],
+  );
   const clusterPeriodLabel = clusterPeriod ? formatPeriodRange(clusterPeriod) : '';
 
   return (
@@ -509,6 +528,13 @@ function ClusterDetailsTab({
                 <dd className="text-xs text-muted-foreground mt-1">
                   No VAT category set — entity VAT summaries show all transactions. Use Edit to set
                   one.
+                </dd>
+              )}
+              {YEAR_END_DEPENDENT_CATEGORIES.includes(cluster.vatPeriod as VatPeriodCategory) && (
+                <dd className="text-xs text-muted-foreground mt-1">
+                  Tax year-end:{' '}
+                  {MONTH_OPTIONS.find((o) => o.value === (cluster.vatYearEndMonth ?? 2))?.label ??
+                    'February'}
                 </dd>
               )}
             </div>
@@ -626,7 +652,10 @@ function EntityCard({
 }) {
   const Icon = entity.entityType === 'company' ? Building2 : User;
   const { data: transactions = [] } = useEntityTransactions(cluster.id, entity.id);
-  const period = useMemo(() => currentVatPeriod(cluster.vatPeriod), [cluster.vatPeriod]);
+  const period = useMemo(
+    () => currentVatPeriod(cluster.vatPeriod, undefined, cluster.vatYearEndMonth),
+    [cluster.vatPeriod, cluster.vatYearEndMonth],
+  );
   const summary = useMemo(
     () => summarizeTransactions(transactions, period),
     [transactions, period],

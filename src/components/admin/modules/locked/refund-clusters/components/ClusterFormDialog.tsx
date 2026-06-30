@@ -25,8 +25,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import { VAT_PERIOD_OPTIONS, vatPeriodDescription } from '../constants';
+import {
+  MONTH_OPTIONS,
+  VAT_PERIOD_OPTIONS,
+  YEAR_END_DEPENDENT_CATEGORIES,
+  vatPeriodDescription,
+} from '../constants';
 import type { RefundCluster, VatPeriodCategory } from '../types';
+
+const DEFAULT_YEAR_END_MONTH = 2; // February — the SARS default.
 
 interface ClusterFormDialogProps {
   open: boolean;
@@ -37,6 +44,7 @@ interface ClusterFormDialogProps {
     name: string;
     description: string;
     vatPeriod: VatPeriodCategory | '';
+    vatYearEndMonth: number;
   }) => void;
   isSubmitting: boolean;
 }
@@ -51,19 +59,29 @@ export function ClusterFormDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [vatPeriod, setVatPeriod] = useState<VatPeriodCategory | ''>('');
+  const [vatYearEndMonth, setVatYearEndMonth] = useState<number>(DEFAULT_YEAR_END_MONTH);
 
   useEffect(() => {
     if (open) {
       setName(cluster?.name ?? '');
       setDescription(cluster?.description ?? '');
       setVatPeriod(cluster?.vatPeriod ?? '');
+      setVatYearEndMonth(cluster?.vatYearEndMonth ?? DEFAULT_YEAR_END_MONTH);
     }
   }, [open, cluster]);
+
+  const showYearEnd =
+    vatPeriod !== '' && YEAR_END_DEPENDENT_CATEGORIES.includes(vatPeriod as VatPeriodCategory);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || isSubmitting) return;
-    onSubmit({ name: name.trim(), description: description.trim(), vatPeriod });
+    onSubmit({
+      name: name.trim(),
+      description: description.trim(),
+      vatPeriod,
+      vatYearEndMonth,
+    });
   };
 
   return (
@@ -122,6 +140,30 @@ export function ClusterFormDialog({
               {vatPeriodDescription(vatPeriod) ? ` ${vatPeriodDescription(vatPeriod)}` : ''}
             </p>
           </div>
+          {showYearEnd && (
+            <div className="space-y-2">
+              <Label htmlFor="cluster-year-end">Tax year-end month</Label>
+              <Select
+                value={String(vatYearEndMonth)}
+                onValueChange={(value) => setVatYearEndMonth(Number(value))}
+              >
+                <SelectTrigger id="cluster-year-end">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The month the vendor’s tax year ends. Category D files two 6-month periods (this
+                month and 6 months later); Category E files one 12-month period ending here.
+              </p>
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

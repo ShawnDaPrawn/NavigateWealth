@@ -41,6 +41,7 @@ export const RefundClustersAPI = {
     name: string;
     description: string;
     vatPeriod: VatPeriodCategory | '';
+    vatYearEndMonth?: number;
   }): Promise<RefundCluster> {
     try {
       const data = await api.post<{ cluster: RefundCluster }>(ENDPOINTS.CLUSTERS, input);
@@ -56,6 +57,7 @@ export const RefundClustersAPI = {
       name?: string;
       description?: string;
       vatPeriod?: VatPeriodCategory | '';
+      vatYearEndMonth?: number;
       archived?: boolean;
     },
   ): Promise<RefundCluster> {

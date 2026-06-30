@@ -84,6 +84,8 @@ interface EntityTransactionsDialogProps {
   onOpenChange: (open: boolean) => void;
   entity: RefundEntity | null;
   vatPeriod: VatPeriodCategory | '';
+  /** Tax-year-end month (1-12) for categories D & E; February by default. */
+  vatYearEndMonth?: number;
 }
 
 interface TxnFormState {
@@ -129,6 +131,7 @@ export function EntityTransactionsDialog({
   onOpenChange,
   entity,
   vatPeriod,
+  vatYearEndMonth,
 }: EntityTransactionsDialogProps) {
   const clusterId = entity?.clusterId ?? '';
   const entityId = entity?.id ?? null;
@@ -160,7 +163,10 @@ export function EntityTransactionsDialog({
 
   // The current period plus several prior submission periods (empty when no
   // cluster category is set, in which case all transactions are shown).
-  const periods = useMemo(() => recentVatPeriods(vatPeriod, 6), [vatPeriod]);
+  const periods = useMemo(
+    () => recentVatPeriods(vatPeriod, 6, undefined, vatYearEndMonth),
+    [vatPeriod, vatYearEndMonth],
+  );
   const period = periods[periodOffset] ?? periods[0] ?? null;
   const visibleTransactions = useMemo(() => {
     if (!period) return transactions;
