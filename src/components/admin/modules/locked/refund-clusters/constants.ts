@@ -49,6 +49,8 @@ export const VAT_PERIOD_OPTIONS: Array<{ value: VatPeriodCategory; label: string
   { value: 'A', label: 'Category A' },
   { value: 'B', label: 'Category B' },
   { value: 'C', label: 'Category C' },
+  { value: 'D', label: 'Category D' },
+  { value: 'E', label: 'Category E' },
 ];
 
 /** Plain-language breakdown of what each SARS VAT category covers. */
@@ -56,11 +58,32 @@ export const VAT_PERIOD_DESCRIPTIONS: Record<VatPeriodCategory, string> = {
   A: 'Bi-monthly — periods end in odd months (Dec–Jan, Feb–Mar, Apr–May, Jun–Jul, Aug–Sep, Oct–Nov).',
   B: 'Bi-monthly — periods end in even months (Jan–Feb, Mar–Apr, May–Jun, Jul–Aug, Sep–Oct, Nov–Dec).',
   C: 'Monthly — one calendar month per period.',
+  D: 'Bi-annual — two 6-month periods a year, ending at the tax-year-end month and 6 months later (Feb & Aug for a February year-end).',
+  E: 'Annual — one 12-month period ending in the vendor’s tax-year-end (approved) month.',
 };
 
 export function vatPeriodDescription(category: VatPeriodCategory | ''): string | null {
   return category ? VAT_PERIOD_DESCRIPTIONS[category] : null;
 }
+
+/** Categories whose periods depend on a configurable tax-year-end month. */
+export const YEAR_END_DEPENDENT_CATEGORIES: ReadonlyArray<VatPeriodCategory> = ['D', 'E'];
+
+/** Month options (1-12) for the tax-year-end selector shown for categories D & E. */
+export const MONTH_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+];
 
 export const VAT_RATE = 0.15;
 

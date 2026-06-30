@@ -73,8 +73,12 @@ export function useEntityDocuments(clusterId: string, entityId: string | null) {
 export function useCreateCluster() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; description: string; vatPeriod: VatPeriodCategory | '' }) =>
-      RefundClustersAPI.createCluster(input),
+    mutationFn: (input: {
+      name: string;
+      description: string;
+      vatPeriod: VatPeriodCategory | '';
+      vatYearEndMonth?: number;
+    }) => RefundClustersAPI.createCluster(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: refundClusterKeys.lists() });
       toast.success('Refund cluster created');
@@ -94,6 +98,7 @@ export function useUpdateCluster() {
         name?: string;
         description?: string;
         vatPeriod?: VatPeriodCategory | '';
+        vatYearEndMonth?: number;
         archived?: boolean;
       };
     }) => RefundClustersAPI.updateCluster(input.clusterId, input.patch),

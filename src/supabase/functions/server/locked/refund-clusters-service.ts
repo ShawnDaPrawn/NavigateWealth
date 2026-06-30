@@ -34,7 +34,7 @@ const log = createModuleLogger('refund-clusters');
 // ============================================================================
 
 export type RefundEntityType = 'sole_proprietor' | 'company';
-export type VatPeriodCategory = 'A' | 'B' | 'C';
+export type VatPeriodCategory = 'A' | 'B' | 'C' | 'D' | 'E';
 export type BankAccountSlot = 'primary' | 'secondary';
 
 export interface BankAccountDetails {
@@ -53,6 +53,8 @@ export interface RefundClusterRecord {
   description: string;
   /** Shared VAT category for every entity in the cluster (drives the current period). */
   vatPeriod: VatPeriodCategory | '';
+  /** Tax-year-end month (1-12) for the 6-monthly (D) and annual (E) categories; Feb by default. */
+  vatYearEndMonth?: number;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -376,7 +378,10 @@ function normalizeManager(input: ManagerInput, base?: RefundManagerRecord) {
   };
 }
 
-const VAT_PERIODS: ReadonlyArray<string> = ['A', 'B', 'C', ''];
+const VAT_PERIODS: ReadonlyArray<string> = ['A', 'B', 'C', 'D', 'E', ''];
+
+/** Default tax-year-end month (February — the SARS default). */
+const DEFAULT_VAT_YEAR_END_MONTH = 2;
 
 const VAT_RATE = 0.15;
 
@@ -459,6 +464,7 @@ export const RefundClustersService = {
     name: string;
     description: string;
     vatPeriod?: VatPeriodCategory | '';
+    vatYearEndMonth?: number;
     createdBy: string;
   }): Promise<RefundClusterRecord> {
     const name = str(input.name);
@@ -470,6 +476,7 @@ export const RefundClustersService = {
       name,
       description: str(input.description),
       vatPeriod: this.normalizeVatPeriod(input.vatPeriod),
+      vatYearEndMonth: this.normalizeYearEndMonth(input.vatYearEndMonth),
       archived: false,
       createdAt: now,
       updatedAt: now,
@@ -486,6 +493,7 @@ export const RefundClustersService = {
       name?: string;
       description?: string;
       vatPeriod?: VatPeriodCategory | '';
+      vatYearEndMonth?: number;
       archived?: boolean;
     },
   ): Promise<RefundClusterRecord> {
@@ -500,6 +508,10 @@ export const RefundClustersService = {
         patch.vatPeriod !== undefined
           ? this.normalizeVatPeriod(patch.vatPeriod)
           : (existing.vatPeriod ?? ''),
+      vatYearEndMonth:
+        patch.vatYearEndMonth !== undefined
+          ? this.normalizeYearEndMonth(patch.vatYearEndMonth)
+          : (existing.vatYearEndMonth ?? DEFAULT_VAT_YEAR_END_MONTH),
       archived: patch.archived !== undefined ? Boolean(patch.archived) : existing.archived,
       updatedAt: new Date().toISOString(),
     };
@@ -759,6 +771,13 @@ export const RefundClustersService = {
   normalizeVatPeriod(value: unknown): VatPeriodCategory | '' {
     const v = typeof value === 'string' ? value.toUpperCase().trim() : '';
     return VAT_PERIODS.includes(v) ? (v as VatPeriodCategory | '') : '';
+  },
+
+  /** Clamp the tax-year-end month to 1-12, defaulting to February. */
+  normalizeYearEndMonth(value: unknown): number {
+    const n = typeof value === 'number' ? value : Number(value);
+    const m = Number.isFinite(n) ? Math.trunc(n) : NaN;
+    return m >= 1 && m <= 12 ? m : DEFAULT_VAT_YEAR_END_MONTH;
   },
 
   // --- Managers --------------------------------------------------------

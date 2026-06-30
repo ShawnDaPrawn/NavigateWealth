@@ -108,6 +108,7 @@ app.post(
       name: String(body?.name ?? ''),
       description: String(body?.description ?? ''),
       vatPeriod: body?.vatPeriod,
+      vatYearEndMonth: body?.vatYearEndMonth,
       createdBy: c.get('userId') as string,
     });
     await audit(c, 'refund_cluster_created', 'Refund cluster created', { entityId: cluster.id });
@@ -125,6 +126,7 @@ app.put(
         name: body?.name,
         description: body?.description,
         vatPeriod: body?.vatPeriod,
+        vatYearEndMonth: body?.vatYearEndMonth,
         archived: body?.archived,
       });
       const action =

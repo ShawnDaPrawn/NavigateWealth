@@ -67,6 +67,20 @@ describe('previousVatPeriod', () => {
     expect(p?.start).toBe('2026-01-01');
     expect(p?.end).toBe('2026-02-28');
   });
+
+  it('category D steps back a six-month window', () => {
+    // Current for March (Feb year-end) is Mar–Aug; previous is Sep–Feb.
+    const p = previousVatPeriod('D', new Date(2026, 2, 15));
+    expect(p?.start).toBe('2025-09-01');
+    expect(p?.end).toBe('2026-02-28');
+  });
+
+  it('category E steps back a full year', () => {
+    // Current for June (Feb year-end) is Mar 2026–Feb 2027; previous is Mar 2025–Feb 2026.
+    const p = previousVatPeriod('E', new Date(2026, 5, 15));
+    expect(p?.start).toBe('2025-03-01');
+    expect(p?.end).toBe('2026-02-28');
+  });
 });
 
 describe('recentVatPeriods', () => {
@@ -110,6 +124,11 @@ describe('vatSubmissionDueDate', () => {
     const decJan = currentVatPeriod('A', new Date(2026, 11, 20))!; // Dec 2026 – Jan 2027
     // Following month is Feb 2027; 28 Feb 2027 is a Sunday → 26 Feb (Friday).
     expect(vatSubmissionDueDate(decJan)).toBe('2027-02-26');
+  });
+
+  it('category D Aug-end period is due the following month (September)', () => {
+    const marAug = currentVatPeriod('D', new Date(2026, 2, 15))!; // Mar–Aug 2026
+    expect(vatSubmissionDueDate(marAug)).toBe('2026-09-30'); // 30 Sep 2026 is a Wednesday
   });
 });
 
@@ -189,6 +208,48 @@ describe('currentVatPeriod', () => {
     const p = currentVatPeriod('B', new Date(2026, 1, 10)); // February
     expect(p?.start).toBe('2026-01-01');
     expect(p?.end).toBe('2026-02-28');
+  });
+
+  // Category D — 6-monthly, default Feb year-end → periods end Feb & Aug.
+  it('category D (Feb year-end) for March is the Mar-Aug window', () => {
+    const p = currentVatPeriod('D', new Date(2026, 2, 15)); // March
+    expect(p?.start).toBe('2026-03-01');
+    expect(p?.end).toBe('2026-08-31');
+    expect(p?.label).toBe('Mar–Aug 2026');
+  });
+
+  it('category D (Feb year-end) for September wraps into the Sep-Feb window', () => {
+    const p = currentVatPeriod('D', new Date(2026, 8, 15)); // September
+    expect(p?.start).toBe('2026-09-01');
+    expect(p?.end).toBe('2027-02-28');
+    expect(p?.label).toBe('Sep 2026–Feb 2027');
+  });
+
+  it('category D for February is the Sep-Feb window ending that month', () => {
+    const p = currentVatPeriod('D', new Date(2026, 1, 10)); // February
+    expect(p?.start).toBe('2025-09-01');
+    expect(p?.end).toBe('2026-02-28');
+  });
+
+  it('category D honours a non-default year-end month (Jun → Jan-Jun / Jul-Dec)', () => {
+    // Jun year-end → period-ends Jun & Dec. May falls in the Jan-Jun window.
+    const p = currentVatPeriod('D', new Date(2026, 4, 15), 6); // May
+    expect(p?.start).toBe('2026-01-01');
+    expect(p?.end).toBe('2026-06-30');
+  });
+
+  // Category E — annual, one 12-month period ending at the year-end month.
+  it('category E (Feb year-end) is the Mar-Feb annual window', () => {
+    const p = currentVatPeriod('E', new Date(2026, 5, 15)); // June 2026
+    expect(p?.start).toBe('2026-03-01');
+    expect(p?.end).toBe('2027-02-28');
+    expect(p?.label).toBe('Mar 2026–Feb 2027');
+  });
+
+  it('category E honours a non-default year-end month (Jun → Jul-Jun)', () => {
+    const p = currentVatPeriod('E', new Date(2026, 5, 15), 6); // June, Jun year-end
+    expect(p?.start).toBe('2025-07-01');
+    expect(p?.end).toBe('2026-06-30');
   });
 });
 

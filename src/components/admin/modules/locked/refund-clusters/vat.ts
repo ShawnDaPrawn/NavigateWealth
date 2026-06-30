@@ -50,70 +50,117 @@ const iso = (year: number, month1: number, day: number): string =>
 const lastDayOfMonth = (year: number, month1: number): number =>
   new Date(year, month1, 0).getDate();
 
+/** Default tax-year-end month (February — the SARS default), used for D & E. */
+export const DEFAULT_VAT_YEAR_END_MONTH = 2;
+
 /**
- * The open VAT period for a category as at `refDate`.
- *
- * - Category C: the calendar month.
- * - Category A: 2-month window ending in an ODD month (Dec-Jan, Feb-Mar, …).
- * - Category B: 2-month window ending in an EVEN month (Jan-Feb, Mar-Apr, …).
- *
- * Returns null when no category is set (caller treats this as "all transactions").
+ * Build a period that ends on the last day of (`endYear`, `endMonth`) and spans
+ * `lengthMonths` calendar months back. The label shows the start year too when
+ * it differs from the end year (e.g. "Sep 2025–Feb 2026"); a 1-month period is
+ * just "Feb 2026".
+ */
+function periodFromEnd(endYear: number, endMonth: number, lengthMonths: number): VatPeriod {
+  let startMonth = endMonth - lengthMonths + 1;
+  let startYear = endYear;
+  while (startMonth < 1) {
+    startMonth += 12;
+    startYear -= 1;
+  }
+  const label =
+    lengthMonths === 1
+      ? `${MONTH_NAMES[endMonth - 1]} ${endYear}`
+      : startYear === endYear
+        ? `${MONTH_NAMES[startMonth - 1]}–${MONTH_NAMES[endMonth - 1]} ${endYear}`
+        : `${MONTH_NAMES[startMonth - 1]} ${startYear}–${MONTH_NAMES[endMonth - 1]} ${endYear}`;
+  return {
+    start: iso(startYear, startMonth, 1),
+    end: iso(endYear, endMonth, lastDayOfMonth(endYear, endMonth)),
+    label,
+  };
+}
+
+/** Clamp an arbitrary value to a valid month (1-12), falling back to February. */
+function normalizeYearEndMonth(value: number): number {
+  const m = Math.trunc(value);
+  return m >= 1 && m <= 12 ? m : DEFAULT_VAT_YEAR_END_MONTH;
+}
+
+/**
+ * The set of period-end months for a category (ascending), and the period
+ * length in months. Mirrors the SARS standard:
+ * - A: ends in odd months (Jan, Mar, …), 2-month periods.
+ * - B: ends in even months (Feb, Apr, …), 2-month periods.
+ * - C: monthly.
+ * - D: every 6 months — ends at the tax-year-end month and 6 months later
+ *   (Feb & Aug for a Feb year-end).
+ * - E: annual — one 12-month period ending at the tax-year-end month.
+ */
+function categoryEndMonths(
+  category: VatPeriodCategory,
+  yearEndMonth: number,
+): { ends: number[]; length: number } {
+  switch (category) {
+    case 'A':
+      return { ends: [1, 3, 5, 7, 9, 11], length: 2 };
+    case 'B':
+      return { ends: [2, 4, 6, 8, 10, 12], length: 2 };
+    case 'C':
+      return { ends: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], length: 1 };
+    case 'D': {
+      const other = ((yearEndMonth + 6 - 1) % 12) + 1;
+      return { ends: [yearEndMonth, other].sort((a, b) => a - b), length: 6 };
+    }
+    case 'E':
+      return { ends: [yearEndMonth], length: 12 };
+  }
+}
+
+/**
+ * The open VAT period for a category as at `refDate`. `yearEndMonth` (1-12,
+ * default February) only affects D and E. Returns null when no category is set
+ * (caller treats this as "all transactions").
  */
 export function currentVatPeriod(
   category: VatPeriodCategory | '',
   refDate: Date = new Date(),
+  yearEndMonth: number = DEFAULT_VAT_YEAR_END_MONTH,
 ): VatPeriod | null {
-  if (category !== 'A' && category !== 'B' && category !== 'C') return null;
+  if (
+    category !== 'A' &&
+    category !== 'B' &&
+    category !== 'C' &&
+    category !== 'D' &&
+    category !== 'E'
+  )
+    return null;
 
   const year = refDate.getFullYear();
   const month1 = refDate.getMonth() + 1; // 1-12
 
-  if (category === 'C') {
-    const end = lastDayOfMonth(year, month1);
-    return {
-      start: iso(year, month1, 1),
-      end: iso(year, month1, end),
-      label: `${MONTH_NAMES[month1 - 1]} ${year}`,
-    };
-  }
+  const { ends, length } = categoryEndMonths(category, normalizeYearEndMonth(yearEndMonth));
 
-  // Bi-monthly: determine the end month by parity.
-  const wantOdd = category === 'A';
-  const isOdd = month1 % 2 === 1;
-  // End month is this month if its parity matches, otherwise the next month.
-  let endMonth = isOdd === wantOdd ? month1 : month1 + 1;
-  let endYear = year;
-  if (endMonth > 12) {
-    endMonth = 1;
-    endYear += 1;
-  }
-  // Start month is the month before the end month.
-  let startMonth = endMonth - 1;
-  let startYear = endYear;
-  if (startMonth < 1) {
-    startMonth = 12;
-    startYear -= 1;
-  }
+  // The open period ends at the first end-month >= the current month; if there
+  // is none this year, it ends at the first end-month next year.
+  const endThisYear = ends.find((e) => e >= month1);
+  const endMonth = endThisYear ?? ends[0];
+  const endYear = endThisYear === undefined ? year + 1 : year;
 
-  return {
-    start: iso(startYear, startMonth, 1),
-    end: iso(endYear, endMonth, lastDayOfMonth(endYear, endMonth)),
-    label: `${MONTH_NAMES[startMonth - 1]}–${MONTH_NAMES[endMonth - 1]} ${endYear}`,
-  };
+  return periodFromEnd(endYear, endMonth, length);
 }
 
 /** The submission period immediately before the one open at `refDate` (null if no category). */
 export function previousVatPeriod(
   category: VatPeriodCategory | '',
   refDate: Date = new Date(),
+  yearEndMonth: number = DEFAULT_VAT_YEAR_END_MONTH,
 ): VatPeriod | null {
-  const current = currentVatPeriod(category, refDate);
+  const current = currentVatPeriod(category, refDate, yearEndMonth);
   if (!current) return null;
   // Step to the day before this period starts; that date falls in the prior
-  // period, so currentVatPeriod resolves it — handling A/B/C + year-wrap for free.
+  // period, so currentVatPeriod resolves it — handling every category + wrap.
   const [y, m, d] = current.start.split('-').map(Number);
   const dayBefore = new Date(y, m - 1, d - 1);
-  return currentVatPeriod(category, dayBefore);
+  return currentVatPeriod(category, dayBefore, yearEndMonth);
 }
 
 /** The current period plus the `count - 1` periods before it, most recent first. */
@@ -121,11 +168,12 @@ export function recentVatPeriods(
   category: VatPeriodCategory | '',
   count: number,
   refDate: Date = new Date(),
+  yearEndMonth: number = DEFAULT_VAT_YEAR_END_MONTH,
 ): VatPeriod[] {
   const periods: VatPeriod[] = [];
   let cursor = refDate;
   for (let i = 0; i < count; i += 1) {
-    const period = currentVatPeriod(category, cursor);
+    const period = currentVatPeriod(category, cursor, yearEndMonth);
     if (!period) break;
     periods.push(period);
     const [y, m, d] = period.start.split('-').map(Number);

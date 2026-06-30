@@ -8,7 +8,7 @@
  */
 
 export type RefundEntityType = 'sole_proprietor' | 'company';
-export type VatPeriodCategory = 'A' | 'B' | 'C';
+export type VatPeriodCategory = 'A' | 'B' | 'C' | 'D' | 'E';
 export type TransactionDirection = 'income' | 'expense';
 export type VatTreatment = 'standard' | 'zero_rated' | 'exempt';
 
@@ -18,6 +18,11 @@ export interface RefundCluster {
   description: string;
   /** Shared VAT category for every entity in the cluster (drives the current period). */
   vatPeriod: VatPeriodCategory | '';
+  /**
+   * Tax-year-end month (1-12) used by the 6-monthly (D) and annual (E)
+   * categories. February (2) by default — the SARS default. Ignored by A/B/C.
+   */
+  vatYearEndMonth?: number;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
