@@ -95,20 +95,24 @@ beforeEach(() => {
 });
 
 describe('ClusterDetailView', () => {
-  it('renders the pill tab row with Entities and Cluster Details triggers', () => {
+  it('renders the segmented tab row with Overview, Entities and Cluster Details triggers', () => {
     render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeDefined();
     expect(screen.getByRole('tab', { name: 'Entities' })).toBeDefined();
     expect(screen.getByRole('tab', { name: 'Cluster Details' })).toBeDefined();
   });
 
-  it('shows the entity list on the default Entities tab', () => {
+  it('shows the entity list on the Entities tab', () => {
     render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
-    // The name appears in both the cluster VAT overview table and the entity card.
-    expect(screen.getAllByText('Thabo Nkosi').length).toBeGreaterThan(0);
+    const entitiesTab = screen.getByRole('tab', { name: 'Entities' });
+    fireEvent.mouseDown(entitiesTab);
+    fireEvent.click(entitiesTab);
+
+    expect(screen.getByText('Thabo Nkosi')).toBeDefined();
     expect(screen.getByRole('button', { name: /add entity/i })).toBeDefined();
   });
 
-  it('renders the current-period VAT overview with a per-entity table', () => {
+  it('renders the current-period VAT overview on the default Overview tab', () => {
     render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
     expect(screen.getByText('Current submission period')).toBeDefined();
     expect(screen.getByText('VAT Output')).toBeDefined();
