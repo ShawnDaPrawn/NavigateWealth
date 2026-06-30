@@ -48,25 +48,25 @@ beforeEach(() => {
 
 describe('RefundClustersPanel', () => {
   it('renders the heading and the Create New Cluster button', () => {
-    render(<RefundClustersPanel />);
+    render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     expect(screen.getByText('Refund Clusters')).toBeDefined();
     expect(screen.getByRole('button', { name: /create new cluster/i })).toBeDefined();
   });
 
   it('lists clusters with entity counts', () => {
-    render(<RefundClustersPanel />);
+    render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     expect(screen.getByText('Q3 VAT Refunds')).toBeDefined();
     expect(screen.getByText('2 entities')).toBeDefined();
   });
 
   it('shows the empty state when there are no clusters', () => {
     mockUseRefundClusters.mockReturnValue({ data: [], isLoading: false });
-    render(<RefundClustersPanel />);
+    render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     expect(screen.getByText(/no refund clusters yet/i)).toBeDefined();
   });
 
   it('filters clusters by search term', () => {
-    render(<RefundClustersPanel />);
+    render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     fireEvent.change(screen.getByPlaceholderText('Search clusters…'), {
       target: { value: 'does-not-match' },
     });
@@ -75,7 +75,7 @@ describe('RefundClustersPanel', () => {
   });
 
   it('opens the create dialog and submits name + description', () => {
-    render(<RefundClustersPanel />);
+    render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /create new cluster/i }));
     expect(screen.getByRole('heading', { name: 'Create New Cluster' })).toBeDefined();
 
@@ -96,7 +96,7 @@ describe('RefundClustersPanel', () => {
       data: [cluster, { ...cluster, id: 'c2', name: 'Old Cluster', archived: true }],
       isLoading: false,
     });
-    render(<RefundClustersPanel />);
+    render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     expect(screen.queryByText('Old Cluster')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /show archived/i }));
     expect(screen.getByText('Old Cluster')).toBeDefined();
