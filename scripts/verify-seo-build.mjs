@@ -1,10 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  DEFAULT_OG_IMAGE_PATH,
   DEFAULT_SITE_URL,
+  SEO_TITLE_MAX,
   absoluteUrl,
   disallowPaths,
+  faqsForRoute,
   normalizeSiteUrl,
+  publicSeoRoutes,
   resolveSiteVerificationToken,
 } from './seo-static-data.mjs';
 
@@ -117,18 +121,88 @@ function verifyStaticHtml() {
       failures.push(`${route.path} is missing initial Open Graph title metadata`);
     }
     if (
+      html.includes(`content="${siteUrl}${DEFAULT_OG_IMAGE_PATH}"`) &&
+      !/<meta\s+property=["']og:image:width["']/i.test(html)
+    ) {
+      failures.push(`${route.path} uses the default OG image but omits its dimensions`);
+    }
+    const titleText = decodeXml(html.match(/<title>([^<]+)<\/title>/i)?.[1] ?? '');
+    if (titleText.length > SEO_TITLE_MAX) {
+      failures.push(
+        `${route.path} title exceeds the ${SEO_TITLE_MAX}-char SERP budget (${titleText.length})`,
+      );
+    }
+    if (
       !/<script\s+id=["']seo-structured-data["']\s+type=["']application\/ld\+json["']>/i.test(html)
     ) {
       failures.push(`${route.path} is missing initial JSON-LD structured data`);
     }
-    if (!/<noscript\s+data-seo-static-body=["']true["']>/i.test(html)) {
-      failures.push(`${route.path} is missing its static no-JS body snapshot`);
-    }
-    if (!/<main\s+id=["']seo-static-body["']/i.test(html)) {
-      failures.push(`${route.path} is missing semantic static body markup`);
-    }
+    verifyStaticBody(route, html);
     verifyJsonLd(route.path, html);
   }
+}
+
+/**
+ * The static snapshot must be VISIBLE (inside #root, no <noscript> wrapper —
+ * Google devalues noscript content) and must carry real page content: article
+ * body text for articles, FAQ text for service pages.
+ */
+function verifyStaticBody(route, html) {
+  if (!/<div\s+id=["']root["']>[\s\S]*?data-seo-static-body/i.test(html)) {
+    failures.push(`${route.path} static body snapshot is missing or not inside #root`);
+    return;
+  }
+  if (/<noscript[^>]*data-seo-static-body/i.test(html)) {
+    failures.push(`${route.path} static body is wrapped in <noscript> (invisible to Google)`);
+  }
+  if (!/<main\s+id=["']seo-static-body["']/i.test(html)) {
+    failures.push(`${route.path} is missing semantic static body markup`);
+  }
+
+  const bodyMatch = html.match(/<!-- static-body:start -->([\s\S]*?)<!-- static-body:end -->/);
+  const staticBody = bodyMatch ? bodyMatch[1] : '';
+
+  // Only our path-guard script may appear inside the snapshot — anything else
+  // means admin-authored article HTML slipped past the sanitizer.
+  const scripts = [...staticBody.matchAll(/<script\b[^>]*>/gi)].filter(
+    (m) => !m[0].includes('seo-static-body-guard'),
+  );
+  if (scripts.length > 0) {
+    failures.push(`${route.path} static body contains unexpected <script> tags`);
+  }
+
+  if (route.path.startsWith('/resources/article/')) {
+    if (!/<h1>[^<]+<\/h1>/.test(staticBody)) {
+      failures.push(`${route.path} static body is missing its <h1> headline`);
+    }
+    const text = staticBody
+      .replace(/<style>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (text.length < 200) {
+      failures.push(`${route.path} static body has almost no article text (${text.length} chars)`);
+    }
+  }
+
+  const sourceRoute = publicSeoRoutes.find((r) => r.path === route.path);
+  if (sourceRoute) {
+    const faqs = faqsForRoute(sourceRoute);
+    if (faqs.length > 0 && !staticBody.includes(escapeHtmlLikeBuilder(faqs[0].question))) {
+      failures.push(`${route.path} static body is missing its FAQ content`);
+    }
+  }
+}
+
+/** Mirrors escapeHtml in seo-static-data.mjs for content comparisons. */
+function escapeHtmlLikeBuilder(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function verifyJsonLd(routePath, html) {
@@ -156,7 +230,8 @@ function decodeXml(value) {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'");
 }
 
 /**

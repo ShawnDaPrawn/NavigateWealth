@@ -15,7 +15,8 @@ const SITE_PAGE_WRAP = 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';
 
 /**
  * Dedicated entry for “schedule a consultation” (email invites, campaigns).
- * Reuses ConsultationModal; transactional page uses noindex. UTMs stay on the URL for attribution.
+ * Reuses ConsultationModal; indexable to match the prerendered head + sitemap.
+ * UTMs stay on the URL for attribution.
  */
 export function ScheduleConsultationPage() {
   const location = useLocation();
@@ -63,7 +64,6 @@ export function ScheduleConsultationPage() {
         title="Schedule a consultation | Navigate Wealth"
         description="Book a complimentary consultation with a Navigate Wealth financial adviser."
         canonicalUrl={CANONICAL}
-        robotsContent="noindex, follow"
       />
 
       <div

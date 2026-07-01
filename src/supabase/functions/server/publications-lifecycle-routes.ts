@@ -26,6 +26,7 @@ import {
   type Article,
   type DeletedArticleRecord,
 } from './publications-route-helpers.ts';
+import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 
 const log = createModuleLogger('publications-lifecycle-routes');
 
@@ -49,6 +50,10 @@ lifecycleRoutes.post('/articles/:id/archive', async (c) => {
     };
 
     await kv.set(`article:${id}`, updated);
+
+    if (article.status === 'published') {
+      triggerSiteRebuild(`article_archived:${id}`);
+    }
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
@@ -128,6 +133,8 @@ lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
     };
 
     await kv.set(`article:${id}`, updated);
+
+    triggerSiteRebuild(`article_unpublished:${id}`);
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
@@ -210,6 +217,10 @@ lifecycleRoutes.delete('/articles/:id', async (c) => {
     const tagLinks = await kv.getByPrefix(`article_tag_link:${id}:`);
     for (const link of tagLinks) {
       await kv.del(`article_tag_link:${id}:${link.tag_id}`);
+    }
+
+    if (article.status === 'published') {
+      triggerSiteRebuild(`article_deleted:${id}`);
     }
 
     // Audit trail (non-blocking — §12.2)

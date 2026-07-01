@@ -31,6 +31,7 @@ import {
   type Article,
 } from './publications-route-helpers.ts';
 import articlesReadRoutes from './publications-articles-read-routes.ts';
+import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 
 const log = createModuleLogger('publications-articles-routes');
 
@@ -128,6 +129,10 @@ articlesRoutes.post('/articles', async (c) => {
 
     await kv.set(`article:${id}`, article);
 
+    if (status === 'published') {
+      triggerSiteRebuild(`article_created_published:${id}`);
+    }
+
     // Create initial version snapshot (Phase 4)
     try {
       await VersionService.createVersion(
@@ -221,6 +226,13 @@ articlesRoutes.put('/articles/:id', async (c) => {
     }
 
     await kv.set(`article:${id}`, updated);
+
+    // Rebuild the public site when the update affects what is publicly
+    // visible: publishing, unpublishing via status change, or editing a
+    // live article (title/slug/body feed the prerendered pages + sitemap).
+    if (existing.status === 'published' || updated.status === 'published') {
+      triggerSiteRebuild(`article_updated:${id}`);
+    }
 
     // Auto-create version snapshot on article update (Phase 4)
     try {
@@ -365,6 +377,8 @@ articlesRoutes.post('/articles/:id/publish', async (c) => {
     };
 
     await kv.set(`article:${id}`, updated);
+
+    triggerSiteRebuild(`article_published:${id}`);
 
     let notificationJob:
       | Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob']
