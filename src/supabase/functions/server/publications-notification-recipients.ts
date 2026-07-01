@@ -2,6 +2,12 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { backfillLegacyNewsletterSubscribersToGroup } from './newsletter-group-service.ts';
 import {
+  extractFirstName,
+  getProfileEmail,
+  getProfileFirstName,
+  getProfileFullName,
+} from './profile-name-resolver.ts';
+import {
   chunkArray,
   LEGACY_SUBSCRIPTION_PAGE_SIZE,
   NEWSLETTER_GROUP_KEY,
@@ -9,7 +15,9 @@ import {
   normalizeSendError,
   PROFILE_LOOKUP_BATCH_SIZE,
 } from './publications-notification-helpers.ts';
+import { persistArticleEmailTrackingRecords } from './publications-email-engagement-service.ts';
 import type {
+  ArticleEmailTrackingRecord,
   ArticleNotificationRecipient,
   ExternalContact,
   LegacySubscriptionPageOptions,
@@ -19,56 +27,7 @@ import type {
 
 const log = createModuleLogger('article-notifications');
 
-export function extractFirstName(email: string): string {
-  const local = email.split('@')[0] || 'Subscriber';
-  const cleaned = local.replace(/[._-]/g, ' ').replace(/\d+/g, '').trim();
-
-  if (!cleaned) return 'Subscriber';
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1).split(' ')[0];
-}
-
-function getProfileEmail(profile: Record<string, unknown> | null | undefined): string | null {
-  if (!profile) return null;
-
-  const personalInformation = (profile.personalInformation || {}) as Record<string, unknown>;
-  const contactDetails = (profile.contactDetails || {}) as Record<string, unknown>;
-  const email = profile.email || personalInformation.email || contactDetails.email;
-
-  return typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
-}
-
-function getProfileFirstName(
-  profile: Record<string, unknown> | null | undefined,
-  fallbackEmail: string,
-): string {
-  if (!profile) return extractFirstName(fallbackEmail);
-
-  const personalInformation = (profile.personalInformation || {}) as Record<string, unknown>;
-  const firstName = profile.firstName || personalInformation.firstName || profile.preferredName;
-
-  return typeof firstName === 'string' && firstName.trim()
-    ? firstName.trim()
-    : extractFirstName(fallbackEmail);
-}
-
-function getProfileFullName(
-  profile: Record<string, unknown> | null | undefined,
-  firstName: string,
-): string {
-  if (!profile) return firstName;
-
-  const personalInformation = (profile.personalInformation || {}) as Record<string, unknown>;
-  const name = profile.name;
-  const first = profile.firstName || personalInformation.firstName;
-  const last = profile.lastName || personalInformation.lastName || personalInformation.surname;
-
-  if (typeof name === 'string' && name.trim()) return name.trim();
-  if ((typeof first === 'string' && first.trim()) || (typeof last === 'string' && last.trim())) {
-    return `${typeof first === 'string' ? first.trim() : ''} ${typeof last === 'string' ? last.trim() : ''}`.trim();
-  }
-
-  return firstName;
-}
+export { extractFirstName };
 
 async function collectRecipientsFromNewsletterGroup(
   recipientMap: Map<string, ArticleNotificationRecipient>,
@@ -83,6 +42,33 @@ async function collectRecipientsFromNewsletterGroup(
 
   let addedCount = 0;
 
+  // Resolve live client profiles FIRST so their current names win the first-wins
+  // dedup below. A client's email may also appear as a legacy-backfilled external
+  // contact carrying a stale name; processing profiles first ensures the
+  // client-management name is used rather than the frozen contact name.
+  const clientIds = Array.isArray(group.clientIds) ? group.clientIds.filter(Boolean) : [];
+  if (clientIds.length > 0) {
+    const profileKeys = clientIds.map((clientId) => `user_profile:${clientId}:personal_info`);
+    for (const batch of chunkArray(profileKeys, PROFILE_LOOKUP_BATCH_SIZE)) {
+      const profiles = (await kv.mget(batch)) as Array<Record<string, unknown> | null | undefined>;
+
+      for (const profile of profiles) {
+        const email = getProfileEmail(profile);
+        if (!email) continue;
+        if (requestedEmails && !requestedEmails.has(email)) continue;
+        if (recipientMap.has(email)) continue;
+
+        const firstName = getProfileFirstName(profile, email);
+        recipientMap.set(email, {
+          email,
+          firstName,
+          name: getProfileFullName(profile, firstName),
+        });
+        addedCount++;
+      }
+    }
+  }
+
   if (group.externalContacts?.length) {
     for (const contact of group.externalContacts as ExternalContact[]) {
       const email = contact.email?.trim().toLowerCase();
@@ -95,29 +81,6 @@ async function collectRecipientsFromNewsletterGroup(
         email,
         firstName,
         name: contact.name || firstName,
-      });
-      addedCount++;
-    }
-  }
-
-  const clientIds = Array.isArray(group.clientIds) ? group.clientIds.filter(Boolean) : [];
-  if (clientIds.length === 0) return addedCount;
-
-  const profileKeys = clientIds.map((clientId) => `user_profile:${clientId}:personal_info`);
-  for (const batch of chunkArray(profileKeys, PROFILE_LOOKUP_BATCH_SIZE)) {
-    const profiles = (await kv.mget(batch)) as Array<Record<string, unknown> | null | undefined>;
-
-    for (const profile of profiles) {
-      const email = getProfileEmail(profile);
-      if (!email) continue;
-      if (requestedEmails && !requestedEmails.has(email)) continue;
-      if (recipientMap.has(email)) continue;
-
-      const firstName = getProfileFirstName(profile, email);
-      recipientMap.set(email, {
-        email,
-        firstName,
-        name: getProfileFullName(profile, firstName),
       });
       addedCount++;
     }
@@ -264,4 +227,67 @@ export async function collectArticleNotificationRecipients(
   }
 
   return [...recipientMap.values()].sort((a, b) => a.email.localeCompare(b.email));
+}
+
+/**
+ * Refresh the denormalized recipient names on a batch of tracking records to the
+ * client's CURRENT name before delivery.
+ *
+ * Article notification names are frozen into tracking records at queue time.
+ * Retry jobs and the cron scheduler can deliver days later, by which point an
+ * admin may have renamed the client in the client manager. This re-resolves the
+ * current names (via the same recipient-collection precedence, so live profiles
+ * beat stale external contacts) and rewrites only the records whose names
+ * actually changed — keeping the admin engagement UI consistent too.
+ *
+ * Non-blocking by design: any failure logs a warning and returns the original
+ * records so delivery is never held up by name resolution.
+ */
+export async function refreshTrackingRecordRecipientNames(
+  records: ArticleEmailTrackingRecord[],
+): Promise<ArticleEmailTrackingRecord[]> {
+  if (records.length === 0) return records;
+
+  try {
+    const uniqueEmails = [...new Set(records.map((record) => record.recipientEmail))];
+    const recipients = await collectArticleNotificationRecipients(uniqueEmails);
+    const recipientByEmail = new Map(recipients.map((recipient) => [recipient.email, recipient]));
+
+    const changed: ArticleEmailTrackingRecord[] = [];
+    const result = records.map((record) => {
+      const recipient = recipientByEmail.get(record.recipientEmail);
+      if (!recipient) return record;
+
+      const nextFirstName = recipient.firstName || record.recipientFirstName;
+      const nextName = recipient.name || record.recipientName;
+
+      if (nextFirstName === record.recipientFirstName && nextName === record.recipientName) {
+        return record;
+      }
+
+      const updated: ArticleEmailTrackingRecord = {
+        ...record,
+        recipientFirstName: nextFirstName,
+        recipientName: nextName,
+      };
+      changed.push(updated);
+      return updated;
+    });
+
+    if (changed.length > 0) {
+      await persistArticleEmailTrackingRecords(changed);
+      log.info('Refreshed recipient names on tracking records before delivery', {
+        batchSize: records.length,
+        changed: changed.length,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    log.warn('Failed to refresh tracking record recipient names — using stored names', {
+      batchSize: records.length,
+      error: normalizeSendError(error),
+    });
+    return records;
+  }
 }

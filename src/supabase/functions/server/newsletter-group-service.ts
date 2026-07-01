@@ -361,6 +361,57 @@ export async function updateNewsletterSubscriberContact(
 }
 
 /**
+ * Update ONLY the display name of an existing external contact in the Newsletter
+ * Contacts group, matched by email.
+ *
+ * Unlike updateNewsletterSubscriberContact this NEVER adds a contact: if the
+ * email is not already an external contact (e.g. the recipient is tracked via
+ * clientIds, or is not a subscriber at all), it is a no-op. This is deliberate —
+ * it is called on every client-manager profile save and must not silently
+ * subscribe non-subscribers. Never throws.
+ */
+export async function updateNewsletterGroupExternalContactName(
+  email: string,
+  name?: string,
+): Promise<void> {
+  const normEmail = email.trim().toLowerCase();
+  const nextName = name?.trim() || undefined;
+  if (!normEmail) return;
+
+  try {
+    const group = await repo.getGroupById(NEWSLETTER_GROUP_ID);
+    if (!group) return;
+
+    const externalContacts: ExternalContact[] = [...(group.externalContacts || [])];
+    const existingIndex = externalContacts.findIndex(
+      (c: ExternalContact) => c.email.toLowerCase() === normEmail,
+    );
+
+    if (existingIndex === -1) return;
+    if (externalContacts[existingIndex].name === nextName) return;
+
+    externalContacts[existingIndex] = {
+      ...externalContacts[existingIndex],
+      name: nextName,
+    };
+
+    const updatedGroup = {
+      ...group,
+      externalContacts,
+      clientCount: (group.clientIds || []).length + externalContacts.length,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kv.set(`communication:groups:${NEWSLETTER_GROUP_ID}`, updatedGroup);
+    log.info('Updated Newsletter Contacts external contact name from profile', {
+      email: normEmail,
+    });
+  } catch (error) {
+    log.error('Failed to update external contact name in Newsletter Contacts group', error);
+  }
+}
+
+/**
  * Backfill older confirmed active newsletter KV records into the Newsletter
  * Contacts group as external contacts.
  *
