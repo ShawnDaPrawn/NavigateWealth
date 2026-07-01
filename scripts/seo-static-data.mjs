@@ -11,6 +11,21 @@ const organizationData = JSON.parse(
   fs.readFileSync(path.resolve('src/components/seo/organization.json'), 'utf8'),
 );
 
+/**
+ * FAQ content shared with the client (src/components/seo/seo-config.ts re-exports
+ * the same file), keyed by page: 'common' for the homepage, route slugs for
+ * service pages. Keeps visible FAQ sections, FAQPage JSON-LD, and the
+ * prerendered static HTML provably identical.
+ */
+const faqData = JSON.parse(fs.readFileSync(path.resolve('src/components/seo/faqs.json'), 'utf8'));
+
+/** FAQ entries for a route, or an empty array when the page has none. */
+export function faqsForRoute(route) {
+  if (route.schema === 'home') return faqData.common || [];
+  if (route.schema !== 'service') return [];
+  return faqData[route.path.replace(/^\//, '')] || [];
+}
+
 export const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
 export const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
 export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-og.png';
@@ -565,6 +580,21 @@ export function createServiceSchema(route, siteUrl) {
   };
 }
 
+export function createFAQPageSchema(route, siteUrl, faqs) {
+  return {
+    '@type': 'FAQPage',
+    '@id': `${absoluteUrl(siteUrl, routeCanonicalPath(route))}#faq`,
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
 export function createRouteSchema(route, siteUrl) {
   const graph = [
     createOrganizationSchema(siteUrl),
@@ -576,6 +606,11 @@ export function createRouteSchema(route, siteUrl) {
 
   if (route.schema === 'service') {
     graph.push(createServiceSchema(route, siteUrl));
+  }
+
+  const faqs = faqsForRoute(route);
+  if (faqs.length > 0) {
+    graph.push(createFAQPageSchema(route, siteUrl, faqs));
   }
 
   return {
