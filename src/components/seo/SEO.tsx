@@ -9,10 +9,17 @@
 
 import { useEffect } from 'react';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
+import organization from './organization.json';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
 /* -------------------------------------------------------------------------- */
+
+interface ArticleMeta {
+  author?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+}
 
 interface SEOProps {
   title: string;
@@ -23,6 +30,8 @@ interface SEOProps {
   ogImage?: string;
   robotsContent?: string;
   structuredData?: Record<string, unknown>;
+  /** Emits article:* Open Graph tags; only meaningful with ogType="article". */
+  articleMeta?: ArticleMeta;
 }
 
 interface FAQItem {
@@ -46,8 +55,8 @@ interface ServiceOffer {
 
 const SITE_NAME = 'Navigate Wealth';
 const BASE_URL = SITE_ORIGIN;
-/** Default OG image used when a page-specific one is not supplied. */
-const DEFAULT_OG_IMAGE = `${BASE_URL}/brand-assets/navigate-wealth-social.png`;
+/** Default OG image used when a page-specific one is not supplied (1200x630). */
+const DEFAULT_OG_IMAGE = `${BASE_URL}/brand-assets/navigate-wealth-og.png`;
 
 /* -------------------------------------------------------------------------- */
 /*  SEO Component                                                             */
@@ -66,6 +75,7 @@ export function SEO({
   ogImage,
   robotsContent = 'index, follow',
   structuredData,
+  articleMeta,
 }: SEOProps) {
   useEffect(() => {
     // Title
@@ -88,6 +98,12 @@ export function SEO({
     setMeta('name', 'robots', robotsContent);
     if (normalizedKeywords) setMeta('name', 'keywords', normalizedKeywords);
 
+    // Helper: drop a <meta> tag if present (e.g. stale dimensions from a
+    // previous page when navigating client-side).
+    const removeMeta = (attr: string, key: string) => {
+      document.querySelector(`meta[${attr}="${key}"]`)?.remove();
+    };
+
     // Open Graph
     const resolvedImage = ogImage || DEFAULT_OG_IMAGE;
     setMeta('property', 'og:title', title);
@@ -96,10 +112,32 @@ export function SEO({
     setMeta('property', 'og:site_name', SITE_NAME);
     setMeta('property', 'og:locale', 'en_ZA');
     setMeta('property', 'og:image', resolvedImage);
-    setMeta('property', 'og:image:width', '1200');
-    setMeta('property', 'og:image:height', '630');
+    if (resolvedImage === DEFAULT_OG_IMAGE) {
+      // Dimensions are only known for our own OG asset; claiming them for
+      // arbitrary page images (article heroes) would be wrong.
+      setMeta('property', 'og:image:width', '1200');
+      setMeta('property', 'og:image:height', '630');
+    } else {
+      removeMeta('property', 'og:image:width');
+      removeMeta('property', 'og:image:height');
+    }
     setMeta('property', 'og:image:alt', title);
     if (canonicalUrl) setMeta('property', 'og:url', canonicalUrl);
+
+    // Article-specific Open Graph tags. Explicitly removed otherwise so they
+    // never leak onto non-article pages during client-side navigation.
+    const articleTags: Array<[string, string | undefined]> = [
+      ['article:author', articleMeta?.author],
+      ['article:published_time', articleMeta?.publishedTime],
+      ['article:modified_time', articleMeta?.modifiedTime],
+    ];
+    for (const [key, value] of articleTags) {
+      if (value) {
+        setMeta('property', key, value);
+      } else {
+        removeMeta('property', key);
+      }
+    }
 
     // Twitter Card
     setMeta('name', 'twitter:card', 'summary_large_image');
@@ -139,7 +177,17 @@ export function SEO({
       const existing = document.getElementById(SCRIPT_ID);
       if (existing) existing.remove();
     };
-  }, [title, description, keywords, canonicalUrl, ogType, ogImage, robotsContent, structuredData]);
+  }, [
+    title,
+    description,
+    keywords,
+    canonicalUrl,
+    ogType,
+    ogImage,
+    robotsContent,
+    structuredData,
+    articleMeta,
+  ]);
 
   return null;
 }
@@ -149,32 +197,23 @@ export function SEO({
 /* -------------------------------------------------------------------------- */
 
 export function createOrganizationSchema(): Record<string, unknown> {
+  // Static organisation facts live in organization.json — the single source of
+  // truth shared with the build-time prerenderer (scripts/seo-static-data.mjs).
   return {
     '@type': ['Organization', 'FinancialService'],
-    name: SITE_NAME,
+    '@id': `${BASE_URL}/#organization`,
+    ...organization,
     url: BASE_URL,
     logo: {
       '@type': 'ImageObject',
       url: `${BASE_URL}/brand-assets/navigate-wealth-social.png`,
     },
-    description:
-      'Independent financial advisory firm providing comprehensive wealth management services across South Africa.',
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: 'Johannesburg',
-      addressRegion: 'Gauteng',
-      addressCountry: 'ZA',
-    },
-    sameAs: [
-      'https://www.linkedin.com/company/navigatewealth/',
-      'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
-      'https://www.youtube.com/@navigatewealth',
-    ],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      telephone: '+27126672505',
-      availableLanguage: ['English', 'Afrikaans'],
+      telephone: organization.telephone,
+      email: organization.email,
+      availableLanguage: organization.availableLanguage,
     },
   };
 }
@@ -186,8 +225,11 @@ export function createOrganizationSchema(): Record<string, unknown> {
 export function createWebSiteSchema(): Record<string, unknown> {
   return {
     '@type': 'WebSite',
+    '@id': `${BASE_URL}/#website`,
     name: SITE_NAME,
     url: BASE_URL,
+    publisher: { '@id': `${BASE_URL}/#organization` },
+    inLanguage: 'en-ZA',
     potentialAction: {
       '@type': 'SearchAction',
       target: {

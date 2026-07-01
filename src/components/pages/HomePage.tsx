@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
+import { FAQSection } from '../shared/FAQSection';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 const VideoModal = React.lazy(() =>
   import('../modals/VideoModal').then((m) => ({ default: m.VideoModal })),
@@ -919,6 +920,12 @@ export function HomePage() {
         <Suspense fallback={null}>
           <FeaturedInsights />
         </Suspense>
+
+        {/* FAQ — same content as the FAQPage JSON-LD emitted above */}
+        <FAQSection
+          faqs={commonFAQs}
+          subtitle="Answers to the questions South Africans ask us most about independent financial advice."
+        />
 
         {/* Get Started CTA Section */}
         <section className="relative py-16 sm:py-20 overflow-hidden bg-[#1e2035]">

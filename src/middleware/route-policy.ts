@@ -124,8 +124,15 @@ export function shouldReturnNotFound(pathname: string, manifest: SeoRouteManifes
   if (matchesSpaPattern(path)) return false;
   if (isKnownArticlePath(path, articleSlugs)) return false;
 
-  // Unknown under /resources/article/ — not a published slug.
-  if (path.startsWith(ARTICLE_PREFIX)) return true;
+  // Unknown slug directly under /resources/article/ — fall through to the SPA
+  // shell so articles published after the last deploy resolve client-side
+  // instead of 404ing until the next build. Genuinely missing articles render
+  // ArticleErrorState, which sets noindex. Nested paths (slug containing "/")
+  // still 404 below.
+  if (path.startsWith(ARTICLE_PREFIX)) {
+    const slug = path.slice(ARTICLE_PREFIX.length);
+    if (slug && !slug.includes('/')) return false;
+  }
 
   return true;
 }

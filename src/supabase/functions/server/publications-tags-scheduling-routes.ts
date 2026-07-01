@@ -27,6 +27,7 @@ import {
   type ArticleTag,
   type ArticleTagLink,
 } from './publications-route-helpers.ts';
+import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 
 const log = createModuleLogger('publications-tags-scheduling-routes');
 
@@ -222,6 +223,9 @@ tagsSchedulingRoutes.post('/cron/process-scheduled', async (c) => {
     }
 
     log.info(`CRON: Processed ${processedCount} scheduled article(s)`, { published });
+    if (processedCount > 0) {
+      triggerSiteRebuild(`scheduled_articles_published:${processedCount}`);
+    }
     const notificationResult = await processArticleNotificationJobs({
       mode: 'cron',
     });
@@ -315,6 +319,10 @@ tagsSchedulingRoutes.post('/process-scheduled', async (c) => {
           }
         }
       }
+    }
+
+    if (processedCount > 0) {
+      triggerSiteRebuild(`scheduled_articles_published:${processedCount}`);
     }
 
     return c.json({
