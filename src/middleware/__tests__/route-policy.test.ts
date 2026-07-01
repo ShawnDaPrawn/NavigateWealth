@@ -31,8 +31,14 @@ describe('route-policy', () => {
     expect(shouldReturnNotFound('/services/fake-xyz', manifest)).toBe(true);
   });
 
-  it('returns 404 for unknown article slugs', () => {
-    expect(shouldReturnNotFound('/resources/article/does-not-exist-123', manifest)).toBe(true);
+  it('falls through to the SPA for unknown article slugs so newly published articles resolve before redeploy', () => {
+    expect(shouldReturnNotFound('/resources/article/does-not-exist-123', manifest)).toBe(false);
+    expect(shouldReturnNotFound('/resources/article/br%C3%A9aking-news', manifest)).toBe(false);
+  });
+
+  it('still returns 404 for malformed article paths', () => {
+    expect(shouldReturnNotFound('/resources/article/some-slug/extra', manifest)).toBe(true);
+    expect(shouldReturnNotFound('/resources/article/', manifest)).toBe(true);
   });
 
   it('allows manifest paths and known articles', () => {
