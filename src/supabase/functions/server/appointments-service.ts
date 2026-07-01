@@ -408,7 +408,7 @@ export class AppointmentsService {
         .from('events')
         .select('id, title, start_at, end_at')
         .in('id', eventIds);
-      const byId = new Map((events || []).map((e: EventRow) => [e.id, e]));
+      const byId = new Map((events || []).map((e) => [e.id, e]));
       for (const request of requests) {
         request.appointment.event = byId.get(request.appointment.event_id as string) ?? null;
       }
@@ -423,7 +423,8 @@ export class AppointmentsService {
       .select('id, appointment:appointments!inner(id, created_by, status)')
       .eq('id', requestId)
       .single();
-    if (error || !data || (data.appointment as { created_by: string }).created_by !== userId) {
+    const appt = data.appointment as unknown as { id: string; created_by: string; status: string };
+    if (error || !data || appt.created_by !== userId) {
       throw new NotFoundError('Reschedule request not found');
     }
 
@@ -433,7 +434,7 @@ export class AppointmentsService {
       .eq('id', requestId);
 
     // Back to confirmed — the standing appointment time remains.
-    const appointment = data.appointment as { id: string; status: string };
+    const appointment = appt;
     if (appointment.status === 'reschedule_requested') {
       await this.supabase
         .from('appointments')
@@ -482,7 +483,10 @@ export class AppointmentsService {
       start_at: event.start_at,
       end_at: event.end_at,
       meeting_kind: appointment.meeting_kind,
-      join_url: appointment.status === 'confirmed' ? appointment.join_url : null,
+      join_url:
+        appointment.status === 'cancelled' || appointment.status === 'completed'
+          ? null
+          : appointment.join_url,
       location: appointment.location,
       status: appointment.status,
       advisor_name: advisor.name,
@@ -646,11 +650,15 @@ export class AppointmentsService {
   }
 
   private async cancelPendingEmails(appointmentId: string): Promise<void> {
+    // Cancel both 'pending' and 'processing' rows. A 'processing' row held by a
+    // concurrent cron invocation still counts as live in the partial unique index
+    // (appointment_emails_one_live_idx), which would block re-queuing the
+    // replacement emails after a reschedule or cancel.
     await this.supabase
       .from('appointment_emails')
       .update({ status: 'cancelled' })
       .eq('appointment_id', appointmentId)
-      .eq('status', 'pending');
+      .in('status', ['pending', 'processing']);
   }
 
   private async getOwnedAppointment(
