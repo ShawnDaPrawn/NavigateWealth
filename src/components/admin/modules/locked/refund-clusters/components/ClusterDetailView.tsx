@@ -178,14 +178,16 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
         )}
       </div>
 
-      <ClusterVatOverview cluster={cluster} entities={data.entities} managerNames={managerNames} />
-
       {/* Segmented control — a compact, distinct look from the Accounts section
           nav (underline) and the top-level pill tabs, so it reads clearly as the
-          switcher for sections *within this cluster*. */}
-      <Tabs defaultValue="entities" className="space-y-4">
+          switcher for sections *within this cluster*. Overview (the VAT summary)
+          is the landing tab. */}
+      <Tabs defaultValue="overview" className="space-y-4">
         <div className="w-full overflow-x-auto">
           <TabsList className={SEGMENT_LIST}>
+            <TabsTrigger value="overview" className={SEGMENT_TRIGGER}>
+              Overview
+            </TabsTrigger>
             <TabsTrigger value="entities" className={SEGMENT_TRIGGER}>
               Entities
             </TabsTrigger>
@@ -197,6 +199,14 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="overview">
+          <ClusterVatOverview
+            cluster={cluster}
+            entities={data.entities}
+            managerNames={managerNames}
+          />
+        </TabsContent>
 
         <TabsContent value="entities" className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
