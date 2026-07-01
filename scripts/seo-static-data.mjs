@@ -1,10 +1,25 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+/**
+ * Static organisation facts shared with the client-side schema factory in
+ * src/components/seo/SEO.tsx — edit organization.json, not this module, when
+ * business details (address, phone, social links, …) change. Resolved from the
+ * repo root, matching how the build scripts are invoked (`node ./scripts/…`).
+ */
+const organizationData = JSON.parse(
+  fs.readFileSync(path.resolve('src/components/seo/organization.json'), 'utf8'),
+);
+
 export const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
 export const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
-export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-social.png';
+export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-og.png';
+export const DEFAULT_OG_IMAGE_WIDTH = 1200;
+export const DEFAULT_OG_IMAGE_HEIGHT = 630;
 export const DEFAULT_LANGUAGE = 'en-ZA';
-export const DEFAULT_BUSINESS_NAME = 'Navigate Wealth';
-export const DEFAULT_BUSINESS_PHONE = '+27126672505';
-export const DEFAULT_BUSINESS_EMAIL = 'info@navigatewealth.co';
+export const DEFAULT_BUSINESS_NAME = organizationData.name;
+export const DEFAULT_BUSINESS_PHONE = organizationData.telephone;
+export const DEFAULT_BUSINESS_EMAIL = organizationData.email;
 
 /**
  * Whether a failure to fetch published articles should hard-fail the build
@@ -73,8 +88,8 @@ export const disallowPaths = [
 export const publicSeoRoutes = [
   {
     path: '/',
-    lastmod: '2026-04-17',
-    title: 'Navigate Wealth | Independent Financial Advisors in South Africa',
+    lastmod: '2026-07-01',
+    title: 'Independent Financial Advisors SA | Navigate Wealth',
     description:
       'Independent financial planning, investment management, retirement, risk, tax and estate planning services across South Africa from Navigate Wealth.',
     keywords:
@@ -174,7 +189,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/risk-management',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Risk Management | Life & Disability Cover | Navigate Wealth',
     description:
       'Independent risk management advice in South Africa. Life cover, disability, severe illness & income protection from leading insurers.',
@@ -186,7 +201,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/retirement-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Retirement Planning | Annuities & Pensions | Navigate Wealth',
     description:
       'Comprehensive retirement planning in South Africa. Retirement annuities, preservation funds, living annuities & pension funds from leading providers.',
@@ -198,7 +213,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/investment-management',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Investment Management | Navigate Wealth',
     description:
       'Professional investment management in South Africa. Unit trusts, tax-free savings, offshore investments & corporate fund solutions.',
@@ -210,7 +225,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/tax-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Tax Planning & Optimisation | Navigate Wealth',
     description:
       'Expert tax planning for individuals and businesses in South Africa — tax-efficient structures, estate duty, capital gains and corporate tax strategies.',
@@ -222,7 +237,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/estate-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
       'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity from specialists.',
@@ -234,7 +249,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/financial-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Financial Planning | Wealth Strategy | Navigate Wealth',
     description:
       'Independent financial planning in South Africa. Strategies covering investments, retirement, tax, estate planning & debt management.',
@@ -246,7 +261,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/medical-aid',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Medical Aid & Health Insurance | Navigate Wealth',
     description:
       'Independent medical aid advice in South Africa: hospital and comprehensive plans, savings plans, group schemes and corporate wellness from leading schemes.',
@@ -258,7 +273,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/employee-benefits',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Employee Benefits | Group Risk & Health | Navigate Wealth',
     description:
       'Tailored employee benefits for businesses in South Africa. Group risk cover, retirement funds, medical aid & wellness programmes.',
@@ -443,53 +458,19 @@ export function createOrganizationSchema(siteUrl) {
   return {
     '@type': ['Organization', 'FinancialService'],
     '@id': `${siteUrl}/#organization`,
-    name: DEFAULT_BUSINESS_NAME,
-    legalName: 'Wealthfront (Pty) Ltd trading as Navigate Wealth',
+    ...organizationData,
     url: siteUrl,
     logo: {
       '@type': 'ImageObject',
       url: `${siteUrl}/brand-assets/navigate-wealth-social.png`,
     },
-    description:
-      'Independent financial advisory firm providing comprehensive wealth management services across South Africa.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Milestone Place Block A, 25 Sovereign Dr Route 21 Business Park',
-      addressLocality: 'Pretoria',
-      addressRegion: 'Gauteng',
-      postalCode: '0178',
-      addressCountry: 'ZA',
-    },
-    areaServed: {
-      '@type': 'Country',
-      name: 'South Africa',
-    },
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      telephone: DEFAULT_BUSINESS_PHONE,
-      email: DEFAULT_BUSINESS_EMAIL,
-      availableLanguage: ['English', 'Afrikaans'],
+      telephone: organizationData.telephone,
+      email: organizationData.email,
+      availableLanguage: organizationData.availableLanguage,
     },
-    telephone: DEFAULT_BUSINESS_PHONE,
-    email: DEFAULT_BUSINESS_EMAIL,
-    priceRange: '$$',
-    knowsAbout: [
-      'Financial Planning',
-      'Wealth Management',
-      'Investment Management',
-      'Retirement Planning',
-      'Risk Management',
-      'Tax Planning',
-      'Estate Planning',
-      'Employee Benefits',
-      'Medical Aid',
-    ],
-    sameAs: [
-      'https://www.linkedin.com/company/navigatewealth/',
-      'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
-      'https://www.youtube.com/@navigatewealth',
-    ],
   };
 }
 

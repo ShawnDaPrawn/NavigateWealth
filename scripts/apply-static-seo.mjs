@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  DEFAULT_OG_IMAGE_HEIGHT,
   DEFAULT_OG_IMAGE_PATH,
+  DEFAULT_OG_IMAGE_WIDTH,
   DEFAULT_SITE_URL,
   absoluteUrl,
   clampSeoDescription,
@@ -188,7 +190,7 @@ ${keywordsTag}      <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
       <meta property="og:locale" content="en_ZA" />
       <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
       <meta property="og:image" content="${escapeHtml(ogImageUrl)}" />
-      <meta property="og:image:alt" content="${escapeHtml(route.title)}" />
+${ogImageDimensionTags(ogImageUrl)}      <meta property="og:image:alt" content="${escapeHtml(route.title)}" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="${escapeHtml(route.title)}" />
       <meta name="twitter:description" content="${escapeHtml(route.description)}" />
@@ -196,6 +198,18 @@ ${keywordsTag}      <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
       <meta name="twitter:site" content="@NavigateWealthSA" />
       <script id="seo-structured-data" type="application/ld+json">${json}</script>
       <!-- static-seo:end -->`;
+}
+
+/**
+ * Emit og:image:width/height only for our own OG asset — dimensions of
+ * arbitrary page images (article heroes) are unknown at build time.
+ */
+function ogImageDimensionTags(ogImageUrl) {
+  if (!ogImageUrl.endsWith(DEFAULT_OG_IMAGE_PATH)) return '';
+  return (
+    `      <meta property="og:image:width" content="${DEFAULT_OG_IMAGE_WIDTH}" />\n` +
+    `      <meta property="og:image:height" content="${DEFAULT_OG_IMAGE_HEIGHT}" />\n`
+  );
 }
 
 function applyStaticBody(html, route) {

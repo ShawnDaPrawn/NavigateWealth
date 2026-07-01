@@ -20,9 +20,9 @@ export interface SEOPageData {
   ogType: string;
 }
 
-const seoPages: Record<string, SEOPageData> = {
+export const seoPages: Record<string, SEOPageData> = {
   home: {
-    title: 'Navigate Wealth | Independent Financial Advisors in South Africa',
+    title: 'Independent Financial Advisors SA | Navigate Wealth',
     description:
       'Navigate Wealth provides independent financial planning, investment management, retirement planning, risk management, tax planning and estate planning services across South Africa.',
     keywords:
@@ -76,7 +76,7 @@ const seoPages: Record<string, SEOPageData> = {
     ogType: 'website',
   },
   'retirement-planning': {
-    title: 'Retirement Planning | Annuities & Pension Funds | Navigate Wealth',
+    title: 'Retirement Planning | Annuities & Pensions | Navigate Wealth',
     description:
       'Comprehensive retirement planning in South Africa. Retirement annuities, preservation funds, living annuities & pension funds from leading providers.',
     keywords:
@@ -94,7 +94,7 @@ const seoPages: Record<string, SEOPageData> = {
     ogType: 'website',
   },
   'estate-planning': {
-    title: 'Estate Planning | Wills, Trusts & Succession | Navigate Wealth',
+    title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
       'Comprehensive estate planning for individuals and businesses in South Africa. Wills, trusts, succession planning, estate duty optimisation, and business continuity from accredited specialists.',
     keywords:
@@ -254,6 +254,38 @@ export function getQuoteServiceContactSEO(serviceId: QuoteServiceId): SEOPageDat
  */
 export function getSEOData(page: string): SEOPageData {
   return seoPages[page] || seoPages.home;
+}
+
+/** SERP-safe title length; mirrors SEO_TITLE_MAX in scripts/seo-static-data.mjs. */
+export const SEO_TITLE_MAX = 60;
+const TITLE_SUFFIX = ' | Navigate Wealth';
+
+function collapseWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+/** Truncate to a word boundary within `max` chars, appending an ellipsis. */
+function truncateAtWord(value: string, max: number): string {
+  const text = collapseWhitespace(value);
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max - 1);
+  const lastSpace = slice.lastIndexOf(' ');
+  const base = lastSpace > max * 0.6 ? slice.slice(0, lastSpace) : slice;
+  return `${base.replace(/[\s.,;:!?–—-]+$/, '')}…`;
+}
+
+/**
+ * Build a SERP-safe article <title>. Keeps the brand suffix when the whole
+ * tag fits, otherwise prefers the keyword-rich headline and drops/truncates
+ * to stay within SEO_TITLE_MAX. Mirrors buildArticleTitle in
+ * scripts/seo-static-data.mjs so the hydrated title matches the prerendered one.
+ */
+export function buildArticleTitle(rawHeadline: string | undefined): string {
+  const headline = collapseWhitespace(rawHeadline ?? '') || 'Financial Planning Article';
+  const withSuffix = `${headline}${TITLE_SUFFIX}`;
+  if (withSuffix.length <= SEO_TITLE_MAX) return withSuffix;
+  if (headline.length <= SEO_TITLE_MAX) return headline;
+  return truncateAtWord(headline, SEO_TITLE_MAX);
 }
 
 /**
