@@ -163,6 +163,9 @@ const NewsletterUnsubscribePage = React.lazy(
 );
 const RobotsTxtPage = React.lazy(() => import('./components/pages/RobotsTxtPage'));
 const SignerLandingPage = React.lazy(() => import('./components/esign-signer/SignerLandingPage'));
+const ManageAppointmentPage = React.lazy(
+  () => import('./components/appointment-manage/ManageAppointmentPage'),
+);
 const VerifyDocumentPage = React.lazy(() => import('./components/pages/VerifyDocumentPage'));
 const OGImageGeneratorPage = React.lazy(() => import('./components/pages/OGImageGeneratorPage'));
 const LinktreePage = React.lazy(() => import('./components/pages/LinktreePage'));
@@ -912,6 +915,19 @@ export function AppRoutes() {
                 fallbackMessage="Unable to load the signing interface. Please try the link again or contact the sender."
               >
                 <SignerLandingPage />
+              </ErrorBoundary>
+            </FlexibleRoute>
+          }
+        />
+        <Route
+          path="/appointment"
+          element={
+            <FlexibleRoute>
+              <ErrorBoundary
+                fallbackTitle="Appointment Error"
+                fallbackMessage="Unable to load the appointment. Please try the link from your email again or contact us."
+              >
+                <ManageAppointmentPage />
               </ErrorBoundary>
             </FlexibleRoute>
           }

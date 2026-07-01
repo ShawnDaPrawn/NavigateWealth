@@ -1,9 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
-import { Plus, Download, Filter, X, Search, FileText } from 'lucide-react';
+import {
+  Plus,
+  Download,
+  Filter,
+  X,
+  Search,
+  FileText,
+  CalendarClock,
+  CalendarDays,
+  ChevronDown,
+} from 'lucide-react';
 import { EventsCalendar } from './components/EventsCalendar';
 import { EventFormModal } from './components/EventFormModal';
+import { AppointmentFormModal } from './components/AppointmentFormModal';
+import { RescheduleRequestsPanel } from './components/RescheduleRequestsPanel';
 import { FiltersDrawer } from './components/FiltersDrawer';
 import { CalendarPDFExportModal } from './components/CalendarPDFExportModal';
 import {
@@ -41,6 +53,8 @@ export function CalendarModule() {
 
   const [showFilters, setShowFilters] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [appointmentEvent, setAppointmentEvent] = useState<CalendarEvent | null>(null);
   const [showPDFModal, setShowPDFModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [searchDebounce, setSearchDebounce] = useState<number | null>(null);
@@ -307,17 +321,47 @@ export function CalendarModule() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button
-                className="h-10 px-4 bg-purple-600 hover:bg-purple-700 shadow-sm transition-all hover:shadow-md"
-                onClick={() => {
-                  setSelectedEvent(null);
-                  setShowEventModal(true);
-                }}
-                disabled={!canCreateEvent}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Event
-              </Button>
+              <RescheduleRequestsPanel />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="h-10 px-4 bg-purple-600 hover:bg-purple-700 shadow-sm transition-all hover:shadow-md"
+                    disabled={!canCreateEvent}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Event
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSelectedEvent(null);
+                      setShowEventModal(true);
+                    }}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    <div>
+                      <div className="font-medium">Event</div>
+                      <div className="text-xs text-muted-foreground">Internal calendar entry</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setAppointmentEvent(null);
+                      setShowAppointmentModal(true);
+                    }}
+                  >
+                    <CalendarClock className="mr-2 h-4 w-4" />
+                    <div>
+                      <div className="font-medium">Appointment</div>
+                      <div className="text-xs text-muted-foreground">
+                        Books a client with confirmation &amp; reminder emails
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -411,6 +455,13 @@ export function CalendarModule() {
                 toast.error('You do not have permission to edit events');
                 return;
               }
+              // Client appointments open in the appointment modal so
+              // reschedules/cancellations trigger the client email flow
+              if (event.event_type === 'appointment') {
+                setAppointmentEvent(event);
+                setShowAppointmentModal(true);
+                return;
+              }
               // System events (renewals, birthdays) open in read-only mode
               // Regular events open in edit mode
               setSelectedEvent(event);
@@ -421,6 +472,11 @@ export function CalendarModule() {
             onView={(event) => {
               if (event.id.startsWith('task-')) {
                 toast.info('Please manage tasks in the Tasks module');
+                return;
+              }
+              if (event.event_type === 'appointment') {
+                setAppointmentEvent(event);
+                setShowAppointmentModal(true);
                 return;
               }
               // All non-task events open in the modal (system events render read-only)
@@ -457,6 +513,15 @@ export function CalendarModule() {
         event={selectedEvent}
         events={events}
         isSubmitting={createEventMutation.isPending || updateEventMutation.isPending}
+      />
+
+      <AppointmentFormModal
+        open={showAppointmentModal}
+        onClose={() => {
+          setShowAppointmentModal(false);
+          setAppointmentEvent(null);
+        }}
+        event={appointmentEvent}
       />
 
       <CalendarPDFExportModal

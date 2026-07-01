@@ -8,6 +8,7 @@
 
 export type EventType =
   | 'meeting'
+  | 'appointment'
   | 'review'
   | 'call'
   | 'webinar'
@@ -82,6 +83,88 @@ export interface CalendarEvent {
     id: string;
     full_name: string;
     email: string;
+  };
+  /** Present for appointment-type events (safe columns only — no tokens). */
+  appointment?: {
+    id: string;
+    status: AppointmentStatus;
+    meeting_kind: MeetingKind;
+    join_url: string | null;
+  } | null;
+}
+
+// ============================================================================
+// APPOINTMENTS (client-facing bookings layered on events)
+// ============================================================================
+
+export type MeetingKind = 'virtual' | 'in_person' | 'phone';
+
+export type AppointmentStatus = 'confirmed' | 'reschedule_requested' | 'cancelled' | 'completed';
+
+export interface Appointment {
+  id: string;
+  event_id: string;
+  client_id: string | null;
+  client_email: string;
+  client_name: string;
+  timezone: string;
+  meeting_kind: MeetingKind;
+  join_url: string | null;
+  location: string | null;
+  meeting_provider: string;
+  ics_uid: string;
+  ics_sequence: number;
+  status: AppointmentStatus;
+  cancelled_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAppointmentInput {
+  title: string;
+  description?: string | null;
+  start_at: string;
+  end_at: string;
+  meeting_kind: MeetingKind;
+  join_url?: string | null;
+  location?: string | null;
+  client: { id: string; name: string; email: string };
+}
+
+export interface RescheduleAppointmentInput {
+  start_at: string;
+  end_at: string;
+  join_url?: string | null;
+  location?: string | null;
+}
+
+export interface ProposedTime {
+  start_at: string;
+  end_at: string;
+}
+
+export interface RescheduleRequest {
+  id: string;
+  appointment_id: string;
+  proposed_times: ProposedTime[];
+  note: string | null;
+  status: 'open' | 'resolved' | 'dismissed';
+  created_at: string;
+  resolved_at: string | null;
+  appointment: {
+    id: string;
+    event_id: string;
+    client_name: string;
+    client_email: string;
+    meeting_kind: MeetingKind;
+    status: AppointmentStatus;
+    event?: {
+      id: string;
+      title: string;
+      start_at: string;
+      end_at: string;
+    } | null;
   };
 }
 
