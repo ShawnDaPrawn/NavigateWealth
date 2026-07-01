@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import createDOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 import {
+  createArticleStaticBodyHtml,
   DEFAULT_OG_IMAGE_HEIGHT,
   DEFAULT_OG_IMAGE_PATH,
   DEFAULT_OG_IMAGE_WIDTH,
@@ -25,6 +28,11 @@ const baseIndexPath = path.join(distDir, 'index.html');
 const siteUrl = normalizeSiteUrl(
   process.env.SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL,
 );
+
+const DOMPurify = createDOMPurify(new JSDOM('').window);
+
+/** Cap injected article HTML so huge articles don't bloat the prerendered page. */
+const ARTICLE_BODY_MAX_CHARS = 60_000;
 
 main().catch((err) => {
   console.error('Failed to apply static SEO:', err);
@@ -212,12 +220,45 @@ function ogImageDimensionTags(ogImageUrl) {
   );
 }
 
+/**
+ * Sanitize admin-authored article HTML for static injection. Truncates at a
+ * paragraph boundary first (sanitizing afterwards re-balances any tags the cut
+ * left open), then strips scripts/styles/frames and event handlers.
+ */
+function sanitizeArticleBodyHtml(route) {
+  let raw = String(route.article?.body || '');
+  if (raw.length > ARTICLE_BODY_MAX_CHARS) {
+    const cut = raw.lastIndexOf('</p>', ARTICLE_BODY_MAX_CHARS);
+    raw = cut > 0 ? raw.slice(0, cut + '</p>'.length) : raw.slice(0, ARTICLE_BODY_MAX_CHARS);
+    raw += `<p><em>Continue reading the full article below.</em></p>`;
+    console.warn(`[static-seo] Truncated static body for ${route.path} (>60KB)`);
+  }
+  const safe = DOMPurify.sanitize(raw, {
+    FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'object', 'embed', 'link', 'meta'],
+    FORBID_ATTR: ['srcset'],
+  });
+  return safe.replace(/<\/script/gi, '<\\/script');
+}
+
+/**
+ * Inject the visible static snapshot INSIDE #root: crawlers (and non-JS
+ * agents) get real content, and React 18's createRoot().render() replaces the
+ * container's children on mount, so nothing double-renders after hydration.
+ */
 function applyStaticBody(html, route) {
-  const body = createStaticBodyHtml(route, siteUrl);
+  const body =
+    route.schema === 'article'
+      ? createArticleStaticBodyHtml(route, siteUrl, sanitizeArticleBodyHtml(route))
+      : createStaticBodyHtml(route, siteUrl);
   if (/<div\s+id=["']root["']\s*>\s*<\/div>/i.test(html)) {
-    return html.replace(/(<div\s+id=["']root["']\s*>\s*<\/div>)/i, `$1${body}`);
+    return html.replace(
+      /<div\s+id=["']root["']\s*>\s*<\/div>/i,
+      `<div id="root">${body}\n      </div>`,
+    );
   }
 
+  // Fallback if the root div is ever restructured: place before the module
+  // script so the content still ships (it will not be auto-replaced by React).
   return html.replace(/<script\s+type=["']module["']/i, `${body}\n      <script type="module"`);
 }
 

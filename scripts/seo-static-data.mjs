@@ -619,24 +619,35 @@ export function createRouteSchema(route, siteUrl) {
   };
 }
 
-export function createStaticBodyHtml(route, siteUrl) {
-  const canonicalUrl = absoluteUrl(siteUrl, routeCanonicalPath(route));
-  const pageName = stripTitleSuffix(route.title);
-  const crumbs = breadcrumbItemsForRoute(route, siteUrl);
-  const serviceLine = route.serviceType
-    ? `<p><strong>Service:</strong> ${escapeHtml(route.serviceType)} for clients in South Africa.</p>`
-    : '';
-  const articleLine =
-    route.schema === 'article'
-      ? '<p>This article is part of the Navigate Wealth resources and insights library.</p>'
-      : '';
+/**
+ * Minimal presentation for the prerendered static body. Deliberately NOT a
+ * Tailwind replica — just enough that the pre-hydration flash reads as an
+ * intentional document (system font, centered column) before React replaces it.
+ */
+const STATIC_BODY_STYLE = `<style>
+        #seo-static-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem;color:#1f2937;line-height:1.6}
+        #seo-static-body h1{font-size:2rem;line-height:1.2;margin:0.5rem 0 1rem}
+        #seo-static-body h2{font-size:1.4rem;margin:2rem 0 0.75rem}
+        #seo-static-body a{color:#4338ca}
+        #seo-static-body nav ol{list-style:none;display:flex;flex-wrap:wrap;gap:0.35rem;padding:0;margin:0 0 1rem;font-size:0.85rem}
+        #seo-static-body nav ol li+li::before{content:'›';margin-right:0.35rem;color:#9ca3af}
+        #seo-static-body img{max-width:100%;height:auto;border-radius:0.5rem}
+        #seo-static-body ul{padding-left:1.25rem}
+        #seo-static-body .seo-brand{font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;margin:0}
+      </style>`;
 
-  return `
-      <!-- static-body:start -->
-      <noscript data-seo-static-body="true">
-        <main id="seo-static-body" aria-label="${escapeHtml(pageName)}">
-          <article>
-            <nav aria-label="Breadcrumb">
+/**
+ * Hides the static snapshot when the SPA fallback shell (which carries the
+ * homepage prerender) is served for a different URL — e.g. an app route or a
+ * just-published article the middleware falls through for.
+ */
+function staticBodyPathGuard(routePath) {
+  return `<script id="seo-static-body-guard">(function(){var p=location.pathname.replace(/\\/+$/,'')||'/';if(p!==${JSON.stringify(routePath)}){var el=document.getElementById('seo-static-body');if(el){el.style.display='none';}}})();</script>`;
+}
+
+function breadcrumbNavHtml(route, siteUrl) {
+  const crumbs = breadcrumbItemsForRoute(route, siteUrl);
+  return `<nav aria-label="Breadcrumb">
               <ol>
 ${crumbs
   .map(
@@ -645,19 +656,151 @@ ${crumbs
   )
   .join('\n')}
               </ol>
-            </nav>
+            </nav>`;
+}
+
+function faqBlockHtml(route) {
+  const faqs = faqsForRoute(route);
+  if (!faqs.length) return '';
+  return `<section aria-label="Frequently asked questions">
+              <h2>Frequently Asked Questions</h2>
+${faqs
+  .map(
+    (faq) => `              <h3>${escapeHtml(faq.question)}</h3>
+              <p>${escapeHtml(faq.answer)}</p>`,
+  )
+  .join('\n')}
+            </section>`;
+}
+
+/** First title segment: "Risk Management | Life & Disability Cover" → "Risk Management". */
+function routePageName(route) {
+  return stripTitleSuffix(route.title).split('|')[0].trim();
+}
+
+/** Internal links: home lists every service page; other pages link to the core pages. */
+function internalLinksHtml(route, siteUrl) {
+  if (route.schema === 'home') {
+    const services = publicSeoRoutes.filter((r) => r.schema === 'service');
+    return `<section aria-label="Our services">
+              <h2>Our Services</h2>
+              <ul>
+${services
+  .map(
+    (svc) =>
+      `                <li><a href="${escapeHtml(absoluteUrl(siteUrl, svc.path))}">${escapeHtml(
+        routePageName(svc),
+      )}</a> — ${escapeHtml(svc.description)}</li>`,
+  )
+  .join('\n')}
+              </ul>
+            </section>`;
+  }
+
+  const links = [
+    ['/', 'Home'],
+    ['/services', 'Our Services'],
+    ['/contact', 'Contact Us'],
+    ['/schedule-consultation', 'Schedule a Consultation'],
+  ].filter(([linkPath]) => linkPath !== routeCanonicalPath(route));
+  return `<nav aria-label="Explore Navigate Wealth">
+              <ul>
+${links
+  .map(
+    ([linkPath, label]) =>
+      `                <li><a href="${escapeHtml(absoluteUrl(siteUrl, linkPath))}">${escapeHtml(label)}</a></li>`,
+  )
+  .join('\n')}
+              </ul>
+            </nav>`;
+}
+
+/**
+ * Visible static snapshot for a marketing route, injected inside #root so
+ * crawlers (including non-JS AI crawlers) see real content; React's
+ * createRoot().render() replaces it on hydration.
+ */
+export function createStaticBodyHtml(route, siteUrl) {
+  // First title segment only — "Risk Management | Life & Disability Cover"
+  // makes a good <title> but a clumsy <h1>.
+  const pageName = routePageName(route);
+  const serviceLine = route.serviceType
+    ? `<p><strong>${escapeHtml(route.serviceType)}</strong> advice for individuals and businesses across South Africa — independent, provider-agnostic and tailored to your goals.</p>`
+    : '';
+
+  return `
+      <!-- static-body:start -->
+      ${STATIC_BODY_STYLE}
+      <main id="seo-static-body" data-seo-static-body="true" aria-label="${escapeHtml(pageName)}">
+        <article>
+            ${breadcrumbNavHtml(route, siteUrl)}
             <header>
-              <p>${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
+              <p class="seo-brand">${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
               <h1>${escapeHtml(pageName)}</h1>
               <p>${escapeHtml(route.description)}</p>
             </header>
             ${serviceLine}
-            ${articleLine}
-            <p><a href="${escapeHtml(canonicalUrl)}">${escapeHtml(pageName)}</a></p>
-          </article>
-        </main>
-      </noscript>
+            ${faqBlockHtml(route)}
+            ${internalLinksHtml(route, siteUrl)}
+        </article>
+      </main>
+      ${staticBodyPathGuard(route.path)}
       <!-- static-body:end -->`;
+}
+
+/**
+ * Visible static snapshot for an article route. `sanitizedBodyHtml` MUST
+ * already be sanitized (dompurify in apply-static-seo.mjs) — this module stays
+ * dependency-light and does not sanitize.
+ */
+export function createArticleStaticBodyHtml(route, siteUrl, sanitizedBodyHtml) {
+  const article = route.article || {};
+  const pageName = stripTitleSuffix(article.title || route.title);
+  const authorName = article.author_name || 'Navigate Wealth Editorial Team';
+  const publishedDate = formatStaticDate(article.published_at);
+  const readingTime = article.reading_time_minutes
+    ? ` · ${Number(article.reading_time_minutes)} min read`
+    : '';
+  const heroUrl = route.ogImage ? resolveImageUrl(siteUrl, route.ogImage) : '';
+  const hero =
+    heroUrl && !heroUrl.endsWith(DEFAULT_OG_IMAGE_PATH)
+      ? `<img src="${escapeHtml(heroUrl)}" alt="${escapeHtml(pageName)}" loading="lazy" />`
+      : '';
+  const excerpt = article.excerpt || article.subtitle || '';
+
+  return `
+      <!-- static-body:start -->
+      ${STATIC_BODY_STYLE}
+      <main id="seo-static-body" data-seo-static-body="true" aria-label="${escapeHtml(pageName)}">
+        <article>
+            ${breadcrumbNavHtml(route, siteUrl)}
+            <header>
+              <p class="seo-brand">${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
+              <h1>${escapeHtml(pageName)}</h1>
+              <p>By ${escapeHtml(authorName)}${publishedDate ? ` · ${escapeHtml(publishedDate)}` : ''}${escapeHtml(readingTime)}</p>
+              ${excerpt ? `<p><em>${escapeHtml(excerpt)}</em></p>` : ''}
+            </header>
+            ${hero}
+            <div class="seo-article-body">
+${sanitizedBodyHtml}
+            </div>
+            <p><a href="${escapeHtml(absoluteUrl(siteUrl, '/resources'))}">Browse more articles from Navigate Wealth</a></p>
+        </article>
+      </main>
+      ${staticBodyPathGuard(route.path)}
+      <!-- static-body:end -->`;
+}
+
+function formatStaticDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-ZA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: DEFAULT_TIMEZONE,
+  }).format(date);
 }
 
 export function stripTitleSuffix(title) {
