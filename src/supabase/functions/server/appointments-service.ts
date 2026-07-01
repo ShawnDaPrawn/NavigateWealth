@@ -423,8 +423,11 @@ export class AppointmentsService {
       .select('id, appointment:appointments!inner(id, created_by, status)')
       .eq('id', requestId)
       .single();
+    if (error || !data) {
+      throw new NotFoundError('Reschedule request not found');
+    }
     const appt = data.appointment as unknown as { id: string; created_by: string; status: string };
-    if (error || !data || appt.created_by !== userId) {
+    if (appt.created_by !== userId) {
       throw new NotFoundError('Reschedule request not found');
     }
 
