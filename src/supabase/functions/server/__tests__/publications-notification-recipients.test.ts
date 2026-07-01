@@ -108,6 +108,20 @@ describe('collectArticleNotificationRecipients — precedence', () => {
       { email: 'ext@example.com', firstName: 'External Person', name: 'External Person' },
     ]);
   });
+
+  it('still returns group external contacts when the profile lookup throws', async () => {
+    // Regression: a profile batch failure must not skip the external-contact loop.
+    mgetShouldThrow = true;
+    kvStore.set(GROUP_KEY, {
+      clientIds: ['client-1'],
+      externalContacts: [{ email: 'ext@example.com', name: 'External Person' }],
+    });
+
+    const recipients = await collectArticleNotificationRecipients(['ext@example.com']);
+    expect(recipients).toEqual([
+      { email: 'ext@example.com', firstName: 'External Person', name: 'External Person' },
+    ]);
+  });
 });
 
 describe('refreshTrackingRecordRecipientNames', () => {

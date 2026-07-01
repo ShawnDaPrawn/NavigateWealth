@@ -50,7 +50,18 @@ async function collectRecipientsFromNewsletterGroup(
   if (clientIds.length > 0) {
     const profileKeys = clientIds.map((clientId) => `user_profile:${clientId}:personal_info`);
     for (const batch of chunkArray(profileKeys, PROFILE_LOOKUP_BATCH_SIZE)) {
-      const profiles = (await kv.mget(batch)) as Array<Record<string, unknown> | null | undefined>;
+      // Isolate each profile batch: a KV failure here must NOT skip the external
+      // contacts below (those recipients would otherwise be silently dropped).
+      let profiles: Array<Record<string, unknown> | null | undefined>;
+      try {
+        profiles = (await kv.mget(batch)) as Array<Record<string, unknown> | null | undefined>;
+      } catch (error) {
+        log.warn('Profile batch lookup failed while resolving recipients (non-blocking)', {
+          batchSize: batch.length,
+          error: normalizeSendError(error),
+        });
+        continue;
+      }
 
       for (const profile of profiles) {
         const email = getProfileEmail(profile);
