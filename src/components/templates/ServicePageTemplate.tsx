@@ -43,6 +43,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { TabStrip } from '../shared/TabStrip';
 import { PartnerMarquee, type PartnerLogo } from '../shared/PartnerMarquee';
+import { FAQSection } from '../shared/FAQSection';
 import { useTabScroll } from '../shared/useTabScroll';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
@@ -145,7 +146,10 @@ export interface ServicePageConfig {
     subHeading?: string;
   };
 
-  /** @deprecated FAQ section removed — kept as optional for backward compat */
+  /**
+   * FAQ content — rendered as a visible accordion section AND emitted as
+   * FAQPage JSON-LD (Google requires marked-up content to be visible).
+   */
   faqs?: { question: string; answer: string }[];
   faqSubtitle?: string;
 
@@ -769,6 +773,11 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
         heading={config.partners.heading}
         subHeading={config.partners.subHeading}
       />
+
+      {/* ═══ FAQ ═══ */}
+      {config.faqs && config.faqs.length > 0 && (
+        <FAQSection faqs={config.faqs} subtitle={config.faqSubtitle} />
+      )}
 
       {/* ═══ CALL-BACK FORM ═══ */}
       <section className="py-20 bg-[#ffffff]" aria-label="Request a call back">

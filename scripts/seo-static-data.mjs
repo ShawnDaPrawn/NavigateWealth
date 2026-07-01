@@ -1,10 +1,40 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+/**
+ * Static organisation facts shared with the client-side schema factory in
+ * src/components/seo/SEO.tsx — edit organization.json, not this module, when
+ * business details (address, phone, social links, …) change. Resolved from the
+ * repo root, matching how the build scripts are invoked (`node ./scripts/…`).
+ */
+const organizationData = JSON.parse(
+  fs.readFileSync(path.resolve('src/components/seo/organization.json'), 'utf8'),
+);
+
+/**
+ * FAQ content shared with the client (src/components/seo/seo-config.ts re-exports
+ * the same file), keyed by page: 'common' for the homepage, route slugs for
+ * service pages. Keeps visible FAQ sections, FAQPage JSON-LD, and the
+ * prerendered static HTML provably identical.
+ */
+const faqData = JSON.parse(fs.readFileSync(path.resolve('src/components/seo/faqs.json'), 'utf8'));
+
+/** FAQ entries for a route, or an empty array when the page has none. */
+export function faqsForRoute(route) {
+  if (route.schema === 'home') return faqData.common || [];
+  if (route.schema !== 'service') return [];
+  return faqData[route.path.replace(/^\//, '')] || [];
+}
+
 export const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
 export const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
-export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-social.png';
+export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-og.png';
+export const DEFAULT_OG_IMAGE_WIDTH = 1200;
+export const DEFAULT_OG_IMAGE_HEIGHT = 630;
 export const DEFAULT_LANGUAGE = 'en-ZA';
-export const DEFAULT_BUSINESS_NAME = 'Navigate Wealth';
-export const DEFAULT_BUSINESS_PHONE = '+27126672505';
-export const DEFAULT_BUSINESS_EMAIL = 'info@navigatewealth.co';
+export const DEFAULT_BUSINESS_NAME = organizationData.name;
+export const DEFAULT_BUSINESS_PHONE = organizationData.telephone;
+export const DEFAULT_BUSINESS_EMAIL = organizationData.email;
 
 /**
  * Whether a failure to fetch published articles should hard-fail the build
@@ -73,8 +103,8 @@ export const disallowPaths = [
 export const publicSeoRoutes = [
   {
     path: '/',
-    lastmod: '2026-04-17',
-    title: 'Navigate Wealth | Independent Financial Advisors in South Africa',
+    lastmod: '2026-07-01',
+    title: 'Independent Financial Advisors SA | Navigate Wealth',
     description:
       'Independent financial planning, investment management, retirement, risk, tax and estate planning services across South Africa from Navigate Wealth.',
     keywords:
@@ -174,7 +204,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/risk-management',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Risk Management | Life & Disability Cover | Navigate Wealth',
     description:
       'Independent risk management advice in South Africa. Life cover, disability, severe illness & income protection from leading insurers.',
@@ -186,7 +216,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/retirement-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Retirement Planning | Annuities & Pensions | Navigate Wealth',
     description:
       'Comprehensive retirement planning in South Africa. Retirement annuities, preservation funds, living annuities & pension funds from leading providers.',
@@ -198,7 +228,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/investment-management',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Investment Management | Navigate Wealth',
     description:
       'Professional investment management in South Africa. Unit trusts, tax-free savings, offshore investments & corporate fund solutions.',
@@ -210,7 +240,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/tax-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Tax Planning & Optimisation | Navigate Wealth',
     description:
       'Expert tax planning for individuals and businesses in South Africa — tax-efficient structures, estate duty, capital gains and corporate tax strategies.',
@@ -222,7 +252,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/estate-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
       'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity from specialists.',
@@ -234,7 +264,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/financial-planning',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Financial Planning | Wealth Strategy | Navigate Wealth',
     description:
       'Independent financial planning in South Africa. Strategies covering investments, retirement, tax, estate planning & debt management.',
@@ -246,7 +276,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/medical-aid',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Medical Aid & Health Insurance | Navigate Wealth',
     description:
       'Independent medical aid advice in South Africa: hospital and comprehensive plans, savings plans, group schemes and corporate wellness from leading schemes.',
@@ -258,7 +288,7 @@ export const publicSeoRoutes = [
   },
   {
     path: '/employee-benefits',
-    lastmod: '2026-03-01',
+    lastmod: '2026-07-01',
     title: 'Employee Benefits | Group Risk & Health | Navigate Wealth',
     description:
       'Tailored employee benefits for businesses in South Africa. Group risk cover, retirement funds, medical aid & wellness programmes.',
@@ -443,53 +473,19 @@ export function createOrganizationSchema(siteUrl) {
   return {
     '@type': ['Organization', 'FinancialService'],
     '@id': `${siteUrl}/#organization`,
-    name: DEFAULT_BUSINESS_NAME,
-    legalName: 'Wealthfront (Pty) Ltd trading as Navigate Wealth',
+    ...organizationData,
     url: siteUrl,
     logo: {
       '@type': 'ImageObject',
       url: `${siteUrl}/brand-assets/navigate-wealth-social.png`,
     },
-    description:
-      'Independent financial advisory firm providing comprehensive wealth management services across South Africa.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Milestone Place Block A, 25 Sovereign Dr Route 21 Business Park',
-      addressLocality: 'Pretoria',
-      addressRegion: 'Gauteng',
-      postalCode: '0178',
-      addressCountry: 'ZA',
-    },
-    areaServed: {
-      '@type': 'Country',
-      name: 'South Africa',
-    },
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      telephone: DEFAULT_BUSINESS_PHONE,
-      email: DEFAULT_BUSINESS_EMAIL,
-      availableLanguage: ['English', 'Afrikaans'],
+      telephone: organizationData.telephone,
+      email: organizationData.email,
+      availableLanguage: organizationData.availableLanguage,
     },
-    telephone: DEFAULT_BUSINESS_PHONE,
-    email: DEFAULT_BUSINESS_EMAIL,
-    priceRange: '$$',
-    knowsAbout: [
-      'Financial Planning',
-      'Wealth Management',
-      'Investment Management',
-      'Retirement Planning',
-      'Risk Management',
-      'Tax Planning',
-      'Estate Planning',
-      'Employee Benefits',
-      'Medical Aid',
-    ],
-    sameAs: [
-      'https://www.linkedin.com/company/navigatewealth/',
-      'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
-      'https://www.youtube.com/@navigatewealth',
-    ],
   };
 }
 
@@ -584,6 +580,21 @@ export function createServiceSchema(route, siteUrl) {
   };
 }
 
+export function createFAQPageSchema(route, siteUrl, faqs) {
+  return {
+    '@type': 'FAQPage',
+    '@id': `${absoluteUrl(siteUrl, routeCanonicalPath(route))}#faq`,
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
 export function createRouteSchema(route, siteUrl) {
   const graph = [
     createOrganizationSchema(siteUrl),
@@ -597,30 +608,46 @@ export function createRouteSchema(route, siteUrl) {
     graph.push(createServiceSchema(route, siteUrl));
   }
 
+  const faqs = faqsForRoute(route);
+  if (faqs.length > 0) {
+    graph.push(createFAQPageSchema(route, siteUrl, faqs));
+  }
+
   return {
     '@context': 'https://schema.org',
     '@graph': graph,
   };
 }
 
-export function createStaticBodyHtml(route, siteUrl) {
-  const canonicalUrl = absoluteUrl(siteUrl, routeCanonicalPath(route));
-  const pageName = stripTitleSuffix(route.title);
-  const crumbs = breadcrumbItemsForRoute(route, siteUrl);
-  const serviceLine = route.serviceType
-    ? `<p><strong>Service:</strong> ${escapeHtml(route.serviceType)} for clients in South Africa.</p>`
-    : '';
-  const articleLine =
-    route.schema === 'article'
-      ? '<p>This article is part of the Navigate Wealth resources and insights library.</p>'
-      : '';
+/**
+ * Minimal presentation for the prerendered static body. Deliberately NOT a
+ * Tailwind replica — just enough that the pre-hydration flash reads as an
+ * intentional document (system font, centered column) before React replaces it.
+ */
+const STATIC_BODY_STYLE = `<style>
+        #seo-static-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem;color:#1f2937;line-height:1.6}
+        #seo-static-body h1{font-size:2rem;line-height:1.2;margin:0.5rem 0 1rem}
+        #seo-static-body h2{font-size:1.4rem;margin:2rem 0 0.75rem}
+        #seo-static-body a{color:#4338ca}
+        #seo-static-body nav ol{list-style:none;display:flex;flex-wrap:wrap;gap:0.35rem;padding:0;margin:0 0 1rem;font-size:0.85rem}
+        #seo-static-body nav ol li+li::before{content:'›';margin-right:0.35rem;color:#9ca3af}
+        #seo-static-body img{max-width:100%;height:auto;border-radius:0.5rem}
+        #seo-static-body ul{padding-left:1.25rem}
+        #seo-static-body .seo-brand{font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;margin:0}
+      </style>`;
 
-  return `
-      <!-- static-body:start -->
-      <noscript data-seo-static-body="true">
-        <main id="seo-static-body" aria-label="${escapeHtml(pageName)}">
-          <article>
-            <nav aria-label="Breadcrumb">
+/**
+ * Hides the static snapshot when the SPA fallback shell (which carries the
+ * homepage prerender) is served for a different URL — e.g. an app route or a
+ * just-published article the middleware falls through for.
+ */
+function staticBodyPathGuard(routePath) {
+  return `<script id="seo-static-body-guard">(function(){var p=location.pathname.replace(/\\/+$/,'')||'/';if(p!==${JSON.stringify(routePath)}){var el=document.getElementById('seo-static-body');if(el){el.style.display='none';}}})();</script>`;
+}
+
+function breadcrumbNavHtml(route, siteUrl) {
+  const crumbs = breadcrumbItemsForRoute(route, siteUrl);
+  return `<nav aria-label="Breadcrumb">
               <ol>
 ${crumbs
   .map(
@@ -629,19 +656,151 @@ ${crumbs
   )
   .join('\n')}
               </ol>
-            </nav>
+            </nav>`;
+}
+
+function faqBlockHtml(route) {
+  const faqs = faqsForRoute(route);
+  if (!faqs.length) return '';
+  return `<section aria-label="Frequently asked questions">
+              <h2>Frequently Asked Questions</h2>
+${faqs
+  .map(
+    (faq) => `              <h3>${escapeHtml(faq.question)}</h3>
+              <p>${escapeHtml(faq.answer)}</p>`,
+  )
+  .join('\n')}
+            </section>`;
+}
+
+/** First title segment: "Risk Management | Life & Disability Cover" → "Risk Management". */
+function routePageName(route) {
+  return stripTitleSuffix(route.title).split('|')[0].trim();
+}
+
+/** Internal links: home lists every service page; other pages link to the core pages. */
+function internalLinksHtml(route, siteUrl) {
+  if (route.schema === 'home') {
+    const services = publicSeoRoutes.filter((r) => r.schema === 'service');
+    return `<section aria-label="Our services">
+              <h2>Our Services</h2>
+              <ul>
+${services
+  .map(
+    (svc) =>
+      `                <li><a href="${escapeHtml(absoluteUrl(siteUrl, svc.path))}">${escapeHtml(
+        routePageName(svc),
+      )}</a> — ${escapeHtml(svc.description)}</li>`,
+  )
+  .join('\n')}
+              </ul>
+            </section>`;
+  }
+
+  const links = [
+    ['/', 'Home'],
+    ['/services', 'Our Services'],
+    ['/contact', 'Contact Us'],
+    ['/schedule-consultation', 'Schedule a Consultation'],
+  ].filter(([linkPath]) => linkPath !== routeCanonicalPath(route));
+  return `<nav aria-label="Explore Navigate Wealth">
+              <ul>
+${links
+  .map(
+    ([linkPath, label]) =>
+      `                <li><a href="${escapeHtml(absoluteUrl(siteUrl, linkPath))}">${escapeHtml(label)}</a></li>`,
+  )
+  .join('\n')}
+              </ul>
+            </nav>`;
+}
+
+/**
+ * Visible static snapshot for a marketing route, injected inside #root so
+ * crawlers (including non-JS AI crawlers) see real content; React's
+ * createRoot().render() replaces it on hydration.
+ */
+export function createStaticBodyHtml(route, siteUrl) {
+  // First title segment only — "Risk Management | Life & Disability Cover"
+  // makes a good <title> but a clumsy <h1>.
+  const pageName = routePageName(route);
+  const serviceLine = route.serviceType
+    ? `<p><strong>${escapeHtml(route.serviceType)}</strong> advice for individuals and businesses across South Africa — independent, provider-agnostic and tailored to your goals.</p>`
+    : '';
+
+  return `
+      <!-- static-body:start -->
+      ${STATIC_BODY_STYLE}
+      <main id="seo-static-body" data-seo-static-body="true" aria-label="${escapeHtml(pageName)}">
+        <article>
+            ${breadcrumbNavHtml(route, siteUrl)}
             <header>
-              <p>${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
+              <p class="seo-brand">${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
               <h1>${escapeHtml(pageName)}</h1>
               <p>${escapeHtml(route.description)}</p>
             </header>
             ${serviceLine}
-            ${articleLine}
-            <p><a href="${escapeHtml(canonicalUrl)}">${escapeHtml(pageName)}</a></p>
-          </article>
-        </main>
-      </noscript>
+            ${faqBlockHtml(route)}
+            ${internalLinksHtml(route, siteUrl)}
+        </article>
+      </main>
+      ${staticBodyPathGuard(route.path)}
       <!-- static-body:end -->`;
+}
+
+/**
+ * Visible static snapshot for an article route. `sanitizedBodyHtml` MUST
+ * already be sanitized (dompurify in apply-static-seo.mjs) — this module stays
+ * dependency-light and does not sanitize.
+ */
+export function createArticleStaticBodyHtml(route, siteUrl, sanitizedBodyHtml) {
+  const article = route.article || {};
+  const pageName = stripTitleSuffix(article.title || route.title);
+  const authorName = article.author_name || 'Navigate Wealth Editorial Team';
+  const publishedDate = formatStaticDate(article.published_at);
+  const readingTime = article.reading_time_minutes
+    ? ` · ${Number(article.reading_time_minutes)} min read`
+    : '';
+  const heroUrl = route.ogImage ? resolveImageUrl(siteUrl, route.ogImage) : '';
+  const hero =
+    heroUrl && !heroUrl.endsWith(DEFAULT_OG_IMAGE_PATH)
+      ? `<img src="${escapeHtml(heroUrl)}" alt="${escapeHtml(pageName)}" loading="lazy" />`
+      : '';
+  const excerpt = article.excerpt || article.subtitle || '';
+
+  return `
+      <!-- static-body:start -->
+      ${STATIC_BODY_STYLE}
+      <main id="seo-static-body" data-seo-static-body="true" aria-label="${escapeHtml(pageName)}">
+        <article>
+            ${breadcrumbNavHtml(route, siteUrl)}
+            <header>
+              <p class="seo-brand">${escapeHtml(DEFAULT_BUSINESS_NAME)}</p>
+              <h1>${escapeHtml(pageName)}</h1>
+              <p>By ${escapeHtml(authorName)}${publishedDate ? ` · ${escapeHtml(publishedDate)}` : ''}${escapeHtml(readingTime)}</p>
+              ${excerpt ? `<p><em>${escapeHtml(excerpt)}</em></p>` : ''}
+            </header>
+            ${hero}
+            <div class="seo-article-body">
+${sanitizedBodyHtml}
+            </div>
+            <p><a href="${escapeHtml(absoluteUrl(siteUrl, '/resources'))}">Browse more articles from Navigate Wealth</a></p>
+        </article>
+      </main>
+      ${staticBodyPathGuard(route.path)}
+      <!-- static-body:end -->`;
+}
+
+function formatStaticDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-ZA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: DEFAULT_TIMEZONE,
+  }).format(date);
 }
 
 export function stripTitleSuffix(title) {

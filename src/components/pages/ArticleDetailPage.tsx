@@ -45,6 +45,14 @@ import { publicAnonKey } from '../../utils/supabase/info';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { API_CONFIG } from '../../utils/api/config';
 import { cn } from '../ui/utils';
+import { SITE_ORIGIN } from '@/utils/siteOrigin';
+import {
+  SEO,
+  createBreadcrumbSchema,
+  createOrganizationSchema,
+  createWebSiteSchema,
+} from '../seo/SEO';
+import { buildArticleTitle } from '../seo/seo-config';
 
 // Phase 1 sub-components
 import { ReadingProgressBar } from './article-detail/ReadingProgressBar';
@@ -893,99 +901,9 @@ export function ArticleDetailPage() {
     }
   }, [slug]);
 
-  // ── SEO: document title + Open Graph / Twitter Card meta tags ──────────
-  useEffect(() => {
-    if (!article) return;
-
-    const prevTitle = document.title;
-    document.title = `${article.title} | Navigate Wealth`;
-
-    const ogImage =
-      article.hero_image_url ||
-      article.featured_image_url ||
-      article.feature_image_url ||
-      article.featured_image ||
-      article.thumbnail_image_url ||
-      '';
-    const description = article.excerpt || article.subtitle || '';
-    const url =
-      article.seo_canonical_url || `${window.location.origin}/resources/article/${article.slug}`;
-
-    const metaTags: Record<string, string> = {
-      'og:title': article.title,
-      'og:description': description,
-      'og:type': 'article',
-      'og:url': url,
-      'og:site_name': 'Navigate Wealth',
-      'twitter:card': ogImage ? 'summary_large_image' : 'summary',
-      'twitter:title': article.title,
-      'twitter:description': description,
-      description: description,
-    };
-    if (ogImage) {
-      metaTags['og:image'] = ogImage;
-      metaTags['twitter:image'] = ogImage;
-    }
-    if (article.author_name) {
-      metaTags['article:author'] = article.author_name;
-    }
-    if (article.published_at) {
-      metaTags['article:published_time'] = article.published_at;
-    }
-
-    const createdEls: HTMLMetaElement[] = [];
-    for (const [key, value] of Object.entries(metaTags)) {
-      const attr = key.startsWith('og:') || key.startsWith('article:') ? 'property' : 'name';
-      let el = document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
-      if (!el) {
-        el = document.createElement('meta');
-        el.setAttribute(attr, key);
-        document.head.appendChild(el);
-        createdEls.push(el);
-      }
-      el.setAttribute('content', value);
-    }
-
-    const prevCanonicalHref =
-      document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href || null;
-    let canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    if (!canonicalEl) {
-      canonicalEl = document.createElement('link');
-      canonicalEl.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonicalEl);
-    }
-    canonicalEl.setAttribute('href', url);
-
-    // JSON-LD structured data
-    const jsonLd = document.createElement('script');
-    jsonLd.type = 'application/ld+json';
-    jsonLd.textContent = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'Article',
-      headline: article.title,
-      description,
-      ...(ogImage && { image: ogImage }),
-      author: { '@type': 'Person', name: article.author_name || 'Navigate Wealth Editorial Team' },
-      publisher: { '@type': 'Organization', name: 'Navigate Wealth' },
-      ...(article.published_at && { datePublished: article.published_at }),
-      ...(article.updated_at && { dateModified: article.updated_at }),
-      url,
-    });
-    document.head.appendChild(jsonLd);
-
-    return () => {
-      document.title = prevTitle;
-      createdEls.forEach((el) => el.remove());
-      if (canonicalEl) {
-        if (prevCanonicalHref) {
-          canonicalEl.setAttribute('href', prevCanonicalHref);
-        } else {
-          canonicalEl.remove();
-        }
-      }
-      jsonLd.remove();
-    };
-  }, [article]);
+  // SEO meta tags are rendered via the shared <SEO /> component in the JSX
+  // below; every public page renders its own <SEO />, so tags are overwritten
+  // (not restored) on client-side navigation.
 
   useEffect(() => {
     if (!article?.id || !emailTrackingToken) return;
@@ -1165,8 +1083,56 @@ export function ArticleDetailPage() {
   const sanitisedHtml = DOMPurify.sanitize(articleBody);
   const enhancedHtml = enhanceArticleHtml(sanitisedHtml);
 
+  // SEO — canonical always uses the production origin (never
+  // window.location.origin, which would emit preview-deployment canonicals).
+  const canonicalUrl =
+    article.seo_canonical_url || `${SITE_ORIGIN}/resources/article/${article.slug}`;
+  const seoDescription = article.excerpt || article.subtitle || '';
+  const articleStructuredData: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      createOrganizationSchema(),
+      createWebSiteSchema(),
+      createBreadcrumbSchema([
+        { name: 'Home', url: SITE_ORIGIN },
+        { name: 'Resources', url: `${SITE_ORIGIN}/resources` },
+        { name: article.title },
+      ]),
+      {
+        '@type': 'Article',
+        '@id': `${canonicalUrl}#article`,
+        headline: article.title,
+        description: seoDescription,
+        ...(articleImage && { image: articleImage }),
+        inLanguage: 'en-ZA',
+        author: {
+          '@type': 'Person',
+          name: authorName,
+        },
+        publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+        ...(article.published_at && { datePublished: article.published_at }),
+        ...(article.updated_at && { dateModified: article.updated_at }),
+        mainEntityOfPage: canonicalUrl,
+        url: canonicalUrl,
+      },
+    ],
+  };
+
   return (
     <>
+      <SEO
+        title={buildArticleTitle(article.title)}
+        description={seoDescription}
+        canonicalUrl={canonicalUrl}
+        ogType="article"
+        ogImage={articleImage || undefined}
+        structuredData={articleStructuredData}
+        articleMeta={{
+          author: authorName,
+          publishedTime: article.published_at ?? undefined,
+          modifiedTime: article.updated_at ?? undefined,
+        }}
+      />
       <ReadingProgressBar contentRef={articleContentRef} />
       <BackToTop />
 
