@@ -10,6 +10,14 @@ export interface RateLimitConfig {
   maxAttempts: number;
   windowMs: number;
   blockDurationMs: number;
+  /**
+   * When the rate-limit store itself errors, should the request be DENIED
+   * (fail closed) rather than allowed (fail open)? For security-sensitive
+   * actions (login, signup, password reset, OTP) this should be true so a
+   * store outage can't be used to disable brute-force protection. Defaults to
+   * false (fail open) to preserve availability for non-sensitive limits.
+   */
+  failClosed?: boolean;
 }
 
 export interface RateLimitResult {
@@ -26,21 +34,25 @@ export const RATE_LIMITS = {
     maxAttempts: 5, // 5 attempts
     windowMs: 15 * 60 * 1000, // per 15 minutes
     blockDurationMs: 30 * 60 * 1000, // block for 30 minutes after exceeding
+    failClosed: true, // brute-force-sensitive — deny if the limiter errors
   },
   SIGNUP: {
     maxAttempts: 3, // 3 attempts
     windowMs: 60 * 60 * 1000, // per hour
     blockDurationMs: 60 * 60 * 1000, // block for 1 hour
+    failClosed: true,
   },
   PASSWORD_RESET: {
     maxAttempts: 3, // 3 attempts
     windowMs: 60 * 60 * 1000, // per hour
     blockDurationMs: 60 * 60 * 1000, // block for 1 hour
+    failClosed: true,
   },
   EMAIL_VERIFICATION: {
     maxAttempts: 5, // 5 attempts
     windowMs: 60 * 60 * 1000, // per hour
     blockDurationMs: 30 * 60 * 1000, // block for 30 minutes
+    failClosed: true,
   },
 } as const;
 
@@ -144,8 +156,20 @@ export async function checkRateLimit(
       blocked: false,
     };
   } catch (error) {
+    if (config.failClosed) {
+      // Fail CLOSED — deny the request so a store outage can't be used to
+      // bypass brute-force protection on sensitive actions.
+      log.error('Rate limit check failed (failing closed — denying request)', error);
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(now + config.windowMs),
+        blocked: true,
+        reason: 'Service is temporarily unavailable. Please try again shortly.',
+      };
+    }
     log.error('Rate limit check failed (failing open)', error);
-    // Fail open - allow request if rate limiting fails
+    // Fail open - allow request if rate limiting fails (non-sensitive limits)
     return {
       allowed: true,
       remaining: config.maxAttempts,
