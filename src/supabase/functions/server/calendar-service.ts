@@ -54,44 +54,58 @@ export class CalendarService {
   async getEvents(userId: string, filters?: Partial<EventFilters>): Promise<CalendarEvent[]> {
     log.info('Getting events', { userId, filters });
 
-    let query = this.supabase
-      .from('events')
-      .select('*, client:clients(*)')
-      .eq('created_by', userId); // Enforce ownership
+    const buildQuery = (select: string) => {
+      let query = this.supabase.from('events').select(select).eq('created_by', userId); // Enforce ownership
 
-    // Apply filters
-    if (filters?.start) {
-      query = query.gte('start_at', filters.start.toISOString());
+      // Apply filters
+      if (filters?.start) {
+        query = query.gte('start_at', filters.start.toISOString());
+      }
+
+      if (filters?.end) {
+        query = query.lte('start_at', filters.end.toISOString());
+      }
+
+      if (filters?.search) {
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      }
+
+      if (filters?.eventTypes && filters.eventTypes.length > 0) {
+        query = query.in('event_type', filters.eventTypes);
+      }
+
+      if (filters?.eventStatuses && filters.eventStatuses.length > 0) {
+        query = query.in('status', filters.eventStatuses);
+      }
+
+      if (filters?.clientId) {
+        query = query.eq('client_id', filters.clientId);
+      }
+
+      return query;
+    };
+
+    // Safe columns only on the appointment join — appointments.manage_token is
+    // a public-page credential and must never reach the browser.
+    let { data, error } = await buildQuery(
+      '*, client:clients(*), appointment:appointments(id,status,meeting_kind,join_url)',
+    );
+
+    if (error) {
+      // Databases that predate the appointments migration have no
+      // events→appointments relationship; fall back to the plain select.
+      log.warn('Appointment join unavailable, falling back to plain select', {
+        error: error.message,
+      });
+      ({ data, error } = await buildQuery('*, client:clients(*)'));
     }
-
-    if (filters?.end) {
-      query = query.lte('start_at', filters.end.toISOString());
-    }
-
-    if (filters?.search) {
-      query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-    }
-
-    if (filters?.eventTypes && filters.eventTypes.length > 0) {
-      query = query.in('event_type', filters.eventTypes);
-    }
-
-    if (filters?.eventStatuses && filters.eventStatuses.length > 0) {
-      query = query.in('status', filters.eventStatuses);
-    }
-
-    if (filters?.clientId) {
-      query = query.eq('client_id', filters.clientId);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       log.error('Error fetching events', error);
       throw error;
     }
 
-    return data || [];
+    return (data || []) as unknown as CalendarEvent[];
   }
 
   /**

@@ -16,6 +16,10 @@ import type {
   Reminder,
   CreateReminderInput,
   UpdateReminderInput,
+  Appointment,
+  CreateAppointmentInput,
+  RescheduleAppointmentInput,
+  RescheduleRequest,
 } from './types';
 
 // ============================================================================
@@ -206,6 +210,107 @@ export async function deleteReminder(id: string): Promise<void> {
 }
 
 // ============================================================================
+// APPOINTMENT API
+// ============================================================================
+
+/**
+ * Book a client appointment (creates the event + queues the email lifecycle)
+ */
+export async function createAppointment(input: CreateAppointmentInput): Promise<Appointment> {
+  logger.debug('[API] Creating appointment', { title: input.title });
+
+  try {
+    const data = await api.post<Appointment>('/appointments', input);
+    logger.debug('[API] Appointment created', { id: data.id });
+    return data;
+  } catch (error) {
+    logger.error('[API] Error creating appointment', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch the appointment attached to a calendar event
+ */
+export async function fetchAppointmentByEvent(eventId: string): Promise<Appointment> {
+  try {
+    return await api.get<Appointment>(`/appointments/by-event/${eventId}`);
+  } catch (error) {
+    logger.error('[API] Error fetching appointment', error);
+    throw error;
+  }
+}
+
+/**
+ * Reschedule an appointment (bumps the ICS sequence + requeues emails)
+ */
+export async function rescheduleAppointment(
+  id: string,
+  input: RescheduleAppointmentInput,
+): Promise<Appointment> {
+  logger.debug('[API] Rescheduling appointment', { id });
+
+  try {
+    return await api.put<Appointment>(`/appointments/${id}/reschedule`, input);
+  } catch (error) {
+    logger.error('[API] Error rescheduling appointment', error);
+    throw error;
+  }
+}
+
+/**
+ * Cancel an appointment (stops pending emails, sends cancellation)
+ */
+export async function cancelAppointment(id: string, reason?: string | null): Promise<Appointment> {
+  logger.debug('[API] Cancelling appointment', { id });
+
+  try {
+    return await api.post<Appointment>(`/appointments/${id}/cancel`, { reason: reason ?? null });
+  } catch (error) {
+    logger.error('[API] Error cancelling appointment', error);
+    throw error;
+  }
+}
+
+/**
+ * Re-send the confirmation email for an appointment
+ */
+export async function resendAppointmentConfirmation(id: string): Promise<void> {
+  try {
+    await api.post(`/appointments/${id}/resend-confirmation`, {});
+  } catch (error) {
+    logger.error('[API] Error resending appointment confirmation', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch client reschedule requests (default: open)
+ */
+export async function fetchRescheduleRequests(
+  status: 'open' | 'resolved' | 'dismissed' = 'open',
+): Promise<RescheduleRequest[]> {
+  try {
+    return await api.get<RescheduleRequest[]>(`/appointments/reschedule-requests?status=${status}`);
+  } catch (error) {
+    logger.error('[API] Error fetching reschedule requests', error);
+    throw error;
+  }
+}
+
+/**
+ * Dismiss a reschedule request without changing the appointment
+ */
+export async function dismissRescheduleRequest(id: string): Promise<void> {
+  try {
+    await api.post(`/appointments/reschedule-requests/${id}/dismiss`, {});
+  } catch (error) {
+    logger.error('[API] Error dismissing reschedule request', error);
+    throw error;
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -224,4 +329,13 @@ export const calendarApi = {
   createReminder,
   updateReminder,
   deleteReminder,
+
+  // Appointments
+  createAppointment,
+  fetchAppointmentByEvent,
+  rescheduleAppointment,
+  cancelAppointment,
+  resendAppointmentConfirmation,
+  fetchRescheduleRequests,
+  dismissRescheduleRequest,
 };

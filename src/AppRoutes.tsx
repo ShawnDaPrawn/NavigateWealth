@@ -172,6 +172,9 @@ const RobotsTxtPage = lazyWithRetry(() => import('./components/pages/RobotsTxtPa
 const SignerLandingPage = lazyWithRetry(
   () => import('./components/esign-signer/SignerLandingPage'),
 );
+const ManageAppointmentPage = lazyWithRetry(
+  () => import('./components/appointment-manage/ManageAppointmentPage'),
+);
 const VerifyDocumentPage = lazyWithRetry(() => import('./components/pages/VerifyDocumentPage'));
 const OGImageGeneratorPage = lazyWithRetry(() => import('./components/pages/OGImageGeneratorPage'));
 const LinktreePage = lazyWithRetry(() => import('./components/pages/LinktreePage'));
@@ -921,6 +924,19 @@ export function AppRoutes() {
                 fallbackMessage="Unable to load the signing interface. Please try the link again or contact the sender."
               >
                 <SignerLandingPage />
+              </ErrorBoundary>
+            </FlexibleRoute>
+          }
+        />
+        <Route
+          path="/appointment"
+          element={
+            <FlexibleRoute>
+              <ErrorBoundary
+                fallbackTitle="Appointment Error"
+                fallbackMessage="Unable to load the appointment. Please try the link from your email again or contact us."
+              >
+                <ManageAppointmentPage />
               </ErrorBoundary>
             </FlexibleRoute>
           }

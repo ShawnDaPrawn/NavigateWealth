@@ -55,6 +55,7 @@ function formatTime(isoStr: string): string {
 /** Map event_type to a human label. */
 const EVENT_TYPE_LABELS: Record<string, string> = {
   meeting: 'Meeting',
+  appointment: 'Appointment',
   review: 'Review',
   call: 'Call',
   webinar: 'Webinar',
@@ -67,6 +68,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 /** Map event_type to badge colours for the email. */
 const EVENT_TYPE_COLOURS: Record<string, { bg: string; text: string }> = {
   meeting: { bg: '#6d28d9', text: '#ffffff' },
+  appointment: { bg: '#0891b2', text: '#ffffff' },
   review: { bg: '#2563eb', text: '#ffffff' },
   call: { bg: '#059669', text: '#ffffff' },
   webinar: { bg: '#d97706', text: '#ffffff' },

@@ -4,6 +4,7 @@
  */
 
 export * from './useEvents';
+export * from './useAppointments';
 export * from './useCalendarEvents';
 export * from './useClientBirthdays';
 export * from './usePolicyRenewals';

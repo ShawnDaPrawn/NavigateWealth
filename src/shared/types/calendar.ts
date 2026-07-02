@@ -9,6 +9,7 @@
 
 export type EventType =
   | 'meeting'
+  | 'appointment'
   | 'review'
   | 'call'
   | 'webinar'
@@ -236,6 +237,7 @@ export const REMINDER_TYPE_COLORS: Record<ReminderType, string> = {
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   meeting: 'Meeting',
+  appointment: 'Appointment',
   review: 'Review',
   call: 'Call',
   webinar: 'Webinar',
@@ -247,6 +249,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
 
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   meeting: 'bg-blue-100 text-blue-700',
+  appointment: 'bg-cyan-100 text-cyan-700',
   review: 'bg-purple-100 text-purple-700',
   call: 'bg-green-100 text-green-700',
   webinar: 'bg-indigo-100 text-indigo-700',
