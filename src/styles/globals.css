@@ -501,6 +501,54 @@ body.schedule-consultation-modal-open footer.bg-black {
     }
   }
 
+  /* Brand compass loader: magnetic needle "seeking" a bearing.
+     Starts and ends at 0deg so the loop is seamless. */
+  @keyframes compass-seek {
+    0% {
+      transform: rotate(0deg);
+    }
+    12% {
+      transform: rotate(-42deg);
+    }
+    28% {
+      transform: rotate(34deg);
+    }
+    44% {
+      transform: rotate(-20deg);
+    }
+    60% {
+      transform: rotate(13deg);
+    }
+    74% {
+      transform: rotate(-7deg);
+    }
+    86% {
+      transform: rotate(3deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+
+  .animate-compass-seek {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: compass-seek 4.2s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  }
+
+  /* Slow dial rotation for depth behind the needle. */
+  @keyframes compass-dial-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-compass-dial {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: compass-dial-spin 18s linear infinite;
+  }
+
   /* Line clamp utilities for text truncation */
   .line-clamp-3 {
     overflow: hidden;
