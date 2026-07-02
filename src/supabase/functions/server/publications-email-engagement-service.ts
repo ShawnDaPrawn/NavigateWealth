@@ -188,6 +188,17 @@ async function persistTrackingRecords(records: ArticleEmailTrackingRecord[]): Pr
   }
 }
 
+/**
+ * Persist a batch of already-built tracking records (all KV mirror keys),
+ * exported for callers that mutate existing records — e.g. refreshing
+ * denormalized recipient names before delivery.
+ */
+export async function persistArticleEmailTrackingRecords(
+  records: ArticleEmailTrackingRecord[],
+): Promise<void> {
+  await persistTrackingRecords(records);
+}
+
 function toIsoNow(): string {
   return new Date().toISOString();
 }

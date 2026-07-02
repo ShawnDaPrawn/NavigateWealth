@@ -404,10 +404,12 @@ export function extractApprovalEmailData(
   email: string,
   appData: ApplicationData,
   applicationId: string,
+  clientNameOverride?: string,
 ) {
   return {
     to: email,
-    clientName: `${appData.firstName || ''} ${appData.lastName || ''}`.trim(),
+    clientName:
+      clientNameOverride?.trim() || `${appData.firstName || ''} ${appData.lastName || ''}`.trim(),
     applicationNumber: applicationId,
   };
 }
@@ -420,10 +422,12 @@ export function extractDeclineEmailData(
   appData: ApplicationData,
   reason: string,
   applicationId: string,
+  clientNameOverride?: string,
 ) {
   return {
     to: email,
-    clientName: `${appData.firstName || ''} ${appData.lastName || ''}`.trim(),
+    clientName:
+      clientNameOverride?.trim() || `${appData.firstName || ''} ${appData.lastName || ''}`.trim(),
     applicationNumber: applicationId,
     reason: reason || 'Please contact support for more information.',
   };
@@ -437,17 +441,22 @@ export function extractAdminNotificationData(
   appData: ApplicationData,
   applicationId: string,
   approvedBy: string,
+  namesOverride?: { firstName?: string; lastName?: string; fullName?: string },
 ): AdminApprovalNotificationData {
+  const firstName = namesOverride?.firstName?.trim() || appData.firstName || '';
+  const lastName = namesOverride?.lastName?.trim() || appData.lastName || '';
+  const clientName = namesOverride?.fullName?.trim() || `${firstName} ${lastName}`.trim();
+
   return {
     applicationNumber: applicationId,
-    clientName: `${appData.firstName || ''} ${appData.lastName || ''}`.trim(),
+    clientName,
     approvedBy: approvedBy || 'Admin',
     // Legacy fields for backward compatibility
     email,
     phone: appData.cellphoneNumber || 'N/A',
     applicationId,
-    firstName: appData.firstName || '',
-    lastName: appData.lastName || '',
+    firstName,
+    lastName,
   };
 }
 

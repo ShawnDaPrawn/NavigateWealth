@@ -37,6 +37,7 @@ import { DATABASE_SCHEMA, ERROR_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { syncApplicationToProfile, mergeProfileOnApproval } from './profile-application-sync.ts';
+import { resolveClientNamesByUserId } from './profile-name-resolver.ts';
 import type {
   SupabaseAdminClient,
   KvApplication,
@@ -459,7 +460,14 @@ export class AdminApplicationsService {
 
     if (user?.email) {
       const isAdminOnboarded = application.origin === 'admin_import';
-      const clientName = `${appData.firstName || ''} ${appData.lastName || ''}`.trim();
+      // Resolve the client's CURRENT name from the just-written profile so the
+      // greeting reflects any admin rename, falling back to the application snapshot.
+      const names = await resolveClientNamesByUserId(userId, {
+        firstName: appData.firstName,
+        lastName: appData.lastName,
+        email: user.email,
+      });
+      const clientName = names.fullName;
       const appNumber = application.application_number || applicationId;
 
       if (isAdminOnboarded) {
@@ -487,7 +495,9 @@ export class AdminApplicationsService {
         // Self-service client: send normal approval email
         await sendEmailSafely(
           () =>
-            sendClientApprovalEmail(extractApprovalEmailData(user.email!, appData, applicationId)),
+            sendClientApprovalEmail(
+              extractApprovalEmailData(user.email!, appData, applicationId, clientName),
+            ),
           'client approval',
         );
       }
@@ -496,7 +506,11 @@ export class AdminApplicationsService {
       await sendEmailSafely(
         () =>
           sendAdminApprovalNotification(
-            extractAdminNotificationData(user.email!, appData, applicationId, adminUserId),
+            extractAdminNotificationData(user.email!, appData, applicationId, adminUserId, {
+              firstName: names.firstName,
+              lastName: names.lastName,
+              fullName: names.fullName,
+            }),
           ),
         'admin notification',
       );
@@ -568,10 +582,23 @@ export class AdminApplicationsService {
     } = await supabase.auth.admin.getUserById(userId);
 
     if (user?.email) {
+      // Resolve the client's current name from their profile, falling back to the
+      // application snapshot when no profile exists.
+      const names = await resolveClientNamesByUserId(userId, {
+        firstName: appData.firstName,
+        lastName: appData.lastName,
+        email: user.email,
+      });
       await sendEmailSafely(
         () =>
           sendClientDeclineEmail(
-            extractDeclineEmailData(user.email!, appData, reason || '', applicationId),
+            extractDeclineEmailData(
+              user.email!,
+              appData,
+              reason || '',
+              applicationId,
+              names.fullName,
+            ),
           ),
         'client decline',
       );

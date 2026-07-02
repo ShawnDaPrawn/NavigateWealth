@@ -16,8 +16,14 @@ import {
   addNewsletterSubscriber,
   addNewsletterSubscribersBulk,
   removeNewsletterSubscriber,
+  updateNewsletterGroupExternalContactName,
   updateNewsletterSubscriberContact,
 } from './newsletter-group-service.ts';
+import {
+  getProfileEmail,
+  getProfileFirstName,
+  getProfileFullName,
+} from './profile-name-resolver.ts';
 
 const log = createModuleLogger('newsletter-service');
 
@@ -361,6 +367,69 @@ export async function updateSubscriberDetails(
     message: `${normCurrentEmail} updated`,
     subscriber: toSubscriberView(updated),
   };
+}
+
+/**
+ * Propagate a client-manager profile rename to their newsletter records so
+ * article notifications and the admin newsletter UI use the current name.
+ *
+ * Keyed by the profile's CURRENT email. Only updates an EXISTING
+ * `newsletter:{email}` record — never creates one and never touches
+ * `active`/`confirmed` (so it can run on every profile save without
+ * subscribing non-subscribers or resurrecting unsubscribes). Also updates the
+ * matching Newsletter Contacts group external contact in place.
+ *
+ * Fire-and-forget by design: fully try/caught, never throws.
+ *
+ * Known limitation: if the profile email itself changed, the old
+ * `newsletter:{oldEmail}` record is keyed by the previous address and is not
+ * reachable here; delivery to that address falls back to its stored name.
+ */
+export async function syncClientProfileNamesToNewsletter(
+  profile: Record<string, unknown> | null | undefined,
+): Promise<void> {
+  try {
+    const email = getProfileEmail(profile);
+    if (!email) return;
+
+    const firstName = getProfileFirstName(profile, email);
+    const fullName = getProfileFullName(profile, firstName);
+    // Derive surname from the composed full name (first token is the first name).
+    const surname = fullName.startsWith(firstName) ? fullName.slice(firstName.length).trim() : '';
+
+    const key = `newsletter:${email}`;
+    const existing: SubscriberEntry | null = await kv.get(key);
+    if (!existing) {
+      // Not a subscriber via KV — still refresh the group external contact in
+      // case they are only present there (legacy backfill).
+      await updateNewsletterGroupExternalContactName(email, fullName || firstName);
+      return;
+    }
+
+    const composedName = fullName || firstName;
+    const namesChanged =
+      existing.firstName !== firstName ||
+      existing.surname !== surname ||
+      existing.name !== composedName;
+
+    if (namesChanged) {
+      const updated: SubscriberEntry = {
+        ...existing,
+        firstName,
+        surname,
+        name: composedName,
+        updatedAt: new Date().toISOString(),
+      };
+      await kv.set(key, updated);
+      log.info('Synced client profile name to newsletter subscriber', { email });
+    }
+
+    if (existing.active && existing.confirmed) {
+      await updateNewsletterGroupExternalContactName(email, composedName);
+    }
+  } catch (error) {
+    log.error('Failed to sync client profile names to newsletter (non-blocking)', error);
+  }
 }
 
 /**

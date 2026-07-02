@@ -14,6 +14,7 @@ import {
   syncProfileToApplication,
   extractUserIdFromProfileKey,
 } from './profile-application-sync.ts';
+import { syncClientProfileNamesToNewsletter } from './newsletter-service.ts';
 import { deepSanitize } from './client-management-utils.ts';
 
 const app = new Hono();
@@ -217,6 +218,14 @@ app.post(
           });
       }
 
+      // ── Profile → Newsletter name sync (fire-and-forget) ─────────────────
+      // Keep transactional-email recipient names current after a rename.
+      syncClientProfileNamesToNewsletter(finalProfile as Record<string, unknown>).catch(
+        (syncErr) => {
+          log.error('Profile → Newsletter background sync error', syncErr);
+        },
+      );
+
       return c.json({
         success: true,
         data: finalProfile,
@@ -279,6 +288,13 @@ app.put(
     await kv.set(key, updatedProfile);
 
     log.success('Profile updated (PUT)', { key });
+
+    // ── Profile → Newsletter name sync (fire-and-forget) ───────────────────
+    syncClientProfileNamesToNewsletter(updatedProfile as Record<string, unknown>).catch(
+      (syncErr) => {
+        log.error('Profile → Newsletter background sync error (PUT)', syncErr);
+      },
+    );
 
     return c.json({
       success: true,
