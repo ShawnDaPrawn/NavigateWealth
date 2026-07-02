@@ -20,15 +20,20 @@ const queryClient = new QueryClient({
       staleTime: 30000, // 30 seconds
       gcTime: 5 * 60 * 1000, // 5 minutes — evict inactive query data to free memory
       retry: (failureCount, error) => {
-        // Never retry 401/403 auth errors — the API client already attempted
-        // a session refresh. Retrying wastes network calls and delays the
-        // user seeing a meaningful error or being redirected to login.
         if (error instanceof Error && 'statusCode' in error) {
           const status = (error as any).statusCode;
-          if (status === 401 || status === 403) return false;
+          // 403 is a genuine authorization denial — never retry.
+          if (status === 403) return false;
+          // 401 means the session token wasn't accepted. The API client + global
+          // cache handler refresh the session in the background; retry a couple
+          // of times (with a short delay) so the query stays in its loading state
+          // and silently resolves once the fresh token lands — instead of
+          // flashing an error card that "fixes itself".
+          if (status === 401) return failureCount < 2;
         }
         return failureCount < 1;
       },
+      retryDelay: (attempt) => Math.min(400 * 2 ** attempt, 2000),
       refetchOnWindowFocus: true,
     },
     mutations: {

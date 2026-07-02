@@ -8,8 +8,29 @@
  * - Request/response interceptors
  */
 
-import { publicAnonKey, supabaseUrl } from '../supabase/info';
+import { publicAnonKey, supabaseUrl, projectId } from '../supabase/info';
 import { createClient } from '../supabase/client';
+
+/**
+ * Whether a persisted Supabase session exists in localStorage.
+ *
+ * Supabase stores the session under `sb-<projectId>-auth-token`. If that key is
+ * present, a logged-in user is expected and `getSession()` returning null simply
+ * means the client is still hydrating/refreshing the session asynchronously — we
+ * should wait for it rather than firing a request with the anon key (which would
+ * 401 and flash a transient error on screen). If the key is absent, the user is
+ * genuinely anonymous and the anon key is the correct, immediate choice.
+ */
+function hasPersistedSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(`sb-${projectId}-auth-token`) !== null;
+  } catch {
+    return false;
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Custom event dispatched when the API client detects the auth session is
@@ -60,6 +81,12 @@ class APIClient {
   // racing each other when multiple queries fire simultaneously with an expired token.
   private refreshPromise: Promise<string | null> | null = null;
 
+  // Mutex for session-hydration polling: initial screens fire several queries at
+  // once, and each would otherwise poll getSession() independently — recreating the
+  // parallel auth-client contention AGENTS.md warns about. All concurrent callers
+  // share this single in-flight poll instead.
+  private hydrationPromise: Promise<void> | null = null;
+
   // Tracks whether the client has ever successfully obtained a real auth token.
   // Used to distinguish "user was never logged in" (don't dispatch session-expired)
   // from "user was logged in but session died" (dispatch session-expired).
@@ -73,9 +100,22 @@ class APIClient {
   private async getAuthToken(): Promise<string> {
     try {
       const supabase = createClient();
-      const {
+      let {
         data: { session },
       } = await supabase.auth.getSession();
+
+      // Hydration race: on a cold load (or tab refocus) a logged-in user's
+      // session may not be ready the instant a query fires. If storage shows a
+      // session SHOULD exist but getSession() returned null, briefly wait for
+      // Supabase to finish hydrating instead of falling back to the anon key
+      // (which would 401 and flash a transient error). Bounded so genuinely
+      // anonymous users are never delayed.
+      if (!session && hasPersistedSession()) {
+        await this.waitForSessionHydration(supabase);
+        ({
+          data: { session },
+        } = await supabase.auth.getSession());
+      }
 
       if (!session) {
         // No session from getSession() — this can happen when:
@@ -121,6 +161,35 @@ class APIClient {
       // Fallback to anon key if session retrieval fails
       return publicAnonKey;
     }
+  }
+
+  /**
+   * Wait (bounded) for Supabase to finish hydrating a persisted session, polling
+   * getSession() until it returns one. Deduplicated: concurrent callers share a
+   * single in-flight poll so initial screens don't fan out N parallel getSession()
+   * loops against the auth client. Resolves as soon as a session appears or after
+   * the bounded attempts elapse.
+   */
+  private async waitForSessionHydration(supabase: ReturnType<typeof createClient>): Promise<void> {
+    if (this.hydrationPromise) {
+      return this.hydrationPromise;
+    }
+
+    this.hydrationPromise = (async () => {
+      try {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await sleep(100);
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session) return;
+        }
+      } finally {
+        this.hydrationPromise = null;
+      }
+    })();
+
+    return this.hydrationPromise;
   }
 
   /**
