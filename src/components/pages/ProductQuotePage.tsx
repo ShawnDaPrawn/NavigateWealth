@@ -218,7 +218,9 @@ export function ProductQuotePage() {
   // A quote wizard is a lead-gen funnel, not a search landing page. Mark it
   // noindex regardless of whether the service is valid (matches the edge
   // X-Robots-Tag in vercel.json) and clear any stale `index` meta left on the
-  // <head> by a previously-visited indexable page during SPA navigation.
+  // <head> by a previously-visited indexable page during SPA navigation. Keep
+  // `follow` so crawlers still traverse the links back to indexable pages
+  // (/get-quote, service pages) — matches the edge header and the contact step.
   useEffect(() => {
     let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!el) {
@@ -226,7 +228,7 @@ export function ProductQuotePage() {
       el.setAttribute('name', 'robots');
       document.head.appendChild(el);
     }
-    el.setAttribute('content', 'noindex, nofollow');
+    el.setAttribute('content', 'noindex, follow');
   }, [serviceConfig]);
 
   if (!serviceConfig) {
