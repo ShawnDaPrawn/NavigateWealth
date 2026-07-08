@@ -214,17 +214,19 @@ export function ProductQuotePage() {
     ],
   );
 
-  // ── Invalid service ─────────────────────────────────────────────────────────
+  // ── Keep quote funnel steps out of the search index ─────────────────────────
+  // A quote wizard is a lead-gen funnel, not a search landing page. Mark it
+  // noindex regardless of whether the service is valid (matches the edge
+  // X-Robots-Tag in vercel.json) and clear any stale `index` meta left on the
+  // <head> by a previously-visited indexable page during SPA navigation.
   useEffect(() => {
-    if (!serviceConfig) {
-      let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
-      if (!el) {
-        el = document.createElement('meta');
-        el.setAttribute('name', 'robots');
-        document.head.appendChild(el);
-      }
-      el.setAttribute('content', 'noindex, nofollow');
+    let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('name', 'robots');
+      document.head.appendChild(el);
     }
+    el.setAttribute('content', 'noindex, nofollow');
   }, [serviceConfig]);
 
   if (!serviceConfig) {

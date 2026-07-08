@@ -8,7 +8,6 @@ import {
   DEFAULT_OG_IMAGE_PATH,
   DEFAULT_OG_IMAGE_WIDTH,
   DEFAULT_SITE_URL,
-  absoluteUrl,
   clampSeoDescription,
   createArticleRoute,
   createArticleSchema,
@@ -20,7 +19,7 @@ import {
   requireArticles,
   resolveImageUrl,
   resolveSiteVerificationToken,
-  routeCanonicalPath,
+  routeCanonicalUrl,
 } from './seo-static-data.mjs';
 
 const distDir = path.resolve('dist');
@@ -60,7 +59,7 @@ async function main() {
 
   const manifest = routes.map((route) => ({
     path: route.path,
-    canonicalUrl: absoluteUrl(siteUrl, routeCanonicalPath(route)),
+    canonicalUrl: routeCanonicalUrl(route, siteUrl),
     title: route.title,
     sitemap: route.sitemap !== false,
   }));
@@ -173,7 +172,7 @@ function removeExistingStaticSeo(html) {
 }
 
 function buildHead(route) {
-  const canonicalUrl = absoluteUrl(siteUrl, routeCanonicalPath(route));
+  const canonicalUrl = routeCanonicalUrl(route, siteUrl);
   const ogImageUrl = resolveImageUrl(siteUrl, route.ogImage || DEFAULT_OG_IMAGE_PATH);
   const schema =
     route.schema === 'article'

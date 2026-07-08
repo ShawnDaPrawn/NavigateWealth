@@ -398,6 +398,35 @@ export function routeCanonicalPath(route) {
   return route.canonicalPath || route.path;
 }
 
+/**
+ * Absolute canonical URL for a route. Prefers an explicit absolute override
+ * (`route.canonicalUrl` — e.g. an article's admin-set `seo_canonical_url`) over
+ * the path-derived canonical, so the prerendered <link rel="canonical"> agrees
+ * with the runtime <SEO> tag (ArticleDetailPage honours the same override).
+ */
+export function routeCanonicalUrl(route, siteUrl) {
+  const override = typeof route.canonicalUrl === 'string' ? route.canonicalUrl.trim() : '';
+  if (override) return override;
+  return absoluteUrl(siteUrl, routeCanonicalPath(route));
+}
+
+/**
+ * When an article carries an admin-set canonical (`seo_canonical_url`) that
+ * points somewhere OTHER than its own URL, return that normalized absolute URL:
+ * the page is a deliberate duplicate that should canonicalise elsewhere and stay
+ * out of the sitemap. Returns null for a missing or self-referential canonical.
+ */
+export function resolveArticleCanonicalOverride(article, siteUrl) {
+  const raw =
+    typeof article?.seo_canonical_url === 'string' ? article.seo_canonical_url.trim() : '';
+  if (!raw) return null;
+  const slug = typeof article?.slug === 'string' ? article.slug.trim() : '';
+  if (!slug) return null;
+  const selfUrl = absoluteUrl(siteUrl, `/resources/article/${encodeURIComponent(slug)}`);
+  const strip = (value) => value.replace(/\/+$/, '');
+  return strip(raw) === strip(selfUrl) ? null : raw;
+}
+
 export function absoluteUrl(siteUrl, routePath) {
   return routePath === '/' ? siteUrl : `${siteUrl}${routePath}`;
 }
@@ -829,11 +858,12 @@ function breadcrumbItemsForRoute(route, siteUrl) {
   return items;
 }
 
-export function createArticleRoute(article, _siteUrl) {
+export function createArticleRoute(article, siteUrl) {
   const slug = typeof article?.slug === 'string' ? article.slug.trim() : '';
   if (!slug) return null;
 
   const path = `/resources/article/${encodeURIComponent(slug)}`;
+  const canonicalOverride = resolveArticleCanonicalOverride(article, siteUrl);
   const title = buildArticleTitle(article.title);
   const description = clampSeoDescription(
     article.excerpt ||
@@ -858,12 +888,15 @@ export function createArticleRoute(article, _siteUrl) {
     ogImage: image,
     schema: 'article',
     article,
+    // A duplicate that canonicalises to another page: emit the override canonical
+    // and keep it out of the sitemap so Google consolidates on the survivor.
+    ...(canonicalOverride ? { canonicalUrl: canonicalOverride, sitemap: false } : {}),
   };
 }
 
 export function createArticleSchema(route, siteUrl) {
   const article = route.article || {};
-  const canonical = absoluteUrl(siteUrl, route.path);
+  const canonical = routeCanonicalUrl(route, siteUrl);
   const image = resolveImageUrl(siteUrl, route.ogImage);
 
   return {

@@ -182,6 +182,9 @@ export function QuoteServiceContactPage() {
     <div className="min-h-screen bg-gray-50">
       <SEO
         {...seo}
+        // Lead-gen funnel step, not a search landing page. Kept out of the index
+        // (matches the edge X-Robots-Tag in vercel.json) but links are followed.
+        robotsContent="noindex, follow"
         structuredData={createWebPageSchema(seo.title, seo.description, seo.canonicalUrl)}
       />
       <div className="bg-[#1e2035] relative overflow-hidden">
