@@ -177,7 +177,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   const profileDataLoose = state.profileData as unknown as Record<string, unknown>;
   const handleInputChangeLoose = actions.handleInputChange as unknown as (
     field: string,
-    value: string | number | boolean,
+    value: unknown,
   ) => void;
   const registry = useUnsavedChangesRegistry();
 

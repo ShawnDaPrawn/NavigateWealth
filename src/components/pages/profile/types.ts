@@ -116,6 +116,13 @@ export interface ChronicCondition {
   treatingDoctor: string;
 }
 
+export interface BudgetExpense {
+  id: string;
+  description: string;
+  amount: number;
+  category: 'needs' | 'wants' | 'savings';
+}
+
 export interface RiskAssessment {
   question1: number;
   question2: number;
@@ -226,6 +233,9 @@ export interface ProfileData {
   // Assets & Liabilities
   assets: Asset[];
   liabilities: Liability[];
+
+  // Budgeting (50-30-20 expense tracking)
+  budgetExpenses: BudgetExpense[];
 }
 
 // ============================================================================

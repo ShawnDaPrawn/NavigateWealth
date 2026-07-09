@@ -53,7 +53,7 @@ interface BudgetingPageProps {
   netIncomeDisplay?: string;
   setNetIncomeDisplay?: (value: string) => void;
   profileData?: Record<string, unknown>;
-  handleInputChange?: (field: string, value: string | number | boolean) => void;
+  handleInputChange?: (field: string, value: unknown) => void;
 }
 
 const CATEGORY_COLORS = {
@@ -111,6 +111,7 @@ export function BudgetingPage({
   onEmptyStateAction,
   embedded,
   profileData,
+  handleInputChange,
 }: BudgetingPageProps) {
   const navigate = useNavigate();
 
@@ -123,7 +124,29 @@ export function BudgetingPage({
   const grossIncome =
     embedded && profileData ? Number(profileData.grossMonthlyIncome) || 0 : propGrossIncome || 0;
 
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  // Expense persistence.
+  //
+  // When the page is rendered inside a profile (client self-service or admin
+  // client viewer), `profileData.budgetExpenses` + `handleInputChange` are
+  // provided. In that mode expenses are a controlled slice of the profile, so
+  // they are saved and reloaded through the profile's existing Save button —
+  // exactly like assets, liabilities and bank accounts. Without those props
+  // (e.g. the standalone route or unit tests) we fall back to local state.
+  const persistedExpenses = Array.isArray(profileData?.budgetExpenses)
+    ? (profileData.budgetExpenses as Expense[])
+    : null;
+  const usePersistedExpenses = Boolean(handleInputChange) && persistedExpenses !== null;
+
+  const [localExpenses, setLocalExpenses] = useState<Expense[]>([]);
+  const expenses = usePersistedExpenses ? (persistedExpenses as Expense[]) : localExpenses;
+
+  const setExpenses = (next: Expense[]) => {
+    if (usePersistedExpenses && handleInputChange) {
+      handleInputChange('budgetExpenses', next);
+    } else {
+      setLocalExpenses(next);
+    }
+  };
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
 
@@ -500,6 +523,12 @@ export function BudgetingPage({
                     ? 'Fill in the details below to track your expense'
                     : `${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'} tracked • ${formatCurrency(totals.total)} total`}
                 </CardDescription>
+                {!isAddingExpense && usePersistedExpenses && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Changes are stored with the profile — use the Save button at the top to keep
+                    them.
+                  </p>
+                )}
               </div>
               {!isAddingExpense && (
                 <Button
