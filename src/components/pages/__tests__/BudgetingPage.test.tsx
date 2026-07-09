@@ -40,6 +40,18 @@ describe('BudgetingPage', () => {
     expect(matches.length).toBeGreaterThan(0);
   });
 
+  it('invokes onEmptyStateAction (instead of navigating away) from the empty state', () => {
+    const onEmptyStateAction = vi.fn();
+    render(
+      <MemoryRouter>
+        {/* netIncome defaults to 0 -> empty state is shown */}
+        <BudgetingPage onEmptyStateAction={onEmptyStateAction} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Go to Personal Info/i }));
+    expect(onEmptyStateAction).toHaveBeenCalledTimes(1);
+  });
+
   it('renders expenses supplied via profileData.budgetExpenses', () => {
     render(
       <MemoryRouter>
