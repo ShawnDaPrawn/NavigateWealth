@@ -9,6 +9,7 @@ import {
   normalizeSiteUrl,
   publicSeoRoutes,
   requireArticles,
+  resolveArticleCanonicalOverride,
   resolveImageUrl,
 } from './seo-static-data.mjs';
 
@@ -212,6 +213,11 @@ function rowsToArticleEntries(rows) {
   for (const a of rows) {
     const slug = typeof a?.slug === 'string' ? a.slug.trim() : '';
     if (!slug) continue;
+
+    // A duplicate that canonicalises to another page must not appear in the
+    // sitemap — otherwise Google sees a self-referential canonical in the
+    // sitemap conflicting with the page's override. Matches the prerenderer.
+    if (resolveArticleCanonicalOverride(a, siteUrl)) continue;
 
     const lastmod =
       toDateOnly(a.updated_at) ||

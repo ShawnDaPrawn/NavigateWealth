@@ -9,6 +9,7 @@ import {
   faqsForRoute,
   normalizeSiteUrl,
   publicSeoRoutes,
+  requireArticles,
   resolveSiteVerificationToken,
 } from './seo-static-data.mjs';
 
@@ -21,6 +22,7 @@ const failures = [];
 verifyRobots();
 verifySitemap();
 verifyStaticHtml();
+verifyArticlesPrerendered();
 verifySiteVerification();
 verifyEdgeNotFound();
 
@@ -139,6 +141,30 @@ function verifyStaticHtml() {
     }
     verifyStaticBody(route, html);
     verifyJsonLd(route.path, html);
+  }
+}
+
+/**
+ * On production builds (Vercel/CI, or SEO_REQUIRE_ARTICLES) at least one article
+ * must have been prerendered. A silently-empty article set means the build-time
+ * Supabase fetch degraded and every /resources/article/* URL would ship as a
+ * thin SPA shell — the exact "Crawled – currently not indexed" regression this
+ * pipeline exists to prevent. Local/offline builds are exempt.
+ */
+function verifyArticlesPrerendered() {
+  if (!requireArticles()) return;
+
+  const manifestPath = path.join(distDir, 'seo-routes.json');
+  if (!fs.existsSync(manifestPath)) return; // verifyStaticHtml already reports this.
+
+  const routes = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const articleCount = routes.filter((route) =>
+    route.path.startsWith('/resources/article/'),
+  ).length;
+  if (articleCount === 0) {
+    failures.push(
+      'no article pages were prerendered on a production build — the article fetch likely failed',
+    );
   }
 }
 

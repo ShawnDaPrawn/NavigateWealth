@@ -43,6 +43,11 @@
         "Cache-Control": "private, no-store, must-revalidate"
       }
     },
+    {
+      "src": "/get-quote/.+",
+      "dest": "/index.html",
+      "headers": { "X-Robots-Tag": "noindex, follow" }
+    },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
