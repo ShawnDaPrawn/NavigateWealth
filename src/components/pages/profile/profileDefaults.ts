@@ -107,4 +107,7 @@ export const getInitialProfileData = (
   // Assets & Liabilities
   assets: [],
   liabilities: [],
+
+  // Budgeting
+  budgetExpenses: [],
 });
