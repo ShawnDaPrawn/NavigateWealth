@@ -145,6 +145,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     },
     assets: initialPersonalInfo?.assets || [],
     liabilities: initialPersonalInfo?.liabilities || [],
+    budgetExpenses: initialPersonalInfo?.budgetExpenses || [],
   });
 
   // Edit mode tracking states
@@ -240,6 +241,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
             bankAccounts: profile.bankAccounts || [],
             assets: profile.assets || [],
             liabilities: profile.liabilities || [],
+            budgetExpenses: profile.budgetExpenses || [],
             // Ensure identity fields are not undefined/null
             idCountry: profile.idCountry || 'South Africa',
             idNumber: profile.idNumber || '',

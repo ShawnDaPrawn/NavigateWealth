@@ -168,6 +168,13 @@ export interface RiskAssessment {
   canRetake: boolean;
 }
 
+export interface BudgetExpense {
+  id: string;
+  description: string;
+  amount: number;
+  category: 'needs' | 'wants' | 'savings';
+}
+
 export interface ProfileData {
   title: string;
   firstName: string;
@@ -239,6 +246,7 @@ export interface ProfileData {
   riskAssessment: RiskAssessment;
   assets: Asset[];
   liabilities: Liability[];
+  budgetExpenses?: BudgetExpense[];
 }
 
 // API Responses

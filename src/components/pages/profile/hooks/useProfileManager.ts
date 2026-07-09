@@ -396,6 +396,7 @@ export function useProfileManager({
               bankAccounts: result.data.bankAccounts || [],
               assets: result.data.assets || [],
               liabilities: result.data.liabilities || [],
+              budgetExpenses: result.data.budgetExpenses || [],
               idCountry: result.data.idCountry || 'South Africa',
               idNumber: result.data.idNumber || '',
               passportCountry: result.data.passportCountry || '',
