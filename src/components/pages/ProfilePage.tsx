@@ -413,6 +413,7 @@ export function ProfilePage() {
               <BudgetingPage
                 netIncome={pm.profileData.netIncome}
                 grossIncome={pm.profileData.grossIncome}
+                onEmptyStateAction={() => handleSectionChange('personal')}
                 profileData={pm.profileData as unknown as Record<string, unknown>}
                 handleInputChange={
                   pm.handleInputChange as unknown as (field: string, value: unknown) => void

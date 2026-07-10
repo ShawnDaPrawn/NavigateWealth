@@ -1029,6 +1029,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             <BudgetingPage
               userId={clientData.id}
               embedded={true}
+              onEmptyStateAction={() => handleSectionChange('personal')}
               incomeValidationError={state.incomeValidationError}
               setIncomeValidationError={
                 actions.setIncomeValidationError as (error: string | null) => void
