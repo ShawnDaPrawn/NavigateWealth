@@ -222,7 +222,7 @@ export function LinktreePage() {
             <img
               src={navigateWealthLogo}
               alt="Navigate Wealth"
-              className="mb-6 h-auto w-[260px] max-w-[78vw]"
+              className="mb-6 h-auto w-[210px] max-w-[68vw]"
               style={{ imageRendering: 'auto' }}
             />
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-[#6d28d9]/15 bg-white shadow-sm">
@@ -245,7 +245,7 @@ export function LinktreePage() {
             <img
               src={navigateWealthLogo}
               alt="Navigate Wealth"
-              className="mb-7 h-auto w-[260px] max-w-[78vw]"
+              className="mb-7 h-auto w-[210px] max-w-[68vw]"
               style={{ imageRendering: 'auto' }}
             />
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-[#6d28d9]/15 bg-white shadow-sm">
@@ -280,7 +280,7 @@ export function LinktreePage() {
             <img
               src={navigateWealthLogo}
               alt="Navigate Wealth"
-              className="h-auto w-[300px] max-w-[82vw] sm:w-[340px]"
+              className="h-auto w-[230px] max-w-[72vw] sm:w-[270px]"
               style={{ imageRendering: 'auto' }}
             />
             <div className="mt-5 h-1 w-16 rounded-full bg-gradient-to-r from-[#6d28d9] to-[#7c3aed]" />
