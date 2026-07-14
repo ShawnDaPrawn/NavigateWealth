@@ -21,6 +21,20 @@ type NavigatorWithRelatedApps = Navigator & {
   getInstalledRelatedApps?: () => Promise<unknown[]>;
 };
 
+// The install prompt is disabled on mobile devices — visitors found it intrusive.
+// Detect phones/tablets via the UA (plus touch-capable MacIntel for iPadOS, which
+// reports as desktop Safari) so the banner only ever shows on desktop browsers.
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const uaDataMobile = (navigator as Navigator & { userAgentData?: { mobile?: boolean } })
+    .userAgentData?.mobile;
+  if (uaDataMobile) return true;
+  return (
+    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
 // iOS Safari never fires `beforeinstallprompt`, so the only way to install is the
 // manual "Share -> Add to Home Screen" flow. Detect iOS Safari to show instructions
 // rather than a (non-functional) one-tap install button. iPadOS reports as desktop
@@ -72,7 +86,9 @@ function isDismissedThisSession(): boolean {
  * "Download our app" install prompt for the Navigate Wealth client portal.
  *
  * Shows a dismissible banner on the homepage and auth pages inviting users to
- * install the PWA. On Android/desktop Chrome it triggers the native install
+ * install the PWA. The banner is suppressed entirely on mobile devices (phones
+ * and tablets) — visitors found it intrusive — so it only appears in desktop
+ * browsers. On Android/desktop Chrome it triggers the native install
  * prompt captured by {@link usePWAInstall}; on iOS Safari it opens a sheet with
  * "Add to Home Screen" instructions. Once the app is installed it never asks
  * again — a persistent `nw-pwa-installed` flag suppresses the prompt across
@@ -180,7 +196,8 @@ export function InstallAppPrompt() {
   const alreadyInstalled = isAppInstalled || isStandalone || (iosSafari && installedFlag);
   // Android/desktop need a captured prompt; iOS Safari is always eligible.
   const canPrompt = iosSafari || showInstallOption;
-  const visible = onPromptRoute && !alreadyInstalled && !dismissed && canPrompt;
+  const visible =
+    onPromptRoute && !alreadyInstalled && !dismissed && canPrompt && !isMobileDevice();
 
   if (!visible) {
     return null;
