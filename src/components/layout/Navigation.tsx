@@ -91,8 +91,15 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
               </Link>
 
               {/* Mega menus — the root/list stay `static` so each panel positions
-                  against the navbar row and spans the full content width */}
-              <NavigationMenu viewport={false} className="static max-w-none flex-none">
+                  against the navbar row and spans the full content width. The
+                  aria-label gives Radix's inner <nav> a unique accessible name so
+                  it reads as an intentional, distinct landmark (not a duplicate of
+                  the outer "Main navigation"). */}
+              <NavigationMenu
+                viewport={false}
+                aria-label="Services, Solutions and Company"
+                className="static max-w-none flex-none"
+              >
                 <NavigationMenuList className="static space-x-8 gap-0">
                   <NavMegaMenu
                     label="Services"
