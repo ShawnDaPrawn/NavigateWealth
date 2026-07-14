@@ -42,9 +42,9 @@ import { FilterPresetBar } from './components/FilterPresetBar';
 import type { CurrentFilterState } from './components/FilterPresetBar';
 import { DraggablePinnedGrid } from './components/DraggablePinnedGrid';
 import { ColourLabelsDialog } from './components/ColourLabelsDialog';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clientKeys, noteKeys } from '../../../../utils/queryKeys';
-import { api } from '../../../../utils/api/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { noteKeys } from '../../../../utils/queryKeys';
+import { useClients } from '../../../../hooks/useClients';
 import { NotesAPI } from './api';
 import { toast } from 'sonner';
 
@@ -109,42 +109,19 @@ export function NotesModule() {
   const colourLabels = useColourLabels(personnelId);
   const [colourLabelsOpen, setColourLabelsOpen] = useState(false);
 
-  // Fetch clients for the linking dropdown. /clients is paginated (default
-  // limit 50), so page through until every client is loaded — otherwise the
-  // dropdown silently shows only the first page.
-  const { data: linkableClients } = useQuery({
-    queryKey: clientKeys.list({ scope: 'note-linking' }),
-    queryFn: async () => {
-      interface ClientRecord {
-        id: string;
-        firstName?: string;
-        lastName?: string;
-      }
-      const perPage = 100;
-      const all: ClientRecord[] = [];
-      let offset = 0;
-      for (;;) {
-        const res = await api.get<{ clients?: ClientRecord[]; total?: number }>(
-          `/clients?limit=${perPage}&offset=${offset}`,
-        );
-        const batch = Array.isArray(res?.clients) ? res.clients : [];
-        all.push(...batch);
-        const total = typeof res?.total === 'number' ? res.total : all.length;
-        if (batch.length < perPage || all.length >= total) break;
-        offset += perPage;
-      }
-      return all;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  // Fetch clients for the linking dropdown. Reuse the shared useClients hook
+  // (backed by the single-request profile/all-users endpoint) rather than
+  // paging /clients — that route re-scans the full client set on every page,
+  // so paging it would trigger one full scan per page.
+  const { data: linkableClients } = useClients();
 
   const clientOptions = useMemo(() => {
     if (!Array.isArray(linkableClients)) return [];
     return linkableClients
-      .filter((c) => c.id && (c.firstName || c.lastName))
+      .filter((c) => c.id && c.full_name && c.full_name !== 'Unknown User')
       .map((c) => ({
         id: c.id,
-        name: [c.firstName, c.lastName].filter(Boolean).join(' '),
+        name: c.full_name,
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
   }, [linkableClients]);
