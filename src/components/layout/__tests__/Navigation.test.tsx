@@ -23,10 +23,13 @@ function renderNavigation() {
   );
 }
 
-/** Open a Radix dropdown trigger (Radix opens on pointerdown, not click). */
+/** Open a NavigationMenu trigger (click toggles the panel). */
 function openMenu(name: RegExp) {
-  const trigger = screen.getByRole('button', { name });
-  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+  fireEvent.click(screen.getByRole('button', { name }));
+}
+
+function getPanelLink(name: RegExp): HTMLElement {
+  return screen.getByRole('link', { name });
 }
 
 describe('Navigation mega menus', () => {
@@ -38,18 +41,15 @@ describe('Navigation mega menus', () => {
     renderNavigation();
 
     openMenu(/^Services$/);
-    const menu = await screen.findByRole('menu');
-    expect(menu).toBeTruthy();
+    await screen.findByAltText("Coins and a growing plant on an adviser's desk");
 
     for (const item of serviceItems) {
-      const link = screen.getByRole('menuitem', { name: new RegExp(item.label) });
+      const link = getPanelLink(new RegExp(item.label));
       expect(link.getAttribute('href')).toBe(item.path);
       expect(link.textContent).toContain(item.description);
     }
 
-    expect(screen.getByAltText("Coins and a growing plant on an adviser's desk")).toBeTruthy();
-
-    const cta = screen.getByRole('menuitem', { name: /View all services/i });
+    const cta = getPanelLink(/View all services/i);
     expect(cta.getAttribute('href')).toBe('/services');
   });
 
@@ -57,30 +57,26 @@ describe('Navigation mega menus', () => {
     renderNavigation();
 
     openMenu(/^Solutions$/);
-    await screen.findByRole('menu');
+    await screen.findByAltText('Financial adviser consulting with clients');
 
     for (const item of solutionItems) {
-      const link = screen.getByRole('menuitem', { name: new RegExp(item.label) });
+      const link = getPanelLink(new RegExp(item.label));
       expect(link.getAttribute('href')).toBe(item.path);
       expect(link.textContent).toContain(item.description);
     }
-    expect(screen.getByAltText('Financial adviser consulting with clients')).toBeTruthy();
   });
 
   it('shows the company tiles with descriptions and panel image', async () => {
     renderNavigation();
 
     openMenu(/^Company$/);
-    await screen.findByRole('menu');
+    await screen.findByAltText('Navigate Wealth advisers working with a client');
 
     for (const item of companyItems) {
-      const link = screen.getByRole('menuitem', {
-        name: new RegExp(item.label.replace('?', '\\?')),
-      });
+      const link = getPanelLink(new RegExp(item.label.replace('?', '\\?')));
       expect(link.getAttribute('href')).toBe(item.path);
       expect(link.textContent).toContain(item.description);
     }
-    expect(screen.getByAltText('Navigate Wealth advisers working with a client')).toBeTruthy();
   });
 
   it('keeps the mobile accordion listing every service', () => {
