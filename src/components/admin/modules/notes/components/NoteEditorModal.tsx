@@ -30,13 +30,16 @@ import { Label } from '../../../../ui/label';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../../../../ui/command';
+import { cn } from '../../../../ui/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +56,8 @@ import {
   User,
   Link2,
   Unlink,
+  Check,
+  ChevronsUpDown,
   ListTodo,
   CheckCircle2,
   Trash2,
@@ -221,6 +226,7 @@ export function NoteEditorModal({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('write');
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
 
   // ── Summary state ────────────────────────────────────────────────────────
   const [localSummary, setLocalSummary] = useState<string | null>(null);
@@ -252,6 +258,10 @@ export function NoteEditorModal({
   }, [isEditing, onAutoSave, title, autoSave, buildAutoSavePayload]);
 
   // ── Reset form when opening ─────────────────────────────────────────────
+  // Depends on autoSave.reset (stable) rather than the autoSave object — the
+  // object's identity changes every render, which re-ran this effect on each
+  // keystroke and wiped the form.
+  const resetAutoSaveStatus = autoSave.reset;
   useEffect(() => {
     if (!isOpen) return;
 
@@ -275,8 +285,8 @@ export function NoteEditorModal({
       setLocalSummary(null);
     }
     setEditorMode('write');
-    autoSave.reset();
-  }, [note, isOpen, defaultClientId, defaultClientName, autoSave]);
+    resetAutoSaveStatus();
+  }, [note, isOpen, defaultClientId, defaultClientName, resetAutoSaveStatus]);
 
   // ── Summarise handler ──────────────────────────────────────────────────
   const handleSummarise = useCallback(async () => {
@@ -514,8 +524,10 @@ export function NoteEditorModal({
           className={`max-w-3xl h-[85vh] p-0 gap-0 overflow-hidden flex flex-col ${colorCfg.bg}`}
         >
           {/* ── Header ─────────────────────────────────────────────────── */}
+          {/* pr-12 keeps the colour swatches clear of the dialog's built-in
+              close button (absolute top-4 right-4) */}
           <div
-            className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${colorCfg.headerBg} ${colorCfg.border}`}
+            className={`pl-6 pr-12 py-4 border-b flex items-center justify-between shrink-0 ${colorCfg.headerBg} ${colorCfg.border}`}
           >
             <div className="flex items-center gap-3">
               <DialogTitle className="text-lg font-bold text-gray-900">
@@ -784,25 +796,79 @@ export function NoteEditorModal({
                     Link to Client
                   </Label>
                   {clients.length > 0 ? (
-                    <Select value={clientId || '__none__'} onValueChange={handleClientChange}>
-                      <SelectTrigger className="h-9 text-sm mt-1">
-                        <SelectValue placeholder="No client linked" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">
-                          <span className="flex items-center gap-2">
-                            <Unlink className="h-3.5 w-3.5 text-gray-400" /> No client linked
+                    <Popover
+                      open={clientPickerOpen}
+                      onOpenChange={setClientPickerOpen}
+                      modal={true}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={clientPickerOpen}
+                          className="w-full justify-between h-9 text-sm mt-1 font-normal"
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            {clientId && clientName ? (
+                              <span className="contents">
+                                <Link2 className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                                <span className="truncate">{clientName}</span>
+                              </span>
+                            ) : (
+                              <span className="contents">
+                                <Unlink className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                <span className="text-gray-500">No client linked</span>
+                              </span>
+                            )}
                           </span>
-                        </SelectItem>
-                        {clients.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <span className="flex items-center gap-2">
-                              <Link2 className="h-3.5 w-3.5 text-purple-500" /> {c.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[360px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search clients..." />
+                          <CommandList>
+                            <CommandEmpty>No client found.</CommandEmpty>
+                            <CommandGroup className="max-h-[240px] overflow-auto">
+                              <CommandItem
+                                value="__none__"
+                                onSelect={() => {
+                                  handleClientChange('__none__');
+                                  setClientPickerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    !clientId ? 'opacity-100' : 'opacity-0',
+                                  )}
+                                />
+                                <Unlink className="h-3.5 w-3.5 text-gray-400" /> No client linked
+                              </CommandItem>
+                              {clients.map((c) => (
+                                <CommandItem
+                                  key={c.id}
+                                  value={`${c.name} ${c.id}`}
+                                  onSelect={() => {
+                                    handleClientChange(c.id);
+                                    setClientPickerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      clientId === c.id ? 'opacity-100' : 'opacity-0',
+                                    )}
+                                  />
+                                  <Link2 className="h-3.5 w-3.5 text-purple-500" /> {c.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   ) : clientName ? (
                     <div className="flex items-center gap-2 mt-1">
                       <Badge className="bg-purple-100 text-purple-700 border-purple-200">

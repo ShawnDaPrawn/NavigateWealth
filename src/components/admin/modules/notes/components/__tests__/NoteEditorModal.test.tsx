@@ -10,7 +10,7 @@
  * context requirements and MediaDevices API usage in jsdom.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen, fireEvent } from '@/test/utils';
 
 vi.mock('@/components/admin/modules/notes/hooks/useSummariseNote', () => ({
   useSummariseNote: () => ({ isPending: false, mutate: vi.fn() }),
@@ -82,5 +82,44 @@ describe('NoteEditorModal', () => {
       />,
     );
     expect(screen.getByText('Edit Note')).toBeTruthy();
+  });
+
+  // Regression: the form-reset effect used to depend on the unstable autoSave
+  // object, re-running on every render and wiping title/content as you typed.
+  it('keeps typed text in the title and content fields', () => {
+    render(
+      <NoteEditorModal
+        isOpen={true}
+        onClose={noop}
+        personnelId="p-1"
+        personnelName="Test User"
+        onSave={noopSave}
+      />,
+    );
+
+    const titleInput = screen.getByPlaceholderText('Note title...') as HTMLInputElement;
+    fireEvent.change(titleInput, { target: { value: 'Meeting notes' } });
+    expect(titleInput.value).toBe('Meeting notes');
+
+    const contentArea = screen.getByPlaceholderText(/write your note here/i) as HTMLTextAreaElement;
+    fireEvent.change(contentArea, { target: { value: 'Discussed portfolio rebalance' } });
+    expect(contentArea.value).toBe('Discussed portfolio rebalance');
+    expect(titleInput.value).toBe('Meeting notes');
+  });
+
+  it('renders the searchable client picker trigger when clients are provided', () => {
+    render(
+      <NoteEditorModal
+        isOpen={true}
+        onClose={noop}
+        personnelId="p-1"
+        personnelName="Test User"
+        clients={[{ id: 'c-1', name: 'Jane Doe' }]}
+        onSave={noopSave}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox');
+    expect(trigger.textContent).toContain('No client linked');
   });
 });
