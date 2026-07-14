@@ -1,40 +1,31 @@
 /**
- * Linktree Routes — CRUD for company link-in-bio links
+ * Linktree Routes - CRUD for company link-in-bio links.
  *
  * KV key pattern:
- *   linktree:links     — JSON array of LinktreeLink[]
- *   linktree:settings  — JSON object of page-level settings (title, bio, theme)
+ *   linktree:links     - JSON array of LinktreeLink[]
+ *   linktree:settings  - JSON object of page-level settings
  *
- * Public GET endpoint does NOT require auth (served to Instagram visitors).
- * All mutation endpoints require admin auth.
- *
- * @module server/linktree-routes
+ * Public GET/click endpoints do not require auth. All management endpoints
+ * require admin auth in this router.
  */
 
 import { Hono } from 'npm:hono';
+import { normalizeNavigateWealthUrl } from '../../../utils/siteOrigin.ts';
 import { requireAdmin } from './auth-mw.ts';
 import * as kv from './kv_store.tsx';
 
 const app = new Hono();
 
-// SECURITY (per-router auth sweep): the public marketing link-in-bio page
-// reads /public and records /click anonymously; everything else is the admin
-// editor (LinktreeTab, which sends a session JWT) and must be admin-gated.
-// Registered before the routes so it applies to all matching methods.
 app.use('/links', requireAdmin);
 app.use('/links/*', requireAdmin);
 app.use('/reorder', requireAdmin);
 app.use('/settings', requireAdmin);
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface LinktreeLink {
   id: string;
   title: string;
   url: string;
-  icon?: string; // Lucide icon slug
+  icon?: string;
   description?: string;
   enabled: boolean;
   order: number;
@@ -49,12 +40,12 @@ interface LinktreeSettings {
   avatarUrl?: string;
   theme: 'navy' | 'gold' | 'light' | 'dark';
   showBranding: boolean;
-  socialProfiles?: Record<string, string>; // e.g. { instagram: 'https://...', linkedin: 'https://...' }
+  socialProfiles?: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: LinktreeSettings = {
   title: 'Navigate Wealth',
-  bio: 'Independent Financial Advice · FSCA Regulated · FSP 54606',
+  bio: 'Independent Financial Advice | FSCA Regulated | FSP 54606',
   theme: 'navy',
   showBranding: true,
   socialProfiles: {},
@@ -63,67 +54,74 @@ const DEFAULT_SETTINGS: LinktreeSettings = {
 const KV_LINKS = 'linktree:links';
 const KV_SETTINGS = 'linktree:settings';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function generateId(): string {
   return `lnk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeLink(link: LinktreeLink): LinktreeLink {
+  return {
+    ...link,
+    url: normalizeNavigateWealthUrl(link.url),
+  };
+}
+
+function normalizeSettings(settings: LinktreeSettings): LinktreeSettings {
+  const socialProfiles: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(settings.socialProfiles || {})) {
+    if (typeof value === 'string' && value.trim()) {
+      socialProfiles[key] = normalizeNavigateWealthUrl(value);
+    }
+  }
+
+  return {
+    ...settings,
+    socialProfiles,
+  };
 }
 
 async function getLinks(): Promise<LinktreeLink[]> {
   const raw = await kv.get(KV_LINKS);
   if (!raw) return [];
+
   try {
-    // KV stores JSONB — value is already parsed by Supabase.
-    // If it's somehow a string (legacy double-encode), parse it.
-    if (typeof raw === 'string') return JSON.parse(raw);
-    if (Array.isArray(raw)) return raw;
-    return [];
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed.map(normalizeLink) : [];
   } catch {
     return [];
   }
 }
 
 async function saveLinks(links: LinktreeLink[]): Promise<void> {
-  // KV column is JSONB — pass the object directly, do NOT JSON.stringify.
-  await kv.set(KV_LINKS, links);
+  await kv.set(KV_LINKS, links.map(normalizeLink));
 }
 
 async function getSettings(): Promise<LinktreeSettings> {
   const raw = await kv.get(KV_SETTINGS);
   if (!raw) return DEFAULT_SETTINGS;
+
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return normalizeSettings({ ...DEFAULT_SETTINGS, ...parsed });
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
 async function saveSettings(settings: LinktreeSettings): Promise<void> {
-  // KV column is JSONB — pass the object directly, do NOT JSON.stringify.
-  await kv.set(KV_SETTINGS, settings);
+  await kv.set(KV_SETTINGS, normalizeSettings(settings));
 }
-
-// ============================================================================
-// Public — GET links + settings (no auth)
-// ============================================================================
 
 app.get('/public', async (c) => {
   try {
     const [links, settings] = await Promise.all([getLinks(), getSettings()]);
-    const enabledLinks = links.filter((l) => l.enabled).sort((a, b) => a.order - b.order);
+    const enabledLinks = links.filter((link) => link.enabled).sort((a, b) => a.order - b.order);
     return c.json({ success: true, data: { links: enabledLinks, settings } });
   } catch (error: unknown) {
     console.error('[linktree] Error fetching public data:', error);
     return c.json({ success: false, error: 'Failed to load links' }, 500);
   }
 });
-
-// ============================================================================
-// Admin — GET all links (including disabled)
-// ============================================================================
 
 app.get('/links', async (c) => {
   try {
@@ -135,10 +133,6 @@ app.get('/links', async (c) => {
   }
 });
 
-// ============================================================================
-// Admin — CREATE link
-// ============================================================================
-
 app.post('/links', async (c) => {
   try {
     const body = await c.req.json();
@@ -149,9 +143,9 @@ app.post('/links', async (c) => {
     }
 
     const links = await getLinks();
-    const maxOrder = links.reduce((max, l) => Math.max(max, l.order), -1);
+    const maxOrder = links.reduce((max, link) => Math.max(max, link.order), -1);
 
-    const newLink: LinktreeLink = {
+    const newLink: LinktreeLink = normalizeLink({
       id: generateId(),
       title: title.trim(),
       url: url.trim(),
@@ -162,7 +156,7 @@ app.post('/links', async (c) => {
       clicks: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     links.push(newLink);
     await saveLinks(links);
@@ -174,27 +168,23 @@ app.post('/links', async (c) => {
   }
 });
 
-// ============================================================================
-// Admin — UPDATE link
-// ============================================================================
-
 app.put('/links/:id', async (c) => {
   try {
     const { id } = c.req.param();
     const body = await c.req.json();
     const links = await getLinks();
-    const index = links.findIndex((l) => l.id === id);
+    const index = links.findIndex((link) => link.id === id);
 
     if (index === -1) {
       return c.json({ success: false, error: 'Link not found' }, 404);
     }
 
-    const updated: LinktreeLink = {
+    const updated: LinktreeLink = normalizeLink({
       ...links[index],
       ...body,
-      id, // Immutable
+      id,
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     links[index] = updated;
     await saveLinks(links);
@@ -206,15 +196,11 @@ app.put('/links/:id', async (c) => {
   }
 });
 
-// ============================================================================
-// Admin — DELETE link
-// ============================================================================
-
 app.delete('/links/:id', async (c) => {
   try {
     const { id } = c.req.param();
     const links = await getLinks();
-    const filtered = links.filter((l) => l.id !== id);
+    const filtered = links.filter((link) => link.id !== id);
 
     if (filtered.length === links.length) {
       return c.json({ success: false, error: 'Link not found' }, 404);
@@ -228,10 +214,6 @@ app.delete('/links/:id', async (c) => {
   }
 });
 
-// ============================================================================
-// Admin — REORDER links
-// ============================================================================
-
 app.put('/reorder', async (c) => {
   try {
     const { orderedIds } = await c.req.json();
@@ -242,17 +224,16 @@ app.put('/reorder', async (c) => {
     const links = await getLinks();
     const reordered = orderedIds
       .map((id: string, index: number) => {
-        const link = links.find((l) => l.id === id);
+        const link = links.find((candidate) => candidate.id === id);
         if (!link) return null;
         return { ...link, order: index, updatedAt: new Date().toISOString() };
       })
       .filter(Boolean) as LinktreeLink[];
 
-    // Append any links not in orderedIds
     const orderedSet = new Set(orderedIds);
     const remaining = links
-      .filter((l) => !orderedSet.has(l.id))
-      .map((l, i) => ({ ...l, order: reordered.length + i }));
+      .filter((link) => !orderedSet.has(link.id))
+      .map((link, index) => ({ ...link, order: reordered.length + index }));
 
     await saveLinks([...reordered, ...remaining]);
     return c.json({ success: true });
@@ -261,10 +242,6 @@ app.put('/reorder', async (c) => {
     return c.json({ success: false, error: 'Failed to reorder links' }, 500);
   }
 });
-
-// ============================================================================
-// Admin — GET / UPDATE settings
-// ============================================================================
 
 app.get('/settings', async (c) => {
   try {
@@ -280,7 +257,7 @@ app.put('/settings', async (c) => {
   try {
     const body = await c.req.json();
     const current = await getSettings();
-    const updated = { ...current, ...body };
+    const updated = normalizeSettings({ ...current, ...body });
     await saveSettings(updated);
     return c.json({ success: true, data: updated });
   } catch (error: unknown) {
@@ -289,22 +266,18 @@ app.put('/settings', async (c) => {
   }
 });
 
-// ============================================================================
-// Public — Track click
-// ============================================================================
-
 app.post('/click/:id', async (c) => {
   try {
     const { id } = c.req.param();
     const links = await getLinks();
-    const index = links.findIndex((l) => l.id === id);
+    const index = links.findIndex((link) => link.id === id);
     if (index !== -1) {
       links[index].clicks += 1;
       await saveLinks(links);
     }
     return c.json({ success: true });
   } catch {
-    return c.json({ success: true }); // Fail silently for click tracking
+    return c.json({ success: true });
   }
 });
 

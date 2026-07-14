@@ -1,43 +1,31 @@
 /**
- * Public Linktree Page — /links
- *
- * A standalone link-in-bio page styled to match the Navigate Wealth platform
- * design language:
- *   - Deep navy layered gradients with radial glows & dot-grid pattern
- *   - Official logo & branding
- *   - Glassmorphism link cards
- *   - Purple accent system consistent with homepage hero
- *
- * No app chrome (no nav, no footer). Accessible from social media profiles.
- * Tracks clicks back to the server for analytics.
- *
- * @module pages/LinktreePage
+ * Public link-in-bio page for /links.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ExternalLink,
-  Loader2,
-  Shield,
-  Globe,
   ArrowUpRight,
-  Link as LinkIcon,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Mail,
-  Phone,
-  MapPin,
+  BookOpen,
+  CalendarCheck,
+  ExternalLink,
   Facebook,
+  FileText,
+  Globe,
+  Instagram,
+  Link as LinkIcon,
+  Linkedin,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Shield,
   Twitter,
+  Youtube,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { normalizeNavigateWealthUrl, SITE_ORIGIN } from '../../utils/siteOrigin';
 import { SEO } from '../seo/SEO';
 import navigateWealthLogo from 'figma:asset/8dc2892f50ecc4c5f692fd5ad52639699e2e4656.png';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface LinktreeLink {
   id: string;
@@ -58,32 +46,20 @@ interface LinktreeSettings {
   socialProfiles?: Record<string, string>;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
+const seoProps = {
+  title: 'Navigate Wealth Links',
+  description: 'Official Navigate Wealth links, resources, services, and contact details.',
+  canonicalUrl: `${SITE_ORIGIN}/links`,
+  robotsContent: 'noindex, nofollow',
+};
 
-const BRAND = {
-  navy: '#1B2A4A',
-  gold: '#C9A84C',
-  heroBg: '#1a1e36',
-  heroMid: '#252a47',
-} as const;
+const LINK_ACCENTS = [
+  { surface: 'bg-[#C9A84C]/[0.14] border-[#C9A84C]/[0.28]', icon: 'text-[#E4C766]' },
+  { surface: 'bg-[#78D6C6]/[0.12] border-[#78D6C6]/25', icon: 'text-[#78D6C6]' },
+  { surface: 'bg-[#A9B7FF]/[0.12] border-[#A9B7FF]/25', icon: 'text-[#A9B7FF]' },
+  { surface: 'bg-[#F2A65A]/[0.12] border-[#F2A65A]/25', icon: 'text-[#F2A65A]' },
+];
 
-/** Map common URL patterns to icons for visual interest */
-function getLinkIcon(url: string): React.ComponentType<{ className?: string }> {
-  const lower = url.toLowerCase();
-  if (lower.includes('instagram.com')) return Instagram;
-  if (lower.includes('linkedin.com')) return Linkedin;
-  if (lower.includes('youtube.com')) return Youtube;
-  if (lower.includes('facebook.com')) return Facebook;
-  if (lower.includes('twitter.com') || lower.includes('x.com')) return Twitter;
-  if (lower.includes('mailto:')) return Mail;
-  if (lower.includes('tel:')) return Phone;
-  if (lower.includes('maps.google') || lower.includes('goo.gl/maps')) return MapPin;
-  return ExternalLink;
-}
-
-/** Social profile icon lookup */
 const SOCIAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   instagram: Instagram,
   linkedin: Linkedin,
@@ -98,13 +74,60 @@ const SOCIAL_LABEL_MAP: Record<string, string> = {
   linkedin: 'LinkedIn',
   facebook: 'Facebook',
   youtube: 'YouTube',
-  twitter: 'X (Twitter)',
+  twitter: 'X',
   email: 'Email',
 };
 
-// ============================================================================
-// Component
-// ============================================================================
+function getLinkIcon(url: string): React.ComponentType<{ className?: string }> {
+  const lower = url.toLowerCase();
+  if (lower.includes('instagram.com')) return Instagram;
+  if (lower.includes('linkedin.com')) return Linkedin;
+  if (lower.includes('youtube.com')) return Youtube;
+  if (lower.includes('facebook.com')) return Facebook;
+  if (lower.includes('twitter.com') || lower.includes('x.com')) return Twitter;
+  if (lower.startsWith('mailto:')) return Mail;
+  if (lower.startsWith('tel:')) return Phone;
+  if (lower.includes('maps.google') || lower.includes('goo.gl/maps')) return MapPin;
+  if (lower.includes('/contact') || lower.includes('consultation')) return CalendarCheck;
+  if (lower.includes('/resources') || lower.includes('/blog')) return BookOpen;
+  if (lower.includes('/services')) return FileText;
+  return ExternalLink;
+}
+
+function formatDisplayUrl(url: string): string {
+  if (url.startsWith('mailto:')) return url.replace(/^mailto:/, '');
+  if (url.startsWith('tel:')) return url.replace(/^tel:/, '');
+
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
+    return `${parsed.hostname}${path}`;
+  } catch {
+    return url.replace(/^https?:\/\//, '');
+  }
+}
+
+function PageBackground() {
+  return (
+    <>
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(145deg, #07111e 0%, #10233d 44%, #13261f 100%)',
+        }}
+      />
+      <div
+        className="absolute inset-0 opacity-55"
+        style={{
+          backgroundImage:
+            'linear-gradient(120deg, rgba(201,168,76,0.16) 0 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px)',
+          backgroundSize: '100% 128px, 30px 30px',
+        }}
+      />
+      <div className="absolute inset-x-0 top-0 h-px bg-[#C9A84C]/70" />
+    </>
+  );
+}
 
 export function LinktreePage() {
   const [links, setLinks] = useState<LinktreeLink[]>([]);
@@ -114,14 +137,10 @@ export function LinktreePage() {
   const [clickedId, setClickedId] = useState<string | null>(null);
 
   const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/linktree`;
-  const seoProps = {
-    title: 'Navigate Wealth Links',
-    description: 'Navigate Wealth social and profile links.',
-    canonicalUrl: 'https://www.navigatewealth.co/links',
-    robotsContent: 'noindex, nofollow',
-  };
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
       try {
         const res = await fetch(`${BASE}/public`, {
@@ -130,267 +149,271 @@ export function LinktreePage() {
             Authorization: `Bearer ${publicAnonKey}`,
           },
         });
+
+        if (!res.ok) throw new Error(`Linktree request failed: ${res.status}`);
+
         const data = await res.json();
-        if (data.success) {
+        if (!data.success) throw new Error('Linktree response was unsuccessful');
+
+        if (!cancelled) {
           setLinks(data.data.links || []);
           setSettings(data.data.settings);
-        } else {
-          setError(true);
         }
       } catch {
-        setError(true);
+        if (!cancelled) setError(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [BASE]);
 
-  const handleClick = useCallback(
-    async (link: LinktreeLink) => {
-      setClickedId(link.id);
+  const visibleLinks = useMemo(
+    () =>
+      links
+        .map((link) => ({ ...link, url: normalizeNavigateWealthUrl(link.url) }))
+        .sort((a, b) => a.order - b.order),
+    [links],
+  );
 
-      // Fire-and-forget click tracking
+  const socialProfiles = useMemo(
+    () =>
+      Object.entries(settings?.socialProfiles || {})
+        .filter(([, url]) => Boolean(url?.trim()))
+        .map(([key, url]) => ({
+          key,
+          label: SOCIAL_LABEL_MAP[key] || key,
+          url: normalizeNavigateWealthUrl(url),
+          Icon: SOCIAL_ICON_MAP[key] || Globe,
+        })),
+    [settings?.socialProfiles],
+  );
+
+  const handleClick = useCallback(
+    (link: LinktreeLink) => {
+      setClickedId(link.id);
+      window.setTimeout(() => setClickedId(null), 500);
+
       fetch(`${BASE}/click/${link.id}`, {
         method: 'POST',
+        keepalive: true,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${publicAnonKey}`,
         },
       }).catch(() => {});
-
-      // Small delay for visual feedback
-      setTimeout(() => {
-        window.open(link.url, '_blank', 'noopener,noreferrer');
-        setClickedId(null);
-      }, 150);
     },
     [BASE],
   );
-
-  // --------------------------------------------------------------------------
-  // Loading
-  // --------------------------------------------------------------------------
 
   if (loading) {
     return (
       <>
         <SEO {...seoProps} />
-        <div
-          className="min-h-screen flex flex-col items-center justify-center"
-          style={{
-            background: `linear-gradient(135deg, ${BRAND.heroBg}, ${BRAND.heroMid}, ${BRAND.heroBg})`,
-          }}
-        >
-          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center mb-4">
-            <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07111e] px-6 text-white">
+          <PageBackground />
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <img
+              src={navigateWealthLogo}
+              alt="Navigate Wealth"
+              className="mb-6 h-9 w-auto"
+              style={{ imageRendering: 'auto' }}
+            />
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.08]">
+              <Loader2 className="h-5 w-5 animate-spin text-[#C9A84C]" />
+            </div>
+            <p className="text-sm text-white/[0.62]">Loading Navigate Wealth links</p>
           </div>
-          <p className="text-gray-500 text-sm">Loading...</p>
         </div>
       </>
     );
   }
-
-  // --------------------------------------------------------------------------
-  // Error / No settings
-  // --------------------------------------------------------------------------
 
   if (error || !settings) {
     return (
       <>
         <SEO {...seoProps} />
-        <div
-          className="min-h-screen flex flex-col items-center justify-center px-6"
-          style={{
-            background: `linear-gradient(135deg, ${BRAND.heroBg}, ${BRAND.heroMid}, ${BRAND.heroBg})`,
-          }}
-        >
-          {/* Logo */}
-          <img
-            src={navigateWealthLogo}
-            alt="Navigate Wealth"
-            className="h-8 w-auto mb-6"
-            style={{ imageRendering: 'auto' }}
-          />
-          <p className="text-gray-400 text-sm text-center max-w-xs">
-            This page is currently unavailable. Please try again later.
-          </p>
-          <div className="flex items-center gap-3 mt-6 text-xs text-gray-600">
-            <span className="flex items-center gap-1">
-              <Shield className="h-3 w-3" /> FSCA Regulated
-            </span>
-            <span>·</span>
-            <span>FSP 54606</span>
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07111e] px-6 text-white">
+          <PageBackground />
+          <div className="relative z-10 flex max-w-sm flex-col items-center text-center">
+            <img
+              src={navigateWealthLogo}
+              alt="Navigate Wealth"
+              className="mb-7 h-9 w-auto"
+              style={{ imageRendering: 'auto' }}
+            />
+            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-[#C9A84C]/25 bg-[#C9A84C]/[0.12]">
+              <LinkIcon className="h-5 w-5 text-[#E4C766]" />
+            </div>
+            <h1 className="text-2xl font-semibold text-white">Links unavailable</h1>
+            <p className="mt-3 text-sm leading-6 text-white/[0.64]">
+              This page is currently unavailable. The main Navigate Wealth website is still
+              available.
+            </p>
+            <a
+              href={SITE_ORIGIN}
+              className="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/[0.14] bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-[#C9A84C]/[0.45] hover:bg-white/[0.12]"
+            >
+              Visit website
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
           </div>
         </div>
       </>
     );
   }
 
-  // --------------------------------------------------------------------------
-  // Render
-  // --------------------------------------------------------------------------
-
   return (
     <>
       <SEO {...seoProps} />
-      <div className="min-h-screen relative overflow-hidden flex flex-col">
-        {/* ── Layered Background (matches homepage hero) ───────────────────── */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(135deg, ${BRAND.heroBg}, ${BRAND.heroMid}, ${BRAND.heroBg})`,
-          }}
-        />
-        {/* Purple radial glow — upper-right */}
-        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-purple-600/8 blur-[120px]" />
-        {/* Secondary glow — lower-left */}
-        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-indigo-600/6 blur-[100px]" />
-        {/* Dot grid */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        />
+      <div className="relative min-h-screen overflow-hidden bg-[#07111e] text-white">
+        <PageBackground />
 
-        {/* ── Content ──────────────────────────────────────────────────────── */}
-        <div className="relative z-10 flex-1 flex flex-col items-center px-4 py-12 sm:py-16">
-          <div className="w-full max-w-md mx-auto">
-            {/* ── Header / Branding ──────────────────────────────────────── */}
-            <div className="flex flex-col items-center text-center mb-10">
-              {/* Logo */}
-              {settings.avatarUrl ? (
+        <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
+          <header className="flex items-center justify-between gap-4">
+            <img
+              src={navigateWealthLogo}
+              alt="Navigate Wealth"
+              className="h-8 w-auto sm:h-9"
+              style={{ imageRendering: 'auto' }}
+            />
+            <a
+              href={SITE_ORIGIN}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-sm font-medium text-white/[0.72] transition hover:border-[#C9A84C]/40 hover:text-white sm:inline-flex"
+            >
+              www.navigatewealth.co
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </header>
+
+          <section className="grid flex-1 items-start gap-8 pb-10 pt-12 sm:pt-16 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14 lg:pt-24">
+            <div className="max-w-xl">
+              {settings.avatarUrl && (
                 <img
                   src={settings.avatarUrl}
                   alt={settings.title}
-                  className="h-16 w-16 rounded-2xl object-cover mb-5 ring-2 ring-white/10 shadow-lg shadow-purple-600/10"
+                  className="mb-5 h-16 w-16 rounded-lg border border-white/[0.12] object-cover shadow-[0_16px_34px_rgba(0,0,0,0.22)]"
                 />
-              ) : (
-                <div className="mb-5">
-                  <img
-                    src={navigateWealthLogo}
-                    alt="Navigate Wealth"
-                    className="h-8 w-auto"
-                    style={{ imageRendering: 'auto' }}
-                  />
-                </div>
               )}
+              <p className="text-sm font-semibold text-[#E4C766]">Official links</p>
+              <h1 className="mt-4 text-4xl font-semibold leading-tight text-white sm:text-5xl">
+                {settings.title || 'Navigate Wealth'}
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-7 text-white/[0.68]">
+                {settings.bio ||
+                  'Independent financial advice, planning resources, and direct ways to connect.'}
+              </p>
 
-              {/* Bio */}
-              {settings.bio && (
-                <p className="text-sm mt-2 max-w-xs leading-relaxed text-gray-400">
-                  {settings.bio}
-                </p>
-              )}
-
-              {/* Trust badges */}
-              <div className="flex items-center gap-3 mt-4 text-[11px] text-gray-500 font-medium">
-                <span className="flex items-center gap-1">
-                  <Shield className="h-3 w-3 text-purple-400/60" />
+              <div className="mt-7 flex flex-wrap gap-2 text-xs font-medium text-white/[0.72]">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-[#C9A84C]/[0.24] bg-[#C9A84C]/10 px-3 py-2">
+                  <Shield className="h-4 w-4 text-[#E4C766]" />
                   FSCA Regulated
                 </span>
-                <span className="text-gray-700">·</span>
-                <span className="flex items-center gap-1">
-                  <Globe className="h-3 w-3 text-purple-400/60" />
-                  Independent
+                <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] px-3 py-2">
+                  <Globe className="h-4 w-4 text-[#78D6C6]" />
+                  FSP 54606
                 </span>
-                <span className="text-gray-700">·</span>
-                <span>FSP 54606</span>
+                <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] px-3 py-2">
+                  <ExternalLink className="h-4 w-4 text-[#A9B7FF]" />
+                  South Africa
+                </span>
               </div>
 
-              {/* Social profile icon buttons */}
-              {settings.socialProfiles && Object.keys(settings.socialProfiles).length > 0 && (
-                <div className="flex items-center gap-2 mt-5">
-                  {Object.entries(settings.socialProfiles).map(([key, url]) => {
-                    if (!url) return null;
-                    const Icon = SOCIAL_ICON_MAP[key] || Globe;
-                    const label = SOCIAL_LABEL_MAP[key] || key;
-                    return (
-                      <a
-                        key={key}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={label}
-                        className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.10] hover:bg-white/[0.12] hover:border-purple-400/25 text-gray-400 hover:text-purple-400 transition-all duration-200"
-                      >
-                        <Icon className="h-4.5 w-4.5" />
-                      </a>
-                    );
-                  })}
+              {socialProfiles.length > 0 && (
+                <div className="mt-7 flex items-center gap-2">
+                  {socialProfiles.map(({ key, label, url, Icon }) => (
+                    <a
+                      key={key}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      title={label}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.07] text-white/[0.66] transition hover:border-[#C9A84C]/40 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* ── Links ──────────────────────────────────────────────────── */}
-            {links.length > 0 ? (
-              <div className="space-y-3">
-                {links.map((link) => {
-                  const Icon = getLinkIcon(link.url);
-                  const isClicked = clickedId === link.id;
-
-                  return (
-                    <button
-                      key={link.id}
-                      onClick={() => handleClick(link)}
-                      className={`
-                      w-full flex items-center gap-4 px-5 py-4 rounded-xl
-                      bg-white/[0.06] border border-white/[0.10]
-                      hover:bg-white/[0.10] hover:border-white/[0.18]
-                      active:scale-[0.98]
-                      transition-all duration-200 cursor-pointer text-left
-                      backdrop-blur-sm group
-                      ${isClicked ? 'scale-[0.98] bg-white/[0.10] border-purple-400/30' : ''}
-                    `}
-                    >
-                      {/* Icon */}
-                      <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-400/10 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/15 group-hover:border-purple-400/20 transition-colors">
-                        <Icon className="h-4.5 w-4.5 text-purple-400" />
-                      </div>
-
-                      {/* Text */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{link.title}</p>
-                        {link.description && (
-                          <p className="text-xs mt-0.5 text-gray-500 truncate">
-                            {link.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Arrow */}
-                      <ArrowUpRight className="h-4 w-4 text-gray-600 flex-shrink-0 group-hover:text-purple-400 transition-colors" />
-                    </button>
-                  );
-                })}
+            <div className="w-full max-w-xl lg:ml-auto">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-white/[0.82]">Featured links</p>
+                <span className="rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs text-white/[0.52]">
+                  {visibleLinks.length} destinations
+                </span>
               </div>
-            ) : (
-              /* ── Empty state ───────────────────────────────────────── */
-              <div className="text-center py-16">
-                <div className="w-14 h-14 mx-auto rounded-xl bg-white/[0.06] border border-white/[0.10] flex items-center justify-center mb-4">
-                  <LinkIcon className="h-6 w-6 text-gray-600" />
+
+              {visibleLinks.length > 0 ? (
+                <div className="space-y-3">
+                  {visibleLinks.map((link, index) => {
+                    const Icon = getLinkIcon(link.url);
+                    const accent = LINK_ACCENTS[index % LINK_ACCENTS.length];
+                    const isClicked = clickedId === link.id;
+
+                    return (
+                      <a
+                        key={link.id}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => handleClick(link)}
+                        className={`group flex min-h-[82px] w-full items-center gap-4 rounded-lg border border-white/[0.12] bg-white/[0.075] px-4 py-4 text-left shadow-[0_16px_36px_rgba(0,0,0,0.24)] outline-none transition duration-200 hover:-translate-y-0.5 hover:border-white/[0.24] hover:bg-white/[0.11] focus-visible:ring-2 focus-visible:ring-[#C9A84C] ${
+                          isClicked ? 'border-[#C9A84C]/50 bg-white/[0.13]' : ''
+                        }`}
+                      >
+                        <span
+                          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border ${accent.surface}`}
+                        >
+                          <Icon className={`h-5 w-5 ${accent.icon}`} />
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold text-white">
+                            {link.title}
+                          </span>
+                          {link.description && (
+                            <span className="mt-1 block overflow-hidden text-ellipsis whitespace-nowrap text-sm text-white/[0.58]">
+                              {link.description}
+                            </span>
+                          )}
+                          <span className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-[#E4C766]/[0.85]">
+                            {formatDisplayUrl(link.url)}
+                          </span>
+                        </span>
+
+                        <span className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.05] text-white/[0.48] transition group-hover:border-[#C9A84C]/35 group-hover:text-[#E4C766] sm:flex">
+                          <ArrowUpRight className="h-4 w-4" />
+                        </span>
+                      </a>
+                    );
+                  })}
                 </div>
-                <p className="text-gray-500 text-sm">No links available yet.</p>
-                <p className="text-gray-600 text-xs mt-1">Check back soon.</p>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="rounded-lg border border-white/[0.12] bg-white/[0.07] px-5 py-12 text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.06]">
+                    <LinkIcon className="h-5 w-5 text-white/[0.48]" />
+                  </div>
+                  <p className="text-sm font-medium text-white/[0.78]">No links available yet.</p>
+                  <p className="mt-1 text-sm text-white/[0.48]">Check back soon.</p>
+                </div>
+              )}
+            </div>
+          </section>
 
-          {/* ── Footer / Branding ──────────────────────────────────────── */}
-          <div className="mt-auto pt-12 text-center">
-            {settings.showBranding && (
-              <div className="flex flex-col items-center gap-3">
-                {/* Divider */}
-                <div className="w-12 h-px bg-white/[0.08]" />
-
-                <p className="text-[10px] text-white/70 max-w-xs leading-relaxed">
-                  Wealthfront (Pty) Ltd t/a Navigate Wealth · FSP 54606 · FSCA Regulated
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+          {settings.showBranding && (
+            <footer className="pb-2 text-xs leading-5 text-white/[0.44]">
+              Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606 | FSCA Regulated
+            </footer>
+          )}
+        </main>
       </div>
     </>
   );

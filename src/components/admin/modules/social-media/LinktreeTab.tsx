@@ -55,6 +55,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '../../../../utils/api';
+import { normalizeNavigateWealthUrl } from '../../../../utils/siteOrigin';
 import { BRAND } from './constants';
 
 // ============================================================================
@@ -98,28 +99,28 @@ interface QuickAddTemplate {
 const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
   {
     title: 'Company Website',
-    url: 'https://navigatewealth.co.za',
+    url: 'https://www.navigatewealth.co',
     description: 'Visit our official website',
     icon: <Globe className="h-4 w-4" />,
     category: 'website',
   },
   {
     title: 'Book a Consultation',
-    url: 'https://navigatewealth.co.za/contact',
+    url: 'https://www.navigatewealth.co/contact',
     description: 'Schedule a free financial planning session',
     icon: <CalendarCheck className="h-4 w-4" />,
     category: 'contact',
   },
   {
     title: 'Our Services',
-    url: 'https://navigatewealth.co.za/services',
+    url: 'https://www.navigatewealth.co/services',
     description: 'Explore our financial planning solutions',
     icon: <FileText className="h-4 w-4" />,
     category: 'website',
   },
   {
     title: 'Latest Blog Posts',
-    url: 'https://navigatewealth.co.za/blog',
+    url: 'https://www.navigatewealth.co/resources',
     description: 'Financial insights and market updates',
     icon: <BookOpen className="h-4 w-4" />,
     category: 'content',
@@ -318,7 +319,7 @@ export function LinktreeTab() {
           method: 'PUT',
           body: JSON.stringify({
             title: formTitle.trim(),
-            url: formUrl.trim(),
+            url: normalizeNavigateWealthUrl(formUrl),
             description: formDescription.trim() || undefined,
             enabled: formEnabled,
           }),
@@ -329,7 +330,7 @@ export function LinktreeTab() {
           method: 'POST',
           body: JSON.stringify({
             title: formTitle.trim(),
-            url: formUrl.trim(),
+            url: normalizeNavigateWealthUrl(formUrl),
             description: formDescription.trim() || undefined,
             enabled: formEnabled,
           }),
@@ -356,7 +357,7 @@ export function LinktreeTab() {
           method: 'POST',
           body: JSON.stringify({
             title: template.title,
-            url: template.url,
+            url: normalizeNavigateWealthUrl(template.url),
             description: template.description,
             enabled: true,
           }),
@@ -430,7 +431,7 @@ export function LinktreeTab() {
       // Filter out empty social profile entries
       const cleanProfiles: Record<string, string> = {};
       for (const [key, val] of Object.entries(sSocialProfiles)) {
-        if (val.trim()) cleanProfiles[key] = val.trim();
+        if (val.trim()) cleanProfiles[key] = normalizeNavigateWealthUrl(val);
       }
 
       await fetchJson(`${BASE}/settings`, {
@@ -943,7 +944,7 @@ export function LinktreeTab() {
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">URL *</Label>
               <Input
-                placeholder="https://navigatewealth.co.za/contact"
+                placeholder="https://www.navigatewealth.co/contact"
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
                 maxLength={500}
