@@ -54,10 +54,10 @@ const seoProps = {
 };
 
 const LINK_ACCENTS = [
-  { surface: 'bg-[#C9A84C]/[0.14] border-[#C9A84C]/[0.28]', icon: 'text-[#E4C766]' },
-  { surface: 'bg-[#78D6C6]/[0.12] border-[#78D6C6]/25', icon: 'text-[#78D6C6]' },
-  { surface: 'bg-[#A9B7FF]/[0.12] border-[#A9B7FF]/25', icon: 'text-[#A9B7FF]' },
-  { surface: 'bg-[#F2A65A]/[0.12] border-[#F2A65A]/25', icon: 'text-[#F2A65A]' },
+  { surface: 'bg-[#6d28d9]/10 border-[#6d28d9]/20', icon: 'text-[#6d28d9]' },
+  { surface: 'bg-[#313653]/[0.08] border-[#313653]/15', icon: 'text-[#313653]' },
+  { surface: 'bg-[#7c3aed]/10 border-[#7c3aed]/20', icon: 'text-[#7c3aed]' },
+  { surface: 'bg-[#5b21b6]/10 border-[#5b21b6]/20', icon: 'text-[#5b21b6]' },
 ];
 
 const SOCIAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -113,18 +113,18 @@ function PageBackground() {
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(145deg, #07111e 0%, #10233d 44%, #13261f 100%)',
+          background: 'linear-gradient(180deg, #f8f7fc 0%, #ffffff 42%, #f4f1fb 100%)',
         }}
       />
       <div
-        className="absolute inset-0 opacity-55"
+        className="absolute inset-0 opacity-80"
         style={{
           backgroundImage:
-            'linear-gradient(120deg, rgba(201,168,76,0.16) 0 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px)',
-          backgroundSize: '100% 128px, 30px 30px',
+            'linear-gradient(120deg, rgba(109,40,217,0.08) 0 1px, transparent 1px), linear-gradient(0deg, rgba(49,54,83,0.05) 0 1px, transparent 1px)',
+          backgroundSize: '100% 136px, 32px 32px',
         }}
       />
-      <div className="absolute inset-x-0 top-0 h-px bg-[#C9A84C]/70" />
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] to-[#313653]" />
     </>
   );
 }
@@ -192,6 +192,9 @@ export function LinktreePage() {
     [settings?.socialProfiles],
   );
 
+  const pageTitle = settings?.title?.trim();
+  const shouldShowPageTitle = Boolean(pageTitle && pageTitle.toLowerCase() !== 'navigate wealth');
+
   const handleClick = useCallback(
     (link: LinktreeLink) => {
       setClickedId(link.id);
@@ -213,19 +216,21 @@ export function LinktreePage() {
     return (
       <>
         <SEO {...seoProps} />
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07111e] px-6 text-white">
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f8f7fc] px-6 text-[#313653]">
           <PageBackground />
           <div className="relative z-10 flex flex-col items-center text-center">
-            <img
-              src={navigateWealthLogo}
-              alt="Navigate Wealth"
-              className="mb-6 h-9 w-auto"
-              style={{ imageRendering: 'auto' }}
-            />
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.08]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#C9A84C]" />
+            <div className="mb-6 inline-flex items-center rounded-lg bg-[#313653] px-5 py-3 shadow-[0_18px_40px_rgba(49,54,83,0.20)]">
+              <img
+                src={navigateWealthLogo}
+                alt="Navigate Wealth"
+                className="h-9 w-auto"
+                style={{ imageRendering: 'auto' }}
+              />
             </div>
-            <p className="text-sm text-white/[0.62]">Loading Navigate Wealth links</p>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-[#6d28d9]/15 bg-white shadow-sm">
+              <Loader2 className="h-5 w-5 animate-spin text-[#6d28d9]" />
+            </div>
+            <p className="text-sm text-[#313653]/70">Loading links</p>
           </div>
         </div>
       </>
@@ -236,26 +241,28 @@ export function LinktreePage() {
     return (
       <>
         <SEO {...seoProps} />
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#07111e] px-6 text-white">
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f8f7fc] px-6 text-[#313653]">
           <PageBackground />
           <div className="relative z-10 flex max-w-sm flex-col items-center text-center">
-            <img
-              src={navigateWealthLogo}
-              alt="Navigate Wealth"
-              className="mb-7 h-9 w-auto"
-              style={{ imageRendering: 'auto' }}
-            />
-            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-[#C9A84C]/25 bg-[#C9A84C]/[0.12]">
-              <LinkIcon className="h-5 w-5 text-[#E4C766]" />
+            <div className="mb-7 inline-flex items-center rounded-lg bg-[#313653] px-5 py-3 shadow-[0_18px_40px_rgba(49,54,83,0.20)]">
+              <img
+                src={navigateWealthLogo}
+                alt="Navigate Wealth"
+                className="h-9 w-auto"
+                style={{ imageRendering: 'auto' }}
+              />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Links unavailable</h1>
-            <p className="mt-3 text-sm leading-6 text-white/[0.64]">
+            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-[#6d28d9]/15 bg-white shadow-sm">
+              <LinkIcon className="h-5 w-5 text-[#6d28d9]" />
+            </div>
+            <h1 className="text-2xl font-semibold text-[#111827]">Links unavailable</h1>
+            <p className="mt-3 text-sm leading-6 text-[#4b5563]">
               This page is currently unavailable. The main Navigate Wealth website is still
               available.
             </p>
             <a
               href={SITE_ORIGIN}
-              className="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/[0.14] bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:border-[#C9A84C]/[0.45] hover:bg-white/[0.12]"
+              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#6d28d9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-purple-200 transition hover:bg-[#5b21b6]"
             >
               Visit website
               <ArrowUpRight className="h-4 w-4" />
@@ -269,84 +276,84 @@ export function LinktreePage() {
   return (
     <>
       <SEO {...seoProps} />
-      <div className="relative min-h-screen overflow-hidden bg-[#07111e] text-white">
+      <div className="relative min-h-screen overflow-hidden bg-[#f8f7fc] text-[#313653]">
         <PageBackground />
 
-        <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-          <header className="flex items-center justify-between gap-4">
-            <img
-              src={navigateWealthLogo}
-              alt="Navigate Wealth"
-              className="h-8 w-auto sm:h-9"
-              style={{ imageRendering: 'auto' }}
-            />
-            <a
-              href={SITE_ORIGIN}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-sm font-medium text-white/[0.72] transition hover:border-[#C9A84C]/40 hover:text-white sm:inline-flex"
-            >
-              www.navigatewealth.co
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
+        <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[640px] flex-col px-5 py-7 sm:px-8 sm:py-9">
+          <header className="flex flex-col items-center text-center">
+            <div className="inline-flex items-center rounded-lg bg-[#313653] px-5 py-3 shadow-[0_18px_40px_rgba(49,54,83,0.20)]">
+              <img
+                src={navigateWealthLogo}
+                alt="Navigate Wealth"
+                className="h-9 w-auto sm:h-10"
+                style={{ imageRendering: 'auto' }}
+              />
+            </div>
+            <div className="mt-5 h-1 w-16 rounded-full bg-gradient-to-r from-[#6d28d9] to-[#7c3aed]" />
+            {settings.avatarUrl && (
+              <img
+                src={settings.avatarUrl}
+                alt=""
+                className="mt-6 h-14 w-14 rounded-lg border border-[#6d28d9]/10 object-cover shadow-sm"
+              />
+            )}
           </header>
 
-          <section className="grid flex-1 items-start gap-8 pb-10 pt-12 sm:pt-16 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14 lg:pt-24">
-            <div className="max-w-xl">
-              {settings.avatarUrl && (
-                <img
-                  src={settings.avatarUrl}
-                  alt={settings.title}
-                  className="mb-5 h-16 w-16 rounded-lg border border-white/[0.12] object-cover shadow-[0_16px_34px_rgba(0,0,0,0.22)]"
-                />
-              )}
-              <p className="text-sm font-semibold text-[#E4C766]">Official links</p>
-              <h1 className="mt-4 text-4xl font-semibold leading-tight text-white sm:text-5xl">
-                {settings.title || 'Navigate Wealth'}
-              </h1>
-              <p className="mt-5 max-w-lg text-base leading-7 text-white/[0.68]">
-                {settings.bio ||
-                  'Independent financial advice, planning resources, and direct ways to connect.'}
-              </p>
+          <section className="flex-1 pb-9 pt-7 sm:pt-9">
+            <div className="rounded-lg border border-[#e5e7eb] bg-white/95 p-5 shadow-[0_24px_60px_rgba(49,54,83,0.10)] sm:p-7">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d28d9]">
+                  Official links
+                </p>
+                {shouldShowPageTitle && (
+                  <h1 className="mt-3 text-2xl font-semibold leading-tight text-[#111827]">
+                    {pageTitle}
+                  </h1>
+                )}
+                <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#4b5563] sm:text-base sm:leading-7">
+                  {settings.bio ||
+                    'Independent financial advice, planning resources, and direct ways to connect.'}
+                </p>
 
-              <div className="mt-7 flex flex-wrap gap-2 text-xs font-medium text-white/[0.72]">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-[#C9A84C]/[0.24] bg-[#C9A84C]/10 px-3 py-2">
-                  <Shield className="h-4 w-4 text-[#E4C766]" />
-                  FSCA Regulated
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] px-3 py-2">
-                  <Globe className="h-4 w-4 text-[#78D6C6]" />
-                  FSP 54606
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] px-3 py-2">
-                  <ExternalLink className="h-4 w-4 text-[#A9B7FF]" />
-                  South Africa
-                </span>
+                <div className="mt-5 flex flex-wrap justify-center gap-2 text-xs font-medium text-[#4b5563]">
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-[#6d28d9]/15 bg-[#6d28d9]/5 px-3 py-2">
+                    <Shield className="h-4 w-4 text-[#6d28d9]" />
+                    FSCA Regulated
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2">
+                    <Globe className="h-4 w-4 text-[#313653]" />
+                    FSP 54606
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2">
+                    <ExternalLink className="h-4 w-4 text-[#313653]" />
+                    South Africa
+                  </span>
+                </div>
+
+                {socialProfiles.length > 0 && (
+                  <div className="mt-5 flex items-center justify-center gap-2">
+                    {socialProfiles.map(({ key, label, url, Icon }) => (
+                      <a
+                        key={key}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        title={label}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white text-[#6b7280] transition hover:border-[#6d28d9]/30 hover:bg-[#6d28d9]/5 hover:text-[#6d28d9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d28d9]"
+                      >
+                        <Icon className="h-4 w-4" />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {socialProfiles.length > 0 && (
-                <div className="mt-7 flex items-center gap-2">
-                  {socialProfiles.map(({ key, label, url, Icon }) => (
-                    <a
-                      key={key}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={label}
-                      title={label}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.07] text-white/[0.66] transition hover:border-[#C9A84C]/40 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]"
-                    >
-                      <Icon className="h-4 w-4" />
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
+              <div className="my-6 h-px bg-gradient-to-r from-transparent via-[#e5e7eb] to-transparent" />
 
-            <div className="w-full max-w-xl lg:ml-auto">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-white/[0.82]">Featured links</p>
-                <span className="rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs text-white/[0.52]">
+                <p className="text-sm font-semibold text-[#111827]">Links</p>
+                <span className="rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-1 text-xs text-[#6b7280]">
                   {visibleLinks.length} destinations
                 </span>
               </div>
@@ -365,8 +372,8 @@ export function LinktreePage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => handleClick(link)}
-                        className={`group flex min-h-[82px] w-full items-center gap-4 rounded-lg border border-white/[0.12] bg-white/[0.075] px-4 py-4 text-left shadow-[0_16px_36px_rgba(0,0,0,0.24)] outline-none transition duration-200 hover:-translate-y-0.5 hover:border-white/[0.24] hover:bg-white/[0.11] focus-visible:ring-2 focus-visible:ring-[#C9A84C] ${
-                          isClicked ? 'border-[#C9A84C]/50 bg-white/[0.13]' : ''
+                        className={`group flex min-h-[82px] w-full items-center gap-4 rounded-lg border border-[#e5e7eb] bg-white px-4 py-4 text-left shadow-sm outline-none transition duration-200 hover:-translate-y-0.5 hover:border-[#6d28d9]/30 hover:bg-[#fbfaff] hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#6d28d9] ${
+                          isClicked ? 'border-[#6d28d9]/50 bg-[#f5f3ff]' : ''
                         }`}
                       >
                         <span
@@ -376,20 +383,20 @@ export function LinktreePage() {
                         </span>
 
                         <span className="min-w-0 flex-1">
-                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold text-white">
+                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold text-[#111827]">
                             {link.title}
                           </span>
                           {link.description && (
-                            <span className="mt-1 block overflow-hidden text-ellipsis whitespace-nowrap text-sm text-white/[0.58]">
+                            <span className="mt-1 block overflow-hidden text-ellipsis whitespace-nowrap text-sm text-[#6b7280]">
                               {link.description}
                             </span>
                           )}
-                          <span className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-[#E4C766]/[0.85]">
+                          <span className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-[#6d28d9]">
                             {formatDisplayUrl(link.url)}
                           </span>
                         </span>
 
-                        <span className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.05] text-white/[0.48] transition group-hover:border-[#C9A84C]/35 group-hover:text-[#E4C766] sm:flex">
+                        <span className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-[#e5e7eb] bg-[#f9fafb] text-[#9ca3af] transition group-hover:border-[#6d28d9]/25 group-hover:text-[#6d28d9] sm:flex">
                           <ArrowUpRight className="h-4 w-4" />
                         </span>
                       </a>
@@ -397,20 +404,20 @@ export function LinktreePage() {
                   })}
                 </div>
               ) : (
-                <div className="rounded-lg border border-white/[0.12] bg-white/[0.07] px-5 py-12 text-center">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.06]">
-                    <LinkIcon className="h-5 w-5 text-white/[0.48]" />
+                <div className="rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-5 py-12 text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white">
+                    <LinkIcon className="h-5 w-5 text-[#9ca3af]" />
                   </div>
-                  <p className="text-sm font-medium text-white/[0.78]">No links available yet.</p>
-                  <p className="mt-1 text-sm text-white/[0.48]">Check back soon.</p>
+                  <p className="text-sm font-medium text-[#4b5563]">No links available yet.</p>
+                  <p className="mt-1 text-sm text-[#6b7280]">Check back soon.</p>
                 </div>
               )}
             </div>
           </section>
 
           {settings.showBranding && (
-            <footer className="pb-2 text-xs leading-5 text-white/[0.44]">
-              Wealthfront (Pty) Ltd t/a Navigate Wealth | FSP 54606 | FSCA Regulated
+            <footer className="pb-2 text-center text-xs leading-5 text-[#6b7280]">
+              Wealthfront (Pty) Ltd | FSP 54606 | FSCA Regulated
             </footer>
           )}
         </main>
