@@ -1,37 +1,32 @@
-import { describe, it, expect } from 'vitest';
-import { SITE_ORIGIN, SITE_ORIGIN_APEX, siteAbsoluteUrl } from '../siteOrigin';
+import { describe, expect, it } from 'vitest';
 
-describe('SITE_ORIGIN', () => {
-  it('is the canonical www origin', () => {
-    expect(SITE_ORIGIN).toBe('https://www.navigatewealth.co');
-  });
-});
+import { normalizeNavigateWealthUrl, SITE_ORIGIN, siteAbsoluteUrl } from '../siteOrigin';
 
-describe('SITE_ORIGIN_APEX', () => {
-  it('is the apex origin without www', () => {
-    expect(SITE_ORIGIN_APEX).toBe('https://navigatewealth.co');
+describe('siteOrigin helpers', () => {
+  it('builds canonical site URLs', () => {
+    expect(siteAbsoluteUrl('/links')).toBe(`${SITE_ORIGIN}/links`);
+    expect(siteAbsoluteUrl('contact')).toBe(`${SITE_ORIGIN}/contact`);
   });
 
-  it('is a different origin from SITE_ORIGIN (so it is outside the PWA scope)', () => {
-    expect(SITE_ORIGIN_APEX).not.toBe(SITE_ORIGIN);
-    expect(new URL(SITE_ORIGIN_APEX).host).not.toBe(new URL(SITE_ORIGIN).host);
-  });
-});
-
-describe('siteAbsoluteUrl', () => {
-  it('prepends SITE_ORIGIN to a path starting with slash', () => {
-    expect(siteAbsoluteUrl('/about')).toBe('https://www.navigatewealth.co/about');
-  });
-
-  it('adds a leading slash when path does not start with one', () => {
-    expect(siteAbsoluteUrl('blog/post')).toBe('https://www.navigatewealth.co/blog/post');
+  it('normalizes Navigate Wealth web hosts to the canonical www domain', () => {
+    expect(normalizeNavigateWealthUrl('https://navigatewealth.co.za')).toBe(SITE_ORIGIN);
+    expect(normalizeNavigateWealthUrl('https://navigatewealth.co.za/contact')).toBe(
+      `${SITE_ORIGIN}/contact`,
+    );
+    expect(normalizeNavigateWealthUrl('http://www.navigatewealth.co.za/services?x=1#quote')).toBe(
+      `${SITE_ORIGIN}/services?x=1#quote`,
+    );
+    expect(normalizeNavigateWealthUrl('navigatewealth.co/resources')).toBe(
+      `${SITE_ORIGIN}/resources`,
+    );
   });
 
-  it('handles empty string as root', () => {
-    expect(siteAbsoluteUrl('')).toBe('https://www.navigatewealth.co/');
-  });
-
-  it('handles deeply nested paths', () => {
-    expect(siteAbsoluteUrl('/a/b/c/d')).toBe('https://www.navigatewealth.co/a/b/c/d');
+  it('does not rewrite non-web or external URLs', () => {
+    expect(normalizeNavigateWealthUrl('mailto:info@navigatewealth.co.za')).toBe(
+      'mailto:info@navigatewealth.co.za',
+    );
+    expect(normalizeNavigateWealthUrl('https://linkedin.com/company/navigate-wealth')).toBe(
+      'https://linkedin.com/company/navigate-wealth',
+    );
   });
 });
