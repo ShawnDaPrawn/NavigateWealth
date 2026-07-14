@@ -90,7 +90,7 @@ export function Footer() {
     resources: [
       { label: 'Insights', path: '/resources' },
       { label: 'Sitemap', path: '/sitemap' },
-      { label: 'Market Updates', path: '/resources' },
+      { label: 'Market Updates', path: '/resources?section=market-updates' },
       { label: 'Design System', path: '/design-system' },
     ],
     legal: [
