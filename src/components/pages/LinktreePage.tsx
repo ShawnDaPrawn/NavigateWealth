@@ -192,6 +192,9 @@ export function LinktreePage() {
     [settings?.socialProfiles],
   );
 
+  const pageTitle = settings?.title?.trim();
+  const shouldShowPageTitle = Boolean(pageTitle && pageTitle.toLowerCase() !== 'navigate wealth');
+
   const handleClick = useCallback(
     (link: LinktreeLink) => {
       setClickedId(link.id);
@@ -302,6 +305,11 @@ export function LinktreePage() {
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d28d9]">
                   Official links
                 </p>
+                {shouldShowPageTitle && (
+                  <h1 className="mt-3 text-2xl font-semibold leading-tight text-[#111827]">
+                    {pageTitle}
+                  </h1>
+                )}
                 <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#4b5563] sm:text-base sm:leading-7">
                   {settings.bio ||
                     'Independent financial advice, planning resources, and direct ways to connect.'}
