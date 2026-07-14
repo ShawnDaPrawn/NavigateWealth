@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { UserProfileDropdown } from '../auth/UserProfileDropdown';
 import { Logo } from './Logo';
+import { NavigationMenu, NavigationMenuList } from '../ui/navigation-menu';
 import { NavMegaMenu } from './NavMegaMenu';
 import {
   serviceItems,
@@ -61,7 +62,7 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
   return (
     <nav className="border-b border-gray-300 bg-white relative" aria-label="Main navigation">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-        <div className="flex justify-between items-center h-16">
+        <div className="relative flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <Link to="/" className="flex items-center">
@@ -89,29 +90,30 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
                 Home
               </Link>
 
-              {/* Services Mega Menu */}
-              <NavMegaMenu
-                label="Services"
-                active={isServicesActive}
-                items={serviceItems}
-                panel={servicesPanel}
-              />
-
-              {/* Solutions Mega Menu */}
-              <NavMegaMenu
-                label="Solutions"
-                active={isSolutionsActive}
-                items={solutionItems}
-                panel={solutionsPanel}
-              />
-
-              {/* Company Mega Menu */}
-              <NavMegaMenu
-                label="Company"
-                active={isCompanyActive}
-                items={companyItems}
-                panel={companyPanel}
-              />
+              {/* Mega menus — the root/list stay `static` so each panel positions
+                  against the navbar row and spans the full content width */}
+              <NavigationMenu viewport={false} className="static max-w-none flex-none">
+                <NavigationMenuList className="static space-x-8 gap-0">
+                  <NavMegaMenu
+                    label="Services"
+                    active={isServicesActive}
+                    items={serviceItems}
+                    panel={servicesPanel}
+                  />
+                  <NavMegaMenu
+                    label="Solutions"
+                    active={isSolutionsActive}
+                    items={solutionItems}
+                    panel={solutionsPanel}
+                  />
+                  <NavMegaMenu
+                    label="Company"
+                    active={isCompanyActive}
+                    items={companyItems}
+                    panel={companyPanel}
+                  />
+                </NavigationMenuList>
+              </NavigationMenu>
 
               <Link
                 to="/ask-vasco"
