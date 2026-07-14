@@ -87,6 +87,15 @@ export function ResourcesPage() {
       : 'insights';
   });
 
+  const validTabs = useMemo(() => ['insights', 'market-watch', 'market-updates'], []);
+
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section && validTabs.includes(section)) {
+      setActiveTab(section);
+    }
+  }, [searchParams, validTabs]);
+
   const [activeInsightsCategory, setActiveInsightsCategory] = useState('');
   const [activeMarketWatchSection, setActiveMarketWatchSection] = useState('overview');
   const [activeMarketNewsSection, setActiveMarketNewsSection] = useState('economic-news');
