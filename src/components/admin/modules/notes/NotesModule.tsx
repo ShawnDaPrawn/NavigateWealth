@@ -109,26 +109,45 @@ export function NotesModule() {
   const colourLabels = useColourLabels(personnelId);
   const [colourLabelsOpen, setColourLabelsOpen] = useState(false);
 
-  // Fetch clients for linking dropdown
-  const { data: clientsResponse } = useQuery({
-    queryKey: clientKeys.lists(),
-    queryFn: () =>
-      api.get<{ clients: Array<{ id: string; firstName?: string; lastName?: string }> }>(
-        '/clients',
-      ),
+  // Fetch clients for the linking dropdown. /clients is paginated (default
+  // limit 50), so page through until every client is loaded — otherwise the
+  // dropdown silently shows only the first page.
+  const { data: linkableClients } = useQuery({
+    queryKey: clientKeys.list({ scope: 'note-linking' }),
+    queryFn: async () => {
+      interface ClientRecord {
+        id: string;
+        firstName?: string;
+        lastName?: string;
+      }
+      const perPage = 100;
+      const all: ClientRecord[] = [];
+      let offset = 0;
+      for (;;) {
+        const res = await api.get<{ clients?: ClientRecord[]; total?: number }>(
+          `/clients?limit=${perPage}&offset=${offset}`,
+        );
+        const batch = Array.isArray(res?.clients) ? res.clients : [];
+        all.push(...batch);
+        const total = typeof res?.total === 'number' ? res.total : all.length;
+        if (batch.length < perPage || all.length >= total) break;
+        offset += perPage;
+      }
+      return all;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
   const clientOptions = useMemo(() => {
-    const clients = clientsResponse?.clients;
-    if (!Array.isArray(clients)) return [];
-    return clients
+    if (!Array.isArray(linkableClients)) return [];
+    return linkableClients
       .filter((c) => c.id && (c.firstName || c.lastName))
       .map((c) => ({
         id: c.id,
         name: [c.firstName, c.lastName].filter(Boolean).join(' '),
-      }));
-  }, [clientsResponse]);
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+  }, [linkableClients]);
 
   // ── UI State: Filters ────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
