@@ -25,7 +25,7 @@ import {
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { normalizeNavigateWealthUrl, SITE_ORIGIN } from '../../utils/siteOrigin';
 import { SEO } from '../seo/SEO';
-import navigateWealthLogo from 'figma:asset/8dc2892f50ecc4c5f692fd5ad52639699e2e4656.png';
+import navigateWealthLogo from '/brand-assets/navigate-wealth-logo-black-purple.png';
 
 interface LinktreeLink {
   id: string;
@@ -219,14 +219,12 @@ export function LinktreePage() {
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f8f7fc] px-6 text-[#313653]">
           <PageBackground />
           <div className="relative z-10 flex flex-col items-center text-center">
-            <div className="mb-6 inline-flex items-center rounded-lg bg-[#313653] px-5 py-3 shadow-[0_18px_40px_rgba(49,54,83,0.20)]">
-              <img
-                src={navigateWealthLogo}
-                alt="Navigate Wealth"
-                className="h-9 w-auto"
-                style={{ imageRendering: 'auto' }}
-              />
-            </div>
+            <img
+              src={navigateWealthLogo}
+              alt="Navigate Wealth"
+              className="mb-6 h-auto w-[260px] max-w-[78vw]"
+              style={{ imageRendering: 'auto' }}
+            />
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-[#6d28d9]/15 bg-white shadow-sm">
               <Loader2 className="h-5 w-5 animate-spin text-[#6d28d9]" />
             </div>
@@ -244,14 +242,12 @@ export function LinktreePage() {
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f8f7fc] px-6 text-[#313653]">
           <PageBackground />
           <div className="relative z-10 flex max-w-sm flex-col items-center text-center">
-            <div className="mb-7 inline-flex items-center rounded-lg bg-[#313653] px-5 py-3 shadow-[0_18px_40px_rgba(49,54,83,0.20)]">
-              <img
-                src={navigateWealthLogo}
-                alt="Navigate Wealth"
-                className="h-9 w-auto"
-                style={{ imageRendering: 'auto' }}
-              />
-            </div>
+            <img
+              src={navigateWealthLogo}
+              alt="Navigate Wealth"
+              className="mb-7 h-auto w-[260px] max-w-[78vw]"
+              style={{ imageRendering: 'auto' }}
+            />
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-[#6d28d9]/15 bg-white shadow-sm">
               <LinkIcon className="h-5 w-5 text-[#6d28d9]" />
             </div>
@@ -281,14 +277,12 @@ export function LinktreePage() {
 
         <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[640px] flex-col px-5 py-7 sm:px-8 sm:py-9">
           <header className="flex flex-col items-center text-center">
-            <div className="inline-flex items-center rounded-lg bg-[#313653] px-5 py-3 shadow-[0_18px_40px_rgba(49,54,83,0.20)]">
-              <img
-                src={navigateWealthLogo}
-                alt="Navigate Wealth"
-                className="h-9 w-auto sm:h-10"
-                style={{ imageRendering: 'auto' }}
-              />
-            </div>
+            <img
+              src={navigateWealthLogo}
+              alt="Navigate Wealth"
+              className="h-auto w-[300px] max-w-[82vw] sm:w-[340px]"
+              style={{ imageRendering: 'auto' }}
+            />
             <div className="mt-5 h-1 w-16 rounded-full bg-gradient-to-r from-[#6d28d9] to-[#7c3aed]" />
             {settings.avatarUrl && (
               <img
