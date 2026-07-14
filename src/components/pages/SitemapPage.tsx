@@ -31,6 +31,13 @@ interface SitemapLink {
   description: string;
   lastModified?: string;
   status?: 'public' | 'auth-required' | 'flexible';
+  /**
+   * Whether the page is eligible for the JSON-LD SiteNavigationElement.
+   * Defaults to true; set false for routes that robots.txt disallows (e.g.
+   * /login, /signup) or that are otherwise not canonical indexable URLs.
+   * Auth-required and query-param links are always excluded regardless.
+   */
+  indexable?: boolean;
 }
 
 interface SitemapSection {
@@ -278,12 +285,14 @@ const sitemapSections: SitemapSection[] = [
         path: '/login',
         description: 'Access your secure Navigate Wealth client portal.',
         status: 'public',
+        indexable: false,
       },
       {
         title: 'Create an Account',
         path: '/signup',
         description: 'Register to start your journey with Navigate Wealth.',
         status: 'public',
+        indexable: false,
       },
       {
         title: 'Client Dashboard',
@@ -386,7 +395,10 @@ const sitemapStructuredData: Record<string, unknown> = {
       '@type': 'SiteNavigationElement',
       name: 'Navigate Wealth Site Navigation',
       hasPart: allLinks
-        .filter((link) => link.status !== 'auth-required' && !link.path.includes('?'))
+        .filter(
+          (link) =>
+            link.indexable !== false && link.status !== 'auth-required' && !link.path.includes('?'),
+        )
         .map((link) => ({
           '@type': 'WebPage',
           name: link.title,
