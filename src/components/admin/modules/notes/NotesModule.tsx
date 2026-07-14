@@ -42,9 +42,9 @@ import { FilterPresetBar } from './components/FilterPresetBar';
 import type { CurrentFilterState } from './components/FilterPresetBar';
 import { DraggablePinnedGrid } from './components/DraggablePinnedGrid';
 import { ColourLabelsDialog } from './components/ColourLabelsDialog';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clientKeys, noteKeys } from '../../../../utils/queryKeys';
-import { api } from '../../../../utils/api/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { noteKeys } from '../../../../utils/queryKeys';
+import { useClients } from '../../../../hooks/useClients';
 import { NotesAPI } from './api';
 import { toast } from 'sonner';
 
@@ -109,26 +109,22 @@ export function NotesModule() {
   const colourLabels = useColourLabels(personnelId);
   const [colourLabelsOpen, setColourLabelsOpen] = useState(false);
 
-  // Fetch clients for linking dropdown
-  const { data: clientsResponse } = useQuery({
-    queryKey: clientKeys.lists(),
-    queryFn: () =>
-      api.get<{ clients: Array<{ id: string; firstName?: string; lastName?: string }> }>(
-        '/clients',
-      ),
-    staleTime: 5 * 60 * 1000,
-  });
+  // Fetch clients for the linking dropdown. Reuse the shared useClients hook
+  // (backed by the single-request profile/all-users endpoint) rather than
+  // paging /clients — that route re-scans the full client set on every page,
+  // so paging it would trigger one full scan per page.
+  const { data: linkableClients } = useClients();
 
   const clientOptions = useMemo(() => {
-    const clients = clientsResponse?.clients;
-    if (!Array.isArray(clients)) return [];
-    return clients
-      .filter((c) => c.id && (c.firstName || c.lastName))
+    if (!Array.isArray(linkableClients)) return [];
+    return linkableClients
+      .filter((c) => c.id && c.full_name && c.full_name !== 'Unknown User')
       .map((c) => ({
         id: c.id,
-        name: [c.firstName, c.lastName].filter(Boolean).join(' '),
-      }));
-  }, [clientsResponse]);
+        name: c.full_name,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+  }, [linkableClients]);
 
   // ── UI State: Filters ────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
