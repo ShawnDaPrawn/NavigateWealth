@@ -2,35 +2,28 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Button } from '../ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import {
   Menu,
   X,
   ChevronDown,
   LogIn,
-  TrendingUp,
-  Target,
-  Shield,
-  Users,
-  Calculator,
   Grid3X3,
-  Building,
-  User,
   Briefcase,
   Info,
-  Award,
   UserCheck,
-  Newspaper,
-  Heart,
   Compass,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { UserProfileDropdown } from '../auth/UserProfileDropdown';
 import { Logo } from './Logo';
+import { NavMegaMenu } from './NavMegaMenu';
+import {
+  serviceItems,
+  solutionItems,
+  companyItems,
+  servicesPanel,
+  solutionsPanel,
+  companyPanel,
+} from './navigationData';
 
 interface NavigationProps {
   /** When true, render the public website nav regardless of auth state */
@@ -58,106 +51,12 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
     { path: '/contact', label: 'Contact' },
   ];
 
-  const serviceItems = [
-    {
-      path: '/risk-management',
-      label: 'Risk Management',
-      icon: Shield,
-    },
-    {
-      path: '/medical-aid',
-      label: 'Medical Aid',
-      icon: Heart,
-    },
-    {
-      path: '/retirement-planning',
-      label: 'Retirement Planning',
-      icon: Target,
-    },
-    {
-      path: '/investment-management',
-      label: 'Investment Management',
-      icon: TrendingUp,
-    },
-    {
-      path: '/employee-benefits',
-      label: 'Employee Benefits',
-      icon: Briefcase,
-    },
-    {
-      path: '/tax-planning',
-      label: 'Tax Planning',
-      icon: Calculator,
-    },
-    {
-      path: '/estate-planning',
-      label: 'Estate Planning',
-      icon: Users,
-    },
-    {
-      path: '/financial-planning',
-      label: 'Financial Planning',
-      icon: Compass,
-    },
-  ];
-
-  const solutionItems = [
-    {
-      path: '/solutions/individuals',
-      label: 'For Individuals',
-      icon: User,
-    },
-    {
-      path: '/solutions/businesses',
-      label: 'For Businesses',
-      icon: Building,
-    },
-    {
-      path: '/solutions/advisers',
-      label: 'For Advisers',
-      icon: Briefcase,
-    },
-  ];
-
-  const companyItems = [
-    {
-      path: '/about',
-      label: 'About Us',
-      icon: Info,
-    },
-    {
-      path: '/why-us',
-      label: 'Why Us?',
-      icon: Award,
-    },
-    {
-      path: '/careers',
-      label: 'Careers',
-      icon: UserCheck,
-    },
-    {
-      path: '/press',
-      label: 'Press',
-      icon: Newspaper,
-    },
-  ];
-
   const isActive = (path: string) => location.pathname === path;
   const isServicesActive =
     location.pathname === '/services' ||
-    location.pathname === '/risk-management' ||
-    location.pathname === '/medical-aid' ||
-    location.pathname === '/retirement-planning' ||
-    location.pathname === '/investment-management' ||
-    location.pathname === '/employee-benefits' ||
-    location.pathname === '/tax-planning' ||
-    location.pathname === '/estate-planning';
+    serviceItems.some((item) => item.path === location.pathname);
   const isSolutionsActive = location.pathname.startsWith('/solutions');
-  const isCompanyActive =
-    location.pathname === '/about' ||
-    location.pathname === '/why-us' ||
-    location.pathname === '/careers' ||
-    location.pathname === '/press';
+  const isCompanyActive = companyItems.some((item) => item.path === location.pathname);
 
   return (
     <nav className="border-b border-gray-300 bg-white relative" aria-label="Main navigation">
@@ -190,92 +89,29 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
                 Home
               </Link>
 
-              {/* Services Dropdown */}
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger
-                  className={`flex items-center space-x-1 transition-colors text-base font-medium ${
-                    isServicesActive ? 'text-primary' : 'text-black hover:text-primary'
-                  }`}
-                >
-                  <span>Services</span>
-                  <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  sideOffset={8}
-                  className="w-64 bg-white/95 border-2 border-gray-100 shadow-2xl rounded-2xl p-4 mt-2 backdrop-blur-md ring-1 ring-black/5"
-                >
-                  {serviceItems.map((service) => (
-                    <DropdownMenuItem key={service.path} asChild className="p-0">
-                      <Link
-                        to={service.path}
-                        className="group flex w-full px-3 py-3 text-lg font-medium text-gray-700 hover:!bg-[#6d28d9] hover:!text-white items-center space-x-3 transition-all duration-200 rounded-xl hover:shadow-md hover:scale-[1.02]"
-                      >
-                        <service.icon className="h-6 w-6 group-hover:text-white transition-colors duration-200" />
-                        <span>{service.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Services Mega Menu */}
+              <NavMegaMenu
+                label="Services"
+                active={isServicesActive}
+                items={serviceItems}
+                panel={servicesPanel}
+              />
 
-              {/* Solutions Dropdown */}
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger
-                  className={`flex items-center space-x-1 transition-colors text-base font-medium ${
-                    isSolutionsActive ? 'text-primary' : 'text-black hover:text-primary'
-                  }`}
-                >
-                  <span>Solutions</span>
-                  <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  sideOffset={8}
-                  className="min-w-48 bg-white/95 border-2 border-gray-100 shadow-2xl rounded-2xl p-4 mt-2 backdrop-blur-md ring-1 ring-black/5"
-                >
-                  {solutionItems.map((solution) => (
-                    <DropdownMenuItem key={solution.path} asChild className="p-0">
-                      <Link
-                        to={solution.path}
-                        className="group flex w-full px-3 py-3 text-lg font-medium text-gray-700 hover:!bg-[#6d28d9] hover:!text-white items-center space-x-3 transition-all duration-200 rounded-xl hover:shadow-md hover:scale-[1.02]"
-                      >
-                        <solution.icon className="h-6 w-6 group-hover:text-white transition-colors duration-200" />
-                        <span>{solution.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Solutions Mega Menu */}
+              <NavMegaMenu
+                label="Solutions"
+                active={isSolutionsActive}
+                items={solutionItems}
+                panel={solutionsPanel}
+              />
 
-              {/* Company Dropdown */}
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger
-                  className={`flex items-center space-x-1 transition-colors text-base font-medium ${
-                    isCompanyActive ? 'text-primary' : 'text-black hover:text-primary'
-                  }`}
-                >
-                  <span>Company</span>
-                  <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  sideOffset={8}
-                  className="min-w-36 bg-white/95 border-2 border-gray-100 shadow-2xl rounded-2xl p-4 mt-2 backdrop-blur-md ring-1 ring-black/5"
-                >
-                  {companyItems.map((company) => (
-                    <DropdownMenuItem key={company.path} asChild className="p-0">
-                      <Link
-                        to={company.path}
-                        className="group flex w-full px-3 py-3 text-lg font-medium text-gray-700 hover:!bg-[#6d28d9] hover:!text-white items-center space-x-3 transition-all duration-200 rounded-xl hover:shadow-md hover:scale-[1.02]"
-                      >
-                        <company.icon className="h-6 w-6 group-hover:text-white transition-colors duration-200" />
-                        <span>{company.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Company Mega Menu */}
+              <NavMegaMenu
+                label="Company"
+                active={isCompanyActive}
+                items={companyItems}
+                panel={companyPanel}
+              />
 
               <Link
                 to="/ask-vasco"
