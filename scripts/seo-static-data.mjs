@@ -653,7 +653,12 @@ export function createRouteSchema(route, siteUrl) {
  * Tailwind replica — just enough that the pre-hydration flash reads as an
  * intentional document (system font, centered column) before React replaces it.
  */
+// The `html.js #seo-static-body` rule hides this SEO snapshot from real
+// (JS-enabled) visitors so it never paints before React mounts — index.html sets
+// the `js` class in <head> before the body paints. Non-JS crawlers keep the `js`
+// class unset and still see the snapshot, so SEO is unaffected.
 const STATIC_BODY_STYLE = `<style>
+        html.js #seo-static-body{display:none}
         #seo-static-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem;color:#1f2937;line-height:1.6}
         #seo-static-body h1{font-size:2rem;line-height:1.2;margin:0.5rem 0 1rem}
         #seo-static-body h2{font-size:1.4rem;margin:2rem 0 0.75rem}
