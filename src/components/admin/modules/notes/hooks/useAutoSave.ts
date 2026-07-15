@@ -8,7 +8,7 @@
  * §11.1 — Local UI state management
  */
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import type { UpdateNoteInput } from '../types';
 
 export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -119,5 +119,7 @@ export function useAutoSave({
     setStatus('idle');
   }, []);
 
-  return { status, markDirty, flush, reset };
+  // Memoised so the object's identity only changes when status does —
+  // consumers must not get a fresh object on every render.
+  return useMemo(() => ({ status, markDirty, flush, reset }), [status, markDirty, flush, reset]);
 }

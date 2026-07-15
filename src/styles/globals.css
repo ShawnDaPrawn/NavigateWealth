@@ -459,7 +459,14 @@ body.schedule-consultation-modal-open footer.bg-black {
 
   .animate-menu-pop {
     animation: menu-pop 0.18s ease-out;
-    transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+    transform-origin: top center;
+  }
+
+  /* Radix NavigationMenu wraps its list in an inline-styled position:relative
+     div. Neutralize it so the navbar mega panels anchor to the navbar row
+     (their nearest positioned ancestor) and can span the full content width. */
+  [data-slot='navigation-menu'] > div[style] {
+    position: static !important;
   }
 
   .delay-100 {
