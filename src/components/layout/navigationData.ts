@@ -141,8 +141,8 @@ export const servicesPanel: MegaPanelConfig = {
   heading: 'Our Services',
   tagline: 'Advice for every part of your financial life.',
   image: {
-    key: '76fc906be4d2c342ff5272cc2c0d901ad65ff7f6',
-    alt: "Coins and a growing plant on an adviser's desk",
+    key: 'services-menu',
+    alt: 'Financial adviser reviewing tax and planning documents with a client',
   },
   cta: { label: 'View all services', to: '/services' },
   // md:w-… overrides the shadcn wrapper's md:w-auto (tailwind-merge keeps the
@@ -156,8 +156,8 @@ export const solutionsPanel: MegaPanelConfig = {
   heading: 'Solutions',
   tagline: 'Tailored guidance for wherever you are.',
   image: {
-    key: '61c60b4a45c33d3564e85aaf184ff3f3b9db37f8',
-    alt: 'Financial adviser consulting with clients',
+    key: 'solutions-menu',
+    alt: 'Financial adviser consulting with a couple',
   },
   panelClassName: 'w-[560px] md:w-[560px] max-w-[calc(100%-1rem)]',
   imageClassName: 'w-[240px]',
@@ -168,8 +168,8 @@ export const companyPanel: MegaPanelConfig = {
   heading: 'Company',
   tagline: 'Get to know Navigate Wealth.',
   image: {
-    key: 'b0b37f186d8c48117bede379a79e329626b6ac95',
-    alt: 'Navigate Wealth advisers working with a client',
+    key: 'company-menu',
+    alt: 'Navigate Wealth team collaborating in a meeting',
   },
   panelClassName: 'w-[560px] md:w-[560px] max-w-[calc(100%-1rem)]',
   imageClassName: 'w-[240px]',
