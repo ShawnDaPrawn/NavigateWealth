@@ -41,7 +41,9 @@ describe('Navigation mega menus', () => {
     renderNavigation();
 
     openMenu(/^Services$/);
-    await screen.findByAltText("Coins and a growing plant on an adviser's desk");
+    await screen.findByAltText(
+      'Financial adviser reviewing tax and planning documents with a client',
+    );
 
     for (const item of serviceItems) {
       const link = getPanelLink(new RegExp(item.label));
@@ -57,7 +59,7 @@ describe('Navigation mega menus', () => {
     renderNavigation();
 
     openMenu(/^Solutions$/);
-    await screen.findByAltText('Financial adviser consulting with clients');
+    await screen.findByAltText('Financial adviser consulting with a couple');
 
     for (const item of solutionItems) {
       const link = getPanelLink(new RegExp(item.label));
@@ -70,7 +72,7 @@ describe('Navigation mega menus', () => {
     renderNavigation();
 
     openMenu(/^Company$/);
-    await screen.findByAltText('Navigate Wealth advisers working with a client');
+    await screen.findByAltText('Navigate Wealth team collaborating in a meeting');
 
     for (const item of companyItems) {
       const link = getPanelLink(new RegExp(item.label.replace('?', '\\?')));

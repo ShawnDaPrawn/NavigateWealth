@@ -11,6 +11,11 @@ const OUT_DIR = path.join(PROJECT_ROOT, 'public', 'img', 'optimized');
  * materially affect LCP/scrolling.
  */
 const TARGETS = [
+  // Navbar mega-menu panel images (portrait cards on the left of each dropdown)
+  { hash: 'Services', label: 'services-menu', key: 'services-menu' },
+  { hash: 'Solutions', label: 'solutions-menu', key: 'solutions-menu' },
+  { hash: 'Company', label: 'company-menu', key: 'company-menu' },
+
   // Home / Services cards (very large Figma exports)
   { hash: 'fc6a85769d1248cdde73b1d2252674e730f0655a', label: 'investment-consultation' },
   { hash: '482a45127e501f4b3cecd244241cff6024f47011', label: 'estate-planning' },
