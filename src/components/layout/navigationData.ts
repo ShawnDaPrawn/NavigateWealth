@@ -29,9 +29,12 @@ export interface MegaPanelConfig {
   /** Key of a pre-optimized image set under public/img/optimized/<key>-<width>.<format> */
   image: { key: string; alt: string };
   cta?: { label: string; to: string };
+  /** Overall panel width — fixed to content so it sits inside the navbar bounds
+      rather than stretching the full container width */
+  panelClassName: string;
   /** Fixed width of the left image column */
   imageClassName: string;
-  /** Column layout of the tile grid */
+  /** Column layout of the tile grid (always two rows for equal panel heights) */
   gridClassName: string;
 }
 
@@ -142,6 +145,9 @@ export const servicesPanel: MegaPanelConfig = {
     alt: "Coins and a growing plant on an adviser's desk",
   },
   cta: { label: 'View all services', to: '/services' },
+  // md:w-… overrides the shadcn wrapper's md:w-auto (tailwind-merge keeps the
+  // md variant separately from the unprefixed width).
+  panelClassName: 'w-[880px] md:w-[880px] max-w-[calc(100%-1rem)]',
   imageClassName: 'w-[300px]',
   gridClassName: 'grid-cols-4',
 };
@@ -153,8 +159,9 @@ export const solutionsPanel: MegaPanelConfig = {
     key: '61c60b4a45c33d3564e85aaf184ff3f3b9db37f8',
     alt: 'Financial adviser consulting with clients',
   },
-  imageClassName: 'w-[260px]',
-  gridClassName: 'grid-cols-3',
+  panelClassName: 'w-[560px] md:w-[560px] max-w-[calc(100%-1rem)]',
+  imageClassName: 'w-[240px]',
+  gridClassName: 'grid-cols-2',
 };
 
 export const companyPanel: MegaPanelConfig = {
@@ -164,6 +171,7 @@ export const companyPanel: MegaPanelConfig = {
     key: 'b0b37f186d8c48117bede379a79e329626b6ac95',
     alt: 'Navigate Wealth advisers working with a client',
   },
-  imageClassName: 'w-[260px]',
-  gridClassName: 'grid-cols-4',
+  panelClassName: 'w-[560px] md:w-[560px] max-w-[calc(100%-1rem)]',
+  imageClassName: 'w-[240px]',
+  gridClassName: 'grid-cols-2',
 };

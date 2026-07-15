@@ -39,11 +39,20 @@ export function NavMegaMenu({ label, active, items, panel }: NavMegaMenuProps) {
       >
         {label}
       </NavigationMenuTrigger>
-      {/* The `!` utilities out-rank the wrapper's viewport=false variant styles
-          (bg-popover, rounded-md, border, shadow, mt-1.5), which otherwise win
-          on specificity. */}
-      <NavigationMenuContent className="absolute inset-x-0 top-full z-50 mt-px! w-auto overflow-hidden overflow-y-auto rounded-2xl! border-2! border-gray-100! bg-white/95! p-0 shadow-2xl! ring-1 ring-black/5 backdrop-blur-md animate-menu-pop max-h-[calc(100vh-8rem)]">
-        <div className="flex items-stretch">
+      {/* Centered within the navbar row (the positioned ancestor) via
+          inset-x-0 + mx-auto on a fixed-width panel, so it's balanced between
+          the content edges without stretching the full width. Centering with
+          margins (not translate) avoids clashing with the open animation's
+          transform. The `!` utilities out-rank the wrapper's viewport=false
+          variant styles (bg-popover, rounded-md, border, shadow, mt-1.5). */}
+      <NavigationMenuContent
+        className={cn(
+          'absolute inset-x-0 top-full z-50 mx-auto mt-px! overflow-hidden rounded-2xl! border-2! border-gray-100! bg-white/95! p-0 shadow-2xl! ring-1 ring-black/5 backdrop-blur-md animate-menu-pop',
+          panel.panelClassName,
+        )}
+      >
+        {/* Fixed height keeps every panel the same height regardless of item count */}
+        <div className="flex h-80 items-stretch">
           {/* Image column */}
           <div className={cn('relative shrink-0 self-stretch bg-gray-100', panel.imageClassName)}>
             <picture>
@@ -76,9 +85,13 @@ export function NavMegaMenu({ label, active, items, panel }: NavMegaMenuProps) {
             </div>
           </div>
 
-          {/* Tile grid, separated from the image by a vertical divider */}
+          {/* Tile grid, separated from the image by a vertical divider. Two
+              equal rows so all three panels share the same height. */}
           <div
-            className={cn('grid flex-1 gap-2 border-l border-gray-200/80 p-4', panel.gridClassName)}
+            className={cn(
+              'grid flex-1 grid-rows-2 gap-2 border-l border-gray-200/80 p-4',
+              panel.gridClassName,
+            )}
           >
             {items.map((item) => (
               <NavigationMenuLink key={item.path} asChild>
