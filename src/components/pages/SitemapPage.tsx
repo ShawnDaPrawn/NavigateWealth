@@ -477,27 +477,42 @@ export function SitemapPage() {
         structuredData={sitemapStructuredData}
       />
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-purple-700 via-purple-700 to-indigo-800 text-white">
+      {/* Hero Section — matches the site-standard dark hero (Home, Services, Why Us) */}
+      <section className="relative overflow-hidden bg-[#111827]" aria-label="Sitemap hero">
+        {/* Background decoration */}
         <div
-          className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full opacity-30 blur-3xl"
+          className="absolute inset-0 bg-gradient-to-br from-[#111827] via-[#1a1f3a] to-[#111827] pointer-events-none"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full opacity-25 pointer-events-none"
           style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(109,40,217,0.35) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full opacity-20 blur-3xl"
+          className="absolute -bottom-48 -left-32 w-[450px] h-[450px] rounded-full opacity-20 pointer-events-none"
           style={{
-            background: 'radial-gradient(circle, rgba(129,140,248,0.6) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
-        <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-16 lg:py-20">
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+          }}
+          aria-hidden="true"
+        />
+
+        <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-16 lg:py-20">
           <div className="max-w-3xl">
             <nav
               aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-sm text-purple-200 mb-6"
+              className="flex items-center gap-2 text-sm text-gray-400 mb-6"
             >
               <Link to="/" className="hover:text-white transition-colors">
                 Home
@@ -505,14 +520,19 @@ export function SitemapPage() {
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
               <span className="text-white">Sitemap</span>
             </nav>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3.5 py-1.5 text-xs font-medium text-purple-100 mb-6">
-              <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-              Everything on Navigate Wealth, in one place
-            </span>
-            <h1 className="text-4xl lg:text-5xl font-bold tracking-tight mb-5">
-              Navigate Wealth Sitemap
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-6">
+              <Globe className="h-3.5 w-3.5 text-purple-400" aria-hidden="true" />
+              <span className="text-[12px] font-medium text-gray-400 tracking-wide">
+                Everything on Navigate Wealth, in one place
+              </span>
+            </div>
+            <h1 className="!text-[clamp(1.85rem,4.5vw,3rem)] !font-extrabold !leading-[1.1] text-white tracking-tight mb-5">
+              Navigate Wealth{' '}
+              <span className="bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-400 bg-clip-text text-transparent">
+                Sitemap
+              </span>
             </h1>
-            <p className="text-lg text-purple-100 leading-relaxed mb-8">
+            <p className="text-gray-400 text-base lg:text-lg max-w-2xl leading-relaxed mb-8">
               Your complete guide to every page on our site — services, solutions, resources, and
               your secure client portal. Search below or browse by category to find exactly what you
               need.
@@ -534,29 +554,29 @@ export function SitemapPage() {
               />
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-purple-100">
+            <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-gray-400">
               <span className="flex items-center gap-2">
-                <FileText className="h-4 w-4" aria-hidden="true" />
+                <FileText className="h-4 w-4 text-purple-400" aria-hidden="true" />
                 {totalPages} pages
               </span>
               <span className="flex items-center gap-2">
-                <Layers className="h-4 w-4" aria-hidden="true" />
+                <Layers className="h-4 w-4 text-purple-400" aria-hidden="true" />
                 {sitemapSections.length} categories
               </span>
               <span className="flex items-center gap-2">
-                <Globe className="h-4 w-4" aria-hidden="true" />
+                <Globe className="h-4 w-4 text-purple-400" aria-hidden="true" />
                 {publicPages} public pages
               </span>
               {lastUpdatedLabel && (
                 <span className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  <Clock className="h-4 w-4 text-purple-400" aria-hidden="true" />
                   Updated {lastUpdatedLabel}
                 </span>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Content */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-14">
