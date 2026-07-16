@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Button } from '../ui/button';
 import {
@@ -36,8 +36,32 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
   const [isServicesExpanded, setIsServicesExpanded] = useState(false);
   const [isSolutionsExpanded, setIsSolutionsExpanded] = useState(false);
   const [isCompanyExpanded, setIsCompanyExpanded] = useState(false);
+  // Controls which desktop mega menu is open. Empty string = all closed.
+  // Driven by click (see NavMegaMenu, which suppresses hover-open) so the menus
+  // behave as a standard menu-button: click to toggle, click-away / Esc to close.
+  const [openMegaMenu, setOpenMegaMenu] = useState('');
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+
+  // Close the open mega menu when the pointer goes down anywhere outside the
+  // desktop navigation menu (click-away). Escape and item selection are handled
+  // natively by Radix via onValueChange.
+  useEffect(() => {
+    if (!openMegaMenu) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('[data-slot="navigation-menu"]')) {
+        setOpenMegaMenu('');
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [openMegaMenu]);
+
+  // Close the mega menu whenever the route changes (e.g. after selecting a link).
+  useEffect(() => {
+    setOpenMegaMenu('');
+  }, [location.pathname]);
 
   // When forcePublic is on, treat the user as unauthenticated for layout purposes
   const effectivelyAuthenticated = forcePublic ? false : isAuthenticated;
@@ -94,26 +118,32 @@ export function Navigation({ forcePublic = false }: NavigationProps) {
                   against the navbar row and spans the full content width. The
                   aria-label gives Radix's inner <nav> a unique accessible name so
                   it reads as an intentional, distinct landmark (not a duplicate of
-                  the outer "Main navigation"). */}
+                  the outer "Main navigation"). Controlled open state + NavMegaMenu's
+                  hover suppression make these click-to-open menus. */}
               <NavigationMenu
                 viewport={false}
+                value={openMegaMenu}
+                onValueChange={setOpenMegaMenu}
                 aria-label="Services, Solutions and Company"
                 className="static max-w-none flex-none"
               >
                 <NavigationMenuList className="static space-x-8 gap-0">
                   <NavMegaMenu
+                    value="services"
                     label="Services"
                     active={isServicesActive}
                     items={serviceItems}
                     panel={servicesPanel}
                   />
                   <NavMegaMenu
+                    value="solutions"
                     label="Solutions"
                     active={isSolutionsActive}
                     items={solutionItems}
                     panel={solutionsPanel}
                   />
                   <NavMegaMenu
+                    value="company"
                     label="Company"
                     active={isCompanyActive}
                     items={companyItems}
