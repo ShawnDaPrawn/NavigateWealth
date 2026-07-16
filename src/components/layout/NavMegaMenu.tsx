@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { Link } from 'react-router';
 import { ArrowRight } from 'lucide-react';
 import {
@@ -11,11 +12,24 @@ import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import type { MegaPanelConfig, NavMenuItem } from './navigationData';
 
 interface NavMegaMenuProps {
+  /** Unique identifier for this menu within the NavigationMenu (controls open state) */
+  value: string;
   label: string;
   active: boolean;
   items: NavMenuItem[];
   panel: MegaPanelConfig;
 }
+
+/**
+ * Suppress Radix's hover-to-open behaviour so the menu only opens on click.
+ * Radix opens/closes on pointer move/enter/leave; preventing the default on
+ * those events on the trigger and content leaves click and keyboard as the only
+ * ways to toggle the menu (the standard menu-button interaction).
+ */
+const suppressHover = {
+  onPointerMove: (event: React.PointerEvent) => event.preventDefault(),
+  onPointerLeave: (event: React.PointerEvent) => event.preventDefault(),
+};
 
 /**
  * Desktop/tablet mega-menu panel for the public navbar: a full-content-width
@@ -27,10 +41,11 @@ interface NavMegaMenuProps {
  * so it spans exactly the page content width and opens flush below the navbar
  * instead of overlapping it.
  */
-export function NavMegaMenu({ label, active, items, panel }: NavMegaMenuProps) {
+export function NavMegaMenu({ value, label, active, items, panel }: NavMegaMenuProps) {
   return (
-    <NavigationMenuItem className="static">
+    <NavigationMenuItem value={value} className="static">
       <NavigationMenuTrigger
+        {...suppressHover}
         className={`h-auto rounded-none bg-transparent p-0 text-base font-medium transition-colors hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent data-[state=open]:hover:bg-transparent data-[state=open]:focus:bg-transparent [&_svg]:size-4 ${
           active
             ? 'text-primary hover:text-primary focus:text-primary data-[state=open]:text-primary'
@@ -46,6 +61,7 @@ export function NavMegaMenu({ label, active, items, panel }: NavMegaMenuProps) {
           transform. The `!` utilities out-rank the wrapper's viewport=false
           variant styles (bg-popover, rounded-md, border, shadow, mt-1.5). */}
       <NavigationMenuContent
+        {...suppressHover}
         className={cn(
           'absolute inset-x-0 top-full z-50 mx-auto mt-px! overflow-hidden rounded-2xl! border-2! border-gray-100! bg-white/95! p-0 shadow-2xl! ring-1 ring-black/5 backdrop-blur-md animate-menu-pop',
           panel.panelClassName,
