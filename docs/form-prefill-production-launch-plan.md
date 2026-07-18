@@ -71,7 +71,7 @@ flowchart TD
    - Record pass/fail and sign-off name + date
 
 4. **Rollback drill**
-   - Set `VITE_FORM_PREFILL_ENABLED=false`, rebuild frontend, confirm Medical falls back to legacy silent fill only
+   - Before launch, disable unified prefill, rebuild, and confirm Medical falls back to legacy silent fill only
    - Document result in PRODUCTION-READINESS Section 10a
 
 ### Exit criteria

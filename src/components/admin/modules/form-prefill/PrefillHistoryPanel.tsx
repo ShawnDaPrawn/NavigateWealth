@@ -4,7 +4,6 @@ import { Button } from '../../../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
 import { Loader2, History, RefreshCw } from 'lucide-react';
 import { fetchPrefillAudit } from '../../../../services/form-prefill-api';
-import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
 
 interface PrefillAuditRow {
   timestamp?: string;
@@ -24,7 +23,7 @@ export function PrefillHistoryPanel({ clientId }: PrefillHistoryPanelProps) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!clientId || !isFormPrefillEnabled()) return;
+    if (!clientId) return;
     setLoading(true);
     setError(null);
     try {
@@ -40,8 +39,6 @@ export function PrefillHistoryPanel({ clientId }: PrefillHistoryPanelProps) {
   useEffect(() => {
     void load();
   }, [load]);
-
-  if (!isFormPrefillEnabled()) return null;
 
   return (
     <Card className="border-purple-100">

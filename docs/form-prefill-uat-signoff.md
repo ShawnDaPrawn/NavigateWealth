@@ -16,7 +16,7 @@ No formal adviser sign-off required. Use this checklist after deploy + frontend 
 | Expanded `/prefill/*` smoke (6 resolve + audit + apply-audit + `/form-templates`) | PASS                                    | 2026-05-23 |
 | `npm test` — form-prefill + esign-prefill suites                                  | PASS (305 tests)                        | 2026-05-23 |
 | Client JWT → `POST /prefill/resolve` returns 403                                  | PASS (integration test)                 | 2026-05-23 |
-| Rollback `VITE_FORM_PREFILL_ENABLED=false` Medical legacy path                    | PASS (build + gate)                     | 2026-05-23 |
+| Pre-launch rollback drill for the Medical legacy path                             | PASS (build + gate)                     | 2026-05-23 |
 | Auto-populate adapter parity tests                                                | PASS                                    | 2026-05-23 |
 | `npm run build` with prefill enabled                                              | PASS                                    | 2026-05-23 |
 | Playwright on production (`PLAYWRIGHT_BASE_URL=https://www.navigatewealth.co`)    | PASS (5/5 incl. PDF template deep link) | 2026-05-23 |
@@ -72,7 +72,8 @@ After migration, set Edge Function secret `FORM_TEMPLATE_ALLOW_KV_FALLBACK=false
 
 ## Rollback
 
-Set `VITE_FORM_PREFILL_ENABLED=false`, rebuild, redeploy frontend. Medical Step 1 falls back to legacy silent fill.
+The rollout flag and legacy silent-fill path were retired after production launch. Revert the
+form-prefill rollout cleanup and redeploy if the launched UI must be rolled back.
 
 ## Support runbook
 

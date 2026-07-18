@@ -15,9 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
-import { FileSpreadsheet, ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
-import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
+import { FileSpreadsheet, ChevronRight, Loader2 } from 'lucide-react';
 
 const FormTemplatesModule = React.lazy(() =>
   import('../../form-prefill/FormTemplatesModule').then((m) => ({
@@ -39,7 +37,6 @@ interface FormTemplateToolProps {
 
 export function FormTemplateTool({ selectedClientId }: FormTemplateToolProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const enabled = isFormPrefillEnabled();
 
   return (
     <div className="contents">
@@ -85,21 +82,9 @@ export function FormTemplateTool({ selectedClientId }: FormTemplateToolProps) {
           </DialogHeader>
 
           <div className="max-h-[min(82vh,900px)] overflow-y-auto bg-slate-50/40 px-6 py-6">
-            {enabled ? (
-              <Suspense fallback={<DialogFallback />}>
-                <FormTemplatesModule selectedClientId={selectedClientId} />
-              </Suspense>
-            ) : (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>PDF form filling unavailable</AlertTitle>
-                <AlertDescription>
-                  External PDF template filling is disabled. Set{' '}
-                  <code className="text-xs">VITE_FORM_PREFILL_ENABLED=true</code> to restore this
-                  feature.
-                </AlertDescription>
-              </Alert>
-            )}
+            <Suspense fallback={<DialogFallback />}>
+              <FormTemplatesModule selectedClientId={selectedClientId} />
+            </Suspense>
           </div>
         </DialogContent>
       </Dialog>
