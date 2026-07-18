@@ -838,16 +838,16 @@ cleanup. Verify before referencing them as real:
 
 ### Launch metadata
 
-| Item                  | Value                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Edge Function deploy  | 2026-05-23 (final publish redeploy)                                                                         |
-| Production API smoke  | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json`          |
-| Frontend deploy       | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM)                        |
-| Rollback drill        | `VITE_FORM_PREFILL_ENABLED=false` build verified — Medical Step 1 legacy gate in `Step1InputForm.tsx` ~L108 |
-| Access model          | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`)                                              |
-| Runbook               | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md)                                            |
-| E-sign tokens doc     | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md)              |
-| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B)   |
+| Item                  | Value                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Edge Function deploy  | 2026-05-23 (final publish redeploy)                                                                          |
+| Production API smoke  | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json`           |
+| Frontend deploy       | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM)                         |
+| Rollback drill        | Pre-launch legacy-path build was verified; the launched path is now permanent and rollback is by code revert |
+| Access model          | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`)                                               |
+| Runbook               | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md)                                             |
+| E-sign tokens doc     | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md)               |
+| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B)    |
 
 ### Tier A production-ready checklist
 
@@ -881,10 +881,11 @@ npm run form-prefill:smoke
 
 Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID` (same actors as FNA intake UAT).
 
-### Feature flag / rollback
+### Rollout status
 
-- `VITE_FORM_PREFILL_ENABLED` — defaults to **enabled** when unset.
-- Set to `false` to disable unified prefill and fall back to legacy silent auto-populate (Medical only).
+- Unified form prefill has been the production path since 2026-05-23.
+- The frontend rollout flag and legacy silent auto-populate branches were retired after launch;
+  rollback is now by reverting the cleanup change.
 
 ### Known gaps (Tier C — not blocking Tier A sign-off)
 
