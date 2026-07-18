@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { FormPrefillId, PrefillResolveResponse } from '../../../../shared/form-prefill/types';
 import { logPrefillAudit, resolveFormPrefill } from '../../../../services/form-prefill-api';
-import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
 import { PREFILL_PROFILE_HINTS } from '../../../../shared/form-prefill/form-field-registry';
 import { PrefillReviewModal } from './PrefillReviewModal';
 import { PrefillBanner } from './PrefillBanner';
@@ -69,7 +68,7 @@ export function useFormPrefill({
   useEffect(() => () => setReviewOpen(false), []);
 
   const runResolve = useCallback(async () => {
-    if (!clientId || !isFormPrefillEnabled()) return null;
+    if (!clientId) return null;
     setLoading(true);
     try {
       const response = await resolveFormPrefill({
@@ -98,7 +97,7 @@ export function useFormPrefill({
   }, [runResolve]);
 
   const startPrefill = useCallback(async () => {
-    if (!clientId || !isFormPrefillEnabled()) return;
+    if (!clientId) return;
     const response = await runResolve();
     if (!response) return;
 

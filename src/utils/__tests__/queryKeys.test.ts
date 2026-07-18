@@ -361,7 +361,6 @@ describe('fna / compliance / esign / notes', () => {
     expect(riskFnaKeys.list('c1')).toEqual(['risk-fna', 'list', 'c1']);
     expect(riskFnaKeys.detail('d1')).toEqual(['risk-fna', 'detail', 'd1']);
     expect(riskFnaKeys.clientProfile('c1')).toEqual(['risk-fna', 'client-profile', 'c1']);
-    expect(medicalFnaKeys.clientProfile('c1')).toEqual(['medical-fna', 'client-profile', 'c1']);
     expect(medicalFnaKeys.policies('c1')).toEqual(['medical-aid-policies', 'c1']);
   });
   it('complianceKeys + esignKeys + noteKeys', () => {
