@@ -11,9 +11,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@/test/utils';
 
+const { autoPopulateInputsMock, startPrefillMock } = vi.hoisted(() => ({
+  autoPopulateInputsMock: vi.fn(),
+  startPrefillMock: vi.fn(),
+}));
+
 vi.mock('@/components/admin/modules/investment-ina/api', () => ({
   InvestmentINAApiService: {
-    autoPopulateInputs: vi.fn().mockResolvedValue({}),
+    autoPopulateInputs: autoPopulateInputsMock,
     calculateINA: vi.fn().mockResolvedValue({}),
     saveSession: vi.fn().mockResolvedValue({ id: 'session-1' }),
   },
@@ -27,11 +32,7 @@ vi.mock(
 );
 
 vi.mock('@/components/admin/modules/form-prefill/useFormPrefill', () => ({
-  useFormPrefill: () => ({ PrefillUI: null, startPrefill: vi.fn() }),
-}));
-
-vi.mock('@/utils/formPrefillFeature', () => ({
-  isFormPrefillEnabled: () => false,
+  useFormPrefill: () => ({ PrefillUI: null, startPrefill: startPrefillMock }),
 }));
 
 vi.mock('sonner', () => ({
@@ -44,6 +45,8 @@ const noop = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  autoPopulateInputsMock.mockResolvedValue({});
+  startPrefillMock.mockResolvedValue(undefined);
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -63,5 +66,12 @@ describe('InvestmentINAWizard', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Client Overview').length).toBeGreaterThan(0);
     });
+  });
+
+  it('starts the launched review prefill path instead of legacy auto-populate', async () => {
+    render(<InvestmentINAWizard open={true} onClose={noop} clientId="c-1" />);
+
+    await waitFor(() => expect(startPrefillMock).toHaveBeenCalledTimes(1));
+    expect(autoPopulateInputsMock).not.toHaveBeenCalled();
   });
 });
