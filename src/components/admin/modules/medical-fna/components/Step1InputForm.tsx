@@ -7,7 +7,7 @@
  * - All inputs validated before proceeding to Step 2
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -42,13 +42,11 @@ import {
   FormLabel,
   FormMessage,
 } from '../../../../ui/form';
-import { useClientProfile } from '../hooks/useClientProfile';
 import { useClientProductKeys } from '../hooks/useClientProductKeys';
 import { MedicalFNAInputSchema, MedicalFNAFormValues } from '../schema';
 import { MedicalFNAInputs } from '../types';
 import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
-import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 
 interface Step1Props {
   clientId?: string;
@@ -67,7 +65,6 @@ export function Step1InputForm({
   submitLabel,
   onSaveDraft,
 }: Step1Props) {
-  const { data: profile } = useClientProfile(clientId);
   const {
     planType,
     hospitalTariff,
@@ -107,11 +104,9 @@ export function Step1InputForm({
   });
 
   const [prefillStarted, setPrefillStarted] = React.useState(false);
-  const prefillEnabled = isFormPrefillEnabled();
 
   const { PrefillUI, startPrefill } = useFormPrefill({
-    clientId:
-      prefillEnabled && initialData && Object.keys(initialData).length > 0 ? undefined : clientId,
+    clientId: initialData && Object.keys(initialData).length > 0 ? undefined : clientId,
     formId: 'medical-fna-step1',
     currentValues: form.getValues() as Record<string, unknown>,
     autoOpenReview: !intakeMode,
@@ -127,84 +122,11 @@ export function Step1InputForm({
   });
 
   React.useEffect(() => {
-    if (
-      prefillEnabled &&
-      clientId &&
-      (!initialData || Object.keys(initialData).length === 0) &&
-      !prefillStarted
-    ) {
+    if (clientId && (!initialData || Object.keys(initialData).length === 0) && !prefillStarted) {
       setPrefillStarted(true);
       void startPrefill();
     }
-  }, [clientId, initialData, prefillStarted, startPrefill, prefillEnabled]);
-
-  // Legacy silent auto-fill only when unified prefill is disabled
-  useEffect(() => {
-    if (prefillEnabled) return;
-    const isEditing = initialData && Object.keys(initialData).length > 2;
-    if (isEditing) return;
-
-    // 1. Profile Data
-    if (profile) {
-      // Some legacy auto-fill fields (spouseFullName, dependants, currentAge)
-      // are present at runtime but not on the typed ProfileData shape.
-      const legacy = profile as unknown as Record<string, unknown>;
-      if (legacy.spouseFullName || profile.maritalStatus === 'Married') {
-        form.setValue('spousePartner', true);
-      }
-
-      const childCount = (
-        (legacy.dependants as Array<{ relationship?: string }> | undefined) || []
-      ).filter((d) => d.relationship === 'Child').length;
-      if (childCount > 0) form.setValue('childrenCount', childCount);
-
-      // Calculate age from DOB if available
-      if (profile.dateOfBirth) {
-        const dob = new Date(profile.dateOfBirth);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-          age--;
-        }
-        form.setValue('currentAge', age);
-      } else if (legacy.currentAge) {
-        // Fallback: direct currentAge field
-        form.setValue('currentAge', legacy.currentAge as number);
-      }
-    }
-
-    // 2. Product Keys (Existing Medical Aid)
-    if (!isProductKeysLoading) {
-      if (planType) form.setValue('existingPlanType', planType);
-
-      if (hospitalTariff) {
-        let mappedTariff = 'Other';
-        if (hospitalTariff.includes('100%')) mappedTariff = '100%';
-        else if (hospitalTariff.includes('200%')) mappedTariff = '200%';
-        else if (hospitalTariff.includes('100')) mappedTariff = '100%';
-        else if (hospitalTariff.includes('200')) mappedTariff = '200%';
-        form.setValue('existingHospitalCover', mappedTariff);
-      }
-
-      if (totalPremium !== undefined) form.setValue('existingTotalPremium', totalPremium);
-      if (msa !== undefined) form.setValue('existingMSA', msa);
-      if (lateJoinerPenalty !== undefined) form.setValue('existingLJP', lateJoinerPenalty);
-      if (dependentsCount !== undefined) form.setValue('existingDependents', dependentsCount);
-    }
-  }, [
-    profile,
-    initialData,
-    form,
-    planType,
-    hospitalTariff,
-    totalPremium,
-    msa,
-    lateJoinerPenalty,
-    dependentsCount,
-    isProductKeysLoading,
-    prefillEnabled,
-  ]);
+  }, [clientId, initialData, prefillStarted, startPrefill]);
 
   const onSubmit = (data: MedicalFNAFormValues) => {
     onNext(data);
@@ -261,7 +183,7 @@ export function Step1InputForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-12">
-        {prefillEnabled && !intakeMode && PrefillUI}
+        {!intakeMode && PrefillUI}
 
         {/* Section A: Household */}
         <Card>

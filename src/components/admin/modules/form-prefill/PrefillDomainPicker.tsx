@@ -11,7 +11,6 @@ import {
 import { Sparkles } from 'lucide-react';
 import type { FormPrefillId } from '../../../../shared/form-prefill/types';
 import { resolveFormPrefill } from '../../../../services/form-prefill-api';
-import { isFormPrefillEnabled } from '../../../../utils/formPrefillFeature';
 import { PrefillReviewModal } from './PrefillReviewModal';
 import { toast } from 'sonner';
 
@@ -58,8 +57,6 @@ export function PrefillDomainPicker({ clientId }: PrefillDomainPickerProps) {
     },
     [clientId],
   );
-
-  if (!isFormPrefillEnabled()) return null;
 
   return (
     <>
