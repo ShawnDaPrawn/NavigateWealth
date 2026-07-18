@@ -302,7 +302,7 @@ To verify Google Search Console:
 
 | Group                  | Examples                                                                                                              | Where they belong                                                               |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Frontend public values | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, `VITE_FORM_PREFILL_ENABLED`                           | Vercel/project build environment and optional `.env.local`. Must be non-secret. |
+| Frontend public values | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`                                                        | Vercel/project build environment and optional `.env.local`. Must be non-secret. |
 | Build and SEO          | `SITE_URL`, `SEO_REQUIRE_ARTICLES`, `GOOGLE_SITE_VERIFICATION`, `SUPABASE_FUNCTIONS_BASE_URL`                         | Local shell, Vercel build env, or CI.                                           |
 | Edge Function secrets  | `SUPABASE_SERVICE_ROLE_KEY`, `NW_ALLOWED_ORIGINS`, `SUPER_ADMIN_PASSWORD`, `CRON_SECRET`, provider/API keys           | Supabase Edge Function secrets, not browser env.                                |
 | AI and integrations    | `OPENAI_API_KEY`, `NW_GOOGLE_AI_API_KEY`, `LINKEDIN_CLIENT_SECRET`, `HONEYCOMB_API_KEY`, `NW_OPENCLAW_GATEWAY_SECRET` | Supabase secrets or integration host secrets, depending on consumer.            |
@@ -311,9 +311,7 @@ To verify Google Search Console:
 
 ## Feature Flags
 
-| Flag                        | Purpose                                                                                                        |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `VITE_FORM_PREFILL_ENABLED` | Enables adviser/admin form prefill UI paths. See the form prefill production launch docs and readiness ledger. |
+Frontend Vite rollout flags for FNA intake and form prefill have been removed after production launch; those product paths are always on.
 
 Edge-side FNA intake storage flags also exist:
 
