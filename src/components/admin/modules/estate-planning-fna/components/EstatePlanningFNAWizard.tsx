@@ -13,7 +13,6 @@ import type { EstatePlanningInputs } from '../types';
 import { ESTATE_PLANNING_CONSTANTS } from '../constants';
 import { ReviewStep } from './ReviewStep';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
-import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 import { logger } from '../../../../../utils/logger';
 
 interface EstatePlanningFNAWizardProps {
@@ -101,10 +100,9 @@ export function EstatePlanningFNAWizard({
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [inputs, setInputs] = useState<EstatePlanningInputs | null>(null);
-  const prefillEnabled = isFormPrefillEnabled();
 
   const { PrefillUI, startPrefill } = useFormPrefill({
-    clientId: open && prefillEnabled && !intakePrefill ? clientId : undefined,
+    clientId: open && !intakePrefill ? clientId : undefined,
     formId: 'estate-fna-step1',
     currentValues: (inputs ?? {}) as Record<string, unknown>,
     onApplyValues: (values) => {
@@ -122,27 +120,19 @@ export function EstatePlanningFNAWizard({
       const defaults = buildDefaultInputs(intakePrefill);
       setInputs(defaults);
 
-      if (prefillEnabled && !intakePrefill) {
+      if (!intakePrefill) {
         void startPrefill();
         return;
       }
 
-      if (intakePrefill) {
-        toast.success('Estate Planning FNA initialized with intake data');
-        return;
-      }
-
-      // Legacy path when prefill disabled
-      const autoPopulatedInputs = await EstatePlanningAPI.autoPopulateInputs(clientId);
-      setInputs({ ...defaults, ...autoPopulatedInputs });
-      toast.success('Estate Planning FNA initialized with client data');
+      toast.success('Estate Planning FNA initialized with intake data');
     } catch (_error: unknown) {
       setInputs(buildDefaultInputs(intakePrefill));
       logger.info('Estate Planning FNA backend not available - working in client-side mode');
     } finally {
       setLoading(false);
     }
-  }, [clientId, intakePrefill, prefillEnabled, startPrefill]);
+  }, [intakePrefill, startPrefill]);
 
   useEffect(() => {
     if (open) {
@@ -197,7 +187,7 @@ export function EstatePlanningFNAWizard({
       nextIcon={CheckCircle}
     >
       <div className="min-h-[400px] space-y-4">
-        {prefillEnabled && !intakePrefill && PrefillUI}
+        {!intakePrefill && PrefillUI}
         <ReviewStep inputs={inputs} />
       </div>
     </FNAWizardLayout>

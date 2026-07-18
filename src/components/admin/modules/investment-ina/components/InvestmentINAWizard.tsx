@@ -51,7 +51,6 @@ import { InvestmentINAApiService } from '../api';
 import { InvestmentINACalculationService } from '../services/investmentINACalculationService';
 import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill/useFormPrefill';
-import { isFormPrefillEnabled } from '../../../../../utils/formPrefillFeature';
 import { logger } from '../../../../../utils/logger';
 
 interface InvestmentINAWizardProps {
@@ -76,10 +75,9 @@ export function InvestmentINAWizard({
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [results, setResults] = useState<InvestmentINAResults | null>(null);
-  const prefillEnabled = isFormPrefillEnabled();
 
   const { PrefillUI, startPrefill } = useFormPrefill({
-    clientId: open && prefillEnabled && !intakePrefill ? clientId : undefined,
+    clientId: open && !intakePrefill ? clientId : undefined,
     formId: 'investment-ina-step1',
     currentValues: inputs as Record<string, unknown>,
     onApplyValues: (values) => {
@@ -119,7 +117,7 @@ export function InvestmentINAWizard({
   const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
-      if (prefillEnabled && !intakePrefill) {
+      if (!intakePrefill) {
         setInputs({});
         await startPrefill();
         return;
@@ -133,7 +131,7 @@ export function InvestmentINAWizard({
     } finally {
       setLoading(false);
     }
-  }, [prefillEnabled, intakePrefill, startPrefill, clientId]);
+  }, [intakePrefill, startPrefill, clientId]);
 
   useEffect(() => {
     if (open) {
@@ -334,7 +332,7 @@ export function InvestmentINAWizard({
       <div className="min-h-[400px]">
         {currentStep === 'client-overview' && (
           <div className="space-y-4">
-            {prefillEnabled && !intakePrefill && PrefillUI}
+            {!intakePrefill && PrefillUI}
             <ClientOverviewStep inputs={inputs} updateInputs={updateInputs} />
           </div>
         )}
