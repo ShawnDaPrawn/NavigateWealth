@@ -14,20 +14,22 @@ It is intentionally built so it can be deleted in one sitting. Keep it that way:
   prefixes, dedicated private storage buckets, and audit entries with their own
   entity types.
 - The invoice template spec (types + normalizer) lives once in
-  `suppliers/templateSpec.ts` (pure, dependency-free); the edge function shares
-  it via a re-export in
-  `src/supabase/functions/server/locked/supplier-template-spec.ts`. Both
-  folders are deleted together, so the module stays self-contained.
+  `src/shared/suppliers/invoice-template-spec.ts` (pure, dependency-free — the
+  established home for SPA+edge shared code); both `suppliers/templateSpec.ts`
+  and `src/supabase/functions/server/locked/supplier-template-spec.ts`
+  re-export it. That shared file belongs to this module — delete it with the
+  module.
 - Dependencies point strictly **outward** (shared UI components, the API client,
   shared server middleware). Nothing outside imports from inside this module
   except the registration lines listed below.
 
 ## How to delete this module completely
 
-### 1. Delete the two folders
+### 1. Delete the folders
 
 - `src/components/admin/modules/locked/`
 - `src/supabase/functions/server/locked/`
+- `src/shared/suppliers/` (the shared invoice-template spec)
 
 ### 2. Remove the registration lines
 

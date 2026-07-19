@@ -2,11 +2,12 @@
  * Supplier Invoice Template Spec — server-side entry.
  *
  * The spec types, defaults and normalizer live in ONE pure, dependency-free
- * module inside the locked frontend folder (see the re-export below); the
+ * module in src/shared/suppliers/ (see the re-export below, mirroring how
+ * shared/integrations/binding-utils.ts is consumed from both sides); the
  * frontend renderer/editor and this edge function share it verbatim, so the
  * AI analyzer, persistence-time normalization and the client can never drift
- * apart. Both folders are part of the locked module and are deleted together
- * (see ../../../../components/admin/modules/locked/README.md).
+ * apart. The shared module belongs to the locked module and is deleted with
+ * it (see ../../../../components/admin/modules/locked/README.md).
  *
  * The OpenAI Structured Outputs JSON schema mirrors that spec and is only
  * needed server-side, so it lives here.
@@ -17,12 +18,12 @@
 export {
   DEFAULT_TEMPLATE_SPEC,
   normalizeTemplateSpec,
-} from '../../../../components/admin/modules/locked/suppliers/templateSpec.ts';
+} from '../../../../shared/suppliers/invoice-template-spec.ts';
 export type {
   InvoiceTemplateSpec,
   TemplateColumn,
   TemplateMetaField,
-} from '../../../../components/admin/modules/locked/suppliers/templateSpec.ts';
+} from '../../../../shared/suppliers/invoice-template-spec.ts';
 
 // ============================================================================
 // OpenAI Structured Outputs JSON schema
