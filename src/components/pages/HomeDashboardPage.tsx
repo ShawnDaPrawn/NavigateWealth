@@ -4,8 +4,6 @@
  * Premium branded dashboard that mirrors the website's design language
  * while providing a functional financial overview.
  *
- * Uses the portal theme system for easy rollback to the classic style.
- *
  * Guidelines refs: §3.1 (dependency direction), §7 (presentation layer),
  * §8.3 (UI standards), §8.4 (AI builder guidelines)
  */
@@ -18,7 +16,7 @@ import { Package, Bot, FileText, User, MessageSquare, Activity, ChevronRight } f
 import { ClientOverviewTab } from '../admin/modules/client-management/components/ClientOverviewTab';
 import type { Client } from '../admin/modules/client-management/types';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
-import { ACTIVE_THEME, QUICK_LINK_STYLES } from '../portal/portal-theme';
+import { QUICK_LINK_STYLES } from '../portal/portal-theme';
 import { TwoFactorPromptModal } from '../portal/TwoFactorPromptModal';
 
 // ── Time-based Greeting ─────────────────────────────────────────────────────
@@ -37,9 +35,6 @@ interface QuickLink {
   description: string;
   path: string;
   icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  /** For branded theme: glassmorphism-friendly icon bg */
   brandedIconBg: string;
   brandedIconColor: string;
 }
@@ -50,8 +45,6 @@ const QUICK_LINKS: QuickLink[] = [
     description: 'View your financial products',
     path: '/products-services-dashboard',
     icon: Package,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
     brandedIconBg: 'bg-purple-500/20',
     brandedIconColor: 'text-purple-300',
   },
@@ -60,8 +53,6 @@ const QUICK_LINKS: QuickLink[] = [
     description: 'Get personalised guidance',
     path: '/ai-advisor',
     icon: Bot,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
     brandedIconBg: 'bg-blue-500/20',
     brandedIconColor: 'text-blue-300',
   },
@@ -70,8 +61,6 @@ const QUICK_LINKS: QuickLink[] = [
     description: 'Update your personal info',
     path: '/profile',
     icon: User,
-    color: 'text-amber-600',
-    bgColor: 'bg-amber-50',
     brandedIconBg: 'bg-amber-500/20',
     brandedIconColor: 'text-amber-300',
   },
@@ -80,8 +69,6 @@ const QUICK_LINKS: QuickLink[] = [
     description: 'View your documents',
     path: '/transactions-documents',
     icon: FileText,
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-50',
     brandedIconBg: 'bg-indigo-500/20',
     brandedIconColor: 'text-indigo-300',
   },
@@ -90,8 +77,6 @@ const QUICK_LINKS: QuickLink[] = [
     description: 'Messages & notifications',
     path: '/communication',
     icon: MessageSquare,
-    color: 'text-rose-600',
-    bgColor: 'bg-rose-50',
     brandedIconBg: 'bg-rose-500/20',
     brandedIconColor: 'text-rose-300',
   },
@@ -100,23 +85,20 @@ const QUICK_LINKS: QuickLink[] = [
 // ── Quick Link Card ─────────────────────────────────────────────────────────
 
 function QuickLinkCard({ link }: { link: QuickLink }) {
-  const styles = QUICK_LINK_STYLES[ACTIVE_THEME];
-  const isBranded = ACTIVE_THEME === 'branded';
+  const styles = QUICK_LINK_STYLES;
 
   return (
     <Link to={link.path} className="group block">
       <div className={styles.card}>
         <div className={`p-4 flex items-center gap-3`}>
-          <div className={`${styles.iconWrap} ${isBranded ? link.brandedIconBg : link.bgColor}`}>
-            <link.icon className={`h-5 w-5 ${isBranded ? link.brandedIconColor : link.color}`} />
+          <div className={`${styles.iconWrap} ${link.brandedIconBg}`}>
+            <link.icon className={`h-5 w-5 ${link.brandedIconColor}`} />
           </div>
           <div className="min-w-0">
             <p className={styles.label}>{link.label}</p>
             <p className={styles.description}>{link.description}</p>
           </div>
-          {isBranded && (
-            <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-white/40 ml-auto flex-shrink-0 transition-colors" />
-          )}
+          <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-white/40 ml-auto flex-shrink-0 transition-colors" />
         </div>
       </div>
     </Link>
@@ -127,7 +109,6 @@ function QuickLinkCard({ link }: { link: QuickLink }) {
 
 export function HomeDashboardPage() {
   const { user } = useAuth();
-  const isBranded = ACTIVE_THEME === 'branded';
 
   const clientForOverview = useMemo<Client | null>(() => {
     if (!user) return null;
@@ -161,7 +142,7 @@ export function HomeDashboardPage() {
   const firstName = user.firstName || 'there';
 
   return (
-    <div className={`min-h-screen ${isBranded ? 'bg-[#f8f9fb]' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-[#f8f9fb]">
       {/* ── 2FA Prompt (shown once per login if 2FA is not enabled) ── */}
       <TwoFactorPromptModal />
 
@@ -172,33 +153,16 @@ export function HomeDashboardPage() {
         subtitle="Track your wealth, manage your products, and stay connected with your adviser."
         icon={Activity}
       >
-        {/* Quick Links inside hero for branded theme */}
-        {isBranded && (
-          <div className="mt-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {QUICK_LINKS.map((link) => (
-                <QuickLinkCard key={link.path} link={link} />
-              ))}
-            </div>
+        <div className="mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {QUICK_LINKS.map((link) => (
+              <QuickLinkCard key={link.path} link={link} />
+            ))}
           </div>
-        )}
+        </div>
       </PortalPageHeader>
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* ── Quick Links (classic theme: below header) ─────────────── */}
-        {!isBranded && (
-          <div>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Quick Access
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {QUICK_LINKS.map((link) => (
-                <QuickLinkCard key={link.path} link={link} />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ── Client Overview (from admin panel, client mode) ─────── */}
         <div>
           <ClientOverviewTab client={clientForOverview} mode="client" />

@@ -10,7 +10,6 @@ import { MessageSquare, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { BrandInlineLoader } from '../../ui/brand-loader';
 import { PortalPageHeader } from '../../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../../portal/portal-theme';
 import { MESSAGE_RETENTION_DAYS } from './constants';
 import { filterCommunications, deriveInboxStats } from './utils';
 import { useCommunications, useMarkAsRead } from './hooks/useCommunications';
@@ -54,9 +53,7 @@ export function CommunicationPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       <PortalPageHeader
         title="Communications"
         subtitle="Updates and notifications from your financial adviser"
