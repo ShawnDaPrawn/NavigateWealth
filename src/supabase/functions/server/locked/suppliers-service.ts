@@ -27,9 +27,12 @@
  */
 
 import * as kv from '../kv_store.tsx';
+import { createModuleLogger } from '../stderr-logger.ts';
 import { RefundClustersService } from './refund-clusters-service.ts';
 import type { InvoiceTemplateSpec } from './supplier-template-spec.ts';
 import { normalizeTemplateSpec } from './supplier-template-spec.ts';
+
+const log = createModuleLogger('suppliers');
 
 // ============================================================================
 // Types
@@ -146,6 +149,8 @@ export interface SupplierInvoiceRecord {
   status: InvoiceStatus;
   /** Set when the invoice was auto-recorded as an input-VAT ledger expense. */
   ledgerTransactionId?: string;
+  /** Client-generated submission id; makes creation idempotent across retries. */
+  clientRequestId?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -155,6 +160,7 @@ export interface InvoiceInput {
   invoiceNumber?: string;
   invoiceDate?: string;
   dueDate?: string;
+  clientRequestId?: string;
   billedTo?: unknown;
   lineItems?: unknown;
   notes?: string;
@@ -614,13 +620,22 @@ export const SuppliersService = {
     const invoiceDate = parseIsoDate(input.invoiceDate, 'invoiceDate');
     const dueDate = parseIsoDate(input.dueDate ?? invoiceDate, 'dueDate');
 
-    // Resolve the invoice number: explicit override, else the sequence.
-    let invoiceNumber = str(input.invoiceNumber);
-    const seq = await this.getSequence(supplierId);
-    if (!invoiceNumber) {
-      invoiceNumber = formatInvoiceNumber(seq);
-    }
     const existing = await this.listInvoices(supplierId);
+
+    // Idempotency: the API client retries transient POST failures, so a
+    // committed-but-lost response would re-run this method. The client sends a
+    // per-submission id; if an invoice already carries it, return that invoice
+    // instead of creating a duplicate (and a duplicate ledger expense).
+    const clientRequestId = str(input.clientRequestId);
+    if (clientRequestId) {
+      const already = existing.find((i) => i.clientRequestId === clientRequestId);
+      if (already) return already;
+    }
+
+    // Resolve the invoice number: explicit override, else the sequence.
+    const override = str(input.invoiceNumber);
+    const seq = await this.getSequence(supplierId);
+    const invoiceNumber = override || formatInvoiceNumber(seq);
     if (existing.some((i) => i.invoiceNumber === invoiceNumber)) {
       throw Object.assign(new Error(`Invoice number ${invoiceNumber} is already in use`), {
         status: 409,
@@ -640,6 +655,7 @@ export const SuppliersService = {
       totals,
       notes: str(input.notes),
       status: input.status === 'issued' ? 'issued' : 'draft',
+      clientRequestId: clientRequestId || undefined,
       createdAt: now,
       updatedAt: now,
       createdBy,
@@ -662,11 +678,31 @@ export const SuppliersService = {
         createdBy,
       );
       record.ledgerTransactionId = transaction.id;
+
+      try {
+        await kv.set(invoiceKey(supplierId, record.id), record);
+      } catch (error) {
+        // Compensate: never leave an input-VAT expense with no invoice behind
+        // it. If the cleanup itself fails, log the orphan for manual removal.
+        try {
+          await RefundClustersService.deleteTransaction(billedTo.entityId, transaction.id);
+        } catch (cleanupError) {
+          log.error('Failed to roll back orphaned ledger transaction', {
+            entityId: billedTo.entityId,
+            transactionId: transaction.id,
+            error: cleanupError,
+          });
+        }
+        throw error;
+      }
+    } else {
+      await kv.set(invoiceKey(supplierId, record.id), record);
     }
 
-    await kv.set(invoiceKey(supplierId, record.id), record);
-    // Only advance the sequence for auto-assigned numbers, after a successful write.
-    if (!str(input.invoiceNumber)) {
+    // Advance the sequence after a successful write — also when an explicit
+    // override consumed exactly the number the sequence would have issued,
+    // otherwise the next auto-assigned invoice collides with it.
+    if (!override || override === formatInvoiceNumber(seq)) {
       await kv.set(seqKey(supplierId), { ...seq, nextNumber: seq.nextNumber + 1 });
     }
     return record;

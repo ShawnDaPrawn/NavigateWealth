@@ -51,7 +51,13 @@ interface InvoiceFormDialogProps {
   sequence: SupplierInvoiceSequence;
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+/** Local calendar date as yyyy-mm-dd (toISOString would shift to UTC's day). */
+const todayIso = () => {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+};
 
 function nextNumberPreview(sequence: SupplierInvoiceSequence): string {
   return `${sequence.prefix}${String(sequence.nextNumber).padStart(sequence.padding, '0')}`;
@@ -75,6 +81,9 @@ export function InvoiceFormDialog({
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
   const [notes, setNotes] = useState('');
   const [recordInLedger, setRecordInLedger] = useState(true);
+  // One id per dialog session: the server treats repeated submissions (client
+  // retries, double-clicks) carrying the same id as the same invoice.
+  const [clientRequestId, setClientRequestId] = useState('');
 
   const create = useCreateInvoice();
   const { data: options = [] } = useBilledToOptions(open);
@@ -93,6 +102,7 @@ export function InvoiceFormDialog({
       setLineItems([emptyLineItem(supplier.defaultVatTreatment)]);
       setNotes('');
       setRecordInLedger(true);
+      setClientRequestId(crypto.randomUUID());
     }
   }, [open, supplier.defaultVatTreatment]);
 
@@ -156,6 +166,7 @@ export function InvoiceFormDialog({
           notes: notes.trim() || undefined,
           status: 'issued',
           recordInLedger: billedToKind === 'cluster_entity' ? recordInLedger : false,
+          clientRequestId,
         },
       },
       { onSuccess: () => onOpenChange(false) },

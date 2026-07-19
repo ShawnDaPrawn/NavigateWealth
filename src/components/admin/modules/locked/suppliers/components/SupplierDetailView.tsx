@@ -5,19 +5,30 @@
  * template.
  */
 
-import { useMemo, useState } from 'react';
-import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../../ui/dialog';
+import { Input } from '../../../../../ui/input';
+import { Label } from '../../../../../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
 import {
   useDeleteSupplier,
   useSupplierDetail,
   useSupplierInvoices,
+  useUpdateSequence,
   useUpdateSupplier,
 } from '../hooks/useSuppliers';
-import type { SupplierInput } from '../types';
+import type { SupplierInput, SupplierInvoiceSequence } from '../types';
 import { LogoUploadCard } from './LogoUploadCard';
 import { SupplierFormDialog } from './SupplierFormDialog';
 import { TemplatePanel } from './TemplatePanel';
@@ -36,6 +47,7 @@ export function SupplierDetailView({ supplierId, onBack }: SupplierDetailViewPro
   const deleteSupplier = useDeleteSupplier();
   const [editOpen, setEditOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [sequenceOpen, setSequenceOpen] = useState(false);
 
   const activeTemplate = useMemo(
     () => data?.templates.find((t) => t.id === data.supplier.activeTemplateId) ?? null,
@@ -136,10 +148,22 @@ export function SupplierDetailView({ supplierId, onBack }: SupplierDetailViewPro
         <TabsContent value="invoices">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Next number: {sequence.prefix}
-                {String(sequence.nextNumber).padStart(sequence.padding, '0')}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm text-muted-foreground">
+                  Next number: {sequence.prefix}
+                  {String(sequence.nextNumber).padStart(sequence.padding, '0')}
+                </p>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => setSequenceOpen(true)}
+                  aria-label="Edit invoice numbering"
+                >
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              </div>
               <Button type="button" onClick={() => setInvoiceOpen(true)} disabled={!activeTemplate}>
                 <Plus className="h-4 w-4 mr-1" /> New Invoice
               </Button>
@@ -163,7 +187,98 @@ export function SupplierDetailView({ supplierId, onBack }: SupplierDetailViewPro
         activeTemplate={activeTemplate}
         sequence={sequence}
       />
+      <SequenceDialog
+        open={sequenceOpen}
+        onOpenChange={setSequenceOpen}
+        supplierId={supplierId}
+        sequence={sequence}
+      />
     </div>
+  );
+}
+
+/** Edit the invoice-number sequence (prefix, next number, zero padding). */
+function SequenceDialog({
+  open,
+  onOpenChange,
+  supplierId,
+  sequence,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  supplierId: string;
+  sequence: SupplierInvoiceSequence;
+}) {
+  const updateSequence = useUpdateSequence();
+  const [prefix, setPrefix] = useState(sequence.prefix);
+  const [nextNumber, setNextNumber] = useState(sequence.nextNumber);
+  const [padding, setPadding] = useState(sequence.padding);
+
+  useEffect(() => {
+    if (open) {
+      setPrefix(sequence.prefix);
+      setNextNumber(sequence.nextNumber);
+      setPadding(sequence.padding);
+    }
+  }, [open, sequence]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSequence.mutate(
+      { supplierId, sequence: { prefix, nextNumber, padding } },
+      { onSuccess: () => onOpenChange(false) },
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Invoice Numbering</DialogTitle>
+          <DialogDescription>
+            Next auto-assigned number: {prefix}
+            {String(Math.max(1, Math.floor(nextNumber) || 1)).padStart(padding, '0')}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="seq-prefix">Prefix</Label>
+            <Input id="seq-prefix" value={prefix} onChange={(e) => setPrefix(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="seq-next">Next Number</Label>
+              <Input
+                id="seq-next"
+                type="number"
+                min={1}
+                value={nextNumber}
+                onChange={(e) => setNextNumber(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seq-padding">Digits</Label>
+              <Input
+                id="seq-padding"
+                type="number"
+                min={1}
+                max={10}
+                value={padding}
+                onChange={(e) => setPadding(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateSequence.isPending}>
+              {updateSequence.isPending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

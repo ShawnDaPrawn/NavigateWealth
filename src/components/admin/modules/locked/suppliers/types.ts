@@ -109,6 +109,8 @@ export interface SupplierInvoice {
   notes: string;
   status: InvoiceStatus;
   ledgerTransactionId?: string;
+  /** Client-generated submission id; makes creation idempotent across retries. */
+  clientRequestId?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -125,6 +127,8 @@ export interface SupplierInvoiceInput {
   notes?: string;
   status?: InvoiceStatus;
   recordInLedger?: boolean;
+  /** Client-generated submission id; makes creation idempotent across retries. */
+  clientRequestId?: string;
 }
 
 export interface SupplierInvoiceSequence {
