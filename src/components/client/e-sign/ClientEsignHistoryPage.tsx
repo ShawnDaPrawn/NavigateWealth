@@ -6,7 +6,6 @@ import { useMemo, useState } from 'react';
 import { AlertCircle, FileText, PenLine, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { PortalPageHeader } from '../../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../../portal/portal-theme';
 import { Button } from '../../ui/button';
 import { BrandSectionLoader } from '../../ui/brand-loader';
 import { Card, CardContent } from '../../ui/card';
@@ -93,9 +92,7 @@ export function ClientEsignHistoryPage() {
 
   if (!user?.id) {
     return (
-      <div
-        className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-      >
+      <div className="min-h-screen bg-[#f8f9fb]">
         <PortalPageHeader
           title="E‑Signatures"
           subtitle="Documents sent to you for electronic signature"
@@ -111,9 +108,7 @@ export function ClientEsignHistoryPage() {
 
   if (loading) {
     return (
-      <div
-        className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-      >
+      <div className="min-h-screen bg-[#f8f9fb]">
         <PortalPageHeader
           title="E‑Signatures"
           subtitle="Documents sent to you for electronic signature"
@@ -133,9 +128,7 @@ export function ClientEsignHistoryPage() {
 
   if (error) {
     return (
-      <div
-        className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-      >
+      <div className="min-h-screen bg-[#f8f9fb]">
         <PortalPageHeader
           title="E‑Signatures"
           subtitle="Documents sent to you for electronic signature"
@@ -166,9 +159,7 @@ export function ClientEsignHistoryPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       <PortalPageHeader
         title="E‑Signatures"
         subtitle="Documents your adviser sends for electronic signature appear here."
