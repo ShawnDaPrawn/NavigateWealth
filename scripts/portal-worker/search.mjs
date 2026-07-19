@@ -16,6 +16,7 @@ import {
   clickWithOverlayFallback,
   evaluateWithNavigationRetry,
   isOtpishControl,
+  looksLikeSearchNoResultsText,
   normalisePolicyNumber,
   pageContainsPolicyNumber,
   splitLabels,
@@ -36,10 +37,23 @@ export function candidateSearchText(candidate) {
   ].map((value) => String(value || '')).join(' ').trim();
 }
 
+export function isLikelyGlobalSiteSearchControl(candidate = {}) {
+  const text = candidateSearchText(candidate);
+  return /\bsearch\s+discovery\s+products?\b.*\b(?:information|faqs?)\b/i.test(text)
+    || /\bproducts?['’]?\s+information\s+and\s+faqs?\b/i.test(text)
+    || /\b(?:global|site|header)\s+search\b/i.test(text)
+    || /\b(?:faqs?|frequently\s+asked\s+questions)\b/i.test(text);
+}
+
+export function isUsableSearchControl(candidate = {}) {
+  return !isOtpishControl(candidate) && !isLikelyGlobalSiteSearchControl(candidate);
+}
+
 export function chooseDeterministicSearchCandidate(candidates = []) {
   const usable = candidates.filter((candidate) => {
     const text = candidateSearchText(candidate);
-    return !/password|otp|one[-\s]*time|verification|username|log\s*in|login|sign\s*in|home|legal|help|contact/i.test(text);
+    return !/password|otp|one[-\s]*time|verification|username|log\s*in|login|sign\s*in|home|legal|help|contact/i.test(text)
+      && !isLikelyGlobalSiteSearchControl(candidate);
   });
 
   const directInput = usable.find((candidate) =>
@@ -64,6 +78,7 @@ export function chooseDeterministicResultCandidate(candidates = [], policyNumber
   const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);
   const scored = candidates
     .filter((candidate) => candidate?.selector)
+    .filter((candidate) => !looksLikeSearchNoResultsText(candidateSearchText(candidate)))
     .map((candidate) => {
       const text = candidateSearchText(candidate);
       const normalizedText = normalisePolicyNumber(text);
@@ -383,6 +398,12 @@ export async function chooseInputWithBrain(page, flow, item) {
   let snapshot = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     snapshot = await captureInputCandidates(page);
+    if (Array.isArray(snapshot?.candidates)) {
+      snapshot = {
+        ...snapshot,
+        candidates: snapshot.candidates.filter((candidate) => !isLikelyGlobalSiteSearchControl(candidate)),
+      };
+    }
     if (Array.isArray(snapshot?.candidates) && snapshot.candidates.length > 0) break;
     if (attempt < 3) {
       await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
@@ -487,8 +508,11 @@ export async function chooseSearchResultWithBrain(page, flow, item) {
 
 export async function findInputByIntent(page, selector, labels = [], rememberedSelectors = []) {
   if (selector) {
-    const locator = page.locator(selector).first();
-    if (await locator.isVisible({ timeout: 1500 }).catch(() => false)) {
+    const locators = page.locator(selector);
+    const count = Math.min(await locators.count().catch(() => 0), 20);
+    for (let index = 0; index < count; index += 1) {
+      const locator = locators.nth(index);
+      if (!(await locator.isVisible({ timeout: 1500 }).catch(() => false))) continue;
       const meta = await locator.evaluate((el) => ({
         type: el.getAttribute('type') || '',
         name: el.getAttribute('name') || '',
@@ -499,7 +523,7 @@ export async function findInputByIntent(page, selector, labels = [], rememberedS
         className: el.getAttribute('class') || '',
         maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
       })).catch(() => ({}));
-      if (!isOtpishControl(meta)) return locator;
+      if (isUsableSearchControl(meta)) return locator;
     }
   }
 
@@ -516,7 +540,7 @@ export async function findInputByIntent(page, selector, labels = [], rememberedS
         className: el.getAttribute('class') || '',
         maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
       })).catch(() => ({}));
-      if (!isOtpishControl(meta)) return locator;
+      if (isUsableSearchControl(meta)) return locator;
     }
   }
 
@@ -545,7 +569,7 @@ export async function findInputByIntent(page, selector, labels = [], rememberedS
         className: el.getAttribute('class') || '',
         maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
       })).catch(() => ({}));
-      if (!isOtpishControl(meta)) return locator;
+      if (isUsableSearchControl(meta)) return locator;
     }
   }
 
@@ -589,7 +613,7 @@ export async function findInputByIntent(page, selector, labels = [], rememberedS
       className: el.getAttribute('class') || '',
       maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
     })).catch(() => ({}));
-    if (!isOtpishControl(meta)) return candidate;
+    if (isUsableSearchControl(meta)) return candidate;
   }
 
   const visibleInputs = page.locator('input, textarea, select, [role="textbox"], [role="searchbox"], [role="combobox"], [contenteditable="true"]');
@@ -609,7 +633,7 @@ export async function findInputByIntent(page, selector, labels = [], rememberedS
       className: el.getAttribute('class') || '',
       maxLength: Number(el.getAttribute('maxlength') || el.maxLength || 0),
     })).catch(() => ({}));
-    if (isOtpishControl(meta)) continue;
+    if (!isUsableSearchControl(meta)) continue;
     firstVisibleCount += 1;
     if (!firstVisible) firstVisible = candidate;
     if (firstVisibleCount > 1) break;
@@ -668,6 +692,14 @@ export async function openPolicySearchResult(page, flow, item, brain) {
     if (await page.getByText(new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).first().isVisible({ timeout: 500 }).catch(() => false)) {
       throw new Error(`Provider search returned "${text}" for policy ${item.policyNumber}.`);
     }
+  }
+  const bodyText = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
+  if (looksLikeSearchNoResultsText(bodyText)) {
+    const sample = bodyText.replace(/\s+/g, ' ').trim().slice(0, 220);
+    throw new Error(
+      `Provider search returned no results for policy ${item.policyNumber}. `
+      + `Visible text sample: ${sample || 'none'}`,
+    );
   }
 
   if (dataQaKey) {

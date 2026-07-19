@@ -76,6 +76,15 @@ export function sampleText(value, maxLength = 500) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
 
+export function looksLikeSearchNoResultsText(value) {
+  const text = sampleText(value, 2000);
+  if (!text) return false;
+  return /(?:^|[\s.?!;:])(?:no|0)\s+(?:search\s+)?results?\s+(?:found|matching|available|returned)\b/i.test(text)
+    || /\bno\s+(?:matching\s+)?(?:polic(?:y|ies)|clients?|members?|accounts?|investments?|records?)\s+(?:found|matching|available|returned)\b/i.test(text)
+    || /\bno\s+search\s+results?\s+found\s+matching\s+your\s+search\s+criteria\b/i.test(text)
+    || /\bnothing\s+(?:was\s+)?found\s+(?:matching|for)\b/i.test(text);
+}
+
 /**
  * Human-readable provider name for status/error messages. The OTP and
  * auth-checkpoint choreography is shared across every provider, so messages
@@ -133,7 +142,11 @@ export async function waitForPolicyNumberConfirmation(page, policyNumber, timeou
     await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => undefined);
     await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
     latestSnapshot = await capturePolicyConfirmationSnapshot(page);
-    if (normalisePolicyNumber(latestSnapshot.searchableText).includes(normalizedPolicyNumber)) {
+    const visibleConfirmationText = [latestSnapshot.title, latestSnapshot.text].join('\n');
+    if (
+      normalisePolicyNumber(visibleConfirmationText).includes(normalizedPolicyNumber)
+      && !looksLikeSearchNoResultsText(latestSnapshot.text)
+    ) {
       return { confirmed: true, snapshot: latestSnapshot };
     }
     await page.waitForTimeout(1000);
@@ -241,5 +254,5 @@ export async function pageContainsPolicyNumber(page, policyNumber) {
   const normalized = normalisePolicyNumber(policyNumber);
   if (!normalized) return false;
   const text = await page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
-  return normalisePolicyNumber(text).includes(normalized);
+  return normalisePolicyNumber(text).includes(normalized) && !looksLikeSearchNoResultsText(text);
 }
