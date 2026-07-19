@@ -27,7 +27,6 @@ import { api } from '../../utils/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { advisorKeys } from '../../utils/queryKeys';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
 import { VascoInlineChatCard, VascoSessionWorkspace, useVascoStream } from '../shared/vasco-chat';
@@ -322,11 +321,7 @@ export function AIAdvisorPage() {
   ) : null;
 
   return (
-    <div
-      className={`min-h-screen ${
-        ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'
-      }`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       <PortalPageHeader
         title="Ask Vasco"
         subtitle="Your AI-powered financial navigator — personalised insights for your financial journey"
