@@ -128,7 +128,6 @@ export interface CreateEventInput {
   video_link?: string | null;
   client_id?: string | null;
   attendees?: Record<string, unknown>;
-  create_reminder?: boolean;
   recurrence_rule?: string | null;
   notes?: string;
 }
