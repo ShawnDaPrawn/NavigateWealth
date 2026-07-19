@@ -53,7 +53,10 @@ import {
   syncArticleNotificationCampaignFromJob,
   syncPublishNotificationCampaignFromTrackingState,
 } from './publications-notification-helpers.ts';
-import { collectArticleNotificationRecipients } from './publications-notification-recipients.ts';
+import {
+  collectArticleNotificationRecipients,
+  refreshTrackingRecordRecipientNames,
+} from './publications-notification-recipients.ts';
 
 export type {
   ArticleNotificationCampaign,
@@ -598,8 +601,13 @@ export async function processArticleNotificationJobs(
 
         while (deliverySteps < maxBatchesPerJob) {
           const readyRecords = await listReadyJobTrackingRecords(workingJob);
-          const batch = readyRecords.slice(0, DELIVERY_BATCH_SIZE);
-          if (batch.length === 0) break;
+          const pendingBatch = readyRecords.slice(0, DELIVERY_BATCH_SIZE);
+          if (pendingBatch.length === 0) break;
+
+          // Refresh denormalized recipient names to the client's CURRENT profile
+          // name before delivery — retry/cron jobs can run days after the names
+          // were frozen at queue time.
+          const batch = await refreshTrackingRecordRecipientNames(pendingBatch);
 
           const batchResults = await Promise.allSettled(
             batch.map(async (tracking) => {

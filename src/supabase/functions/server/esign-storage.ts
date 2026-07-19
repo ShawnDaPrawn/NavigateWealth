@@ -12,6 +12,13 @@ const getSupabase = () =>
 
 const log = createModuleLogger('esign-storage');
 
+// Per-UPLOAD size cap (defence-in-depth on top of the bucket's 50MB limit).
+// Enforced in validateDocument() at the untrusted request boundary — NOT in the
+// shared uploadDocument() helper, which is also used for internally-generated
+// PDFs (e.g. materialiseEnvelope concatenates documents) that legitimately need
+// no such limit and don't check the helper's return value.
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024; // 25MB
+
 // Storage bucket names
 const BUCKETS = {
   DOCUMENTS: 'make-91ed8379-esign-documents',
@@ -485,6 +492,14 @@ export function validateDocument(
     // Check minimum size (at least 1KB)
     if (buffer.length < 1024) {
       return { valid: false, error: 'Invalid file: File too small' };
+    }
+
+    // Check maximum size — untrusted-upload cap (defence-in-depth / DoS).
+    if (buffer.byteLength > MAX_DOCUMENT_BYTES) {
+      return {
+        valid: false,
+        error: `File exceeds the ${Math.floor(MAX_DOCUMENT_BYTES / (1024 * 1024))}MB limit`,
+      };
     }
 
     const ext = fileName.split('.').pop()?.toLowerCase();

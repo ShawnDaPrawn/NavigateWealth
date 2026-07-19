@@ -11,42 +11,7 @@ import {
   runtimeIssueFromUnknown,
 } from './utils/quality/runtimeIssueReporter';
 import { isWebLockStealAbort } from './utils/errorUtils';
-
-const CHUNK_LOAD_RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
-const CHUNK_LOAD_RELOAD_WINDOW_MS = 60_000;
-
-function isDynamicImportLoadFailure(value: unknown): boolean {
-  const message =
-    value instanceof Error
-      ? value.message
-      : typeof value === 'string'
-        ? value
-        : String(value ?? '');
-
-  return (
-    message.includes('Failed to fetch dynamically imported module') ||
-    message.includes('Importing a module script failed') ||
-    message.includes('ChunkLoadError')
-  );
-}
-
-function reloadOnceForChunkLoadFailure(): boolean {
-  try {
-    const now = Date.now();
-    const lastReload = Number(window.sessionStorage.getItem(CHUNK_LOAD_RELOAD_KEY) || '0');
-
-    if (Number.isFinite(lastReload) && now - lastReload < CHUNK_LOAD_RELOAD_WINDOW_MS) {
-      return false;
-    }
-
-    window.sessionStorage.setItem(CHUNK_LOAD_RELOAD_KEY, String(now));
-    window.location.reload();
-    return true;
-  } catch {
-    window.location.reload();
-    return true;
-  }
-}
+import { isChunkLoadError, reloadOnceForChunkLoadFailure } from './utils/chunkLoad';
 
 export default function App() {
   // Validate environment variables on first render
@@ -70,7 +35,7 @@ export default function App() {
     // cross-origin iframes, which is unavailable in sandboxed contexts (e.g. preview iframes).
     // This is non-fatal — widgets may still render correctly in production.
     const handleWindowError = (event: ErrorEvent) => {
-      if (isDynamicImportLoadFailure(event.message) || isDynamicImportLoadFailure(event.error)) {
+      if (isChunkLoadError(event.message) || isChunkLoadError(event.error)) {
         event.preventDefault();
         return reloadOnceForChunkLoadFailure();
       }
@@ -106,7 +71,7 @@ export default function App() {
       }
 
       const reason = String(event.reason ?? '');
-      if (isDynamicImportLoadFailure(event.reason) || isDynamicImportLoadFailure(reason)) {
+      if (isChunkLoadError(event.reason) || isChunkLoadError(reason)) {
         event.preventDefault();
         reloadOnceForChunkLoadFailure();
         return;
@@ -125,11 +90,12 @@ export default function App() {
       void reportRuntimeClientIssue(runtimeIssueFromUnknown('unhandled-rejection', event.reason));
     };
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    const handleVitePreloadError = (event: Event) => {
-      event.preventDefault();
-      reloadOnceForChunkLoadFailure();
-    };
-    window.addEventListener('vite:preloadError', handleVitePreloadError);
+    // NOTE: We intentionally do NOT listen for `vite:preloadError` here. Calling
+    // preventDefault() on it makes Vite swallow the failed import and resolve the
+    // module as `undefined` (which then renders as a broken-component error).
+    // Leaving it unhandled lets the import reject normally so `lazyWithRetry`
+    // (used for every route) can retry in place and, only as a last resort,
+    // reload once to recover from a stale deploy.
 
     // Create and append Google Analytics script
     const script1 = document.createElement('script');
@@ -193,7 +159,6 @@ export default function App() {
       // Cleanup scripts if component unmounts (though this rarely happens for the main App component)
       window.removeEventListener('error', handleWindowError);
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      window.removeEventListener('vite:preloadError', handleVitePreloadError);
       if (script1.parentNode) document.head.removeChild(script1);
       if (script2.parentNode) document.head.removeChild(script2);
     };

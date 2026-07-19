@@ -4,8 +4,10 @@ import { AlertCircle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { BrandPageLoader, BrandSectionLoader } from '../ui/brand-loader';
 import { logger } from '../../utils/logger';
 import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
+import { isChunkLoadError, reloadOnceForChunkLoadFailure } from '../../utils/chunkLoad';
 
 interface Props {
   children: ReactNode;
@@ -22,6 +24,9 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  /** True while a failed lazy chunk is being recovered via a one-time reload.
+   *  We render the loader (not the error card) during this brief window. */
+  isRecoveringChunk: boolean;
 }
 
 /**
@@ -37,11 +42,15 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
+      isRecoveringChunk: false,
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    return { hasError: true, error };
+    // isChunkLoadError is a pure check — deciding to show the loader instead of
+    // the error card on the very first fallback render avoids a one-frame flash
+    // of the error card before componentDidCatch triggers the reload.
+    return { hasError: true, error, isRecoveringChunk: isChunkLoadError(error) };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -59,9 +68,23 @@ export class ErrorBoundary extends Component<Props, State> {
       filePath: window.location.pathname,
     });
 
+    // Recover from a failed lazy chunk that wasn't wrapped in lazyWithRetry
+    // (e.g. nested admin module tabs, or any plain React.lazy elsewhere). A
+    // stale chunk after a deploy or a transient fetch failure should reload
+    // once (throttled) to fetch the fresh chunk rather than stranding the user
+    // on the error card — mirroring what lazyWithRetry does for route chunks.
+    if (isChunkLoadError(error)) {
+      const reloading = reloadOnceForChunkLoadFailure();
+      // If the reload was throttled (already reloaded recently), fall back to
+      // showing the error card so the user isn't stuck on a perpetual loader.
+      this.setState({ error, errorInfo, isRecoveringChunk: reloading });
+      return;
+    }
+
     this.setState({
       error,
       errorInfo,
+      isRecoveringChunk: false,
     });
   }
 
@@ -72,6 +95,7 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
+      isRecoveringChunk: false,
     });
 
     if (onReset) {
@@ -103,6 +127,23 @@ export class ErrorBoundary extends Component<Props, State> {
     const { children, fallbackTitle, fallbackMessage, showDetails, inline } = this.props;
 
     if (hasError) {
+      // A failed lazy chunk is being recovered by a one-time reload (see
+      // componentDidCatch). Show the branded loader, not the error card, so the
+      // navigation looks like a normal load while the reload is in flight.
+      if (this.state.isRecoveringChunk) {
+        return inline ? (
+          <BrandSectionLoader
+            title="Updating to the latest version"
+            message="Fetching the newest files. This will only take a moment."
+          />
+        ) : (
+          <BrandPageLoader
+            title="Updating to the latest version"
+            message="Fetching the newest files. This will only take a moment."
+          />
+        );
+      }
+
       const showTechDetails = this.isDevelopment() || showDetails;
       const isDynamicImportError = this.isDynamicImportError(error);
       const message = isDynamicImportError

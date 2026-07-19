@@ -54,9 +54,11 @@ import { logger } from '../../../../../utils/logger';
 // System-generated event types that cannot be manually created
 const SYSTEM_EVENT_TYPES: EventType[] = ['birthday', 'renewal'];
 
-// Event types available for manual creation (excludes system types)
+// Event types available for manual creation (excludes system types and
+// appointments — client appointments are booked via AppointmentFormModal so
+// the confirmation/reminder email flow always runs)
 const MANUAL_EVENT_TYPE_ENTRIES = Object.entries(EVENT_TYPE_LABELS).filter(
-  ([value]) => !SYSTEM_EVENT_TYPES.includes(value as EventType),
+  ([value]) => !SYSTEM_EVENT_TYPES.includes(value as EventType) && value !== 'appointment',
 );
 
 // Helper to check if an event is system-generated

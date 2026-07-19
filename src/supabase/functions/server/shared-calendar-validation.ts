@@ -16,6 +16,7 @@ import {
 // Enums as Zod Enums
 export const EventTypeSchema = z.enum([
   'meeting',
+  'appointment',
   'review',
   'call',
   'webinar',

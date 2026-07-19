@@ -7,6 +7,7 @@ import { deriveInboxStats } from '../client/communication/utils';
 import { Button } from '../ui/button';
 import { useAuth } from '../auth/AuthContext';
 import { toast } from 'sonner';
+import { prefetchRoute, prefetchClientRoutesWhenIdle } from '../../router/routePrefetch';
 
 export function DashboardNavigation() {
   const location = useLocation();
@@ -16,6 +17,11 @@ export function DashboardNavigation() {
   const { data: communications = [] } = useCommunications();
   const unreadCount = deriveInboxStats(communications).unread;
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  // Warm the JS chunks for the other client pages during idle time so that
+  // navigating between them is instant instead of stalling on a per-click chunk
+  // download behind the full-screen loader.
+  React.useEffect(() => prefetchClientRoutesWhenIdle(), []);
 
   const navItems = [
     {
@@ -93,6 +99,9 @@ export function DashboardNavigation() {
               <Link
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => prefetchRoute(item.path)}
+                onFocus={() => prefetchRoute(item.path)}
+                onTouchStart={() => prefetchRoute(item.path)}
                 className={`${styles.linkBase} ${
                   isActive(item.path) ? styles.linkActive : styles.linkInactive
                 }`}

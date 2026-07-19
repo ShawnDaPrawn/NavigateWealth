@@ -9,6 +9,7 @@
 
 export type EventType =
   | 'meeting'
+  | 'appointment'
   | 'review'
   | 'call'
   | 'webinar'

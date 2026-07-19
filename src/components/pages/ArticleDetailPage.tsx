@@ -1079,9 +1079,12 @@ export function ArticleDetailPage() {
   const readingTime = article.reading_time_minutes || estimateReadingTime(articleBody);
   const authorName = article.author_name || 'Navigate Wealth Editorial Team';
 
-  // Sanitise and enhance HTML
+  // Sanitise, enhance, then RE-sanitise. enhanceArticleHtml() round-trips the
+  // markup through DOM .innerHTML reads/writes, which could reintroduce unsafe
+  // content; sanitising again before it reaches dangerouslySetInnerHTML closes
+  // that gap (SECURITY-AUDIT M-7).
   const sanitisedHtml = DOMPurify.sanitize(articleBody);
-  const enhancedHtml = enhanceArticleHtml(sanitisedHtml);
+  const enhancedHtml = DOMPurify.sanitize(enhanceArticleHtml(sanitisedHtml));
 
   // SEO — canonical always uses the production origin (never
   // window.location.origin, which would emit preview-deployment canonicals).
