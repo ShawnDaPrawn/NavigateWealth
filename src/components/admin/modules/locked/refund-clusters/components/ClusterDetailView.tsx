@@ -91,6 +91,7 @@ import type {
   VatPeriodCategory,
 } from '../types';
 import { ClusterFormDialog } from './ClusterFormDialog';
+import { ClusterPackButton } from './ClusterPackButton';
 import { EntityFormDialog } from './EntityFormDialog';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
 import { EntityTransactionsDialog } from './EntityTransactionsDialog';
@@ -169,9 +170,12 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">{cluster.name}</h2>
           {cluster.archived && <Badge variant="outline">Archived</Badge>}
+          <div className="ml-auto">
+            <ClusterPackButton cluster={cluster} />
+          </div>
         </div>
         {cluster.description && (
           <p className="text-sm text-muted-foreground">{cluster.description}</p>

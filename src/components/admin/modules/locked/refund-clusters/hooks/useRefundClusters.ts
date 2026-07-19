@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { refundClusterKeys } from '../queryKeys';
 import { RefundClustersAPI } from '../api';
 import type {
+  AttachmentKind,
   BankAccountSlot,
   RefundEntityInput,
   RefundManagerInput,
@@ -331,6 +332,19 @@ export function useEntityTransactions(clusterId: string, entityId: string | null
 }
 
 /**
+ * Transactions plus their server-computed SARS-readiness flags. Cached under a
+ * child of the transactions key, so every transaction mutation refreshes it.
+ */
+export function useEntityLedger(clusterId: string, entityId: string | null) {
+  return useQuery({
+    queryKey: refundClusterKeys.ledger(entityId ?? ''),
+    queryFn: () => RefundClustersAPI.listLedger(clusterId, entityId!),
+    enabled: !!entityId,
+    staleTime: STALE_TIME,
+  });
+}
+
+/**
  * Transactions for several entities at once, aligned to `entityIds` order.
  * Shares the per-entity transaction cache keys with {@link useEntityTransactions},
  * so a cluster-level VAT summary and an entity drawer stay in sync.
@@ -455,6 +469,159 @@ export function useViewTransactionInvoice() {
       RefundClustersAPI.getTransactionInvoiceUrl(input.clusterId, input.entityId, input.txnId),
     onError: (error: Error) => {
       toast.error('Failed to open invoice', { description: error.message });
+    },
+  });
+}
+
+// ============================================================================
+// Attachments (evidence files)
+// ============================================================================
+
+export function useUploadAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      clusterId: string;
+      entityId: string;
+      txnId: string;
+      kind: AttachmentKind;
+      file: File;
+      verifiedFull?: boolean;
+    }) =>
+      RefundClustersAPI.uploadAttachment(
+        input.clusterId,
+        input.entityId,
+        input.txnId,
+        input.kind,
+        input.file,
+        input.verifiedFull,
+      ),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Evidence uploaded');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to upload evidence', { description: error.message });
+    },
+  });
+}
+
+export function useDeleteAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txnId: string; attId: string }) =>
+      RefundClustersAPI.deleteAttachment(input.clusterId, input.entityId, input.txnId, input.attId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Evidence deleted');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete evidence', { description: error.message });
+    },
+  });
+}
+
+export function useSetAttachmentVerified() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      clusterId: string;
+      entityId: string;
+      txnId: string;
+      attId: string;
+      verifiedFull: boolean;
+    }) =>
+      RefundClustersAPI.setAttachmentVerifiedFull(
+        input.clusterId,
+        input.entityId,
+        input.txnId,
+        input.attId,
+        input.verifiedFull,
+      ),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update verification', { description: error.message });
+    },
+  });
+}
+
+/** Resolves a signed URL for an evidence file (open the tab in the click gesture). */
+export function useViewAttachment() {
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; txnId: string; attId: string }) =>
+      RefundClustersAPI.getAttachmentUrl(input.clusterId, input.entityId, input.txnId, input.attId),
+    onError: (error: Error) => {
+      toast.error('Failed to open evidence', { description: error.message });
+    },
+  });
+}
+
+// ============================================================================
+// VAT submission packs
+// ============================================================================
+
+function triggerBlobDownload(blob: Blob, fileName: string) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.URL.revokeObjectURL(url);
+}
+
+/** Generates + downloads the SARS submission pack ZIP for one entity/period. */
+export function useDownloadSubmissionPack() {
+  return useMutation({
+    retry: false,
+    mutationFn: async (input: {
+      clusterId: string;
+      entityId: string;
+      periodStart: string;
+      periodEnd: string;
+      periodLabel: string;
+    }) => {
+      const blob = await RefundClustersAPI.downloadSubmissionPack(input.clusterId, input.entityId, {
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        periodLabel: input.periodLabel,
+      });
+      triggerBlobDownload(blob, `vat-pack_${input.periodStart}_${input.periodEnd}.zip`);
+    },
+    onSuccess: () => {
+      toast.success('Submission pack downloaded');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to generate submission pack', { description: error.message });
+    },
+  });
+}
+
+/** Generates + downloads one ZIP containing a pack per entity in the cluster. */
+export function useDownloadClusterSubmissionPack() {
+  return useMutation({
+    retry: false,
+    mutationFn: async (input: {
+      clusterId: string;
+      periodStart: string;
+      periodEnd: string;
+      periodLabel: string;
+    }) => {
+      const blob = await RefundClustersAPI.downloadClusterSubmissionPack(input.clusterId, {
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        periodLabel: input.periodLabel,
+      });
+      triggerBlobDownload(blob, `cluster-vat-packs_${input.periodStart}_${input.periodEnd}.zip`);
+    },
+    onSuccess: () => {
+      toast.success('Cluster submission packs downloaded');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to generate submission packs', { description: error.message });
     },
   });
 }

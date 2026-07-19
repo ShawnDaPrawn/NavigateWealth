@@ -6,16 +6,22 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-const mockUseEntityTransactions = vi.fn();
+const mockUseEntityLedger = vi.fn();
 
 vi.mock('../hooks/useRefundClusters', () => ({
-  useEntityTransactions: () => mockUseEntityTransactions(),
+  useEntityLedger: () => mockUseEntityLedger(),
   useCreateTransaction: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateTransaction: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTransaction: () => ({ mutate: vi.fn(), isPending: false }),
-  useUploadTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
-  useDeleteTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
-  useViewTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
+  useUploadAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useViewAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetAttachmentVerified: () => ({ mutate: vi.fn(), isPending: false }),
+  useDownloadSubmissionPack: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../../suppliers/hooks/useSuppliers', () => ({
+  useSuppliers: () => ({ data: [], isLoading: false }),
 }));
 
 import { EntityTransactionsDialog } from '../components/EntityTransactionsDialog';
@@ -85,9 +91,13 @@ function tx(overrides: Partial<RefundTransaction>): RefundTransaction {
   };
 }
 
+function ledger(transactions: RefundTransaction[], flags: Record<string, string[]> = {}) {
+  return { data: { transactions, flags }, isLoading: false };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockUseEntityTransactions.mockReturnValue({ data: [], isLoading: false });
+  mockUseEntityLedger.mockReturnValue(ledger([]));
 });
 
 describe('EntityTransactionsDialog', () => {
@@ -98,8 +108,8 @@ describe('EntityTransactionsDialog', () => {
   });
 
   it('shows a refundable net position when input VAT exceeds output', () => {
-    mockUseEntityTransactions.mockReturnValue({
-      data: [
+    mockUseEntityLedger.mockReturnValue(
+      ledger([
         tx({ direction: 'expense', amount: 2300, vatAmount: 300, date: '2026-03-10' }),
         tx({
           id: 't2',
@@ -108,9 +118,8 @@ describe('EntityTransactionsDialog', () => {
           vatAmount: 150,
           date: '2026-03-12',
         }),
-      ],
-      isLoading: false,
-    });
+      ]),
+    );
     // vatPeriod="" → no period filter, so all transactions count regardless of date.
     render(<EntityTransactionsDialog open onOpenChange={() => {}} entity={entity} vatPeriod="" />);
     // Net = output 150 − input 300 = −150 → Input / Refund
@@ -121,5 +130,40 @@ describe('EntityTransactionsDialog', () => {
   it('renders the current VAT period label from the cluster category', () => {
     render(<EntityTransactionsDialog open onOpenChange={() => {}} entity={entity} vatPeriod="C" />);
     expect(screen.getByText(/VAT period:/i)).toBeDefined();
+  });
+
+  it('surfaces server-computed evidence flags on the row', () => {
+    mockUseEntityLedger.mockReturnValue(
+      ledger([tx({ attachments: [] })], { t1: ['missing_tax_invoice'] }),
+    );
+    render(<EntityTransactionsDialog open onOpenChange={() => {}} entity={entity} vatPeriod="" />);
+    expect(screen.getByText(/No tax invoice attached/i)).toBeDefined();
+    expect(screen.getByText(/1 flagged/i)).toBeDefined();
+  });
+
+  it('shows the evidence-complete badge when nothing is flagged', () => {
+    mockUseEntityLedger.mockReturnValue(
+      ledger(
+        [
+          tx({
+            attachments: [
+              {
+                id: 'a1',
+                kind: 'tax_invoice',
+                fileName: 'inv.pdf',
+                storagePath: 'p',
+                contentType: 'application/pdf',
+                sizeBytes: 1,
+                uploadedAt: '2026-03-15T00:00:00.000Z',
+                uploadedBy: 'u1',
+              },
+            ],
+          }),
+        ],
+        { t1: [] },
+      ),
+    );
+    render(<EntityTransactionsDialog open onOpenChange={() => {}} entity={entity} vatPeriod="" />);
+    expect(screen.getByText(/Evidence complete/i)).toBeDefined();
   });
 });

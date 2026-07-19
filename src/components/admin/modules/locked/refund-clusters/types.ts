@@ -69,6 +69,43 @@ export interface TaxDetails {
   previousPeriodVat: string;
 }
 
+export type AttachmentKind =
+  | 'tax_invoice'
+  | 'proof_of_payment'
+  | 'credit_note'
+  | 'debit_note'
+  | 'statement'
+  | 'other';
+
+export interface TransactionAttachment {
+  id: string;
+  kind: AttachmentKind;
+  fileName: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string;
+  /** Operator confirmed the FULL tax invoice requirements (needed > R5,000). */
+  verifiedFull?: boolean;
+}
+
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid';
+
+export interface TransactionPayment {
+  status: PaymentStatus;
+  paidDate?: string;
+  method?: string;
+  bankAccount?: BankAccountSlot;
+}
+
+export interface TransactionCounterparty {
+  kind: 'supplier' | 'customer' | 'other';
+  /** Suppliers-directory id when kind is 'supplier'. */
+  id?: string;
+  name: string;
+}
+
 export interface RefundTransactionInvoice {
   fileName: string;
   storagePath: string;
@@ -92,6 +129,12 @@ export interface RefundTransaction {
   amount: number;
   vatAmount: number;
   vatOverridden: boolean;
+  counterparty?: TransactionCounterparty;
+  category?: string;
+  reference?: string;
+  payment?: TransactionPayment;
+  attachments?: TransactionAttachment[];
+  /** Legacy single invoice; the server lazily migrates it into attachments. */
   invoice?: RefundTransactionInvoice;
   createdAt: string;
   updatedAt: string;
@@ -106,6 +149,17 @@ export interface RefundTransactionInput {
   amount: number;
   /** Optional manual override of the auto-derived VAT. */
   vatAmount?: number;
+  /** null clears the stored value. */
+  counterparty?: TransactionCounterparty | null;
+  category?: string | null;
+  reference?: string | null;
+  payment?: TransactionPayment | null;
+}
+
+/** Transactions plus their server-computed SARS-readiness flags. */
+export interface EntityLedgerResponse {
+  transactions: RefundTransaction[];
+  flags: Record<string, string[]>;
 }
 
 export interface RefundEntity {

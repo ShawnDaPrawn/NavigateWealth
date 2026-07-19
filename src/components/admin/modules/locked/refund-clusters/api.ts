@@ -9,8 +9,10 @@ import { api } from '../../../../../utils/api/client';
 import { logger } from '../../../../../utils/logger';
 import { ENDPOINTS } from './constants';
 import type {
+  AttachmentKind,
   BankAccountSlot,
   ClusterDetailResponse,
+  EntityLedgerResponse,
   RefundCluster,
   RefundEntity,
   RefundEntityDocument,
@@ -255,6 +257,16 @@ export const RefundClustersAPI = {
     }
   },
 
+  /** Transactions plus their server-computed SARS-readiness flags. */
+  async listLedger(clusterId: string, entityId: string): Promise<EntityLedgerResponse> {
+    try {
+      const data = await api.get<EntityLedgerResponse>(ENDPOINTS.TRANSACTIONS(clusterId, entityId));
+      return { transactions: data?.transactions ?? [], flags: data?.flags ?? {} };
+    } catch (error) {
+      rethrow(error, 'listLedger');
+    }
+  },
+
   async createTransaction(
     clusterId: string,
     entityId: string,
@@ -339,6 +351,116 @@ export const RefundClustersAPI = {
       await api.delete(ENDPOINTS.TRANSACTION_INVOICE(clusterId, entityId, txnId));
     } catch (error) {
       rethrow(error, 'deleteTransactionInvoice');
+    }
+  },
+
+  // --- Attachments (evidence files) ------------------------------------
+
+  async uploadAttachment(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+    kind: AttachmentKind,
+    file: File,
+    verifiedFull?: boolean,
+  ): Promise<RefundTransaction> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('kind', kind);
+      if (verifiedFull) formData.append('verifiedFull', 'true');
+      const data = await api.post<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTION_ATTACHMENTS(clusterId, entityId, txnId),
+        formData,
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'uploadAttachment');
+    }
+  },
+
+  async getAttachmentUrl(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+    attId: string,
+  ): Promise<string> {
+    try {
+      const data = await api.get<{ url: string }>(
+        ENDPOINTS.TRANSACTION_ATTACHMENT_URL(clusterId, entityId, txnId, attId),
+      );
+      return data.url;
+    } catch (error) {
+      rethrow(error, 'getAttachmentUrl');
+    }
+  },
+
+  async setAttachmentVerifiedFull(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+    attId: string,
+    verifiedFull: boolean,
+  ): Promise<RefundTransaction> {
+    try {
+      const data = await api.put<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTION_ATTACHMENT(clusterId, entityId, txnId, attId),
+        { verifiedFull },
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'setAttachmentVerifiedFull');
+    }
+  },
+
+  async deleteAttachment(
+    clusterId: string,
+    entityId: string,
+    txnId: string,
+    attId: string,
+  ): Promise<RefundTransaction> {
+    try {
+      const data = await api.delete<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTION_ATTACHMENT(clusterId, entityId, txnId, attId),
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'deleteAttachment');
+    }
+  },
+
+  // --- VAT submission packs --------------------------------------------
+
+  /** Downloads the SARS submission pack ZIP for one entity + period. */
+  async downloadSubmissionPack(
+    clusterId: string,
+    entityId: string,
+    period: { periodStart: string; periodEnd: string; periodLabel: string },
+  ): Promise<Blob> {
+    try {
+      const response = await api.post<Response>(
+        ENDPOINTS.SUBMISSION_PACK(clusterId, entityId),
+        period,
+      );
+      return await response.blob();
+    } catch (error) {
+      rethrow(error, 'downloadSubmissionPack');
+    }
+  },
+
+  /** Downloads one ZIP containing a pack per entity in the cluster. */
+  async downloadClusterSubmissionPack(
+    clusterId: string,
+    period: { periodStart: string; periodEnd: string; periodLabel: string },
+  ): Promise<Blob> {
+    try {
+      const response = await api.post<Response>(
+        ENDPOINTS.CLUSTER_SUBMISSION_PACK(clusterId),
+        period,
+      );
+      return await response.blob();
+    } catch (error) {
+      rethrow(error, 'downloadClusterSubmissionPack');
     }
   },
 };

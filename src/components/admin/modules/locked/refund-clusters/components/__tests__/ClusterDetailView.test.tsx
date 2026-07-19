@@ -35,6 +35,17 @@ vi.mock('../../hooks/useRefundClusters', () => ({
   useUploadTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
   useViewTransactionInvoice: () => ({ mutate: vi.fn(), isPending: false }),
+  useEntityLedger: () => ({ data: { transactions: [], flags: {} }, isLoading: false }),
+  useUploadAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useViewAttachment: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetAttachmentVerified: () => ({ mutate: vi.fn(), isPending: false }),
+  useDownloadSubmissionPack: () => ({ mutate: vi.fn(), isPending: false }),
+  useDownloadClusterSubmissionPack: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../../../suppliers/hooks/useSuppliers', () => ({
+  useSuppliers: () => ({ data: [], isLoading: false }),
 }));
 
 import { ClusterDetailView } from '../ClusterDetailView';

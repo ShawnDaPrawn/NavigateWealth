@@ -64,6 +64,49 @@ export interface RefundClusterRecord {
 export type TransactionDirection = 'income' | 'expense';
 export type VatTreatment = 'standard' | 'zero_rated' | 'exempt';
 
+/** Evidence kinds SARS asks for during refund verifications. */
+export type AttachmentKind =
+  | 'tax_invoice'
+  | 'proof_of_payment'
+  | 'credit_note'
+  | 'debit_note'
+  | 'statement'
+  | 'other';
+
+export interface TransactionAttachment {
+  id: string;
+  kind: AttachmentKind;
+  fileName: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string;
+  /**
+   * Operator confirmation that a tax invoice meets the FULL tax invoice
+   * requirements (s20(4): recipient name/address/VAT no) — required for
+   * supplies over R5,000.
+   */
+  verifiedFull?: boolean;
+}
+
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid';
+
+export interface TransactionPayment {
+  status: PaymentStatus;
+  /** ISO yyyy-mm-dd. */
+  paidDate?: string;
+  method?: string;
+  bankAccount?: BankAccountSlot;
+}
+
+export interface TransactionCounterparty {
+  kind: 'supplier' | 'customer' | 'other';
+  /** Suppliers-directory id when kind is 'supplier'. */
+  id?: string;
+  name: string;
+}
+
 export interface RefundTransactionRecord {
   id: string;
   entityId: string;
@@ -80,7 +123,19 @@ export interface RefundTransactionRecord {
   vatAmount: number;
   /** Whether vatAmount was set manually rather than auto-derived. */
   vatOverridden: boolean;
-  /** Optional supporting tax invoice. */
+  /** Who the money moved to/from (supplier link, customer, or freeform). */
+  counterparty?: TransactionCounterparty;
+  /** Income/expense category; categories marked capital map to VAT201 field 14. */
+  category?: string;
+  /** Counterparty document reference (their invoice number / PO). */
+  reference?: string;
+  payment?: TransactionPayment;
+  /** Supporting evidence files. */
+  attachments?: TransactionAttachment[];
+  /**
+   * Legacy single tax invoice (pre-attachments). Lazily migrated into
+   * `attachments` on read; never written by new code.
+   */
   invoice?: RefundTransactionInvoice;
   createdAt: string;
   updatedAt: string;
@@ -104,6 +159,10 @@ export interface TransactionInput {
   amount?: number;
   /** When provided, overrides the auto-derived VAT for the row. */
   vatAmount?: number;
+  counterparty?: { kind?: string; id?: string; name?: string } | null;
+  category?: string | null;
+  reference?: string | null;
+  payment?: { status?: string; paidDate?: string; method?: string; bankAccount?: string } | null;
 }
 
 export interface PersonalDetails {
@@ -408,6 +467,63 @@ function toAmount(value: unknown): number {
 function autoVat(amount: number, treatment: VatTreatment): number {
   if (treatment !== 'standard') return 0;
   return round2((amount * VAT_RATE) / (1 + VAT_RATE));
+}
+
+/** Parse the optional counterparty; null clears it, invalid shapes are dropped. */
+function parseCounterparty(
+  value: TransactionInput['counterparty'],
+  existing?: TransactionCounterparty,
+): TransactionCounterparty | undefined {
+  if (value === undefined) return existing;
+  if (value === null) return undefined;
+  const name = str(value.name);
+  if (!name) return undefined;
+  const kind = value.kind === 'supplier' || value.kind === 'customer' ? value.kind : 'other';
+  return { kind, id: str(value.id) || undefined, name };
+}
+
+/** Parse the optional payment block; null clears it. */
+function parsePayment(
+  value: TransactionInput['payment'],
+  existing?: TransactionPayment,
+): TransactionPayment | undefined {
+  if (value === undefined) return existing;
+  if (value === null) return undefined;
+  const status = value.status === 'paid' || value.status === 'partial' ? value.status : 'unpaid';
+  const bankAccount =
+    value.bankAccount === 'primary' || value.bankAccount === 'secondary'
+      ? value.bankAccount
+      : undefined;
+  return {
+    status,
+    paidDate: str(value.paidDate) || undefined,
+    method: str(value.method) || undefined,
+    bankAccount,
+  };
+}
+
+/**
+ * Lazy migration: a legacy single `invoice` is surfaced as a tax_invoice
+ * attachment. Reads always go through this; writes persist the new shape.
+ */
+function migrateTxn(txn: RefundTransactionRecord): RefundTransactionRecord {
+  if (!txn.invoice) return txn;
+  const attachments = txn.attachments ?? [];
+  const already = attachments.some((a) => a.storagePath === txn.invoice!.storagePath);
+  const { invoice, ...rest } = txn;
+  return {
+    ...rest,
+    attachments: already
+      ? attachments
+      : [{ id: `legacy-${txn.id}`, kind: 'tax_invoice', ...invoice }, ...attachments],
+  };
+}
+
+/** Every storage path referenced by a transaction (attachments + legacy invoice). */
+export function transactionStoragePaths(txn: RefundTransactionRecord): string[] {
+  const paths = (txn.attachments ?? []).map((a) => a.storagePath);
+  if (txn.invoice && !paths.includes(txn.invoice.storagePath)) paths.push(txn.invoice.storagePath);
+  return paths;
 }
 
 // ============================================================================
@@ -922,6 +1038,7 @@ export const RefundClustersService = {
     const rows = (await kv.getByPrefix(`${TXN_PREFIX}${entityId}:`)) as RefundTransactionRecord[];
     return rows
       .filter((row) => row && row.id)
+      .map(migrateTxn)
       .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   },
 
@@ -938,7 +1055,8 @@ export const RefundClustersService = {
   },
 
   async getTransaction(entityId: string, txnId: string): Promise<RefundTransactionRecord | null> {
-    return ((await kv.get(txnKey(entityId, txnId))) as RefundTransactionRecord | undefined) ?? null;
+    const txn = (await kv.get(txnKey(entityId, txnId))) as RefundTransactionRecord | undefined;
+    return txn ? migrateTxn(txn) : null;
   },
 
   /** Resolve the stored VAT amount from the input (auto unless explicitly overridden). */
@@ -984,6 +1102,10 @@ export const RefundClustersService = {
       amount,
       vatAmount,
       vatOverridden,
+      counterparty: parseCounterparty(input.counterparty),
+      category: input.category != null ? str(input.category) || undefined : undefined,
+      reference: input.reference != null ? str(input.reference) || undefined : undefined,
+      payment: parsePayment(input.payment),
       createdAt: now,
       updatedAt: now,
       createdBy,
@@ -1019,6 +1141,14 @@ export const RefundClustersService = {
       amount,
       vatAmount,
       vatOverridden,
+      counterparty: parseCounterparty(input.counterparty, existing.counterparty),
+      category:
+        input.category !== undefined ? str(input.category ?? '') || undefined : existing.category,
+      reference:
+        input.reference !== undefined
+          ? str(input.reference ?? '') || undefined
+          : existing.reference,
+      payment: parsePayment(input.payment, existing.payment),
       updatedAt: new Date().toISOString(),
     };
     await kv.set(txnKey(entityId, txnId), next);
@@ -1035,6 +1165,82 @@ export const RefundClustersService = {
     return existing;
   },
 
+  // --- Transaction attachments ----------------------------------------
+
+  /** Adds an evidence file to a transaction. */
+  async addAttachment(
+    entityId: string,
+    txnId: string,
+    attachment: Omit<TransactionAttachment, 'id'>,
+  ): Promise<{ transaction: RefundTransactionRecord; attachment: TransactionAttachment }> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
+    const stored: TransactionAttachment = { id: newId(), ...attachment };
+    const next: RefundTransactionRecord = {
+      ...existing,
+      attachments: [...(existing.attachments ?? []), stored],
+      updatedAt: new Date().toISOString(),
+    };
+    delete next.invoice; // migrated shape is now persisted
+    await kv.set(txnKey(entityId, txnId), next);
+    return { transaction: next, attachment: stored };
+  },
+
+  async getAttachment(
+    entityId: string,
+    txnId: string,
+    attachmentId: string,
+  ): Promise<TransactionAttachment | null> {
+    const txn = await this.getTransaction(entityId, txnId);
+    return txn?.attachments?.find((a) => a.id === attachmentId) ?? null;
+  },
+
+  /** Removes attachment metadata; the route removes the storage file first. */
+  async removeAttachment(
+    entityId: string,
+    txnId: string,
+    attachmentId: string,
+  ): Promise<RefundTransactionRecord> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
+    const next: RefundTransactionRecord = {
+      ...existing,
+      attachments: (existing.attachments ?? []).filter((a) => a.id !== attachmentId),
+      updatedAt: new Date().toISOString(),
+    };
+    delete next.invoice;
+    await kv.set(txnKey(entityId, txnId), next);
+    return next;
+  },
+
+  /** Sets the full-tax-invoice verification flag on an attachment. */
+  async setAttachmentVerifiedFull(
+    entityId: string,
+    txnId: string,
+    attachmentId: string,
+    verifiedFull: boolean,
+  ): Promise<RefundTransactionRecord> {
+    const existing = await this.getTransaction(entityId, txnId);
+    if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
+    if (!existing.attachments?.some((a) => a.id === attachmentId)) {
+      throw Object.assign(new Error('Attachment not found'), { status: 404 });
+    }
+    const next: RefundTransactionRecord = {
+      ...existing,
+      attachments: existing.attachments.map((a) =>
+        a.id === attachmentId ? { ...a, verifiedFull } : a,
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    delete next.invoice;
+    await kv.set(txnKey(entityId, txnId), next);
+    return next;
+  },
+
+  // --- Legacy single-invoice API (kept for existing callers) -----------
+  // Operates on the transaction's tax_invoice attachments: attach replaces
+  // the first one, remove drops it. New code should use the attachment CRUD.
+
   async attachTransactionInvoice(
     entityId: string,
     txnId: string,
@@ -1042,9 +1248,20 @@ export const RefundClustersService = {
   ): Promise<RefundTransactionRecord> {
     const existing = await this.getTransaction(entityId, txnId);
     if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
-    const next = { ...existing, invoice, updatedAt: new Date().toISOString() };
+    const rest = (existing.attachments ?? []).filter((a) => a.kind !== 'tax_invoice');
+    const next: RefundTransactionRecord = {
+      ...existing,
+      attachments: [{ id: newId(), kind: 'tax_invoice', ...invoice }, ...rest],
+      updatedAt: new Date().toISOString(),
+    };
+    delete next.invoice;
     await kv.set(txnKey(entityId, txnId), next);
     return next;
+  },
+
+  /** First tax_invoice attachment (what the legacy invoice routes serve). */
+  primaryInvoice(txn: RefundTransactionRecord): TransactionAttachment | null {
+    return txn.attachments?.find((a) => a.kind === 'tax_invoice') ?? null;
   },
 
   async removeTransactionInvoice(
@@ -1053,7 +1270,12 @@ export const RefundClustersService = {
   ): Promise<RefundTransactionRecord> {
     const existing = await this.getTransaction(entityId, txnId);
     if (!existing) throw Object.assign(new Error('Transaction not found'), { status: 404 });
-    const next = { ...existing, updatedAt: new Date().toISOString() };
+    const primary = this.primaryInvoice(existing);
+    const next: RefundTransactionRecord = {
+      ...existing,
+      attachments: (existing.attachments ?? []).filter((a) => a.id !== primary?.id),
+      updatedAt: new Date().toISOString(),
+    };
     delete next.invoice;
     await kv.set(txnKey(entityId, txnId), next);
     return next;

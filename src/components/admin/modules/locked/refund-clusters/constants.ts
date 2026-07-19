@@ -3,6 +3,8 @@
  */
 
 import type {
+  AttachmentKind,
+  PaymentStatus,
   RefundEntityType,
   TransactionDirection,
   VatPeriodCategory,
@@ -38,6 +40,15 @@ export const ENDPOINTS = {
     `${entityBase(clusterId, entityId)}/transactions/${txnId}/invoice`,
   TRANSACTION_INVOICE_URL: (clusterId: string, entityId: string, txnId: string) =>
     `${entityBase(clusterId, entityId)}/transactions/${txnId}/invoice/url`,
+  TRANSACTION_ATTACHMENTS: (clusterId: string, entityId: string, txnId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments`,
+  TRANSACTION_ATTACHMENT: (clusterId: string, entityId: string, txnId: string, attId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments/${attId}`,
+  TRANSACTION_ATTACHMENT_URL: (clusterId: string, entityId: string, txnId: string, attId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments/${attId}/url`,
+  SUBMISSION_PACK: (clusterId: string, entityId: string) =>
+    `${entityBase(clusterId, entityId)}/submission-pack`,
+  CLUSTER_SUBMISSION_PACK: (clusterId: string) => `/refund-clusters/${clusterId}/submission-pack`,
 } as const;
 
 export const ENTITY_TYPE_LABELS: Record<RefundEntityType, string> = {
@@ -103,6 +114,47 @@ export const ACCOUNT_TYPE_OPTIONS = ['Cheque / Current', 'Savings', 'Transmissio
 /** Allowed upload types — mirrored server-side; the server is authoritative. */
 export const ALLOWED_FILE_ACCEPT = '.pdf,.jpg,.jpeg,.png';
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+export const ATTACHMENT_KIND_OPTIONS: Array<{
+  value: AttachmentKind;
+  label: string;
+  short: string;
+}> = [
+  { value: 'tax_invoice', label: 'Tax invoice', short: 'INV' },
+  { value: 'proof_of_payment', label: 'Proof of payment', short: 'POP' },
+  { value: 'credit_note', label: 'Credit note', short: 'CR' },
+  { value: 'debit_note', label: 'Debit note', short: 'DR' },
+  { value: 'statement', label: 'Statement', short: 'STMT' },
+  { value: 'other', label: 'Other', short: 'DOC' },
+];
+
+export function attachmentKindShort(kind: AttachmentKind): string {
+  return ATTACHMENT_KIND_OPTIONS.find((o) => o.value === kind)?.short ?? 'DOC';
+}
+
+export const PAYMENT_STATUS_OPTIONS: Array<{ value: PaymentStatus; label: string }> = [
+  { value: 'unpaid', label: 'Unpaid' },
+  { value: 'partial', label: 'Partially paid' },
+  { value: 'paid', label: 'Paid' },
+];
+
+/**
+ * Ledger categories. `capital: true` marks capital goods — VAT201 separates
+ * input tax on capital goods (field 14) from other goods/services (field 15).
+ */
+export const CATEGORY_OPTIONS: Array<{ value: string; label: string; capital?: boolean }> = [
+  { value: 'sales_services', label: 'Sales — services' },
+  { value: 'sales_goods', label: 'Sales — goods' },
+  { value: 'professional_fees', label: 'Professional fees' },
+  { value: 'materials', label: 'Materials & consumables' },
+  { value: 'rent', label: 'Rent & utilities' },
+  { value: 'fuel_transport', label: 'Fuel & transport' },
+  { value: 'equipment_capital', label: 'Equipment (capital)', capital: true },
+  { value: 'vehicles_capital', label: 'Vehicles (capital)', capital: true },
+  { value: 'bank_charges', label: 'Bank charges' },
+  { value: 'telecoms', label: 'Telecoms & software' },
+  { value: 'other', label: 'Other' },
+];
 
 export interface DocumentTypeOption {
   value: string;

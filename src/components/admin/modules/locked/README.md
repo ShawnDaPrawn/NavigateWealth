@@ -13,12 +13,15 @@ It is intentionally built so it can be deleted in one sitting. Keep it that way:
 - Its data is namespaced: KV keys under the `refund-clusters:` and `suppliers:`
   prefixes, dedicated private storage buckets, and audit entries with their own
   entity types.
-- The invoice template spec (types + normalizer) lives once in
-  `src/shared/suppliers/invoice-template-spec.ts` (pure, dependency-free — the
-  established home for SPA+edge shared code); both `suppliers/templateSpec.ts`
-  and `src/supabase/functions/server/locked/supplier-template-spec.ts`
-  re-export it. That shared file belongs to this module — delete it with the
-  module.
+- Pure SPA+edge shared logic lives in locked-owned files under `src/shared/`
+  (the established home for such code) and is re-exported on both sides:
+  - `src/shared/suppliers/invoice-template-spec.ts` — invoice template spec
+    (types + normalizer) for the Suppliers invoice standard.
+  - `src/shared/locked-vat/vat-validation.ts` — SARS evidence-validation rules
+    (flags, labels, completeness) for the ledger.
+  - `src/shared/locked-vat/pack-naming.ts` — submission-pack evidence file
+    naming.
+    These shared files belong to this module — delete them with the module.
 - Dependencies point strictly **outward** (shared UI components, the API client,
   shared server middleware). Nothing outside imports from inside this module
   except the registration lines listed below.
@@ -30,6 +33,7 @@ It is intentionally built so it can be deleted in one sitting. Keep it that way:
 - `src/components/admin/modules/locked/`
 - `src/supabase/functions/server/locked/`
 - `src/shared/suppliers/` (the shared invoice-template spec)
+- `src/shared/locked-vat/` (VAT validation rules + pack naming)
 
 ### 2. Remove the registration lines
 
@@ -74,3 +78,9 @@ supplier's uploaded example invoice (base64) to the configured OpenAI model via
 the shared `ai-model-config.ts` pipeline to extract the invoice-template spec.
 No other locked-module data leaves the platform. The analysis is audited as
 `supplier_template_analyzed`.
+
+**VAT submission packs**: `vat_pack_generated` audit entries record every pack
+export. Packs are generated on demand and streamed through the authenticated
+API — never written to storage, never given public URLs. Transaction evidence
+files (`refund_transaction_attachment_*` audit actions) live in the
+refund-clusters bucket alongside the legacy single-invoice files.

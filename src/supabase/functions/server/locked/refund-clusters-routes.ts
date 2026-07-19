@@ -16,10 +16,15 @@ import { createModuleLogger } from '../stderr-logger.ts';
 import { AdminAuditService } from '../admin-audit-service.ts';
 import {
   RefundClustersService,
+  transactionStoragePaths,
+  type AttachmentKind,
   type EntityInput,
   type ManagerInput,
   type TransactionInput,
 } from './refund-clusters-service.ts';
+import { computeTransactionFlags } from './vat-validation.ts';
+import { SuppliersService } from './suppliers-service.ts';
+import { buildSubmissionPack, COMPLIANCE_PACK_DOC_TYPES } from './vat-pack-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('refund-clusters-routes');
@@ -154,7 +159,7 @@ app.delete(
       const txns = await RefundClustersService.listClusterTransactions(clusterId);
       const paths = [
         ...docs.map((d) => d.storagePath),
-        ...txns.flatMap((t) => (t.invoice ? [t.invoice.storagePath] : [])),
+        ...txns.flatMap((t) => transactionStoragePaths(t)),
       ];
       if (paths.length > 0) {
         const { error } = await getSupabase().storage.from(BUCKET).remove(paths);
@@ -254,7 +259,7 @@ app.delete(
     const txns = await RefundClustersService.listTransactions(entityId);
     const paths = [
       ...docs.map((d) => d.storagePath),
-      ...txns.flatMap((t) => (t.invoice ? [t.invoice.storagePath] : [])),
+      ...txns.flatMap((t) => transactionStoragePaths(t)),
     ];
     if (paths.length > 0) {
       const { error } = await getSupabase().storage.from(BUCKET).remove(paths);
@@ -482,7 +487,11 @@ app.get(
   asyncHandler(async (c) => {
     const entityId = c.req.param('entityId') ?? '';
     const transactions = await RefundClustersService.listTransactions(entityId);
-    return c.json({ success: true, transactions });
+    // SARS-readiness flags need supplier VAT numbers for linked counterparties.
+    const suppliers = await SuppliersService.listSuppliers();
+    const supplierVatNumbers = Object.fromEntries(suppliers.map((s) => [s.id, s.vatNumber]));
+    const flags = computeTransactionFlags(transactions, { supplierVatNumbers });
+    return c.json({ success: true, transactions, flags });
   }),
 );
 
@@ -549,14 +558,13 @@ app.delete(
     if (!existing) {
       return c.json({ error: 'Transaction not found' }, 404);
     }
-    // Remove the invoice file first (if any) so metadata is only dropped once storage confirms.
-    if (existing.invoice) {
-      const { error } = await getSupabase()
-        .storage.from(BUCKET)
-        .remove([existing.invoice.storagePath]);
+    // Remove evidence files first so metadata is only dropped once storage confirms.
+    const paths = transactionStoragePaths(existing);
+    if (paths.length > 0) {
+      const { error } = await getSupabase().storage.from(BUCKET).remove(paths);
       if (error) {
-        log.error('Failed to remove transaction invoice from storage', error);
-        return c.json({ error: 'Failed to delete the stored invoice — please try again' }, 500);
+        log.error('Failed to remove transaction evidence from storage', error);
+        return c.json({ error: 'Failed to delete the stored evidence — please try again' }, 500);
       }
     }
     await RefundClustersService.deleteTransaction(entityId, txnId);
@@ -598,7 +606,7 @@ app.post(
     // Upload the replacement (always a unique path) and persist its metadata
     // BEFORE removing any prior invoice, so a failed upload never loses the
     // existing file. The old path is cleaned up only after the new one sticks.
-    const oldPath = existing.invoice?.storagePath;
+    const oldPath = RefundClustersService.primaryInvoice(existing)?.storagePath;
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const storagePath = `${clusterId}/${entityId}/transactions/${txnId}/${Date.now()}_${safeName}`;
     const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
@@ -642,13 +650,14 @@ app.get(
     const txnId = c.req.param('txnId') ?? '';
 
     const transaction = await RefundClustersService.getTransaction(entityId, txnId);
-    if (!transaction?.invoice) {
+    const primary = transaction ? RefundClustersService.primaryInvoice(transaction) : null;
+    if (!primary) {
       return c.json({ error: 'Invoice not found' }, 404);
     }
 
     const { data, error } = await getSupabase()
       .storage.from(BUCKET)
-      .createSignedUrl(transaction.invoice.storagePath, 300);
+      .createSignedUrl(primary.storagePath, 300);
     if (error || !data?.signedUrl) {
       log.error('Failed to create invoice signed URL', error);
       return c.json({ error: 'Failed to create invoice link' }, 500);
@@ -658,7 +667,7 @@ app.get(
       entityId,
       metadata: { transactionId: txnId },
     });
-    return c.json({ success: true, url: data.signedUrl, fileName: transaction.invoice.fileName });
+    return c.json({ success: true, url: data.signedUrl, fileName: primary.fileName });
   }),
 );
 
@@ -669,13 +678,12 @@ app.delete(
     const txnId = c.req.param('txnId') ?? '';
 
     const transaction = await RefundClustersService.getTransaction(entityId, txnId);
-    if (!transaction?.invoice) {
+    const primary = transaction ? RefundClustersService.primaryInvoice(transaction) : null;
+    if (!primary) {
       return c.json({ error: 'Invoice not found' }, 404);
     }
 
-    const { error } = await getSupabase()
-      .storage.from(BUCKET)
-      .remove([transaction.invoice.storagePath]);
+    const { error } = await getSupabase().storage.from(BUCKET).remove([primary.storagePath]);
     if (error) {
       log.error('Failed to remove transaction invoice from storage', error);
       return c.json({ error: 'Failed to delete the stored invoice — please try again' }, 500);
@@ -688,6 +696,324 @@ app.delete(
       metadata: { transactionId: txnId },
     });
     return c.json({ success: true, transaction: updated });
+  }),
+);
+
+// ============================================================================
+// VAT submission packs
+// ============================================================================
+
+interface PackPeriodBody {
+  periodStart?: string;
+  periodEnd?: string;
+  periodLabel?: string;
+}
+
+function parsePackPeriod(
+  body: PackPeriodBody,
+): { start: string; end: string; label: string } | null {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  const start = String(body?.periodStart ?? '');
+  const end = String(body?.periodEnd ?? '');
+  if (!iso.test(start) || !iso.test(end) || start > end) return null;
+  return { start, end, label: String(body?.periodLabel ?? `${start} to ${end}`).slice(0, 120) };
+}
+
+/** Streams a stored file as bytes; null when missing (pack notes the gap). */
+async function makeFileFetcher(supabase: ReturnType<typeof getSupabase>) {
+  return async (storagePath: string): Promise<Uint8Array | null> => {
+    const { data, error } = await supabase.storage.from(BUCKET).download(storagePath);
+    if (error || !data) return null;
+    return new Uint8Array(await data.arrayBuffer());
+  };
+}
+
+async function buildEntityPack(
+  clusterId: string,
+  entityId: string,
+  period: { start: string; end: string; label: string },
+): Promise<
+  { zip: Uint8Array; txnCount: number; flaggedCount: number } | { error: string; status: 404 }
+> {
+  const cluster = await RefundClustersService.getCluster(clusterId);
+  const entity = await RefundClustersService.getEntityRaw(clusterId, entityId);
+  if (!cluster || !entity) return { error: 'Entity not found', status: 404 };
+
+  const all = await RefundClustersService.listTransactions(entityId);
+  const transactions = all.filter((t) => t.date >= period.start && t.date <= period.end);
+  const suppliers = await SuppliersService.listSuppliers();
+  const supplierVatNumbers = Object.fromEntries(suppliers.map((s) => [s.id, s.vatNumber]));
+  const flags = computeTransactionFlags(transactions, { supplierVatNumbers });
+  const documents = (await RefundClustersService.listDocuments(entityId)).filter((d) =>
+    COMPLIANCE_PACK_DOC_TYPES.includes(d.documentType),
+  );
+
+  const zip = await buildSubmissionPack({
+    cluster,
+    entity,
+    period,
+    transactions,
+    flags,
+    documents,
+    fetchFile: await makeFileFetcher(getSupabase()),
+  });
+  return {
+    zip,
+    txnCount: transactions.length,
+    flaggedCount: transactions.filter((t) => (flags[t.id] ?? []).length > 0).length,
+  };
+}
+
+/**
+ * POST /:clusterId/entities/:entityId/submission-pack
+ *
+ * Streams the SARS verification pack (ZIP) for the given period. Never
+ * stored — generated per request and audited.
+ */
+app.post(
+  '/:clusterId/entities/:entityId/submission-pack',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const period = parsePackPeriod(await c.req.json().catch(() => ({})));
+    if (!period) {
+      return c.json({ error: 'periodStart and periodEnd must be ISO dates (start ≤ end)' }, 400);
+    }
+
+    const result = await buildEntityPack(clusterId, entityId, period);
+    if ('error' in result) return c.json({ error: result.error }, result.status);
+
+    await audit(c, 'vat_pack_generated', 'VAT submission pack generated', {
+      entityType: 'refund_entity',
+      entityId,
+      metadata: {
+        clusterId,
+        period: period.label,
+        transactions: result.txnCount,
+        flagged: result.flaggedCount,
+      },
+    });
+    return c.body(result.zip.buffer as ArrayBuffer, 200, {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="vat-pack_${period.start}_${period.end}.zip"`,
+    });
+  }),
+);
+
+/**
+ * POST /:clusterId/submission-pack
+ *
+ * Cluster roll-up: one outer ZIP containing a full pack per entity for the
+ * same period.
+ */
+app.post(
+  '/:clusterId/submission-pack',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const period = parsePackPeriod(await c.req.json().catch(() => ({})));
+    if (!period) {
+      return c.json({ error: 'periodStart and periodEnd must be ISO dates (start ≤ end)' }, 400);
+    }
+    const cluster = await RefundClustersService.getCluster(clusterId);
+    if (!cluster) return c.json({ error: 'Cluster not found' }, 404);
+
+    const entities = await RefundClustersService.listEntities(clusterId);
+    const { zipSync } = await import('npm:fflate@0.8.2');
+    const outer: Record<string, Uint8Array> = {};
+    let totalTxns = 0;
+    for (const entity of entities) {
+      const result = await buildEntityPack(clusterId, entity.id, period);
+      if ('error' in result) continue;
+      const name = (
+        entity.businessDetails?.tradingName ||
+        entity.businessDetails?.companyName ||
+        [entity.personalDetails?.name, entity.personalDetails?.surname].filter(Boolean).join(' ') ||
+        entity.id
+      )
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .slice(0, 40);
+      outer[`${name}_vat-pack_${period.start}_${period.end}.zip`] = result.zip;
+      totalTxns += result.txnCount;
+    }
+
+    await audit(c, 'vat_pack_generated', 'Cluster VAT submission packs generated', {
+      entityId: clusterId,
+      metadata: {
+        period: period.label,
+        entities: Object.keys(outer).length,
+        transactions: totalTxns,
+      },
+    });
+    const bundle = zipSync(outer, { level: 0 }); // inner zips are already compressed
+    return c.body(bundle.buffer as ArrayBuffer, 200, {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="cluster-vat-packs_${period.start}_${period.end}.zip"`,
+    });
+  }),
+);
+
+// ============================================================================
+// Transaction attachments (evidence files: tax invoices, proof of payment, …)
+// ============================================================================
+
+const ATTACHMENT_KINDS: ReadonlyArray<AttachmentKind> = [
+  'tax_invoice',
+  'proof_of_payment',
+  'credit_note',
+  'debit_note',
+  'statement',
+  'other',
+];
+
+app.post(
+  '/:clusterId/entities/:entityId/transactions/:txnId/attachments',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const txnId = c.req.param('txnId') ?? '';
+
+    const existing = await RefundClustersService.getTransaction(entityId, txnId);
+    if (!existing) {
+      return c.json({ error: 'Transaction not found' }, 404);
+    }
+
+    const body = await c.req.parseBody();
+    const file = body['file'];
+    const kind = typeof body['kind'] === 'string' ? (body['kind'] as AttachmentKind) : 'other';
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'No file uploaded' }, 400);
+    }
+    if (!ATTACHMENT_KINDS.includes(kind)) {
+      return c.json({ error: `kind must be one of: ${ATTACHMENT_KINDS.join(', ')}` }, 400);
+    }
+    const invalid = validateUpload(file);
+    if (invalid) {
+      return c.json({ error: invalid }, 400);
+    }
+
+    const supabase = getSupabase();
+    await ensureBucket(supabase);
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `${clusterId}/${entityId}/transactions/${txnId}/${kind}/${Date.now()}_${safeName}`;
+    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+    if (uploadError) {
+      log.error('Attachment upload failed', uploadError);
+      return c.json({ error: uploadError.message }, 500);
+    }
+
+    const { transaction } = await RefundClustersService.addAttachment(entityId, txnId, {
+      kind,
+      fileName: file.name,
+      storagePath,
+      contentType: file.type,
+      sizeBytes: file.size,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: c.get('userId') as string,
+      verifiedFull: body['verifiedFull'] === 'true' ? true : undefined,
+    });
+
+    await audit(c, 'refund_transaction_attachment_uploaded', `Evidence uploaded (${kind})`, {
+      entityType: 'refund_entity',
+      entityId,
+      metadata: { clusterId, transactionId: txnId, kind },
+    });
+    return c.json({ success: true, transaction }, 201);
+  }),
+);
+
+app.get(
+  '/:clusterId/entities/:entityId/transactions/:txnId/attachments/:attId/url',
+  asyncHandler(async (c) => {
+    const entityId = c.req.param('entityId') ?? '';
+    const txnId = c.req.param('txnId') ?? '';
+    const attId = c.req.param('attId') ?? '';
+
+    const attachment = await RefundClustersService.getAttachment(entityId, txnId, attId);
+    if (!attachment) {
+      return c.json({ error: 'Attachment not found' }, 404);
+    }
+
+    const { data, error } = await getSupabase()
+      .storage.from(BUCKET)
+      .createSignedUrl(attachment.storagePath, 300);
+    if (error || !data?.signedUrl) {
+      log.error('Failed to create attachment signed URL', error);
+      return c.json({ error: 'Failed to create attachment link' }, 500);
+    }
+    await audit(c, 'refund_transaction_attachment_viewed', `Evidence viewed (${attachment.kind})`, {
+      entityType: 'refund_entity',
+      entityId,
+      metadata: { transactionId: txnId, attachmentId: attId, kind: attachment.kind },
+    });
+    return c.json({ success: true, url: data.signedUrl, fileName: attachment.fileName });
+  }),
+);
+
+/** Toggle the "full tax invoice verified" confirmation on an attachment. */
+app.put(
+  '/:clusterId/entities/:entityId/transactions/:txnId/attachments/:attId',
+  asyncHandler(async (c) => {
+    const entityId = c.req.param('entityId') ?? '';
+    const txnId = c.req.param('txnId') ?? '';
+    const attId = c.req.param('attId') ?? '';
+    const body = await c.req.json().catch(() => ({}));
+    try {
+      const transaction = await RefundClustersService.setAttachmentVerifiedFull(
+        entityId,
+        txnId,
+        attId,
+        body?.verifiedFull === true,
+      );
+      await audit(c, 'refund_transaction_attachment_verified', 'Evidence verification updated', {
+        entityType: 'refund_entity',
+        entityId,
+        metadata: {
+          transactionId: txnId,
+          attachmentId: attId,
+          verifiedFull: body?.verifiedFull === true,
+        },
+      });
+      return c.json({ success: true, transaction });
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 404 | 500);
+    }
+  }),
+);
+
+app.delete(
+  '/:clusterId/entities/:entityId/transactions/:txnId/attachments/:attId',
+  asyncHandler(async (c) => {
+    const entityId = c.req.param('entityId') ?? '';
+    const txnId = c.req.param('txnId') ?? '';
+    const attId = c.req.param('attId') ?? '';
+
+    const attachment = await RefundClustersService.getAttachment(entityId, txnId, attId);
+    if (!attachment) {
+      return c.json({ error: 'Attachment not found' }, 404);
+    }
+    // Only drop the metadata once storage confirms the file is gone.
+    const { error } = await getSupabase().storage.from(BUCKET).remove([attachment.storagePath]);
+    if (error) {
+      log.error('Failed to remove attachment from storage', error);
+      return c.json({ error: 'Failed to delete the stored file — please try again' }, 500);
+    }
+    const transaction = await RefundClustersService.removeAttachment(entityId, txnId, attId);
+    await audit(
+      c,
+      'refund_transaction_attachment_deleted',
+      `Evidence deleted (${attachment.kind})`,
+      {
+        severity: 'warning',
+        entityType: 'refund_entity',
+        entityId,
+        metadata: { transactionId: txnId, attachmentId: attId, kind: attachment.kind },
+      },
+    );
+    return c.json({ success: true, transaction });
   }),
 );
 
