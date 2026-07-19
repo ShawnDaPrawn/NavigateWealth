@@ -417,7 +417,6 @@ export const riskFnaKeys = {
 
 export const medicalFnaKeys = {
   all: ['medical-fna'] as const,
-  clientProfile: (clientId: string) => [...medicalFnaKeys.all, 'client-profile', clientId] as const,
   policies: (clientId: string) => ['medical-aid-policies', clientId] as const,
 } as const;
 

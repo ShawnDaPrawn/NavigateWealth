@@ -300,21 +300,20 @@ To verify Google Search Console:
 
 `.env.example` documents the variables the code reads. The major groups are:
 
-| Group                  | Examples                                                                                                               | Where they belong                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Frontend public values | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, `VITE_FNA_INTAKE_ENABLED`, `VITE_FORM_PREFILL_ENABLED` | Vercel/project build environment and optional `.env.local`. Must be non-secret. |
-| Build and SEO          | `SITE_URL`, `SEO_REQUIRE_ARTICLES`, `GOOGLE_SITE_VERIFICATION`, `SUPABASE_FUNCTIONS_BASE_URL`                          | Local shell, Vercel build env, or CI.                                           |
-| Edge Function secrets  | `SUPABASE_SERVICE_ROLE_KEY`, `NW_ALLOWED_ORIGINS`, `SUPER_ADMIN_PASSWORD`, `CRON_SECRET`, provider/API keys            | Supabase Edge Function secrets, not browser env.                                |
-| AI and integrations    | `OPENAI_API_KEY`, `NW_GOOGLE_AI_API_KEY`, `LINKEDIN_CLIENT_SECRET`, `HONEYCOMB_API_KEY`, `NW_OPENCLAW_GATEWAY_SECRET`  | Supabase secrets or integration host secrets, depending on consumer.            |
-| Provider portal worker | `NW_API_BASE`, `NW_API_AUTH_TOKEN`, `NW_PORTAL_WORKER_SECRET`, `NW_PROVIDER_*`, `NW_PLAYWRIGHT_*`                      | Worker host, local debugging shell, or GitHub Actions.                          |
-| E2E and smoke tests    | `E2E_FNA_ADVISER_EMAIL`, `E2E_FNA_ADVISER_PASSWORD`, `E2E_FNA_CLIENT_ID`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`              | Local ignored env files or GitHub Actions secrets.                              |
+| Group                  | Examples                                                                                                              | Where they belong                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Frontend public values | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, `VITE_FNA_INTAKE_ENABLED`                             | Vercel/project build environment and optional `.env.local`. Must be non-secret. |
+| Build and SEO          | `SITE_URL`, `SEO_REQUIRE_ARTICLES`, `GOOGLE_SITE_VERIFICATION`, `SUPABASE_FUNCTIONS_BASE_URL`                         | Local shell, Vercel build env, or CI.                                           |
+| Edge Function secrets  | `SUPABASE_SERVICE_ROLE_KEY`, `NW_ALLOWED_ORIGINS`, `SUPER_ADMIN_PASSWORD`, `CRON_SECRET`, provider/API keys           | Supabase Edge Function secrets, not browser env.                                |
+| AI and integrations    | `OPENAI_API_KEY`, `NW_GOOGLE_AI_API_KEY`, `LINKEDIN_CLIENT_SECRET`, `HONEYCOMB_API_KEY`, `NW_OPENCLAW_GATEWAY_SECRET` | Supabase secrets or integration host secrets, depending on consumer.            |
+| Provider portal worker | `NW_API_BASE`, `NW_API_AUTH_TOKEN`, `NW_PORTAL_WORKER_SECRET`, `NW_PROVIDER_*`, `NW_PLAYWRIGHT_*`                     | Worker host, local debugging shell, or GitHub Actions.                          |
+| E2E and smoke tests    | `E2E_FNA_ADVISER_EMAIL`, `E2E_FNA_ADVISER_PASSWORD`, `E2E_FNA_CLIENT_ID`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`             | Local ignored env files or GitHub Actions secrets.                              |
 
 ## Feature Flags
 
-| Flag                        | Purpose                                                                                                           |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `VITE_FNA_INTAKE_ENABLED`   | Enables the client-led FNA intake UI. Production launch documentation records this as enabled after launch gates. |
-| `VITE_FORM_PREFILL_ENABLED` | Enables adviser/admin form prefill UI paths. See the form prefill production launch docs and readiness ledger.    |
+| Flag                      | Purpose                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `VITE_FNA_INTAKE_ENABLED` | Enables the client-led FNA intake UI. Production launch documentation records this as enabled after launch gates. |
 
 Edge-side FNA intake storage flags also exist:
 
