@@ -61,5 +61,6 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/refund-clusters', () => import('./locked/refund-clusters-routes.ts'));
   lazy(app, '/treasury', () => import('./locked/treasury-routes.ts'));
   lazy(app, '/issuing', () => import('./locked/issuing-routes.ts'));
+  lazy(app, '/suppliers', () => import('./locked/suppliers-routes.ts'));
   lazy(app, '/form-templates', () => import('./form-template-routes.ts'));
 }

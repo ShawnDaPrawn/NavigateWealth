@@ -17,6 +17,7 @@ import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { ComingSoonBadge } from './components/ComingSoonBadge';
 import { AccountsPanel } from './refund-clusters/AccountsPanel';
+import { SuppliersPanel } from './suppliers/SuppliersPanel';
 import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { IssuingCardsPanel } from './issuing/IssuingCardsPanel';
 import { getLockoutRemaining, verifyAccessCode } from './access';
@@ -52,12 +53,13 @@ export function LockedModule() {
         </div>
       </div>
 
-      {/* Top-level tabs: Banking · Accounts · Trading */}
+      {/* Top-level tabs: Banking · Accounts · Suppliers · Trading */}
       <Tabs defaultValue="banking" className="space-y-4">
         <div className="w-full overflow-x-auto pb-2">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="banking">Banking</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
             <TabsTrigger value="trading" disabled>
               Trading
               <ComingSoonBadge />
@@ -74,6 +76,10 @@ export function LockedModule() {
 
         <TabsContent value="accounts">
           <AccountsPanel />
+        </TabsContent>
+
+        <TabsContent value="suppliers">
+          <SuppliersPanel />
         </TabsContent>
       </Tabs>
     </div>
