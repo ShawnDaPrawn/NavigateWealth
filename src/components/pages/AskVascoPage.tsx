@@ -34,7 +34,6 @@ import { vascoKeys } from '../../utils/queryKeys';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 import {
   VascoAvatar,
   VascoInlineChatCard,
@@ -535,11 +534,7 @@ export function AskVascoPage() {
             seoData.canonicalUrl,
           )}
         />
-        <div
-          className={`flex min-h-[60vh] items-center justify-center px-4 ${
-            ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'
-          }`}
-        >
+        <div className="flex min-h-[60vh] items-center justify-center bg-[#f8f9fb] px-4">
           <div className="max-w-md text-center">
             <div className="flex justify-center">
               <VascoAvatar size="xl" />
@@ -578,11 +573,7 @@ export function AskVascoPage() {
           seoData.canonicalUrl,
         )}
       />
-      <div
-        className={`relative min-h-screen overflow-hidden ${
-          ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'
-        }`}
-      >
+      <div className="relative min-h-screen overflow-hidden bg-[#f8f9fb]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_28%_12%,rgba(109,40,217,0.10),transparent_34%),radial-gradient(circle_at_72%_0%,rgba(14,165,233,0.08),transparent_32%)]" />
           <div className="absolute right-[-90px] top-28 h-72 w-72 rounded-full border border-[#c4b5fd]/30" />
