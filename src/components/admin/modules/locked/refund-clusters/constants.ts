@@ -46,6 +46,10 @@ export const ENDPOINTS = {
     `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments/${attId}`,
   TRANSACTION_ATTACHMENT_URL: (clusterId: string, entityId: string, txnId: string, attId: string) =>
     `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments/${attId}/url`,
+  SUBMISSIONS: (clusterId: string, entityId: string) =>
+    `${entityBase(clusterId, entityId)}/submissions`,
+  SUBMISSION: (clusterId: string, entityId: string, periodKey: string) =>
+    `${entityBase(clusterId, entityId)}/submissions/${periodKey}`,
   SUBMISSION_PACK: (clusterId: string, entityId: string) =>
     `${entityBase(clusterId, entityId)}/submission-pack`,
   CLUSTER_SUBMISSION_PACK: (clusterId: string) => `/refund-clusters/${clusterId}/submission-pack`,

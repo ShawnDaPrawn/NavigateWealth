@@ -20,8 +20,10 @@ import {
   type AttachmentKind,
   type EntityInput,
   type ManagerInput,
+  type SubmissionInput,
   type TransactionInput,
 } from './refund-clusters-service.ts';
+import { isLockedStatus } from './vat201.ts';
 import { computeTransactionFlags } from './vat-validation.ts';
 import { SuppliersService } from './suppliers-service.ts';
 import { buildSubmissionPack, COMPLIANCE_PACK_DOC_TYPES } from './vat-pack-service.ts';
@@ -696,6 +698,68 @@ app.delete(
       metadata: { transactionId: txnId },
     });
     return c.json({ success: true, transaction: updated });
+  }),
+);
+
+// ============================================================================
+// VAT submissions (period lifecycle: submitted → verification → refund)
+// ============================================================================
+
+app.get(
+  '/:clusterId/entities/:entityId/submissions',
+  asyncHandler(async (c) => {
+    const entityId = c.req.param('entityId') ?? '';
+    const submissions = await RefundClustersService.listSubmissions(entityId);
+    return c.json({ success: true, submissions });
+  }),
+);
+
+/**
+ * PUT /:clusterId/entities/:entityId/submissions/:periodKey
+ *
+ * Upserts the period's submission record. Any status other than 'open' locks
+ * transaction mutations inside the period; moving a locked period back to
+ * 'open' is an explicit unlock, audited at warning severity.
+ */
+app.put(
+  '/:clusterId/entities/:entityId/submissions/:periodKey',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const pKey = c.req.param('periodKey') ?? '';
+    const body = (await c.req.json()) as SubmissionInput;
+    try {
+      const { submission, previousStatus } = await RefundClustersService.upsertSubmission(
+        clusterId,
+        entityId,
+        pKey,
+        body,
+        c.get('userId') as string,
+      );
+      const unlocked = isLockedStatus(previousStatus) && submission.status === 'open';
+      await audit(
+        c,
+        unlocked ? 'vat_period_unlocked' : 'vat_submission_updated',
+        unlocked
+          ? `VAT period ${submission.periodLabel} unlocked for editing`
+          : `VAT submission ${submission.periodLabel} → ${submission.status}`,
+        {
+          severity: unlocked ? 'warning' : 'info',
+          entityType: 'refund_entity',
+          entityId,
+          metadata: {
+            clusterId,
+            periodKey: pKey,
+            status: submission.status,
+            previousStatus,
+            sarsRef: submission.sarsRef,
+          },
+        },
+      );
+      return c.json({ success: true, submission });
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 400 | 404 | 500);
+    }
   }),
 );
 

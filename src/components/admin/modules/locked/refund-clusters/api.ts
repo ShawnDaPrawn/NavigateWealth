@@ -22,6 +22,8 @@ import type {
   RefundTransaction,
   RefundTransactionInput,
   VatPeriodCategory,
+  VatSubmission,
+  VatSubmissionInput,
 } from './types';
 
 function rethrow(error: unknown, context: string): never {
@@ -426,6 +428,36 @@ export const RefundClustersAPI = {
       return data.transaction;
     } catch (error) {
       rethrow(error, 'deleteAttachment');
+    }
+  },
+
+  // --- VAT submissions (period lifecycle) ------------------------------
+
+  async listSubmissions(clusterId: string, entityId: string): Promise<VatSubmission[]> {
+    try {
+      const data = await api.get<{ submissions: VatSubmission[] }>(
+        ENDPOINTS.SUBMISSIONS(clusterId, entityId),
+      );
+      return data?.submissions ?? [];
+    } catch (error) {
+      rethrow(error, 'listSubmissions');
+    }
+  },
+
+  async upsertSubmission(
+    clusterId: string,
+    entityId: string,
+    periodKey: string,
+    input: VatSubmissionInput,
+  ): Promise<VatSubmission> {
+    try {
+      const data = await api.put<{ submission: VatSubmission }>(
+        ENDPOINTS.SUBMISSION(clusterId, entityId, periodKey),
+        input,
+      );
+      return data.submission;
+    } catch (error) {
+      rethrow(error, 'upsertSubmission');
     }
   },
 

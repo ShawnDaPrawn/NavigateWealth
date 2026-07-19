@@ -7,6 +7,8 @@
  * server only ever returns a `hasEfilingPassword` flag.
  */
 
+import type { SubmissionStatus } from './vat201';
+
 export type RefundEntityType = 'sole_proprietor' | 'company';
 export type VatPeriodCategory = 'A' | 'B' | 'C' | 'D' | 'E';
 export type TransactionDirection = 'income' | 'expense';
@@ -160,6 +162,37 @@ export interface RefundTransactionInput {
 export interface EntityLedgerResponse {
   transactions: RefundTransaction[];
   flags: Record<string, string[]>;
+}
+
+/** A VAT period's submission lifecycle; any status but 'open' locks the period. */
+export interface VatSubmission {
+  entityId: string;
+  clusterId: string;
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  status: SubmissionStatus;
+  submittedDate?: string;
+  sarsRef?: string;
+  refundAmount?: number;
+  refundReceivedDate?: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface VatSubmissionInput {
+  periodStart?: string;
+  periodEnd?: string;
+  periodLabel?: string;
+  status?: SubmissionStatus;
+  submittedDate?: string;
+  sarsRef?: string;
+  refundAmount?: number;
+  refundReceivedDate?: string;
+  notes?: string;
 }
 
 export interface RefundEntity {

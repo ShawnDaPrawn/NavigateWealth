@@ -23,6 +23,7 @@ import type {
   RefundTransactionRecord,
 } from './refund-clusters-service.ts';
 import { FLAG_LABELS, type TransactionFlag } from './vat-validation.ts';
+import { computeVat201, vat201Rows } from './vat201.ts';
 import { evidenceFileName, sanitizeFragment } from '../../../../shared/locked-vat/pack-naming.ts';
 
 export { evidenceFileName, sanitizeFragment };
@@ -156,17 +157,24 @@ function buildCoverPdf(input: PackInput, summary: PeriodSummary, flaggedCount: n
 
   const afterVendor = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
     .finalY;
+  const vat201 = computeVat201(input.transactions);
   autoTable(doc, {
     startY: afterVendor + 10,
-    head: [['VAT201 summary', 'Amount']],
+    head: [['Field', 'VAT201 line', 'Amount']],
     body: [
-      ['Output supplies (VAT-inclusive total)', fmtR(summary.outputTotal)],
-      ['Output VAT (field 13)', fmtR(summary.outputVat)],
-      ['Input purchases (VAT-inclusive total)', fmtR(summary.inputTotal)],
-      ['Input VAT (fields 14 + 15)', fmtR(summary.inputVat)],
+      ...vat201Rows(vat201).map((row) => [
+        row.field,
+        row.field === '19'
+          ? vat201.netVat < 0
+            ? 'Net VAT — REFUND DUE'
+            : 'Net VAT — payable'
+          : row.label,
+        fmtR(row.field === '19' ? Math.abs(row.value) : row.value),
+      ]),
       [
-        summary.netVat < 0 ? 'NET — REFUNDABLE (field 19)' : 'NET — PAYABLE (field 19)',
-        fmtR(Math.abs(summary.netVat)),
+        '—',
+        'Gross totals: output / input (VAT-inclusive)',
+        `${fmtR(summary.outputTotal)} / ${fmtR(summary.inputTotal)}`,
       ],
     ],
     theme: 'grid',

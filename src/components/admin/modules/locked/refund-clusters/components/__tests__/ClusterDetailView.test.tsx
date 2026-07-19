@@ -42,6 +42,8 @@ vi.mock('../../hooks/useRefundClusters', () => ({
   useSetAttachmentVerified: () => ({ mutate: vi.fn(), isPending: false }),
   useDownloadSubmissionPack: () => ({ mutate: vi.fn(), isPending: false }),
   useDownloadClusterSubmissionPack: () => ({ mutate: vi.fn(), isPending: false }),
+  useEntitySubmissions: () => ({ data: [], isLoading: false }),
+  useUpsertSubmission: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../../../suppliers/hooks/useSuppliers', () => ({

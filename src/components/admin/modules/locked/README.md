@@ -21,6 +21,8 @@ It is intentionally built so it can be deleted in one sitting. Keep it that way:
     (flags, labels, completeness) for the ledger.
   - `src/shared/locked-vat/pack-naming.ts` — submission-pack evidence file
     naming.
+  - `src/shared/locked-vat/vat201.ts` — VAT201 field mapping, submission
+    lifecycle (period locking) and the s45 refund payout clock.
     These shared files belong to this module — delete them with the module.
 - Dependencies point strictly **outward** (shared UI components, the API client,
   shared server middleware). Nothing outside imports from inside this module
@@ -84,3 +86,9 @@ export. Packs are generated on demand and streamed through the authenticated
 API — never written to storage, never given public URLs. Transaction evidence
 files (`refund_transaction_attachment_*` audit actions) live in the
 refund-clusters bucket alongside the legacy single-invoice files.
+
+**Period locking**: marking a VAT period submitted
+(`refund-clusters:submission:` rows, audited as `vat_submission_updated`)
+locks transaction create/edit/delete inside its dates at the service layer;
+evidence attachments stay allowed. Reopening a locked period is audited as
+`vat_period_unlocked` at warning severity.

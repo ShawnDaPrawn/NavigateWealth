@@ -82,6 +82,7 @@ import {
   useViewAttachment,
 } from '../hooks/useRefundClusters';
 import { useSuppliers } from '../../suppliers/hooks/useSuppliers';
+import { PeriodStatusCard } from './PeriodStatusCard';
 import {
   formatPeriodRange,
   formatZar,
@@ -321,6 +322,15 @@ export function EntityTransactionsDialog({
           </DialogHeader>
 
           <VatSummaryPanel summary={summary} />
+
+          {period && (
+            <PeriodStatusCard
+              clusterId={clusterId}
+              entityId={entity.id}
+              period={period}
+              transactions={visibleTransactions}
+            />
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">

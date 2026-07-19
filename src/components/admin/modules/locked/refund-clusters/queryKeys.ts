@@ -15,5 +15,6 @@ export const refundClusterKeys = {
   transactions: (entityId: string) => [...refundClusterKeys.all, 'transactions', entityId] as const,
   /** Child of `transactions` so transaction invalidations refresh it too. */
   ledger: (entityId: string) => [...refundClusterKeys.transactions(entityId), 'ledger'] as const,
+  submissions: (entityId: string) => [...refundClusterKeys.all, 'submissions', entityId] as const,
   managers: (clusterId: string) => [...refundClusterKeys.all, 'managers', clusterId] as const,
 } as const;

@@ -20,12 +20,14 @@
  *   refund-clusters:doc:{entityId}:{docId}           → RefundEntityDocument
  *   refund-clusters:txn:{entityId}:{txnId}           → RefundTransactionRecord
  *   refund-clusters:manager:{clusterId}:{managerId}  → RefundManagerRecord
+ *   refund-clusters:submission:{entityId}:{periodKey} → VatSubmissionRecord
  *
  * @module server/refund-clusters-service
  */
 
 import * as kv from '../kv_store.tsx';
 import { createModuleLogger } from '../stderr-logger.ts';
+import { isLockedStatus, type SubmissionStatus } from './vat201.ts';
 
 const log = createModuleLogger('refund-clusters');
 
@@ -149,6 +151,44 @@ export interface RefundTransactionInvoice {
   sizeBytes: number;
   uploadedAt: string;
   uploadedBy: string;
+}
+
+/**
+ * A VAT period's submission lifecycle. Existence with any status other than
+ * 'open' LOCKS the period: transactions dated inside it cannot be created,
+ * edited or deleted (corrections go into the open period). Evidence
+ * attachments remain allowed — verification is when documents get gathered.
+ */
+export interface VatSubmissionRecord {
+  entityId: string;
+  clusterId: string;
+  /** `${periodStart}_${periodEnd}` — stable identifier. */
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  status: SubmissionStatus;
+  /** ISO yyyy-mm-dd date the VAT201 was filed on eFiling. */
+  submittedDate?: string;
+  sarsRef?: string;
+  refundAmount?: number;
+  refundReceivedDate?: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface SubmissionInput {
+  periodStart?: string;
+  periodEnd?: string;
+  periodLabel?: string;
+  status?: string;
+  submittedDate?: string;
+  sarsRef?: string;
+  refundAmount?: number;
+  refundReceivedDate?: string;
+  notes?: string;
 }
 
 export interface TransactionInput {
@@ -303,6 +343,7 @@ const ENTITY_PREFIX = 'refund-clusters:entity:';
 const DOC_PREFIX = 'refund-clusters:doc:';
 const TXN_PREFIX = 'refund-clusters:txn:';
 const MANAGER_PREFIX = 'refund-clusters:manager:';
+const SUBMISSION_PREFIX = 'refund-clusters:submission:';
 
 const clusterKey = (clusterId: string) => `${CLUSTER_PREFIX}${clusterId}`;
 const entityKey = (clusterId: string, entityId: string) =>
@@ -311,6 +352,7 @@ const docKey = (entityId: string, docId: string) => `${DOC_PREFIX}${entityId}:${
 const txnKey = (entityId: string, txnId: string) => `${TXN_PREFIX}${entityId}:${txnId}`;
 const managerKey = (clusterId: string, managerId: string) =>
   `${MANAGER_PREFIX}${clusterId}:${managerId}`;
+const submissionKey = (entityId: string, pKey: string) => `${SUBMISSION_PREFIX}${entityId}:${pKey}`;
 
 const newId = () => crypto.randomUUID();
 
@@ -880,6 +922,10 @@ export const RefundClustersService = {
     for (const txn of txns) {
       await kv.del(txnKey(entityId, txn.id));
     }
+    const submissions = await this.listSubmissions(entityId);
+    for (const submission of submissions) {
+      await kv.del(submissionKey(entityId, submission.periodKey));
+    }
     await kv.del(entityKey(clusterId, entityId));
     return docs;
   },
@@ -1091,11 +1137,13 @@ export const RefundClustersService = {
     const { vatAmount, vatOverridden } = this.resolveVatAmount(amount, treatment, input.vatAmount);
 
     const now = new Date().toISOString();
+    const txnDate = str(input.date) || now.slice(0, 10);
+    await this.assertPeriodUnlocked(entityId, txnDate);
     const record: RefundTransactionRecord = {
       id: newId(),
       entityId,
       clusterId,
-      date: str(input.date) || now.slice(0, 10),
+      date: txnDate,
       description: str(input.description),
       direction,
       vatTreatment: treatment,
@@ -1131,9 +1179,14 @@ export const RefundClustersService = {
       input.vatTreatment !== undefined ? parseTreatment(input.vatTreatment) : existing.vatTreatment;
     const { vatAmount, vatOverridden } = this.resolveVatAmount(amount, treatment, input.vatAmount);
 
+    const nextDate = input.date !== undefined ? str(input.date) || existing.date : existing.date;
+    // Both the current and the target period must be open.
+    await this.assertPeriodUnlocked(entityId, existing.date);
+    if (nextDate !== existing.date) await this.assertPeriodUnlocked(entityId, nextDate);
+
     const next: RefundTransactionRecord = {
       ...existing,
-      date: input.date !== undefined ? str(input.date) || existing.date : existing.date,
+      date: nextDate,
       description: input.description !== undefined ? str(input.description) : existing.description,
       direction:
         input.direction !== undefined ? parseDirection(input.direction) : existing.direction,
@@ -1161,8 +1214,125 @@ export const RefundClustersService = {
     txnId: string,
   ): Promise<RefundTransactionRecord | null> {
     const existing = await this.getTransaction(entityId, txnId);
-    if (existing) await kv.del(txnKey(entityId, txnId));
+    if (existing) {
+      await this.assertPeriodUnlocked(entityId, existing.date);
+      await kv.del(txnKey(entityId, txnId));
+    }
     return existing;
+  },
+
+  // --- VAT submissions (period lifecycle + locking) --------------------
+
+  async listSubmissions(entityId: string): Promise<VatSubmissionRecord[]> {
+    const rows = (await kv.getByPrefix(
+      `${SUBMISSION_PREFIX}${entityId}:`,
+    )) as VatSubmissionRecord[];
+    return rows
+      .filter((row) => row && row.periodKey)
+      .sort((a, b) => b.periodStart.localeCompare(a.periodStart));
+  },
+
+  async getSubmission(entityId: string, pKey: string): Promise<VatSubmissionRecord | null> {
+    return (
+      ((await kv.get(submissionKey(entityId, pKey))) as VatSubmissionRecord | undefined) ?? null
+    );
+  },
+
+  /**
+   * Upsert a period's submission record. Returns the previous status so the
+   * route can audit unlocks (locked → open) at warning severity.
+   */
+  async upsertSubmission(
+    clusterId: string,
+    entityId: string,
+    pKey: string,
+    input: SubmissionInput,
+    updatedBy: string,
+  ): Promise<{ submission: VatSubmissionRecord; previousStatus: SubmissionStatus | undefined }> {
+    const entity = await this.getEntityRaw(clusterId, entityId);
+    if (!entity) throw Object.assign(new Error('Entity not found'), { status: 404 });
+
+    const existing = await this.getSubmission(entityId, pKey);
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    const periodStart = str(input.periodStart) || existing?.periodStart || '';
+    const periodEnd = str(input.periodEnd) || existing?.periodEnd || '';
+    if (!iso.test(periodStart) || !iso.test(periodEnd) || periodStart > periodEnd) {
+      throw Object.assign(new Error('periodStart and periodEnd must be ISO dates (start ≤ end)'), {
+        status: 400,
+      });
+    }
+    const statuses: SubmissionStatus[] = [
+      'open',
+      'submitted',
+      'verification',
+      'refund_received',
+      'closed',
+    ];
+    const status =
+      input.status !== undefined
+        ? statuses.includes(input.status as SubmissionStatus)
+          ? (input.status as SubmissionStatus)
+          : undefined
+        : (existing?.status ?? 'open');
+    if (!status) {
+      throw Object.assign(new Error(`status must be one of: ${statuses.join(', ')}`), {
+        status: 400,
+      });
+    }
+
+    const now = new Date().toISOString();
+    const record: VatSubmissionRecord = {
+      entityId,
+      clusterId,
+      periodKey: pKey,
+      periodStart,
+      periodEnd,
+      periodLabel:
+        input.periodLabel !== undefined
+          ? str(input.periodLabel).slice(0, 120)
+          : (existing?.periodLabel ?? `${periodStart} to ${periodEnd}`),
+      status,
+      submittedDate:
+        input.submittedDate !== undefined
+          ? str(input.submittedDate) || undefined
+          : existing?.submittedDate,
+      sarsRef: input.sarsRef !== undefined ? str(input.sarsRef) || undefined : existing?.sarsRef,
+      refundAmount:
+        input.refundAmount !== undefined
+          ? Number.isFinite(Number(input.refundAmount))
+            ? round2(Number(input.refundAmount))
+            : undefined
+          : existing?.refundAmount,
+      refundReceivedDate:
+        input.refundReceivedDate !== undefined
+          ? str(input.refundReceivedDate) || undefined
+          : existing?.refundReceivedDate,
+      notes: input.notes !== undefined ? str(input.notes) : (existing?.notes ?? ''),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+      updatedBy,
+    };
+    await kv.set(submissionKey(entityId, pKey), record);
+    return { submission: record, previousStatus: existing?.status };
+  },
+
+  /**
+   * Rejects mutations of transactions dated inside a submitted (locked)
+   * period. Called by every transaction create/update/delete.
+   */
+  async assertPeriodUnlocked(entityId: string, dateIso: string): Promise<void> {
+    const submissions = await this.listSubmissions(entityId);
+    const locking = submissions.find(
+      (s) => isLockedStatus(s.status) && dateIso >= s.periodStart && dateIso <= s.periodEnd,
+    );
+    if (locking) {
+      throw Object.assign(
+        new Error(
+          `The VAT period ${locking.periodLabel} was submitted to SARS and is locked — capture corrections in the current open period instead`,
+        ),
+        { status: 409 },
+      );
+    }
   },
 
   // --- Transaction attachments ----------------------------------------

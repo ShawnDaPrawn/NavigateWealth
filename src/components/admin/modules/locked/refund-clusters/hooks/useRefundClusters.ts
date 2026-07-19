@@ -16,6 +16,7 @@ import type {
   RefundManagerInput,
   RefundTransactionInput,
   VatPeriodCategory,
+  VatSubmissionInput,
 } from '../types';
 
 const STALE_TIME = 60 * 1000;
@@ -554,6 +555,48 @@ export function useViewAttachment() {
       RefundClustersAPI.getAttachmentUrl(input.clusterId, input.entityId, input.txnId, input.attId),
     onError: (error: Error) => {
       toast.error('Failed to open evidence', { description: error.message });
+    },
+  });
+}
+
+// ============================================================================
+// VAT submissions (period lifecycle)
+// ============================================================================
+
+export function useEntitySubmissions(clusterId: string, entityId: string | null) {
+  return useQuery({
+    queryKey: refundClusterKeys.submissions(entityId ?? ''),
+    queryFn: () => RefundClustersAPI.listSubmissions(clusterId, entityId!),
+    enabled: !!entityId,
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useUpsertSubmission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      clusterId: string;
+      entityId: string;
+      periodKey: string;
+      submission: VatSubmissionInput;
+    }) =>
+      RefundClustersAPI.upsertSubmission(
+        input.clusterId,
+        input.entityId,
+        input.periodKey,
+        input.submission,
+      ),
+    onSuccess: (submission, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.submissions(variables.entityId) });
+      toast.success(
+        submission.status === 'open'
+          ? `Period ${submission.periodLabel} unlocked`
+          : `Period ${submission.periodLabel} marked ${submission.status.replace('_', ' ')}`,
+      );
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update the period status', { description: error.message });
     },
   });
 }
