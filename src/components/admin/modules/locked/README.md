@@ -10,18 +10,26 @@ It is intentionally built so it can be deleted in one sitting. Keep it that way:
 - All frontend code lives in `src/components/admin/modules/locked/` (including
   its own query keys, types, API layer and tests — nothing in shared registries).
 - All backend code lives in `src/supabase/functions/server/locked/`.
-- Its data is namespaced: KV keys under the `refund-clusters:` prefix, a
-  dedicated private storage bucket, and audit entries with their own entity types.
+- Its data is namespaced: KV keys under the `refund-clusters:` and `suppliers:`
+  prefixes, dedicated private storage buckets, and audit entries with their own
+  entity types.
+- The invoice template spec (types + normalizer) lives once in
+  `src/shared/suppliers/invoice-template-spec.ts` (pure, dependency-free — the
+  established home for SPA+edge shared code); both `suppliers/templateSpec.ts`
+  and `src/supabase/functions/server/locked/supplier-template-spec.ts`
+  re-export it. That shared file belongs to this module — delete it with the
+  module.
 - Dependencies point strictly **outward** (shared UI components, the API client,
   shared server middleware). Nothing outside imports from inside this module
   except the registration lines listed below.
 
 ## How to delete this module completely
 
-### 1. Delete the two folders
+### 1. Delete the folders
 
 - `src/components/admin/modules/locked/`
 - `src/supabase/functions/server/locked/`
+- `src/shared/suppliers/` (the shared invoice-template spec)
 
 ### 2. Remove the registration lines
 
@@ -35,7 +43,7 @@ Find them by searching for the quoted strings (line numbers drift; strings don't
 | `src/components/admin/layout/types.ts`                           | `\| 'locked'` in the `AdminModule` union                                                                                                        |
 | `src/components/admin/modules/personnel/constants.ts`            | `'locked'` in `SELF_GATED_MODULES` and the `locked: []` entry in the module-capabilities map                                                    |
 | `src/components/admin/modules/personnel/hooks/usePermissions.ts` | `'locked'` in the `allModules` list (if present)                                                                                                |
-| `src/supabase/functions/server/mount-modules.ts`                 | the `lazy(app, '/refund-clusters', ...)` line                                                                                                   |
+| `src/supabase/functions/server/mount-modules.ts`                 | the `lazy(app, '/refund-clusters', ...)` and `lazy(app, '/suppliers', ...)` lines                                                               |
 
 Then run the quality gates (`npm run lint && npm run typecheck && npm test`) —
 the compiler will flag anything missed via the `AdminModule` union.
@@ -43,12 +51,14 @@ the compiler will flag anything missed via the `AdminModule` union.
 ### 3. Clean up operational data (Supabase project)
 
 - **KV rows**: delete all rows in `kv_store_91ed8379` whose key starts with
-  `refund-clusters:` (clusters, entities, document metadata).
-- **Storage**: delete the bucket `make-91ed8379-refund-clusters` and its contents.
+  `refund-clusters:` (clusters, entities, document metadata) or `suppliers:`
+  (suppliers, invoice templates, invoices, number sequences).
+- **Storage**: delete the buckets `make-91ed8379-refund-clusters` and
+  `make-91ed8379-suppliers` and their contents.
 - **Secrets**: remove the `NW_REFUND_VAULT_KEY` edge-function secret if it was set.
 - **Audit log** (optional): historical admin-audit entries with entityType
-  `refund_cluster` / `refund_entity` remain in the shared audit trail; purge them
-  only if required.
+  `refund_cluster` / `refund_entity` / `supplier` remain in the shared audit
+  trail; purge them only if required.
 - Redeploy the edge function after removing the server folder.
 
 ## Security model (for maintainers)
@@ -58,3 +68,9 @@ server route re-enforces super-admin; eFiling passwords are AES-256-GCM
 encrypted at rest (key: `NW_REFUND_VAULT_KEY`, falling back to a key derived
 from the service-role key); documents live in a private bucket served via
 short-lived signed URLs; every sensitive action is audit-logged.
+
+**AI data egress (Suppliers)**: the "Analyze with AI" action sends the
+supplier's uploaded example invoice (base64) to the configured OpenAI model via
+the shared `ai-model-config.ts` pipeline to extract the invoice-template spec.
+No other locked-module data leaves the platform. The analysis is audited as
+`supplier_template_analyzed`.
