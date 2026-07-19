@@ -53,7 +53,6 @@ import { ConsultationModal } from '../modals/ConsultationModal';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { PortalQuoteFlowModal } from '../portal/PortalQuoteFlowModal';
 import { ServiceFnaPanel } from '../portal/ServiceFnaPanel';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 import {
   getFnaTitleForService,
   quoteServiceIdToFnaDomain,
@@ -759,9 +758,7 @@ export function ProductsServicesDashboardPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       {/* Branded Page Header */}
       <PortalPageHeader
         title="Products & Services"

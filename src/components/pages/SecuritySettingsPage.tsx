@@ -25,7 +25,6 @@ import { TwoFactorModal } from '../auth/TwoFactorModal';
 import { VerificationCodeField } from '../security/VerificationCodeField';
 import { useSecuritySettings } from '../../hooks/useSecuritySettings';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 import { toast } from 'sonner';
 import {
   Shield,
@@ -204,9 +203,7 @@ export function SecuritySettingsPage() {
   const strokeDashoffset = circumference - (securityScore / 100) * circumference;
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <PortalPageHeader
         title="Security Settings"

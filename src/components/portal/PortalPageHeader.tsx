@@ -5,13 +5,10 @@
  * Mirrors the website's dark gradient hero aesthetic while keeping
  * the content functional and dashboard-appropriate.
  *
- * When ACTIVE_THEME is 'classic', renders a simple white/gray header.
- *
  * Guidelines refs: §8.1, §8.3, §8.4
  */
 
 import React from 'react';
-import { ACTIVE_THEME } from './portal-theme';
 
 interface PortalPageHeaderProps {
   /** Greeting line, e.g. "Good morning, Chris" */
@@ -38,33 +35,6 @@ export function PortalPageHeader({
   compact = false,
   children,
 }: PortalPageHeaderProps) {
-  if (ACTIVE_THEME === 'classic') {
-    return (
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {Icon && (
-                <div className="h-12 w-12 rounded-xl bg-purple-50 flex items-center justify-center">
-                  <Icon className="h-6 w-6 text-purple-600" />
-                </div>
-              )}
-              <div>
-                {greeting && <p className="text-sm text-gray-500">{greeting}</p>}
-                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-                {subtitle && <p className="text-gray-600 mt-0.5">{subtitle}</p>}
-              </div>
-            </div>
-            {actions && <div className="flex items-center gap-3">{actions}</div>}
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Branded theme ──────────────────────────────────────────────────────────
-
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1e36] via-[#252a47] to-[#1a1e36]">
       {/* Glow effects */}
