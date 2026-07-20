@@ -80,6 +80,9 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // jsdom shares document.head across tests in this file; drop any robots
+  // meta a test (or the component under test) left behind.
+  document.querySelector('meta[name="robots"]')?.remove();
 });
 
 describe('ArticleDetailPage', () => {
@@ -196,6 +199,79 @@ describe('ArticleDetailPage', () => {
     renderWithSlug('long-article');
     await waitFor(() => {
       expect(screen.getByText('5 min read')).toBeTruthy();
+    });
+  });
+
+  describe('robots meta behaviour', () => {
+    it('sets noindex when the API returns 404', async () => {
+      mockFetchReturns404();
+      renderWithSlug('definitely-not-a-real-article-xyz');
+      await waitFor(() => {
+        expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+          'noindex, nofollow',
+        );
+      });
+    });
+
+    it('leaves the prerendered robots meta untouched on transient failure', async () => {
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', 'robots');
+      meta.setAttribute('content', 'index, follow');
+      document.head.appendChild(meta);
+
+      vi.stubGlobal('fetch', () =>
+        Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) }),
+      );
+      renderWithSlug('some-real-article');
+      // Real timers: the hook backs off 500ms + 1500ms before surfacing the error.
+      await waitFor(() => expect(screen.getByText('Unable to Load Article')).toBeTruthy(), {
+        timeout: 6000,
+      });
+      expect(meta.getAttribute('content')).toBe('index, follow');
+    });
+
+    it('recovers via retry when a transient failure is followed by success', async () => {
+      let slugCalls = 0;
+      vi.stubGlobal('fetch', (url: string) => {
+        if (String(url).includes('/publications/articles/slug/')) {
+          slugCalls += 1;
+          if (slugCalls === 1) {
+            return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  id: 'art-retry',
+                  slug: 'retry-article',
+                  title: 'Recovered After Retry',
+                  body: '<p>Content</p>',
+                },
+              }),
+          });
+        }
+        // increment-views and other fire-and-forget calls
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      });
+      renderWithSlug('retry-article');
+      await waitFor(() => expect(screen.getByText('Recovered After Retry')).toBeTruthy(), {
+        timeout: 6000,
+      });
+      expect(slugCalls).toBe(2);
+    });
+
+    it('does not retry a definitive 404', async () => {
+      const fetchMock = vi.fn(() =>
+        Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      renderWithSlug('gone-forever-article');
+      await waitFor(() => {
+        expect(screen.getByText('Article Not Found')).toBeTruthy();
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });

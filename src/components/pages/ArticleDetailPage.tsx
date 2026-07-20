@@ -179,57 +179,103 @@ function setSessionFlag(key: string): void {
 // Self-contained hook — fetches a single article by slug
 // ---------------------------------------------------------------------------
 
+// Transient failures (network errors, 408/429/5xx) are retried with a short
+// backoff so a Supabase cold start or rate-limit blip during a crawler's
+// render doesn't surface the error state. A definitive HTTP 404 never retries.
+const TRANSIENT_RETRY_DELAYS_MS = [500, 1500];
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
 function useArticleBySlug(slug: string | undefined) {
   const [article, setArticle] = useState<ArticleDisplay | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  // Guards against out-of-order responses when the slug changes (or Retry is
+  // clicked) while a previous attempt or its backoff is still in flight.
+  const requestIdRef = useRef(0);
 
   const fetchArticle = useCallback(async () => {
     if (!slug) return;
 
+    const requestId = ++requestIdRef.current;
+    const isCurrent = () => requestIdRef.current === requestId;
+
     setIsLoading(true);
     setError(null);
+    setNotFound(false);
+    setArticle(null);
 
-    try {
-      const url = `${API_CONFIG.BASE_URL}/publications/articles/slug/${slug}`;
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${publicAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const url = `${API_CONFIG.BASE_URL}/publications/articles/slug/${slug}`;
+    let lastError: unknown = null;
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch article (${response.status})`);
+    for (let attempt = 0; attempt <= TRANSIENT_RETRY_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, TRANSIENT_RETRY_DELAYS_MS[attempt - 1]));
+        if (!isCurrent()) return;
       }
 
-      const data = await response.json();
-      setArticle(data.data || data);
-
-      // Increment view count silently
-      const articleData = data.data || data;
-      if (articleData?.id) {
-        fetch(`${API_CONFIG.BASE_URL}/publications/articles/${articleData.id}/increment-views`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }).catch(() => {
-          /* silent */
+      try {
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
+          },
         });
+        if (!isCurrent()) return;
+
+        if (response.status === 404) {
+          // Definitive: the article does not exist. Only this case may lead
+          // to a noindex meta tag downstream.
+          setNotFound(true);
+          setError("The article you're looking for doesn't exist.");
+          setIsLoading(false);
+          return;
+        }
+
+        if (!response.ok) {
+          lastError = new Error(`Failed to fetch article (${response.status})`);
+          if (isRetryableStatus(response.status)) continue;
+          break;
+        }
+
+        const data = await response.json();
+        if (!isCurrent()) return;
+        const articleData = data.data || data;
+        setArticle(articleData);
+        setIsLoading(false);
+
+        // Increment view count silently
+        if (articleData?.id) {
+          fetch(`${API_CONFIG.BASE_URL}/publications/articles/${articleData.id}/increment-views`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }).catch(() => {
+            /* silent */
+          });
+        }
+        return;
+      } catch (err) {
+        if (!isCurrent()) return;
+        lastError = err;
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch article';
-      setError(errorMessage);
-      console.error('useArticleBySlug error:', err);
-    } finally {
-      setIsLoading(false);
     }
+
+    // Retries exhausted or non-retryable failure. The article may well exist,
+    // so downstream must NOT mark the page noindex for this case.
+    const errorMessage = lastError instanceof Error ? lastError.message : 'Failed to fetch article';
+    setError(errorMessage);
+    setIsLoading(false);
+    console.error('useArticleBySlug error:', lastError);
   }, [slug]);
 
   useEffect(() => {
     fetchArticle();
   }, [fetchArticle]);
 
-  return { article, isLoading, error, refetch: fetchArticle };
+  return { article, isLoading, error, notFound, refetch: fetchArticle };
 }
 
 // ---------------------------------------------------------------------------
@@ -367,8 +413,20 @@ function ArticleLoadingState() {
   );
 }
 
-function ArticleErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+function ArticleErrorState({
+  message,
+  notFound,
+  onRetry,
+}: {
+  message: string;
+  notFound: boolean;
+  onRetry?: () => void;
+}) {
   useEffect(() => {
+    // Only a definitive 404 may noindex the page. On transient failures the
+    // prerendered `index, follow` meta must stay untouched so the page keeps
+    // its indexable state when a crawler renders it.
+    if (!notFound) return;
     let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!el) {
       el = document.createElement('meta');
@@ -376,7 +434,7 @@ function ArticleErrorState({ message, onRetry }: { message: string; onRetry?: ()
       document.head.appendChild(el);
     }
     el.setAttribute('content', 'noindex, nofollow');
-  }, []);
+  }, [notFound]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
@@ -384,7 +442,9 @@ function ArticleErrorState({ message, onRetry }: { message: string; onRetry?: ()
         <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
           <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">Article Not Found</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          {notFound ? 'Article Not Found' : 'Unable to Load Article'}
+        </h2>
         <p className="text-gray-600 mb-8">{message}</p>
         <div className="flex items-center justify-center gap-3">
           <Link to="/resources">
@@ -882,7 +942,7 @@ export function ArticleDetailPage() {
   const articleContentRef = useRef<HTMLDivElement>(null);
 
   // Fetch article
-  const { article: apiArticle, isLoading, error, refetch } = useArticleBySlug(slug);
+  const { article: apiArticle, isLoading, error, notFound, refetch } = useArticleBySlug(slug);
 
   // Fallback to demo
   const article: ArticleDisplay | null =
@@ -1055,6 +1115,7 @@ export function ArticleDetailPage() {
   if (!article && (error || !slug)) {
     return (
       <ArticleErrorState
+        notFound={notFound || !slug}
         message={error || "The article you're looking for doesn't exist."}
         onRetry={refetch}
       />
