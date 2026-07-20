@@ -12,6 +12,7 @@ import { RefundClustersAPI } from '../api';
 import type {
   AttachmentKind,
   BankAccountSlot,
+  CaptureUpload,
   RefundEntityInput,
   RefundManagerInput,
   RefundTransactionInput,
@@ -555,6 +556,57 @@ export function useViewAttachment() {
       RefundClustersAPI.getAttachmentUrl(input.clusterId, input.entityId, input.txnId, input.attId),
     onError: (error: Error) => {
       toast.error('Failed to open evidence', { description: error.message });
+    },
+  });
+}
+
+// ============================================================================
+// AI invoice capture
+// ============================================================================
+
+/** Long-running AI read — never auto-retried so a slow extraction isn't doubled. */
+export function useCaptureInvoice() {
+  return useMutation({
+    retry: false,
+    mutationFn: (input: { clusterId: string; entityId: string; file: File }) =>
+      RefundClustersAPI.captureInvoice(input.clusterId, input.entityId, input.file),
+    onError: (error: Error) => {
+      toast.error('Could not read the document', { description: error.message });
+    },
+  });
+}
+
+export function useCreateTransactionFromCapture() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      clusterId: string;
+      entityId: string;
+      txn: RefundTransactionInput;
+      upload: CaptureUpload;
+    }) =>
+      RefundClustersAPI.createTransactionFromCapture(
+        input.clusterId,
+        input.entityId,
+        input.txn,
+        input.upload,
+      ),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: refundClusterKeys.transactions(variables.entityId) });
+      toast.success('Transaction captured with its invoice attached');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to save the captured transaction', { description: error.message });
+    },
+  });
+}
+
+export function useDiscardCapture() {
+  return useMutation({
+    mutationFn: (input: { clusterId: string; entityId: string; storagePath: string }) =>
+      RefundClustersAPI.discardCapture(input.clusterId, input.entityId, input.storagePath),
+    onError: () => {
+      // Non-critical cleanup; an orphaned upload is logged server-side.
     },
   });
 }

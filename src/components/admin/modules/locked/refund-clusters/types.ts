@@ -8,6 +8,7 @@
  */
 
 import type { SubmissionStatus } from './vat201';
+import type { CaptureExtraction } from './capture';
 
 export type RefundEntityType = 'sole_proprietor' | 'company';
 export type VatPeriodCategory = 'A' | 'B' | 'C' | 'D' | 'E';
@@ -181,6 +182,19 @@ export interface VatSubmission {
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
+}
+
+/** Metadata of a capture document already uploaded to storage. */
+export interface CaptureUpload {
+  fileName: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+}
+
+export interface CaptureResponse {
+  extraction: CaptureExtraction;
+  upload: CaptureUpload;
 }
 
 export interface VatSubmissionInput {

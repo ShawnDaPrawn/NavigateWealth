@@ -46,6 +46,11 @@ export const ENDPOINTS = {
     `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments/${attId}`,
   TRANSACTION_ATTACHMENT_URL: (clusterId: string, entityId: string, txnId: string, attId: string) =>
     `${entityBase(clusterId, entityId)}/transactions/${txnId}/attachments/${attId}/url`,
+  CAPTURE: (clusterId: string, entityId: string) => `${entityBase(clusterId, entityId)}/capture`,
+  CAPTURE_DISCARD: (clusterId: string, entityId: string) =>
+    `${entityBase(clusterId, entityId)}/capture/discard`,
+  TRANSACTIONS_FROM_CAPTURE: (clusterId: string, entityId: string) =>
+    `${entityBase(clusterId, entityId)}/transactions/from-capture`,
   SUBMISSIONS: (clusterId: string, entityId: string) =>
     `${entityBase(clusterId, entityId)}/submissions`,
   SUBMISSION: (clusterId: string, entityId: string, periodKey: string) =>

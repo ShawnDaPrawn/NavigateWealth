@@ -75,11 +75,14 @@ encrypted at rest (key: `NW_REFUND_VAULT_KEY`, falling back to a key derived
 from the service-role key); documents live in a private bucket served via
 short-lived signed URLs; every sensitive action is audit-logged.
 
-**AI data egress (Suppliers)**: the "Analyze with AI" action sends the
-supplier's uploaded example invoice (base64) to the configured OpenAI model via
-the shared `ai-model-config.ts` pipeline to extract the invoice-template spec.
-No other locked-module data leaves the platform. The analysis is audited as
-`supplier_template_analyzed`.
+**AI data egress**: two actions send a single uploaded document (base64) to
+the configured OpenAI model via the shared `ai-model-config.ts` pipeline —
+the Suppliers "Analyze with AI" template extraction (audited as
+`supplier_template_analyzed`) and the ledger "Capture from Document" invoice
+read (audited as `refund_capture_analyzed`, shared module
+`src/shared/locked-vat/capture-extraction.ts`). No other locked-module data
+leaves the platform, and nothing reaches the ledger without operator
+confirmation.
 
 **VAT submission packs**: `vat_pack_generated` audit entries record every pack
 export. Packs are generated on demand and streamed through the authenticated

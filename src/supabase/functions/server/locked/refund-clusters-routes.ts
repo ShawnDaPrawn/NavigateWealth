@@ -24,6 +24,7 @@ import {
   type TransactionInput,
 } from './refund-clusters-service.ts';
 import { isLockedStatus } from './vat201.ts';
+import { extractInvoiceCapture } from './invoice-capture-ai.ts';
 import { computeTransactionFlags } from './vat-validation.ts';
 import { SuppliersService } from './suppliers-service.ts';
 import { buildSubmissionPack, COMPLIANCE_PACK_DOC_TYPES } from './vat-pack-service.ts';
@@ -698,6 +699,165 @@ app.delete(
       metadata: { transactionId: txnId },
     });
     return c.json({ success: true, transaction: updated });
+  }),
+);
+
+// ============================================================================
+// AI invoice capture (received documents → draft transactions)
+// ============================================================================
+
+/** Base64 without loading the whole file through string concatenation limits. */
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
+/**
+ * POST /:clusterId/entities/:entityId/capture
+ *
+ * Uploads a received invoice document and runs AI extraction over it. Nothing
+ * is written to the ledger — the client shows the draft for confirmation and
+ * then calls transactions/from-capture (or discards via DELETE …/capture).
+ * The document (base64) is sent to the configured AI provider.
+ */
+app.post(
+  '/:clusterId/entities/:entityId/capture',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const entity = await RefundClustersService.getEntityRaw(clusterId, entityId);
+    if (!entity) return c.json({ error: 'Entity not found' }, 404);
+
+    const body = await c.req.parseBody();
+    const file = body['file'];
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'No file uploaded' }, 400);
+    }
+    const invalid = validateUpload(file);
+    if (invalid) return c.json({ error: invalid }, 400);
+
+    const supabase = getSupabase();
+    await ensureBucket(supabase);
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `${clusterId}/${entityId}/captures/${Date.now()}_${safeName}`;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, bytes, {
+      contentType: file.type,
+      upsert: false,
+    });
+    if (uploadError) {
+      log.error('Capture upload failed', uploadError);
+      return c.json({ error: uploadError.message }, 500);
+    }
+
+    try {
+      const { extraction, model } = await extractInvoiceCapture({
+        fileBase64: bytesToBase64(bytes),
+        fileName: file.name,
+        contentType: file.type,
+      });
+      await audit(c, 'refund_capture_analyzed', 'Invoice document captured with AI', {
+        entityType: 'refund_entity',
+        entityId,
+        metadata: { clusterId, model, confidence: extraction.confidence },
+      });
+      return c.json({
+        success: true,
+        extraction,
+        upload: {
+          fileName: file.name,
+          storagePath,
+          contentType: file.type,
+          sizeBytes: file.size,
+        },
+      });
+    } catch (error) {
+      // Extraction failed — remove the stored file so nothing is orphaned.
+      await supabase.storage.from(BUCKET).remove([storagePath]);
+      return c.json({ error: (error as Error).message }, errStatus(error) as 400 | 500 | 502);
+    }
+  }),
+);
+
+/** Discard an uploaded capture the operator chose not to keep. */
+app.post(
+  '/:clusterId/entities/:entityId/capture/discard',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const body = await c.req.json().catch(() => ({}));
+    const storagePath = String(body?.storagePath ?? '');
+    // Only files inside this entity's captures folder can be discarded here.
+    if (!storagePath.startsWith(`${clusterId}/${entityId}/captures/`)) {
+      return c.json({ error: 'Invalid capture path' }, 400);
+    }
+    const { error } = await getSupabase().storage.from(BUCKET).remove([storagePath]);
+    if (error) {
+      log.error('Failed to discard capture', error);
+      return c.json({ error: 'Failed to discard the uploaded file' }, 500);
+    }
+    return c.json({ success: true });
+  }),
+);
+
+/**
+ * POST /:clusterId/entities/:entityId/transactions/from-capture
+ *
+ * Creates the confirmed transaction and attaches the already-uploaded capture
+ * document as its tax_invoice evidence in one step.
+ */
+app.post(
+  '/:clusterId/entities/:entityId/transactions/from-capture',
+  asyncHandler(async (c) => {
+    const clusterId = c.req.param('clusterId') ?? '';
+    const entityId = c.req.param('entityId') ?? '';
+    const body = await c.req.json();
+    const upload = body?.upload as
+      | { fileName?: string; storagePath?: string; contentType?: string; sizeBytes?: number }
+      | undefined;
+    if (!upload?.storagePath?.startsWith(`${clusterId}/${entityId}/captures/`)) {
+      return c.json({ error: 'Invalid capture upload reference' }, 400);
+    }
+    try {
+      const transaction = await RefundClustersService.createTransaction(
+        clusterId,
+        entityId,
+        body?.transaction as TransactionInput,
+        c.get('userId') as string,
+      );
+      const { transaction: withEvidence } = await RefundClustersService.addAttachment(
+        entityId,
+        transaction.id,
+        {
+          kind: 'tax_invoice',
+          fileName: String(upload.fileName ?? 'captured-invoice'),
+          storagePath: upload.storagePath,
+          contentType: String(upload.contentType ?? 'application/octet-stream'),
+          sizeBytes: Number(upload.sizeBytes ?? 0),
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: c.get('userId') as string,
+        },
+      );
+      await audit(c, 'refund_transaction_created', 'Transaction created from AI capture', {
+        entityType: 'refund_entity',
+        entityId,
+        metadata: {
+          clusterId,
+          transactionId: transaction.id,
+          direction: transaction.direction,
+          amount: transaction.amount,
+          vatAmount: transaction.vatAmount,
+          source: 'ai_capture',
+        },
+      });
+      return c.json({ success: true, transaction: withEvidence }, 201);
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, errStatus(error) as 400 | 404 | 409 | 500);
+    }
   }),
 );
 

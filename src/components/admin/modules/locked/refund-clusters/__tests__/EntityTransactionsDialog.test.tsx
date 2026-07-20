@@ -20,6 +20,9 @@ vi.mock('../hooks/useRefundClusters', () => ({
   useDownloadSubmissionPack: () => ({ mutate: vi.fn(), isPending: false }),
   useEntitySubmissions: () => ({ data: [], isLoading: false }),
   useUpsertSubmission: () => ({ mutate: vi.fn(), isPending: false }),
+  useCaptureInvoice: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateTransactionFromCapture: () => ({ mutate: vi.fn(), isPending: false }),
+  useDiscardCapture: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../../suppliers/hooks/useSuppliers', () => ({

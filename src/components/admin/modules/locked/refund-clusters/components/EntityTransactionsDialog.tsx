@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Pencil,
   Plus,
+  ScanLine,
   ShieldAlert,
   Trash2,
   Upload,
@@ -82,6 +83,7 @@ import {
   useViewAttachment,
 } from '../hooks/useRefundClusters';
 import { useSuppliers } from '../../suppliers/hooks/useSuppliers';
+import { CaptureDialog } from './CaptureDialog';
 import { PeriodStatusCard } from './PeriodStatusCard';
 import {
   formatPeriodRange,
@@ -196,6 +198,7 @@ export function EntityTransactionsDialog({
   const [deleteTarget, setDeleteTarget] = useState<RefundTransaction | null>(null);
   const [periodOffset, setPeriodOffset] = useState(0);
   const [packConfirmOpen, setPackConfirmOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -234,6 +237,15 @@ export function EntityTransactionsDialog({
     [visibleTransactions, periodFlags],
   );
   const completeness = useMemo(() => evidenceCompleteness(periodFlags), [periodFlags]);
+  const existingReferences = useMemo(
+    () =>
+      new Set(
+        transactions
+          .map((t) => t.reference?.trim().toLowerCase() ?? '')
+          .filter((ref) => ref !== ''),
+      ),
+    [transactions],
+  );
 
   if (!entity) return null;
 
@@ -375,6 +387,9 @@ export function EntityTransactionsDialog({
                   {downloadPack.isPending ? 'Generating…' : 'Submission Pack'}
                 </Button>
               )}
+              <Button size="sm" variant="outline" onClick={() => setCaptureOpen(true)}>
+                <ScanLine className="h-4 w-4 mr-1" /> Capture from Document
+              </Button>
               <Button size="sm" onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-1" /> Add Transaction
               </Button>
@@ -740,6 +755,14 @@ export function EntityTransactionsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CaptureDialog
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        clusterId={clusterId}
+        entityId={entity.id}
+        existingReferences={existingReferences}
+      />
     </>
   );
 }

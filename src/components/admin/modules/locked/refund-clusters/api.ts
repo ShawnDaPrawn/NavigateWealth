@@ -11,6 +11,8 @@ import { ENDPOINTS } from './constants';
 import type {
   AttachmentKind,
   BankAccountSlot,
+  CaptureResponse,
+  CaptureUpload,
   ClusterDetailResponse,
   EntityLedgerResponse,
   RefundCluster,
@@ -428,6 +430,50 @@ export const RefundClustersAPI = {
       return data.transaction;
     } catch (error) {
       rethrow(error, 'deleteAttachment');
+    }
+  },
+
+  // --- AI invoice capture ----------------------------------------------
+
+  /** Uploads a received invoice and runs AI extraction; nothing hits the ledger yet. */
+  async captureInvoice(clusterId: string, entityId: string, file: File): Promise<CaptureResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const data = await api.post<CaptureResponse>(
+        ENDPOINTS.CAPTURE(clusterId, entityId),
+        formData,
+      );
+      return data;
+    } catch (error) {
+      rethrow(error, 'captureInvoice');
+    }
+  },
+
+  /** Creates the confirmed transaction with the capture attached as evidence. */
+  async createTransactionFromCapture(
+    clusterId: string,
+    entityId: string,
+    transaction: RefundTransactionInput,
+    upload: CaptureUpload,
+  ): Promise<RefundTransaction> {
+    try {
+      const data = await api.post<{ transaction: RefundTransaction }>(
+        ENDPOINTS.TRANSACTIONS_FROM_CAPTURE(clusterId, entityId),
+        { transaction, upload },
+      );
+      return data.transaction;
+    } catch (error) {
+      rethrow(error, 'createTransactionFromCapture');
+    }
+  },
+
+  /** Discards an uploaded capture the operator chose not to keep. */
+  async discardCapture(clusterId: string, entityId: string, storagePath: string): Promise<void> {
+    try {
+      await api.post(ENDPOINTS.CAPTURE_DISCARD(clusterId, entityId), { storagePath });
+    } catch (error) {
+      rethrow(error, 'discardCapture');
     }
   },
 
