@@ -428,12 +428,24 @@ function ArticleErrorState({
     // its indexable state when a crawler renders it.
     if (!notFound) return;
     let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    const created = !el;
+    const previous = el?.getAttribute('content') ?? null;
     if (!el) {
       el = document.createElement('meta');
       el.setAttribute('name', 'robots');
       document.head.appendChild(el);
     }
     el.setAttribute('content', 'noindex, nofollow');
+    const meta = el;
+    return () => {
+      // Restore the pre-404 value so a later Retry/slug change that ends in
+      // a transient failure (which renders no <SEO/>) isn't left noindexed.
+      if (created) {
+        meta.remove();
+      } else if (previous !== null) {
+        meta.setAttribute('content', previous);
+      }
+    };
   }, [notFound]);
 
   return (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { ArticleDetailPage } from '../ArticleDetailPage';
 
@@ -272,6 +272,32 @@ describe('ArticleDetailPage', () => {
         expect(screen.getByText('Article Not Found')).toBeTruthy();
       });
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('restores the robots meta when a 404 is followed by a transient failure', async () => {
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', 'robots');
+      meta.setAttribute('content', 'index, follow');
+      document.head.appendChild(meta);
+
+      let slugCalls = 0;
+      vi.stubGlobal('fetch', () => {
+        slugCalls += 1;
+        if (slugCalls === 1) {
+          return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+      });
+      renderWithSlug('unpublished-then-flaky-article');
+      await waitFor(() => expect(screen.getByText('Article Not Found')).toBeTruthy());
+      expect(meta.getAttribute('content')).toBe('noindex, nofollow');
+
+      fireEvent.click(screen.getByText('Retry'));
+      // Retry hits 500s and exhausts the 500ms + 1500ms backoff before failing.
+      await waitFor(() => expect(screen.getByText('Unable to Load Article')).toBeTruthy(), {
+        timeout: 6000,
+      });
+      expect(meta.getAttribute('content')).toBe('index, follow');
     });
   });
 });
