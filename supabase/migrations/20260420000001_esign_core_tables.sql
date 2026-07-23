@@ -17,8 +17,8 @@
 --   2. Deploy code with `ESIGN_DUAL_WRITE=true` → every mutating route
 --      writes to BOTH the KV store AND Postgres. Reads stay on KV.
 --   3. Backfill historical KV data with `scripts/esign-backfill.mjs`.
---   4. Switch `ESIGN_READ_FROM=postgres` → reads come from Postgres,
---      writes still dual-write (safety net).
+--   4. Implement and verify Postgres reads behind an explicit read-source
+--      control, while writes still dual-write (safety net).
 --   5. After 7+ days of clean reads, switch to Postgres-only writes and
 --      stop dual-writing (`ESIGN_DUAL_WRITE=false`).
 --   6. After the next compliance retention window, drop the legacy KV keys.
