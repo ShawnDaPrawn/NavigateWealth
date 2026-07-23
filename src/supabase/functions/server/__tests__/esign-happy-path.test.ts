@@ -77,7 +77,6 @@ const { pgMock } = vi.hoisted(() => ({
 vi.mock('../esign-postgres-repo.ts', () => ({
   esignPgRepo: pgMock,
   dualWriteEnabled: false,
-  readSource: 'kv' as const,
 }));
 
 // ── Supabase client mock (admin lookups) ───────────────────────────────────
