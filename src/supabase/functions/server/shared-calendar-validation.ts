@@ -58,6 +58,16 @@ export const ReminderStatusSchema = z.enum(['pending', 'completed', 'overdue', '
   ...ReminderStatus[],
 ]);
 
+// Attendees are stored as a JSONB map keyed by client ID (e.g.
+// `{ "<client-id>": { name, email, type } }`), which is how the calendar UI
+// builds and reads them. Accept that map shape, and also tolerate a plain
+// array of attendee objects for forward compatibility.
+const AttendeeSchema = z
+  .object({ name: z.string().optional(), email: z.string().optional() })
+  .passthrough();
+
+const AttendeesSchema = z.union([z.array(AttendeeSchema), z.record(z.string(), AttendeeSchema)]);
+
 // Create Event Schema
 export const CreateEventSchema = z
   .object({
@@ -70,9 +80,7 @@ export const CreateEventSchema = z
     location: z.string().nullable().optional(),
     video_link: z.string().nullable().optional(),
     client_id: z.string().nullable().optional(),
-    attendees: z
-      .array(z.object({ name: z.string().optional(), email: z.string().optional() }).passthrough())
-      .optional(),
+    attendees: AttendeesSchema.optional(),
     create_reminder: z.boolean().optional(),
     recurrence_rule: z.string().nullable().optional(),
     notes: z.string().optional(),
@@ -100,9 +108,7 @@ export const UpdateEventSchema = z.object({
   video_link: z.string().nullable().optional(),
   status: EventStatusSchema.optional(),
   client_id: z.string().nullable().optional(),
-  attendees: z
-    .array(z.object({ name: z.string().optional(), email: z.string().optional() }).passthrough())
-    .optional(),
+  attendees: AttendeesSchema.optional(),
   recurrence_rule: z.string().nullable().optional(),
   notes: z.string().optional(),
 });
