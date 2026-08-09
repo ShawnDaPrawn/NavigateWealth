@@ -22,7 +22,6 @@ import {
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 
 export interface ServicePageAction {
   label: string;
@@ -186,9 +185,7 @@ export function ServicePageLayout<T extends { id?: string | number; [key: string
   ];
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-gray-50/50'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* ── Header ── */}
         <div className="mb-6">

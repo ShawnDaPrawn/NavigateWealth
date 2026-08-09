@@ -4,33 +4,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ACTIVE_THEME, BRAND, NAV_STYLES, HERO_STYLES } from '../portal-theme';
+import { NAV_STYLES, QUICK_LINK_STYLES } from '../portal-theme';
 
 describe('portal-theme', () => {
-  it('ACTIVE_THEME is either branded or classic', () => {
-    expect(['branded', 'classic']).toContain(ACTIVE_THEME);
+  it('exposes the launched branded navigation styles directly', () => {
+    expect(NAV_STYLES.wrapper).toContain('from-[#1a1e36]');
+    expect(NAV_STYLES.linkActive).toContain('text-white');
   });
 
-  it('BRAND has heroBg color', () => {
-    expect(typeof BRAND.heroBg).toBe('string');
-    expect(BRAND.heroBg).toMatch(/^#/);
-  });
-
-  it('BRAND has purple color', () => {
-    expect(typeof BRAND.purple).toBe('string');
-  });
-
-  it('BRAND has textOnDark', () => {
-    expect(BRAND.textOnDark).toBeDefined();
-  });
-
-  it('NAV_STYLES is defined', () => {
-    expect(NAV_STYLES).toBeDefined();
-    expect(typeof NAV_STYLES).toBe('object');
-  });
-
-  it('HERO_STYLES is defined', () => {
-    expect(HERO_STYLES).toBeDefined();
-    expect(typeof HERO_STYLES).toBe('object');
+  it('exposes the launched branded quick-link styles directly', () => {
+    expect(QUICK_LINK_STYLES.card).toContain('bg-white/[0.07]');
   });
 });

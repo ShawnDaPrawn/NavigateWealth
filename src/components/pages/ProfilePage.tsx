@@ -48,7 +48,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 
 // ============================================================================
 // Navigation config
@@ -130,9 +129,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       <PortalPageHeader
         title="My Profile"
         subtitle="Manage your personal information and preferences"

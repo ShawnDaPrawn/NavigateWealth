@@ -42,7 +42,6 @@ import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
 import type { IntakeHandoffState } from './components/IntakeWizardHandoff';
-import { isFnaIntakeFeatureEnabled } from '@/shared/fna-intake/fna-intake-labels';
 
 // Heavy sub-components — lazy-loaded (only rendered on user action)
 const ClientDrawer = React.lazy(() =>
@@ -318,23 +317,21 @@ export function ClientManagementModule() {
         </div>
       </div>
 
-      {isFnaIntakeFeatureEnabled() && (
-        <Suspense fallback={<LazyFallback />}>
-          <FNAIntakeQueue
-            onOpenClient={(clientId) => {
-              const match = safeClients.find((c) => c.id === clientId);
-              if (match) setSelectedClient(match);
-            }}
-            onAccept={(handoff) => {
-              const match = safeClients.find((c) => c.id === handoff.clientId);
-              setIntakeHandoff({
-                ...handoff,
-                clientName: match ? `${match.firstName} ${match.lastName}` : undefined,
-              });
-            }}
-          />
-        </Suspense>
-      )}
+      <Suspense fallback={<LazyFallback />}>
+        <FNAIntakeQueue
+          onOpenClient={(clientId) => {
+            const match = safeClients.find((c) => c.id === clientId);
+            if (match) setSelectedClient(match);
+          }}
+          onAccept={(handoff) => {
+            const match = safeClients.find((c) => c.id === handoff.clientId);
+            setIntakeHandoff({
+              ...handoff,
+              clientName: match ? `${match.firstName} ${match.lastName}` : undefined,
+            });
+          }}
+        />
+      </Suspense>
 
       {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
