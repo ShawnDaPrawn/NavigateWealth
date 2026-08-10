@@ -21,7 +21,7 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 const mockCalendarApiFetchEvents = vi.fn();
@@ -35,15 +35,6 @@ vi.mock('../../api', () => ({
     createEvent: (...args: unknown[]) => mockCalendarApiCreateEvent(...args),
     updateEvent: (...args: unknown[]) => mockCalendarApiUpdateEvent(...args),
     deleteEvent: (...args: unknown[]) => mockCalendarApiDeleteEvent(...args),
-  },
-}));
-
-const mockApiPost = vi.fn();
-
-vi.mock('../../../../../../utils/api', () => ({
-  api: {
-    post: (...args: unknown[]) => mockApiPost(...args),
-    get: vi.fn(),
   },
 }));
 
@@ -197,7 +188,7 @@ describe('useCreateEvent', () => {
     expect(mockUseMutation).toHaveBeenCalledTimes(1);
   });
 
-  it('mutationFn calls calendarApi.createEvent without create_reminder field', async () => {
+  it('mutationFn calls calendarApi.createEvent with event input', async () => {
     const createdEvent = { id: 'e-new', title: 'New Meeting' };
     mockCalendarApiCreateEvent.mockResolvedValue(createdEvent);
     const capturedConfig = vi.fn();
@@ -207,27 +198,9 @@ describe('useCreateEvent', () => {
     });
     renderHook(() => useCreateEvent());
     const config = capturedConfig.mock.calls[0][0];
-    const result = await config.mutationFn({ title: 'New Meeting', create_reminder: false });
+    const result = await config.mutationFn({ title: 'New Meeting' });
     expect(mockCalendarApiCreateEvent).toHaveBeenCalledWith({ title: 'New Meeting' });
     expect(result).toEqual(createdEvent);
-  });
-
-  it('mutationFn posts reminder when create_reminder=true and client_id set', async () => {
-    const createdEvent = { id: 'e-new', title: 'Meeting' };
-    mockCalendarApiCreateEvent.mockResolvedValue(createdEvent);
-    mockApiPost.mockResolvedValue({});
-    const capturedConfig = vi.fn();
-    mockUseMutation.mockImplementation((config) => {
-      capturedConfig(config);
-      return makeMutationResult();
-    });
-    renderHook(() => useCreateEvent());
-    const config = capturedConfig.mock.calls[0][0];
-    await config.mutationFn({ title: 'Meeting', create_reminder: true, client_id: 'c-001' });
-    expect(mockApiPost).toHaveBeenCalledWith(
-      '/communication/calendar/reminder',
-      expect.objectContaining({ clientId: 'c-001' }),
-    );
   });
 
   it('onSuccess invalidates event list queries', () => {

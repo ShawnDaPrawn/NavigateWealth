@@ -81,7 +81,6 @@ export const CreateEventSchema = z
     video_link: z.string().nullable().optional(),
     client_id: z.string().nullable().optional(),
     attendees: AttendeesSchema.optional(),
-    create_reminder: z.boolean().optional(),
     recurrence_rule: z.string().nullable().optional(),
     notes: z.string().optional(),
   })

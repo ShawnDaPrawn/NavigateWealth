@@ -28,7 +28,6 @@ const base = {
   video_link: 'https://meet.example.com/abc',
   client_id: 'client-uuid-1',
   recurrence_rule: null,
-  create_reminder: false,
 };
 
 describe('CreateEventSchema attendees', () => {

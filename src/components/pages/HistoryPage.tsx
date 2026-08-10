@@ -27,7 +27,6 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
-import { ACTIVE_THEME } from '../portal/portal-theme';
 
 interface HistoryItem {
   id: string;
@@ -321,9 +320,7 @@ export function HistoryPage() {
   const favouriteItems = items.filter((i) => i.isFavourite).length;
 
   return (
-    <div
-      className={`min-h-screen ${ACTIVE_THEME === 'branded' ? 'bg-[#f8f9fb]' : 'bg-[rgb(249,249,249)]'}`}
-    >
+    <div className="min-h-screen bg-[#f8f9fb]">
       <PortalPageHeader
         title="Document History"
         subtitle="Access all your policy documents and links"

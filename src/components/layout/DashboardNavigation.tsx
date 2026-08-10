@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Home, Package, Bot, MessageSquare, PenLine, History, User, LogOut } from 'lucide-react';
-import { ACTIVE_THEME, NAV_STYLES } from '../portal/portal-theme';
+import { NAV_STYLES } from '../portal/portal-theme';
 import { useCommunications } from '../client/communication/hooks/useCommunications';
 import { deriveInboxStats } from '../client/communication/utils';
 import { Button } from '../ui/button';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 export function DashboardNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const styles = NAV_STYLES[ACTIVE_THEME];
+  const styles = NAV_STYLES;
   const { logout } = useAuth();
   const { data: communications = [] } = useCommunications();
   const unreadCount = deriveInboxStats(communications).unread;
@@ -79,11 +79,6 @@ export function DashboardNavigation() {
     }
   };
 
-  const mobileLogoutButtonClass =
-    ACTIVE_THEME === 'branded'
-      ? 'border-white/10 text-white/70 hover:text-white hover:bg-white/10'
-      : 'border-gray-200 text-gray-600 hover:text-red-600 hover:bg-red-50';
-
   return (
     <nav className={styles.wrapper} aria-label="Dashboard navigation">
       <div className={styles.container}>
@@ -115,7 +110,7 @@ export function DashboardNavigation() {
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className={`md:hidden shrink-0 ${mobileLogoutButtonClass}`}
+            className="md:hidden shrink-0 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />

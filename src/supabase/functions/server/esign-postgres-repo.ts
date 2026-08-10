@@ -2,29 +2,25 @@
  * E-Sign Postgres Repository (Phase 0.1 — dual-write scaffold)
  * ==============================================================
  *
- * This module is the writer/reader for the new `esign_*` Postgres tables
+ * This module is the shadow writer for the new `esign_*` Postgres tables
  * created in `supabase/migrations/20260420000001_esign_core_tables.sql`.
  *
  * IMPORTANT — this is FEATURE-FLAGGED. By default, every method here is a
- * no-op so production traffic is unaffected. The migration phases:
+ * no-op so production traffic is unaffected. The implemented migration phases:
  *
  *   Phase 1: ESIGN_DUAL_WRITE=false (default)
  *     • Writes go to KV only. Postgres methods are no-ops.
  *     • Existing behaviour preserved 100%.
  *
- *   Phase 2: ESIGN_DUAL_WRITE=true, ESIGN_READ_FROM=kv
+ *   Phase 2: ESIGN_DUAL_WRITE=true
  *     • Every mutation writes to BOTH KV (canonical) and Postgres (shadow).
  *     • Reads still come from KV.
  *     • Failures in Postgres are LOGGED and SWALLOWED — never break the
  *       request. The KV write is canonical.
  *
- *   Phase 3: ESIGN_DUAL_WRITE=true, ESIGN_READ_FROM=postgres
- *     • Reads come from Postgres. KV is the safety net.
- *     • If Postgres read returns null, fall back to KV.
- *
- *   Phase 4: ESIGN_DUAL_WRITE=false, ESIGN_READ_FROM=postgres
- *     • Postgres is canonical. KV is no longer touched.
- *     • Legacy KV keys are removed by a one-shot cleanup job.
+ * A future Postgres read cutover must add and verify a read implementation
+ * before introducing a read-source control. This module currently exposes no
+ * Postgres read path.
  *
  * Every call site in `esign-services.ts` should look like:
  *
@@ -44,13 +40,8 @@ const log = createModuleLogger('esign-pg-repo');
 
 // ── Feature flags ───────────────────────────────────────────────────────────
 
-export type ReadSource = 'kv' | 'postgres';
-
 export const dualWriteEnabled: boolean =
   (Deno.env.get('ESIGN_DUAL_WRITE') ?? 'false').toLowerCase() === 'true';
-
-export const readSource: ReadSource =
-  (Deno.env.get('ESIGN_READ_FROM') ?? 'kv').toLowerCase() === 'postgres' ? 'postgres' : 'kv';
 
 // ── Lazy client (cold-start friendly) ───────────────────────────────────────
 

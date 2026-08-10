@@ -46,12 +46,12 @@ dual-write cutover, and launch gates documented in:
 **Frontend:**
 
 - `ClientFNAHub` / `ClientFNAIntakeWizard` with read-only submission review
-- Feature flag **`VITE_FNA_INTAKE_ENABLED` opt-in** (`true` only) — gates hub, queue, intake CTAs
+- Client-led intake hub, queue, and intake CTAs are launched by default
 - Hub shows retry UI when batch-status fails (non-blocking)
 
 **Tests:** lifecycle (mock KV), postgres row mapping, hub error UX, intake-field-mapping (incl. investment/estate), E2E smoke (`e2e/fna-intake-smoke.spec.ts`, requires `E2E_FNA_*` creds)
 
-**Production launch:** Do not set `VITE_FNA_INTAKE_ENABLED=true` until UAT sign-off + legal consent + Postgres cutover complete — see launch checklist.
+**Production launch:** Completed after UAT sign-off, legal consent, and Postgres cutover — see launch checklist.
 
 **Ops cutover (2026-05-23 — applied on production Supabase):**
 
@@ -61,7 +61,7 @@ dual-write cutover, and launch gates documented in:
 - [x] KV backfill skipped — 0 existing `fna-intake:session:*` keys at cutover
 - [x] Staging UAT sign-off — [`docs/fna-intake-uat-signoff.md`](fna-intake-uat-signoff.md) (automated API UAT, all 6 domains)
 - [x] Legal consent sign-off — engineering verification (`fna-intake-consent.test.ts` + consent hash in UAT signoff)
-- [x] Production `VITE_FNA_INTAKE_ENABLED=true` on Vercel (deployed 2026-05-23)
+- [x] Production client-led intake UI deployed on Vercel (2026-05-23)
 - [x] `FNA_INTAKE_DUAL_WRITE=false` — Postgres-only writes
 
 **FNA intake status:** Production-grade for clients (automated launch 2026-05-23).
@@ -838,16 +838,16 @@ cleanup. Verify before referencing them as real:
 
 ### Launch metadata
 
-| Item                  | Value                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Edge Function deploy  | 2026-05-23 (final publish redeploy)                                                                         |
-| Production API smoke  | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json`          |
-| Frontend deploy       | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM)                        |
-| Rollback drill        | `VITE_FORM_PREFILL_ENABLED=false` build verified — Medical Step 1 legacy gate in `Step1InputForm.tsx` ~L108 |
-| Access model          | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`)                                              |
-| Runbook               | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md)                                            |
-| E-sign tokens doc     | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md)              |
-| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B)   |
+| Item                  | Value                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Edge Function deploy  | 2026-05-23 (final publish redeploy)                                                                          |
+| Production API smoke  | **PASS** — 6 `/prefill/resolve` + audit + `/form-templates` → `tmp/form-prefill-smoke-report.json`           |
+| Frontend deploy       | **Done** — Vercel `https://www.navigatewealth.co` (dpl_9k6nE4EBWh2UuXgaste5USGaQVyM)                         |
+| Rollback drill        | Pre-launch legacy-path build was verified; the launched path is now permanent and rollback is by code revert |
+| Access model          | **Platform-wide** — any adviser/admin (`form-prefill-auth.ts`)                                               |
+| Runbook               | [`docs/runbooks/form-prefill.md`](docs/runbooks/form-prefill.md)                                             |
+| E-sign tokens doc     | [`docs/compliance/form-prefill-esign-tokens.md`](docs/compliance/form-prefill-esign-tokens.md)               |
+| Template KV migration | [`scripts/migrate-form-templates-to-storage.mjs`](scripts/migrate-form-templates-to-storage.mjs) (Tier B)    |
 
 ### Tier A production-ready checklist
 
@@ -881,10 +881,11 @@ npm run form-prefill:smoke
 
 Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID` (same actors as FNA intake UAT).
 
-### Feature flag / rollback
+### Rollout status
 
-- `VITE_FORM_PREFILL_ENABLED` — defaults to **enabled** when unset.
-- Set to `false` to disable unified prefill and fall back to legacy silent auto-populate (Medical only).
+- Unified form prefill has been the production path since 2026-05-23.
+- The frontend rollout flag and legacy silent auto-populate branches were retired after launch;
+  rollback is now by reverting the cleanup change.
 
 ### Known gaps (Tier C — not blocking Tier A sign-off)
 
