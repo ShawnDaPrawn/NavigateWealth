@@ -6,8 +6,24 @@ gold and dark grey, drawn with the instruments of the Portuguese Age of Discover
 
 **Nothing structural changes.** Navigation layout and order, the Log In and Get
 Started actions, the mega menus, the footer columns, the compliance disclaimer and
-every section of homepage copy are reproduced exactly as they ship today. This is a
-surface direction — tokens, type and ornament.
+every section of homepage body copy are reproduced exactly as they ship today. This
+is a surface direction — tokens, type and ornament.
+
+### The one copy change, stated plainly
+
+Four sections gain a serif display headline, and their existing heading drops to the
+eyebrow above it. That is a copy and heading-hierarchy change, not just a re-skin:
+
+| Section | Today's `<h2>` | In the deck |
+| --- | --- | --- |
+| Services | Our Services | eyebrow `I · OUR SERVICES` + **Charted for Every Passage** |
+| Why us | Why us? | eyebrow `II · WHY US?` + **The Ship, the Crew, the Instruments** |
+| Partners | Trusted Partners | eyebrow `III · TRUSTED PARTNERS` + **The Fleet We Sail With** |
+| Reviews | What Our Clients Say | eyebrow `IV · CLIENT LOG`, heading unchanged |
+
+Hero, Insights, FAQ, the CTA and the footer keep their headings as they are. The
+added lines are optional — plate XIV lists them under open questions, and the
+direction holds if you drop all four and promote the original headings back to `h2`.
 
 ## Files
 
