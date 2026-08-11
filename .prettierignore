@@ -53,3 +53,10 @@ src/components/auth/AuthContext.tsx
 
 # Pinned by src/supabase/functions/server/__tests__/vasco-routes.guardrails.test.ts
 src/supabase/functions/server/vasco-routes.ts
+
+# Design deliverables. direction.html is a hand-laid-out 1600x900 print
+# document whose formatting is load-bearing, and direction.built.html is
+# generated from it by docs/design/homepage-discovery/build.py with every
+# asset inlined as a data URI — reformatting either is meaningless churn.
+docs/design/homepage-discovery/direction.html
+docs/design/homepage-discovery/direction.built.html
