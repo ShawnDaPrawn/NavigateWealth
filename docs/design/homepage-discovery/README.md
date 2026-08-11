@@ -14,12 +14,12 @@ is a surface direction — tokens, type and ornament.
 Four sections gain a serif display headline, and their existing heading drops to the
 eyebrow above it. That is a copy and heading-hierarchy change, not just a re-skin:
 
-| Section | Today's `<h2>` | In the deck |
-| --- | --- | --- |
-| Services | Our Services | eyebrow `I · OUR SERVICES` + **Charted for Every Passage** |
-| Why us | Why us? | eyebrow `II · WHY US?` + **The Ship, the Crew, the Instruments** |
-| Partners | Trusted Partners | eyebrow `III · TRUSTED PARTNERS` + **The Fleet We Sail With** |
-| Reviews | What Our Clients Say | eyebrow `IV · CLIENT LOG`, heading unchanged |
+| Section  | Today's `<h2>`       | In the deck                                                      |
+| -------- | -------------------- | ---------------------------------------------------------------- |
+| Services | Our Services         | eyebrow `I · OUR SERVICES` + **Charted for Every Passage**       |
+| Why us   | Why us?              | eyebrow `II · WHY US?` + **The Ship, the Crew, the Instruments** |
+| Partners | Trusted Partners     | eyebrow `III · TRUSTED PARTNERS` + **The Fleet We Sail With**    |
+| Reviews  | What Our Clients Say | eyebrow `IV · CLIENT LOG`, heading unchanged                     |
 
 Hero, Insights, FAQ, the CTA and the footer keep their headings as they are. The
 added lines are optional — plate XIV lists them under open questions, and the
@@ -27,12 +27,12 @@ direction holds if you drop all four and promote the original headings back to `
 
 ## Files
 
-| File | What it is |
-| --- | --- |
-| `Navigate-Wealth-Homepage-Design-Direction.pdf` | The deliverable — 15 landscape plates at 1600×900 |
-| `direction.html` | Source template, with `{{TOKEN}}` placeholders for assets |
-| `direction.built.html` | Self-contained build; open in any browser |
-| `build.py` | Inlines assets, then prints the PDF with headless Chromium |
+| File                                            | What it is                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------- |
+| `Navigate-Wealth-Homepage-Design-Direction.pdf` | The deliverable — 15 landscape plates at 1600×900          |
+| `direction.html`                                | Source template, with `{{TOKEN}}` placeholders for assets  |
+| `direction.built.html`                          | Self-contained build; open in any browser                  |
+| `build.py`                                      | Inlines assets, then prints the PDF with headless Chromium |
 
 ## Rebuilding
 
