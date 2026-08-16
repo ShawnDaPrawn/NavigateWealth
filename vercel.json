@@ -5,6 +5,11 @@
       "has": [{ "type": "host", "value": "navigatewealth.co" }],
       "destination": "https://www.navigatewealth.co/:path*",
       "statusCode": 301
+    },
+    {
+      "source": "/resources/article/holiday-scams-fake-deals-and-banking-fraud-how-to-protect-yourself-this-easter",
+      "destination": "/resources/article/holiday-scams-fake-deals-and-banking-fraud-how-to-protect-yourself",
+      "statusCode": 301
     }
   ],
   "outputDirectory": "dist",

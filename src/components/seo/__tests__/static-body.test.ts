@@ -148,4 +148,18 @@ describe('createArticleRoute canonical override (seo_canonical_url)', () => {
     expect(article.url).toBe(survivor);
     expect(article.mainEntityOfPage).toBe(survivor);
   });
+
+  it('applies the known holiday-scam duplicate map without an admin canonical', () => {
+    const route = createArticleRoute(
+      {
+        slug: 'holiday-scams-fake-deals-and-banking-fraud-how-to-protect-yourself-this-easter',
+        title: 'Holiday scams',
+      },
+      DEFAULT_SITE_URL,
+    )!;
+    expect(route.canonicalUrl).toBe(
+      `${DEFAULT_SITE_URL}/resources/article/holiday-scams-fake-deals-and-banking-fraud-how-to-protect-yourself`,
+    );
+    expect(route.sitemap).toBe(false);
+  });
 });

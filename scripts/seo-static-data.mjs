@@ -10,6 +10,9 @@ import path from 'node:path';
 const organizationData = JSON.parse(
   fs.readFileSync(path.resolve('src/components/seo/organization.json'), 'utf8'),
 );
+const articleCanonicalOverrides = JSON.parse(
+  fs.readFileSync(path.resolve('src/components/seo/article-canonical-overrides.json'), 'utf8'),
+);
 
 /**
  * FAQ content shared with the client (src/components/seo/seo-config.ts re-exports
@@ -417,11 +420,20 @@ export function routeCanonicalUrl(route, siteUrl) {
  * out of the sitemap. Returns null for a missing or self-referential canonical.
  */
 export function resolveArticleCanonicalOverride(article, siteUrl) {
-  const raw =
-    typeof article?.seo_canonical_url === 'string' ? article.seo_canonical_url.trim() : '';
-  if (!raw) return null;
   const slug = typeof article?.slug === 'string' ? article.slug.trim() : '';
   if (!slug) return null;
+
+  let raw = typeof article?.seo_canonical_url === 'string' ? article.seo_canonical_url.trim() : '';
+  if (!raw) {
+    const mapped = articleCanonicalOverrides[slug];
+    if (typeof mapped === 'string' && mapped.trim()) {
+      raw = /^https?:\/\//i.test(mapped.trim())
+        ? mapped.trim()
+        : absoluteUrl(siteUrl, mapped.trim());
+    }
+  }
+  if (!raw) return null;
+
   const selfUrl = absoluteUrl(siteUrl, `/resources/article/${encodeURIComponent(slug)}`);
   const strip = (value) => value.replace(/\/+$/, '');
   return strip(raw) === strip(selfUrl) ? null : raw;
