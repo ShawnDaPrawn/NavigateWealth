@@ -10,6 +10,8 @@ import { PublicationsAPI } from '../api';
 import type { Article, ArticleFilters } from '../types';
 import { publicationKeys } from './queryKeys';
 
+const EMPTY_ARTICLES: Article[] = [];
+
 interface UseArticlesReturn {
   articles: Article[];
   isLoading: boolean;
@@ -21,7 +23,7 @@ interface UseArticlesReturn {
 
 export function useArticles(params?: ArticleFilters): UseArticlesReturn {
   const {
-    data: articles = [],
+    data: articles = EMPTY_ARTICLES,
     isLoading,
     isFetching,
     error,

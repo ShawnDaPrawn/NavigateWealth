@@ -7,7 +7,6 @@ import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Linkedin, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { OptimizedImage } from '../shared/OptimizedImage';
-import { TEAM_IMAGES } from '../../utils/imageConstants';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 // ============================================================================
@@ -27,80 +26,6 @@ interface TeamMember {
   sortOrder: number;
 }
 
-// ============================================================================
-// Fallback data (used when no KV-managed team members exist)
-// ============================================================================
-
-const FALLBACK_MEMBERS: TeamMember[] = [
-  {
-    id: 'fallback-1',
-    name: 'Michael Johnson',
-    title: 'Founder & CEO',
-    credentials: 'CFP\u00AE, CFA',
-    bio: "With over 30 years in wealth management, Michael founded Navigate Wealth with a vision to provide personalized financial solutions. He holds a Master's in Finance from Wharton.",
-    specialties: ['Investment Strategy', 'Estate Planning', 'Tax Optimization'],
-    image: TEAM_IMAGES.michael,
-    sortOrder: 1,
-  },
-  {
-    id: 'fallback-2',
-    name: 'Sarah Chen',
-    title: 'Senior Portfolio Manager',
-    credentials: 'CFA, MBA',
-    bio: 'Sarah brings 15 years of institutional investment experience to Navigate Wealth. She previously managed portfolios at leading investment firms before joining our team.',
-    specialties: ['Portfolio Management', 'Risk Analysis', 'Asset Allocation'],
-    image: TEAM_IMAGES.sarah,
-    sortOrder: 2,
-  },
-  {
-    id: 'fallback-3',
-    name: 'David Rodriguez',
-    title: 'Director of Financial Planning',
-    credentials: 'CFP\u00AE, ChFC',
-    bio: 'David specializes in comprehensive financial planning and retirement strategies. His analytical approach helps clients navigate complex financial decisions with confidence.',
-    specialties: ['Retirement Planning', 'Insurance Analysis', 'Education Funding'],
-    image: TEAM_IMAGES.david,
-    sortOrder: 3,
-  },
-  {
-    id: 'fallback-4',
-    name: 'Jennifer Walsh',
-    title: 'Senior Wealth Advisor',
-    credentials: 'CFP\u00AE, CIMA',
-    bio: 'Jennifer focuses on high-net-worth families and their unique wealth management needs. She has over 12 years of experience in private wealth management.',
-    specialties: ['Family Wealth', 'Trust Services', 'Philanthropy'],
-    image:
-      'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&crop=face',
-    sortOrder: 4,
-  },
-  {
-    id: 'fallback-5',
-    name: 'Robert Kim',
-    title: 'Investment Analyst',
-    credentials: 'CFA Level III',
-    bio: 'Robert conducts in-depth market research and analysis to support our investment decisions. He brings fresh perspectives with his quantitative background.',
-    specialties: ['Market Research', 'Quantitative Analysis', 'ESG Investing'],
-    image:
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop&crop=face',
-    sortOrder: 5,
-  },
-  {
-    id: 'fallback-6',
-    name: 'Lisa Thompson',
-    title: 'Client Relations Manager',
-    credentials: 'Series 7, 66',
-    bio: 'Lisa ensures our clients receive exceptional service and support. She coordinates between our advisors and clients to ensure seamless communication.',
-    specialties: ['Client Service', 'Operations', 'Account Management'],
-    image:
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop&crop=face',
-    sortOrder: 6,
-  },
-];
-
-// ============================================================================
-// Data fetching
-// ============================================================================
-
 async function fetchTeamMembers(): Promise<TeamMember[]> {
   try {
     const res = await fetch(
@@ -114,7 +39,7 @@ async function fetchTeamMembers(): Promise<TeamMember[]> {
   } catch (err) {
     console.error('Failed to fetch team members from API:', err);
   }
-  return FALLBACK_MEMBERS;
+  return [];
 }
 
 // ============================================================================
@@ -122,7 +47,7 @@ async function fetchTeamMembers(): Promise<TeamMember[]> {
 // ============================================================================
 
 export function TeamPage() {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(FALLBACK_MEMBERS);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -189,6 +114,19 @@ export function TeamPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
             </div>
+          ) : teamMembers.length === 0 ? (
+            <div className="max-w-xl mx-auto text-center space-y-4 py-8">
+              <p className="text-gray-600 leading-relaxed">
+                Team profiles are being updated. Contact us to meet an adviser and discuss your
+                financial plan.
+              </p>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white" asChild>
+                <Link to="/contact">
+                  Contact Us
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {teamMembers.map((member, index) => (
@@ -218,20 +156,22 @@ export function TeamPage() {
 
                     <p className="text-gray-600 text-sm leading-relaxed">{member.bio}</p>
 
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-black text-sm">Specialties:</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {member.specialties.map((specialty, specialtyIndex) => (
-                          <Badge
-                            key={specialtyIndex}
-                            variant="secondary"
-                            className="text-xs bg-purple-50 text-purple-600"
-                          >
-                            {specialty}
-                          </Badge>
-                        ))}
+                    {Array.isArray(member.specialties) && member.specialties.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-black text-sm">Specialties:</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {member.specialties.map((specialty, specialtyIndex) => (
+                            <Badge
+                              key={specialtyIndex}
+                              variant="secondary"
+                              className="text-xs bg-purple-50 text-purple-600"
+                            >
+                              {specialty}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="flex justify-center space-x-3 pt-2">
                       {member.linkedinUrl ? (

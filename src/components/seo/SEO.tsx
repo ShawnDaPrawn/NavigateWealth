@@ -223,6 +223,7 @@ export function createOrganizationSchema(): Record<string, unknown> {
  * and the branded search box.
  */
 export function createWebSiteSchema(): Record<string, unknown> {
+  // ResourcesPage hydrates the `q` param into the on-page search box.
   return {
     '@type': 'WebSite',
     '@id': `${BASE_URL}/#website`,
