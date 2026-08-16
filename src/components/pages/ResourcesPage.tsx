@@ -33,6 +33,7 @@ import {
   formatDate,
 } from '../admin/modules/publications';
 import type { Article } from '../admin/modules/publications';
+import { readResourcesSearchQuery, writeResourcesSearchQuery } from './resourcesSearch';
 
 // ---------------------------------------------------------------------------
 // Treat CATEGORY_ICON_MAP as a flexible Record for runtime lookups.
@@ -101,7 +102,7 @@ export function ResourcesPage() {
   const [activeMarketNewsSection, setActiveMarketNewsSection] = useState('economic-news');
 
   // Search States
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => readResourcesSearchQuery(searchParams));
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
@@ -225,7 +226,14 @@ export function ResourcesPage() {
   const handleTabChange = useCallback(
     (value: string) => {
       setActiveTab(value);
-      setSearchParams({ section: value }, { replace: true });
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('section', value);
+          return writeResourcesSearchQuery(next, '');
+        },
+        { replace: true },
+      );
 
       // Clear search when switching tabs
       if (searchQuery) {
@@ -291,6 +299,25 @@ export function ResourcesPage() {
     [articlesList, newsData, defaultNewsData],
   );
 
+  // Hydrate sitelinks / shared search URLs (`/resources?q=…`) once data is ready.
+  useEffect(() => {
+    const q = readResourcesSearchQuery(searchParams);
+    setSearchQuery((current) => (current === q ? current : q));
+    if (q) {
+      performSearch(q);
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
+    }
+  }, [searchParams, performSearch]);
+
+  const updateQueryParam = useCallback(
+    (value: string) => {
+      setSearchParams((prev) => writeResourcesSearchQuery(prev, value), { replace: true });
+    },
+    [setSearchParams],
+  );
+
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
@@ -300,20 +327,24 @@ export function ResourcesPage() {
         clearTimeout(searchDebounceTimer);
       }
 
-      const timer = setTimeout(() => performSearch(val), 300);
+      const timer = setTimeout(() => {
+        performSearch(val);
+        updateQueryParam(val);
+      }, 300);
       setSearchDebounceTimer(timer);
     },
-    [searchDebounceTimer, performSearch],
+    [searchDebounceTimer, performSearch, updateQueryParam],
   );
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
+    updateQueryParam('');
     if (searchDebounceTimer) {
       clearTimeout(searchDebounceTimer);
       setSearchDebounceTimer(null);
     }
-  }, [searchDebounceTimer]);
+  }, [searchDebounceTimer, updateQueryParam]);
 
   // --- Render ---
 
@@ -384,6 +415,7 @@ export function ResourcesPage() {
                     placeholder="Search articles..."
                     value={searchQuery}
                     onChange={handleSearchChange}
+                    aria-label="Search articles and market news"
                   />
                   {searchQuery && (
                     <button
