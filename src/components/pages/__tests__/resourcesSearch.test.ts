@@ -14,7 +14,8 @@ describe('resourcesSearch', () => {
     expect(next.get('q')).toBe('TFSA');
   });
 
-  it('removes q when the query is cleared', () => {
+  it('trims the stored q param and removes it when the query is cleared', () => {
+    expect(writeResourcesSearchQuery(new URLSearchParams(), 'tax ').get('q')).toBe('tax');
     const next = writeResourcesSearchQuery(new URLSearchParams('section=insights&q=oil'), '  ');
     expect(next.get('q')).toBeNull();
     expect(next.get('section')).toBe('insights');

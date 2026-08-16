@@ -302,13 +302,13 @@ export function ResourcesPage() {
   // Hydrate sitelinks / shared search URLs (`/resources?q=…`) once data is ready.
   useEffect(() => {
     const q = readResourcesSearchQuery(searchParams);
-    setSearchQuery((current) => (current === q ? current : q));
-    if (q) {
-      performSearch(q);
-    } else {
-      setSearchResults([]);
-      setIsSearching(false);
+    setSearchQuery((current) => (current.trim() === q ? current : q));
+    if (!q) {
+      setSearchResults((prev) => (prev.length === 0 ? prev : []));
+      setIsSearching((prev) => (prev ? false : prev));
+      return;
     }
+    performSearch(q);
   }, [searchParams, performSearch]);
 
   const updateQueryParam = useCallback(
