@@ -188,14 +188,48 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   `rateLimiter.ts:146` returns `allowed:true` when KV degrades — disabling
   login brute-force protection exactly when it's needed. ~560 routes have no
   limiting, including the paid AI endpoints.
-- **D1 — Verify RLS on `kv_store_91ed8379`.** The primary PII store (profiles,
-  documents, e-sign, the signing key) has **no migration and no
-  `ENABLE ROW LEVEL SECURITY` statement in the repo**. Its RLS state cannot be
-  confirmed from source. With a public anon key in the bundle, if RLS is off or
-  permissive the entire datastore is readable via PostgREST. **Confirm in the
-  dashboard as priority-zero.**
+- **D1 — RLS on `kv_store_91ed8379`: VERIFIED SAFE (2026-08-21).** _Closed — was
+  the audit's top-3 "may be total exposure", and it is not._ Checked directly
+  against the production project (`vpjmdsltwrnpefzcgdmz`), read-only:
+  `kv_store_91ed8379` has **RLS enabled with 0 policies**, which is deny-all for
+  `anon` and `authenticated` — only `service_role` (which bypasses RLS) reaches
+  it, exactly as intended. Supabase's own linter classifies this as INFO, not a
+  vulnerability. All 7 `public` tables have RLS enabled, and `storage.objects`
+  is likewise RLS-on with no policies (service-role only). The suspected
+  `public.exec_sql` arbitrary-SQL vector (§9) **does not exist** in production —
+  also closed.
 
-### SIGNIFICANT — architecture & correctness
+  Residual, low severity, NOT exposures — recommended hardening, not applied
+  here because they are production changes with live-traffic implications:
+  1. `get_events_today`, `get_reminders_due_today`, `get_upcoming_reminders` are
+     `SECURITY DEFINER` and carry `EXECUTE` for `anon`. The linter flags the
+     pattern, but **all three self-scope on `auth.uid()`**, which is NULL for
+     anon, so they return zero rows and leak nothing — verified by calling them
+     as the `anon` role. Revoke `anon` EXECUTE anyway (defence in depth); check
+     first that no client calls these RPCs unauthenticated.
+  2. Leaked-password protection (HaveIBeenPwned) is disabled in Auth. One
+     dashboard toggle.
+  3. Nine functions have a mutable `search_path`. Standard hardening.
+
+- **D2 — Migration drift between the repo and production (NEW, 2026-08-21).**
+  The repo's `supabase/migrations/` and the applied migrations have diverged, in
+  both directions:
+  - Applied in production: `create_kv_table_91ed8379`, `fna_intake_sessions`,
+    `atomic_auth_rate_limit`.
+  - **`20260420000001_esign_core_tables.sql` was never applied** — there are **no
+    `esign_*` tables in any schema**. This corrects §5 of this plan and the
+    ledger, both of which described those tables as landed with RLS: e-signature
+    data lives entirely in KV.
+  - **`atomic_auth_rate_limit` has no migration file in the repo.** It created
+    `check_auth_rate_limit_91ed8379` (SECURITY DEFINER, correctly NOT executable
+    by `anon`/`authenticated`) — which addresses the non-atomic half of S11, but
+    is invisible to anyone reading the repo.
+  - The `kv_store_91ed8379` table itself has no migration file either.
+
+  Schema state that only exists in the dashboard cannot be reviewed, rolled
+  back, or reproduced in a staging project. Reconcile: generate migration files
+  for what is actually applied, and either apply or delete the esign migration
+  so the folder tells the truth.
 
 - **A1 — The dependency-cruiser boundary gate was vacuous.** _(FIXED 2026-08-21,
   Stage A.)_ Originally verified: 49/52 first-party imports resolved as
@@ -245,16 +279,49 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   `src/assets` — `vite.config.ts:19-24` already prefers it. Weigh that against
   adding more binaries to an already-892 MB `.git`; generating at build time
   avoids the git cost.
-- **A16 — The eager entry graph ships admin-only tooling to every visitor.**
-  _(Found by F6, 2026-08-21 — not in the original audit.)_ The entry
-  modulepreload graph is **2.34 MB uncompressed / 659 KB gzipped** and includes
-  `vendor-jspdf` (382 KB, PDF generation) and `vendor-tiptap` (353 KB, the
-  rich-text editor used in 6 admin publication files). A visitor reading a
-  marketing page downloads both before first paint. Trace the static import
-  chain that pulls them into the eager graph and move it behind `React.lazy` /
-  a dynamic `import()`. Also here: `vendor-feedback` (172 KB) still carries the
-  dead `react-toastify` (A12). Ratcheted by F6, so it cannot worsen — but
-  ~900 KB of the entry graph is avoidable today.
+- **A16 — The eager entry graph preloaded 735 KB of vendor chunks — FIXED
+  2026-08-21.** _(Found by F6; the original diagnosis here was WRONG and is
+  corrected below.)_
+
+  **Symptom (as first reported, and correct):** `dist/index.html` carried
+  `<link rel="modulepreload">` for `vendor-jspdf` (382 KB) and `vendor-tiptap`
+  (353 KB), so every marketing-page visitor fetched a PDF generator and a
+  rich-text editor before first paint.
+
+  **Original diagnosis — wrong.** This was written up as "feature code eagerly
+  imports admin tooling". It does not. Tracing static imports from `main.tsx`
+  finds only **93 reachable files and no import of jspdf or tiptap at all**: the
+  application's route-level code-splitting is correct.
+
+  **Actual cause.** Vite's `__vitePreload` helper was hoisted by `manualChunks`
+  into the `vendor-jspdf` chunk, and the entry chunk then statically imported
+  that chunk to get it — `import{a as _}from"./vendor-jspdf-*.js"`, where `a` is
+  `function(t,e,i){let s=Promise.resolve();…}`. So ~382 KB was preloaded for the
+  sake of a ~300-byte helper, with `vendor-tiptap` pulled in the same way. A
+  `manualChunks` pitfall, not an application-architecture problem.
+
+  **Fix.** `jspdf`/`jspdf-autotable` and `@tiptap/*` are used only from lazy
+  routes, so they no longer get forced into named manual chunks — Rollup emits
+  them as ordinary async chunks (`jspdf.es.min-*.js` etc.), which is what they
+  always should have been. Verified: both libraries are still present and
+  reachable, and `totalJsBytes` fell 0.1%, so nothing was duplicated across
+  chunks.
+
+  **Measured result — the largest user-facing win in this plan so far:**
+
+  | Metric                     | Before   | After        | Change     |
+  | -------------------------- | -------- | ------------ | ---------- |
+  | Eager entry (uncompressed) | 2.33 MB  | **1.86 MB**  | **−20.1%** |
+  | Eager entry (gzipped)      | 655.5 KB | **496.6 KB** | **−24.2%** |
+
+  ~159 KB less gzipped on every single page load. Re-baselined into F6 so it
+  cannot regress.
+
+  **Lesson worth keeping:** `manualChunks` decides where shared helpers land. A
+  named vendor chunk that is only needed lazily can still be dragged into the
+  eager graph by a few bytes of hoisted runtime. Check `dist/index.html`'s
+  modulepreload list after changing chunking — F6 now does this automatically.
+
 - **A8 — Backend is 8.6% test-file-covered and 0% coverage-measured, and
   deploys with only a non-blocking, credential-gated smoke test.** Combined with
   A2, ~136K lines ship to production essentially unverified.

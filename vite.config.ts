@@ -73,10 +73,6 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-quill';
   }
 
-  if (id.includes('/@tiptap/')) {
-    return 'vendor-tiptap';
-  }
-
   if (id.includes('/pdf-lib/')) {
     return 'vendor-pdf-lib';
   }
@@ -87,10 +83,6 @@ function getManualChunk(id: string): string | undefined {
 
   if (id.includes('/pdfjs-dist/')) {
     return 'vendor-pdf-viewer';
-  }
-
-  if (id.includes('/jspdf/') || id.includes('/jspdf-autotable/')) {
-    return 'vendor-jspdf';
   }
 
   if (id.includes('/docx/') || id.includes('/@zip.js/zip.js/')) {
