@@ -103,4 +103,29 @@ describe('loadUserProfile session user hint', () => {
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  it('preserves the server security code when profile access requires 2FA', async () => {
+    vi.restoreAllMocks();
+    vi.spyOn(global, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/security/')) {
+        return new Response(JSON.stringify({ success: true, status: { twoFactorEnabled: true } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      return new Response(
+        JSON.stringify({ error: 'Two-factor verification required', code: 'TWO_FACTOR_REQUIRED' }),
+        { status: 403, headers: { 'content-type': 'application/json' } },
+      );
+    });
+
+    await expect(
+      loadUserProfile(userId, email, sessionHint, 'pending-2fa-access-token'),
+    ).rejects.toMatchObject({
+      name: 'ProfileAccessError',
+      code: 'TWO_FACTOR_REQUIRED',
+      status: 403,
+    });
+  });
 });

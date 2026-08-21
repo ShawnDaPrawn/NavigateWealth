@@ -103,6 +103,14 @@ export interface OtpVerificationResult {
   error?: string;
 }
 
+export interface KbaVerificationResult {
+  success: boolean;
+  status?: 'passed' | 'failed' | 'skipped' | 'error';
+  provider?: string;
+  actionUrl?: string | null;
+  error?: string;
+}
+
 export interface SignatureSubmissionResult {
   success: boolean;
   error?: string;

@@ -365,7 +365,10 @@ describe('CategoriesAPI', () => {
       expect(result).toEqual(MOCK_CATEGORY);
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/categories'),
-        expect.objectContaining({ method: 'POST' }),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+        }),
       );
     });
   });
@@ -424,6 +427,13 @@ describe('ContentTypesAPI', () => {
       mockFetch.mockResolvedValue(makeOkResponse(MOCK_TYPE));
       const result = await ContentTypesAPI.createType({ name: 'Blog Post' } as never);
       expect(result).toEqual(MOCK_TYPE);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/types'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+        }),
+      );
     });
   });
 
@@ -449,7 +459,12 @@ describe('StatsAPI', () => {
     mockFetch.mockResolvedValue(makeOkResponse(stats));
     const result = await StatsAPI.getStats();
     expect(result).toEqual(stats);
-    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/stats'), expect.any(Object));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/stats'),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
+    );
   });
 });
 
@@ -492,7 +507,10 @@ describe('InitializationAPI', () => {
       expect(result).toEqual({ success: true });
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/initialize'),
-        expect.objectContaining({ method: 'POST' }),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+        }),
       );
     });
   });
@@ -551,7 +569,10 @@ describe('TemplatesAPI', () => {
     await TemplatesAPI.createTemplate({ name: 'Standard Article' } as never);
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/templates'),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
     );
   });
 
@@ -583,7 +604,10 @@ describe('VersionsAPI', () => {
     await VersionsAPI.createVersion('a-001', 'editor@test.com');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/versions/a-001'),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+      }),
     );
   });
 });

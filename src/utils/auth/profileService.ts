@@ -16,6 +16,17 @@ import { createClient } from '../supabase/client';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
 
+export class ProfileAccessError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = 'ProfileAccessError';
+  }
+}
+
 async function getRequiredAccessToken(hint?: string): Promise<string> {
   if (hint) return hint;
   const {
@@ -300,6 +311,18 @@ export async function loadUserProfile(
       }
 
       return mapProfileToAppUser(userId, email, profileData, supabaseUserData, securityStatus);
+    }
+
+    if (response.status !== 404) {
+      const errorData = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+      };
+      throw new ProfileAccessError(
+        errorData.error || `Profile access failed (${response.status})`,
+        errorData.code || 'PROFILE_ACCESS_FAILED',
+        response.status,
+      );
     }
 
     if (response.status === 404) {

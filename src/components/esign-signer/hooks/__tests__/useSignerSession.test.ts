@@ -13,6 +13,7 @@ import { renderHook, act } from '@testing-library/react';
 const mockValidateAccessToken = vi.fn();
 const mockVerifyOtp = vi.fn();
 const mockResendOtp = vi.fn();
+const mockVerifyKba = vi.fn();
 const mockSubmitSignature = vi.fn();
 const mockRejectDocument = vi.fn();
 
@@ -21,6 +22,7 @@ vi.mock('../../services/esignSignerService', () => ({
     validateAccessToken: (...args: unknown[]) => mockValidateAccessToken(...args),
     verifyOtp: (...args: unknown[]) => mockVerifyOtp(...args),
     resendOtp: (...args: unknown[]) => mockResendOtp(...args),
+    verifyKba: (...args: unknown[]) => mockVerifyKba(...args),
     submitSignature: (...args: unknown[]) => mockSubmitSignature(...args),
     rejectDocument: (...args: unknown[]) => mockRejectDocument(...args),
   },
@@ -199,6 +201,38 @@ describe('verifyOtp', () => {
     expect(ret!.success).toBe(false);
     expect(ret!.error).toBe('Failed to verify OTP');
     expect(result.current.loading).toBe(false);
+  });
+});
+
+describe('verifyKba', () => {
+  it('delegates the identity challenge and preserves a passed result', async () => {
+    mockVerifyKba.mockResolvedValueOnce({ success: true, status: 'passed' });
+    const { result } = renderHook(() => useSignerSession());
+
+    let ret: Awaited<ReturnType<typeof result.current.verifyKba>>;
+    await act(async () => {
+      ret = await result.current.verifyKba('tok', '9001015009087');
+    });
+
+    expect(mockVerifyKba).toHaveBeenCalledWith('tok', '9001015009087');
+    expect(ret!).toEqual({ success: true, status: 'passed' });
+    expect(result.current.error).toBeNull();
+  });
+
+  it('fails closed when the identity provider rejects or throws', async () => {
+    mockVerifyKba.mockResolvedValueOnce({ success: false, error: 'Not verified' });
+    const { result } = renderHook(() => useSignerSession());
+
+    await act(async () => {
+      await result.current.verifyKba('tok');
+    });
+    expect(result.current.error).toBe('Not verified');
+
+    mockVerifyKba.mockRejectedValueOnce(new Error('offline'));
+    await act(async () => {
+      await result.current.verifyKba('tok');
+    });
+    expect(result.current.error).toBe('Failed to verify identity');
   });
 });
 

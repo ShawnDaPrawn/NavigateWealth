@@ -9,6 +9,7 @@ import type {
   SignatureData,
   SignerSessionValidation,
   OtpVerificationResult,
+  KbaVerificationResult,
   SignatureSubmissionResult,
 } from '../types';
 
@@ -112,6 +113,45 @@ class EsignSignerService {
       return { success: true };
     } catch (error) {
       console.error('Error resending OTP:', error);
+      return {
+        success: false,
+        error: 'Network error. Please check your connection.',
+      };
+    }
+  }
+
+  /** Run the signer identity challenge required by KBA-enabled envelopes. */
+  async verifyKba(token: string, idNumber?: string): Promise<KbaVerificationResult> {
+    try {
+      const response = await fetch(`${API_BASE}/signer/kba`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${publicAnonKey}`,
+        },
+        body: JSON.stringify({
+          access_token: token,
+          id_number: idNumber || undefined,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || data.message || 'Identity verification failed',
+        };
+      }
+
+      return {
+        success: data.success === true,
+        status: data.status,
+        provider: data.provider,
+        actionUrl: data.action_url ?? null,
+        error: data.success === true ? undefined : data.error || 'Identity verification failed',
+      };
+    } catch (error) {
+      console.error('Error verifying signer identity:', error);
       return {
         success: false,
         error: 'Network error. Please check your connection.',

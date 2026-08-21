@@ -302,7 +302,7 @@ export const ArticlesAPI = {
   async deleteArticle(id: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/articles/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     await handleResponse<void>(response);
     notifyEmailEngagementChanged(id, 'notification_campaign_updated');
@@ -364,7 +364,7 @@ export const ArticlesAPI = {
   async archiveArticle(id: string): Promise<Article> {
     const response = await fetch(`${BASE_URL}/articles/${id}/archive`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<Article>(response);
   },
@@ -384,7 +384,7 @@ export const ArticlesAPI = {
   async unarchiveArticle(id: string): Promise<Article> {
     const response = await fetch(`${BASE_URL}/articles/${id}/unarchive`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<Article>(response);
   },
@@ -404,7 +404,7 @@ export const ArticlesAPI = {
   async unpublishArticle(id: string): Promise<Article> {
     const response = await fetch(`${BASE_URL}/articles/${id}/unpublish`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<Article>(response);
   },
@@ -419,7 +419,7 @@ export const ArticlesAPI = {
   async processScheduled(): Promise<{ processed: number }> {
     const response = await fetch(`${BASE_URL}/process-scheduled`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     const result = await response.json();
     return { processed: result?.data?.processed || 0 };
@@ -651,7 +651,7 @@ export const CategoriesAPI = {
   async createCategory(input: CreateCategoryInput): Promise<Category> {
     const response = await fetch(`${BASE_URL}/categories`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<Category>(response);
@@ -675,7 +675,7 @@ export const CategoriesAPI = {
     const { id, ...updates } = input;
     const response = await fetch(`${BASE_URL}/categories/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
     return handleResponse<Category>(response);
@@ -694,7 +694,7 @@ export const CategoriesAPI = {
   async deleteCategory(id: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/categories/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -780,7 +780,7 @@ export const ContentTypesAPI = {
   async createType(input: CreateContentTypeInput): Promise<ContentType> {
     const response = await fetch(`${BASE_URL}/types`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<ContentType>(response);
@@ -804,7 +804,7 @@ export const ContentTypesAPI = {
     const { id, ...updates } = input;
     const response = await fetch(`${BASE_URL}/types/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updates),
     });
     return handleResponse<ContentType>(response);
@@ -823,7 +823,7 @@ export const ContentTypesAPI = {
   async deleteType(id: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/types/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -873,7 +873,7 @@ export const StatsAPI = {
    * ```
    */
   async getStats(): Promise<PublicationStats> {
-    const response = await fetch(`${BASE_URL}/stats`, { headers });
+    const response = await fetch(`${BASE_URL}/stats`, { headers: await getAuthHeaders() });
     return handleResponse<PublicationStats>(response);
   },
 };
@@ -939,7 +939,7 @@ export const InitializationAPI = {
   async initialize(input: InitializePublicationsInput = {}): Promise<{ success: boolean }> {
     const response = await fetch(`${BASE_URL}/initialize`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<{ success: boolean }>(response);
@@ -959,7 +959,7 @@ export const SettingsAPI = {
    * Export all data
    */
   async exportData(): Promise<unknown> {
-    const response = await fetch(`${BASE_URL}/export`, { headers });
+    const response = await fetch(`${BASE_URL}/export`, { headers: await getAuthHeaders() });
     return handleResponse(response);
   },
 
@@ -969,7 +969,7 @@ export const SettingsAPI = {
   async importData(data: Record<string, unknown>): Promise<unknown> {
     const response = await fetch(`${BASE_URL}/import`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(data),
     });
     return handleResponse(response);
@@ -981,7 +981,7 @@ export const SettingsAPI = {
   async clearDrafts(): Promise<{ message: string }> {
     const response = await fetch(`${BASE_URL}/maintenance/clear-drafts`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse(response);
   },
@@ -1029,19 +1029,21 @@ export const AIWritingAPI = {
 
 export const TemplatesAPI = {
   async getTemplates(): Promise<ContentTemplate[]> {
-    const response = await fetch(`${BASE_URL}/templates`, { headers });
+    const response = await fetch(`${BASE_URL}/templates`, { headers: await getAuthHeaders() });
     return handleResponse<ContentTemplate[]>(response);
   },
 
   async getTemplate(id: string): Promise<ContentTemplate> {
-    const response = await fetch(`${BASE_URL}/templates/${id}`, { headers });
+    const response = await fetch(`${BASE_URL}/templates/${id}`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<ContentTemplate>(response);
   },
 
   async createTemplate(input: CreateTemplateInput): Promise<ContentTemplate> {
     const response = await fetch(`${BASE_URL}/templates`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<ContentTemplate>(response);
@@ -1050,7 +1052,7 @@ export const TemplatesAPI = {
   async updateTemplate(id: string, input: UpdateTemplateInput): Promise<ContentTemplate> {
     const response = await fetch(`${BASE_URL}/templates/${id}`, {
       method: 'PUT',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify(input),
     });
     return handleResponse<ContentTemplate>(response);
@@ -1059,7 +1061,7 @@ export const TemplatesAPI = {
   async deleteTemplate(id: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/templates/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: await getAuthHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -1067,7 +1069,7 @@ export const TemplatesAPI = {
   async seedDefaults(): Promise<ContentTemplate[]> {
     const response = await fetch(`${BASE_URL}/templates/seed`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<ContentTemplate[]>(response);
   },
@@ -1079,14 +1081,16 @@ export const TemplatesAPI = {
 
 export const VersionsAPI = {
   async getVersions(articleId: string): Promise<ArticleVersion[]> {
-    const response = await fetch(`${BASE_URL}/versions/${articleId}`, { headers });
+    const response = await fetch(`${BASE_URL}/versions/${articleId}`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<ArticleVersion[]>(response);
   },
 
   async createVersion(articleId: string, editedBy?: string): Promise<ArticleVersion> {
     const response = await fetch(`${BASE_URL}/versions/${articleId}`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
       body: JSON.stringify({ edited_by: editedBy || 'system' }),
     });
     return handleResponse<ArticleVersion>(response);
@@ -1095,7 +1099,7 @@ export const VersionsAPI = {
   async restoreVersion(articleId: string, versionId: string): Promise<unknown> {
     const response = await fetch(`${BASE_URL}/versions/${articleId}/${versionId}/restore`, {
       method: 'POST',
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse(response);
   },

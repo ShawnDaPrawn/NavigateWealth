@@ -17,6 +17,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { OtpVerificationStep } from './OtpVerificationStep';
+import { KbaVerificationStep } from './KbaVerificationStep';
 import { SigningWorkflow } from './SigningWorkflow';
 import { SigningCompletePage } from './SigningCompletePage';
 import { useSignerSession } from './hooks/useSignerSession';
@@ -28,6 +29,7 @@ type SigningStep =
   | 'loading'
   | 'expired'
   | 'otp'
+  | 'kba'
   | 'signing'
   | 'waiting'
   | 'complete'
@@ -41,8 +43,15 @@ export function SignerLandingPage() {
 
   const [currentStep, setCurrentStep] = useState<SigningStep>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const { sessionData, validateToken, verifyOtp, submitSignature, rejectDocument, resendOtp } =
-    useSignerSession();
+  const {
+    sessionData,
+    validateToken,
+    verifyOtp,
+    verifyKba,
+    submitSignature,
+    rejectDocument,
+    resendOtp,
+  } = useSignerSession();
 
   // Initial token validation
   useEffect(() => {
@@ -72,11 +81,16 @@ export function SignerLandingPage() {
           // Sequential signing: not this signer's turn yet
           setCurrentStep('waiting');
         } else if (
-          result.data.challenge_required ||
-          result.data.missing_factors?.length ||
+          result.data.missing_factors?.includes('otp') ||
+          result.data.missing_factors?.includes('access_code') ||
           (result.data.otp_required && result.data.signer_status !== 'otp_verified')
         ) {
           setCurrentStep('otp');
+        } else if (result.data.missing_factors?.includes('kba')) {
+          setCurrentStep('kba');
+        } else if (result.data.challenge_required) {
+          setErrorMessage('This signing challenge is not supported. Please contact the sender.');
+          setCurrentStep('expired');
         } else {
           setCurrentStep('signing');
         }
@@ -87,12 +101,25 @@ export function SignerLandingPage() {
     });
   }, [token, validateToken]);
 
-  const handleOtpVerified = async () => {
+  const handleChallengeVerified = async () => {
     if (!token) return;
     const refreshed = await validateToken(token);
-    if (refreshed.success && refreshed.data && !refreshed.data.challenge_required) {
-      setCurrentStep('signing');
-      return;
+    if (refreshed.success && refreshed.data) {
+      if (
+        refreshed.data.missing_factors?.includes('otp') ||
+        refreshed.data.missing_factors?.includes('access_code')
+      ) {
+        setCurrentStep('otp');
+        return;
+      }
+      if (refreshed.data.missing_factors?.includes('kba')) {
+        setCurrentStep('kba');
+        return;
+      }
+      if (!refreshed.data.challenge_required) {
+        setCurrentStep('signing');
+        return;
+      }
     }
     setErrorMessage(refreshed.error || 'Unable to open the document after verification.');
     setCurrentStep('expired');
@@ -247,9 +274,23 @@ export function SignerLandingPage() {
         <OtpVerificationStep
           token={token!}
           sessionData={sessionData}
-          onVerified={handleOtpVerified}
+          onVerified={handleChallengeVerified}
           verifyOtp={verifyOtp}
           resendOtp={resendOtp}
+        />
+      </div>
+    );
+  }
+
+  // ==================== KBA VERIFICATION ====================
+  if (currentStep === 'kba') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <KbaVerificationStep
+          token={token!}
+          sessionData={sessionData}
+          onVerified={handleChallengeVerified}
+          verifyKba={verifyKba}
         />
       </div>
     );

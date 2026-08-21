@@ -10,6 +10,7 @@ import type {
   SignatureData,
   SignerSessionValidation,
   OtpVerificationResult,
+  KbaVerificationResult,
   SignatureSubmissionResult,
 } from '../types';
 
@@ -119,6 +120,25 @@ export function useSignerSession() {
     }
   };
 
+  const verifyKba = async (token: string, idNumber?: string): Promise<KbaVerificationResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await esignSignerService.verifyKba(token, idNumber);
+      if (!result.success) {
+        setError(result.error || 'Identity verification failed');
+      }
+      return result;
+    } catch (_err) {
+      const errorMsg = 'Failed to verify identity';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const rejectDocument = async (
     token: string,
     reason: string,
@@ -157,6 +177,7 @@ export function useSignerSession() {
     error,
     validateToken,
     verifyOtp,
+    verifyKba,
     submitSignature,
     rejectDocument,
     resendOtp: async (token: string): Promise<OtpVerificationResult> => {
