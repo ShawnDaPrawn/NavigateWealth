@@ -49,6 +49,10 @@
       }
     },
     {
+      "src": "^/get-quote/medical-aid$",
+      "dest": "/index.html"
+    },
+    {
       "src": "/get-quote/.+",
       "dest": "/index.html",
       "headers": { "X-Robots-Tag": "noindex, follow" }

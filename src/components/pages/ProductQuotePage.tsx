@@ -5,9 +5,9 @@
  *   1. Continuation from the Quote Gateway (contact details pre-filled)
  *   2. Standalone entry (blank fields — acts as a lead capture landing page)
  *
- * Step 3 of the quote funnel. Requires contact from step 2 (/get-quote/:service/contact);
- * bare /get-quote/:service redirects there. Deep-linked from service pages via
- * /get-quote/:service/contact → submit → this page with router state.
+ * Step 3 of the quote funnel. Requires contact from step 2 (/get-quote/:service/contact)
+ * except /get-quote/medical-aid, which is an indexable landing page and collects
+ * contact inline. Other bare /get-quote/:service URLs still redirect to /contact.
  *
  * §7 — Presentation layer
  * §3.1 — Dependency direction: UI → hooks → API
@@ -33,6 +33,8 @@ import {
   Lock,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SEO, createWebPageSchema } from '../seo/SEO';
+import { getSEOData } from '../seo/seo-config';
 import { getServiceConfig, isValidServiceId } from './quote/constants';
 import { ProviderStrip } from './quote/components/ProviderStrip';
 import { TrustBar } from './quote/components/TrustBar';
@@ -47,6 +49,8 @@ import { TaxPlanningQuoteWizard } from './quote/components/TaxPlanningQuoteWizar
 
 // ── Session persistence ───────────────────────────────────────────────────────
 const SESSION_KEY = 'nw_product_quote';
+/** Quote URLs Google is allowed to index. Keep in sync with vercel.json. */
+const INDEXABLE_QUOTE_SERVICES = new Set(['medical-aid']);
 
 function loadSession(service: string): Record<string, string> {
   try {
@@ -214,14 +218,16 @@ export function ProductQuotePage() {
     ],
   );
 
-  // ── Keep quote funnel steps out of the search index ─────────────────────────
-  // A quote wizard is a lead-gen funnel, not a search landing page. Mark it
-  // noindex regardless of whether the service is valid (matches the edge
-  // X-Robots-Tag in vercel.json) and clear any stale `index` meta left on the
-  // <head> by a previously-visited indexable page during SPA navigation. Keep
-  // `follow` so crawlers still traverse the links back to indexable pages
-  // (/get-quote, service pages) — matches the edge header and the contact step.
+  // Keep quote-funnel steps out of the search index, except indexable landings
+  // such as /get-quote/medical-aid. Other services stay noindex to match the
+  // edge X-Robots-Tag in vercel.json.
+  const isIndexableQuote = Boolean(
+    service && INDEXABLE_QUOTE_SERVICES.has(service) && serviceConfig,
+  );
+  const medicalAidSeo = isIndexableQuote ? getSEOData('get-quote-medical-aid') : null;
+
   useEffect(() => {
+    if (isIndexableQuote) return;
     let el = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
     if (!el) {
       el = document.createElement('meta');
@@ -229,7 +235,7 @@ export function ProductQuotePage() {
       document.head.appendChild(el);
     }
     el.setAttribute('content', 'noindex, follow');
-  }, [serviceConfig]);
+  }, [isIndexableQuote]);
 
   if (!serviceConfig) {
     return (
@@ -245,8 +251,9 @@ export function ProductQuotePage() {
     );
   }
 
-  // Deep links to /get-quote/:service must complete step 2 (contact) first
-  if (!routerState?.contact) {
+  // Deep links to /get-quote/:service must complete step 2 (contact) first,
+  // except indexable landings which collect contact on this page.
+  if (!routerState?.contact && !isIndexableQuote) {
     return <Navigate to={`/get-quote/${service}/contact`} replace />;
   }
 
@@ -273,6 +280,17 @@ export function ProductQuotePage() {
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
+      {medicalAidSeo && (
+        <SEO
+          {...medicalAidSeo}
+          robotsContent="index, follow"
+          structuredData={createWebPageSchema(
+            medicalAidSeo.title,
+            medicalAidSeo.description,
+            medicalAidSeo.canonicalUrl,
+          )}
+        />
+      )}
       {/* Hero */}
       <div className="bg-[#1e2035] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />

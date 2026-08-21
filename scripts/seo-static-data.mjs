@@ -313,6 +313,17 @@ export const publicSeoRoutes = [
     schema: 'webpage',
   },
   {
+    path: '/get-quote/medical-aid',
+    lastmod: '2026-08-19',
+    title: 'Medical Aid Quote | Navigate Wealth',
+    description:
+      'Compare medical aid quotes in South Africa. Independent advice on schemes, hospital plans and gap cover from Navigate Wealth.',
+    keywords:
+      'medical aid quote South Africa, hospital plan, gap cover, medical scheme comparison, Navigate Wealth',
+    ogType: 'website',
+    schema: 'webpage',
+  },
+  {
     path: '/solutions/individuals',
     lastmod: '2026-03-01',
     title: 'Financial Planning for Individuals | Navigate Wealth',
