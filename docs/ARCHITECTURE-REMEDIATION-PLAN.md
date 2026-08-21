@@ -9,6 +9,12 @@
 > ledger). Where the two disagree, the corrections in
 > [§8 Ledger corrections](#8-ledger-corrections) are authoritative — they
 > are based on direct re-verification, not memory.
+>
+> For the **target-state architecture and codebase-organisation blueprint** —
+> what "good" looks like once these fixes land, with the conventions and
+> fitness functions that keep it that way — see
+> `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md`. This plan is the sequenced _fix
+> list_; that one is the _destination_.
 
 ---
 
