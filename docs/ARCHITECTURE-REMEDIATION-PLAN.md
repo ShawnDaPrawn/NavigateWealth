@@ -196,13 +196,16 @@ Severity is about blast radius, not effort. IDs are used in the plan.
 
 ### SIGNIFICANT — architecture & correctness
 
-- **A1 — The dependency-cruiser boundary gate is vacuous.** Verified: 49/52
-  first-party imports resolve as `couldNotResolve:['unknown']`; rules are
-  anchored `^(src|@)/` so `../`-prefixed unresolved specifiers can never match.
-  All three "blocking" boundary rules have **never fired**. The CI green is
-  vacuous, not clean — which is precisely what let ~83 real boundary violations
-  accumulate undetected. **Highest-leverage architecture fix: make this gate
-  actually resolve TS files, then triage what it surfaces.**
+- **A1 — The dependency-cruiser boundary gate was vacuous.** _(FIXED 2026-08-21,
+  Stage A.)_ Originally verified: 49/52 first-party imports resolved as
+  `couldNotResolve:['unknown']` because the resolver had no `extensions` list,
+  so all three "blocking" boundary rules had **never fired** — the CI green was
+  vacuous, not clean. Fixed by adding `enhancedResolveOptions.extensions`; the
+  first honest run surfaced **210 real violations** (109 cross-feature-internals,
+  100 outsider-admin-internals, 1 spa-edge type-only false positive) — well
+  above the ~83 estimable by hand. The three rules are now `warn` (visible,
+  non-blocking) pending burn-down under touch-it-you-fix-it, then flip to
+  `error`.
 - **A2 — Global error handler is never registered.** `error.middleware.ts` has
   a full Zod-aware handler with telemetry, reachable only via opt-in
   `asyncHandler`. `index.tsx` registers no `app.onError`/`app.notFound`, and
@@ -504,10 +507,12 @@ until P4 is done.
 `docs/PRODUCTION-READINESS.md` is unusually honest, but three claims are now
 known to overstate reality and should be corrected there:
 
-1. **"`npm run depcruise` — No violations (4683 modules… cruised)"** reads as
-   "boundaries are clean." Verified: the cruise resolves **no first-party TS
-   files** (49/52 deps `couldNotResolve`), so the boundary rules have never
-   fired. The green is vacuous. (Finding A1.)
+1. **"`npm run depcruise` — No violations (4683 modules… cruised)"** read as
+   "boundaries are clean" but was vacuous — the cruise resolved **no first-party
+   TS files** (49/52 deps `couldNotResolve`), so the boundary rules never fired.
+   _Fixed 2026-08-21 (Stage A):_ the resolver now works (2492 real modules) and
+   surfaces **210 real violations** as `warn`. Update the ledger to say the gate
+   is real and non-blocking during burn-down, not "no violations". (Finding A1.)
 2. **"coverage thresholds… (statements ~31%)"** omits that the entire ~136K-line
    backend is excluded from measurement and that ~16 marketing pages are silently
    dropped by the v8 parser. Effective whole-repo coverage is ~22%. Report SPA

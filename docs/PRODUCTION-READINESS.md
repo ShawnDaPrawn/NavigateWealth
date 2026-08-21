@@ -22,15 +22,15 @@ those proposed files exist on `main`.
 Full quality-gate baseline re-verified locally on `main` commit `23b3e16`
 (`Ship canonical SEO fixes and medical-aid quote landing (#204)`), 2026-08-21:
 
-| Gate                           | Result                                                                                                                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run lint`                 | 0 errors, 59 warnings (accepted baseline — mostly `max-lines` / complexity warnings)                                                                                           |
-| `npm run typecheck`            | 0 errors                                                                                                                                                                       |
-| `npm run typecheck:middleware` | 0 errors                                                                                                                                                                       |
-| `npm run typecheck:deno`       | Ratchet floor is **0** (`.deno-check-baseline`); enforced green in CI (Quality Check run #801 on `main`, 2026-08-21). Not verifiable in restricted sandboxes — see note below. |
-| `npm run depcruise`            | No violations (4683 modules, 11861 dependencies cruised)                                                                                                                       |
-| `npm test -- --coverage`       | 502 test files, 6842 tests, all pass; coverage thresholds in `vitest.config.ts` enforced (statements ~31%)                                                                     |
-| `npm run build`                | Passes; SEO verification passes                                                                                                                                                |
+| Gate                           | Result                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint`                 | 0 errors, 59 warnings (accepted baseline — mostly `max-lines` / complexity warnings)                                                                                                                                                                                                                                                                                                                  |
+| `npm run typecheck`            | 0 errors                                                                                                                                                                                                                                                                                                                                                                                              |
+| `npm run typecheck:middleware` | 0 errors                                                                                                                                                                                                                                                                                                                                                                                              |
+| `npm run typecheck:deno`       | Ratchet floor is **0** (`.deno-check-baseline`); enforced green in CI (Quality Check run #801 on `main`, 2026-08-21). Not verifiable in restricted sandboxes — see note below.                                                                                                                                                                                                                        |
+| `npm run depcruise`            | Exit 0. **NOTE (2026-08-21):** the "4683 modules / no violations" reading was vacuous — the resolver had no `extensions` list, so first-party TS never resolved and the boundary rules never fired. Resolver fixed in Stage A (see `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md` F1); it now cruises 2492 real modules and surfaces 210 real boundary violations as `warn` (non-blocking during burn-down). |
+| `npm test -- --coverage`       | 502 test files, 6842 tests, all pass; coverage thresholds in `vitest.config.ts` enforced (statements ~31%)                                                                                                                                                                                                                                                                                            |
+| `npm run build`                | Passes; SEO verification passes                                                                                                                                                                                                                                                                                                                                                                       |
 
 Roadmap items from this file that are now **done and verified**:
 
@@ -540,9 +540,12 @@ Acceptance:
 ### Section 4.4 P1 - Continue The `integrations.tsx` Split Carefully — DONE (verified 2026-08-21)
 
 > The split is complete: `integrations.tsx` is a 37-line router composing
-> seven `integrations-*-routes` modules, and `npm run depcruise` reports no
-> boundary violations. Kept for history; apply the same rules when splitting
-> the remaining >1000-line modules listed in the 2026-08-21 addendum.
+> seven `integrations-*-routes` modules. (Historical note: the "no boundary
+> violations" claimed here reflected the pre-2026-08-21 vacuous depcruise
+> resolver; the SPA-side boundary rules did not cover this edge split, and the
+> resolver fix now surfaces 210 SPA-module violations — see the depcruise note
+> in Section 0.) Apply the same split discipline to the remaining >1000-line
+> modules listed in the 2026-08-21 addendum.
 
 `src/supabase/functions/server/integrations.tsx` is still large and high-risk.
 The first priority is reducing it without changing behavior.
