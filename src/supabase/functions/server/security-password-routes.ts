@@ -14,7 +14,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAuth, requirePrimaryAuth } from './auth-mw.ts';
 import { ChangePasswordSchema } from './security-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import {
@@ -206,7 +206,7 @@ Log In: ${buttonUrl}
  * GET /security/:userId/status
  * Get user security status (including suspension status)
  */
-app.get('/:userId/status', requireAuth, async (c) => {
+app.get('/:userId/status', requirePrimaryAuth, async (c) => {
   try {
     const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);

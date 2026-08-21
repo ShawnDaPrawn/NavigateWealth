@@ -21,6 +21,7 @@ import { DEFAULT_SCHEMAS } from './default-schemas.ts';
 import { SaveSchemaInputSchema } from './integrations-validation.ts';
 import type { KvSchema, SchemaField } from './integrations-types.ts';
 import { autoGenerateCustomKeysForSchema } from './integrations-derive.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-schema');
@@ -102,7 +103,7 @@ app.get('/custom-keys', async (c) => {
 });
 
 // POST /schemas
-app.post('/schemas', async (c) => {
+app.post('/schemas', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = SaveSchemaInputSchema.safeParse(body);

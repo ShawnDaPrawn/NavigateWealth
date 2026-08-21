@@ -1,8 +1,10 @@
-import { Hono } from 'npm:hono';
+import { Hono, type Context } from 'npm:hono';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { AdviceEngineService } from './advice-engine-service.ts';
+import { requireClientAccess } from './client-access.ts';
+import type { FNAType } from './advice-engine-types.ts';
 import {
   CreateRiskFNASchema,
   UpdateRiskFNASchema,
@@ -26,6 +28,11 @@ const app = new Hono();
 const log = createModuleLogger('advice-engine-fna');
 const service = new AdviceEngineService();
 
+async function requireFnaAccess(c: Context, type: FNAType, fnaId: string) {
+  const fna = await service.getFNAById(type, fnaId);
+  return requireClientAccess(c, fna.clientId);
+}
+
 // ============================================================================
 // RISK PLANNING FNA
 // ============================================================================
@@ -37,6 +44,8 @@ app.post(
     const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateRiskFNASchema.parse(body);
+    const denied = await requireClientAccess(c, validated.clientId);
+    if (denied) return denied;
     log.info('Creating Risk FNA', { userId, clientId: validated.clientId });
     const fna = await service.createFNA('risk', userId, validated);
     log.success('Risk FNA created', { userId, fnaId: fna.id });
@@ -50,6 +59,8 @@ app.put(
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'risk', fnaId);
+    if (denied) return denied;
     const body = await c.req.json();
     const updates = UpdateRiskFNASchema.parse(body);
     log.info('Updating Risk FNA', { userId, fnaId });
@@ -63,6 +74,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     const fnas = await service.getClientFNAs('risk', clientId);
     return c.json({ fnas });
   }),
@@ -73,6 +86,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'risk', fnaId);
+    if (denied) return denied;
     const fna = await service.getFNAById('risk', fnaId);
     return c.json({ fna });
   }),
@@ -84,6 +99,8 @@ app.post(
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'risk', fnaId);
+    if (denied) return denied;
     log.info('Publishing Risk FNA', { adminUserId, fnaId });
     const fna = await service.publishFNA('risk', fnaId, adminUserId);
     log.success('Risk FNA published', { fnaId });
@@ -102,6 +119,8 @@ app.post(
     const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateMedicalFNASchema.parse(body);
+    const denied = await requireClientAccess(c, validated.clientId);
+    if (denied) return denied;
     log.info('Creating Medical FNA', { userId, clientId: validated.clientId });
     const fna = await service.createFNA('medical', userId, validated);
     log.success('Medical FNA created', { userId, fnaId: fna.id });
@@ -115,6 +134,8 @@ app.put(
   asyncHandler(async (c) => {
     const _userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'medical', fnaId);
+    if (denied) return denied;
     const body = await c.req.json();
     const updates = UpdateMedicalFNASchema.parse(body);
     const fna = await service.updateFNA('medical', fnaId, updates);
@@ -127,6 +148,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     const fnas = await service.getClientFNAs('medical', clientId);
     return c.json({ fnas });
   }),
@@ -138,6 +161,8 @@ app.post(
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'medical', fnaId);
+    if (denied) return denied;
     const fna = await service.publishFNA('medical', fnaId, adminUserId);
     return c.json({ fna });
   }),
@@ -154,6 +179,8 @@ app.post(
     const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateRetirementFNASchema.parse(body);
+    const denied = await requireClientAccess(c, validated.clientId);
+    if (denied) return denied;
     log.info('Creating Retirement FNA', { userId, clientId: validated.clientId });
     const fna = await service.createFNA('retirement', userId, validated);
     log.success('Retirement FNA created', { userId, fnaId: fna.id });
@@ -167,6 +194,8 @@ app.put(
   asyncHandler(async (c) => {
     const _userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'retirement', fnaId);
+    if (denied) return denied;
     const body = await c.req.json();
     const updates = UpdateRetirementFNASchema.parse(body);
     const fna = await service.updateFNA('retirement', fnaId, updates);
@@ -179,6 +208,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     const fnas = await service.getClientFNAs('retirement', clientId);
     return c.json({ fnas });
   }),
@@ -190,6 +221,8 @@ app.post(
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'retirement', fnaId);
+    if (denied) return denied;
     const fna = await service.publishFNA('retirement', fnaId, adminUserId);
     return c.json({ fna });
   }),
@@ -206,6 +239,8 @@ app.post(
     const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateInvestmentINASchema.parse(body);
+    const denied = await requireClientAccess(c, validated.clientId);
+    if (denied) return denied;
     log.info('Creating Investment INA', { userId, clientId: validated.clientId });
     const ina = await service.createFNA('investment', userId, validated);
     log.success('Investment INA created', { userId, inaId: ina.id });
@@ -219,6 +254,8 @@ app.put(
   asyncHandler(async (c) => {
     const _userId = c.get('userId');
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'investment', inaId);
+    if (denied) return denied;
     const body = await c.req.json();
     const updates = UpdateInvestmentINASchema.parse(body);
     const ina = await service.updateFNA('investment', inaId, updates);
@@ -231,6 +268,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     const inas = await service.getClientFNAs('investment', clientId);
     return c.json({ inas });
   }),
@@ -242,6 +281,8 @@ app.post(
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const { id: inaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'investment', inaId);
+    if (denied) return denied;
     const ina = await service.publishFNA('investment', inaId, adminUserId);
     return c.json({ ina });
   }),
@@ -258,6 +299,8 @@ app.post(
     const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateTaxFNASchema.parse(body);
+    const denied = await requireClientAccess(c, validated.clientId);
+    if (denied) return denied;
     log.info('Creating Tax Planning FNA', { userId, clientId: validated.clientId });
     const fna = await service.createFNA('tax', userId, validated);
     log.success('Tax Planning FNA created', { userId, fnaId: fna.id });
@@ -271,6 +314,8 @@ app.put(
   asyncHandler(async (c) => {
     const _userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'tax', fnaId);
+    if (denied) return denied;
     const body = await c.req.json();
     const updates = UpdateTaxFNASchema.parse(body);
     const fna = await service.updateFNA('tax', fnaId, updates);
@@ -283,6 +328,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     const fnas = await service.getClientFNAs('tax', clientId);
     return c.json({ fnas });
   }),
@@ -294,6 +341,8 @@ app.post(
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'tax', fnaId);
+    if (denied) return denied;
     const fna = await service.publishFNA('tax', fnaId, adminUserId);
     return c.json({ fna });
   }),
@@ -310,6 +359,8 @@ app.post(
     const userId = c.get('userId') as string;
     const body = await c.req.json();
     const validated = CreateEstateFNASchema.parse(body);
+    const denied = await requireClientAccess(c, validated.clientId);
+    if (denied) return denied;
     log.info('Creating Estate Planning FNA', { userId, clientId: validated.clientId });
     const fna = await service.createFNA('estate', userId, validated);
     log.success('Estate Planning FNA created', { userId, fnaId: fna.id });
@@ -323,6 +374,8 @@ app.put(
   asyncHandler(async (c) => {
     const _userId = c.get('userId');
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'estate', fnaId);
+    if (denied) return denied;
     const body = await c.req.json();
     const updates = UpdateEstateFNASchema.parse(body);
     const fna = await service.updateFNA('estate', fnaId, updates);
@@ -335,6 +388,8 @@ app.get(
   requireAuth,
   asyncHandler(async (c) => {
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     const fnas = await service.getClientFNAs('estate', clientId);
     return c.json({ fnas });
   }),
@@ -346,6 +401,8 @@ app.post(
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const { id: fnaId } = FNAIdParamSchema.parse(c.req.param());
+    const denied = await requireFnaAccess(c, 'estate', fnaId);
+    if (denied) return denied;
     const fna = await service.publishFNA('estate', fnaId, adminUserId);
     return c.json({ fna });
   }),
@@ -375,6 +432,8 @@ app.post(
     const adminUserId = c.get('userId') as string;
     const body = await c.req.json();
     const { clientId, analysisType, data } = AIAnalysisRequestSchema.parse(body);
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
     log.info('AI Intelligence analysis', { adminUserId, clientId, analysisType });
     const analysis = await service.aiAnalyze(clientId, analysisType, data);
     return c.json(analysis);

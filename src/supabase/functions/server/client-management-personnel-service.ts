@@ -19,6 +19,12 @@ const getSupabase = () =>
 // Personnel Profile KV Store Helpers
 const PERSONNEL_PREFIX = 'personnel:profile:';
 
+function assertCanAssignRole(currentUserRole: UserRole, targetRole: UserRole): void {
+  if (targetRole === 'super_admin' && currentUserRole !== 'super_admin') {
+    throw new Error('Cannot assign super_admin role');
+  }
+}
+
 const PersonnelRepository = {
   async getProfile(id: string): Promise<PersonnelProfile | null> {
     const data = await kv.get(`${PERSONNEL_PREFIX}${id}`);
@@ -60,6 +66,7 @@ export const PersonnelService = {
     if (!['super_admin', 'admin'].includes(currentUserRole)) {
       throw new Error('Unauthorized: Only admins can invite users.');
     }
+    assertCanAssignRole(currentUserRole, payload.role);
 
     // 2. Build redirect URL — sends the invited user to the admin account setup page
     const redirectTo = siteUrl ? `${siteUrl}/auth/callback?type=invite` : undefined;
@@ -397,6 +404,7 @@ export const PersonnelService = {
     if (!['super_admin', 'admin'].includes(currentUserRole)) {
       throw new Error('Unauthorized: Only admins can create personnel accounts.');
     }
+    assertCanAssignRole(currentUserRole, payload.role);
 
     // 2. Generate temp password (user will set their own via recovery link)
     const tempPassword = (() => {

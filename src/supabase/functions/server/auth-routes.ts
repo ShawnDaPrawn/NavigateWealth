@@ -21,6 +21,8 @@ import {
   getBlockedIpAddressWarning,
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
+import { requireSuperAdmin } from './auth-mw.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const authRoutes = new Hono();
 const log = createModuleLogger('auth-routes');
@@ -639,7 +641,7 @@ authRoutes.get('/security-status', async (c) => {
  * Proper fix: all new signups now use email_confirm:true (see auth-signup.ts).
  * Searchable tag: // WORKAROUND: unconfirmed-email-login-fix
  */
-authRoutes.post('/confirm-email', async (c) => {
+authRoutes.post('/confirm-email', requireSuperAdmin, async (c) => {
   try {
     const { email } = await c.req.json();
 
@@ -681,6 +683,17 @@ authRoutes.post('/confirm-email', async (c) => {
     }
 
     log.info('Auto-confirmed email for legacy user:', email);
+    await AdminAuditService.record({
+      actorId: c.get('userId') as string,
+      actorRole: c.get('userRole') as string,
+      category: 'security',
+      action: 'legacy_email_confirmed',
+      summary: 'Confirmed a legacy user email after super-admin review',
+      severity: 'warning',
+      entityType: 'user',
+      entityId: user.id,
+      metadata: { email: user.email },
+    });
     return c.json({ confirmed: true }, 200);
   } catch (error) {
     log.error('confirm-email error:', error);

@@ -139,6 +139,10 @@ export async function verifyAccessCode(
     }
 
     log.success(`Access code verified for signer ${signerId}`);
+    await kv.set(`esign:signer:${signerId}`, {
+      ...signer,
+      access_code_verified_at: new Date().toISOString(),
+    });
     return { valid: true };
   } catch (error) {
     log.error('Verify access code exception:', error);
@@ -162,6 +166,7 @@ export async function markOTPVerified(
     const updated = {
       ...signer,
       otp_verified: true,
+      otp_verified_at: new Date().toISOString(),
       status: signer.status === 'pending' ? 'sent' : signer.status,
     };
 

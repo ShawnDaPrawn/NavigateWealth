@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { FileText, Loader2, Search, Sparkles, X, ChevronRight, Check, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -249,8 +250,9 @@ export function TemplatePickerDialog({
                 <div
                   className="prose prose-xs max-w-none text-gray-600 text-xs leading-relaxed max-h-[300px] overflow-y-auto"
                   dangerouslySetInnerHTML={{
-                    __html:
+                    __html: DOMPurify.sanitize(
                       previewTemplate.body || '<p class="text-gray-400 italic">Empty template</p>',
+                    ),
                   }}
                 />
               </div>

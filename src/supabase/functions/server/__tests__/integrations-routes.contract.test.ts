@@ -79,6 +79,15 @@ vi.mock('../auth-mw.ts', () => ({
     c.set('userRole', 'admin');
     await next();
   },
+  requireAdmin: async (c: any, next: any) => {
+    if (!c.req.header('Authorization')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    c.set('user', { id: 'test-user', email: 'admin@test.co' });
+    c.set('userId', 'test-user');
+    c.set('userRole', 'admin');
+    await next();
+  },
 }));
 
 // ── Supabase client stub ─────────────────────────────────────────────────────
@@ -316,7 +325,9 @@ describe('integrations.tsx route contracts', () => {
 
   describe('GET /history', () => {
     it('returns 400 when providerId or categoryId is missing', async () => {
-      const res = await integrationsApp.request('/history?providerId=p1');
+      const res = await integrationsApp.request('/history?providerId=p1', {
+        headers: { Authorization: 'Bearer test-token' },
+      });
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ error: expect.stringContaining('Missing') });
     });
@@ -324,7 +335,9 @@ describe('integrations.tsx route contracts', () => {
     it('returns upload history sorted by uploadedAt descending', async () => {
       kvStore.set('history:p1:risk:older', { id: 'older', uploadedAt: '2026-01-01T00:00:00.000Z' });
       kvStore.set('history:p1:risk:newer', { id: 'newer', uploadedAt: '2026-03-01T00:00:00.000Z' });
-      const res = await integrationsApp.request('/history?providerId=p1&categoryId=risk');
+      const res = await integrationsApp.request('/history?providerId=p1&categoryId=risk', {
+        headers: { Authorization: 'Bearer test-token' },
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Array<{ id: string }>;
       expect(body.map((h) => h.id)).toEqual(['newer', 'older']);

@@ -13,7 +13,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireSuperAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
@@ -181,7 +181,7 @@ envelopesRoutes.get('/envelopes', async (c) => {
  * DELETE /envelopes
  * Clear all envelopes and related data (Admin only)
  */
-envelopesRoutes.delete('/envelopes', async (c) => {
+envelopesRoutes.delete('/envelopes', requireSuperAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);

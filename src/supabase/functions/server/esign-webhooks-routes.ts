@@ -18,6 +18,7 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { logAuditEvent } from './esign-services.ts';
 import type { SenderEvent } from './esign-notification-prefs.ts';
+import { assertPublicHttpsUrl } from './ssrf-guard.ts';
 import {
   createSubscription as createWebhookSub,
   listSubscriptionsByFirm as listWebhookSubs,
@@ -44,6 +45,11 @@ const KNOWN_WEBHOOK_EVENTS: SenderEvent[] = [
   'envelope.recalled',
 ];
 
+const withoutSecret = <T extends { secret?: string }>(subscription: T): Omit<T, 'secret'> => {
+  const { secret: _secret, ...safe } = subscription;
+  return safe;
+};
+
 /** POST /webhooks — create a subscription. */
 webhooksRoutes.post('/webhooks', rateLimit('SENDER_MUTATE'), async (c) => {
   try {
@@ -55,8 +61,13 @@ webhooksRoutes.post('/webhooks', rateLimit('SENDER_MUTATE'), async (c) => {
       description?: string;
     };
 
-    if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+    if (!url || typeof url !== 'string') {
       return c.json({ error: 'A valid https URL is required' }, 400);
+    }
+    try {
+      assertPublicHttpsUrl(url);
+    } catch {
+      return c.json({ error: 'A public https URL is required' }, 400);
     }
     if (!Array.isArray(events) || events.length === 0) {
       return c.json({ error: 'At least one event subscription is required' }, 400);
@@ -105,7 +116,7 @@ webhooksRoutes.get('/webhooks', async (c) => {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
     const subs = await listWebhookSubs(firmId);
-    return c.json({ subscriptions: subs });
+    return c.json({ subscriptions: subs.map(withoutSecret) });
   } catch (error: unknown) {
     log.error('List webhooks error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
@@ -136,7 +147,13 @@ webhooksRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
       active: boolean;
       description: string;
     }> = {};
-    if (typeof body.url === 'string' && /^https?:\/\//i.test(body.url)) patch.url = body.url;
+    if (typeof body.url === 'string') {
+      try {
+        patch.url = assertPublicHttpsUrl(body.url).toString();
+      } catch {
+        return c.json({ error: 'A public https URL is required' }, 400);
+      }
+    }
     if (Array.isArray(body.events)) {
       patch.events = body.events.filter(
         (e: unknown): e is SenderEvent =>
@@ -154,7 +171,7 @@ webhooksRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
       action: 'webhook_subscription_updated',
       metadata: { id, patch },
     });
-    return c.json({ subscription: updated });
+    return c.json({ subscription: updated ? withoutSecret(updated) : null });
   } catch (error: unknown) {
     log.error('Update webhook error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;

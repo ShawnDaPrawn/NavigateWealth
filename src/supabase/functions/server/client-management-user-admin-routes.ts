@@ -9,7 +9,7 @@ import {
 } from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
 import { createServiceClient } from './client-management-utils.ts';
-import { requireAdmin } from './auth-mw.ts';
+import { requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-management-user-admin');
@@ -163,6 +163,14 @@ app.get('/all-users', requireAdmin, async (c) => {
 app.put(
   '/users/:userId/metadata',
   requireAdmin,
+  async (c, next) => {
+    const body = await c.req.json().catch(() => ({}));
+    const requestedRole = body?.metadata?.role;
+    if (requestedRole === 'super_admin' || requestedRole === 'super-admin') {
+      return requireSuperAdmin(c, next);
+    }
+    await next();
+  },
   asyncHandler(async (c) => {
     const { userId } = c.req.param();
     if (!userId) {

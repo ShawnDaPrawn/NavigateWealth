@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import {
   FileText,
   Plus,
@@ -441,7 +442,9 @@ export function ContentTemplates() {
                   <div
                     className="prose prose-xs max-w-none text-xs text-gray-600 leading-relaxed"
                     dangerouslySetInnerHTML={{
-                      __html: template.body || '<p class="text-gray-400 italic">Empty template</p>',
+                      __html: DOMPurify.sanitize(
+                        template.body || '<p class="text-gray-400 italic">Empty template</p>',
+                      ),
                     }}
                   />
                 </div>

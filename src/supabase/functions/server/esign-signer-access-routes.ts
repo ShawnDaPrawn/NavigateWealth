@@ -13,6 +13,11 @@ import { createOTPEmail } from './esign-email-templates.ts';
 import { getConsentByVersion } from './esign-consent-registry.ts';
 import { getFirmBranding, toPublicBranding } from './esign-branding-service.ts';
 import { sendEmail } from './email-service.ts';
+import {
+  assertActiveSigningState,
+  getMissingSignerFactors,
+  isSignerTurn,
+} from './esign-signer-guards.ts';
 
 const log = createModuleLogger('esign-signer-access-routes');
 
@@ -34,6 +39,27 @@ app.get('/sign-by-token/:token', async (c) => {
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
+    }
+
+    try {
+      assertActiveSigningState(envelope, signer);
+    } catch (stateError) {
+      return c.json(
+        { error: stateError instanceof Error ? stateError.message : 'Unavailable' },
+        410,
+      );
+    }
+    const missingFactors = getMissingSignerFactors(envelope, signer);
+    if (missingFactors.length > 0) {
+      return c.json({
+        challenge: {
+          envelope_id: envelope.id,
+          envelope_title: envelope.title,
+          signer_id: signer.id,
+          signer_email: signer.email,
+          missing_factors: missingFactors,
+        },
+      });
     }
 
     // Get document URL
@@ -131,11 +157,45 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       return c.json({ error: 'Envelope not found' }, 404);
     }
 
-    // Check if envelope is expired
-    const now = new Date();
-    const expiresAt = new Date(envelope.expires_at);
-    if (now > expiresAt) {
-      return c.json({ error: 'Document has expired' }, 410);
+    try {
+      assertActiveSigningState(envelope, signer);
+    } catch (stateError) {
+      return c.json(
+        { error: stateError instanceof Error ? stateError.message : 'Document unavailable' },
+        410,
+      );
+    }
+
+    const allSigners = envelope.signers || [];
+    const sortedAllSigners = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const signerOrder = signer.order || 1;
+    const isTurn = isSignerTurn(envelope, signer);
+    const signersSummary = sortedAllSigners.map((s) => ({
+      order: s.order,
+      name: s.name,
+      role: s.role,
+      status: s.status,
+      is_current: s.id === signer.id,
+    }));
+    const missingFactors = getMissingSignerFactors(envelope, signer);
+    if (missingFactors.length > 0) {
+      return c.json({
+        envelope_id: envelope.id,
+        envelope_title: envelope.title,
+        envelope_status: envelope.status,
+        signer_id: signer.id,
+        signer_name: signer.name,
+        signer_email: signer.email,
+        signer_status: signer.status,
+        signer_order: signerOrder,
+        otp_required: signer.requires_otp,
+        otp_verified: signer.otp_verified,
+        access_code_required: !!signer.access_code,
+        missing_factors: missingFactors,
+        is_turn: isTurn,
+        all_signers: signersSummary,
+        challenge_required: true,
+      });
     }
 
     // Get document URL
@@ -150,29 +210,6 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
     const signerFields = allFields2.filter((f: FieldRecord) => f.signer_id === signer.id);
 
     // Determine if it's this signer's turn based on signing mode
-    const allSigners = envelope.signers || [];
-    const sortedAllSigners = [...allSigners].sort((a, b) => (a.order || 0) - (b.order || 0));
-    const signerOrder = signer.order || 1;
-    const signingMode = envelope.signing_mode || 'sequential';
-
-    // In parallel mode, all signers can sign at any time.
-    // In sequential mode, a signer can only sign when all lower-order signers have signed.
-    const isTurn =
-      signingMode === 'parallel'
-        ? true
-        : sortedAllSigners
-            .filter((s) => (s.order || 0) < signerOrder)
-            .every((s) => s.status === 'signed');
-
-    // Build a summary of all signers (non-sensitive) for the waiting UI
-    const signersSummary = sortedAllSigners.map((s) => ({
-      order: s.order,
-      name: s.name,
-      role: s.role,
-      status: s.status,
-      is_current: s.id === signer.id,
-    }));
-
     // ── Look up the signer's saved signature profile (Phase 1 — signature reuse).
     // Keyed by lowercased email so a returning signer sees their adopted
     // signature pre-loaded across envelopes, no matter which firm sent it.

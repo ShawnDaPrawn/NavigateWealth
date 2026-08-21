@@ -9,16 +9,13 @@ import userAdmin from './client-management-user-admin-routes.ts';
 import profileCrud from './client-management-profile-crud-routes.ts';
 import documents from './client-management-documents-routes.ts';
 import status from './client-management-status-routes.ts';
+import { requireAuth } from './auth-mw.ts';
 
-// NOTE: a blanket `requireAuth` cannot be applied at this parent yet — the
-// client self-service frontend (profileService.ts) still calls
-// /profile/personal-info with the PUBLIC anon key rather than the user's
-// session token, so gating here would break profile loading. Closing this
-// hole requires the frontend auth-token migration (see SECURITY-AUDIT §9).
-// In the meantime, defence-in-depth is applied at the handler level:
-//  - profile writes strip privileged fields for non-admins (profile-crud)
-//  - user-admin routes self-gate with requireAdmin (api-client callers).
 const router = new Hono();
+
+// Every profile operation touches Auth Admin, service-role KV, storage, or
+// account state. Frontend callers must therefore send a real session JWT.
+router.use('*', requireAuth);
 
 router.route('/', superAdmin);
 router.route('/', userAdmin);

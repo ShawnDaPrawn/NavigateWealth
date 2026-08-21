@@ -11,6 +11,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { generateId, generateSlug } from './publications-route-helpers.ts';
 import type { Article, ArticleCategory, ArticleType } from './publications-route-helpers.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const log = createModuleLogger('publications-taxonomy-routes');
 
@@ -66,7 +67,7 @@ taxonomyRoutes.get('/categories/:id', async (c) => {
   }
 });
 
-taxonomyRoutes.post('/categories', async (c) => {
+taxonomyRoutes.post('/categories', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, icon_key, sort_order, is_active = true } = body;
@@ -100,7 +101,7 @@ taxonomyRoutes.post('/categories', async (c) => {
   }
 });
 
-taxonomyRoutes.put('/categories/:id', async (c) => {
+taxonomyRoutes.put('/categories/:id', requireAdmin, async (c) => {
   try {
     const id = c.req.param('id')!;
     const body = await c.req.json();
@@ -134,7 +135,7 @@ taxonomyRoutes.put('/categories/:id', async (c) => {
   }
 });
 
-taxonomyRoutes.delete('/categories/:id', async (c) => {
+taxonomyRoutes.delete('/categories/:id', requireAdmin, async (c) => {
   try {
     const id = c.req.param('id')!;
     await kv.del(`article_category:${id}`);
@@ -175,7 +176,7 @@ taxonomyRoutes.get('/types/:id', async (c) => {
   }
 });
 
-taxonomyRoutes.post('/types', async (c) => {
+taxonomyRoutes.post('/types', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, sort_order, is_active = true } = body;
@@ -208,7 +209,7 @@ taxonomyRoutes.post('/types', async (c) => {
   }
 });
 
-taxonomyRoutes.put('/types/:id', async (c) => {
+taxonomyRoutes.put('/types/:id', requireAdmin, async (c) => {
   try {
     const id = c.req.param('id')!;
     const body = await c.req.json();
@@ -238,7 +239,7 @@ taxonomyRoutes.put('/types/:id', async (c) => {
   }
 });
 
-taxonomyRoutes.delete('/types/:id', async (c) => {
+taxonomyRoutes.delete('/types/:id', requireAdmin, async (c) => {
   try {
     const id = c.req.param('id')!;
     await kv.del(`article_type:${id}`);

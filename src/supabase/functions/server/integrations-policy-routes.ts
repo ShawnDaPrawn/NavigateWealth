@@ -23,7 +23,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';
 import {
   CreatePolicySchema,
@@ -43,6 +43,7 @@ import type {
 import { recalculateClientTotals } from './integrations-derive.ts';
 import { isValidDate } from './integrations-field-utils.ts';
 import { POLICY_DOC_BUCKET } from './integrations-document-storage.ts';
+import { requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-policy');
@@ -80,6 +81,8 @@ app.get('/policies', requireAuth, async (c) => {
     if (!clientId) {
       return c.json({ error: 'Missing clientId' }, 400);
     }
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const policiesKey = `policies:client:${clientId}`;
     let policies = (await kv.get(policiesKey)) || [];
@@ -129,6 +132,8 @@ app.post('/policies/archive', requireAuth, async (c) => {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { id, clientId, reason } = parsed.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const policiesKey = `policies:client:${clientId}`;
     const policies = (await kv.get(policiesKey)) || [];
@@ -166,6 +171,8 @@ app.post('/policies/reinstate', requireAuth, async (c) => {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { id, clientId } = parsed.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const policiesKey = `policies:client:${clientId}`;
     const policies = (await kv.get(policiesKey)) || [];
@@ -203,6 +210,8 @@ app.post('/policies', requireAuth, async (c) => {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { clientId, categoryId, providerId, providerName, data } = parsed.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const provider = await kv.get(`provider:${providerId}`);
     if (!provider) {
@@ -246,6 +255,8 @@ app.put('/policies', requireAuth, async (c) => {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { id, clientId, categoryId, providerId, providerName, data } = parsed.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     if (!id || !clientId) {
       return c.json({ error: 'Missing policy id or clientId' }, 400);
@@ -297,6 +308,8 @@ app.delete('/policies', requireAuth, async (c) => {
     if (!id || !clientId) {
       return c.json({ error: 'Missing policy id or clientId' }, 400);
     }
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const policiesKey = `policies:client:${clientId}`;
     let policies = (await kv.get(policiesKey)) || [];
@@ -349,6 +362,8 @@ app.post('/recalculate-totals', requireAuth, async (c) => {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
     const { clientId } = parsed.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     await recalculateClientTotals(clientId);
 
@@ -360,7 +375,7 @@ app.post('/recalculate-totals', requireAuth, async (c) => {
 });
 
 // GET /dashboard-stats
-app.get('/dashboard-stats', requireAuth, async (c) => {
+app.get('/dashboard-stats', requireAdmin, async (c) => {
   try {
     const allPoliciesKeys = await getByPrefix('policies:client:');
     let totalActivePolicies = 0;
@@ -422,7 +437,7 @@ app.get('/dashboard-stats', requireAuth, async (c) => {
 });
 
 // GET /policy-renewals
-app.get('/policy-renewals', requireAuth, async (c) => {
+app.get('/policy-renewals', requireAdmin, async (c) => {
   try {
     log.info('Fetching policy renewal data for calendar');
 

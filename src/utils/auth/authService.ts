@@ -107,7 +107,8 @@ export async function signIn(email: string, password: string): Promise<SignInRes
   try {
     logger.info('Starting sign in process...', { email });
 
-    // Check rate limiting and validate on server (fails open if server unavailable)
+    // Check rate limiting and validate on server. Authentication is blocked if
+    // the security service cannot make a trustworthy decision.
     const validation = await validateLoginAttempt(email);
 
     if (!validation.allowed) {
@@ -144,34 +145,6 @@ export async function signIn(email: string, password: string): Promise<SignInRes
               'rate_limited',
               error,
             );
-          }
-
-          // WORKAROUND: unconfirmed-email-login-fix
-          // Legacy users created with email_confirm:false get "Invalid login credentials"
-          // from Supabase. Attempt to auto-confirm their email server-side and retry once.
-          if (
-            error.status === 400 &&
-            error.message.includes('Invalid login credentials') &&
-            attempt === 0
-          ) {
-            logger.info('Invalid credentials — checking if email needs confirmation...');
-            try {
-              const confirmRes = await fetch(`${API_BASE}/auth/confirm-email`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${publicAnonKey}`,
-                },
-                body: JSON.stringify({ email }),
-              });
-              const confirmData = await confirmRes.json();
-              if (confirmData.confirmed && !confirmData.alreadyConfirmed) {
-                logger.info('Email auto-confirmed, retrying sign in...');
-                continue; // retry the sign-in loop
-              }
-            } catch (confirmErr) {
-              console.warn('⚠️ Email confirmation check failed (non-blocking):', confirmErr);
-            }
           }
 
           await logLoginFailure(email, error.message);

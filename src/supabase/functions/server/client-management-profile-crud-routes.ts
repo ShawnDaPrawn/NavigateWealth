@@ -15,9 +15,18 @@ import {
   extractUserIdFromProfileKey,
 } from './profile-application-sync.ts';
 import { deepSanitize } from './client-management-utils.ts';
+import { isPlatformAdminRole, requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-management-profile-crud');
+
+async function requireProfileKeyAccess(c: Parameters<typeof requireClientAccess>[0], key: string) {
+  const userId = extractUserIdFromProfileKey(key);
+  if (!userId) {
+    return c.json({ error: 'Invalid profile key', code: 'INVALID_PROFILE_KEY' }, 400);
+  }
+  return requireClientAccess(c, userId);
+}
 
 /**
  * GET /personal-info
@@ -29,20 +38,25 @@ app.get(
     const query = c.req.query();
 
     // Validate query parameters
-    const { key, email } = PersonalInfoQuerySchema.parse(query);
+    const { key } = PersonalInfoQuerySchema.parse(query);
 
-    log.info('Fetching profile', { key, email });
+    const accessDenied = await requireProfileKeyAccess(c, key);
+    if (accessDenied) return accessDenied;
+
+    log.info('Fetching profile', { key });
 
     // Get profile from KV store
     const profile = await kv.get(key);
 
     // Check if super admin by email (durable allowlist + env override)
-    const isSuperAdmin = isSuperAdminEmail(email);
+    const isSuperAdmin =
+      c.get('userId') === extractUserIdFromProfileKey(key) &&
+      (c.get('userRole') === 'super_admin' || c.get('userRole') === 'super-admin');
 
     // If profile exists, ensure super admin has correct role
     if (profile) {
       if (isSuperAdmin && profile.role !== 'super_admin') {
-        log.info('Upgrading super admin role', { email });
+        log.info('Upgrading authenticated super admin profile role');
         profile.role = 'super_admin';
         profile.accountStatus = 'approved';
         profile.adviserAssigned = true;
@@ -51,7 +65,6 @@ app.get(
 
       log.success('Profile retrieved', {
         role: profile.role,
-        email,
         isSuperAdmin,
       });
 
@@ -110,9 +123,8 @@ app.post(
       }
       const { key, data } = validated;
 
-      if (!key || !key.includes('user_profile')) {
-        log.warn('Suspicious Key Format', { key });
-      }
+      const accessDenied = await requireProfileKeyAccess(c, key);
+      if (accessDenied) return accessDenied;
 
       const incomingData = data as Record<string, unknown>;
 
@@ -122,9 +134,7 @@ app.post(
       // Strip them unless the caller is an admin. (incomingData is the same
       // object reference spread into finalProfile below, so this is effective
       // for both the full-replacement and partial-patch paths.)
-      const callerRole = c.get('userRole');
-      const callerIsAdmin =
-        callerRole === 'admin' || callerRole === 'super_admin' || callerRole === 'super-admin';
+      const callerIsAdmin = isPlatformAdminRole(c.get('userRole'));
       if (!callerIsAdmin) {
         for (const privileged of ['role', 'accountStatus', 'adviserAssigned', 'suspended']) {
           delete incomingData[privileged];
@@ -250,6 +260,15 @@ app.put(
     const validated = AlternativeProfileUpdateSchema.parse(body);
     const { userId, ...updates } = validated;
 
+    const accessDenied = await requireClientAccess(c, userId);
+    if (accessDenied) return accessDenied;
+
+    if (!isPlatformAdminRole(c.get('userRole'))) {
+      for (const privileged of ['role', 'accountStatus', 'adviserAssigned']) {
+        delete (updates as Record<string, unknown>)[privileged];
+      }
+    }
+
     const key = `user_profile:${userId}:personal_info`;
 
     log.info('Updating profile (PUT)', { key });
@@ -298,6 +317,18 @@ app.post(
 
     // Validate input
     const { userId, email, displayName } = CreateDefaultProfileSchema.parse(body);
+
+    const accessDenied = await requireClientAccess(c, userId);
+    if (accessDenied) return accessDenied;
+
+    const callerIsAdmin = isPlatformAdminRole(c.get('userRole'));
+    const authenticatedEmail = c.get('userEmail');
+    if (
+      !callerIsAdmin &&
+      (!authenticatedEmail || authenticatedEmail.toLowerCase() !== email.toLowerCase())
+    ) {
+      return c.json({ error: 'Forbidden: email does not match the authenticated user' }, 403);
+    }
 
     const key = `user_profile:${userId}:personal_info`;
 

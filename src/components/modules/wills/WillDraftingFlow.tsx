@@ -277,19 +277,24 @@ export function WillDraftingFlow({ clientDetails, onComplete, onBack }: WillDraf
         generatedAt: new Date().toISOString(),
       };
 
-      // Use a deterministic client ID from the email or generate one
-      const clientId = personalInfo.email.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-
-      const response = await fetch(`${API_BASE}/estate-planning-fna/wills/create`, {
+      // This public lead-generation flow must not write directly into an
+      // authenticated client's estate records. Store it as a quote request;
+      // advisers can move reviewed data into the protected FNA workflow.
+      const response = await fetch(`${API_BASE}/quote-request/submit`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${publicAnonKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          clientId,
-          type: 'last_will',
-          data: willData,
+          firstName: personalInfo.firstName,
+          lastName: personalInfo.surname,
+          email: personalInfo.email,
+          phone: personalInfo.cellphone,
+          productName: 'Last Will & Testament',
+          service: 'estate-planning',
+          stage: 'full',
+          productDetails: { willDraft: willData },
         }),
       });
 

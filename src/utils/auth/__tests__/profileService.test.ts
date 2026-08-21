@@ -130,7 +130,7 @@ describe('createDefaultProfile', () => {
       ok: true,
       json: async () => ({ success: true }),
     });
-    await createDefaultProfile('u-001', 'user@test.com', 'John');
+    await createDefaultProfile('u-001', 'user@test.com', 'John', 'access-token');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/profile/create-default'),
       expect.objectContaining({ method: 'POST' }),
@@ -146,7 +146,7 @@ describe('createDefaultProfile', () => {
       ok: true,
       json: async () => ({ success: true }),
     });
-    await createDefaultProfile('u-001', 'user@test.com');
+    await createDefaultProfile('u-001', 'user@test.com', '', 'access-token');
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.displayName).toBe('');
   });
@@ -156,12 +156,16 @@ describe('createDefaultProfile', () => {
       ok: false,
       text: async () => 'Internal Server Error',
     });
-    await expect(createDefaultProfile('u-001', 'user@test.com')).resolves.toBeUndefined();
+    await expect(
+      createDefaultProfile('u-001', 'user@test.com', '', 'access-token'),
+    ).resolves.toBeUndefined();
   });
 
   it('throws when fetch itself throws', async () => {
     mockFetch.mockRejectedValue(new Error('Network error'));
-    await expect(createDefaultProfile('u-001', 'user@test.com')).rejects.toThrow();
+    await expect(
+      createDefaultProfile('u-001', 'user@test.com', '', 'access-token'),
+    ).rejects.toThrow();
   });
 
   it('logs error when response is HTML error page', async () => {
@@ -169,7 +173,9 @@ describe('createDefaultProfile', () => {
       ok: false,
       text: async () => '<!DOCTYPE html><html><body>Error</body></html>',
     });
-    await expect(createDefaultProfile('u-001', 'user@test.com')).resolves.toBeUndefined();
+    await expect(
+      createDefaultProfile('u-001', 'user@test.com', '', 'access-token'),
+    ).resolves.toBeUndefined();
   });
 });
 
@@ -183,7 +189,7 @@ describe('updateUserProfile', () => {
       ok: true,
       json: async () => ({ success: true }),
     });
-    await updateUserProfile('u-001', { firstName: 'John' } as never);
+    await updateUserProfile('u-001', { firstName: 'John' } as never, 'access-token');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/profile/personal-info'),
       expect.objectContaining({ method: 'POST' }),
@@ -198,11 +204,15 @@ describe('updateUserProfile', () => {
       ok: false,
       status: 500,
     });
-    await expect(updateUserProfile('u-001', {})).rejects.toThrow('Failed to update profile');
+    await expect(updateUserProfile('u-001', {}, 'access-token')).rejects.toThrow(
+      'Failed to update profile',
+    );
   });
 
   it('throws when fetch itself throws', async () => {
     mockFetch.mockRejectedValue(new Error('Connection refused'));
-    await expect(updateUserProfile('u-001', {})).rejects.toThrow('Connection refused');
+    await expect(updateUserProfile('u-001', {}, 'access-token')).rejects.toThrow(
+      'Connection refused',
+    );
   });
 });

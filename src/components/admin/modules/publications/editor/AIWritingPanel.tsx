@@ -19,6 +19,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import type { Editor } from '@tiptap/react';
 import {
   Sparkles,
@@ -709,7 +710,7 @@ export function AIWritingPanel({
               <div className="px-3 py-3">
                 <div
                   className="text-xs text-gray-700 leading-relaxed prose prose-xs max-w-none max-h-64 overflow-y-auto"
-                  dangerouslySetInnerHTML={{ __html: result.result }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(result.result) }}
                 />
               </div>
 
