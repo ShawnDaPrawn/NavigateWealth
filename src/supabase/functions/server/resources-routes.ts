@@ -675,6 +675,9 @@ app.post(
     if (!files || !Array.isArray(files) || files.length === 0) {
       return c.json({ error: 'Files array is required' }, 400);
     }
+    if (files.length > 20) {
+      return c.json({ error: 'A maximum of 20 files is allowed' }, 400);
+    }
 
     if (!password || password.length < 4) {
       return c.json({ error: 'Password is required (min 4 chars)' }, 400);

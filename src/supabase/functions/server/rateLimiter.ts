@@ -3,8 +3,12 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const log = createModuleLogger('rate-limiter');
+
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 export interface RateLimitConfig {
   maxAttempts: number;
@@ -53,104 +57,41 @@ export async function checkRateLimit(
   action: string,
   config: RateLimitConfig,
 ): Promise<RateLimitResult> {
-  const key = `ratelimit:${action}:${identifier}`;
-  const blockKey = `ratelimit:block:${action}:${identifier}`;
   const now = Date.now();
 
   try {
-    // Check if identifier is currently blocked
-    const blockData = await kv.get(blockKey);
-    if (blockData && blockData.blockedUntil > now) {
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: new Date(blockData.blockedUntil),
-        blocked: true,
-        reason: `Too many attempts. Please try again after ${new Date(blockData.blockedUntil).toLocaleTimeString()}.`,
-      };
-    }
-
-    // Get current attempt data
-    const attemptData = await kv.get(key);
-
-    if (!attemptData) {
-      // First attempt - initialize
-      await kv.set(key, {
-        attempts: 1,
-        firstAttempt: now,
-        lastAttempt: now,
-      });
-
-      return {
-        allowed: true,
-        remaining: config.maxAttempts - 1,
-        resetAt: new Date(now + config.windowMs),
-        blocked: false,
-      };
-    }
-
-    // Check if window has expired
-    const windowExpired = now - attemptData.firstAttempt > config.windowMs;
-
-    if (windowExpired) {
-      // Reset counter - window has expired
-      await kv.set(key, {
-        attempts: 1,
-        firstAttempt: now,
-        lastAttempt: now,
-      });
-
-      return {
-        allowed: true,
-        remaining: config.maxAttempts - 1,
-        resetAt: new Date(now + config.windowMs),
-        blocked: false,
-      };
-    }
-
-    // Increment attempt counter
-    const newAttempts = attemptData.attempts + 1;
-    await kv.set(key, {
-      attempts: newAttempts,
-      firstAttempt: attemptData.firstAttempt,
-      lastAttempt: now,
+    const { data, error } = await getSupabase().rpc('check_auth_rate_limit_91ed8379', {
+      p_identifier: identifier,
+      p_action: action,
+      p_max_attempts: config.maxAttempts,
+      p_window_ms: config.windowMs,
+      p_block_duration_ms: config.blockDurationMs,
     });
+    if (error || !data) throw error || new Error('Empty rate-limit decision');
 
-    // Check if limit exceeded
-    if (newAttempts > config.maxAttempts) {
-      // Block the identifier
-      const blockedUntil = now + config.blockDurationMs;
-      await kv.set(blockKey, {
-        blockedAt: now,
-        blockedUntil,
-        attempts: newAttempts,
-      });
-
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: new Date(blockedUntil),
-        blocked: true,
-        reason: `Too many attempts. Account temporarily locked. Please try again after ${new Date(blockedUntil).toLocaleTimeString()}.`,
-      };
-    }
-
-    // Still within limits
-    const remaining = config.maxAttempts - newAttempts;
+    const decision = data as {
+      allowed: boolean;
+      remaining: number;
+      resetAt: number;
+      blocked: boolean;
+    };
     return {
-      allowed: true,
-      remaining,
-      resetAt: new Date(attemptData.firstAttempt + config.windowMs),
-      blocked: false,
+      allowed: decision.allowed,
+      remaining: decision.remaining,
+      resetAt: new Date(decision.resetAt),
+      blocked: decision.blocked,
+      reason: decision.blocked
+        ? `Too many attempts. Account temporarily locked. Please try again after ${new Date(decision.resetAt).toLocaleTimeString()}.`
+        : undefined,
     };
   } catch (error) {
-    log.error('Rate limit check failed (failing open)', error);
-    // Fail open - allow request if rate limiting fails
+    log.error('Rate limit check failed (failing closed)', error);
     return {
-      allowed: true,
-      remaining: config.maxAttempts,
+      allowed: false,
+      remaining: 0,
       resetAt: new Date(now + config.windowMs),
-      blocked: false,
+      blocked: true,
+      reason: 'Unable to validate request rate. Please try again later.',
     };
   }
 }
@@ -228,10 +169,11 @@ export async function getRateLimitStatus(
   } catch (error) {
     log.error('Rate limit status check failed', error);
     return {
-      allowed: true,
-      remaining: config.maxAttempts,
+      allowed: false,
+      remaining: 0,
       resetAt: new Date(now + config.windowMs),
-      blocked: false,
+      blocked: true,
+      reason: 'Unable to validate request rate. Please try again later.',
     };
   }
 }

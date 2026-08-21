@@ -158,6 +158,7 @@ vi.mock('../auth-mw.ts', () => ({
     }
     c.set('user', { id: 'super-admin-id', email: MOCK_SUPER_ADMIN_EMAIL });
     c.set('userId', 'super-admin-id');
+    c.set('userRole', 'super_admin');
     await next();
   },
   requireAuth: async (c: any, next: any) => {
@@ -170,9 +171,6 @@ vi.mock('../auth-mw.ts', () => ({
     await next();
   },
   requireAdmin: async (c: any, next: any) => {
-    if (!c.req.header('Authorization')) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
     c.set('user', { id: 'admin-id', email: 'admin@test.co' });
     c.set('userId', 'admin-id');
     c.set('userRole', 'admin');
@@ -225,7 +223,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
   // ── GET / (health check) ──────────────────────────────────────────────────
   describe('GET /', () => {
     it('returns 200 with { status: "ok", service: "Profile Routes" }', async () => {
-      const res = await profileRouter.request('/');
+      const res = await profileRouter.request('/', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(body.status).toBe('ok');
@@ -237,7 +235,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
   // ── GET /super-admin ──────────────────────────────────────────────────────
   describe('GET /super-admin', () => {
     it('returns 200 with { success, profile } when super admin user exists', async () => {
-      const res = await profileRouter.request('/super-admin');
+      const res = await profileRouter.request('/super-admin', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(body.success).toBe(true);
@@ -245,7 +243,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
     });
 
     it('persists default profile to KV on first call', async () => {
-      await profileRouter.request('/super-admin');
+      await profileRouter.request('/super-admin', { headers: AUTH });
       const stored = kvStore.get(`user_profile:super-admin-id:personal_info`);
       expect(stored).toBeTruthy();
     });
@@ -257,7 +255,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/super-admin', {
         method: 'PUT',
         body: JSON.stringify({}),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(400);
     });
@@ -266,7 +264,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/super-admin', {
         method: 'PUT',
         body: JSON.stringify({ firstName: 'Shawn' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
@@ -277,7 +275,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
 
   // ── POST /super-admin/enable-personal-client ────────────────────────────────
   describe('POST /super-admin/enable-personal-client', () => {
-    it('returns 401 without Authorization header', async () => {
+    it('returns 401 without an Authorization header', async () => {
       const res = await profileRouter.request('/super-admin/enable-personal-client', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -344,18 +342,22 @@ describe('client-management-profile-routes.ts route contracts', () => {
   // ── GET /personal-info ─────────────────────────────────────────────────────
   describe('GET /personal-info', () => {
     it('returns 400 when key query param is missing', async () => {
-      const res = await profileRouter.request('/personal-info');
+      const res = await profileRouter.request('/personal-info', { headers: AUTH });
       expect(res.status).toBe(400);
     });
 
     it('returns 404 when profile does not exist', async () => {
-      const res = await profileRouter.request(`/personal-info?key=${PROFILE_KEY}`);
+      const res = await profileRouter.request(`/personal-info?key=${PROFILE_KEY}`, {
+        headers: AUTH,
+      });
       expect(res.status).toBe(404);
     });
 
     it('returns 200 with { success, data } when profile exists', async () => {
       kvStore.set(PROFILE_KEY, { userId: TEST_UUID, email: 'test@test.co', role: 'client' });
-      const res = await profileRouter.request(`/personal-info?key=${PROFILE_KEY}`);
+      const res = await profileRouter.request(`/personal-info?key=${PROFILE_KEY}`, {
+        headers: AUTH,
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(body.success).toBe(true);
@@ -369,7 +371,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/personal-info', {
         method: 'POST',
         body: JSON.stringify({ data: {} }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(400);
     });
@@ -378,7 +380,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/personal-info', {
         method: 'POST',
         body: JSON.stringify({ key: PROFILE_KEY, data: { userId: TEST_UUID, firstName: 'John' } }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
@@ -392,7 +394,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/', {
         method: 'PUT',
         body: JSON.stringify({ userId: TEST_UUID }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(400);
     });
@@ -401,7 +403,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/', {
         method: 'PUT',
         body: JSON.stringify({ userId: TEST_UUID, firstName: 'Jane' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
@@ -416,7 +418,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/create-default', {
         method: 'POST',
         body: JSON.stringify({ displayName: 'Test User' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(400);
     });
@@ -429,7 +431,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
           email: 'test@test.co',
           displayName: 'Test User',
         }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
@@ -442,7 +444,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/create-default', {
         method: 'POST',
         body: JSON.stringify({ userId: TEST_UUID, email: 'test@test.co' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
@@ -458,6 +460,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/upload', {
         method: 'POST',
         body: form,
+        headers: AUTH,
       });
       expect(res.status).toBe(400);
       const body = (await res.json()) as Record<string, unknown>;
@@ -471,7 +474,7 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await profileRouter.request('/send-documents', {
         method: 'POST',
         body: JSON.stringify({}),
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
       expect([400, 500]).toContain(res.status);
     });

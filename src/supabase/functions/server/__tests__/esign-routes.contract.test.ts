@@ -100,6 +100,15 @@ vi.mock('../auth-mw.ts', () => {
         token: 't',
       };
     },
+    requireSuperAdmin: async (c: any, next: any) => {
+      if (!c.req.header('Authorization')) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+      c.set('user', { id: 'u1', email: 'admin@test.co' });
+      c.set('userId', 'u1');
+      c.set('userRole', 'super_admin');
+      await next();
+    },
   };
 });
 

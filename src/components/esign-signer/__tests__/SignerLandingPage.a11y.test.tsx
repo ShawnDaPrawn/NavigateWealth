@@ -62,6 +62,7 @@ let scenario: SessionResult = { step: 'loading' };
 vi.mock('../SigningWorkflow', () => ({ SigningWorkflow: () => null }));
 vi.mock('../SigningCompletePage', () => ({ SigningCompletePage: () => null }));
 vi.mock('../OtpVerificationStep', () => ({ OtpVerificationStep: () => null }));
+vi.mock('../KbaVerificationStep', () => ({ KbaVerificationStep: () => null }));
 
 vi.mock('../../esign-signer/hooks/useSignerSession', () => ({
   useSignerSession: () => {
@@ -76,6 +77,7 @@ vi.mock('../../esign-signer/hooks/useSignerSession', () => ({
         ...(scenario.step === 'expired' ? { error: 'expired-or-invalid-token' } : {}),
       })),
       verifyOtp: vi.fn(),
+      verifyKba: vi.fn(),
       submitSignature: vi.fn(),
       rejectDocument: vi.fn(),
       resendOtp: vi.fn(),

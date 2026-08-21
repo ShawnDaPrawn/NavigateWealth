@@ -2,7 +2,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import {
   loadPortalBrainMemory,
   summarisePortalBrainMemory,
@@ -36,7 +36,7 @@ const log = createModuleLogger('integrations-portal-flow-routes');
 const app = new Hono();
 
 // GET /portal-flows/:providerId
-app.get('/portal-flows/:providerId', requireAuth, async (c) => {
+app.get('/portal-flows/:providerId', requireAdmin, async (c) => {
   try {
     const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
@@ -54,7 +54,7 @@ app.get('/portal-flows/:providerId', requireAuth, async (c) => {
 });
 
 // PUT /portal-flows/:providerId
-app.put('/portal-flows/:providerId', requireAuth, async (c) => {
+app.put('/portal-flows/:providerId', requireAdmin, async (c) => {
   try {
     const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
@@ -111,7 +111,7 @@ app.put('/portal-flows/:providerId', requireAuth, async (c) => {
 });
 
 // DELETE /portal-flows/:providerId
-app.delete('/portal-flows/:providerId', requireAuth, async (c) => {
+app.delete('/portal-flows/:providerId', requireAdmin, async (c) => {
   try {
     const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
@@ -144,7 +144,7 @@ app.delete('/portal-flows/:providerId', requireAuth, async (c) => {
 });
 
 // GET /portal-flows/:providerId/brain-memory
-app.get('/portal-flows/:providerId/brain-memory', requireAuth, async (c) => {
+app.get('/portal-flows/:providerId/brain-memory', requireAdmin, async (c) => {
   try {
     const providerId = c.req.param('providerId')!;
     const categoryId = String(c.req.query('categoryId') || '').trim();
@@ -174,7 +174,7 @@ app.get('/portal-flows/:providerId/brain-memory', requireAuth, async (c) => {
 });
 
 // GET /portal-flows/:providerId/credentials/:profileId
-app.get('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (c) => {
+app.get('/portal-flows/:providerId/credentials/:profileId', requireAdmin, async (c) => {
   try {
     const providerId = c.req.param('providerId')!;
     const profileId = normalisePortalCredentialProfileId(c.req.param('profileId')!);
@@ -198,7 +198,7 @@ app.get('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (
 });
 
 // PUT /portal-flows/:providerId/credentials/:profileId
-app.put('/portal-flows/:providerId/credentials/:profileId', requireAuth, async (c) => {
+app.put('/portal-flows/:providerId/credentials/:profileId', requireAdmin, async (c) => {
   try {
     const providerId = c.req.param('providerId')!;
     const profileId = normalisePortalCredentialProfileId(c.req.param('profileId')!);

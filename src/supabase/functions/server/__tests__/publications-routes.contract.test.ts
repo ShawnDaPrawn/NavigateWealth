@@ -82,7 +82,9 @@ vi.mock('../auth-mw.ts', () => ({
     await next();
   },
   requireAdmin: async (c: any, next: any) => {
-    if (c.get('userRole') !== 'admin') return c.json({ error: 'Forbidden' }, 403);
+    if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, 401);
+    c.set('userId', 'u1');
+    c.set('userRole', 'admin');
     await next();
   },
 }));

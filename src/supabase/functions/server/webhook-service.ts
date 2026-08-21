@@ -27,6 +27,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { SenderEvent } from './esign-notification-prefs.ts';
+import { assertPublicHttpUrlResolved, assertPublicHttpsUrl } from './ssrf-guard.ts';
 
 const log = createModuleLogger('webhook-service');
 
@@ -185,12 +186,13 @@ export async function createSubscription(params: {
   events: SenderEvent[];
   description?: string;
 }): Promise<WebhookSubscription> {
+  const url = assertPublicHttpsUrl(params.url).toString();
   const now = new Date().toISOString();
   const sub: WebhookSubscription = {
     id: crypto.randomUUID(),
     firm_id: params.firmId,
     created_by_user_id: params.userId,
-    url: params.url,
+    url,
     secret: generateSecret(),
     events: params.events,
     active: true,
@@ -414,6 +416,8 @@ async function attemptDelivery(
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
+    assertPublicHttpsUrl(sub.url);
+    await assertPublicHttpUrlResolved(sub.url);
     const resp = await fetch(sub.url, {
       method: 'POST',
       headers: {
@@ -425,6 +429,7 @@ async function attemptDelivery(
       },
       body,
       signal: controller.signal,
+      redirect: 'manual',
     });
     clearTimeout(timer);
     if (resp.status >= 200 && resp.status < 300) {

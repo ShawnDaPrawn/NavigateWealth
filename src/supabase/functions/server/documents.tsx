@@ -11,10 +11,28 @@ import documentsEmailRoutes from './documents-email-routes.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { CreateDocumentLinkSchema, UpdateDocumentSchema } from './documents-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { requireAuth } from './auth-mw.ts';
+import { requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
-app.route('/', documentsEmailRoutes);
 const log = createModuleLogger('documents');
+
+app.use('*', requireAuth);
+
+const requirePathClientAccess = async (
+  c: Parameters<typeof requireClientAccess>[0],
+  next: () => Promise<void>,
+) => {
+  const userId = c.req.param('userId');
+  if (!userId) return c.json({ error: 'User ID is required' }, 400);
+  const accessDenied = await requireClientAccess(c, userId);
+  if (accessDenied) return accessDenied;
+  await next();
+};
+
+app.use('/:userId', requirePathClientAccess);
+app.use('/:userId/*', requirePathClientAccess);
+app.route('/', documentsEmailRoutes);
 
 // Root handlers
 app.get('/', (c) => c.json({ service: 'documents', status: 'active' }));

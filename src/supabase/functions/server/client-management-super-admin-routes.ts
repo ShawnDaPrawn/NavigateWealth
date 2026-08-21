@@ -17,7 +17,7 @@ const log = createModuleLogger('client-management-super-admin');
  * GET /super-admin
  * Get the super admin profile
  */
-app.get('/super-admin', async (c) => {
+app.get('/super-admin', requireSuperAdmin, async (c) => {
   try {
     log.info('Fetching super admin profile');
 
@@ -105,6 +105,7 @@ app.get('/super-admin', async (c) => {
  */
 app.put(
   '/super-admin',
+  requireSuperAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
 

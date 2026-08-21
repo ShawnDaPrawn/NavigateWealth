@@ -36,13 +36,14 @@ import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 const log = createModuleLogger('publications-articles-routes');
 
 const articlesRoutes = new Hono();
+
 articlesRoutes.route('/', articlesReadRoutes);
 
 // ============================================================================
 // ARTICLES ROUTES
 // ============================================================================
 
-articlesRoutes.post('/articles', async (c) => {
+articlesRoutes.post('/articles', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const {
@@ -163,7 +164,7 @@ articlesRoutes.post('/articles', async (c) => {
   }
 });
 
-articlesRoutes.put('/articles/:id', async (c) => {
+articlesRoutes.put('/articles/:id', requireAdmin, async (c) => {
   try {
     const id = c.req.param('id')!;
     const body = await c.req.json();
@@ -354,7 +355,7 @@ articlesRoutes.put('/articles/:id', async (c) => {
   }
 });
 
-articlesRoutes.post('/articles/:id/publish', async (c) => {
+articlesRoutes.post('/articles/:id/publish', requireAdmin, async (c) => {
   try {
     const id = c.req.param('id')!;
     const body = await c.req.json().catch(() => ({}));

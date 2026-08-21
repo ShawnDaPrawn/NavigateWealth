@@ -123,24 +123,16 @@ describe('signIn', () => {
     });
   });
 
-  it('auto-confirms a legacy unconfirmed email then retries successfully', async () => {
-    h.auth.signInWithPassword
-      .mockResolvedValueOnce({
-        data: {},
-        error: { status: 400, message: 'Invalid login credentials' },
-      })
-      .mockResolvedValueOnce({
-        data: { user: supaUser, session: { access_token: 't' } },
-        error: null,
-      });
-    fetchResolving({ confirmed: true, alreadyConfirmed: false });
+  it('does not auto-confirm a legacy account from an email-only login attempt', async () => {
+    h.auth.signInWithPassword.mockResolvedValue({
+      data: {},
+      error: { status: 400, message: 'Invalid login credentials' },
+    });
 
-    const res = await authService.signIn('a@b.co', 'pw');
-    expect(res.user?.id).toBe('u1');
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/auth/confirm-email'),
-      expect.anything(),
-    );
+    await expect(authService.signIn('a@b.co', 'pw')).rejects.toMatchObject({
+      code: 'invalid_credentials',
+    });
+    expect(h.auth.signInWithPassword).toHaveBeenCalledTimes(1);
   });
 });
 

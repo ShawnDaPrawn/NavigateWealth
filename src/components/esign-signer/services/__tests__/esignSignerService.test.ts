@@ -70,6 +70,37 @@ describe('OTP', () => {
   });
 });
 
+describe('KBA', () => {
+  it('posts the signer token and maps a passed provider result', async () => {
+    fetchResolving({ success: true, provider: 'persona', status: 'passed', action_url: null });
+
+    await expect(esignSignerService.verifyKba('tok', '9001015009087')).resolves.toEqual({
+      success: true,
+      provider: 'persona',
+      status: 'passed',
+      actionUrl: null,
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/signer/kba'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ access_token: 'tok', id_number: '9001015009087' }),
+      }),
+    );
+  });
+
+  it('surfaces provider and network failures without bypassing the challenge', async () => {
+    fetchResolving({ error: 'verification failed' }, { ok: false, status: 422 });
+    await expect(esignSignerService.verifyKba('tok')).resolves.toEqual({
+      success: false,
+      error: 'verification failed',
+    });
+
+    fetchRejecting();
+    expect((await esignSignerService.verifyKba('tok')).success).toBe(false);
+  });
+});
+
 describe('submitSignature', () => {
   const sigs = [
     { field_id: 'f1', type: 'signature', value: 'data:img' },

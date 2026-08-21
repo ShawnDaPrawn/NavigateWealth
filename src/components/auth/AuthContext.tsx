@@ -12,6 +12,7 @@ import { logger } from '../../utils/logger';
 import {
   buildAppUserFromAuthSessionFallback,
   loadUserProfile,
+  ProfileAccessError,
   updateUserProfile,
 } from '../../utils/auth/profileService';
 import type { AuthUser } from '../../utils/auth/types';
@@ -145,6 +146,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   'profile_hydration_timeout',
                 );
               } catch (loadErr) {
+                if (
+                  loadErr instanceof ProfileAccessError &&
+                  loadErr.code === 'TWO_FACTOR_REQUIRED'
+                ) {
+                  logger.info('Pending 2FA session found without resumable challenge; signing out');
+                  logoutGuardRef.current = true;
+                  profileLoadedForUserRef.current = null;
+                  profileHydrateInFlightRef.current.clear();
+                  setUser(null);
+                  void authSignOut()
+                    .catch((signOutError) => {
+                      console.error('Failed to clear interrupted 2FA session', signOutError);
+                    })
+                    .finally(() => {
+                      logoutGuardRef.current = false;
+                    });
+                  return;
+                }
                 const timedOut =
                   loadErr instanceof Error &&
                   (loadErr.message === 'profile_hydration_timeout' || loadErr.name === 'TimeoutError');

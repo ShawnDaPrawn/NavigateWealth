@@ -17,7 +17,7 @@ function mockFetchForHappyProfile() {
   vi.spyOn(global, 'fetch').mockImplementation(async (input) => {
     const url = String(input);
     if (url.includes('/security/')) {
-      return new Response(JSON.stringify({ status: { suspended: false } }), {
+      return new Response(JSON.stringify({ success: true, status: { suspended: false } }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       });
@@ -70,7 +70,7 @@ describe('loadUserProfile session user hint', () => {
       createdAt: '',
     });
 
-    await loadUserProfile(userId, email, sessionHint);
+    await loadUserProfile(userId, email, sessionHint, 'test-access-token');
 
     expect(spy).not.toHaveBeenCalled();
   });
@@ -84,7 +84,7 @@ describe('loadUserProfile session user hint', () => {
       createdAt: '',
     });
 
-    await loadUserProfile(userId, email);
+    await loadUserProfile(userId, email, undefined, 'test-access-token');
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -99,8 +99,33 @@ describe('loadUserProfile session user hint', () => {
     });
 
     const wrongHint = { ...sessionHint, id: 'other-user-id' } as SupabaseUser;
-    await loadUserProfile(userId, email, wrongHint);
+    await loadUserProfile(userId, email, wrongHint, 'test-access-token');
 
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the server security code when profile access requires 2FA', async () => {
+    vi.restoreAllMocks();
+    vi.spyOn(global, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/security/')) {
+        return new Response(JSON.stringify({ success: true, status: { twoFactorEnabled: true } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      return new Response(
+        JSON.stringify({ error: 'Two-factor verification required', code: 'TWO_FACTOR_REQUIRED' }),
+        { status: 403, headers: { 'content-type': 'application/json' } },
+      );
+    });
+
+    await expect(
+      loadUserProfile(userId, email, sessionHint, 'pending-2fa-access-token'),
+    ).rejects.toMatchObject({
+      name: 'ProfileAccessError',
+      code: 'TWO_FACTOR_REQUIRED',
+      status: 403,
+    });
   });
 });

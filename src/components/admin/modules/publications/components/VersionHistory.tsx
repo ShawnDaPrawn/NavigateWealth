@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import {
   History,
   X,
@@ -374,7 +375,9 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
                               <div
                                 className="prose prose-xs max-w-none text-[11px] text-gray-600 leading-relaxed max-h-48 overflow-y-auto"
                                 dangerouslySetInnerHTML={{
-                                  __html: version.body || '<p class="text-gray-400">No content</p>',
+                                  __html: DOMPurify.sanitize(
+                                    version.body || '<p class="text-gray-400">No content</p>',
+                                  ),
                                 }}
                               />
                             </div>

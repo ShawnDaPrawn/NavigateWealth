@@ -10,6 +10,7 @@ import type {
   SignatureData,
   SignerSessionValidation,
   OtpVerificationResult,
+  KbaVerificationResult,
   SignatureSubmissionResult,
 } from '../types';
 
@@ -52,12 +53,18 @@ export function useSignerSession() {
     }
   };
 
-  const verifyOtp = async (token: string, otp: string): Promise<OtpVerificationResult> => {
+  const verifyOtp = async (
+    token: string,
+    otp: string,
+    accessCode?: string,
+  ): Promise<OtpVerificationResult> => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await esignSignerService.verifyOtp(token, otp);
+      const result = accessCode
+        ? await esignSignerService.verifyOtp(token, otp, accessCode)
+        : await esignSignerService.verifyOtp(token, otp);
 
       if (result.success) {
         // Update session data to reflect OTP verified status
@@ -113,6 +120,25 @@ export function useSignerSession() {
     }
   };
 
+  const verifyKba = async (token: string, idNumber?: string): Promise<KbaVerificationResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await esignSignerService.verifyKba(token, idNumber);
+      if (!result.success) {
+        setError(result.error || 'Identity verification failed');
+      }
+      return result;
+    } catch (_err) {
+      const errorMsg = 'Failed to verify identity';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const rejectDocument = async (
     token: string,
     reason: string,
@@ -151,6 +177,7 @@ export function useSignerSession() {
     error,
     validateToken,
     verifyOtp,
+    verifyKba,
     submitSignature,
     rejectDocument,
     resendOtp: async (token: string): Promise<OtpVerificationResult> => {

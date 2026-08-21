@@ -23,6 +23,8 @@ export interface SignerSessionData {
   otp_required: boolean;
   otp_verified?: boolean;
   access_code_required?: boolean;
+  challenge_required?: boolean;
+  missing_factors?: string[];
   document_url: string;
   document_filename?: string;
   page_count: number;
@@ -98,6 +100,14 @@ export interface SignerSessionValidation {
 
 export interface OtpVerificationResult {
   success: boolean;
+  error?: string;
+}
+
+export interface KbaVerificationResult {
+  success: boolean;
+  status?: 'passed' | 'failed' | 'skipped' | 'error';
+  provider?: string;
+  actionUrl?: string | null;
   error?: string;
 }
 

@@ -122,7 +122,8 @@ export async function validateLoginAttempt(email: string): Promise<{
         };
       }
       return {
-        allowed: true, // Allow attempt, let Supabase handle validation
+        allowed: false,
+        error: result.error || 'Unable to validate this login attempt. Please try again.',
       };
     }
 
@@ -132,14 +133,17 @@ export async function validateLoginAttempt(email: string): Promise<{
       error instanceof Error &&
       (error.name === 'AbortError' || error.message.includes('fetch'))
     ) {
-      logger.info(
-        'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
-      );
-      return { allowed: true };
+      logger.warn('Login validation server unavailable; blocking the login attempt.');
+      return {
+        allowed: false,
+        error: 'Unable to validate this login attempt. Please try again.',
+      };
     }
     console.error('Login validation error:', error);
-    // Fail open - allow login attempt to proceed
-    return { allowed: true };
+    return {
+      allowed: false,
+      error: 'Unable to validate this login attempt. Please try again.',
+    };
   }
 }
 

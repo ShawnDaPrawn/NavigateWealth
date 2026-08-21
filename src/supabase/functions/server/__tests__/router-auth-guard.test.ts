@@ -64,12 +64,7 @@ const PUBLIC_ROUTERS: Record<string, string> = {
  * distinction is deliberate so the gap stays visible. Each entry MUST reference
  * the blocking work. New routers may NOT be added here to dodge auth.
  */
-const KNOWN_UNAUTH_DEBT: Record<string, string> = {
-  'documents.ts':
-    'IDOR over client documents (GET/upload/download/delete by :userId). Fix blocked on C-7/C-2: ' +
-    'client pages (TransactionsDocumentsPage, HistoryPage) still send the anon key, so gating now ' +
-    'would 401 live traffic. Tracked in SECURITY-AUDIT-2026-06 §"Not yet addressed".',
-};
+const KNOWN_UNAUTH_DEBT: Record<string, string> = {};
 
 function listMountedModules(): string[] {
   const mountFiles = readdirSync(SERVER_DIR).filter(

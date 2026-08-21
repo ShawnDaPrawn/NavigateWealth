@@ -35,24 +35,20 @@ app.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
   try {
     const body = await c.req.json();
     const { access_token, access_code } = body as Record<string, unknown>;
-    const otpParsed = OtpVerifySchema.safeParse({ otp: body.otp });
-
-    if (!access_token || !otpParsed.success) {
-      return c.json(
-        {
-          error: 'access_token and valid otp required',
-          ...(otpParsed.success ? {} : formatZodError(otpParsed.error)),
-        },
-        400,
-      );
+    if (typeof access_token !== 'string' || !access_token) {
+      return c.json({ error: 'access_token required' }, 400);
     }
-    const otp = otpParsed.data.otp;
 
     // Get signer by token (needed for rate limiting by user ID)
     const signer = await getSignerByToken(access_token as string);
 
     if (!signer) {
       return c.json({ error: 'Invalid access token' }, 404);
+    }
+
+    const otpParsed = OtpVerifySchema.safeParse({ otp: body.otp });
+    if (signer.requires_otp && !otpParsed.success) {
+      return c.json({ error: 'Valid otp required', ...formatZodError(otpParsed.error) }, 400);
     }
 
     // Rate limit check (Per signer to prevent OTP guessing)
@@ -67,7 +63,10 @@ app.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
     }
 
     // Verify access code if required
-    if (access_code) {
+    if (signer.access_code) {
+      if (typeof access_code !== 'string' || !access_code) {
+        return c.json({ error: 'Access code required' }, 401);
+      }
       const accessCodeResult = await verifyAccessCode(signer.id, access_code as string);
       if (!accessCodeResult.valid) {
         return c.json({ error: accessCodeResult.error || 'Invalid access code' }, 401);
@@ -75,14 +74,14 @@ app.post('/signer/verify-otp', rateLimit('OTP_VERIFY'), async (c) => {
     }
 
     // Verify OTP
-    const otpResult = await verifyOTP(signer.id, otp);
-    if (!otpResult.valid) {
-      return c.json({ error: otpResult.error || 'Invalid OTP' }, 401);
+    if (signer.requires_otp && otpParsed.success) {
+      const otpResult = await verifyOTP(signer.id, otpParsed.data.otp);
+      if (!otpResult.valid) {
+        return c.json({ error: otpResult.error || 'Invalid OTP' }, 401);
+      }
+      await markOTPVerified(signer.id);
+      await clearOTP(signer.id);
     }
-
-    // Mark as verified
-    await markOTPVerified(signer.id);
-    await clearOTP(signer.id);
 
     // Update signer status
     await updateSignerStatus(signer.id, 'viewed', {

@@ -70,6 +70,44 @@ export function assertPublicHttpUrl(rawUrl: string): URL {
   return parsed;
 }
 
+/** Require HTTPS for destinations that receive application data. */
+export function assertPublicHttpsUrl(rawUrl: string): URL {
+  const parsed = assertPublicHttpUrl(rawUrl);
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Only https URLs are allowed');
+  }
+  return parsed;
+}
+
+/**
+ * Resolve a hostname immediately before a server-side fetch and reject any
+ * private/reserved answer. Fetches must still disable automatic redirects.
+ */
+export async function assertPublicHttpUrlResolved(rawUrl: string): Promise<URL> {
+  const parsed = assertPublicHttpUrl(rawUrl);
+  const host = parsed.hostname;
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.includes(':')) return parsed;
+
+  const resolveDns = (
+    Deno as unknown as {
+      resolveDns?: (query: string, recordType: 'A' | 'AAAA') => Promise<string[]>;
+    }
+  ).resolveDns;
+  if (!resolveDns) throw new Error('DNS safety validation is unavailable');
+
+  const answers = await Promise.allSettled([resolveDns(host, 'A'), resolveDns(host, 'AAAA')]);
+  const addresses = answers.flatMap((answer) =>
+    answer.status === 'fulfilled' ? answer.value : [],
+  );
+  if (addresses.length === 0) throw new Error('URL host could not be resolved');
+
+  for (const address of addresses) {
+    const literal = address.includes(':') ? `[${address}]` : address;
+    assertPublicHttpUrl(`${parsed.protocol}//${literal}/`);
+  }
+  return parsed;
+}
+
 /** Non-throwing variant. */
 export function isPublicHttpUrl(rawUrl: string): boolean {
   try {

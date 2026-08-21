@@ -31,4 +31,10 @@ describe('AuthContext structural invariants', () => {
     expect(authContextSrc).toContain('parallel getSession() bootstrap was removed');
     expect(authContextSrc).toContain('onAuthStateChange');
   });
+
+  it('invalidates an interrupted login-time 2FA session instead of creating a fallback user', () => {
+    expect(authContextSrc).toContain("loadErr.code === 'TWO_FACTOR_REQUIRED'");
+    expect(authContextSrc).toContain('Pending 2FA session found without resumable challenge');
+    expect(authContextSrc).toMatch(/TWO_FACTOR_REQUIRED[\s\S]*?void authSignOut\(\)/);
+  });
 });
