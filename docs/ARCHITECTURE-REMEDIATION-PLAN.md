@@ -296,12 +296,19 @@ check, not a code change.**
    behind `requireSuperAdmin`, add an `esign_config:*` denylist, and audit-log
    every read.
    _Gate:_ key is unreadable via any KV route; a test asserts the denylist.
-3. **S8 — Get the signer token out of the URL/analytics.**
-   Switch `/sign?token=` to the existing `GET /sign-by-token/:token` path form
-   and/or add a `beforeSend` scrubber to Vercel Analytics + a GA `page_location`
-   redaction that strips `token` and client UUIDs.
-   _Gate:_ no analytics payload contains `token=`; a unit test covers the
-   scrubber.
+3. **S8 — Get the signer token out of analytics, history, and referrers.**
+   Redaction is **mandatory**, not optional: add a `beforeSend` scrubber to
+   Vercel Analytics and a GA `page_location` redaction that strips `token` and
+   client UUIDs, and clear the token from the address bar after read via
+   `history.replaceState`. Note the token lives in the SPA route `/sign?token=`
+   (`AppRoutes.tsx:907`, rendered by `SignerLandingPage`), **not** at the
+   server JSON endpoint `GET /sign-by-token/:token` — so if the URL form is
+   changed to a path segment (`/sign/:token`) that is a **frontend route
+   migration** (a path token still enters history/referrers, so it does not
+   replace scrubbing). Do not point signer links at the server API route; it
+   does not render the signing page.
+   _Gate:_ no analytics/referrer payload contains `token=`; the address bar no
+   longer shows the token after load; a unit test covers the scrubber.
 4. **S10 + S11 (public forms) — Escape output and add IP-dimensioned limits.**
    Apply the existing `escapeHtml` to every interpolated field in the three
    lead-gen email builders; add an IP dimension to their rate limiters (mirror
@@ -332,13 +339,22 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    (`auth-mw.ts`), and make `fna-auth`'s `authenticateUser` delegate to it.
    _Gate:_ a contract test asserts the anon key returns 401 on every FNA/tax/
    estate/medical route.
-3. **P1.3 — Flip the gateway to `verify_jwt = true` (S3).** Split the three
-   health routes into an unauthenticated sibling function, then enable JWT
-   verification on `make-server-91ed8379`. This closes S2 (`/documents`)
-   structurally and makes "auth by convention" a defence-in-depth layer rather
-   than the only gate.
-   _Gate:_ `documents.tsx` routes return 401 unauthenticated; health sibling
-   returns 200; live smoke passes.
+3. **P1.3 — Flip the gateway to `verify_jwt = true` (S3).** Supabase's
+   `verify_jwt` is **per-function**, so flipping it on `make-server-91ed8379`
+   makes the gateway reject _every_ request without a valid JWT — before Hono
+   runs. That means it is not enough to split out health: **all genuinely public
+   routes must move to an unauthenticated sibling function first.** Relocate the
+   health routes _and_ the entire `PUBLIC_ROUTERS` set — quote-request,
+   contact-form, consultation (lead-gen), `sign-by-token`, the RSS proxy, and
+   the openclaw webhook — into an `public`/`unauthenticated` function (this is
+   the `public` bounded-context function from the enhancement plan §3.3). Only
+   then enable JWT verification on the authenticated function. This closes S2
+   (`/documents`) structurally and makes "auth by convention" a defence-in-depth
+   layer rather than the only gate.
+   _Gate:_ `documents.tsx` routes return 401 unauthenticated; the public
+   lead-gen forms, signer-token access, and health all still return their
+   normal responses from the unauthenticated function; live smoke passes on
+   both functions.
 4. **P1.4 — Object-level authorization (S2/S6/S7).** Add per-resource ownership/
    firm checks to `documents.tsx`, the 8 e-sign download/audit handlers, and the
    FNA read/delete routes — modelled on the reference implementation already in
@@ -442,7 +458,7 @@ P0  Contain exposures        ── D1 → S4 → S8 → S10/S11 → S9        (
         ▼
 P1  Auth keystone            ── P1.1 token migration
         │                       → P1.2 kill anon-admin (S1)
-        │                       → P1.3 verify_jwt=true + health split (S3, closes S2)
+        │                       → P1.3 verify_jwt=true + public/health split (S3, closes S2)
         │                       → P1.4 object-level authz (S2/S6/S7)
         │                       → P1.5 suspension enforcement
         ▼
