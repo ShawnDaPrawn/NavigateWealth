@@ -55,8 +55,8 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
   // Initial fetch
   useEffect(() => {
     if (userId) {
-      fetchSecurityStatus();
-      fetchActivityLogs();
+      void fetchSecurityStatus();
+      void fetchActivityLogs();
     }
   }, [userId, fetchSecurityStatus, fetchActivityLogs]);
 
@@ -108,8 +108,8 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
       setTimeout(() => setSaveSuccess(false), 3000);
 
       // Refresh data
-      fetchActivityLogs();
-      fetchSecurityStatus();
+      void fetchActivityLogs();
+      void fetchSecurityStatus();
     } catch (error) {
       console.error('❌ Failed to update password:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update password');
@@ -131,12 +131,12 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
       }));
 
       toast.success(`Two-factor authentication ${enabled ? 'enabled' : 'disabled'}`);
-      fetchActivityLogs();
+      void fetchActivityLogs();
     } catch (error) {
       console.error('❌ Failed to toggle 2FA:', error);
       toast.error('Failed to toggle 2FA');
       // Revert state on failure if needed, but we're relying on fetch to sync
-      fetchSecurityStatus();
+      void fetchSecurityStatus();
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +191,7 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
         newEmailCode: '',
       }));
       toast.success('Verification codes sent to your current and new email addresses');
-      fetchActivityLogs();
+      void fetchActivityLogs();
       return result;
     } catch (error) {
       console.error('❌ Failed to start email change:', error);
@@ -243,8 +243,8 @@ export function useSecuritySettings(userId?: string, userEmail?: string) {
         currentEmailCode: '',
         newEmailCode: '',
       });
-      fetchActivityLogs();
-      fetchSecurityStatus();
+      void fetchActivityLogs();
+      void fetchSecurityStatus();
       return result;
     } catch (error) {
       console.error('❌ Failed to verify email change:', error);

@@ -31,6 +31,7 @@ export default tseslint.config(
       'test-results/**',
       '.vercel/**',
       'coverage/**',
+      'coverage-server/**',
       '**/*.d.ts',
       'public/sitemap.xml',
       'seo-route-manifest.json',
@@ -179,6 +180,54 @@ export default tseslint.config(
     files: ['scripts/**/*.{js,mjs,cjs}'],
     rules: {
       'max-lines': 'off',
+    },
+  },
+
+  // 7d. TYPE-AWARE rules (Stage A / F5) — core logic layers only.
+  //
+  //     `no-floating-promises` / `no-misused-promises` need type information,
+  //     which means a second, slower parse backed by a real tsconfig. They are
+  //     the only rules here that can catch an unawaited promise — a live bug
+  //     class in an async-heavy codebase, and one nothing else gates.
+  //
+  //     SCOPE, AND WHY IT IS NOT REPO-WIDE YET. Measured 2026-08-21 across the
+  //     whole SPA: 1,197 violations. They are almost entirely in
+  //     src/components/ (577 floating + 610 misused = 1,187) — overwhelmingly
+  //     `onClick={async () => …}`-style handlers, which are real but
+  //     low-severity and far too numerous to fix in one pass. The core logic
+  //     layers below had just 10, all `no-floating-promises`, all
+  //     fire-and-forget refreshes in useSecuritySettings.ts (9) and
+  //     useFnaBatchStatus.ts (1). Those were fixed with an explicit `void`, so
+  //     this scope is at ZERO and the rules land as `error` — a real gate with
+  //     no debt, rather than another warn-baseline nobody reads.
+  //
+  //     EXPANSION PATH: add 'src/components/**' here once that 1,187 backlog is
+  //     burned down (start with no-floating-promises, which is the higher-value
+  //     half), then extend to the Deno edge source — that needs its own
+  //     tsconfig first, since tsconfig.typecheck.json deliberately excludes it.
+  //
+  //     Cost: ~10s over this scope. A repo-wide type-aware pass measured ~83s.
+  {
+    files: [
+      'src/utils/**/*.ts',
+      'src/hooks/**/*.ts',
+      'src/shared/**/*.{ts,tsx}',
+      'src/services/**/*.ts',
+      'src/config/**/*.ts',
+      'src/router/**/*.tsx',
+    ],
+    // Tests deliberately float promises; keep the gate on production code.
+    ignores: ['**/*.test.{ts,tsx}', '**/__tests__/**'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: './tsconfig.typecheck.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
     },
   },
 
