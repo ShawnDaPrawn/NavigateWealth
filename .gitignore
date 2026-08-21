@@ -22,4 +22,5 @@ temp_pr*.diff
 playwright-report
 test-results
 coverage
+coverage-server
 .claude/

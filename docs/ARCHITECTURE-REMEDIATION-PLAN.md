@@ -258,6 +258,13 @@ Severity is about blast radius, not effort. IDs are used in the plan.
 - **A8 — Backend is 8.6% test-file-covered and 0% coverage-measured, and
   deploys with only a non-blocking, credential-gated smoke test.** Combined with
   A2, ~136K lines ship to production essentially unverified.
+  _Measurement half FIXED (Stage A / F4, 2026-08-21):_ the backend is now
+  measured and floored separately via `vitest.config.server.ts` —
+  **statements 13.43%, branches 9.38%, functions 12.88%, lines 13.79%** across
+  573 tests, gated as its own CI step. So the number is real and can only
+  ratchet up. **Still open:** the blocking post-deploy smoke test in
+  `deploy-supabase-function.yml` — measurement is not verification, and the
+  backend still deploys without one.
 - **A9 — Playwright e2e never runs in CI.** All 9 specs `test.skip` on missing
   credentials; no workflow runs them; the `retries: CI?2:0` branch is dead.
   Effective e2e coverage is zero.
@@ -538,10 +545,14 @@ known to overstate reality and should be corrected there:
    _Fixed 2026-08-21 (Stage A):_ the resolver now works (2492 real modules) and
    surfaces **210 real violations** as `warn`. Update the ledger to say the gate
    is real and non-blocking during burn-down, not "no violations". (Finding A1.)
-2. **"coverage thresholds… (statements ~31%)"** omits that the entire ~136K-line
-   backend is excluded from measurement and that ~16 marketing pages are silently
-   dropped by the v8 parser. Effective whole-repo coverage is ~22%. Report SPA
-   and backend separately. (Findings A8, §2.)
+2. **"coverage thresholds… (statements ~31%)"** omitted that the entire
+   ~136K-line backend was excluded from measurement and that ~16 marketing pages
+   are silently dropped by the v8 parser, so the figure described the SPA subset
+   only. _Fixed 2026-08-21 (Stage A / F4):_ the backend is measured and floored
+   separately (`vitest.config.server.ts`) at **statements 13.43% / branches
+   9.38% / functions 12.88% / lines 13.79%**, and the ledger now reports the two
+   layers as two numbers. The v8-unparseable-pages caveat still applies to the
+   SPA figure. (Findings A8, §2.)
 3. **"59 warnings — mostly `max-lines` / complexity warnings"** — there is **no
    complexity rule configured** in `eslint.config.mjs`. _Measured precisely
    2026-08-21 (Stage A / F2), superseding the earlier raw-line estimate:_ the

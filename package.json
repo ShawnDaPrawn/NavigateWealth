@@ -145,6 +145,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage:server": "vitest run --coverage --config vitest.config.server.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "fna-intake:backfill": "node ./scripts/fna-intake-backfill.mjs",
