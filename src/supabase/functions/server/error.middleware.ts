@@ -110,7 +110,10 @@ export async function errorHandler(error: Error, c: Context) {
     path: new URL(c.req.url).pathname,
     method: c.req.method,
     statusCode: 500,
-    requestId: c.get('requestId') as string | undefined,
+    // Lazily-mounted sub-routers are dispatched via `router.fetch()` into a
+    // separate Hono instance, so index.tsx's `c.set('requestId')` is not
+    // visible there — lazy-router forwards the id as a header instead.
+    requestId: (c.get('requestId') as string | undefined) ?? c.req.header('x-request-id'),
   });
 
   return c.json(

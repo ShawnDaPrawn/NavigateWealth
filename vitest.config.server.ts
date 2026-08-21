@@ -20,11 +20,16 @@ import baseConfig from './vitest.config';
  *
  * FIRST HONEST MEASUREMENT (2026-08-21, 573 backend tests):
  *   statements 13.43%   branches 9.38%   functions 12.88%   lines 13.79%
+ * CURRENT (2026-08-21, 608 backend tests — after PR #207's security tests and
+ * the lazy-router suite landed):
+ *   statements 13.74%   branches 9.80%   functions 13.48%   lines 14.11%
  *
  * The floors below sit just under those, matching the ratchet convention used
  * everywhere else in this repo: coverage can only go up. Raise them as backend
  * tests land — contract tests in the `esign-routes.contract.test.ts` style are
- * the highest-value way to move this number.
+ * the highest-value way to move this number. The small gap (~0.1pt) is
+ * deliberate headroom: an exact floor turns an unrelated refactor that deletes
+ * a few uncovered lines into a CI failure.
  *
  * Run:  npm run test:coverage:server
  * The SPA equivalent is `npm test -- --coverage` (vitest.config.ts).
@@ -59,12 +64,12 @@ export default defineConfig({
         'src/supabase/functions/**/*.test.{ts,tsx}',
         'src/supabase/functions/**/*.spec.{ts,tsx}',
       ],
-      // Floors set just below the 2026-08-21 measurement. Ratchet UP only.
+      // Floors set just below the current measurement. Ratchet UP only.
       thresholds: {
-        statements: 13.0,
-        branches: 9.0,
-        functions: 12.5,
-        lines: 13.3,
+        statements: 13.6,
+        branches: 9.7,
+        functions: 13.3,
+        lines: 14.0,
       },
     },
   },

@@ -34,9 +34,28 @@
  * cannot catch. Treat a rise as "prove this route should be open", not as
  * "you shipped a vulnerability".
  *
- * Sanity check on the analysis: it independently re-derives the known
- * `documents.tsx` IDOR (see KNOWN_UNAUTH_DEBT in the module-granular test),
- * which is a true positive we can verify by hand.
+ * SANITY CHECKS ON THE ANALYSIS
+ * -----------------------------
+ * A ratchet is only worth its floor if the thing doing the counting still
+ * works, so three properties are pinned independently of the count.
+ *
+ * The first version of this file anchored that on the `documents.tsx` IDOR —
+ * "the analysis must still re-derive this known true positive". That was the
+ * wrong kind of anchor and it broke the first time it mattered: PR #207 FIXED
+ * the IDOR (`app.use('*', requireAuth)` plus a path-scoped
+ * `requireClientAccess`), and this test failed in CI for doing exactly the
+ * right thing. An integrity check must never be anchored on a defect staying
+ * unfixed.
+ *
+ * The anchors below are stable under remediation instead:
+ *   - routes that are public BY DEFINITION stay in the list — a `/login` that
+ *     required auth would be a bootstrap paradox, and the health probes are
+ *     documented in index.tsx as the only deliberately open endpoints;
+ *   - `documents.tsx` — now guarded at BOTH router scope and path scope — must
+ *     stay OUT of it, which exercises the two hardest resolution rules and
+ *     would catch either a regressed guard or a broken analysis;
+ *   - the route total stays in a sane range, so the regexes cannot silently
+ *     match nothing.
  *
  * WHEN THIS FAILS
  * ---------------
@@ -150,11 +169,29 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     expect(totalRoutes).toBeGreaterThan(500);
   });
 
-  it('still detects the known documents.tsx IDOR (analysis sanity check)', () => {
-    // A true positive we can verify by hand: documents.tsx imports no auth
-    // helper at all. If this stops matching, the analysis has drifted and the
-    // count below is no longer trustworthy.
-    expect(unguarded.some((entry) => entry.startsWith('documents.tsx '))).toBe(true);
+  it('still reports routes that are public by definition (true positives)', () => {
+    // These cannot ever be guarded: a login endpoint behind requireAuth is a
+    // bootstrap paradox, and index.tsx documents the health probes as the only
+    // endpoints reachable without a bearer token. If the analysis stops
+    // reporting them it has gone blind, and the floor below means nothing.
+    for (const expected of [
+      'auth-routes.ts POST /login-validate',
+      'auth-routes.ts POST /signup',
+      'index.tsx GET /make-server-91ed8379/health',
+    ]) {
+      expect(unguarded, `expected the analysis to still report "${expected}"`).toContain(expected);
+    }
+  });
+
+  it('does not report documents.tsx, which is guarded at router AND path scope', () => {
+    // The counterpart true negative. documents.tsx carries
+    // `app.use('*', requireAuth)` AND `app.use('/:userId', requireClientAccess)`
+    // (PR #207), so it exercises both of the resolution rules most likely to
+    // break. A regression here is either a removed guard on client documents —
+    // the IDOR reopening — or an analysis that no longer understands scoped
+    // middleware. Both must fail CI.
+    const leaked = unguarded.filter((entry) => entry.startsWith('documents.tsx '));
+    expect(leaked, 'documents.tsx routes lost their guard, or guard resolution broke').toEqual([]);
   });
 
   it('does not add unguarded routes beyond the committed floor', () => {

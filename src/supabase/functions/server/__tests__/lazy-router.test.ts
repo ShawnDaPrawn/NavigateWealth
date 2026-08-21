@@ -1,0 +1,338 @@
+/**
+ * lazy-router.ts — dispatch + shared error handler (Stage B / B1)
+ * ==============================================================
+ *
+ * WHY THIS FILE EXISTS
+ * --------------------
+ * The obvious way to give the Edge Function a global error handler is
+ * `app.onError(...)` in index.tsx. It does not work here, and the reason is
+ * structural rather than incidental: `lazy()` dispatches each sub-router with
+ * `router.fetch(new Request(...))`, and every sub-router is its OWN Hono
+ * instance whose `.fetch()` catches errors internally and returns its own
+ * Response. Nothing throws back out, so the parent's handler never sees it —
+ * it would cover the three health routes in index.tsx and none of the ~584
+ * routes behind the 77 lazy mounts. A try/catch around `router.fetch()` fails
+ * identically, because there is no throw to catch.
+ *
+ * The first test below pins that premise directly. If a future Hono version
+ * changed it, the fix in lazy-router would be unnecessary complexity, and this
+ * test is how we would find out.
+ *
+ * The rest pin the behaviour of the fix:
+ *   - an unguarded sub-router gets the shared handler (structured JSON 500 with
+ *     telemetry, instead of Hono's bare "Internal Server Error" text);
+ *   - a sub-router that set its OWN handler keeps it (honeycomb-routes.ts is
+ *     the one such router today) — silently clobbering another module's
+ *     explicit choice is the class of bug this work exists to remove;
+ *   - the private-field sentinel that distinguishes those two cases still works
+ *     against the installed Hono, so a Hono upgrade that renames `errorHandler`
+ *     FAILS here rather than silently turning the safety net off;
+ *   - the request id crosses the dispatch boundary, without which every one of
+ *     those routes' failures would be recorded with no correlation id.
+ *
+ * Run: npx vitest run src/supabase/functions/server/__tests__/lazy-router.test.ts
+ */
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { Hono } from 'hono';
+
+beforeAll(() => {
+  // error.middleware.ts reads Deno.env to decide whether to include stack
+  // detail; 'test' is not 'production', so we assert on the development shape.
+  vi.stubGlobal('Deno', { env: { get: () => 'test' } });
+});
+
+// Keep the real errorHandler (its response shape is what we are asserting) but
+// silence its logging and stub the one dependency that touches KV.
+vi.mock('../stderr-logger.ts', () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), success: vi.fn(), debug: vi.fn() },
+  createModuleLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
+const recordRuntimeServerIssue = vi.fn(async () => {});
+vi.mock('../quality-issues-runtime-server.ts', () => ({
+  recordRuntimeServerIssue: (...args: unknown[]) => recordRuntimeServerIssue(...args),
+  RUNTIME_SERVER_ISSUES_KEY: 'quality_issues:runtime_server',
+}));
+
+const { lazy } = await import('../lazy-router.ts');
+
+const PREFIX = '/make-server-91ed8379';
+
+/** Build a parent app shaped like index.tsx: request-id middleware, then mounts. */
+function makeParent() {
+  const app = new Hono();
+  app.use('*', async (c, next) => {
+    c.set('requestId', c.req.header('x-request-id') ?? 'generated-request-id');
+    await next();
+  });
+  return app;
+}
+
+/**
+ * `lazy()` caches sub-routers in a module-level Map keyed by mount path, so
+ * every test must mount at a path no other test used.
+ */
+let mountCounter = 0;
+const nextPath = () => `/t${(mountCounter += 1)}`;
+
+beforeEach(() => {
+  recordRuntimeServerIssue.mockClear();
+});
+
+describe('lazy-router: the premise behind B1', () => {
+  it('does NOT propagate a sub-router error to the parent onError', async () => {
+    // This is the finding that invalidates `app.onError(...)` in index.tsx.
+    const parentSawError = vi.fn();
+    const parent = new Hono();
+    parent.onError((_err, c) => {
+      parentSawError();
+      return c.json({ from: 'parent' }, 500);
+    });
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw new Error('kaboom');
+    });
+
+    parent.all('/mount/*', (c) => child.fetch(new Request('http://x/boom', c.req.raw)));
+
+    const res = await parent.fetch(new Request('http://x/mount/boom'));
+
+    expect(res.status).toBe(500);
+    expect(parentSawError).not.toHaveBeenCalled();
+  });
+});
+
+describe('lazy-router: shared error handler attachment', () => {
+  it('turns an unguarded sub-router throw into a structured JSON 500', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw new Error('unanticipated failure');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    // Hono's built-in handler returns the text "Internal Server Error" with no
+    // telemetry at all. This is the shape we replaced it with.
+    expect(body).toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+      endpoint: '/boom',
+      method: 'GET',
+    });
+    // The whole point: the failure is now recorded, not lost.
+    expect(recordRuntimeServerIssue).toHaveBeenCalledTimes(1);
+  });
+
+  it('records the request id forwarded across the dispatch boundary', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw new Error('unanticipated failure');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    await parent.fetch(
+      new Request(`http://x${PREFIX}${path}/boom`, { headers: { 'x-request-id': 'rid-12345678' } }),
+    );
+
+    expect(recordRuntimeServerIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: 'rid-12345678', statusCode: 500, method: 'GET' }),
+    );
+  });
+
+  it('maps APIError subclasses to their own status, not a blanket 500', async () => {
+    const { NotFoundError } = await import('../error.middleware.ts');
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/missing', () => {
+      throw new NotFoundError('no such widget');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/missing`));
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ error: 'no such widget', code: 'NOT_FOUND' });
+    // Expected errors must NOT pollute the unexpected-500 telemetry feed.
+    expect(recordRuntimeServerIssue).not.toHaveBeenCalled();
+  });
+
+  it('leaves a sub-router that set its OWN onError alone', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.onError((_err, c) => c.json({ from: 'the sub-router' }, 500));
+    child.get('/boom', () => {
+      throw new Error('unanticipated failure');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
+
+    expect(await res.json()).toEqual({ from: 'the sub-router' });
+    expect(recordRuntimeServerIssue).not.toHaveBeenCalled();
+  });
+});
+
+describe('lazy-router: dispatch is otherwise unchanged', () => {
+  /**
+   * NOTE ON THE TEST ENVIRONMENT — requests with a BODY cannot be exercised
+   * here. Vitest's jsdom compat `Request` (createCompatRequest in
+   * vitest/dist/chunks) does `const compatInit = { ...init }` whenever
+   * `init.body != null`, and spreading a `Request` copies nothing: all of its
+   * members are prototype accessors, not own enumerable properties. So under
+   * jsdom `new Request(url, someRequest)` with a body silently degrades to a
+   * bodyless GET with no headers. Plain Node and Deno both copy method,
+   * headers and body correctly (verified directly), so this is an artifact of
+   * the harness, not of lazy-router.
+   *
+   * Bodyless requests take the shim's `super(...args)` path and are copied
+   * faithfully, so method and header propagation is asserted with a DELETE.
+   * Do not "fix" this by asserting on a POST body — it will fail for a reason
+   * that has nothing to do with this code.
+   */
+  it('strips the mount prefix and preserves method and headers', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+    const seen: { url: string; method: string; auth: string | null; requestId: string | null }[] =
+      [];
+
+    const child = new Hono();
+    child.delete('/widgets/7', (c) => {
+      seen.push({
+        url: new URL(c.req.url).pathname,
+        method: c.req.method,
+        auth: c.req.header('authorization') ?? null,
+        requestId: c.req.header('x-request-id') ?? null,
+      });
+      return c.json({ ok: true });
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(
+      new Request(`http://x${PREFIX}${path}/widgets/7`, {
+        method: 'DELETE',
+        headers: { authorization: 'Bearer token-abc' },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(seen).toEqual([
+      {
+        url: '/widgets/7',
+        method: 'DELETE',
+        // Sub-routers apply their own requireAuth, so losing this header would
+        // 401 every authenticated route behind a lazy mount.
+        auth: 'Bearer token-abc',
+        requestId: 'generated-request-id',
+      },
+    ]);
+  });
+
+  it('maps a bare mount hit to the sub-router root', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+    let seenPath: string | null = null;
+
+    const child = new Hono();
+    child.get('/', (c) => {
+      seenPath = new URL(c.req.url).pathname;
+      return c.json({ ok: true });
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}`));
+
+    expect(res.status).toBe(200);
+    expect(seenPath).toBe('/');
+  });
+
+  it('never overwrites a request id the caller supplied', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+    let seenId: string | null = null;
+
+    const child = new Hono();
+    child.get('/id', (c) => {
+      seenId = c.req.header('x-request-id') ?? null;
+      return c.json({ ok: true });
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    await parent.fetch(
+      new Request(`http://x${PREFIX}${path}/id`, {
+        headers: { 'x-request-id': 'caller-supplied' },
+      }),
+    );
+
+    expect(seenId).toBe('caller-supplied');
+  });
+
+  it('still returns a 500 with details when the module fails to import', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    lazy(parent, path, () => Promise.reject(new Error('module blew up')));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/anything`));
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({
+      error: `Failed to load module: ${path}`,
+      details: 'module blew up',
+    });
+  });
+});
+
+describe('lazy-router: the private-field sentinel', () => {
+  /**
+   * `usesHonoDefaultErrorHandler` decides "did this router set its own handler?"
+   * by identity-comparing `router.errorHandler` against the value a fresh
+   * `new Hono()` carries. Hono declares that field `private`, so it is stable
+   * runtime surface but NOT a supported type-level contract — a Hono upgrade
+   * could rename it, at which point the comparison would silently return false
+   * for every router and the safety net would quietly stop being installed.
+   *
+   * These assertions make that a CI failure instead of silence.
+   */
+  it('exposes a shared default error handler on every fresh Hono instance', () => {
+    const a = new Hono() as unknown as { errorHandler?: unknown };
+    const b = new Hono() as unknown as { errorHandler?: unknown };
+    expect(typeof a.errorHandler).toBe('function');
+    expect(a.errorHandler).toBe(b.errorHandler);
+  });
+
+  it('replaces that field when a router calls onError', () => {
+    const fresh = new Hono() as unknown as { errorHandler?: unknown };
+    const customised = new Hono();
+    customised.onError((_err, c) => c.text('mine', 500));
+    expect((customised as unknown as { errorHandler?: unknown }).errorHandler).not.toBe(
+      fresh.errorHandler,
+    );
+  });
+});
