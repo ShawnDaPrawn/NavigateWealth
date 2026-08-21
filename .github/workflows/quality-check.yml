@@ -217,8 +217,37 @@ jobs:
           exit 0
 
       - name: Run dependency audit
+        # RATCHETED (2026-08-21, Stage A / F7): this used to be `|| true` with no
+        # threshold — a fresh critical CVE in a direct dependency could never fail
+        # a PR, on a platform holding client financial/medical PII, ID documents
+        # and digital signatures. Now the HIGH+CRITICAL count is compared against
+        # the committed floor in .npm-audit-baseline by "Enforce quality gates";
+        # the job fails if it RISES, so no new high/critical can be introduced
+        # while the residual backlog is burned down.
+        #
+        # Floor is currently 1: `sharp` (<0.35.0, inherited libvips CVEs) needs a
+        # semver-MAJOR bump. It is a devDependency used only by local image
+        # generation scripts (scripts/generate-brand-*.mjs) and never ships to
+        # users, so it is accepted rather than forced. LOWER .npm-audit-baseline
+        # when it is upgraded; at 0, gate on the count directly for a hard zero.
+        #
+        # `|| true` is retained on the audit command itself because npm audit
+        # exits non-zero whenever ANY vulnerability exists (including moderate/low,
+        # which are not gated) — the count, not the exit code, is authoritative.
         shell: bash
-        run: npm audit --json > quality-npm-audit-report.json || true
+        run: |
+          set +e
+          npm audit --json > quality-npm-audit-report.json
+          audit_high="$(node -e "
+            try {
+              const r = require('./quality-npm-audit-report.json');
+              const v = (r.metadata && r.metadata.vulnerabilities) || {};
+              console.log((v.high || 0) + (v.critical || 0));
+            } catch (e) { console.log('999999'); }
+          ")"
+          echo "$audit_high" > quality-npm-audit.count
+          echo "npm audit high+critical: $audit_high (ratchet floor: $(cat .npm-audit-baseline 2>/dev/null || echo '?'))"
+          exit 0
 
       - name: Publish quality issue snapshot
         shell: bash
@@ -254,6 +283,7 @@ jobs:
             quality-depcruise.exit
             quality-depcruise.count
             quality-typecheck-deno.count
+            quality-npm-audit.count
 
       - name: Enforce quality gates
         # Runs last so the dashboard snapshot is published and artifacts are
@@ -277,6 +307,8 @@ jobs:
           deno_baseline="$(cat .deno-check-baseline 2>/dev/null | tr -dc '0-9')"; deno_baseline="${deno_baseline:-0}"
           depcruise_count="$(cat quality-depcruise.count 2>/dev/null | tr -dc '0-9')"; depcruise_count="${depcruise_count:-999999}"
           depcruise_baseline="$(cat .depcruise-baseline 2>/dev/null | tr -dc '0-9')"; depcruise_baseline="${depcruise_baseline:-0}"
+          audit_count="$(cat quality-npm-audit.count 2>/dev/null | tr -dc '0-9')"; audit_count="${audit_count:-999999}"
+          audit_baseline="$(cat .npm-audit-baseline 2>/dev/null | tr -dc '0-9')"; audit_baseline="${audit_baseline:-0}"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
@@ -285,6 +317,7 @@ jobs:
           echo "middleware typecheck code: $mw_exit"
           echo "dependency-cruiser code:   $depcruise_exit"
           echo "depcruise violations:      $depcruise_count (ratchet floor $depcruise_baseline)"
+          echo "npm audit high+critical:   $audit_count (ratchet floor $audit_baseline)"
           echo "deno type-error count:     $deno_count (ratchet floor $deno_baseline; raw exit $deno_exit)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
@@ -299,6 +332,12 @@ jobs:
             failed=1
           elif [ "$depcruise_count" -lt "$depcruise_baseline" ]; then
             echo "::notice::Module-boundary violations dropped to $depcruise_count (below floor $depcruise_baseline) — tighten the ratchet by setting .depcruise-baseline to $depcruise_count."
+          fi
+          if [ "$audit_count" -gt "$audit_baseline" ]; then
+            echo "::error::npm audit high/critical vulnerabilities rose to $audit_count (ratchet floor $audit_baseline) — a NEW high or critical advisory affects this dependency tree. Run 'npm audit' to see it and 'npm audit fix' for a non-breaking fix; pin/override or alias the package if no clean fix exists. If you deliberately accepted it, update .npm-audit-baseline WITH a justification comment in quality-check.yml. See quality-npm-audit-report.json"
+            failed=1
+          elif [ "$audit_count" -lt "$audit_baseline" ]; then
+            echo "::notice::npm audit high/critical vulnerabilities dropped to $audit_count (below floor $audit_baseline) — tighten the ratchet by setting .npm-audit-baseline to $audit_count."
           fi
           if [ "$deno_count" -gt "$deno_baseline" ]; then
             echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update .deno-check-baseline. See quality-typecheck-deno.log"

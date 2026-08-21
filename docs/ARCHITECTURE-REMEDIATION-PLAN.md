@@ -247,10 +247,16 @@ Severity is about blast radius, not effort. IDs are used in the plan.
 - **A10 — Deprecated `SUPER_ADMIN_EMAIL` locks out the recovery admin.** 12
   production call sites in 5 files; `client-management-super-admin-routes.ts:182`
   denies the recovery super-admin from the very route built for recovery.
-- **A11 — `npm audit` is fully advisory** (`|| true`, no severity gate) on a
-  PII/signature platform. Two fake CI test steps write `.exit` files nothing
-  reads; the "publish quality snapshot" step can fail every PR on a Supabase
-  outage (no `continue-on-error`).
+- **A11 — CI theatre.** _(audit half FIXED 2026-08-21, Stage A / F7.)_
+  `npm audit` was fully advisory (`|| true`, no severity gate) on a
+  PII/signature platform — and the drift proved the point: 7 high + 2 moderate
+  had accumulated unnoticed, including a runtime `react-router`
+  XSS/open-redirect. `npm audit fix` cleared 6 highs + both moderates with no
+  `package.json` change; high+critical is now ratcheted against
+  `.npm-audit-baseline` (floor 1: dev-only `sharp`). **Still open:** two fake CI
+  test steps write `.exit` files nothing reads, and the "publish quality
+  snapshot" step can fail every PR on a Supabase outage (no
+  `continue-on-error`).
 
 ### MINOR (batch opportunistically)
 

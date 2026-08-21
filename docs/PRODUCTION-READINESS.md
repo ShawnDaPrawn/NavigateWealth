@@ -209,8 +209,14 @@ Landed since the 2026-04-20 CORS restore:
 - Phase 11 dependency audit burn-down removes the current npm audit findings:
   `react-quill-new` is held on `3.7.0`, transitive `quill` is overridden to
   `2.0.2`, and `xlsx` is aliased to `@e965/xlsx@0.20.3`.
-- `npm audit --json` currently reports 0 vulnerabilities after the Phase 11
-  dependency changes.
+- `npm audit --json` reported 0 vulnerabilities at the time of the Phase 11
+  dependency changes. **This is no longer true and was never gated** — the audit
+  step ran with `|| true` and no threshold, so drift was invisible. Re-measured
+  2026-08-21: 7 high + 2 moderate had accumulated (including a runtime
+  `react-router` XSS/open-redirect advisory). `npm audit fix` cleared 6 highs and
+  both moderates with no `package.json` change; the residual 1 high is `sharp`
+  (dev-only, needs a semver-major bump). The count is now ratcheted against
+  `.npm-audit-baseline` (Stage A / F7) so it cannot silently drift again.
 
 Remaining production-readiness blockers are now mainly:
 
