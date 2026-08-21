@@ -89,6 +89,15 @@ export default tseslint.config(
               allowTypeImports: true,
             },
           ],
+          // ONE-WAY-TO-DO-IT bans (Stage A / F10). Only rules that are already
+          // at ZERO belong here, so they can be `error` with no debt.
+          paths: [
+            {
+              name: 'react-toastify',
+              message:
+                'Use `import { toast } from "sonner"` — sonner is the app\'s toast system and its <Toaster> is the only one mounted (AppProviders.tsx). react-toastify toasts silently DO NOTHING: no <ToastContainer> is rendered anywhere and its CSS is never imported, so every call was a no-op. This bit ReminderSettingsPanel, where admins saving e-sign reminder settings got no success or failure feedback at all.',
+            },
+          ],
         },
       ],
     },

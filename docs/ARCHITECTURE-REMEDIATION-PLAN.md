@@ -284,10 +284,14 @@ Severity is about blast radius, not effort. IDs are used in the plan.
 
 ### MINOR (batch opportunistically)
 
-- **A12 — `react-toastify` toasts are a silent no-op** (no `<ToastContainer>`
-  mounted): admins saving e-sign reminder settings get no success/failure
-  feedback (`ReminderSettingsPanel.tsx:67`). The lib also rides eagerly in
-  `vendor-feedback`.
+- **A12 — `react-toastify` toasts are a silent no-op** — **FIXED 2026-08-21
+  (Stage A / F10).** No `<ToastContainer>` was mounted anywhere and its CSS was
+  never imported, so admins saving e-sign reminder settings got no success or
+  failure feedback at all (`ReminderSettingsPanel.tsx:67`). Swapped to `sonner`
+  (identical API; every sibling in the module already used it), the dependency
+  was removed, and it is now banned at `error` via `no-restricted-imports` so it
+  cannot return. Dropping it from the eager `vendor-feedback` chunk also took
+  the entry graph from 659.3 to **655.5 KB gzipped** (re-baselined into F6).
 - **A13 — 1,056 lines of Quill CSS in the eager global stylesheet**
   (`src/index.css`), loaded on the marketing homepage for a 5-file admin editor.
 - **A14 — Two large module `api.ts` files bypass the API client**

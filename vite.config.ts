@@ -57,7 +57,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-data';
   }
 
-  if (id.includes('/motion/') || id.includes('/sonner/') || id.includes('/react-toastify/')) {
+  if (id.includes('/motion/') || id.includes('/sonner/')) {
     return 'vendor-feedback';
   }
 
