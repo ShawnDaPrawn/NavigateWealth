@@ -220,10 +220,12 @@ Severity is about blast radius, not effort. IDs are used in the plan.
     `esign_*` tables in any schema**. This corrects §5 of this plan and the
     ledger, both of which described those tables as landed with RLS: e-signature
     data lives entirely in KV.
-  - **`atomic_auth_rate_limit` has no migration file in the repo.** It created
+  - ~~**`atomic_auth_rate_limit` has no migration file in the repo.**~~
+    **CLOSED 2026-08-21** by main's PR #207, which added
+    `supabase/migrations/20260821000001_atomic_auth_rate_limit.sql`. It creates
     `check_auth_rate_limit_91ed8379` (SECURITY DEFINER, correctly NOT executable
-    by `anon`/`authenticated`) — which addresses the non-atomic half of S11, but
-    is invisible to anyone reading the repo.
+    by `anon`/`authenticated`), addressing the non-atomic half of S11. The
+    drift in this direction is resolved; the two items below are not.
   - The `kv_store_91ed8379` table itself has no migration file either.
 
   Schema state that only exists in the dashboard cannot be reviewed, rolled
