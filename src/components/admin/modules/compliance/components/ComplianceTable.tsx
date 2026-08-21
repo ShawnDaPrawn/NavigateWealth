@@ -197,7 +197,7 @@ export function ComplianceTable({
       case 'number':
         return typeof value === 'number' ? value.toLocaleString() : '0';
       case 'currency':
-        return typeof value === 'number' ? `R${value.toLocaleString()}` : '—';
+        return typeof value === 'number' ? `R${value.toLocaleString('en-US')}` : '—';
       default:
         return value ? String(value) : '—';
     }
