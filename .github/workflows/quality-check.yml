@@ -248,6 +248,34 @@ jobs:
           echo "dependency-cruiser violations: $depcruise_count (ratchet floor: $(cat .depcruise-baseline 2>/dev/null || echo '?'))"
           exit 0
 
+      - name: Check bundle size budget (ratcheted)
+        # Stage A / F6. Nothing measured build output before this, so weight
+        # could grow invisibly. Compares dist/ against the committed floors in
+        # .bundle-size-baseline.json; "Enforce quality gates" fails the job if a
+        # metric exceeds its floor + 5% headroom (exact-byte comparison would
+        # fail on content-hash and ordinary-feature noise and get switched off).
+        #
+        # Runs after the build step, which produces dist/. If the build failed
+        # there is no dist/ and this exits 2 (fails CLOSED) rather than looking
+        # like a pass — the build gate reports the root cause.
+        #
+        # Two known problems this makes visible on every run, both pre-existing
+        # and tracked, neither introduced here:
+        #   * the eager entry graph (~659 KB gzipped) includes vendor-tiptap and
+        #     vendor-jspdf — a rich-text editor and a PDF generator that every
+        #     marketing-page visitor downloads;
+        #   * imageBytes is ~864 MB because `figma:asset` imports resolve to raw
+        #     multi-MB PNGs (remediation plan A7 — the .webp the resolver looks
+        #     for in src/assets is never generated).
+        # Re-baseline with `npm run bundle:check -- --write-baseline` when either
+        # is fixed, so the win is locked in.
+        shell: bash
+        run: |
+          set +e
+          npm run bundle:check 2>&1 | tee quality-bundle-size.log
+          echo "${PIPESTATUS[0]}" > quality-bundle-size.exit
+          exit 0
+
       - name: Run dependency audit
         # RATCHETED (2026-08-21, Stage A / F7): this used to be `|| true` with no
         # threshold — a fresh critical CVE in a direct dependency could never fail
@@ -317,6 +345,8 @@ jobs:
             quality-typecheck-deno.count
             quality-npm-audit.count
             quality-lint-warnings.count
+            quality-bundle-size.log
+            quality-bundle-size.exit
 
       - name: Enforce quality gates
         # Runs last so the dashboard snapshot is published and artifacts are
@@ -344,6 +374,7 @@ jobs:
           audit_baseline="$(cat .npm-audit-baseline 2>/dev/null | tr -dc '0-9')"; audit_baseline="${audit_baseline:-0}"
           lint_warnings="$(cat quality-lint-warnings.count 2>/dev/null | tr -dc '0-9')"; lint_warnings="${lint_warnings:-999999}"
           lint_warn_baseline="$(cat .eslint-warning-baseline 2>/dev/null | tr -dc '0-9')"; lint_warn_baseline="${lint_warn_baseline:-0}"
+          bundle_exit="$(cat quality-bundle-size.exit 2>/dev/null || echo 1)"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
@@ -354,6 +385,7 @@ jobs:
           echo "depcruise violations:      $depcruise_count (ratchet floor $depcruise_baseline)"
           echo "npm audit high+critical:   $audit_count (ratchet floor $audit_baseline)"
           echo "ESLint warnings:           $lint_warnings (ratchet floor $lint_warn_baseline)"
+          echo "bundle size budget:        exit $bundle_exit (see quality-bundle-size.log)"
           echo "deno type-error count:     $deno_count (ratchet floor $deno_baseline; raw exit $deno_exit)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
@@ -374,6 +406,13 @@ jobs:
             failed=1
           elif [ "$audit_count" -lt "$audit_baseline" ]; then
             echo "::notice::npm audit high/critical vulnerabilities dropped to $audit_count (below floor $audit_baseline) — tighten the ratchet by setting .npm-audit-baseline to $audit_count."
+          fi
+          if [ "$bundle_exit" = "2" ]; then
+            echo "::error::Bundle-size check could not run (missing dist/ or unreadable .bundle-size-baseline.json). If the production build failed, fix that first — this check needs its output. See quality-bundle-size.log"
+            failed=1
+          elif [ "$bundle_exit" != "0" ]; then
+            echo "::error::Bundle-size budget exceeded — a metric grew past its floor + 5% headroom, usually because a large dependency was pulled into an eagerly-loaded chunk. Lazy-load it (React.lazy / dynamic import()), or re-baseline with 'npm run bundle:check -- --write-baseline' and justify it. See quality-bundle-size.log"
+            failed=1
           fi
           if [ "$lint_warnings" -gt "$lint_warn_baseline" ]; then
             echo "::error::ESLint warnings rose to $lint_warnings (ratchet floor $lint_warn_baseline) — new lint warnings were introduced (e.g. a file over the 1000-line max-lines budget, a react-hooks/exhaustive-deps suppression, or an unused variable). Fix them, or if you deliberately changed the floor, update .eslint-warning-baseline. See quality-lint.log"

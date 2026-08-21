@@ -239,6 +239,22 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   The webp-preferring resolver never fires (0 `.webp` in `src/assets`);
   `optimize:images` is not in `npm run build`. Individual 28–32 MB PNGs are
   emitted to `dist/`. All 154 are tracked in git (`.git` is 892 MB).
+  _Now measured and gated (Stage A / F6): `imageBytes` is **864 MB** of an
+  882 MB `dist/`, ratcheted in `.bundle-size-baseline.json` so it cannot grow._
+  The fix the resolver was written for is to generate `<hash>.webp` into
+  `src/assets` — `vite.config.ts:19-24` already prefers it. Weigh that against
+  adding more binaries to an already-892 MB `.git`; generating at build time
+  avoids the git cost.
+- **A16 — The eager entry graph ships admin-only tooling to every visitor.**
+  _(Found by F6, 2026-08-21 — not in the original audit.)_ The entry
+  modulepreload graph is **2.34 MB uncompressed / 659 KB gzipped** and includes
+  `vendor-jspdf` (382 KB, PDF generation) and `vendor-tiptap` (353 KB, the
+  rich-text editor used in 6 admin publication files). A visitor reading a
+  marketing page downloads both before first paint. Trace the static import
+  chain that pulls them into the eager graph and move it behind `React.lazy` /
+  a dynamic `import()`. Also here: `vendor-feedback` (172 KB) still carries the
+  dead `react-toastify` (A12). Ratcheted by F6, so it cannot worsen — but
+  ~900 KB of the entry graph is avoidable today.
 - **A8 — Backend is 8.6% test-file-covered and 0% coverage-measured, and
   deploys with only a non-blocking, credential-gated smoke test.** Combined with
   A2, ~136K lines ship to production essentially unverified.
