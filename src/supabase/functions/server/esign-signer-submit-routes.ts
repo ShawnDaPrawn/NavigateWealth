@@ -25,6 +25,12 @@ import {
 import { emitWebhookEvent } from './webhook-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
 import { enqueueCompletion } from './esign-completion-queue.ts';
+import {
+  assertActiveSigningState,
+  assertSignerFieldOwnership,
+  getMissingSignerFactors,
+  isSignerTurn,
+} from './esign-signer-guards.ts';
 
 const log = createModuleLogger('esign-signer-submit-routes');
 
@@ -64,26 +70,21 @@ app.post('/signer/submit', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
       return c.json({ error: 'Invalid access token' }, 404);
     }
 
-    // Check if already signed
-    if (signer.status === 'signed') {
-      return c.json({ error: 'Document already signed' }, 400);
-    }
-
-    // Check if OTP verification is required but not done
-    if (signer.requires_otp && !signer.otp_verified) {
-      return c.json({ error: 'OTP verification required before signing' }, 403);
-    }
-
-    // P6.6 — if the envelope requires KBA, the check must have been
-    // completed before submit. We surface a soft error so the client
-    // can route the signer through the KBA step.
+    const signingEnvelope = await getEnvelopeDetails(signer.envelope_id);
+    if (!signingEnvelope) return c.json({ error: 'Envelope not found' }, 404);
     try {
-      const envelopeForKba = await getEnvelopeDetails(signer.envelope_id);
-      if (envelopeForKba?.kba_required && signer.kba?.status !== 'passed') {
-        return c.json({ error: 'Identity verification (KBA) is required before signing' }, 403);
+      assertActiveSigningState(signingEnvelope, signer);
+      if (!isSignerTurn(signingEnvelope, signer)) throw new Error("It is not this signer's turn");
+      const missingFactors = getMissingSignerFactors(signingEnvelope, signer);
+      if (missingFactors.length > 0) {
+        throw new Error(`Required verification incomplete: ${missingFactors.join(', ')}`);
       }
-    } catch (kbaErr) {
-      log.warn('KBA gate check failed; allowing submit:', { error: String(kbaErr) });
+      assertSignerFieldOwnership(signingEnvelope, signer.id, field_values);
+    } catch (guardError) {
+      return c.json(
+        { error: guardError instanceof Error ? guardError.message : 'Signing is not allowed' },
+        403,
+      );
     }
 
     // Update field values
@@ -355,6 +356,22 @@ app.post('/signer/reject', requireIdempotency(), rateLimit('SIGNER_SUBMIT'), asy
 
     if (!signer) {
       return c.json({ error: 'Invalid access token' }, 404);
+    }
+
+    const signingEnvelope = await getEnvelopeDetails(signer.envelope_id);
+    if (!signingEnvelope) return c.json({ error: 'Envelope not found' }, 404);
+    try {
+      assertActiveSigningState(signingEnvelope, signer);
+      if (!isSignerTurn(signingEnvelope, signer)) throw new Error("It is not this signer's turn");
+      const missingFactors = getMissingSignerFactors(signingEnvelope, signer);
+      if (missingFactors.length > 0) {
+        throw new Error(`Required verification incomplete: ${missingFactors.join(', ')}`);
+      }
+    } catch (guardError) {
+      return c.json(
+        { error: guardError instanceof Error ? guardError.message : 'Decline is not allowed' },
+        403,
+      );
     }
 
     // Update signer status

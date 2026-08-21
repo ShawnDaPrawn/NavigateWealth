@@ -16,6 +16,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
 import { SITE_ORIGIN_APEX } from '../../../utils/siteOrigin.ts';
+import { requireAdmin } from './auth-mw.ts';
 import {
   generateId,
   generateSlug,
@@ -36,7 +37,7 @@ const getSupabase = () =>
 // STATISTICS ROUTE
 // ============================================================================
 
-adminRoutes.get('/stats', async (c) => {
+adminRoutes.get('/stats', requireAdmin, async (c) => {
   try {
     const articles = await kv.getByPrefix('article:');
     const categories = await kv.getByPrefix('article_category:');
@@ -88,7 +89,7 @@ adminRoutes.get('/stats', async (c) => {
 // INITIALIZATION - Seed Default Categories & Types
 // ============================================================================
 
-adminRoutes.post('/initialize', async (c) => {
+adminRoutes.post('/initialize', requireAdmin, async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));
     const shouldCreateCategories = body?.create_default_categories !== false;
@@ -194,7 +195,7 @@ adminRoutes.post('/initialize', async (c) => {
 });
 
 // Export all articles (for backup/migration)
-adminRoutes.get('/export', async (c) => {
+adminRoutes.get('/export', requireAdmin, async (c) => {
   try {
     const articles = await kv.getByPrefix('article:');
     const categories = await kv.getByPrefix('article_category:');
@@ -218,7 +219,7 @@ adminRoutes.get('/export', async (c) => {
 });
 
 // Import articles (from backup/migration)
-adminRoutes.post('/import', async (c) => {
+adminRoutes.post('/import', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
 
@@ -268,7 +269,7 @@ adminRoutes.post('/import', async (c) => {
 });
 
 // Clear all drafts (maintenance operation)
-adminRoutes.delete('/maintenance/clear-drafts', async (c) => {
+adminRoutes.delete('/maintenance/clear-drafts', requireAdmin, async (c) => {
   try {
     const articles = await kv.getByPrefix('article:');
     let deleted = 0;
@@ -291,7 +292,7 @@ adminRoutes.delete('/maintenance/clear-drafts', async (c) => {
 });
 
 // Image upload endpoint
-adminRoutes.post('/upload-image', async (c) => {
+adminRoutes.post('/upload-image', requireAdmin, async (c) => {
   try {
     const bucketName = 'make-91ed8379-publications';
 
@@ -369,7 +370,7 @@ adminRoutes.post('/upload-image', async (c) => {
 });
 
 // Send article notification to user groups
-adminRoutes.post('/articles/:id/send-notifications', async (c) => {
+adminRoutes.post('/articles/:id/send-notifications', requireAdmin, async (c) => {
   try {
     const articleId = c.req.param('id')!;
     const body = await c.req.json();

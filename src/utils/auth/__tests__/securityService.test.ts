@@ -107,14 +107,14 @@ describe('validateLoginAttempt', () => {
     expect(res.resetAt).toBeInstanceOf(Date);
   });
 
-  it('fails OPEN on a non-429 error response', async () => {
+  it('fails closed on a non-429 error response', async () => {
     fetchResolving({}, { ok: false, status: 500 });
-    expect(await validateLoginAttempt('a@b.co')).toEqual({ allowed: true });
+    expect(await validateLoginAttempt('a@b.co')).toMatchObject({ allowed: false });
   });
 
-  it('fails OPEN on a network error', async () => {
+  it('fails closed on a network error', async () => {
     fetchRejecting(new Error('Failed to fetch'));
-    expect(await validateLoginAttempt('a@b.co')).toEqual({ allowed: true });
+    expect(await validateLoginAttempt('a@b.co')).toMatchObject({ allowed: false });
   });
 });
 

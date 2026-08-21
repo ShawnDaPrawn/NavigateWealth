@@ -5,6 +5,7 @@ import { getErrMsg } from './shared-logger-utils.ts';
 import * as kv from './kv_store.tsx';
 import { sendEmail } from './email-service.ts';
 import { createServiceClient } from './client-management-utils.ts';
+import { requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-management-documents');
@@ -21,6 +22,11 @@ app.post('/upload', async (c) => {
 
     if (!file || !(file instanceof File)) {
       return c.json({ error: 'No file uploaded' }, 400);
+    }
+
+    if (typeof userId === 'string') {
+      const accessDenied = await requireClientAccess(c, userId);
+      if (accessDenied) return accessDenied;
     }
 
     // Create Supabase client
@@ -85,6 +91,9 @@ app.post('/send-documents', async (c) => {
     if (!userId) {
       return c.json({ error: 'User ID is required' }, 400);
     }
+
+    const accessDenied = await requireClientAccess(c, userId);
+    if (accessDenied) return accessDenied;
 
     log.info('Sending documents for user', { userId });
 

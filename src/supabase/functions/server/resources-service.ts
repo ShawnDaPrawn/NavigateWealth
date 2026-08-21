@@ -31,6 +31,7 @@ import {
   parseRSStoJSON,
   type RSSItem,
 } from './resources-helpers.ts';
+import { assertPublicHttpUrlResolved } from './ssrf-guard.ts';
 
 const log = createModuleLogger('resources-service');
 
@@ -1342,6 +1343,10 @@ export class ResourcesService {
     }>,
     password: string,
   ): Promise<{ downloadUrl: string }> {
+    const MAX_EXTERNAL_FILE_BYTES = 25 * 1024 * 1024;
+    const MAX_EXTERNAL_TOTAL_BYTES = 100 * 1024 * 1024;
+    let externalTotalBytes = 0;
+
     await this.ensureBucket();
 
     // Create a temporary directory for this process
@@ -1543,16 +1548,33 @@ export class ResourcesService {
                   await tempFile.seek(0, Deno.SeekMode.Start);
                   await tempFile.truncate(0);
 
-                  const response = await fetch(file.url);
+                  await assertPublicHttpUrlResolved(file.url);
+                  const response = await fetch(file.url, { redirect: 'manual' });
                   if (!response.ok || !response.body)
                     throw new Error(`Fetch failed: ${response.status}`);
+                  const declaredLength = Number(response.headers.get('content-length') || 0);
+                  if (
+                    declaredLength > MAX_EXTERNAL_FILE_BYTES ||
+                    externalTotalBytes + declaredLength > MAX_EXTERNAL_TOTAL_BYTES
+                  ) {
+                    throw new Error('External file exceeds download size limit');
+                  }
 
                   // Stream to temp file
                   const reader = response.body.getReader();
+                  let downloadedBytes = 0;
                   try {
                     while (true) {
                       const { done, value } = await reader.read();
                       if (done) break;
+                      downloadedBytes += value.length;
+                      if (
+                        downloadedBytes > MAX_EXTERNAL_FILE_BYTES ||
+                        externalTotalBytes + downloadedBytes > MAX_EXTERNAL_TOTAL_BYTES
+                      ) {
+                        await reader.cancel();
+                        throw new Error('External file exceeds download size limit');
+                      }
                       await tempFile.write(value);
                     }
                   } catch (streamErr) {
@@ -1561,6 +1583,7 @@ export class ResourcesService {
                   } finally {
                     reader.releaseLock();
                   }
+                  externalTotalBytes += downloadedBytes;
                   success = true;
                 } catch (err) {
                   lastError = err;

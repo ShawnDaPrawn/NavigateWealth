@@ -23,6 +23,8 @@ export interface SignerSessionData {
   otp_required: boolean;
   otp_verified?: boolean;
   access_code_required?: boolean;
+  challenge_required?: boolean;
+  missing_factors?: string[];
   document_url: string;
   document_filename?: string;
   page_count: number;

@@ -28,6 +28,7 @@ import {
   type ArticleTagLink,
 } from './publications-route-helpers.ts';
 import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const log = createModuleLogger('publications-tags-scheduling-routes');
 
@@ -47,7 +48,7 @@ tagsSchedulingRoutes.get('/tags', async (c) => {
   }
 });
 
-tagsSchedulingRoutes.post('/tags', async (c) => {
+tagsSchedulingRoutes.post('/tags', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const { name } = body;
@@ -77,7 +78,7 @@ tagsSchedulingRoutes.post('/tags', async (c) => {
   }
 });
 
-tagsSchedulingRoutes.post('/articles/:articleId/tags/:tagId', async (c) => {
+tagsSchedulingRoutes.post('/articles/:articleId/tags/:tagId', requireAdmin, async (c) => {
   try {
     const articleId = c.req.param('articleId')!;
     const tagId = c.req.param('tagId')!;
@@ -96,7 +97,7 @@ tagsSchedulingRoutes.post('/articles/:articleId/tags/:tagId', async (c) => {
   }
 });
 
-tagsSchedulingRoutes.delete('/articles/:articleId/tags/:tagId', async (c) => {
+tagsSchedulingRoutes.delete('/articles/:articleId/tags/:tagId', requireAdmin, async (c) => {
   try {
     const articleId = c.req.param('articleId')!;
     const tagId = c.req.param('tagId')!;
@@ -245,7 +246,7 @@ tagsSchedulingRoutes.post('/cron/process-scheduled', async (c) => {
   }
 });
 
-tagsSchedulingRoutes.post('/process-scheduled', async (c) => {
+tagsSchedulingRoutes.post('/process-scheduled', requireAdmin, async (c) => {
   try {
     const articles = await kv.getByPrefix('article:');
     const now = new Date();

@@ -90,6 +90,7 @@ const authMocks = vi.hoisted(() => ({
 
 vi.mock('../auth-mw.ts', () => ({
   requireAuth: authMocks.requireAuth,
+  requirePrimaryAuth: authMocks.requireAuth,
 }));
 
 // ── Supabase client stub ───────────────────────────────────────────────────────

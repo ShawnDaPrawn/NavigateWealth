@@ -11,7 +11,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { TemplateService, VersionService } from './publications-phase4-service.ts';
 import { type Article } from './publications-route-helpers.ts';
@@ -19,6 +19,10 @@ import { type Article } from './publications-route-helpers.ts';
 const log = createModuleLogger('publications-site-routes');
 
 const siteRoutes = new Hono();
+
+siteRoutes.use('/templates', requireAdmin);
+siteRoutes.use('/templates/*', requireAdmin);
+siteRoutes.use('/versions/*', requireAdmin);
 
 // ============================================================================
 // CONTENT TEMPLATES ROUTES (Phase 4)
@@ -182,7 +186,7 @@ siteRoutes.post('/versions/:articleId/:versionId/restore', async (c) => {
  */
 siteRoutes.get(
   '/press/config',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const config = await kv.get('config:press_stats');
     return c.json({
@@ -203,7 +207,7 @@ siteRoutes.get(
  */
 siteRoutes.put(
   '/press/config',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const { aum, yearsInBusiness, combinedExperience } = body;
@@ -372,7 +376,7 @@ siteRoutes.get('/team', async (c) => {
  */
 siteRoutes.get(
   '/team/admin',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const entries = await kv.getByPrefix('team_member:');
     const members = (entries as TeamMember[])
@@ -388,7 +392,7 @@ siteRoutes.get(
  */
 siteRoutes.post(
   '/team/admin',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const {
@@ -441,7 +445,7 @@ siteRoutes.post(
  */
 siteRoutes.put(
   '/team/admin/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const { id } = c.req.param();
     const existing = (await kv.get(`team_member:${id}`)) as TeamMember | null;
@@ -478,7 +482,7 @@ siteRoutes.put(
  */
 siteRoutes.delete(
   '/team/admin/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const { id } = c.req.param();
     const existing = (await kv.get(`team_member:${id}`)) as TeamMember | null;
@@ -542,7 +546,7 @@ siteRoutes.get('/careers', async (c) => {
  */
 siteRoutes.get(
   '/careers/admin',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const entries = await kv.getByPrefix('job_listing:');
     const listings = (entries as JobListing[])
@@ -557,7 +561,7 @@ siteRoutes.get(
  */
 siteRoutes.post(
   '/careers/admin',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const {
@@ -609,7 +613,7 @@ siteRoutes.post(
  */
 siteRoutes.put(
   '/careers/admin/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const { id } = c.req.param();
     const existing = (await kv.get(`job_listing:${id}`)) as JobListing | null;
@@ -642,7 +646,7 @@ siteRoutes.put(
  */
 siteRoutes.delete(
   '/careers/admin/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const { id } = c.req.param();
     const existing = (await kv.get(`job_listing:${id}`)) as JobListing | null;

@@ -26,7 +26,11 @@ interface OtpVerificationStepProps {
   token: string;
   sessionData: SignerSessionData | null;
   onVerified: () => void;
-  verifyOtp: (token: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  verifyOtp: (
+    token: string,
+    otp: string,
+    accessCode?: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   resendOtp: (token: string) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -38,6 +42,7 @@ export function OtpVerificationStep({
   resendOtp,
 }: OtpVerificationStepProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [accessCode, setAccessCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -55,15 +60,19 @@ export function OtpVerificationStep({
   const handleVerify = useCallback(async () => {
     const otpValue = otp.join('');
 
-    if (otpValue.length !== 6) {
+    if (sessionData?.otp_required && otpValue.length !== 6) {
       setError('Please enter the complete 6-digit code');
+      return;
+    }
+    if (sessionData?.access_code_required && !accessCode.trim()) {
+      setError('Please enter the document access code');
       return;
     }
 
     setIsVerifying(true);
     setError(null);
 
-    const result = await verifyOtp(token, otpValue);
+    const result = await verifyOtp(token, otpValue, accessCode.trim() || undefined);
 
     if (result.success) {
       onVerified();
@@ -74,15 +83,18 @@ export function OtpVerificationStep({
     }
 
     setIsVerifying(false);
-  }, [otp, token, verifyOtp, onVerified]);
+  }, [accessCode, otp, token, verifyOtp, onVerified, sessionData]);
 
   // Auto-submit when all digits are entered
   useEffect(() => {
-    const isComplete = otp.every((digit) => digit !== '');
+    const isComplete =
+      !sessionData?.access_code_required &&
+      (!sessionData?.otp_required || otp.every((digit) => digit !== '')) &&
+      Boolean(sessionData?.otp_required);
     if (isComplete && !isVerifying) {
       handleVerify();
     }
-  }, [otp, isVerifying, handleVerify]);
+  }, [accessCode, otp, isVerifying, handleVerify, sessionData]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;
@@ -173,11 +185,15 @@ export function OtpVerificationStep({
                 <ShieldCheck className="h-8 w-8 text-indigo-600" />
               </motion.div>
               <h1 className="text-2xl font-bold text-gray-900 mb-1.5">Verify Your Identity</h1>
-              <p className="text-sm text-gray-500">We've sent a 6-digit verification code to</p>
-              <p className="text-sm mt-1 font-medium text-gray-800">
-                <Mail className="h-3.5 w-3.5 inline mr-1 text-indigo-500 -mt-0.5" />
-                {maskedEmail}
-              </p>
+              {sessionData?.otp_required && (
+                <>
+                  <p className="text-sm text-gray-500">We've sent a 6-digit verification code to</p>
+                  <p className="text-sm mt-1 font-medium text-gray-800">
+                    <Mail className="h-3.5 w-3.5 inline mr-1 text-indigo-500 -mt-0.5" />
+                    {maskedEmail}
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Document info */}
@@ -198,33 +214,50 @@ export function OtpVerificationStep({
             )}
 
             {/* OTP Input */}
-            <div className="mb-5">
-              <label className="block text-sm text-gray-600 mb-3 text-center font-medium">
-                Enter Verification Code
-              </label>
-              <div className="flex gap-2.5 justify-center">
-                {otp.map((digit, index) => (
-                  <Input
-                    key={index}
-                    ref={(el) => (inputRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    onPaste={handlePaste}
-                    className={`w-12 h-14 text-center text-xl font-bold rounded-lg border-2 transition-all ${
-                      digit
-                        ? 'border-indigo-400 bg-indigo-50/50'
-                        : 'border-gray-200 focus:border-indigo-500'
-                    }`}
-                    disabled={isVerifying}
-                    autoFocus={index === 0}
-                  />
-                ))}
+            {sessionData?.otp_required && (
+              <div className="mb-5">
+                <label className="block text-sm text-gray-600 mb-3 text-center font-medium">
+                  Enter Verification Code
+                </label>
+                <div className="flex gap-2.5 justify-center">
+                  {otp.map((digit, index) => (
+                    <Input
+                      key={index}
+                      ref={(el) => (inputRefs.current[index] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={handlePaste}
+                      className={`w-12 h-14 text-center text-xl font-bold rounded-lg border-2 transition-all ${
+                        digit
+                          ? 'border-indigo-400 bg-indigo-50/50'
+                          : 'border-gray-200 focus:border-indigo-500'
+                      }`}
+                      disabled={isVerifying}
+                      autoFocus={index === 0}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {sessionData?.access_code_required && (
+              <div className="mb-5">
+                <label className="block text-sm text-gray-600 mb-2 font-medium">
+                  Document access code
+                </label>
+                <Input
+                  type="password"
+                  value={accessCode}
+                  onChange={(event) => setAccessCode(event.target.value)}
+                  autoComplete="one-time-code"
+                  disabled={isVerifying}
+                />
+              </div>
+            )}
 
             {/* Error message */}
             {error && !isVerifying && (
@@ -245,7 +278,11 @@ export function OtpVerificationStep({
             {/* Verify button (manual, in case auto-submit didn't fire) */}
             <Button
               onClick={handleVerify}
-              disabled={!otp.every((d) => d !== '') || isVerifying}
+              disabled={
+                (sessionData?.otp_required && !otp.every((d) => d !== '')) ||
+                (sessionData?.access_code_required && !accessCode.trim()) ||
+                isVerifying
+              }
               className="w-full mb-4 bg-indigo-600 hover:bg-indigo-700 h-11"
             >
               {isVerifying ? (
@@ -259,24 +296,26 @@ export function OtpVerificationStep({
             </Button>
 
             {/* Resend OTP */}
-            <div className="text-center">
-              <p className="text-sm text-gray-500 mb-1.5">Didn't receive the code?</p>
-              {resendCooldown > 0 ? (
-                <p className="text-sm text-gray-400 flex items-center justify-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Resend in {resendCooldown}s
-                </p>
-              ) : (
-                <Button
-                  onClick={handleResendOtp}
-                  variant="ghost"
-                  size="sm"
-                  className="text-indigo-600 hover:text-indigo-700"
-                >
-                  Resend Code
-                </Button>
-              )}
-            </div>
+            {sessionData?.otp_required && (
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-1.5">Didn't receive the code?</p>
+                {resendCooldown > 0 ? (
+                  <p className="text-sm text-gray-400 flex items-center justify-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    Resend in {resendCooldown}s
+                  </p>
+                ) : (
+                  <Button
+                    onClick={handleResendOtp}
+                    variant="ghost"
+                    size="sm"
+                    className="text-indigo-600 hover:text-indigo-700"
+                  >
+                    Resend Code
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Security note */}
             <div className="mt-7 pt-5 border-t">

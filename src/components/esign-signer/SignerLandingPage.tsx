@@ -71,7 +71,11 @@ export function SignerLandingPage() {
         } else if (result.data.is_turn === false) {
           // Sequential signing: not this signer's turn yet
           setCurrentStep('waiting');
-        } else if (result.data.otp_required && result.data.signer_status !== 'otp_verified') {
+        } else if (
+          result.data.challenge_required ||
+          result.data.missing_factors?.length ||
+          (result.data.otp_required && result.data.signer_status !== 'otp_verified')
+        ) {
           setCurrentStep('otp');
         } else {
           setCurrentStep('signing');
@@ -83,8 +87,15 @@ export function SignerLandingPage() {
     });
   }, [token, validateToken]);
 
-  const handleOtpVerified = () => {
-    setCurrentStep('signing');
+  const handleOtpVerified = async () => {
+    if (!token) return;
+    const refreshed = await validateToken(token);
+    if (refreshed.success && refreshed.data && !refreshed.data.challenge_required) {
+      setCurrentStep('signing');
+      return;
+    }
+    setErrorMessage(refreshed.error || 'Unable to open the document after verification.');
+    setCurrentStep('expired');
   };
 
   const handleSigningComplete = () => {

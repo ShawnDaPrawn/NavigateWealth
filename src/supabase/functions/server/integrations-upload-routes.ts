@@ -17,7 +17,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import type { KvProvider } from './integrations-types.ts';
 import type {
   IntegrationConfig,
@@ -56,7 +56,7 @@ const isUploadedFile = (value: unknown): value is File =>
     typeof (value as File).size === 'number');
 
 // POST /upload
-app.post('/upload', requireAuth, async (c) => {
+app.post('/upload', requireAdmin, async (c) => {
   try {
     // Wrap parseBody in try/catch — Hono's parseBody calls formData.forEach()
     // internally, which throws if the body cannot be parsed as FormData
@@ -259,7 +259,7 @@ app.post('/upload', requireAuth, async (c) => {
 });
 
 // GET /history
-app.get('/history', async (c) => {
+app.get('/history', requireAdmin, async (c) => {
   const providerId = c.req.query('providerId');
   const categoryId = c.req.query('categoryId');
 
@@ -283,7 +283,7 @@ app.get('/history', async (c) => {
 });
 
 // GET /sync-runs/:runId
-app.get('/sync-runs/:runId', requireAuth, async (c) => {
+app.get('/sync-runs/:runId', requireAdmin, async (c) => {
   try {
     const runId = c.req.param('runId')!;
     const run = (await kv.get(`sync-run:${runId}`)) as IntegrationSyncRun | null;
@@ -298,7 +298,7 @@ app.get('/sync-runs/:runId', requireAuth, async (c) => {
 });
 
 // POST /sync-runs/:runId/publish
-app.post('/sync-runs/:runId/publish', requireAuth, async (c) => {
+app.post('/sync-runs/:runId/publish', requireAdmin, async (c) => {
   try {
     const runId = c.req.param('runId')!;
     const body = await c.req.json().catch(() => ({}));

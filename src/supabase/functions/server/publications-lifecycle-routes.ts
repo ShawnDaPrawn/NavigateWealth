@@ -27,10 +27,22 @@ import {
   type DeletedArticleRecord,
 } from './publications-route-helpers.ts';
 import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const log = createModuleLogger('publications-lifecycle-routes');
 
 const lifecycleRoutes = new Hono();
+
+for (const path of [
+  '/articles/:id/archive',
+  '/articles/:id/unarchive',
+  '/articles/:id/unpublish',
+  '/articles/:id/schedule',
+  '/articles/:id',
+  '/articles/:id/duplicate',
+]) {
+  lifecycleRoutes.use(path, requireAdmin);
+}
 
 lifecycleRoutes.post('/articles/:id/archive', async (c) => {
   try {

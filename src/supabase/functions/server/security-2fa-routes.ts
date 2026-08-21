@@ -21,7 +21,7 @@ import {
   createEmailTemplate,
   getFooterSettings,
 } from './email-service.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAuth, requirePrimaryAuth } from './auth-mw.ts';
 import { SuspendUserSchema, Toggle2FASchema, Verify2FACodeSchema } from './security-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import {
@@ -167,7 +167,7 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
  * POST /security/:userId/2fa/send-code
  * Generate and send 2FA verification code via email
  */
-app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
+app.post('/:userId/2fa/send-code', requirePrimaryAuth, async (c) => {
   try {
     const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
@@ -255,7 +255,7 @@ app.post('/:userId/2fa/send-code', requireAuth, async (c) => {
  * security KV entry so the frontend can implement a grace-period
  * (e.g. skip 2FA if verified within the last 3 hours).
  */
-app.post('/:userId/2fa/verify-code', requireAuth, async (c) => {
+app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
   try {
     const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);

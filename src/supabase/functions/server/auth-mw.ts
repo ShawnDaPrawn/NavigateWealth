@@ -10,6 +10,7 @@ import { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { logger } from './stderr-logger.ts';
 import { resolveTrustedRole } from './constants.ts';
+import * as kv from './kv_store.tsx';
 
 declare module 'npm:hono' {
   interface ContextVariableMap {
@@ -40,6 +41,39 @@ export class AuthError extends Error {
   }
 }
 
+const TWO_FACTOR_GRACE_MS = 3 * 60 * 60 * 1000;
+
+async function enforceAccountSecurity(userId: string): Promise<void> {
+  let status: Record<string, unknown> | null;
+  try {
+    status = (await kv.get(`security:${userId}`)) as Record<string, unknown> | null;
+  } catch (error) {
+    logger.error('Account security state lookup failed', error);
+    throw new AuthError(
+      'Security status is temporarily unavailable',
+      503,
+      'SECURITY_STATE_UNAVAILABLE',
+    );
+  }
+
+  if (!status) return;
+  if (status.deleted === true) {
+    throw new AuthError('Account is closed', 403, 'ACCOUNT_DELETED');
+  }
+  if (status.suspended === true) {
+    throw new AuthError('Account is suspended', 403, 'ACCOUNT_SUSPENDED');
+  }
+  if (status.twoFactorEnabled === true) {
+    const verifiedAt =
+      typeof status.last2faVerifiedAt === 'string'
+        ? new Date(status.last2faVerifiedAt).getTime()
+        : Number.NaN;
+    if (!Number.isFinite(verifiedAt) || Date.now() - verifiedAt >= TWO_FACTOR_GRACE_MS) {
+      throw new AuthError('Two-factor verification required', 403, 'TWO_FACTOR_REQUIRED');
+    }
+  }
+}
+
 /**
  * Get auth context manually (for non-middleware use).
  * Throws AuthError on failure — suitable for try/catch patterns in route handlers.
@@ -61,6 +95,8 @@ export async function getAuthContext(c: Context) {
     logger.error('Auth context check failed', error);
     throw new AuthError('Invalid or expired session', 401, 'AUTH_INVALID');
   }
+
+  await enforceAccountSecurity(user.id);
 
   // Resolve role from trusted sources only (super-admin allowlist,
   // app_metadata, NW_ADMIN_EMAILS) — privileged values in client-editable
@@ -93,7 +129,10 @@ interface ResolvedAuthUser {
  * on failure. Callers should check `result instanceof Response` to
  * distinguish the two cases.
  */
-async function resolveAuthUser(c: Context): Promise<ResolvedAuthUser | Response> {
+async function resolveAuthUser(
+  c: Context,
+  enforceSecurityState = true,
+): Promise<ResolvedAuthUser | Response> {
   const authHeader = c.req.header('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -111,6 +150,20 @@ async function resolveAuthUser(c: Context): Promise<ResolvedAuthUser | Response>
     return c.json({ error: 'Invalid or expired session', code: 'AUTH_INVALID' }, 401);
   }
 
+  if (enforceSecurityState) {
+    try {
+      await enforceAccountSecurity(user.id);
+    } catch (securityError) {
+      if (securityError instanceof AuthError) {
+        return c.json(
+          { error: securityError.message, code: securityError.code },
+          securityError.statusCode as 403 | 503,
+        );
+      }
+      throw securityError;
+    }
+  }
+
   // Resolve role from trusted sources only (super-admin allowlist,
   // app_metadata, NW_ADMIN_EMAILS) — privileged values in client-editable
   // user_metadata are NOT honoured. See resolveTrustedRole in constants.ts.
@@ -120,6 +173,7 @@ async function resolveAuthUser(c: Context): Promise<ResolvedAuthUser | Response>
   c.set('user', user);
   c.set('userId', user.id);
   c.set('userRole', role);
+  c.set('userEmail', user.email);
 
   return { user, userId: user.id, role };
 }
@@ -131,6 +185,17 @@ export async function requireAuth(c: Context, next: Next) {
   const result = await resolveAuthUser(c);
   if (result instanceof Response) return result;
 
+  await next();
+}
+
+/**
+ * Require a valid primary Supabase session without applying the account-state
+ * gate. Only challenge/status endpoints should use this so a 2FA user can
+ * complete the factor that unlocks normal APIs.
+ */
+export async function requirePrimaryAuth(c: Context, next: Next) {
+  const result = await resolveAuthUser(c, false);
+  if (result instanceof Response) return result;
   await next();
 }
 

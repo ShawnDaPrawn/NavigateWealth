@@ -12,7 +12,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { TwoFactorModal } from '../auth/TwoFactorModal';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { projectId } from '../../utils/supabase/info';
 import { LOGIN_BRAND_FEATURES } from './auth/authConstants';
 import { AuthBrandPanel } from './auth/AuthBrandPanel';
 import { AuthPaperBackground } from './auth/AuthPaperBackground';
@@ -37,8 +37,8 @@ export function LoginPage() {
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [tempUserId, setTempUserId] = useState<string | null>(null);
   const [tempUserEmail, setTempUserEmail] = useState<string>('');
-  /** Temporarily held password for re-authentication after 2FA verification */
-  const [tempPassword, setTempPassword] = useState<string>('');
+  /** Primary-session token used only to complete the pending 2FA challenge. */
+  const [tempAccessToken, setTempAccessToken] = useState<string>('');
 
   // Get success message from location state (e.g., from email verification)
   const successMessage = location.state?.message;
@@ -111,6 +111,11 @@ export function LoginPage() {
     try {
       // Proceed with normal sign in
       const result = await signIn(email, password);
+      const accessToken = result.session?.access_token;
+      if (!accessToken) {
+        await signOut();
+        throw new Error('Sign-in did not return a valid session');
+      }
 
       // Check if 2FA is enabled for this user
       if (result.user?.id) {
@@ -118,12 +123,18 @@ export function LoginPage() {
           const securityResponse = await fetch(
             `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${result.user.id}/status`,
             {
-              headers: { Authorization: `Bearer ${publicAnonKey}` },
+              headers: { Authorization: `Bearer ${accessToken}` },
             },
           );
 
-          if (securityResponse.ok) {
+          if (!securityResponse.ok) {
+            throw new Error('Security status request failed');
+          }
+          {
             const securityData = await securityResponse.json();
+            if (!securityData.success) {
+              throw new Error('Security status response was invalid');
+            }
 
             // -- Account lifecycle gate --
             // If the account is closed (soft-deleted), sign out immediately
@@ -162,21 +173,13 @@ export function LoginPage() {
                 }
               }
 
-              // ── Sign out immediately ───────────────────────────────
-              // The signIn() call above created a session. We must kill
-              // it BEFORE showing the 2FA modal so the user cannot
-              // access any authenticated routes until the code is
-              // verified. Credentials are held in local state so we
-              // can re-authenticate after successful verification.
-              await signOut();
-
               // Send 2FA code
               const sendCodeResponse = await fetch(
                 `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${result.user.id}/2fa/send-code`,
                 {
                   method: 'POST',
                   headers: {
-                    Authorization: `Bearer ${publicAnonKey}`,
+                    Authorization: `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({ email: email }),
@@ -187,10 +190,10 @@ export function LoginPage() {
                 throw new Error('Failed to send 2FA code');
               }
 
-              // Show 2FA modal — user is signed out at this point
+              // Keep the primary session only long enough to complete the server-enforced factor.
               setTempUserId(result.user.id);
               setTempUserEmail(email);
-              setTempPassword(password);
+              setTempAccessToken(accessToken);
               setShow2FAModal(true);
               setIsSubmitting(false);
               return; // Don't proceed with login until 2FA is verified
@@ -201,9 +204,11 @@ export function LoginPage() {
               sessionStorage.setItem('nw_show_2fa_prompt', 'true');
             }
           }
-        } catch (_twoFAError: unknown) {
-          // Continue with login if 2FA check fails (fail open)
-          // This is intentional - 2FA check failing should not block login
+        } catch (twoFAError: unknown) {
+          await signOut().catch(() => undefined);
+          throw new Error('Unable to verify account security status. Please try again.', {
+            cause: twoFAError,
+          });
         }
       }
 
@@ -248,41 +253,20 @@ export function LoginPage() {
   const handle2FAVerified = async () => {
     setShow2FAModal(false);
     setError('');
-
-    // ── Re-authenticate ──────────────────────────────────────────
-    // The user was signed out before the 2FA modal was shown.
-    // Now that the code has been verified, re-create the session
-    // using the stored credentials.
-    if (tempUserEmail && tempPassword) {
-      try {
-        setIsSubmitting(true);
-        await signIn(tempUserEmail, tempPassword);
-        // Session is now active — the useEffect will detect
-        // isAuthenticated and redirect to the dashboard.
-      } catch (reAuthError: unknown) {
-        console.error('Re-authentication after 2FA failed:', reAuthError);
-        setError(
-          'Your identity was verified, but we could not complete sign-in. Please try logging in again.',
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    setIsSubmitting(false);
 
     // Clear temporary credentials
     setTempUserId(null);
     setTempUserEmail('');
-    setTempPassword('');
+    setTempAccessToken('');
   };
 
   const handle2FACancel = async () => {
     setShow2FAModal(false);
     setTempUserId(null);
     setTempUserEmail('');
-    setTempPassword('');
-
-    // User was already signed out before the modal was shown,
-    // so no need to sign out again — just inform them.
+    setTempAccessToken('');
+    await signOut().catch(() => undefined);
     setError('Login cancelled. Two-factor authentication is required.');
   };
 
@@ -487,7 +471,7 @@ export function LoginPage() {
             {
               method: 'POST',
               headers: {
-                Authorization: `Bearer ${publicAnonKey}`,
+                Authorization: `Bearer ${tempAccessToken}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ code }),
@@ -501,7 +485,7 @@ export function LoginPage() {
               setShow2FAModal(false);
               setTempUserId(null);
               setTempUserEmail('');
-              setTempPassword('');
+              setTempAccessToken('');
               setError(
                 data.error ||
                   'Your account has been suspended. Please contact Navigate Wealth support.',
@@ -518,7 +502,7 @@ export function LoginPage() {
             {
               method: 'POST',
               headers: {
-                Authorization: `Bearer ${publicAnonKey}`,
+                Authorization: `Bearer ${tempAccessToken}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ email: tempUserEmail }),

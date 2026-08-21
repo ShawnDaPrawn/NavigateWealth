@@ -54,7 +54,7 @@ class EsignSignerService {
   /**
    * Verify OTP code
    */
-  async verifyOtp(token: string, otp: string): Promise<OtpVerificationResult> {
+  async verifyOtp(token: string, otp: string, accessCode?: string): Promise<OtpVerificationResult> {
     try {
       const response = await fetch(`${API_BASE}/signer/verify-otp`, {
         method: 'POST',
@@ -65,6 +65,7 @@ class EsignSignerService {
         body: JSON.stringify({
           access_token: token,
           otp,
+          access_code: accessCode,
         }),
       });
 

@@ -52,12 +52,18 @@ export function useSignerSession() {
     }
   };
 
-  const verifyOtp = async (token: string, otp: string): Promise<OtpVerificationResult> => {
+  const verifyOtp = async (
+    token: string,
+    otp: string,
+    accessCode?: string,
+  ): Promise<OtpVerificationResult> => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await esignSignerService.verifyOtp(token, otp);
+      const result = accessCode
+        ? await esignSignerService.verifyOtp(token, otp, accessCode)
+        : await esignSignerService.verifyOtp(token, otp);
 
       if (result.success) {
         // Update session data to reflect OTP verified status

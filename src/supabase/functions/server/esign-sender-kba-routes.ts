@@ -61,7 +61,8 @@ app.post('/signer/kba', rateLimit('SIGNER_ACCESS'), async (c) => {
         provider: result.provider,
         status: result.status,
         reference: result.reference,
-        verified_at: result.verifiedAt ?? new Date().toISOString(),
+        verified_at:
+          result.status === 'passed' ? (result.verifiedAt ?? new Date().toISOString()) : undefined,
       },
     });
 

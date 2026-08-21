@@ -12,8 +12,18 @@ import {
 } from './constants';
 import { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { getCurrentUserWithMetadata, mapSupabaseUserToMetadataSnapshot } from './authService';
+import { createClient } from '../supabase/client';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
+
+async function getRequiredAccessToken(hint?: string): Promise<string> {
+  if (hint) return hint;
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
+  if (!session?.access_token) throw new Error('Authenticated session required');
+  return session.access_token;
+}
 
 /**
  * Personnel (staff) roles - matches the server-side PERSONNEL_ROLES constant.
@@ -113,7 +123,7 @@ export function buildAppUserFromAuthSessionFallback(
  */
 async function fetchSecurityStatus(
   userId: string,
-  accessToken?: string,
+  accessToken: string,
 ): Promise<UserSuspensionStatus> {
   try {
     const controller = new AbortController();
@@ -123,7 +133,7 @@ async function fetchSecurityStatus(
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken || publicAnonKey}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: publicAnonKey,
       },
       signal: controller.signal,
@@ -131,32 +141,35 @@ async function fetchSecurityStatus(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn('Security status fetch failed, assuming not suspended');
-      return { suspended: false };
+      throw new Error(`Security status fetch failed (${response.status})`);
     }
 
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('text/html')) {
-      console.warn('Security status returned HTML, assuming not suspended');
-      return { suspended: false };
+      throw new Error('Security status returned an invalid content type');
     }
 
     const data = await response.json();
-    return data.status || { suspended: false };
+    if (!data.success || !data.status) throw new Error('Security status response was invalid');
+    return data.status;
   } catch (error) {
     if (
       error instanceof Error &&
       (error.name === 'AbortError' || error.message.includes('Failed to fetch'))
     ) {
-      logger.debug('Security status unavailable, proceeding with default');
+      logger.debug('Security status unavailable; profile hydration is blocked');
     } else {
       console.warn('Error fetching security status:', error);
     }
-    return { suspended: false };
+    throw error;
   }
 }
 
-async function fetchProfileResponse(encodedKey: string, encodedEmail: string): Promise<Response> {
+async function fetchProfileResponse(
+  encodedKey: string,
+  encodedEmail: string,
+  accessToken: string,
+): Promise<Response> {
   let retries = 3;
   let lastError: unknown;
 
@@ -171,7 +184,7 @@ async function fetchProfileResponse(encodedKey: string, encodedEmail: string): P
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${accessToken}`,
             apikey: publicAnonKey,
           },
           signal: controller.signal,
@@ -221,6 +234,7 @@ export async function loadUserProfile(
     const key = `user_profile:${userId}:personal_info`;
     const encodedKey = encodeURIComponent(key);
     const encodedEmail = encodeURIComponent(email);
+    const accessToken = await getRequiredAccessToken(authAccessTokenHint);
 
     const supabaseMetaPromise =
       supabaseUserHint != null && supabaseUserHint.id === userId
@@ -229,8 +243,8 @@ export async function loadUserProfile(
 
     const [supabaseUserData, securityStatus, response] = await Promise.all([
       supabaseMetaPromise,
-      fetchSecurityStatus(userId, authAccessTokenHint),
-      fetchProfileResponse(encodedKey, encodedEmail),
+      fetchSecurityStatus(userId, accessToken),
+      fetchProfileResponse(encodedKey, encodedEmail, accessToken),
     ]);
 
     if (response.ok) {
@@ -272,9 +286,13 @@ export async function loadUserProfile(
         });
         profileData.accountStatus = supabaseStatus as AccountStatus;
         try {
-          await updateUserProfile(userId, {
-            accountStatus: supabaseStatus,
-          } as Partial<UserProfile>);
+          await updateUserProfile(
+            userId,
+            {
+              accountStatus: supabaseStatus,
+            } as Partial<UserProfile>,
+            accessToken,
+          );
           logger.info('KV profile auto-healed', { supabaseStatus });
         } catch (healErr) {
           console.warn('Failed to persist KV profile auto-heal:', healErr);
@@ -284,7 +302,7 @@ export async function loadUserProfile(
       return mapProfileToAppUser(userId, email, profileData, supabaseUserData, securityStatus);
     }
 
-    if (response.status === 404 || !response.ok) {
+    if (response.status === 404) {
       const metaRole = supabaseUserData?.role;
       const isInvited = supabaseUserData?.invited === true;
       const isPersonnel =
@@ -314,9 +332,9 @@ export async function loadUserProfile(
       logger.info('Profile not found (or error), creating default profile', {
         status: response.status,
       });
-      await createDefaultProfile(userId, email, supabaseUserData?.firstName || '');
+      await createDefaultProfile(userId, email, supabaseUserData?.firstName || '', accessToken);
 
-      const retryResponse = await fetchProfileResponse(encodedKey, encodedEmail);
+      const retryResponse = await fetchProfileResponse(encodedKey, encodedEmail, accessToken);
 
       if (retryResponse.ok) {
         const result = await retryResponse.json();
@@ -333,23 +351,7 @@ export async function loadUserProfile(
       console.error('Error loading profile:', error);
     }
 
-    const isSuperAdmin = email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-    logger.info(
-      'Login validation server unavailable (likely cold start or dev mode), proceeding with login.',
-    );
-
-    return {
-      id: userId,
-      email,
-      firstName: '',
-      lastName: '',
-      role: isSuperAdmin ? 'super_admin' : DEFAULT_ROLE,
-      applicationStatus: DEFAULT_APPLICATION_STATUS,
-      accountStatus: isSuperAdmin ? 'approved' : DEFAULT_ACCOUNT_STATUS,
-      accountType: undefined,
-      adviserAssigned: isSuperAdmin,
-      suspended: false,
-    };
+    throw error;
   }
 }
 
@@ -360,15 +362,17 @@ export async function createDefaultProfile(
   userId: string,
   email: string,
   displayName: string = '',
+  accessTokenHint?: string,
 ): Promise<void> {
   try {
     logger.info('Creating default profile for user', { userId });
+    const accessToken = await getRequiredAccessToken(accessTokenHint);
 
     const response = await fetch(`${API_BASE}/profile/create-default`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: publicAnonKey,
       },
       body: JSON.stringify({
@@ -401,15 +405,17 @@ export async function createDefaultProfile(
 export async function updateUserProfile(
   userId: string,
   updates: Partial<UserProfile>,
+  accessTokenHint?: string,
 ): Promise<void> {
   try {
     const key = `user_profile:${userId}:personal_info`;
+    const accessToken = await getRequiredAccessToken(accessTokenHint);
 
     const response = await fetch(`${API_BASE}/profile/personal-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: publicAnonKey,
       },
       body: JSON.stringify({ key, data: updates }),
