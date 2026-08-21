@@ -204,8 +204,10 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   first honest run surfaced **210 real violations** (109 cross-feature-internals,
   100 outsider-admin-internals, 1 spa-edge type-only false positive) — well
   above the ~83 estimable by hand. The three rules are now `warn` (visible,
-  non-blocking) pending burn-down under touch-it-you-fix-it, then flip to
-  `error`.
+  non-blocking) **and ratcheted against `.depcruise-baseline`** — CI fails if
+  the count rises above the committed floor, so the backlog is strictly
+  non-worsening while it is burned down under touch-it-you-fix-it. At 0, flip
+  the rules to `error` for a hard zero.
 - **A2 — Global error handler is never registered.** `error.middleware.ts` has
   a full Zod-aware handler with telemetry, reachable only via opt-in
   `asyncHandler`. `index.tsx` registers no `app.onError`/`app.notFound`, and

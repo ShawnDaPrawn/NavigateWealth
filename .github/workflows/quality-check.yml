@@ -170,7 +170,7 @@ jobs:
           exit 0
 
       - name: Run dependency-cruiser (blocking)
-        # Phase 7 boundary guardrails — two rules, both error-severity:
+        # Phase 7 boundary guardrails — three rules:
         #
         #   no-cross-feature-internals
         #     Feature modules under src/components/admin/modules/ communicate
@@ -178,11 +178,26 @@ jobs:
         #     another module's hooks/, components/, api.ts, etc. directly is
         #     forbidden — it creates hidden coupling that makes refactors risky.
         #
+        #   no-outsider-admin-internals
+        #     Code outside the admin modules must likewise import only barrels.
+        #
         #   no-spa-edge-source
         #     SPA source must not import Supabase Edge Function (Deno) code at
         #     runtime. Call those routes over HTTP; use `import type` for shared
         #     type definitions only. Belt-and-suspenders on top of the ESLint
         #     no-restricted-imports error that already enforces this.
+        #
+        # RATCHETED (2026-08-21, Stage A / F1): this gate used to report "no
+        # violations" vacuously — the resolver had no `extensions` list, so
+        # first-party TS never resolved and NO rule ever fired. With the
+        # resolver fixed the rules work and expose a real pre-existing backlog
+        # (210 violations), so the three rules are `warn` (depcruise exits 0)
+        # and "Enforce quality gates" fails the job only if the violation count
+        # EXCEEDS the committed floor in .depcruise-baseline — no NEW boundary
+        # violation can be introduced while the backlog is burned down.
+        # LOWER .depcruise-baseline as violations are fixed; at 0, flip the
+        # rules back to `error` in .dependency-cruiser.cjs and gate on the exit
+        # code directly for a hard zero.
         #
         # Config: .dependency-cruiser.cjs
         # Run locally: npm run depcruise
@@ -191,6 +206,14 @@ jobs:
           set +e
           npx dependency-cruiser@16 'src/**/*.{ts,tsx}' --config .dependency-cruiser.cjs 2>&1 | tee quality-depcruise.log
           echo "${PIPESTATUS[0]}" > quality-depcruise.exit
+          # Authoritative count = dep-cruiser's own summary line, e.g.
+          #   "x 210 dependency violations (0 errors, 210 warnings)."
+          # A clean run prints "no dependency violations found" (no number), so
+          # an empty match means 0.
+          depcruise_count="$(grep -oE '[0-9]+ dependency violations' quality-depcruise.log | grep -oE '^[0-9]+' | tail -n1)"
+          depcruise_count="${depcruise_count:-0}"
+          echo "$depcruise_count" > quality-depcruise.count
+          echo "dependency-cruiser violations: $depcruise_count (ratchet floor: $(cat .depcruise-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Run dependency audit
@@ -229,6 +252,8 @@ jobs:
             quality-issues-payload.json
             quality-depcruise.log
             quality-depcruise.exit
+            quality-depcruise.count
+            quality-typecheck-deno.count
 
       - name: Enforce quality gates
         # Runs last so the dashboard snapshot is published and artifacts are
@@ -250,6 +275,8 @@ jobs:
           depcruise_exit="$(cat quality-depcruise.exit 2>/dev/null || echo 1)"
           deno_count="$(cat quality-typecheck-deno.count 2>/dev/null | tr -dc '0-9')"; deno_count="${deno_count:-999999}"
           deno_baseline="$(cat .deno-check-baseline 2>/dev/null | tr -dc '0-9')"; deno_baseline="${deno_baseline:-0}"
+          depcruise_count="$(cat quality-depcruise.count 2>/dev/null | tr -dc '0-9')"; depcruise_count="${depcruise_count:-999999}"
+          depcruise_baseline="$(cat .depcruise-baseline 2>/dev/null | tr -dc '0-9')"; depcruise_baseline="${depcruise_baseline:-0}"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
@@ -257,6 +284,7 @@ jobs:
           echo "format check exit code:    $format_exit"
           echo "middleware typecheck code: $mw_exit"
           echo "dependency-cruiser code:   $depcruise_exit"
+          echo "depcruise violations:      $depcruise_count (ratchet floor $depcruise_baseline)"
           echo "deno type-error count:     $deno_count (ratchet floor $deno_baseline; raw exit $deno_exit)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
@@ -265,7 +293,13 @@ jobs:
           if [ "$lint_exit" != "0" ]; then echo "::error::ESLint failed — a new lint error was introduced (baseline is 0 errors). See quality-lint.log"; failed=1; fi
           if [ "$format_exit" != "0" ]; then echo "::error::Prettier format check failed — run 'npm run format' to fix unformatted files (see quality-format.log)"; failed=1; fi
           if [ "$mw_exit" != "0" ]; then echo "::error::Middleware typecheck failed — middleware.ts must not import 'next/server' (see quality-typecheck-middleware.log)"; failed=1; fi
-          if [ "$depcruise_exit" != "0" ]; then echo "::error::dependency-cruiser found boundary violations — a feature module is importing another module's internals, or SPA code is importing edge-function source at runtime. Fix the import or export through the module's index barrel. See quality-depcruise.log"; failed=1; fi
+          if [ "$depcruise_exit" != "0" ]; then echo "::error::dependency-cruiser reported an ERROR-severity boundary violation (or failed to run) — a feature module is importing another module's internals, or SPA code is importing edge-function source at runtime. Fix the import or export through the module's index barrel. See quality-depcruise.log"; failed=1; fi
+          if [ "$depcruise_count" -gt "$depcruise_baseline" ]; then
+            echo "::error::Module-boundary violations rose to $depcruise_count (ratchet floor $depcruise_baseline) — a NEW cross-module/outsider import was introduced. Import through the module's public index barrel instead, or move the shared code to src/shared. If you deliberately changed the floor, update .depcruise-baseline. See quality-depcruise.log"
+            failed=1
+          elif [ "$depcruise_count" -lt "$depcruise_baseline" ]; then
+            echo "::notice::Module-boundary violations dropped to $depcruise_count (below floor $depcruise_baseline) — tighten the ratchet by setting .depcruise-baseline to $depcruise_count."
+          fi
           if [ "$deno_count" -gt "$deno_baseline" ]; then
             echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update .deno-check-baseline. See quality-typecheck-deno.log"
             failed=1
