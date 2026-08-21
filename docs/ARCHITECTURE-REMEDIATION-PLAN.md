@@ -66,7 +66,8 @@ and it is the first real work in this plan.
 ## 2. How this was assessed
 
 - **Local quality gates re-run from a clean `node_modules`** (all green,
-  confirming the ledger's baseline): `lint` 0 errors / 59 warnings,
+  confirming the ledger's baseline): `lint` 0 errors / 59 warnings (since
+  reduced to 55 and ratcheted — see correction 3 below),
   `typecheck` 0 errors, `typecheck:middleware` 0 errors, `depcruise` "no
   violations", `build` passes with SEO verification, and `vitest --coverage`
   passes with **measured coverage: statements 31.31%, branches 23.0%,
@@ -526,9 +527,15 @@ known to overstate reality and should be corrected there:
    dropped by the v8 parser. Effective whole-repo coverage is ~22%. Report SPA
    and backend separately. (Findings A8, §2.)
 3. **"59 warnings — mostly `max-lines` / complexity warnings"** — there is **no
-   complexity rule configured** in `eslint.config.mjs`, and **74 files** exceed
-   the `max-lines` budget (not the 4 the ledger cites). The warnings are
-   `max-lines` + `no-console` + `exhaustive-deps`.
+   complexity rule configured** in `eslint.config.mjs`. _Measured precisely
+   2026-08-21 (Stage A / F2), superseding the earlier raw-line estimate:_ the
+   count is now **55** (4 dead `eslint-disable` directives removed), composed of
+   `max-lines` 40, `react-refresh/only-export-components` 9,
+   `no-irregular-whitespace` 2, `react-hooks/exhaustive-deps` 2,
+   `no-unused-vars` 1, `prefer-const` 1 — no `no-console` at all. Note the
+   `max-lines` figure is **40 files**, not the 74 that exceed 1000 _raw_ lines:
+   the rule skips blanks/comments and exempts `scripts/**`. The count is now
+   ratcheted against `.eslint-warning-baseline`.
 
 Additionally, the Section 2 rubric's remaining unchecked box — "Backup, DR,
 POPIA, FAIS, Sentry, CSP…" — should be split: **CSP is still absent**

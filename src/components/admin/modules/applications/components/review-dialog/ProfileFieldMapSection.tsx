@@ -10,7 +10,6 @@ import {
 interface ProfileFieldMapSectionProps {
   showFieldMap: boolean;
   onToggle: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>;
 }
 

@@ -75,19 +75,51 @@ jobs:
           echo "${PIPESTATUS[0]}" > quality-typecheck.exit
           exit 0
 
-      - name: Run ESLint (blocking)
-        # ESLint runs at 0 errors (warnings are not yet gated — there's a large
-        # warning backlog being burned down). This check is GATED in "Enforce
-        # quality gates" below, so any new lint ERROR fails CI. Formatting is
-        # enforced per-commit via the Husky + lint-staged pre-commit hook
-        # (Prettier on staged files), not as a repo-wide CI check, because
-        # several guardrail/golden tests assert on exact source text and a
-        # repo-wide reformat would trip them.
+      - name: Run ESLint (blocking + warning ratchet)
+        # ESLint runs at 0 errors; any new lint ERROR fails CI via "Enforce
+        # quality gates" below. Formatting is enforced per-commit via the Husky
+        # + lint-staged pre-commit hook (Prettier on staged files), not as a
+        # repo-wide CI check, because several guardrail/golden tests assert on
+        # exact source text and a repo-wide reformat would trip them.
+        #
+        # WARNING RATCHET (2026-08-21, Stage A / F2): warnings used to be
+        # completely ungated, so the backlog could grow silently — including the
+        # `max-lines` file-size budget, which warned constantly and blocked
+        # nothing. The warning COUNT is now compared against the committed floor
+        # in .eslint-warning-baseline; the job fails if it RISES. This is
+        # deliberately the TOTAL count rather than a max-lines-only count: it is
+        # strictly stronger (a new oversized file, a new exhaustive-deps
+        # suppression, or a new unused var all raise it) and needs one mechanism
+        # instead of several.
+        #
+        # Floor is currently 55: max-lines 40, react-refresh 9,
+        # no-irregular-whitespace 2, exhaustive-deps 2, no-unused-vars 1,
+        # prefer-const 1. LOWER .eslint-warning-baseline as warnings are fixed.
+        #
+        # F2 burn-down path for the file-size budget: `max-lines` is 1000 in
+        # eslint.config.mjs (skipBlankLines + skipComments; scripts/** exempt).
+        # Split the 40 offenders under touch-it-you-fix-it, then step the budget
+        # 1000 -> 800 -> 600, re-baselining the warning count at each step. When
+        # the max-lines contribution reaches 0, promote the rule to `error`.
+        #
+        # NOTE: a crashed/misconfigured ESLint exits non-zero and is caught by
+        # the separate lint_exit gate, so parsing an empty log as 0 warnings
+        # cannot mask a failure.
         shell: bash
         run: |
           set +e
           npm run lint 2>&1 | tee quality-lint.log
           echo "${PIPESTATUS[0]}" > quality-lint.exit
+          # Authoritative count = the summary tuple, e.g.
+          #   "✖ 55 problems (0 errors, 55 warnings)".
+          # Parsed from inside the parentheses ON PURPOSE: ESLint also prints
+          # "0 errors and 1 warning potentially fixable with the `--fix` option",
+          # and a looser pattern picks up that decoy number instead.
+          # A fully clean run prints no summary at all -> 0.
+          lint_warnings="$(grep -oE '\([0-9]+ errors?, [0-9]+ warnings?\)' quality-lint.log | tail -n1 | grep -oE '[0-9]+ warnings?' | grep -oE '^[0-9]+')"
+          lint_warnings="${lint_warnings:-0}"
+          echo "$lint_warnings" > quality-lint-warnings.count
+          echo "ESLint warnings: $lint_warnings (ratchet floor: $(cat .eslint-warning-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Run Prettier format check (blocking)
@@ -284,6 +316,7 @@ jobs:
             quality-depcruise.count
             quality-typecheck-deno.count
             quality-npm-audit.count
+            quality-lint-warnings.count
 
       - name: Enforce quality gates
         # Runs last so the dashboard snapshot is published and artifacts are
@@ -309,6 +342,8 @@ jobs:
           depcruise_baseline="$(cat .depcruise-baseline 2>/dev/null | tr -dc '0-9')"; depcruise_baseline="${depcruise_baseline:-0}"
           audit_count="$(cat quality-npm-audit.count 2>/dev/null | tr -dc '0-9')"; audit_count="${audit_count:-999999}"
           audit_baseline="$(cat .npm-audit-baseline 2>/dev/null | tr -dc '0-9')"; audit_baseline="${audit_baseline:-0}"
+          lint_warnings="$(cat quality-lint-warnings.count 2>/dev/null | tr -dc '0-9')"; lint_warnings="${lint_warnings:-999999}"
+          lint_warn_baseline="$(cat .eslint-warning-baseline 2>/dev/null | tr -dc '0-9')"; lint_warn_baseline="${lint_warn_baseline:-0}"
           echo "build exit code:           $build_exit"
           echo "test exit code:            $test_exit"
           echo "typecheck exit code:       $typecheck_exit"
@@ -318,6 +353,7 @@ jobs:
           echo "dependency-cruiser code:   $depcruise_exit"
           echo "depcruise violations:      $depcruise_count (ratchet floor $depcruise_baseline)"
           echo "npm audit high+critical:   $audit_count (ratchet floor $audit_baseline)"
+          echo "ESLint warnings:           $lint_warnings (ratchet floor $lint_warn_baseline)"
           echo "deno type-error count:     $deno_count (ratchet floor $deno_baseline; raw exit $deno_exit)"
           failed=0
           if [ "$build_exit" != "0" ]; then echo "::error::Production build failed (see quality-build.log)"; failed=1; fi
@@ -338,6 +374,12 @@ jobs:
             failed=1
           elif [ "$audit_count" -lt "$audit_baseline" ]; then
             echo "::notice::npm audit high/critical vulnerabilities dropped to $audit_count (below floor $audit_baseline) — tighten the ratchet by setting .npm-audit-baseline to $audit_count."
+          fi
+          if [ "$lint_warnings" -gt "$lint_warn_baseline" ]; then
+            echo "::error::ESLint warnings rose to $lint_warnings (ratchet floor $lint_warn_baseline) — new lint warnings were introduced (e.g. a file over the 1000-line max-lines budget, a react-hooks/exhaustive-deps suppression, or an unused variable). Fix them, or if you deliberately changed the floor, update .eslint-warning-baseline. See quality-lint.log"
+            failed=1
+          elif [ "$lint_warnings" -lt "$lint_warn_baseline" ]; then
+            echo "::notice::ESLint warnings dropped to $lint_warnings (below floor $lint_warn_baseline) — tighten the ratchet by setting .eslint-warning-baseline to $lint_warnings."
           fi
           if [ "$deno_count" -gt "$deno_baseline" ]; then
             echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update .deno-check-baseline. See quality-typecheck-deno.log"

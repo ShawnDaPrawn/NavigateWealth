@@ -118,7 +118,6 @@ vi.mock('../../constants', () => ({
 // HELPERS
 // ============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getOptions(hook: () => any): Record<string, any> {
   const { result } = renderHook(hook);
   return result.current._options as Record<string, unknown>;
