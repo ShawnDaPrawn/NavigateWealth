@@ -53,6 +53,7 @@ import {
   createWebSiteSchema,
 } from '../seo/SEO';
 import { buildArticleTitle } from '../seo/seo-config';
+import { knownArticleCanonicalUrl } from '../seo/articleCanonical';
 
 // Phase 1 sub-components
 import { ReadingProgressBar } from './article-detail/ReadingProgressBar';
@@ -1085,8 +1086,10 @@ export function ArticleDetailPage() {
 
   // SEO — canonical always uses the production origin (never
   // window.location.origin, which would emit preview-deployment canonicals).
+  const selfUrl = `${SITE_ORIGIN}/resources/article/${article.slug}`;
   const canonicalUrl =
-    article.seo_canonical_url || `${SITE_ORIGIN}/resources/article/${article.slug}`;
+    article.seo_canonical_url || knownArticleCanonicalUrl(article.slug) || selfUrl;
+  const isCanonicalDuplicate = canonicalUrl.replace(/\/+$/, '') !== selfUrl.replace(/\/+$/, '');
   const seoDescription = article.excerpt || article.subtitle || '';
   const articleStructuredData: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -1126,6 +1129,7 @@ export function ArticleDetailPage() {
         canonicalUrl={canonicalUrl}
         ogType="article"
         ogImage={articleImage || undefined}
+        robotsContent={isCanonicalDuplicate ? 'noindex, follow' : undefined}
         structuredData={articleStructuredData}
         articleMeta={{
           author: authorName,

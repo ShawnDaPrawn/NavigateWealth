@@ -166,6 +166,15 @@ export const seoPages: Record<string, SEOPageData> = {
     canonicalUrl: `${BASE_URL}/get-quote`,
     ogType: 'website',
   },
+  'get-quote-medical-aid': {
+    title: 'Medical Aid Quote | Navigate Wealth',
+    description:
+      'Compare medical aid quotes in South Africa. Independent advice on schemes, hospital plans and gap cover from Navigate Wealth.',
+    keywords:
+      'medical aid quote South Africa, hospital plan, gap cover, medical scheme comparison, Navigate Wealth',
+    canonicalUrl: `${BASE_URL}/get-quote/medical-aid`,
+    ogType: 'website',
+  },
   legal: {
     title: 'Legal & Compliance | Navigate Wealth',
     description:

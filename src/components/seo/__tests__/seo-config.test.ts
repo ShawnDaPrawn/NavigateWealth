@@ -62,6 +62,12 @@ describe('getSEOData', () => {
     expect(data).toHaveProperty('canonicalUrl');
     expect(data).toHaveProperty('ogType');
   });
+
+  it('returns indexable SEO data for the medical-aid quote landing page', () => {
+    const data = getSEOData('get-quote-medical-aid');
+    expect(data.title).toContain('Medical Aid Quote');
+    expect(data.canonicalUrl).toBe('https://navigatewealth.co/get-quote/medical-aid');
+  });
 });
 
 describe('getQuoteServiceContactSEO', () => {
