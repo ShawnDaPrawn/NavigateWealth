@@ -1,0 +1,509 @@
+# Navigate Wealth — Architecture Evaluation & Remediation Plan
+
+> **Purpose.** A single, evidence-based assessment of the codebase as it
+> stands on `main` (commit `6303993`, verified 2026-08-21) and a sequenced
+> plan to take it from "ships and works" to genuinely first-class,
+> better-than-production-grade. Written to be worked from top-down.
+>
+> This document complements `docs/PRODUCTION-READINESS.md` (the status
+> ledger). Where the two disagree, the corrections in
+> [§8 Ledger corrections](#8-ledger-corrections) are authoritative — they
+> are based on direct re-verification, not memory.
+
+---
+
+## 1. Verdict
+
+**The engineering discipline here is well above average for a codebase this
+size, but it is sitting on top of three or four live, severe security
+exposures and a data layer that will not scale — and the automated gate that
+was meant to protect the architecture has never actually run.**
+
+Two things are true at once and both matter:
+
+- **The craft is real.** Strict TypeScript at 0 errors across three runtimes,
+  0 `@ts-ignore` in ~449K lines of frontend, a properly-designed API client
+  with a refresh mutex, thorough route-level code-splitting, an honest coverage
+  config, a genuinely clever CI ratchet that turns "someone mounted a router
+  without auth" into a build failure, and unusually candid in-code documentation
+  of its own debt. This is not a beginner codebase.
+
+- **The gaps are the kind that end companies, not sprints.** The public
+  Supabase anon key is accepted as a full admin credential on every financial,
+  medical, and estate route. An entire `/documents` API is unauthenticated and
+  lets anyone who knows a user's UUID read, upload, and **delete** that client's
+  files. The PDF-signing private key sits in plaintext in a table any admin can
+  read. For a South African financial-advisory platform holding FNA data,
+  medical information, wills, and e-signatures, these are POPIA
+  reportable-breach-class exposures — and they are documented in-repo as
+  _known, deferred_ debt that has been open for roughly two months.
+
+**So: is it "production grade"?** Operationally it runs. By the standard you
+asked for — better than production grade — **not yet**, and the blocking
+category is security/data-integrity, not tooling. The good news is that the
+team has already _found_ almost all of these (the CI ratchet, the
+`SECURITY-AUDIT-2026-06.md` doc, and the inline `SECURITY-AUDIT C-7` comments
+prove it). The gap is remediation capacity and sequencing, not detection. That
+is exactly what this plan supplies.
+
+**The single highest-leverage fact in this whole document:** the two worst
+security holes (anon-key-as-admin and the `/documents` IDOR) share **one root
+cause** — the frontend API client sends the public anon key as a bearer token
+whenever there is no live session (`src/utils/api/client.ts:100,115,122`), and
+the backend accepts that exact key as admin (`fna-auth.ts:86`). You cannot
+simply gate those routes today without 401-ing live client traffic. **The
+frontend auth-token migration is the keystone.** Both criticals fall out of it,
+and it is the first real work in this plan.
+
+---
+
+## 2. How this was assessed
+
+- **Local quality gates re-run from a clean `node_modules`** (all green,
+  confirming the ledger's baseline): `lint` 0 errors / 59 warnings,
+  `typecheck` 0 errors, `typecheck:middleware` 0 errors, `depcruise` "no
+  violations", `build` passes with SEO verification, and `vitest --coverage`
+  passes with **measured coverage: statements 31.31%, branches 23.0%,
+  functions 26.62%, lines 32.05%**.
+- **Four independent deep audits** — frontend architecture, backend/server
+  architecture, security posture, and testing/quality — each reading source
+  with file/line evidence.
+- **The four most severe or surprising claims were personally re-verified**
+  against source before being written here: the anon-key-as-admin branch
+  (`fna-auth.ts:77-89`), the unauthenticated `/documents` routes
+  (`documents.tsx:116+`), the API-client anon-key fallback
+  (`client.ts:88-123`), and the vacuous dependency-cruiser gate (dumped the
+  cruise JSON: 49/52 deps `couldNotResolve`).
+
+### Scale, corrected
+
+The working figure of "~238K lines" is roughly half the truth. Actual `src/`:
+**585K lines across 2,244 files.** Of that, the Deno edge function is ~136K
+lines (432 files) and the SPA is ~449K lines. `src/components/admin` alone is
+**317K lines — 74% of all component code.** This matters because the enforced
+~31% coverage is measured only over the _parseable SPA subset_ and **excludes
+the entire 136K-line backend**, so effective whole-repo coverage is closer to
+~22%.
+
+---
+
+## 3. What is genuinely strong — do not regress this
+
+A remediation plan that damages the good parts is a failure. Preserve:
+
+1. **Type safety.** `strict: true` + `noUnusedLocals/Parameters/FallthroughCases`,
+   SPA typecheck burned down from ~1,308 errors to **0** and gated, **0
+   `@ts-ignore`** repo-wide, **5** `@ts-expect-error` each with a reason, and
+   **0 `any` in `src/shared` and `src/utils`** (the core logic). This is the
+   standout.
+2. **The router-auth-guard CI ratchet**
+   (`server/__tests__/router-auth-guard.test.ts`). It walks every mounted
+   router's import tree for an auth marker and fails the build for any
+   unguarded router not on an _annotated_ debt allowlist. Keep it; §5 explains
+   its one blind spot (route-granularity).
+3. **The API client** (`src/utils/api/client.ts`) — refresh mutex, proactive
+   refresh, scoped retry, typed `APIError`, session-recovery events. This is
+   the pattern the stragglers (§Phase 3) should converge onto, not something to
+   replace.
+4. **Lazy-router with thundering-herd dedup** (`server/lazy-router.ts`) — light
+   boot, correct concurrent-import handling.
+5. **Route-level code splitting** — 72 `React.lazy` pages, mature chunk-load
+   failure recovery (`App.tsx:17-49`), 20 named vendor chunks.
+6. **`resolveTrustedRole`** (`server/constants.ts:124`) — refuses privileged
+   roles from client-writable `user_metadata`. The classic escalation is
+   correctly closed.
+7. **Honest self-documentation** — the coverage caveat in `vitest.config.ts`,
+   the `KNOWN_UNAUTH_DEBT` map, and the CORS fail-open rationale are exactly
+   what made this audit fast. Keep writing debt down where it lives.
+8. **Data access is funnelled through the Edge Function** — the SPA never
+   queries Postgres tables directly (0 `.from(` calls outside `src/supabase`),
+   so RLS is a second line of defence rather than the only one.
+
+---
+
+## 4. Findings by severity
+
+Severity is about blast radius, not effort. IDs are used in the plan.
+
+### CRITICAL — security & data integrity (fix before building new features)
+
+- **S1 — Public anon key = admin on all FNA/tax/estate/medical/prefill routes.**
+  `fna-auth.ts:86` returns `ADMIN_USER` for anyone presenting the anon key,
+  which ships in the browser bundle (`utils/supabase/info.tsx:5`). Unauthenticated
+  internet access to full client financial + medical PII. Self-documented as
+  `SECURITY-AUDIT §8 C-7`.
+- **S2 — `/documents/*` is entirely unauthenticated (IDOR).**
+  `documents.tsx` imports no auth helper; `GET/POST/PATCH/DELETE /:userId[...]`
+  let anyone with a user UUID list, upload, download (1-hour signed URLs), and
+  delete another client's documents. Tracked in `KNOWN_UNAUTH_DEBT`. Live now.
+- **S3 — `verify_jwt = false` + auth enforced only by convention.**
+  `supabase/config.toml` disables gateway JWT verification; the comment claims
+  every sub-router self-gates, but only **18 of 113 route files** apply
+  router-scoped auth. S1 and S2 are symptoms of this posture. There are **6
+  parallel auth mechanisms** in use.
+- **S4 — Signing private key + passphrase in plaintext KV**, readable by any
+  `admin` via the unbounded `GET /kv-store/:key` reader (`kv-routes.ts:24`,
+  `esign-pdf-protect.ts:47`). An admin (not just super-admin) can exfiltrate the
+  document-signing key and forge signatures that validate identically to
+  genuine ones.
+- **S5 — KV data layer: 119 unbounded whole-namespace scans, silent truncation.**
+  `getByPrefix` has no limit (`kv_store.tsx:90`); PostgREST caps at ~1000 rows
+  and nothing handles truncation. One dashboard call
+  (`reporting-service.ts:53`) loads every profile + application + FNA +
+  communication into one isolate. This is both a hard scaling ceiling and a
+  silent-correctness bug: counts and lists will quietly go wrong as data grows.
+
+### HIGH
+
+- **S6 — Auth-without-authz on e-sign downloads.** 8 handlers discard the auth
+  context (`const _ctx = …`); any authenticated user — including a
+  self-registered client — can download any completed signed PDF or audit
+  export by envelope ID (`esign-sender-download-routes.ts:29,187,323`, etc.).
+- **S7 — FNA routes authenticate but never authorize.** Any authenticated
+  principal can read or `hard-delete` any client's FNA by ID
+  (`retirement-fna-routes.tsx:214`, `risk-planning-fna-routes.tsx:891`, …).
+- **S8 — Signer access token in the URL query string.**
+  `/sign?token=<uuid>` → leaked to Google Analytics and Vercel Analytics
+  (`App.tsx:134-148,209`, no `beforeSend` scrubber), plus browser history and
+  `Referer`. The server already supports the token as a path segment.
+- **S9 — No server-side HTML sanitization anywhere.** Correctness depends on
+  every one of ~37 render sites getting DOMPurify right; non-React consumers
+  (outbound email, PDF) get raw HTML. Confirmed-unsanitized sinks:
+  `AIWritingPanel.tsx:712` (raw LLM output), `MarkdownPreview.tsx:210`
+  (working `javascript:` URI).
+- **S10 — Public lead-gen forms inject unescaped input into staff email.**
+  `quote-request-routes.ts`, `contact-form-routes.ts`, `consultation.ts` build
+  admin-notification HTML by string interpolation of anonymous input with **0
+  `escapeHtml` calls** — though the helper exists and is used elsewhere.
+- **S11 — Rate limiters are non-atomic, IP-blind on public forms, and fail
+  open.** All six limiters do read-modify-write on KV (races under burst);
+  public forms key on email only (rotate the address → unlimited);
+  `rateLimiter.ts:146` returns `allowed:true` when KV degrades — disabling
+  login brute-force protection exactly when it's needed. ~560 routes have no
+  limiting, including the paid AI endpoints.
+- **D1 — Verify RLS on `kv_store_91ed8379`.** The primary PII store (profiles,
+  documents, e-sign, the signing key) has **no migration and no
+  `ENABLE ROW LEVEL SECURITY` statement in the repo**. Its RLS state cannot be
+  confirmed from source. With a public anon key in the bundle, if RLS is off or
+  permissive the entire datastore is readable via PostgREST. **Confirm in the
+  dashboard as priority-zero.**
+
+### SIGNIFICANT — architecture & correctness
+
+- **A1 — The dependency-cruiser boundary gate is vacuous.** Verified: 49/52
+  first-party imports resolve as `couldNotResolve:['unknown']`; rules are
+  anchored `^(src|@)/` so `../`-prefixed unresolved specifiers can never match.
+  All three "blocking" boundary rules have **never fired**. The CI green is
+  vacuous, not clean — which is precisely what let ~83 real boundary violations
+  accumulate undetected. **Highest-leverage architecture fix: make this gate
+  actually resolve TS files, then triage what it surfaces.**
+- **A2 — Global error handler is never registered.** `error.middleware.ts` has
+  a full Zod-aware handler with telemetry, reachable only via opt-in
+  `asyncHandler`. `index.tsx` registers no `app.onError`/`app.notFound`, and
+  mount failures are caught and **swallowed** (a broken deploy still reports
+  `/health` = 200). Unanticipated throws return a bare 500 with no body, no
+  request ID, and **no telemetry** — the observability pipeline misses exactly
+  the errors it was built for.
+- **A3 — Request IDs are generated but never reach the logs.**
+  `c.get('requestId')` is read in 6 places against 235 logger instances; logs
+  are emoji strings, not JSON, all forced to stderr (severity flattened). You
+  cannot trace a request through the logs of a 584-route function. No metrics
+  of any kind.
+- **A4 — 7 quote wizards are byte-identical copy-paste, ~8,400 lines.**
+  `loadDraft/saveDraft/clearDraft/formatCurrency/parseCurrencyToNumber/StepIndicator`
+  duplicated verbatim ×7, all raw-`fetch()` past the API client. ~2,500–3,000
+  extractable lines, and this is the untested public revenue path.
+- **A5 — Validation covers <30% of mutating routes.** 82 schema-parse sites for
+  283 POST/PUT/PATCH routes; 44 route files have zero; `zValidator` used 0
+  times. Unvalidated set includes `auth-routes.ts` (signup/login/reset) and the
+  entire e-sign family, writing straight into schemaless JSONB.
+- **A6 — Single 136K-line Edge Function.** Every heavy lib (`pdf-lib`,
+  `node-forge`, `@signpdf/*`, `jspdf`, `xlsx`, `zip.js`) is a static import;
+  first hit on `/esign` after an isolate recycle parses ~19K lines + the crypto
+  stack — and that path is a client clicking a signature link from email.
+  Deploys are all-or-nothing across every domain with no canary or per-domain
+  rollback.
+- **A7 — 853 MB of raw Figma PNGs in `src/assets`; 812 MB in the build graph.**
+  The webp-preferring resolver never fires (0 `.webp` in `src/assets`);
+  `optimize:images` is not in `npm run build`. Individual 28–32 MB PNGs are
+  emitted to `dist/`. All 154 are tracked in git (`.git` is 892 MB).
+- **A8 — Backend is 8.6% test-file-covered and 0% coverage-measured, and
+  deploys with only a non-blocking, credential-gated smoke test.** Combined with
+  A2, ~136K lines ship to production essentially unverified.
+- **A9 — Playwright e2e never runs in CI.** All 9 specs `test.skip` on missing
+  credentials; no workflow runs them; the `retries: CI?2:0` branch is dead.
+  Effective e2e coverage is zero.
+- **A10 — Deprecated `SUPER_ADMIN_EMAIL` locks out the recovery admin.** 12
+  production call sites in 5 files; `client-management-super-admin-routes.ts:182`
+  denies the recovery super-admin from the very route built for recovery.
+- **A11 — `npm audit` is fully advisory** (`|| true`, no severity gate) on a
+  PII/signature platform. Two fake CI test steps write `.exit` files nothing
+  reads; the "publish quality snapshot" step can fail every PR on a Supabase
+  outage (no `continue-on-error`).
+
+### MINOR (batch opportunistically)
+
+- **A12 — `react-toastify` toasts are a silent no-op** (no `<ToastContainer>`
+  mounted): admins saving e-sign reminder settings get no success/failure
+  feedback (`ReminderSettingsPanel.tsx:67`). The lib also rides eagerly in
+  `vendor-feedback`.
+- **A13 — 1,056 lines of Quill CSS in the eager global stylesheet**
+  (`src/index.css`), loaded on the marketing homepage for a 5-file admin editor.
+- **A14 — Two large module `api.ts` files bypass the API client**
+  (`publications/api.ts` 76 raw fetches, `social-media/api.ts` 27) — no retry,
+  no 401-refresh, no `APIError`.
+- **A15 — Dead weight**: `src/public/` duplicates `public/`;
+  `components/figma/ImageWithFallback.tsx` has 0 importers; `react-dnd` (2 files)
+  duplicates `@hello-pangea/dnd` (12); `useClientSearch.test.ts` leaks fake
+  timers (one-line fix); 60 files > 1,000 lines.
+
+---
+
+## 5. The plan
+
+Five phases, sequenced by dependency and risk. **Phases P0 and P1 are not
+optional and should precede new feature work** — they are the difference
+between "a breach we self-reported and fixed" and "a breach a regulator finds."
+P2–P4 are the "better than production grade" build-out and can proceed in
+parallel tracks once P0/P1 land.
+
+Each workstream lists the finding IDs it closes and a concrete **acceptance
+gate**. Every change follows the existing finalization protocol in `AGENTS.md`
+(verify all gates locally → commit → PR → auto-merge), one reviewable slice at
+a time.
+
+### P0 — Contain the live exposures (days, not weeks)
+
+Ordered. **D1 first because it may already be a breach and is a dashboard
+check, not a code change.**
+
+1. **D1 — Confirm RLS on `kv_store_91ed8379` and every KV/ad-hoc table.**
+   In the Supabase dashboard, verify `ENABLE ROW LEVEL SECURITY` and a
+   deny-by-default policy on `kv_store_91ed8379`, `personal_client_applications`,
+   `tasks_91ed8379`, and any other table without a migration. Write the result
+   into a new migration so the state is version-controlled.
+   _Gate:_ a committed migration asserts RLS-on + service-role-only policy for
+   every table; a PostgREST probe with the anon key returns 0 rows / 401.
+2. **S4 — Move the signing key out of KV and lock the KV reader.**
+   Make `NW_ESIGN_PLATFORM_P12_BASE64` the only source; delete the KV fallback
+   and the `esign_config:platform_signing_cert` row. Gate `GET /kv-store/:key`
+   behind `requireSuperAdmin`, add an `esign_config:*` denylist, and audit-log
+   every read.
+   _Gate:_ key is unreadable via any KV route; a test asserts the denylist.
+3. **S8 — Get the signer token out of the URL/analytics.**
+   Switch `/sign?token=` to the existing `GET /sign-by-token/:token` path form
+   and/or add a `beforeSend` scrubber to Vercel Analytics + a GA `page_location`
+   redaction that strips `token` and client UUIDs.
+   _Gate:_ no analytics payload contains `token=`; a unit test covers the
+   scrubber.
+4. **S10 + S11 (public forms) — Escape output and add IP-dimensioned limits.**
+   Apply the existing `escapeHtml` to every interpolated field in the three
+   lead-gen email builders; add an IP dimension to their rate limiters (mirror
+   the login limiter which already does IP+email).
+   _Gate:_ a test injects `<script>` in a form field and asserts it is escaped
+   in the rendered email; limiter test covers IP keying.
+5. **S9 (worst two sinks) — Sanitize `AIWritingPanel` and `MarkdownPreview`.**
+   Add DOMPurify at those two render sites and filter the `javascript:` URI in
+   the markdown link rule.
+   _Gate:_ tests assert `javascript:` and `<img onerror>` are neutralized.
+
+### P1 — The auth keystone (the unlock for S1/S2/S3/S6/S7)
+
+This is the largest single piece of work and it gates the most. Do it as its
+own tracked epic, in slices, behind the router-auth-guard ratchet.
+
+1. **P1.1 — Frontend auth-token migration.** Stop sending the public anon key
+   as a bearer token when unauthenticated (`client.ts:100,115,122`). Introduce
+   an explicit notion of _public_ endpoints (quote/contact/consultation) that
+   need no bearer, versus _authenticated_ endpoints that must have a real JWT or
+   fail. Migrate the known offenders that rely on the anon key
+   (`communication/api.ts`, `WillDraftingFlow.tsx`, the 7 quote wizards, the 41
+   `pages/*.tsx` raw fetchers).
+   _Gate:_ no SPA code path sends `publicAnonKey` as `Authorization` for an
+   authenticated route; the app still boots and public forms still work.
+2. **P1.2 — Remove the anon-key-as-admin branch (S1).** Delete `fna-auth.ts:85-89`
+   once P1.1 lands. Collapse the 6 auth mechanisms toward one
+   (`auth-mw.ts`), and make `fna-auth`'s `authenticateUser` delegate to it.
+   _Gate:_ a contract test asserts the anon key returns 401 on every FNA/tax/
+   estate/medical route.
+3. **P1.3 — Flip the gateway to `verify_jwt = true` (S3).** Split the three
+   health routes into an unauthenticated sibling function, then enable JWT
+   verification on `make-server-91ed8379`. This closes S2 (`/documents`)
+   structurally and makes "auth by convention" a defence-in-depth layer rather
+   than the only gate.
+   _Gate:_ `documents.tsx` routes return 401 unauthenticated; health sibling
+   returns 200; live smoke passes.
+4. **P1.4 — Object-level authorization (S2/S6/S7).** Add per-resource ownership/
+   firm checks to `documents.tsx`, the 8 e-sign download/audit handlers, and the
+   FNA read/delete routes — modelled on the reference implementation already in
+   `client-portal-routes.ts:48-57` (`isAdmin || userId === callerId`). Wire the
+   existing `admin-audit-service` into export/delete paths.
+   _Gate:_ contract tests assert a client A token is 403'd on client B's
+   documents/FNA/envelopes; audit rows are written for exports and deletes.
+5. **P1.5 — Enforce account suspension (found dead in the backend audit).**
+   Wire `performSecurityCheck`/`checkAccountSuspension` into the request path
+   (they currently have zero call sites).
+   _Gate:_ a suspended user's existing JWT is rejected; test covers it.
+
+### P2 — Make the architecture's guardrails real
+
+1. **A1 — Fix the dependency-cruiser resolver, then triage.** Add
+   `enhancedResolveOptions`/`extensions` + `tsConfig` resolution so first-party
+   TS files resolve, confirm the three boundary rules now fire, then work the
+   ~83 violations down (start with the client-facing `HomeDashboardPage` →
+   1,600-line admin `ClientOverviewTab` leak). Keep the rules `warn` until the
+   backlog is burned, then flip to `error`.
+   _Gate:_ cruise JSON shows first-party deps resolving; a deliberate
+   cross-module-internals import fails the gate in a test fixture.
+2. **A2 + A3 — Register the global error handler and thread request IDs.**
+   Add `app.onError(errorHandler)` + `app.notFound(...)` in `index.tsx`; stop
+   swallowing mount failures (fail the boot or expose degraded health); make the
+   logger carry `requestId` from context; emit JSON logs. Add minimal counters
+   (request count, error count, p50/p95 by route family).
+   _Gate:_ a thrown error returns the standard envelope with a request ID that
+   appears in the log line; `/health` reflects a failed mount.
+3. **A5 — Validation at the boundary.** Adopt `zValidator` (or a thin
+   equivalent) so schemas are type-linked to handlers; start with
+   `auth-routes.ts` and the e-sign family. Ratchet a "mutating routes with a
+   schema" metric upward like the Deno baseline.
+   _Gate:_ auth + e-sign mutating routes reject malformed bodies with 400 and a
+   typed error; ratchet metric enforced in CI.
+4. **A6 — Begin decomposing the monolith at its natural seams.** Extract the
+   e-sign subtree (heaviest cold path, most compliance-sensitive) into its own
+   function once P1.3's health split exists; convert the heavy PDF/crypto
+   libraries to dynamic `import()` at the routes that use them. No behavior
+   change; measure cold-start before/after.
+   _Gate:_ `/esign` cold-start import weight drops materially; deploys of
+   non-esign code no longer touch the esign function.
+
+### P3 — Data layer & correctness (the scaling ceiling)
+
+1. **S5 — Replace whole-namespace scans with bounded, paginated access.**
+   Migrate the hot read paths (`reporting-service` dashboard, `tasks-routes`,
+   `publications-admin-routes`) off `getByPrefix` onto `listByPrefix` with
+   limits, and add explicit truncation handling. Introduce a thin
+   `repositories/` layer so 128 files stop importing `kv_store` directly.
+   _Gate:_ no unbounded `getByPrefix` on a request path; a KV-scale test asserts
+   correct counts past 1,000 rows.
+2. **D-model — Promote the highest-value entities out of JSONB.** Give
+   `clients`, `applications`, and `tasks` real Postgres tables with indexes and
+   RLS (as e-sign and FNA-intake already have), dual-write then cut over exactly
+   like the FNA-intake launch track did. This is the long pole; scope it as its
+   own epic after P0–P2.
+   _Gate:_ per-entity migration + RLS + backfill script + read-from flag, mirror
+   of the FNA-intake cutover.
+3. **A10 — Remove `SUPER_ADMIN_EMAIL`.** Replace the 12 call sites with
+   `isSuperAdminEmail()`; delete the const.
+   _Gate:_ recovery admin can use the recovery routes; grep shows 0 references.
+
+### P4 — Quality, testing & release confidence
+
+1. **A8 — Measure and gate the backend.** Remove the blanket
+   `src/supabase/functions/**` coverage exclusion, set an honest separate floor,
+   and report SPA and backend as two numbers. Add a **blocking** post-deploy
+   health/auth smoke to `deploy-supabase-function.yml` (hit root + 2–3 gated
+   routes, assert 200/401) with a rollback path.
+   _Gate:_ backend coverage is measured and floored; a red smoke fails the
+   deploy.
+2. **A9 — One real e2e journey in CI.** Seed data programmatically (not
+   manually-copied single-use tokens), run the e-sign round trip against a
+   preview deploy on PRs.
+   _Gate:_ Playwright runs unattended in CI and is required.
+3. **A4 — De-duplicate the quote wizards and put the public path under test.**
+   Extract `useWizardDraft`, a shared `<StepIndicator>`, and a shared submit
+   onto the API client; add a contract test for `quote-request-routes.ts` and
+   one submit-path test per wizard.
+   _Gate:_ ~2,500 lines removed; public quote path has route + submit tests.
+4. **A11 — Fix the CI theater.** Gate `npm audit` on high/critical (with an
+   allowlist ratchet like `.deno-check-baseline`); delete the two fake test
+   steps; add `continue-on-error: true` to the quality-snapshot publish.
+   _Gate:_ a seeded high CVE fails a PR; a Supabase outage does not.
+5. **A12–A15 — Batch the minor cleanups.** Mount a `<ToastContainer>` or move
+   `ReminderSettingsPanel` to `sonner` and delete `react-toastify`; scope the
+   Quill CSS import into the editor; converge `publications`/`social-media`
+   `api.ts` onto the API client; delete `src/public/`, the dead figma component,
+   and one DnD library; add `afterEach(vi.useRealTimers())` to test setup.
+   _Gate:_ toasts render; homepage no longer ships Quill CSS; one DnD lib
+   remains.
+
+---
+
+## 6. Sequencing at a glance
+
+```
+P0  Contain exposures        ── D1 → S4 → S8 → S10/S11 → S9        (days)
+        │  (D1 may already be a breach; it is a dashboard check)
+        ▼
+P1  Auth keystone            ── P1.1 token migration
+        │                       → P1.2 kill anon-admin (S1)
+        │                       → P1.3 verify_jwt=true + health split (S3, closes S2)
+        │                       → P1.4 object-level authz (S2/S6/S7)
+        │                       → P1.5 suspension enforcement
+        ▼
+P2  Real guardrails          ── A1 depcruise · A2/A3 errors+tracing · A5 validation · A6 decompose
+P3  Data layer               ── S5 bounded reads · D-model tables · A10 super-admin
+P4  Quality & release        ── A8 backend coverage+smoke · A9 e2e · A4 wizards · A11 CI · A12-15 cleanup
+
+New feature work: resumes after P1 lands. P2–P4 run as parallel tracks.
+```
+
+**Why this order.** P0 stops active bleeding with small, local changes. P1 is
+the keystone — until the anon key stops being an admin credential, every other
+authz fix can be bypassed, so it must precede the object-level work that depends
+on it. P2 makes the _automated_ guardrails real so that P3/P4 and all future
+feature work can't silently regress (fixing A1 in particular converts "trust me"
+into "the gate says so"). P3 lifts the scaling ceiling before data volume forces
+it. P4 buys durable release confidence so you can move fast without re-breaking
+P0–P3.
+
+---
+
+## 7. What this unlocks for feature work
+
+You asked to keep building. The honest answer is that **P0 + P1 should land
+first** — roughly the near-term, and mostly backend/auth work that doesn't
+block frontend feature design. Once the auth keystone is in:
+
+- New client-data features inherit real object-level authorization instead of
+  re-deriving it per handler.
+- New routes are protected by a gateway that verifies JWTs, so "forgot to add
+  `requireAuth`" stops being a data-breach-class mistake.
+- The depcruise fix (P2/A1) means new modules that reach across boundaries fail
+  CI instead of accruing silent debt.
+
+I'd recommend treating P0/P1 as a focused hardening sprint, then building new
+features on the P2 guardrails as they land — rather than pausing everything
+until P4 is done.
+
+---
+
+## 8. Ledger corrections
+
+`docs/PRODUCTION-READINESS.md` is unusually honest, but three claims are now
+known to overstate reality and should be corrected there:
+
+1. **"`npm run depcruise` — No violations (4683 modules… cruised)"** reads as
+   "boundaries are clean." Verified: the cruise resolves **no first-party TS
+   files** (49/52 deps `couldNotResolve`), so the boundary rules have never
+   fired. The green is vacuous. (Finding A1.)
+2. **"coverage thresholds… (statements ~31%)"** omits that the entire ~136K-line
+   backend is excluded from measurement and that ~16 marketing pages are silently
+   dropped by the v8 parser. Effective whole-repo coverage is ~22%. Report SPA
+   and backend separately. (Findings A8, §2.)
+3. **"59 warnings — mostly `max-lines` / complexity warnings"** — there is **no
+   complexity rule configured** in `eslint.config.mjs`, and **74 files** exceed
+   the `max-lines` budget (not the 4 the ledger cites). The warnings are
+   `max-lines` + `no-console` + `exhaustive-deps`.
+
+Additionally, the Section 2 rubric's remaining unchecked box — "Backup, DR,
+POPIA, FAIS, Sentry, CSP…" — should be split: **CSP is still absent**
+(confirmed, no `Content-Security-Policy` anywhere; adoption blockers are the
+`index.html` inline script and the GA `innerHTML` injection), and the security
+findings S1–S11 above are POPIA-material and belong on that line as _open_, not
+merely _documented_.
+
+---
+
+_Prepared 2026-08-21 against `main` @ `6303993`. Findings carry file:line
+evidence; the four most severe were re-verified against source. This plan is
+advisory — no application code was changed in producing it._
