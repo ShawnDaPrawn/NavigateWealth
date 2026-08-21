@@ -393,6 +393,53 @@ backlog hits zero. That is the ratchet that makes the gains permanent.
 
 ---
 
+## 10a. Stage B — verified preconditions (2026-08-21)
+
+Investigated before implementing. Four findings change the plan; the first
+invalidates the obvious approach entirely.
+
+**B1. A root `app.onError` would NOT catch the routes that matter.**
+`lazy-router.ts:77` dispatches every sub-router with
+`return router.fetch(new Request(...))`. Each sub-router is its own Hono
+instance, and Hono's `.fetch()` handles errors _inside_ that call — returning
+its own 500 Response rather than propagating the throw. So registering
+`onError` on the root app in `index.tsx` covers only the 3 health routes and
+the request-id middleware, **not the 584 routes behind lazy mounts**. A root
+`try/catch` around `router.fetch()` fails for the same reason: there is no
+throw to catch.
+
+_The fix that does work_ is one place: when `lazy-router` caches a module, call
+`mod.default.onError(errorHandler)` on it. Sub-routers `export default app`
+(a real Hono instance), so `.onError` is available at runtime, and
+`honeycomb-routes.ts:27` already uses exactly this pattern — precedent, not
+invention. One edit, all 77 mount points.
+
+**B2. `@hono/zod-validator` is not available to the edge function.**
+`src/supabase/functions/server/deno.json` pins the import map to `hono`, `zod`,
+`@supabase/supabase-js`, `pdf-lib`, `xlsx` — no validator package. Either add an
+import-map entry (new third-party dependency in the request path of a financial
+backend) or hand-roll ~20 lines over the existing `zod` + `formatZodError`.
+Prefer the latter; it adds no supply-chain surface.
+
+**B3. Zod versions are skewed across the boundary — affects F8.**
+The SPA resolves `zod@3.25.76`; the edge import map pins `zod@3.24.1`. Edge code
+already imports from `src/shared/` (e.g. `auth-routes.ts:22`). Any schema placed
+in `src/shared/contracts/` is therefore compiled against two different Zod
+versions. Both are 3.x so most usage is compatible, but "one schema, both sides"
+is not literally true today. Align the versions before expanding F8 across the
+boundary.
+
+**B4. Request-scoped logging cannot be verified from a dev machine.**
+`AsyncLocalStorage` is the only way to get `requestId` into the 235
+module-scoped loggers without touching every call site, and nothing in the
+codebase uses `node:async_hooks` today. Whether it behaves correctly in the
+_deployed_ Supabase edge runtime is a runtime question, not a source question —
+it cannot be settled from this repo. Do NOT adopt a module-level variable as a
+substitute: the isolate serves concurrent requests, so that leaks request IDs
+across users. Either prove AsyncLocalStorage on a staging deploy first, or
+scope the change to explicitly threading `c` through the handful of
+highest-value paths.
+
 ## 11. Definition of "production-grade organised" — exit checklist
 
 The target is reached when all of these are _true and CI-enforced_:
