@@ -26,6 +26,7 @@ import { Hono } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 import './console-override.ts';
 
+import { runWithRequestContext } from './request-context.ts';
 import { mountCoreRoutes } from './mount-core.ts';
 import { mountFnaRoutes } from './mount-fna.ts';
 import { mountModuleRoutes } from './mount-modules.ts';
@@ -91,7 +92,11 @@ app.use('*', async (c, next) => {
   const requestId =
     incoming && /^[A-Za-z0-9_-]{8,64}$/.test(incoming) ? incoming : crypto.randomUUID();
   c.set('requestId', requestId);
-  await next();
+  // Everything downstream — including sub-routers dispatched by lazy-router via
+  // router.fetch(), which run inside this same async chain — now logs with this
+  // id attached (Stage B / B4). Degrades to today's behaviour if the deployed
+  // runtime lacks node:async_hooks.
+  await runWithRequestContext({ requestId }, () => next());
   c.header('x-request-id', requestId);
 });
 
