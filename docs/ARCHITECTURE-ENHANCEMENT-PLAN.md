@@ -495,6 +495,43 @@ across users. Either prove AsyncLocalStorage on a staging deploy first, or
 scope the change to explicitly threading `c` through the handful of
 highest-value paths.
 
+## 10b. Stage B — what landed, and what is left (2026-08-22)
+
+Stage B's five workstreams (§10) were: introduce `repositories/`; global
+`onError`; request-id logging + metrics; consolidate auth onto `auth-mw`;
+`zValidator` on auth + esign.
+
+| Workstream                        | State                                                                                                                                                     |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Global `onError` (B1)             | **DONE.** Shared handler on all 77 lazy mounts, plus the non-`Error` dispatch gap and two disclosure fixes found reviewing it.                            |
+| `zValidator` on auth + esign (B2) | **MECHANISM DONE, ADOPTION RATCHETED.** `validate.ts` + 13 routes wired; `.route-validation-baseline` = 63 remaining.                                     |
+| Request-id logging (B4)           | **DONE.** `request-context.ts` (AsyncLocalStorage, feature-detected); every log line via one change to `formatMessage`. **Metrics NOT done** — see below. |
+| Consolidate auth onto `auth-mw`   | **PARTLY DONE + RATCHETED.** 7 → 5 hand-rolled implementations; `.auth-implementations-baseline` floors it. Found and fixed S12.                          |
+| Introduce `repositories/`         | **SEEDED + RATCHETED.** Typed base with bounded reads by default; one namespace migrated; `.kv-direct-import-baseline` = 176.                             |
+
+**Three of the five are ratcheted rather than finished, and that is the honest
+description.** Each backlog is too large to clear in one pass without changing
+behaviour that cannot be verified from this repo:
+
+- **63 unvalidated body routes.** Schemas must be derived from each handler's
+  own destructuring — the six pre-existing unused schemas in
+  `esign-validation.ts` prove why: they were written against an imagined API
+  shape, and wiring `SignerSubmitSchema` to `/signer/submit` would have rejected
+  every signature submission in production (A19).
+- **5 hand-rolled auth implementations.** Not equivalent debt. `auth-routes.ts`
+  calls `getUser` because it _is_ the login endpoint. `fna-auth.ts` is a second
+  canonical implementation for the FNA family and is the real merge candidate.
+  `ai-advisor.ts` / `ai-intelligence.tsx` authorize against an adviser book and
+  a KV profile — models `requireAdmin` does not express.
+- **176 direct `kv_store` importers.** A strangler job. The layer and the floor
+  exist; the migration is per-namespace and ongoing.
+
+**Explicitly NOT done: metrics.** §10's Stage B row says "request-id logging +
+metrics". Correlation IDs landed; there is no metrics pipeline, and adding one
+means choosing a sink (Supabase logs, an OTLP endpoint, the in-house
+quality-issues store) — a decision with operational cost that belongs with the
+observability work in §22, not bolted onto a logging change.
+
 ## 11. Definition of "production-grade organised" — exit checklist
 
 The target is reached when all of these are _true and CI-enforced_:

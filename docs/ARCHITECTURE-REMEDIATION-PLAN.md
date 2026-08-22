@@ -306,6 +306,27 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   privilege-boundary bypass and the class of bug is the point — five copies of
   an auth check drift, and one did.
 
+- **A19 — Six e-sign schemas are written against an API shape that does not
+  exist (NEW, 2026-08-22).** `esign-validation.ts` defines
+  `EnvelopeContextSchema`, `SignerSchema`, `InviteSignersSchema`,
+  `EsignFieldSchema`, `UpdateFieldValueSchema`, `OtpSendSchema` and
+  `SignerSubmitSchema`; none is referenced anywhere.
+
+  They are not merely unused — they are **wrong**, and dangerous precisely
+  because they look ready to wire up. There are two e-sign wire formats:
+  sender-facing is camelCase (`signerId`, `signatureData`), signer-facing is
+  snake_case (`access_token`, `signature_data`). `SignerSubmitSchema` is written
+  in the sender format for a signer route, and types `fieldValues` as a record
+  where the handler iterates an **array** of `{ field_id, value }`. Attaching it
+  to `/signer/submit` would reject every signature submission in production.
+
+  This is the F8 lesson in the wild: a hand-maintained schema that can silently
+  drift is worse than none, because it reports false violations and invites
+  exactly the "just wire it up" change that breaks things. Either correct them
+  against the handlers or delete them; leaving them is leaving a loaded trap.
+  Left in place for now with a warning comment, because deleting another
+  module's declarations is a separate decision from the B2 change that found it.
+
 - **A17 — The runtime-error recorder is an awaited, non-atomic read-modify-write
   on a single KV row, now on the error path of every route (NEW, 2026-08-22).**
   _(Found by an adversarial review of the B1 change; one of 37 candidate
