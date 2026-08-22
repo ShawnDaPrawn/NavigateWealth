@@ -56,7 +56,6 @@ export interface SectionProps {
   fv: (field: string) => string;
   updateField: (field: string, value: string | number | boolean | string[]) => void;
   amendedFields: Set<string>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>;
 }
 

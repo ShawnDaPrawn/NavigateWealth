@@ -453,51 +453,54 @@ describe('communicationApi getHistory', () => {
 });
 
 describe('communicationApi uploadFile', () => {
-  it('uploadFile sends a POST with FormData via fetch and returns attachment data', async () => {
+  /**
+   * These tests used to mock raw `fetch` and assert
+   * `expect(options.headers.Authorization).toContain('Bearer')` — which passed
+   * while the header was `Bearer <publicAnonKey>`, at a route guarded by
+   * `requireAuth, requireAdmin`. So the test certified as working a call that
+   * could never succeed. "Contains Bearer" is not an assertion about auth.
+   *
+   * They now go through the shared client, which is what actually carries the
+   * session JWT (P1.1).
+   */
+  it('uploads through the shared api client, which sends the session JWT', async () => {
     const mockAttachment = { id: 'att-001', filename: 'doc.pdf', url: 'https://cdn/doc.pdf' };
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockAttachment,
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    mockApiPost.mockResolvedValueOnce(mockAttachment);
 
     const file = new File(['content'], 'doc.pdf', { type: 'application/pdf' });
     const result = await communicationApi.uploadFile(file);
 
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toContain('communication/upload');
-    expect(options.method).toBe('POST');
-    expect(options.headers.Authorization).toContain('Bearer');
-    expect(options.body).toBeInstanceOf(FormData);
+    expect(mockApiPost).toHaveBeenCalledOnce();
+    const [endpoint, body] = mockApiPost.mock.calls[0];
+    expect(String(endpoint)).toContain('upload');
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get('file')).toBe(file);
     expect(result).toEqual(mockAttachment);
+  });
 
+  it('does not hand-roll fetch, so it cannot reintroduce an anon-key bearer', async () => {
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+    mockApiPost.mockResolvedValueOnce({ id: 'a', filename: 'f', url: 'u' });
+
+    await communicationApi.uploadFile(new File(['x'], 'f.pdf'));
+
+    expect(mockFetch).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
-  it('uploadFile throws when the response is not ok', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ error: 'File too large' }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const file = new File(['data'], 'big.pdf', { type: 'application/pdf' });
-    await expect(communicationApi.uploadFile(file)).rejects.toThrow('File too large');
-
-    vi.unstubAllGlobals();
+  it('propagates an upload failure from the client', async () => {
+    mockApiPost.mockRejectedValueOnce(new Error('File too large'));
+    await expect(communicationApi.uploadFile(new File(['data'], 'big.pdf'))).rejects.toThrow(
+      'File too large',
+    );
   });
 });
 
 describe('communicationApi sendDirectMessage', () => {
-  it('sendDirectMessage posts payload via fetch and returns response data on success', async () => {
+  it('posts the mapped payload through the shared api client', async () => {
     const mockResponse = { success: true, messageId: 'msg-xyz' };
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      headers: { get: () => 'application/json' },
-      json: async () => mockResponse,
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    mockApiPost.mockResolvedValueOnce(mockResponse);
 
     const result = await communicationApi.sendDirectMessage({
       clientId: 'client-001',
@@ -509,48 +512,17 @@ describe('communicationApi sendDirectMessage', () => {
       clientEmail: 'client@example.com',
     });
 
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toContain('communication/send');
-    expect(options.method).toBe('POST');
-    expect(options.headers['Content-Type']).toBe('application/json');
-    const body = JSON.parse(options.body as string);
-    expect(body.recipients).toContain('client-001');
-    expect(body.subject).toBe('Hello');
+    expect(mockApiPost).toHaveBeenCalledOnce();
+    const [endpoint, body] = mockApiPost.mock.calls[0];
+    expect(String(endpoint)).toContain('send');
+    const payload = body as { recipients: string[]; subject: string };
+    expect(payload.recipients).toContain('client-001');
+    expect(payload.subject).toBe('Hello');
     expect(result).toEqual(mockResponse);
-
-    vi.unstubAllGlobals();
   });
 
-  it('sendDirectMessage returns success:true with unknown messageId when response is not JSON', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      headers: { get: () => 'text/plain' },
-    });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const result = await communicationApi.sendDirectMessage({
-      clientId: 'client-002',
-      subject: 'Plain response',
-      message: 'Body',
-      category: 'info',
-      priority: 'low',
-      sendEmail: false,
-    });
-
-    expect(result).toEqual({ success: true, messageId: 'unknown' });
-
-    vi.unstubAllGlobals();
-  });
-
-  it('sendDirectMessage throws when JSON response is not ok', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: false,
-      statusText: 'Bad Request',
-      headers: { get: () => 'application/json' },
-      json: async () => ({ error: 'Invalid recipient' }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+  it('propagates a send failure from the client', async () => {
+    mockApiPost.mockRejectedValueOnce(new Error('Invalid recipient'));
 
     await expect(
       communicationApi.sendDirectMessage({
@@ -562,26 +534,15 @@ describe('communicationApi sendDirectMessage', () => {
         sendEmail: true,
       }),
     ).rejects.toThrow('Invalid recipient');
-
-    vi.unstubAllGlobals();
   });
 
-  it('sendDirectMessage uses session token when session is present', async () => {
-    // Override supabase mock to return an active session for this test only
-    mockCreateClient.mockReturnValueOnce({
-      auth: {
-        getSession: async () => ({
-          data: { session: { access_token: 'session-token-abc' } },
-        }),
-      },
-    } as never);
-
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      headers: { get: () => 'application/json' },
-      json: async () => ({ success: true, messageId: 'msg-session' }),
-    });
+  it('does not hand-roll fetch or read the session itself', async () => {
+    // The old implementation called supabase.auth.getSession() and fell back to
+    // the anon key. Token handling belongs in one place; this asserts the
+    // duplicate is gone rather than merely improved.
+    const mockFetch = vi.fn();
     vi.stubGlobal('fetch', mockFetch);
+    mockApiPost.mockResolvedValueOnce({ success: true, messageId: 'm' });
 
     await communicationApi.sendDirectMessage({
       clientId: 'client-003',
@@ -592,9 +553,7 @@ describe('communicationApi sendDirectMessage', () => {
       sendEmail: false,
     });
 
-    const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers.Authorization).toBe('Bearer session-token-abc');
-
+    expect(mockFetch).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });

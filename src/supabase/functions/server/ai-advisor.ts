@@ -9,7 +9,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, enforceAccountSecurity } from './auth-mw.ts';
 import { PERSONNEL_ROLES } from './constants.ts';
 import {
   OPENAI_PRIMARY_MODEL,
@@ -529,6 +529,21 @@ async function requireAuth(c: Context, next: Next) {
 
     if (error || !user) {
       return c.json({ error: 'Unauthorized: Invalid user session' }, 401);
+    }
+
+    // Same account-security policy as auth-mw (P1.2) — see the note in
+    // ai-intelligence.tsx. Without it a suspended account keeps talking to the
+    // advisor until its token expires on its own.
+    try {
+      await enforceAccountSecurity(user.id);
+    } catch (securityError) {
+      if (securityError instanceof AuthError) {
+        return c.json(
+          { error: securityError.message, code: securityError.code },
+          securityError.statusCode as 403,
+        );
+      }
+      throw securityError;
     }
 
     // Attach user info to context

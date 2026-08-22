@@ -2,6 +2,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { SaveSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -74,9 +75,10 @@ app.get('', (c) => c.json({ service: 'estate-planning-fna', status: 'active' }))
 app.get('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/auto-populate');
-    const _user = await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:auto-populate');
 
     const { estateAutoPopulateFromResolver } = await import('./form-prefill-auto-populate.ts');
     const resolverInputs = await estateAutoPopulateFromResolver(clientId);
@@ -211,6 +213,7 @@ app.post('/save', async (c) => {
     }
 
     const { clientId, inputs, results, status, adviserNotes } = parsed.data;
+    await assertClientAccess(authUser, clientId, 'estate-planning-fna:save');
 
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
     const version = (sessions?.length || 0) + 1;
@@ -249,9 +252,10 @@ app.post('/save', async (c) => {
 app.get('/client/:clientId/sessions', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/client/:clientId/sessions');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:sessions');
 
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
     const sortedSessions = (sessions || []).sort(
@@ -331,10 +335,13 @@ app.get('/client/:clientId/latest-published', async (c) => {
 app.get('/session/:sessionId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/session/:sessionId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.split('-v')[0];
+    // The KV key below is built from this same derived id, so authorizing the
+    // derived owner authorizes exactly the record that gets touched.
+    await assertClientAccess(user, clientId, 'estate-planning-fna:session-read');
 
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
     const session = await kv.get(key);
@@ -364,10 +371,13 @@ app.get('/session/:sessionId', async (c) => {
 app.delete('/session/:sessionId', async (c) => {
   try {
     log.info('📥 DELETE /estate-planning-fna/session/:sessionId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.split('-v')[0];
+    // The KV key below is built from this same derived id, so authorizing the
+    // derived owner authorizes exactly the record that gets touched.
+    await assertClientAccess(user, clientId, 'estate-planning-fna:session-delete');
 
     const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
     await kv.del(key);

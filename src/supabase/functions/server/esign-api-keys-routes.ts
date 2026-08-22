@@ -13,6 +13,8 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
+import { validateBody, validateOptionalBody } from './validate.ts';
+import { CreateApiKeySchema, UpdateApiKeySchema } from './esign-validation.ts';
 import { logAuditEvent } from './esign-services.ts';
 import {
   createApiKey,
@@ -28,45 +30,50 @@ const log = createModuleLogger('esign-api-keys-routes');
 
 const apiKeysRoutes = new Hono();
 
-apiKeysRoutes.post('/api-keys', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const body = await c.req.json().catch(() => ({}));
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    if (!name) return c.json({ error: 'A name is required' }, 400);
-    const scopes = Array.isArray(body.scopes)
-      ? body.scopes.filter((s: unknown) => typeof s === 'string')
-      : undefined;
-    const expiresAt = typeof body.expiresAt === 'string' ? body.expiresAt : undefined;
-    const firmId = resolveFirmId(ctx.user);
+apiKeysRoutes.post(
+  '/api-keys',
+  rateLimit('SENDER_MUTATE'),
+  validateBody(CreateApiKeySchema),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const body = await c.req.json().catch(() => ({}));
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      if (!name) return c.json({ error: 'A name is required' }, 400);
+      const scopes = Array.isArray(body.scopes)
+        ? body.scopes.filter((s: unknown) => typeof s === 'string')
+        : undefined;
+      const expiresAt = typeof body.expiresAt === 'string' ? body.expiresAt : undefined;
+      const firmId = resolveFirmId(ctx.user);
 
-    const { key, token } = await createApiKey({
-      firmId,
-      userId: ctx.user.id,
-      name,
-      scopes,
-      expiresAt,
-    });
-    await logAuditEvent({
-      envelopeId: 'system',
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'api_key_created',
-      metadata: { id: key.id, name: key.name, prefix: key.prefix },
-    });
+      const { key, token } = await createApiKey({
+        firmId,
+        userId: ctx.user.id,
+        name,
+        scopes,
+        expiresAt,
+      });
+      await logAuditEvent({
+        envelopeId: 'system',
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'api_key_created',
+        metadata: { id: key.id, name: key.name, prefix: key.prefix },
+      });
 
-    return c.json({ key: redactApiKey(key), token });
-  } catch (error: unknown) {
-    log.error('Create API key error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to create API key',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+      return c.json({ key: redactApiKey(key), token });
+    } catch (error: unknown) {
+      log.error('Create API key error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to create API key',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  },
+);
 
 /** GET /api-keys — list keys for the current firm (redacted). */
 apiKeysRoutes.get('/api-keys', async (c) => {
@@ -86,46 +93,55 @@ apiKeysRoutes.get('/api-keys', async (c) => {
 });
 
 /** PATCH /api-keys/:id — update name / active / scopes / expires_at. */
-apiKeysRoutes.patch('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const existing = await getApiKey(id);
-    if (!existing) return c.json({ error: 'API key not found' }, 404);
-    if (existing.firm_id !== resolveFirmId(ctx.user)) {
-      return c.json({ error: 'Forbidden' }, 403);
+apiKeysRoutes.patch(
+  '/api-keys/:id',
+  rateLimit('SENDER_MUTATE'),
+  validateOptionalBody(UpdateApiKeySchema),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const id = c.req.param('id')!;
+      const existing = await getApiKey(id);
+      if (!existing) return c.json({ error: 'API key not found' }, 404);
+      if (existing.firm_id !== resolveFirmId(ctx.user)) {
+        return c.json({ error: 'Forbidden' }, 403);
+      }
+
+      const body = await c.req.json().catch(() => ({}));
+      const patch: Partial<{
+        name: string;
+        active: boolean;
+        scopes: string[];
+        expires_at?: string;
+      }> = {};
+      if (typeof body.name === 'string') patch.name = body.name.trim();
+      if (typeof body.active === 'boolean') patch.active = body.active;
+      if (Array.isArray(body.scopes))
+        patch.scopes = body.scopes.filter((s: unknown) => typeof s === 'string') as string[];
+      if (typeof body.expiresAt === 'string' || body.expiresAt === null)
+        patch.expires_at = body.expiresAt ?? undefined;
+
+      const updated = await updateApiKey(id, patch);
+      await logAuditEvent({
+        envelopeId: 'system',
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'api_key_updated',
+        metadata: { id, patch },
+      });
+      return c.json({ key: updated ? redactApiKey(updated) : null });
+    } catch (error: unknown) {
+      log.error('Update API key error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to update API key',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
     }
-
-    const body = await c.req.json().catch(() => ({}));
-    const patch: Partial<{ name: string; active: boolean; scopes: string[]; expires_at?: string }> =
-      {};
-    if (typeof body.name === 'string') patch.name = body.name.trim();
-    if (typeof body.active === 'boolean') patch.active = body.active;
-    if (Array.isArray(body.scopes))
-      patch.scopes = body.scopes.filter((s: unknown) => typeof s === 'string') as string[];
-    if (typeof body.expiresAt === 'string' || body.expiresAt === null)
-      patch.expires_at = body.expiresAt ?? undefined;
-
-    const updated = await updateApiKey(id, patch);
-    await logAuditEvent({
-      envelopeId: 'system',
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'api_key_updated',
-      metadata: { id, patch },
-    });
-    return c.json({ key: updated ? redactApiKey(updated) : null });
-  } catch (error: unknown) {
-    log.error('Update API key error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to update API key',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+  },
+);
 
 /** POST /api-keys/:id/rotate — issue a sibling key (dual-active). */
 apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c) => {

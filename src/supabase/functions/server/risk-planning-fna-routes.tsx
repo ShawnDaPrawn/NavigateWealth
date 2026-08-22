@@ -9,6 +9,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess, assertRecordClientAccess } from './client-access.ts';
 import { CreateRiskPlanningFnaSchema, UpdateRiskPlanningFnaSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
@@ -405,9 +406,11 @@ function performCalculations(inputData: RiskCalcInputData, userId: string) {
 riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /risk-planning-fna/client-profile/:clientId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'risk-planning-fna:client-profile');
+
     const profileData = await autoPopulateFromProfile(clientId);
 
     return c.json({
@@ -427,9 +430,11 @@ riskPlanningFnaRoutes.get('/client-profile/:clientId', async (c) => {
 riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
   try {
     log.info('ðŸ“¥ GET /risk-planning-fna/client/:clientId/latest');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'risk-planning-fna:latest');
+
     const latestKey = `risk_planning_fna:${clientId}:latest`;
     const latest = await kv.get(latestKey);
 
@@ -457,9 +462,11 @@ riskPlanningFnaRoutes.get('/client/:clientId/latest', async (c) => {
 riskPlanningFnaRoutes.get('/client/:clientId/list', async (c) => {
   try {
     log.info('ðŸ“¥ GET /risk-planning-fna/client/:clientId/list');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'risk-planning-fna:list');
+
     const listKey = `risk_planning_fna:${clientId}:list`;
     const list = (await kv.get(listKey)) || [];
 
@@ -529,6 +536,8 @@ riskPlanningFnaRoutes.post('/create', async (c) => {
         400,
       );
     }
+
+    await assertClientAccess(user, clientId, 'risk-planning-fna:create');
 
     // Generate FNA ID and version
     const fnaId = generateFnaId();
@@ -604,7 +613,7 @@ riskPlanningFnaRoutes.post('/create', async (c) => {
 riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /risk-planning-fna/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
@@ -618,6 +627,8 @@ riskPlanningFnaRoutes.get('/:fnaId', async (c) => {
         404,
       );
     }
+
+    await assertRecordClientAccess(user, fna, 'risk-planning-fna:read');
 
     return c.json({
       success: true,
@@ -665,6 +676,8 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
         404,
       );
     }
+
+    await assertRecordClientAccess(user, fna, 'risk-planning-fna:update');
 
     if (fna.status === 'published') {
       return c.json(
@@ -725,6 +738,8 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
       );
     }
 
+    await assertRecordClientAccess(user, fna, 'risk-planning-fna:publish');
+
     if (fna.status === 'published') {
       return c.json(
         {
@@ -774,7 +789,7 @@ riskPlanningFnaRoutes.post('/publish/:fnaId', async (c) => {
 riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
     log.info('ðŸ”¥ POST /risk-planning-fna/unpublish/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
@@ -788,6 +803,8 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
         404,
       );
     }
+
+    await assertRecordClientAccess(user, fna, 'risk-planning-fna:unpublish');
 
     if (fna.status !== 'published') {
       return c.json(
@@ -830,7 +847,7 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
 riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ DELETE /risk-planning-fna/archive/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
@@ -844,6 +861,8 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
         404,
       );
     }
+
+    await assertRecordClientAccess(user, fna, 'risk-planning-fna:archive');
 
     // Mark as archived (soft delete for compliance)
     const archivedFna = {
@@ -891,7 +910,7 @@ riskPlanningFnaRoutes.delete('/archive/:fnaId', async (c) => {
 riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ DELETE /risk-planning-fna/hard-delete/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`risk_planning_fna:${fnaId}`);
@@ -905,6 +924,8 @@ riskPlanningFnaRoutes.delete('/hard-delete/:fnaId', async (c) => {
         404,
       );
     }
+
+    await assertRecordClientAccess(user, fna, 'risk-planning-fna:hard-delete');
 
     // Hard delete the FNA record
     await kv.del(`risk_planning_fna:${fnaId}`);

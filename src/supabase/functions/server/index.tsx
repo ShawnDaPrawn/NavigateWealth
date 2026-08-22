@@ -26,6 +26,7 @@ import { Hono } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 import './console-override.ts';
 
+import { runWithRequestContext } from './request-context.ts';
 import { mountCoreRoutes } from './mount-core.ts';
 import { mountFnaRoutes } from './mount-fna.ts';
 import { mountModuleRoutes } from './mount-modules.ts';
@@ -91,8 +92,47 @@ app.use('*', async (c, next) => {
   const requestId =
     incoming && /^[A-Za-z0-9_-]{8,64}$/.test(incoming) ? incoming : crypto.randomUUID();
   c.set('requestId', requestId);
-  await next();
+  // Everything downstream — including sub-routers dispatched by lazy-router via
+  // router.fetch(), which run inside this same async chain — now logs with this
+  // id attached (Stage B / B4). Degrades to today's behaviour if the deployed
+  // runtime lacks node:async_hooks.
+  await runWithRequestContext({ requestId }, () => next());
   c.header('x-request-id', requestId);
+});
+
+// ── Root error handler (Stage B / B1) ─────────────────────────────────────
+// Covers the routes this app dispatches ITSELF: the health probes above and
+// any throw inside lazy-router's own proxy handler. It deliberately does NOT
+// cover the ~584 routes behind the lazy mounts — those sub-routers are invoked
+// with `router.fetch()`, so each one handles its own errors internally and
+// nothing propagates here. lazy-router installs the same shared handler on
+// each of them at cache time instead; see the note at the top of that file.
+//
+// `error.middleware.ts` is imported dynamically so it (and `npm:zod`, the
+// stderr logger and the quality-issues recorder) stay out of the boot payload
+// this file exists to keep minimal.
+app.onError(async (err, c) => {
+  const requestId = c.get('requestId');
+  let response: Response;
+  try {
+    const { errorHandler } = await import('./error.middleware.ts');
+    response = await errorHandler(err, c);
+  } catch (handlerError: unknown) {
+    // The safety net must not itself become the failure. Fall back to a plain
+    // JSON 500 rather than letting Deno.serve emit an opaque one.
+    console.error(
+      '[ERROR] Shared error handler failed:',
+      handlerError instanceof Error ? handlerError.message : handlerError,
+    );
+    response = Response.json(
+      { message: 'An unexpected error occurred', code: 'INTERNAL_ERROR', requestId },
+      { status: 500 },
+    );
+  }
+  // The request-id middleware above stamps the header AFTER `await next()`,
+  // which never runs when the handler throws — so stamp it here instead.
+  if (typeof requestId === 'string') response.headers.set('x-request-id', requestId);
+  return response;
 });
 
 // ── Health checks (unauthenticated) ───────────────────────────────────────

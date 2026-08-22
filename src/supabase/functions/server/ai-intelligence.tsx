@@ -16,6 +16,7 @@ import { Hono } from 'npm:hono';
 import type { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
+import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import {
@@ -82,6 +83,23 @@ async function requireAdmin(c: Context, next: Next) {
 
     if (error || !user) {
       return c.json({ error: 'Unauthorized: Invalid user session' }, 401);
+    }
+
+    // Same account-security policy as auth-mw (P1.2). This middleware verifies
+    // the token itself, and every hand-rolled copy of that had skipped this —
+    // so a SUSPENDED or DELETED account kept full access here for as long as
+    // its JWT stayed valid. Suspending an account does not invalidate an
+    // already-issued token.
+    try {
+      await enforceAccountSecurity(user.id);
+    } catch (securityError) {
+      if (securityError instanceof AuthError) {
+        return c.json(
+          { error: securityError.message, code: securityError.code },
+          securityError.statusCode as 403,
+        );
+      }
+      throw securityError;
     }
 
     // Check if user has appropriate access from KV store

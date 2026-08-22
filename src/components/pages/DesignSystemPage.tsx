@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { useState, useEffect, useRef } from 'react';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';

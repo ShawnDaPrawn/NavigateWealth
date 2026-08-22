@@ -24,7 +24,8 @@
  */
 
 import { Hono } from 'npm:hono';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as service from './tax-agent-service.ts';
@@ -40,6 +41,7 @@ app.get('', (c) => c.json({ service: 'tax-agent', status: 'active' }));
 
 app.get('/status', async (c) => {
   try {
+    // Not keyed by a resource: proving the caller is signed in is the whole check.
     await authenticateUser(c.req.header('Authorization'), 'tax-agent');
     const configured = !!Deno.env.get('OPENAI_API_KEY');
     return c.json({ configured });
@@ -60,6 +62,7 @@ app.post('/create-session', async (c) => {
 
     const body = await c.req.json();
     const { clientId, clientName } = body;
+    await assertClientAccess(user, clientId, 'tax-agent:create-session');
 
     if (!clientId || !clientName) {
       return c.json(
@@ -90,8 +93,7 @@ app.post('/create-session', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error creating tax agent session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -101,9 +103,11 @@ app.post('/create-session', async (c) => {
 app.get('/sessions/client/:clientId', async (c) => {
   try {
     log.info('GET /sessions/client/:clientId');
-    await authenticateUser(c.req.header('Authorization'), 'tax-agent');
+    const user = await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'tax-agent:list');
+
     const sessions = await service.getClientSessions(clientId);
 
     const summaries = sessions.map((s) => ({
@@ -121,8 +125,7 @@ app.get('/sessions/client/:clientId', async (c) => {
     return c.json({ success: true, data: summaries });
   } catch (error: unknown) {
     log.error('Error listing tax agent sessions', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -131,11 +134,12 @@ app.get('/sessions/client/:clientId', async (c) => {
 app.get('/sessions/:sessionId', async (c) => {
   try {
     log.info('GET /sessions/:sessionId');
-    await authenticateUser(c.req.header('Authorization'), 'tax-agent');
+    const user = await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
     const sessionId = c.req.param('sessionId')!;
     // clientId is the prefix of the sessionId before '-ta-'
     const clientId = sessionId.replace(/-ta-\d+$/, '');
+    await assertClientAccess(user, clientId, 'tax-agent:session');
 
     const session = await service.getSession(clientId, sessionId);
     if (!session) {
@@ -160,8 +164,7 @@ app.get('/sessions/:sessionId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error getting tax agent session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -170,10 +173,11 @@ app.get('/sessions/:sessionId', async (c) => {
 app.post('/sessions/:sessionId/send', async (c) => {
   try {
     log.info('POST /sessions/:sessionId/send');
-    await authenticateUser(c.req.header('Authorization'), 'tax-agent');
+    const user = await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-ta-\d+$/, '');
+    await assertClientAccess(user, clientId, 'tax-agent:session');
 
     const body = await c.req.json();
     const { message, previousResponseId } = body;
@@ -202,8 +206,7 @@ app.post('/sessions/:sessionId/send', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error sending message to tax agent', error);
-    const errMsg = getErrMsg(error);
-    return c.json({ success: false, error: errMsg }, errMsg === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -216,13 +219,13 @@ app.post('/sessions/:sessionId/save', async (c) => {
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-ta-\d+$/, '');
+    await assertClientAccess(user, clientId, 'tax-agent:session');
 
     const result = await service.saveSessionOutput(clientId, sessionId, user.id);
     return c.json({ success: true, data: result });
   } catch (error: unknown) {
     log.error('Error saving tax agent session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -231,17 +234,17 @@ app.post('/sessions/:sessionId/save', async (c) => {
 app.delete('/sessions/:sessionId', async (c) => {
   try {
     log.info('DELETE /sessions/:sessionId');
-    await authenticateUser(c.req.header('Authorization'), 'tax-agent');
+    const user = await authenticateUser(c.req.header('Authorization'), 'tax-agent');
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-ta-\d+$/, '');
+    await assertClientAccess(user, clientId, 'tax-agent:session');
 
     await service.deleteSession(clientId, sessionId);
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('Error deleting tax agent session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

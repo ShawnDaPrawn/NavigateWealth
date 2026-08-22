@@ -24,7 +24,7 @@ import { Switch } from '../../../../ui/switch';
 import { Input } from '../../../../ui/input';
 import { esignApi } from '../api';
 import type { ReminderConfig, SigningMode } from '../types';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 // ==================== REMINDER CONFIG PANEL ====================
 

@@ -21,7 +21,16 @@ import {
   getBlockedIpAddressWarning,
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
-import { requireSuperAdmin } from './auth-mw.ts';
+import { requireSuperAdmin, enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import { validateBody } from './validate.ts';
+import {
+  SignupValidateSchema,
+  SignupSchema,
+  EmailOnlySchema,
+  EmailAndUserIdSchema,
+  LoginFailureSchema,
+  ConfirmEmailSchema,
+} from './auth-validation.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 
 const authRoutes = new Hono();
@@ -49,7 +58,7 @@ function getUserAgent(c: Context): string {
  * Server-side signup validation with rate limiting
  * Does NOT create the user - just validates the input
  */
-authRoutes.post('/signup-validate', async (c) => {
+authRoutes.post('/signup-validate', validateBody(SignupValidateSchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
   const blockedIpAddress = getBlockedIpAddress(ip);
@@ -203,7 +212,7 @@ authRoutes.post('/signup-validate', async (c) => {
  * Create a new user with admin privileges (auto-confirm email)
  * Use this for manual signup/seeding when email service is not available
  */
-authRoutes.post('/signup', async (c) => {
+authRoutes.post('/signup', validateBody(SignupSchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
   const blockedIpAddress = getBlockedIpAddress(ip);
@@ -280,7 +289,7 @@ authRoutes.post('/signup', async (c) => {
  * Server-side login validation with rate limiting
  * Returns whether credentials are valid and logs the attempt
  */
-authRoutes.post('/login-validate', async (c) => {
+authRoutes.post('/login-validate', validateBody(EmailOnlySchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
@@ -392,7 +401,7 @@ authRoutes.post('/login-validate', async (c) => {
  * POST /auth/login-success
  * Called after successful login to clear rate limits and log success
  */
-authRoutes.post('/login-success', async (c) => {
+authRoutes.post('/login-success', validateBody(EmailAndUserIdSchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
@@ -421,7 +430,7 @@ authRoutes.post('/login-success', async (c) => {
  * POST /auth/login-failure
  * Called after failed login to log the failure
  */
-authRoutes.post('/login-failure', async (c) => {
+authRoutes.post('/login-failure', validateBody(LoginFailureSchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
@@ -446,7 +455,7 @@ authRoutes.post('/login-failure', async (c) => {
  * POST /auth/logout
  * Log user logout event
  */
-authRoutes.post('/logout', async (c) => {
+authRoutes.post('/logout', validateBody(EmailAndUserIdSchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
@@ -470,7 +479,7 @@ authRoutes.post('/logout', async (c) => {
  * POST /auth/password-reset-request
  * Handle password reset request with rate limiting
  */
-authRoutes.post('/password-reset-request', async (c) => {
+authRoutes.post('/password-reset-request', validateBody(EmailOnlySchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
@@ -563,7 +572,7 @@ authRoutes.post('/password-reset-request', async (c) => {
  * POST /auth/password-change
  * Log password change event
  */
-authRoutes.post('/password-change', async (c) => {
+authRoutes.post('/password-change', validateBody(EmailAndUserIdSchema), async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
@@ -605,6 +614,21 @@ authRoutes.get('/security-status', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
+    // Same account-security policy as auth-mw (P1.2). This handler verifies the
+    // token itself rather than going through requireAdmin, and so had skipped
+    // the suspended/deleted/stale-2FA check entirely.
+    try {
+      await enforceAccountSecurity(user.id);
+    } catch (securityError) {
+      if (securityError instanceof AuthError) {
+        return c.json(
+          { error: securityError.message, code: securityError.code },
+          securityError.statusCode as 403,
+        );
+      }
+      throw securityError;
+    }
+
     // Check if user is admin
     const userProfile = await kv.get(`user_profile:${user.id}:personal_info`);
     if (
@@ -641,64 +665,69 @@ authRoutes.get('/security-status', async (c) => {
  * Proper fix: all new signups now use email_confirm:true (see auth-signup.ts).
  * Searchable tag: // WORKAROUND: unconfirmed-email-login-fix
  */
-authRoutes.post('/confirm-email', requireSuperAdmin, async (c) => {
-  try {
-    const { email } = await c.req.json();
+authRoutes.post(
+  '/confirm-email',
+  requireSuperAdmin,
+  validateBody(ConfirmEmailSchema),
+  async (c) => {
+    try {
+      const { email } = await c.req.json();
 
-    if (!email) {
-      return c.json({ error: 'Email is required' }, 400);
-    }
+      if (!email) {
+        return c.json({ error: 'Email is required' }, 400);
+      }
 
-    const supabase = getSupabase();
+      const supabase = getSupabase();
 
-    // Find the user by email
-    const {
-      data: { users },
-      error: listError,
-    } = await supabase.auth.admin.listUsers();
-    if (listError) {
-      log.error('Error listing users for email confirmation:', listError);
-      return c.json({ error: 'Internal error' }, 500);
-    }
+      // Find the user by email
+      const {
+        data: { users },
+        error: listError,
+      } = await supabase.auth.admin.listUsers();
+      if (listError) {
+        log.error('Error listing users for email confirmation:', listError);
+        return c.json({ error: 'Internal error' }, 500);
+      }
 
-    const user = users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      // Don't reveal whether the account exists (anti-enumeration)
+      const user = users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+      if (!user) {
+        // Don't reveal whether the account exists (anti-enumeration)
+        return c.json({ confirmed: false }, 200);
+      }
+
+      // If already confirmed, nothing to do
+      if (user.email_confirmed_at) {
+        return c.json({ confirmed: true, alreadyConfirmed: true }, 200);
+      }
+
+      // Confirm the email
+      const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+        email_confirm: true,
+      });
+
+      if (updateError) {
+        log.error('Error confirming email for user:', updateError);
+        return c.json({ confirmed: false }, 200);
+      }
+
+      log.info('Auto-confirmed email for legacy user:', email);
+      await AdminAuditService.record({
+        actorId: c.get('userId') as string,
+        actorRole: c.get('userRole') as string,
+        category: 'security',
+        action: 'legacy_email_confirmed',
+        summary: 'Confirmed a legacy user email after super-admin review',
+        severity: 'warning',
+        entityType: 'user',
+        entityId: user.id,
+        metadata: { email: user.email },
+      });
+      return c.json({ confirmed: true }, 200);
+    } catch (error) {
+      log.error('confirm-email error:', error);
       return c.json({ confirmed: false }, 200);
     }
-
-    // If already confirmed, nothing to do
-    if (user.email_confirmed_at) {
-      return c.json({ confirmed: true, alreadyConfirmed: true }, 200);
-    }
-
-    // Confirm the email
-    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
-      email_confirm: true,
-    });
-
-    if (updateError) {
-      log.error('Error confirming email for user:', updateError);
-      return c.json({ confirmed: false }, 200);
-    }
-
-    log.info('Auto-confirmed email for legacy user:', email);
-    await AdminAuditService.record({
-      actorId: c.get('userId') as string,
-      actorRole: c.get('userRole') as string,
-      category: 'security',
-      action: 'legacy_email_confirmed',
-      summary: 'Confirmed a legacy user email after super-admin review',
-      severity: 'warning',
-      entityType: 'user',
-      entityId: user.id,
-      metadata: { email: user.email },
-    });
-    return c.json({ confirmed: true }, 200);
-  } catch (error) {
-    log.error('confirm-email error:', error);
-    return c.json({ confirmed: false }, 200);
-  }
-});
+  },
+);
 
 export default authRoutes;

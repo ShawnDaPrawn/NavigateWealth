@@ -1,7 +1,8 @@
 import { Hono } from 'npm:hono';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuditTrail, getEnvelopeDetails } from './esign-services.ts';
+import { getAuditTrail } from './esign-services.ts';
+import { requireOwnedEnvelope, firmScopeResponse } from './esign-route-helpers.ts';
 import { getDocumentUrl, getCertificateUrl } from './esign-storage.ts';
 import { getCertificate } from './esign-certificates.ts';
 
@@ -16,14 +17,21 @@ const app = new Hono();
 app.get('/envelopes/:envelopeId/audit', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+
+    // Ownership, not just authentication (S6). This route did not even load the
+    // envelope before returning its audit trail.
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
     const events = await getAuditTrail(envelopeId);
 
     return c.json({ events });
   } catch (error: unknown) {
     log.error('❌ Get audit trail error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -41,10 +49,10 @@ app.get('/envelopes/:envelopeId/audit', async (c) => {
 app.get('/envelopes/:envelopeId/document', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
-    const envelope = await getEnvelopeDetails(envelopeId);
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
 
     if (!envelope || !envelope.document) {
       return c.json({ error: 'Document not found' }, 404);
@@ -55,6 +63,8 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
     return c.json({ url });
   } catch (error: unknown) {
     log.error('❌ Get document URL error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -72,8 +82,13 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
 app.get('/envelopes/:envelopeId/certificate', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+
+    // A completion certificate names the signers and the document — ownership
+    // must be established before it is handed out (S6).
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
     const certificate = await getCertificate(envelopeId);
 
@@ -86,6 +101,8 @@ app.get('/envelopes/:envelopeId/certificate', async (c) => {
     return c.json({ url, certificate });
   } catch (error: unknown) {
     log.error('❌ Get certificate URL error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({

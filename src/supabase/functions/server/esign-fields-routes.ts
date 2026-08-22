@@ -13,6 +13,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
+import { requireOwnedEnvelope, firmScopeResponse } from './esign-route-helpers.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { UpdateFieldsSchema } from './esign-validation.ts';
@@ -111,6 +112,8 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Update fields error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update fields' }),
@@ -126,11 +129,12 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
 fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership, not just authentication (S6). Field definitions describe where
+    // signatures and initials land on a client's document.
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
@@ -144,6 +148,8 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Get fields error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to fetch fields' }),
@@ -159,15 +165,15 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
 fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
     const fieldId = c.req.param('fieldId')!;
 
     const body = await c.req.json();
     const updates = body;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership before mutation (S6).
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
@@ -235,6 +241,8 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
     }
   } catch (error: unknown) {
     log.error('❌ Update field error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update field' }),
@@ -316,6 +324,8 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Delete field error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to delete field' }),

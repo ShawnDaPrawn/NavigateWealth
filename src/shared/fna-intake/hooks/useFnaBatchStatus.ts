@@ -39,6 +39,6 @@ export function useFnaBatchStatus(clientId: string | undefined, options?: { enab
 export function useInvalidateFnaBatchStatus() {
   const queryClient = useQueryClient();
   return (clientId: string) => {
-    queryClient.invalidateQueries({ queryKey: fnaKeys.batchStatus(clientId) });
+    void queryClient.invalidateQueries({ queryKey: fnaKeys.batchStatus(clientId) });
   };
 }

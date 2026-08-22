@@ -4,11 +4,10 @@
  */
 
 import { Hono } from 'npm:hono';
-import type { Context, Next } from 'npm:hono';
-import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import { requireAdmin } from './auth-mw.ts';
 import { AdminApplicationsService } from './applications-service.ts';
 import type { ErrorResponse, SuccessResponse } from './types.ts';
-import { resolveTrustedRole, HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.ts';
+import { HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { KvApplication } from './applications-types.ts';
@@ -25,50 +24,27 @@ const log = createModuleLogger('admin-applications');
 /**
  * Middleware to verify admin access
  */
-const verifyAdmin = async (c: Context, next: Next) => {
-  try {
-    const authHeader = c.req.header('Authorization');
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return c.json({ error: ERROR_MESSAGES.AUTH.NO_TOKEN }, HTTP_STATUS.UNAUTHORIZED);
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
-
-    // Get user from token
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return c.json({ error: ERROR_MESSAGES.AUTH.INVALID_TOKEN }, HTTP_STATUS.UNAUTHORIZED);
-    }
-
-    // Role from trusted sources only (super-admin allowlist, app_metadata,
-    // NW_ADMIN_EMAILS) — never from client-editable user_metadata.
-    const userRole = resolveTrustedRole(user);
-    if (userRole !== 'admin' && userRole !== 'super_admin' && userRole !== 'super-admin') {
-      return c.json({ error: ERROR_MESSAGES.AUTH.NOT_ADMIN }, HTTP_STATUS.FORBIDDEN);
-    }
-
-    // Store user info in context
-    c.set('userId', user.id);
-    c.set('userEmail', user.email);
-
-    await next();
-  } catch (_error) {
-    return c.json(
-      { error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR },
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-    );
-  }
-};
+/**
+ * Admin gate — delegates to auth-mw (Stage B: consolidate auth onto auth-mw).
+ *
+ * This used to hand-roll bearer extraction, its own Supabase client, and its
+ * own role check. It was already correct (it used resolveTrustedRole), but
+ * every copy is a place the canonical version can drift away from — and one
+ * such copy HAD drifted: tasks-digest-routes.ts resolved the role from
+ * client-editable `user_metadata`, letting any signed-in user pass an
+ * admin-only gate.
+ *
+ * `requireAdmin` checks the same three role strings and sets a superset of the
+ * context variables this file reads (userId). It additionally applies
+ * enforceAccountSecurity, so a deleted, suspended or stale-2FA account can no
+ * longer administer clients through these routes — a strict improvement, and
+ * the reason to route through one implementation rather than five.
+ *
+ * The error bodies change from this module's ERROR_MESSAGES constants to
+ * auth-mw's ({ error, code }); the SPA reads `.error || .message`, so both
+ * render.
+ */
+const verifyAdmin = requireAdmin;
 
 // Apply admin middleware to all routes
 adminApp.use('*', verifyAdmin);

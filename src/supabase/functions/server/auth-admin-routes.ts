@@ -15,6 +15,12 @@ import { clearRateLimit } from './rateLimiter.ts';
 import { validatePassword, validateEmail } from './passwordValidator.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
+import { validateBody } from './validate.ts';
+import {
+  CreateSuperAdminSchema,
+  ClearRateLimitSchema,
+  EnsureDevUserSchema,
+} from './auth-validation.ts';
 
 const getSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -25,7 +31,7 @@ function getClientIP(c: Context): string {
 
 const adminAuthRoutes = new Hono();
 
-adminAuthRoutes.post('/create-superadmin', async (c) => {
+adminAuthRoutes.post('/create-superadmin', validateBody(CreateSuperAdminSchema), async (c) => {
   try {
     const { secretKey, email, password } = await c.req.json();
 
@@ -35,7 +41,12 @@ adminAuthRoutes.post('/create-superadmin', async (c) => {
       return c.json({ error: 'Server configuration error' }, 500);
     }
 
-    if (secretKey !== expectedSecretKey) {
+    // Constant-time, matching /ensure-dev-user below. A plain `!==` on strings
+    // short-circuits at the first differing byte, so the comparison time
+    // correlates with how much of the secret the caller already guessed. The
+    // correct helper was already imported in this file and used by one of the
+    // three routes guarding this same secret — the other two had drifted.
+    if (!constantTimeEqual(String(secretKey || ''), expectedSecretKey)) {
       return c.json({ error: 'Invalid secret key' }, 403);
     }
 
@@ -115,7 +126,7 @@ adminAuthRoutes.post('/create-superadmin', async (c) => {
  * Clear rate limits for a specific email (admin utility)
  * Requires secret key for access
  */
-adminAuthRoutes.post('/clear-rate-limit', async (c) => {
+adminAuthRoutes.post('/clear-rate-limit', validateBody(ClearRateLimitSchema), async (c) => {
   try {
     const { email, secretKey } = await c.req.json();
 
@@ -125,7 +136,12 @@ adminAuthRoutes.post('/clear-rate-limit', async (c) => {
       return c.json({ error: 'Server configuration error' }, 500);
     }
 
-    if (secretKey !== expectedSecretKey) {
+    // Constant-time, matching /ensure-dev-user below. A plain `!==` on strings
+    // short-circuits at the first differing byte, so the comparison time
+    // correlates with how much of the secret the caller already guessed. The
+    // correct helper was already imported in this file and used by one of the
+    // three routes guarding this same secret — the other two had drifted.
+    if (!constantTimeEqual(String(secretKey || ''), expectedSecretKey)) {
       return c.json({ error: 'Invalid secret key' }, 403);
     }
 
@@ -156,7 +172,7 @@ adminAuthRoutes.post('/clear-rate-limit', async (c) => {
  * Development helper: Ensures a user exists and has the correct password
  * This allows "auto-fixing" of login issues in development
  */
-adminAuthRoutes.post('/ensure-dev-user', async (c) => {
+adminAuthRoutes.post('/ensure-dev-user', validateBody(EnsureDevUserSchema), async (c) => {
   try {
     const { email, password, secretKey } = await c.req.json();
 

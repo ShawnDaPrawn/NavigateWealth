@@ -7,6 +7,7 @@
 
 import { ILogger, LogContext, LogLevel } from './shared-logger-types.ts';
 import { sanitizeLogData } from './shared-logger-utils.ts';
+import { getRequestContext } from './request-context.ts';
 
 class StderrLogger implements ILogger {
   private isDevelopment: boolean;
@@ -38,7 +39,15 @@ class StderrLogger implements ILogger {
     const safeContext = context ? sanitizeLogData(context) : undefined;
     const safeError = error ? sanitizeLogData(error) : undefined;
 
-    let formattedMsg = `${emoji} [${timestamp}] [${level.toUpperCase()}] ${message}`;
+    // Request correlation (Stage B / B4). Stamped here because EVERY log line
+    // in the edge function passes through this method, so the ~235 module
+    // loggers get it without a single call-site change. Absent outside a
+    // request, and absent if node:async_hooks is unavailable in the deployed
+    // runtime — in both cases the line is exactly what it was before.
+    const requestId = getRequestContext()?.requestId;
+    const correlation = requestId ? ` [req:${requestId}]` : '';
+
+    let formattedMsg = `${emoji} [${timestamp}] [${level.toUpperCase()}]${correlation} ${message}`;
 
     if (safeContext) {
       try {

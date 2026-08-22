@@ -186,7 +186,7 @@ routes.post('/:id/preview', async (c) => {
       return c.json({ success: false, error: 'clientId is required' }, 400);
     }
 
-    assertPrefillClientAccess(user, clientId);
+    await assertPrefillClientAccess(user, clientId);
 
     const template = (await kv.get(templateKey(id))) as FormTemplateRecord | null;
     if (!template) {
@@ -260,7 +260,7 @@ routes.post('/:id/fill', async (c) => {
       return c.json({ success: false, error: 'clientId is required' }, 400);
     }
 
-    assertPrefillClientAccess(user, clientId);
+    await assertPrefillClientAccess(user, clientId);
 
     const template = (await kv.get(templateKey(id))) as FormTemplateRecord | null;
 

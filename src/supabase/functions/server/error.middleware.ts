@@ -51,8 +51,57 @@ export class NotFoundError extends APIError {
 // ERROR HANDLER
 // ============================================================================
 
+/**
+ * The shape index.tsx accepts for a caller-supplied request id. Kept identical
+ * on purpose: a value that policy would not accept at the edge must not become
+ * acceptable further in.
+ */
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** Context-set id first, then the forwarded header — never an unvalidated one. */
+function resolveRequestId(c: Context): string | undefined {
+  const fromContext = c.get('requestId') as string | undefined;
+  if (typeof fromContext === 'string' && REQUEST_ID_PATTERN.test(fromContext)) return fromContext;
+  const fromHeader = c.req.header('x-request-id');
+  return typeof fromHeader === 'string' && REQUEST_ID_PATTERN.test(fromHeader)
+    ? fromHeader
+    : undefined;
+}
+
 export async function errorHandler(error: Error, c: Context) {
   logger.error('API Error occurred', error, { path: c.req.url });
+
+  // Hono's built-in handler — the one lazy-router REPLACES on all 77 mounts —
+  // honours an error that carries its own Response via `getResponse()`
+  // (hono-base.js: `if ("getResponse" in err)`). That is how HTTPException, and
+  // every Hono middleware that throws it (jwt, bearerAuth, bodyLimit, timeout,
+  // the validator), communicates a deliberate status and body.
+  //
+  // Nothing in this codebase throws one today — verified: zero references to
+  // HTTPException or hono/http-exception anywhere in src/, and the only Hono
+  // submodules the server imports are `cors` and a type-only http-status. So
+  // this is not a live bug. It is a TRAP: replacing a handler with one that
+  // handles strictly less means the first person to add `bearerAuth` to a
+  // sub-router would watch their 401 silently become a generic 500, on all 77
+  // mounts at once, with no clue why. Handling it here makes the replacement a
+  // superset of what it replaced, which is the only safe way to replace
+  // something.
+  //
+  // Checked before the typed branches so a deliberate response is never
+  // recorded as an unexpected 500.
+  //
+  // Reached via optional chaining because this is now the FIRST thing in the
+  // handler that touches `error`, and `throw null` / `throw undefined` are
+  // legal JavaScript. Nothing in this codebase does that today, but an error
+  // handler is the one place that must not become the failure — and
+  // recordRuntimeServerIssue below already assumes a possibly-null error
+  // (`error?.name`, `error?.message`), so this file was the odd one out.
+  const carriedResponse = (error as { getResponse?: () => Response } | null | undefined)
+    ?.getResponse;
+  if (typeof carriedResponse === 'function') {
+    const carried = carriedResponse.call(error);
+    return c.newResponse(carried.body, carried);
+  }
 
   if (error instanceof ZodError) {
     // Shared utility for consistent validation error formatting
@@ -91,14 +140,23 @@ export async function errorHandler(error: Error, c: Context) {
     );
   }
 
-  // For unexpected errors, include more details in development/logging
-  const isDevelopment = Deno.env.get('DENO_ENV') !== 'production';
+  // For unexpected errors, include more details in development/logging.
+  //
+  // FAILS CLOSED. This used to read `!== 'production'`, which meant an UNSET
+  // DENO_ENV counted as development — and DENO_ENV is set nowhere in this repo
+  // or its deployment config, so the deployed edge function was returning
+  // `details`, `errorName` and five frames of stack trace to callers on every
+  // unexpected 500. Opting IN to disclosure is the only safe direction for a
+  // backend holding client PII, ID documents and e-signatures. Nothing is lost
+  // operationally: the full stack is still written to stderr just below, where
+  // Supabase's logs keep it.
+  const isDevelopment = Deno.env.get('DENO_ENV') === 'development';
 
   // Always log the full error stack to stderr for debugging
   logger.error('Unhandled error details', {
-    message: error.message,
-    name: error.name,
-    stack: error.stack,
+    message: error?.message,
+    name: error?.name,
+    stack: error?.stack,
   });
 
   // Record unexpected 500s into the in-house quality-issues pipeline so backend
@@ -110,7 +168,17 @@ export async function errorHandler(error: Error, c: Context) {
     path: new URL(c.req.url).pathname,
     method: c.req.method,
     statusCode: 500,
-    requestId: c.get('requestId') as string | undefined,
+    // Lazily-mounted sub-routers are dispatched via `router.fetch()` into a
+    // separate Hono instance, so index.tsx's `c.set('requestId')` is not
+    // visible there — lazy-router forwards the id as a header instead.
+    //
+    // The header is re-validated rather than trusted. lazy-router already
+    // overwrites it with the id index.tsx validated, but this function is also
+    // reachable directly through `asyncHandler` in ~50 modules, and the value
+    // lands unbounded and unsanitised in a KV-persisted issue message that the
+    // admin dashboard renders. One validation at the point of use is cheaper
+    // than trusting every future call path.
+    requestId: resolveRequestId(c),
   });
 
   return c.json(
@@ -121,9 +189,9 @@ export async function errorHandler(error: Error, c: Context) {
       endpoint: new URL(c.req.url).pathname,
       method: c.req.method,
       ...(isDevelopment && {
-        details: error.message,
-        errorName: error.name,
-        stack: error.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines only
+        details: error?.message,
+        errorName: error?.name,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines only
       }),
       timestamp: new Date().toISOString(),
     },

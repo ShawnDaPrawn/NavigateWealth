@@ -3,6 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
 const app = new Hono();
@@ -71,9 +72,10 @@ function parseWillId(willId: string): { clientId: string; type: string } {
 app.get('/wills/client/:clientId/profile-prefill', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId/profile-prefill');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-profile-prefill');
 
     const [profile, clientKeys] = await Promise.all([
       kv.get(`user_profile:${clientId}:personal_info`),
@@ -118,6 +120,8 @@ app.post('/wills/create', async (c) => {
         400,
       );
     }
+
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-create');
 
     if (!['last_will', 'living_will'].includes(type)) {
       return c.json(
@@ -169,10 +173,11 @@ app.post('/wills/create', async (c) => {
 app.put('/wills/:willId', async (c) => {
   try {
     log.info('📥 PUT /estate-planning-fna/wills/:willId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-write');
 
     const key = `will:${clientId}:${type}:${willId}`;
     const existingWill = await kv.get(key);
@@ -234,9 +239,10 @@ app.put('/wills/:willId', async (c) => {
 app.get('/wills/client/:clientId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/wills/client/:clientId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-list');
 
     const wills = await kv.getByPrefix(`will:${clientId}:`);
     const sortedWills = (wills || []).sort(
@@ -260,10 +266,11 @@ app.get('/wills/client/:clientId', async (c) => {
 app.get('/wills/:willId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/wills/:willId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-write');
 
     const key = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(key);
@@ -298,6 +305,7 @@ app.put('/wills/:willId/finalize', async (c) => {
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-finalize');
 
     const key = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(key);
@@ -358,10 +366,11 @@ app.put('/wills/:willId/finalize', async (c) => {
 app.delete('/wills/:willId', async (c) => {
   try {
     log.info('📥 DELETE /estate-planning-fna/wills/:willId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-write');
 
     const key = `will:${clientId}:${type}:${willId}`;
     const existingWill = await kv.get(key);
@@ -409,6 +418,7 @@ app.post('/wills/:willId/attach-signed', async (c) => {
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-attach-signed');
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(kvKey);
@@ -498,10 +508,11 @@ app.post('/wills/:willId/attach-signed', async (c) => {
 app.get('/wills/:willId/signed-document', async (c) => {
   try {
     log.info('GET /estate-planning-fna/wills/:willId/signed-document');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-signed-document');
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(kvKey);
@@ -539,10 +550,11 @@ app.get('/wills/:willId/signed-document', async (c) => {
 app.delete('/wills/:willId/signed-document', async (c) => {
   try {
     log.info('DELETE /estate-planning-fna/wills/:willId/signed-document');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const willId = c.req.param('willId')!;
     const { clientId, type } = parseWillId(willId);
+    await assertClientAccess(user, clientId, 'estate-planning-fna:will-signed-document');
 
     const kvKey = `will:${clientId}:${type}:${willId}`;
     const will = await kv.get(kvKey);

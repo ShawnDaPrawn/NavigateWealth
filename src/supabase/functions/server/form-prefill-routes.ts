@@ -72,7 +72,7 @@ routes.post('/resolve', async (c) => {
       return c.json({ success: false, error: 'clientId and valid formId are required' }, 400);
     }
 
-    assertPrefillClientAccess(user, clientId);
+    await assertPrefillClientAccess(user, clientId);
 
     const result = await resolveFormPrefill(clientId, formId, {
       currentFormValues,
@@ -99,7 +99,7 @@ routes.post('/apply-audit', async (c) => {
       return c.json({ success: false, error: 'clientId and formId are required' }, 400);
     }
 
-    assertPrefillClientAccess(user, clientId);
+    await assertPrefillClientAccess(user, clientId);
 
     const auditKey = `form_prefill_audit:${clientId}:${Date.now()}`;
     await kv.set(auditKey, {
@@ -123,7 +123,7 @@ routes.get('/audit/:clientId', async (c) => {
     requirePrefillUser(user);
 
     const clientId = c.req.param('clientId')!;
-    assertPrefillClientAccess(user, clientId);
+    await assertPrefillClientAccess(user, clientId);
 
     const limit = Math.min(Number(c.req.query('limit') || 50), 200);
     const prefix = `form_prefill_audit:${clientId}:`;
@@ -157,7 +157,7 @@ routes.post('/normalize-intake', async (c) => {
     }
 
     if (clientId) {
-      assertPrefillClientAccess(user, clientId);
+      await assertPrefillClientAccess(user, clientId);
       await assertPrefillResolveRateLimit(user.id);
     }
 
