@@ -306,6 +306,51 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   privilege-boundary bypass and the class of bug is the point — five copies of
   an auth check drift, and one did.
 
+- **S16 — Form prefill was a bypass of the P1.4 authorization fix (NEW,
+  2026-08-22).** `form-prefill-auth.assertPrefillClientAccess` allowed **any**
+  adviser to prefill **any** client, with a docblock stating that assignment
+  scoping was "intentionally not enforced".
+
+  That was a coherent decision when it was written, because nothing else
+  enforced assignment either. P1.4 changed the facts and nobody revisited it.
+  Prefill reads `user_profile:{clientId}:personal_info`,
+  `user_profile:{clientId}:client_keys` and `policies:{clientId}` and returns
+  them as proposed field values — the same client PII the FNA family had just
+  been locked down to protect.
+
+  So an adviser refused client B's FNA could call `POST /form-prefill/resolve`
+  with B's id and any valid form id, and read B's personal information, ID
+  number and policies straight out of the response. Two policies disagreeing
+  about the same adviser and the same client is not a stylistic inconsistency —
+  it is a hole in whichever one is stricter.
+
+  Fixed by routing prefill through the shared `client-access` policy. Denials
+  are re-thrown as `intakeForbidden()` rather than surfacing `ClientAccessError`
+  directly, because both prefill route files map `FnaIntakeError` to its own
+  status and everything else to a 500 — letting the shared error escape would
+  have turned a deliberate 403 into an opaque server fault.
+
+  **Platform administrators are untouched**, and this was the explicit
+  constraint on the change. `isPlatformAdminRole` is consulted before any
+  adviser resolution runs, and `resolveTrustedRole` maps the super-admin email
+  allowlist to `super_admin`, which that check admits. Both role spellings and
+  the allowlist path are asserted by test rather than left to inspection —
+  removing the platform-admin short-circuit fails five tests.
+
+  The only behaviour change is that an adviser with no server-resolvable
+  assignment can no longer prefill for that client. Same operational caveat as
+  P1.4: if assignment records are sparse in production, advisers will see 403s
+  where they previously saw data, and the shared policy logs caller id, role and
+  client id on every denial precisely so that case is distinguishable from
+  probing.
+
+  **Three existing tests were asserting the old behaviour, and one of them said
+  so in its own name.** `allows adviser resolve for assigned workflow client`
+  never established an assignment — its `kv` mock had no `get` at all, so the
+  resolver returned null. It passed because nothing consulted it. The setup now
+  makes the assignment real, and the unused `_otherClientId` constant sitting in
+  that file finally has the negative test it was named for.
+
 - **A22 — The validation ratchet was counting 20 routes where satisfying it
   would have broken production (NEW, 2026-08-22).** `.route-validation-baseline`
   counted every `POST`/`PUT`/`PATCH` registration in the auth and e-sign
