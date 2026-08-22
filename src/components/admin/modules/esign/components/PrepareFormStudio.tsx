@@ -4,30 +4,9 @@
  * Replaces the older PrepareFormEditor.
  */
 
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../../../ui/button';
-import {
-  ArrowLeft,
-  Send,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Undo,
-  Redo,
-  ChevronDown,
-  Settings as SettingsIcon,
-  Eye,
-  Keyboard,
-  Users,
-  Copy,
-  Trash2,
-  Magnet,
-  Filter,
-  Layers,
-  Plus,
-  X,
-  FileText,
-} from 'lucide-react';
+import { Loader2, ChevronDown, Magnet, Plus, X, FileText } from 'lucide-react';
 import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
 import { FieldPropertiesPanel } from './FieldPropertiesPanel';
@@ -41,33 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../../../../ui/sheet';
-import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
-import { Textarea } from '../../../../ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
 import { logger } from '../../../../../utils/logger';
-import { RecipientsManager } from './RecipientsManager';
 import { PageManagerDialog } from './PageManagerDialog';
 import { createFieldsFromCandidates, buildPageReplicas } from './prepareFormStudioUtils';
 import { useFieldHistory } from './useFieldHistory';
@@ -76,7 +29,14 @@ import { useFieldSelection } from './useFieldSelection';
 import { useDocumentManagement } from './useDocumentManagement';
 import { useCandidateManagement } from './useCandidateManagement';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { EmailPreview } from './EmailPreview';
+import { StudioToolbar } from './studio/StudioToolbar';
+import { SignerLegend } from './studio/SignerLegend';
+import { BulkActionBar } from './studio/BulkActionBar';
+import { SettingsDialog } from './studio/SettingsDialog';
+import { ShortcutsDialog } from './studio/ShortcutsDialog';
+import { RecipientsSheet } from './studio/RecipientsSheet';
+import { StudioPreviewDialog } from './studio/StudioPreviewDialog';
+import type { SettingsDraft } from './studio/settingsDraft';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -142,7 +102,7 @@ export function PrepareFormStudio({
   const [previewMode, setPreviewMode] = useState<'doc' | 'email'>('doc');
 
   // Editable settings draft (mirrors envelope until user saves).
-  const [settingsDraft, setSettingsDraft] = useState({
+  const [settingsDraft, setSettingsDraft] = useState<SettingsDraft>({
     title: envelope.title,
     message: envelope.message ?? '',
     expiryDays: 30,
@@ -609,360 +569,53 @@ export function PrepareFormStudio({
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Top Toolbar */}
-      <div className="h-14 bg-white border-b flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <Button variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div className="h-6 w-px bg-gray-200" />
-          <h2 className="font-semibold text-gray-900 truncate max-w-[260px]" title={envelope.title}>
-            {envelope.title}
-          </h2>
-          {/* Recipients quick-edit trigger */}
-          <button
-            type="button"
-            onClick={() => setShowRecipients(true)}
-            className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition shrink-0"
-            title="Edit recipients"
-          >
-            <Users className="h-3 w-3" />
-            {signers.length} Recipient{signers.length !== 1 ? 's' : ''}
-          </button>
-          {/* Auto-save status indicator */}
-          <div className="text-xs text-gray-500 ml-1 min-w-[110px]" aria-live="polite">
-            {saving || autoSaving ? (
-              <span className="flex items-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Saving…
-              </span>
-            ) : hasUnsavedChanges ? (
-              <span className="flex items-center gap-1 text-amber-600">
-                <AlertCircle className="h-3 w-3" />
-                Unsaved changes
-              </span>
-            ) : lastSavedAt ? (
-              <span className="flex items-center gap-1 text-green-600">
-                <CheckCircle2 className="h-3 w-3" />
-                Saved {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            ) : null}
-          </div>
-        </div>
+      <StudioToolbar
+        autoSaving={autoSaving}
+        canRedo={canRedo}
+        canUndo={canUndo}
+        documentUrl={documentUrl}
+        envelope={envelope}
+        handleBack={handleBack}
+        handleSave={handleSave}
+        handleSend={handleSend}
+        hasUnsavedChanges={hasUnsavedChanges}
+        lastSavedAt={lastSavedAt}
+        redo={redo}
+        saving={saving}
+        sendActionBusyLabel={sendActionBusyLabel}
+        sendActionLabel={sendActionLabel}
+        sending={sending}
+        setShowPageManager={setShowPageManager}
+        setShowPreview={setShowPreview}
+        setShowRecipients={setShowRecipients}
+        setShowSettings={setShowSettings}
+        setShowShortcuts={setShowShortcuts}
+        setSnapEnabled={setSnapEnabled}
+        signers={signers}
+        snapEnabled={snapEnabled}
+        undo={undo}
+      />
 
-        <div className="flex items-center gap-1.5">
-          {/* Snap toggle — Magnet icon makes the metaphor self-explanatory. */}
-          <Button
-            variant={snapEnabled ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setSnapEnabled((v) => !v)}
-            className="h-8 px-2 gap-1"
-            title="Toggle snap to grid (hold Alt while dragging to bypass)"
-          >
-            <Magnet className="h-3.5 w-3.5" />
-            <span className="text-xs">Snap</span>
-          </Button>
+      <SignerLegend
+        clearSignerFilter={clearSignerFilter}
+        fieldCountsBySigner={fieldCountsBySigner}
+        selectedSignerId={selectedSignerId}
+        setSelectedSignerId={setSelectedSignerId}
+        signers={signers}
+        toggleSignerFilter={toggleSignerFilter}
+        visibleSignerIds={visibleSignerIds}
+      />
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSettings(true)}
-            className="h-8 px-2 gap-1"
-            title="Edit envelope settings"
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-            <span className="text-xs">Settings</span>
-          </Button>
-
-          {/* P3.3 — Reorder / delete / rotate pages before sending. Only
-              shown for envelopes that actually have a source PDF. */}
-          {(envelope.document?.url || envelope.documentUrl || documentUrl) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPageManager(true)}
-              className="h-8 px-2 gap-1"
-              title="Reorder, rotate, or delete pages"
-            >
-              <Layers className="h-3.5 w-3.5" />
-              <span className="text-xs">Pages</span>
-            </Button>
-          )}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPreview(true)}
-            className="h-8 px-2 gap-1"
-            title="Preview as recipient"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            <span className="text-xs">Preview</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowShortcuts(true)}
-            className="h-8 w-8"
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts (?)"
-          >
-            <Keyboard className="h-3.5 w-3.5" />
-          </Button>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo">
-            <Undo className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo">
-            <Redo className="h-4 w-4" />
-          </Button>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <Button
-            variant="outline"
-            onClick={handleSave}
-            disabled={!hasUnsavedChanges || saving || autoSaving}
-            className="w-24"
-          >
-            {saving || autoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
-          </Button>
-
-          <Button
-            onClick={handleSend}
-            disabled={sending}
-            className="min-w-[140px] bg-purple-600 hover:bg-purple-700"
-          >
-            {sending ? (
-              <div className="contents">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {sendActionBusyLabel}
-              </div>
-            ) : (
-              <div className="contents">
-                {sendActionLabel}
-                <Send className="h-4 w-4 ml-2" />
-              </div>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* Signer Legend Strip — shows every recipient with their colour swatch
-          and field count. Click a swatch to filter the canvas to just their
-          fields, click again to clear. CCs are dimmed and unclickable.
-
-          P2.5 2.5 — when a signer has zero fields placed, the count chip
-          becomes a dashed "Place →" button: clicking it makes them the
-          active recipient AND scrolls the canvas to the top so the sender
-          can immediately start dropping fields. */}
-      <div className="bg-white border-b px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0">
-        <span className="text-xs uppercase tracking-wider text-gray-400 mr-1 shrink-0">
-          Signers
-        </span>
-        {signers.map((signer, idx) => {
-          const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
-          const isCC = signer.kind === 'cc';
-          const isWitness = signer.kind === 'witness';
-          const isVisible = !visibleSignerIds || visibleSignerIds.has(signer.email);
-          const isFiltering = !!visibleSignerIds && visibleSignerIds.size > 0;
-          const count = fieldCountsBySigner[signer.email] ?? 0;
-          const isActive = selectedSignerId === signer.email;
-          return (
-            <div
-              key={signer.email}
-              className={[
-                'inline-flex items-center gap-1 rounded-full border text-xs transition shrink-0 overflow-hidden',
-                isCC ? 'opacity-60 border-gray-200' : 'border-gray-200',
-                isFiltering && !isVisible ? 'opacity-40' : '',
-                isFiltering && isVisible ? 'border-purple-300 bg-purple-50' : '',
-                isActive ? 'ring-2 ring-purple-400/60' : '',
-              ].join(' ')}
-            >
-              <button
-                type="button"
-                disabled={isCC}
-                onClick={() => {
-                  if (isCC) return;
-                  toggleSignerFilter(signer.email);
-                }}
-                className={[
-                  'inline-flex items-center gap-2 px-2.5 py-1',
-                  isCC ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
-                ].join(' ')}
-                title={
-                  isCC ? `${signer.name} — Receives a copy` : `Filter to ${signer.name}'s fields`
-                }
-              >
-                <span
-                  className="w-3 h-3 rounded-full shrink-0 ring-1 ring-black/5"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="truncate max-w-[120px] font-medium text-gray-700">
-                  {signer.name}
-                </span>
-                {isCC && (
-                  <span className="text-[10px] uppercase tracking-wide text-gray-400 ml-1">CC</span>
-                )}
-                {isWitness && (
-                  <span className="text-[10px] uppercase tracking-wide text-amber-600 ml-1">
-                    Witness
-                  </span>
-                )}
-              </button>
-              {!isCC && count > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedSignerId(signer.email);
-                  }}
-                  className={[
-                    'text-[10px] tabular-nums px-1.5 py-1 rounded-r-full',
-                    isActive
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                  ].join(' ')}
-                  title={`${count} field${count === 1 ? '' : 's'} — click to place fields for ${signer.name}`}
-                >
-                  {count}
-                </button>
-              )}
-              {!isCC && count === 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedSignerId(signer.email);
-                    const canvas = document.querySelector('[data-esign-canvas]');
-                    canvas?.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className={[
-                    'text-[10px] uppercase tracking-wide px-1.5 py-1 rounded-r-full border-l border-dashed',
-                    isActive
-                      ? 'bg-purple-600 text-white border-purple-700'
-                      : 'border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100',
-                  ].join(' ')}
-                  title={`${signer.name} has no fields — click to place the first one`}
-                >
-                  Place →
-                </button>
-              )}
-            </div>
-          );
-        })}
-        {visibleSignerIds && visibleSignerIds.size > 0 && (
-          <button
-            type="button"
-            onClick={() => clearSignerFilter()}
-            className="ml-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-gray-500 hover:bg-gray-100 shrink-0"
-            title="Show all signers"
-          >
-            <Filter className="h-3 w-3" />
-            Clear filter
-          </button>
-        )}
-      </div>
-
-      {/* Bulk-action bar — appears only when 2+ fields are selected so it
-          doesn't waste vertical space the rest of the time.
-
-          P2.5 2.2 + 2.3 — duplicate, delete, reassign, toggle required, and
-          replicate to every page. The bulk actions live on the bar so the
-          sender doesn't have to open the right-hand Properties panel for
-          every field individually. */}
-      {totalSelected > 1 && (
-        <div className="bg-purple-600 text-white px-4 py-1.5 flex items-center gap-3 text-sm shrink-0">
-          <span className="font-medium">{totalSelected} fields selected</span>
-          <div className="h-4 w-px bg-white/30" />
-          <button
-            type="button"
-            onClick={handleDuplicate}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Duplicate
-          </button>
-          {pageCount > 1 && (
-            <button
-              type="button"
-              onClick={handleApplyToAllPages}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10"
-              title={`Replicate selection to all ${pageCount} pages`}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              Apply to all pages
-            </button>
-          )}
-
-          {/* Bulk reassign — dropdown of eligible (non-cc) signers. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10"
-              >
-                <Users className="h-3.5 w-3.5" />
-                Reassign
-                <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              {eligibleSigners.length === 0 ? (
-                <DropdownMenuItem disabled>No eligible signers</DropdownMenuItem>
-              ) : (
-                eligibleSigners.map((s, idx) => {
-                  const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
-                  return (
-                    <DropdownMenuItem
-                      key={s.email}
-                      onSelect={() => handleBulkReassign(s.email)}
-                      className="flex items-center gap-2"
-                    >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="truncate">{s.name}</span>
-                    </DropdownMenuItem>
-                  );
-                })
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <button
-            type="button"
-            onClick={() => handleBulkRequired(true)}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10"
-            title="Mark all selected as required"
-          >
-            Required
-          </button>
-          <button
-            type="button"
-            onClick={() => handleBulkRequired(false)}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10"
-            title="Mark all selected as optional"
-          >
-            Optional
-          </button>
-
-          <button
-            type="button"
-            onClick={handleBulkDelete}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Delete
-          </button>
-          <div className="ml-auto text-xs opacity-80">
-            ⌘/Ctrl + C / V / D · Backspace to delete · Esc to clear
-          </div>
-        </div>
-      )}
+      <BulkActionBar
+        eligibleSigners={eligibleSigners}
+        handleApplyToAllPages={handleApplyToAllPages}
+        handleBulkDelete={handleBulkDelete}
+        handleBulkReassign={handleBulkReassign}
+        handleBulkRequired={handleBulkRequired}
+        handleDuplicate={handleDuplicate}
+        pageCount={pageCount}
+        totalSelected={totalSelected}
+      />
 
       {/* Main Studio Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -1240,99 +893,14 @@ export function PrepareFormStudio({
         </div>
       </div>
 
-      {/* ====================== SETTINGS DIALOG ====================== */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5 text-purple-600" />
-              Envelope settings
-            </DialogTitle>
-            <DialogDescription>
-              Update the envelope title, message, signing order, and expiry. Changes apply
-              immediately to this draft.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="env-title">Title</Label>
-              <Input
-                id="env-title"
-                value={settingsDraft.title}
-                onChange={(e) => setSettingsDraft((d) => ({ ...d, title: e.target.value }))}
-                placeholder="e.g. Investment Mandate – Jane Smith"
-                maxLength={200}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="env-message">Message to recipients</Label>
-              <Textarea
-                id="env-message"
-                value={settingsDraft.message}
-                onChange={(e) => setSettingsDraft((d) => ({ ...d, message: e.target.value }))}
-                placeholder="Optional. Shown to every recipient in the email and signing screen."
-                rows={3}
-                maxLength={1000}
-              />
-              <p className="text-[11px] text-gray-400 text-right">
-                {settingsDraft.message.length}/1000
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="env-expiry">Expires in (days)</Label>
-                <Input
-                  id="env-expiry"
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={settingsDraft.expiryDays}
-                  onChange={(e) =>
-                    setSettingsDraft((d) => ({
-                      ...d,
-                      expiryDays: Math.max(1, Math.min(365, parseInt(e.target.value || '30', 10))),
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Signing order</Label>
-                <Select
-                  value={settingsDraft.signingMode}
-                  onValueChange={(v) =>
-                    setSettingsDraft((d) => ({ ...d, signingMode: v as 'sequential' | 'parallel' }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sequential">Sequential</SelectItem>
-                    <SelectItem value="parallel">Parallel</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowSettings(false)}
-              disabled={savingSettings}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveSettings}
-              disabled={savingSettings}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {savingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Save settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SettingsDialog
+        handleSaveSettings={handleSaveSettings}
+        savingSettings={savingSettings}
+        setSettingsDraft={setSettingsDraft}
+        setShowSettings={setShowSettings}
+        settingsDraft={settingsDraft}
+        showSettings={showSettings}
+      />
 
       {/* ====================== P3.3 — PAGE MANAGER ====================== */}
       <PageManagerDialog
@@ -1357,173 +925,28 @@ export function PrepareFormStudio({
         }}
       />
 
-      {/* ====================== KEYBOARD SHORTCUTS ====================== */}
-      <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
-        <DialogContent className="sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Keyboard className="h-5 w-5 text-purple-600" />
-              Keyboard shortcuts
-            </DialogTitle>
-            <DialogDescription>
-              Power-user controls for placing and arranging fields quickly.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2 text-sm">
-            {[
-              ['Save', '⌘ / Ctrl + S'],
-              ['Undo', '⌘ / Ctrl + Z'],
-              ['Redo', '⇧ + ⌘ / Ctrl + Z'],
-              ['Copy', '⌘ / Ctrl + C'],
-              ['Paste', '⌘ / Ctrl + V'],
-              ['Duplicate', '⌘ / Ctrl + D'],
-              ['Select all', '⌘ / Ctrl + A'],
-              ['Delete', 'Delete / Backspace'],
-              ['Nudge field', 'Arrow keys'],
-              ['Nudge ×10', 'Shift + Arrow'],
-              ['Bypass snap', 'Hold Alt while drag'],
-              ['Multi-select', 'Shift + click / drag'],
-              ['Clear selection', 'Esc'],
-              // P2.5 2.11
-              ['Pick recipient 1–9', '1 … 9'],
-              ['Show this help', '?'],
-            ].map(([label, keys]) => (
-              <React.Fragment key={label}>
-                <span className="text-gray-600">{label}</span>
-                <span className="font-mono text-xs text-gray-800 text-right">{keys}</span>
-              </React.Fragment>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ShortcutsDialog setShowShortcuts={setShowShortcuts} showShortcuts={showShortcuts} />
 
-      {/* ====================== RECIPIENTS QUICK-EDIT ====================== */}
-      <Sheet open={showRecipients} onOpenChange={setShowRecipients}>
-        <SheetContent side="right" className="w-full sm:max-w-[520px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Recipients</SheetTitle>
-            <SheetDescription>
-              Reorder, add or remove recipients without leaving the studio. Changes save
-              automatically when you close this panel.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-4">
-            <RecipientsManager
-              signers={signers}
-              onChange={(next) => {
-                // Persist on every change so the studio's `signers` prop and
-                // the legend stay in sync without a "Save recipients" button.
-                void handleRecipientsSave(next);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <RecipientsSheet
+        handleRecipientsSave={handleRecipientsSave}
+        setShowRecipients={setShowRecipients}
+        showRecipients={showRecipients}
+        signers={signers}
+      />
 
-      {/* ====================== PREVIEW DIALOG ======================
-          P2.5 2.10 — Two-mode preview:
-            1. "Document" — non-interactive PDF preview, optionally filtered
-               to a single recipient so the sender sees exactly what that
-               person will see on signing day.
-            2. "Email" — a faithful HTML mock of the invitation email each
-               recipient will receive (subject, signer name, document title,
-               personal message, "Review and sign" CTA). Catches things like
-               "this still says 'Hi {{name}}'" before send time. */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-[1100px] w-[95vw] h-[88vh] p-0 flex flex-col">
-          <DialogHeader className="px-5 py-3 border-b shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-purple-600" />
-              Preview as recipient
-            </DialogTitle>
-            <DialogDescription>
-              See the document and email exactly as a recipient will. Choose a specific signer to
-              filter the document view to their fields only.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Toolbar: signer picker + view-mode tabs. Kept above the content
-              so switching modes doesn't reset the chosen signer. */}
-          <div className="px-5 py-2 border-b shrink-0 flex items-center gap-3 flex-wrap">
-            <span className="text-sm text-gray-600">Recipient:</span>
-            <Select value={previewSignerEmail} onValueChange={setPreviewSignerEmail}>
-              <SelectTrigger className="w-[260px] h-8">
-                <SelectValue placeholder="All recipients" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All recipients (combined)</SelectItem>
-                {eligibleSigners.map((s, idx) => {
-                  const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
-                  return (
-                    <SelectItem key={s.email} value={s.email}>
-                      <span className="inline-flex items-center gap-2">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
-                          style={{ backgroundColor: color }}
-                        />
-                        {s.name}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-
-            <div className="ml-auto inline-flex rounded-md border border-gray-200 overflow-hidden text-sm">
-              <button
-                type="button"
-                onClick={() => setPreviewMode('doc')}
-                className={`px-3 py-1.5 ${previewMode === 'doc' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                Document
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewMode('email')}
-                className={`px-3 py-1.5 border-l border-gray-200 ${previewMode === 'email' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                Email
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 min-h-0 bg-gray-100">
-            {previewMode === 'doc' ? (
-              <PDFViewer
-                documentUrl={documentUrl || envelope.document?.url || envelope.documentUrl}
-                documentName={envelope.title}
-                // Filter to a single signer's fields so the sender sees what
-                // that recipient will see — including the gentle reality that
-                // a recipient with zero fields gets nothing to do.
-                fields={
-                  previewSignerEmail === '__all__'
-                    ? fields
-                    : fields.filter((f) => f.signer_id === previewSignerEmail)
-                }
-                signers={signers}
-                showFields={true}
-                selectedSignerId={previewSignerEmail === '__all__' ? undefined : previewSignerEmail}
-              />
-            ) : (
-              <EmailPreview
-                envelope={{
-                  title: envelope.title,
-                  message: envelope.message ?? undefined,
-                  sender_name:
-                    (envelope as { sender_name?: string | null }).sender_name ?? undefined,
-                  firm_name: (envelope as { firm_name?: string | null }).firm_name ?? undefined,
-                }}
-                signer={
-                  previewSignerEmail === '__all__'
-                    ? eligibleSigners[0] // best-effort fallback
-                    : (eligibleSigners.find((s) => s.email === previewSignerEmail) ??
-                      eligibleSigners[0])
-                }
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <StudioPreviewDialog
+        documentUrl={documentUrl}
+        eligibleSigners={eligibleSigners}
+        envelope={envelope}
+        fields={fields}
+        previewMode={previewMode}
+        previewSignerEmail={previewSignerEmail}
+        setPreviewMode={setPreviewMode}
+        setPreviewSignerEmail={setPreviewSignerEmail}
+        setShowPreview={setShowPreview}
+        showPreview={showPreview}
+        signers={signers}
+      />
     </div>
   );
 }
