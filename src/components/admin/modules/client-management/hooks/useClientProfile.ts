@@ -3,19 +3,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { clientApi, getClientProfileQueryOptions } from '../api';
 import { clientKeys } from './queryKeys';
-import {
-  Client,
-  ProfileData,
-  Asset,
-  Liability,
-  FamilyMember,
-  BankAccount,
-  Employer,
-  ChronicCondition,
-  IdentityDocument,
-  IdentityDocumentType,
-} from '../types';
-import { IdCard, FileText, CreditCard, Home, ReceiptText } from 'lucide-react';
+import { Client, ProfileData } from '../types';
+import { createIdentityDocumentHandlers } from './clientProfile/identityDocumentHandlers';
+import { createProofOfResidenceHandlers } from './clientProfile/proofOfResidenceHandlers';
+import { createEmployerHandlers } from './clientProfile/employerHandlers';
+import { createChronicConditionHandlers } from './clientProfile/chronicConditionHandlers';
+import { createFamilyMemberHandlers } from './clientProfile/familyMemberHandlers';
+import { createBankAccountHandlers } from './clientProfile/bankAccountHandlers';
+import { createRiskAssessmentHandlers } from './clientProfile/riskAssessmentHandlers';
+import { createAssetHandlers } from './clientProfile/assetHandlers';
+import { createLiabilityHandlers } from './clientProfile/liabilityHandlers';
 
 /**
  * Create a stable, comparable snapshot of profile data for dirty detection.
@@ -414,989 +411,160 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     setProofOfBankToDelete(null);
   }, []);
 
-  // Identity Document Management Functions
-  const hasDocumentType = (type: IdentityDocumentType) => {
-    return profileData.identityDocuments.some((doc) => doc.type === type);
-  };
-
-  const addIdentityDocument = (type: IdentityDocumentType) => {
-    if (hasDocumentType(type)) {
-      const typeNames: Record<IdentityDocumentType, string> = {
-        'national-id': 'National ID',
-        passport: 'Passport',
-        'drivers-license': "Driver's License",
-        'proof-of-residence': 'Proof of Residence',
-        'proof-primary-bank-account': 'Proof of Primary Bank Account',
-        'utility-bill': 'Utility Bill',
-      };
-      toast.error(
-        `Client already has a ${typeNames[type]}. Only one document of each type is allowed.`,
-      );
-      return;
-    }
-
-    const newDoc: IdentityDocument = {
-      id: Date.now().toString(),
-      type,
-      number: '',
-      countryOfIssue: 'South Africa',
-      expiryDate: '',
-      isVerified: false,
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      identityDocuments: [...prev.identityDocuments, newDoc],
-    }));
-    setIdentityDocsInEditMode((prev) => new Set([...prev, newDoc.id]));
-    setHasChanges(true);
-  };
-
-  const handleDocumentUpload = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
-      return;
-    }
-
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-    if (!validTypes.includes(file.type)) {
-      toast.error('Please upload a PDF, JPG, or PNG file');
-      return;
-    }
-
-    const fileUrl = URL.createObjectURL(file);
-
-    setProfileData((prev) => ({
-      ...prev,
-      identityDocuments: prev.identityDocuments.map((doc) =>
-        doc.id === id
-          ? {
-              ...doc,
-              fileName: file.name,
-              fileUrl: fileUrl,
-              fileSize: file.size,
-              uploadDate: new Date().toISOString(),
-              isVerified: false,
-            }
-          : doc,
-      ),
-    }));
-    setHasChanges(true);
-    toast.success(`Document "${file.name}" uploaded successfully`);
-  };
-
-  const updateIdentityDocument = (id: string, updates: Partial<IdentityDocument>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      identityDocuments: prev.identityDocuments.map((doc) =>
-        doc.id === id ? { ...doc, ...updates } : doc,
-      ),
-    }));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteIdentityDocument = (id: string) => {
-    setIdentityDocToDelete(id);
-  };
-
-  const removeIdentityDocument = (id: string) => {
-    setProfileData((prev) => ({
-      ...prev,
-      identityDocuments: prev.identityDocuments.filter((doc) => doc.id !== id),
-    }));
-    setIdentityDocsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-    setIdentityDocToDelete(null);
-    setHasChanges(true);
-  };
-
-  const saveIdentityDocument = (id: string) => {
-    const doc = profileData.identityDocuments.find((d) => d.id === id);
-
-    if (doc?.type === 'national-id') {
-      if (!doc.number || !doc.fileName) {
-        toast.error('Please fill in the ID number and upload the document before saving');
-        return;
-      }
-    }
-
-    if (
-      doc &&
-      ['proof-of-residence', 'proof-primary-bank-account', 'utility-bill'].includes(doc.type) &&
-      !doc.fileName
-    ) {
-      toast.error('Please upload the document before saving');
-      return;
-    }
-
-    setIdentityDocsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const cancelEditIdentityDocument = (id: string) => {
-    const doc = profileData.identityDocuments.find((d) => d.id === id);
-
-    if (doc && !doc.number && !doc.fileName) {
-      removeIdentityDocument(id);
-      return;
-    }
-
-    setIdentityDocsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const editIdentityDocument = (id: string) => {
-    setIdentityDocsInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const getDocumentTypeLabel = (type: IdentityDocumentType) => {
-    switch (type) {
-      case 'national-id':
-        return 'Identity';
-      case 'passport':
-        return 'Passport';
-      case 'drivers-license':
-        return "Driver's License";
-      case 'proof-of-residence':
-        return 'Proof of Residence';
-      case 'proof-primary-bank-account':
-        return 'Proof of Primary Bank Account';
-      case 'utility-bill':
-        return 'Utility Bill';
-      default:
-        return type;
-    }
-  };
-
-  const getDocumentTypeIcon = (type: IdentityDocumentType) => {
-    switch (type) {
-      case 'national-id':
-        return { icon: IdCard, color: 'purple' };
-      case 'passport':
-        return { icon: FileText, color: 'blue' };
-      case 'drivers-license':
-        return { icon: CreditCard, color: 'amber' };
-      case 'proof-of-residence':
-        return { icon: Home, color: 'green' };
-      case 'proof-primary-bank-account':
-        return { icon: CreditCard, color: 'blue' };
-      case 'utility-bill':
-        return { icon: ReceiptText, color: 'amber' };
-      default:
-        return { icon: FileText, color: 'gray' };
-    }
-  };
-
-  // Proof of Residence handlers
-  const handleProofOfResidenceUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
-      return;
-    }
-
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Please upload a PDF, JPG, or PNG file');
-      return;
-    }
-
-    setProfileData((prev) => ({
-      ...prev,
-      proofOfResidenceUploaded: true,
-      proofOfResidenceFileName: file.name,
-    }));
-    setProofOfResidenceInEditMode(false);
-    setHasChanges(true);
-  };
-
-  const editProofOfResidence = () => {
-    setProofOfResidenceInEditMode(true);
-  };
-
-  const saveProofOfResidence = () => {
-    setProofOfResidenceInEditMode(false);
-  };
-
-  const confirmDeleteProofOfResidence = () => {
-    setProofOfResidenceToDelete(true);
-  };
-
-  const removeProofOfResidence = () => {
-    setProfileData((prev) => ({
-      ...prev,
-      proofOfResidenceUploaded: false,
-      proofOfResidenceFileName: undefined,
-    }));
-    setProofOfResidenceToDelete(false);
-    setProofOfResidenceInEditMode(false);
-    setHasChanges(true);
-  };
-
-  // Employer Management Functions
-  const addEmployer = () => {
-    const newEmployer: Employer = {
-      id: Date.now().toString(),
-      jobTitle: '',
-      employerName: '',
-      industry: '',
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      employers: [...prev.employers, newEmployer],
-    }));
-    setEmployersInEditMode((prev) => new Set([...prev, newEmployer.id]));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteEmployer = (id: string) => {
-    setEmployerToDelete(id);
-  };
-
-  const removeEmployer = () => {
-    if (!employerToDelete) return;
-    setProfileData((prev) => ({
-      ...prev,
-      employers: prev.employers.filter((employer) => employer.id !== employerToDelete),
-    }));
-    setEmployersInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(employerToDelete);
-      return newSet;
-    });
-    setEmployerToDelete(null);
-    setHasChanges(true);
-  };
-
-  const updateEmployer = (id: string, updates: Partial<Employer>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      employers: prev.employers.map((employer) =>
-        employer.id === id ? { ...employer, ...updates } : employer,
-      ),
-    }));
-    setHasChanges(true);
-  };
-
-  const saveEmployer = (id: string) => {
-    const employer = profileData.employers.find((e) => e.id === id);
-
-    if (!employer?.employerName || !employer?.jobTitle || !employer?.industry) {
-      toast.error(
-        'Please fill in all required fields (Employer Name, Job Title, and Industry) before saving',
-      );
-      return;
-    }
-
-    setEmployersInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const editEmployer = (id: string) => {
-    setEmployersInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const cancelEditEmployer = (id: string) => {
-    const employer = profileData.employers.find((e) => e.id === id);
-
-    if (employer && !employer.employerName && !employer.jobTitle && !employer.industry) {
-      setProfileData((prev) => ({
-        ...prev,
-        employers: prev.employers.filter((e) => e.id !== id),
-      }));
-      setEmployersInEditMode((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      return;
-    }
-
-    setEmployersInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const saveSelfEmployed = () => {
-    if (!profileData.selfEmployedIndustry || !profileData.selfEmployedDescription) {
-      toast.error(
-        'Please fill in all required fields (Industry and Business Description) before saving',
-      );
-      return;
-    }
-    setSelfEmployedInEditMode(false);
-  };
-
-  const cancelEditSelfEmployed = () => {
-    setSelfEmployedInEditMode(false);
-  };
-
-  const editSelfEmployed = () => {
-    setSelfEmployedInEditMode(true);
-  };
-
-  // Chronic Condition Management Functions
-  const addChronicCondition = () => {
-    const newCondition: ChronicCondition = {
-      id: Date.now().toString(),
-      conditionName: '',
-      monthDiagnosed: '',
-      yearDiagnosed: '',
-      onTreatment: false,
-      treatingDoctor: '',
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      chronicConditions: [...prev.chronicConditions, newCondition],
-    }));
-    setChronicConditionsInEditMode((prev) => new Set([...prev, newCondition.id]));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteChronicCondition = (id: string) => {
-    setChronicConditionToDelete(id);
-  };
-
-  const removeChronicCondition = () => {
-    if (!chronicConditionToDelete) return;
-    setProfileData((prev) => ({
-      ...prev,
-      chronicConditions: prev.chronicConditions.filter(
-        (condition) => condition.id !== chronicConditionToDelete,
-      ),
-    }));
-    setChronicConditionsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(chronicConditionToDelete);
-      return newSet;
-    });
-    setChronicConditionToDelete(null);
-    setHasChanges(true);
-  };
-
-  const updateChronicCondition = (id: string, updates: Partial<ChronicCondition>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      chronicConditions: prev.chronicConditions.map((condition) =>
-        condition.id === id ? { ...condition, ...updates } : condition,
-      ),
-    }));
-    setHasChanges(true);
-  };
-
-  const saveChronicCondition = (id: string) => {
-    const condition = profileData.chronicConditions.find((c) => c.id === id);
-
-    if (!condition?.conditionName) {
-      toast.error('Please enter the name of the condition before saving');
-      return;
-    }
-
-    setChronicConditionsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const editChronicCondition = (id: string) => {
-    setChronicConditionsInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const cancelEditChronicCondition = (id: string) => {
-    const condition = profileData.chronicConditions.find((c) => c.id === id);
-
-    if (condition && !condition.conditionName) {
-      setProfileData((prev) => ({
-        ...prev,
-        chronicConditions: prev.chronicConditions.filter((c) => c.id !== id),
-      }));
-      setChronicConditionsInEditMode((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      return;
-    }
-
-    setChronicConditionsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  // Family Member Management Functions
-  const addFamilyMember = () => {
-    const newMember: FamilyMember = {
-      id: Date.now().toString(),
-      fullName: '',
-      relationship: '',
-      dateOfBirth: '',
-      gender: '',
-      idPassportNumber: '',
-      isFinanciallyDependent: false,
-      isIncludedInEstatePlanning: false,
-      shareProfileInformation: false,
-      shareEmail: '',
-      notes: '',
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      familyMembers: [...prev.familyMembers, newMember],
-    }));
-    setFamilyMembersInEditMode((prev) => new Set([...prev, newMember.id]));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteFamilyMember = (id: string) => {
-    setFamilyMemberToDelete(id);
-  };
-
-  const removeFamilyMember = () => {
-    if (!familyMemberToDelete) return;
-    setProfileData((prev) => ({
-      ...prev,
-      familyMembers: prev.familyMembers.filter((member) => member.id !== familyMemberToDelete),
-    }));
-    setFamilyMembersInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(familyMemberToDelete);
-      return newSet;
-    });
-    setFamilyMemberToDelete(null);
-    setHasChanges(true);
-  };
-
-  const updateFamilyMember = (id: string, updates: Partial<FamilyMember>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      familyMembers: prev.familyMembers.map((member) =>
-        member.id === id ? { ...member, ...updates } : member,
-      ),
-    }));
-    setHasChanges(true);
-  };
-
-  const saveFamilyMember = (id: string) => {
-    const member = profileData.familyMembers.find((m) => m.id === id);
-
-    if (!member?.fullName || !member?.relationship) {
-      toast.error('Please fill in all required fields (Full Name and Relationship) before saving');
-      return;
-    }
-
-    setFamilyMembersInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const editFamilyMember = (id: string) => {
-    setFamilyMembersInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const cancelEditFamilyMember = (id: string) => {
-    const member = profileData.familyMembers.find((m) => m.id === id);
-
-    if (member && !member.fullName && !member.relationship) {
-      setProfileData((prev) => ({
-        ...prev,
-        familyMembers: prev.familyMembers.filter((m) => m.id !== id),
-      }));
-      setFamilyMembersInEditMode((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      return;
-    }
-
-    setFamilyMembersInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  // Bank Account Management Functions
-  const addBankAccount = () => {
-    const newAccount: BankAccount = {
-      id: Date.now().toString(),
-      accountHolderName: '',
-      bankName: '',
-      accountNumber: '',
-      accountType: 'checking',
-      branchCode: '',
-      isPrimary: false,
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      bankAccounts: [...prev.bankAccounts, newAccount],
-    }));
-    setBankAccountsInEditMode((prev) => new Set([...prev, newAccount.id]));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteBankAccount = (id: string) => {
-    setBankAccountToDelete(id);
-  };
-
-  const removeBankAccount = () => {
-    if (!bankAccountToDelete) return;
-    setProfileData((prev) => ({
-      ...prev,
-      bankAccounts: prev.bankAccounts.filter((account) => account.id !== bankAccountToDelete),
-    }));
-    setBankAccountsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(bankAccountToDelete);
-      return newSet;
-    });
-    setBankAccountToDelete(null);
-    setHasChanges(true);
-  };
-
-  const updateBankAccount = (id: string, updates: Partial<BankAccount>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      bankAccounts: prev.bankAccounts.map((account) =>
-        account.id === id ? { ...account, ...updates } : account,
-      ),
-    }));
-    setHasChanges(true);
-  };
-
-  const saveBankAccount = (id: string) => {
-    const account = profileData.bankAccounts.find((a) => a.id === id);
-
-    if (
-      !account?.accountHolderName ||
-      !account?.bankName ||
-      !account?.accountNumber ||
-      !account?.accountType
-    ) {
-      toast.error(
-        'Please fill in all required fields (Account Holder Name, Bank Name, Account Number, and Account Type) before saving',
-      );
-      return;
-    }
-
-    if (account.bankName === 'Other') {
-      if (!account.customBankName || !account.customBranchCode) {
-        toast.error(
-          'For "Other" banks, please provide the Custom Bank Name and Custom Branch Code',
-        );
-        return;
-      }
-    } else {
-      if (!account.branchCode) {
-        toast.error('Please provide the Branch Code before saving');
-        return;
-      }
-    }
-
-    setBankAccountsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const editBankAccount = (id: string) => {
-    setBankAccountsInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const cancelEditBankAccount = (id: string) => {
-    const account = profileData.bankAccounts.find((a) => a.id === id);
-
-    if (
-      account &&
-      !account.accountHolderName &&
-      !account.bankName &&
-      !account.accountNumber &&
-      !account.accountType
-    ) {
-      setProfileData((prev) => ({
-        ...prev,
-        bankAccounts: prev.bankAccounts.filter((a) => a.id !== id),
-      }));
-      setBankAccountsInEditMode((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      return;
-    }
-
-    setBankAccountsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-  };
-
-  const handleProofOfBankUpload = (id: string, file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateBankAccount(id, {
-        proofOfBankDocument: reader.result as string,
-        proofOfBankFileName: file.name,
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const confirmDeleteProofOfBank = (id: string) => {
-    setProofOfBankToDelete(id);
-  };
-
-  const removeProofOfBank = () => {
-    if (!proofOfBankToDelete) return;
-    updateBankAccount(proofOfBankToDelete, {
-      proofOfBankDocument: undefined,
-      proofOfBankFileName: undefined,
-    });
-    setProofOfBankToDelete(null);
-  };
-
-  // Risk Assessment Management Functions
-  const updateRiskQuestion = (questionNumber: number, score: number) => {
-    setProfileData((prev) => {
-      const updatedAssessment = {
-        ...prev.riskAssessment,
-        [`question${questionNumber}`]: score,
-      };
-
-      // Calculate total score
-      const totalScore =
-        updatedAssessment.question1 +
-        updatedAssessment.question2 +
-        updatedAssessment.question3 +
-        updatedAssessment.question4 +
-        updatedAssessment.question5 +
-        updatedAssessment.question6 +
-        updatedAssessment.question7 +
-        updatedAssessment.question8 +
-        updatedAssessment.question9 +
-        updatedAssessment.question10;
-
-      // Check if all questions are answered
-      const allAnswered =
-        updatedAssessment.question1 > 0 &&
-        updatedAssessment.question2 > 0 &&
-        updatedAssessment.question3 > 0 &&
-        updatedAssessment.question4 > 0 &&
-        updatedAssessment.question5 > 0 &&
-        updatedAssessment.question6 > 0 &&
-        updatedAssessment.question7 > 0 &&
-        updatedAssessment.question8 > 0 &&
-        updatedAssessment.question9 > 0 &&
-        updatedAssessment.question10 > 0;
-
-      // Determine risk category (only if all questions answered)
-      let riskCategory = '';
-      if (allAnswered) {
-        if (totalScore >= 10 && totalScore <= 15) {
-          riskCategory = 'Conservative';
-        } else if (totalScore >= 16 && totalScore <= 22) {
-          riskCategory = 'Moderate';
-        } else if (totalScore >= 23 && totalScore <= 30) {
-          riskCategory = 'Aggressive';
-        }
-      }
-
-      return {
-        ...prev,
-        riskAssessment: {
-          ...updatedAssessment,
-          totalScore,
-          riskCategory,
-          dateCompleted: allAnswered ? new Date().toISOString() : '',
-          canRetake: allAnswered,
-        },
-      };
-    });
-    setHasChanges(true);
-  };
-
-  const resetRiskAssessment = () => {
-    setProfileData((prev) => ({
-      ...prev,
-      riskAssessment: {
-        question1: 0,
-        question2: 0,
-        question3: 0,
-        question4: 0,
-        question5: 0,
-        question6: 0,
-        question7: 0,
-        question8: 0,
-        question9: 0,
-        question10: 0,
-        totalScore: 0,
-        riskCategory: '',
-        dateCompleted: '',
-        canRetake: true,
-      },
-    }));
-    setAssessmentStarted(false);
-    setHasChanges(true);
-  };
-
-  // Asset Management Functions
-  const addAsset = () => {
-    const newAsset: Asset = {
-      id: Date.now().toString(),
-      type: '',
-      name: '',
-      description: '',
-      value: 0,
-      ownershipType: '',
-      provider: '',
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      assets: [...prev.assets, newAsset],
-    }));
-    setAssetsInEditMode((prev) => new Set([...prev, newAsset.id]));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteAsset = (id: string) => {
-    setAssetToDelete(id);
-  };
-
-  const removeAsset = () => {
-    if (!assetToDelete) return;
-    setProfileData((prev) => ({
-      ...prev,
-      assets: prev.assets.filter((asset) => asset.id !== assetToDelete),
-    }));
-    setAssetsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(assetToDelete);
-      return newSet;
-    });
-    setAssetDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[assetToDelete];
-      return newState;
-    });
-    setAssetToDelete(null);
-    setHasChanges(true);
-  };
-
-  const updateAsset = (id: string, updates: Partial<Asset>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      assets: prev.assets.map((asset) => (asset.id === id ? { ...asset, ...updates } : asset)),
-    }));
-    setHasChanges(true);
-  };
-
-  const saveAsset = (id: string) => {
-    const asset = profileData.assets.find((a) => a.id === id);
-
-    if (!asset?.type || !asset?.name || !asset?.ownershipType) {
-      toast.error(
-        'Please fill in all required fields (Asset Type, Asset Name, and Ownership Type) before saving',
-      );
-      return;
-    }
-
-    if (asset.type === 'Other' && !asset.customType) {
-      toast.error('For "Other" asset types, please specify the custom asset type');
-      return;
-    }
-
-    setAssetsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-    setAssetDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
-    });
-  };
-
-  const editAsset = (id: string) => {
-    setAssetsInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const cancelEditAsset = (id: string) => {
-    const asset = profileData.assets.find((a) => a.id === id);
-
-    if (asset && !asset.type && !asset.name && !asset.ownershipType) {
-      setProfileData((prev) => ({
-        ...prev,
-        assets: prev.assets.filter((a) => a.id !== id),
-      }));
-      setAssetsInEditMode((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      setAssetDisplayValues((prev) => {
-        const newState = { ...prev };
-        delete newState[id];
-        return newState;
-      });
-      return;
-    }
-
-    setAssetsInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-
-    setAssetDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
-    });
-  };
-
-  // Liability Management Functions
-  const addLiability = () => {
-    const newLiability: Liability = {
-      id: Date.now().toString(),
-      type: '',
-      name: '',
-      description: '',
-      provider: '',
-      outstandingBalance: 0,
-      monthlyPayment: 0,
-      interestRate: 0,
-    };
-    setProfileData((prev) => ({
-      ...prev,
-      liabilities: [...prev.liabilities, newLiability],
-    }));
-    setLiabilitiesInEditMode((prev) => new Set([...prev, newLiability.id]));
-    setHasChanges(true);
-  };
-
-  const confirmDeleteLiability = (id: string) => {
-    setLiabilityToDelete(id);
-  };
-
-  const removeLiability = () => {
-    if (!liabilityToDelete) return;
-    setProfileData((prev) => ({
-      ...prev,
-      liabilities: prev.liabilities.filter((liability) => liability.id !== liabilityToDelete),
-    }));
-    setLiabilitiesInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(liabilityToDelete);
-      return newSet;
-    });
-    setLiabilityDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[liabilityToDelete];
-      return newState;
-    });
-    setLiabilityToDelete(null);
-    setHasChanges(true);
-  };
-
-  const updateLiability = (id: string, updates: Partial<Liability>) => {
-    setProfileData((prev) => ({
-      ...prev,
-      liabilities: prev.liabilities.map((liability) =>
-        liability.id === id ? { ...liability, ...updates } : liability,
-      ),
-    }));
-    setHasChanges(true);
-  };
-
-  const saveLiability = (id: string) => {
-    const liability = profileData.liabilities.find((l) => l.id === id);
-
-    if (!liability?.type || !liability?.name || !liability?.provider) {
-      toast.error(
-        'Please fill in all required fields (Liability Type, Liability Name, and Provider) before saving',
-      );
-      return;
-    }
-
-    if (liability.type === 'Other' && !liability.customType) {
-      toast.error('For "Other" liability types, please specify the custom liability type');
-      return;
-    }
-
-    setLiabilitiesInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-    setLiabilityDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
-    });
-  };
-
-  const editLiability = (id: string) => {
-    setLiabilitiesInEditMode((prev) => new Set([...prev, id]));
-  };
-
-  const cancelEditLiability = (id: string) => {
-    const liability = profileData.liabilities.find((l) => l.id === id);
-
-    if (liability && !liability.type && !liability.name && !liability.provider) {
-      setProfileData((prev) => ({
-        ...prev,
-        liabilities: prev.liabilities.filter((l) => l.id !== id),
-      }));
-      setLiabilitiesInEditMode((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      setLiabilityDisplayValues((prev) => {
-        const newState = { ...prev };
-        delete newState[id];
-        return newState;
-      });
-      return;
-    }
-
-    setLiabilitiesInEditMode((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
-
-    setLiabilityDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
-    });
-  };
+  // ── Collection editors ─────────────────────────────────────────────
+  // Each group is a plain factory over the state this hook owns; see
+  // `clientProfile/` for why they are functions rather than hooks.
+  const {
+    hasDocumentType,
+    addIdentityDocument,
+    handleDocumentUpload,
+    updateIdentityDocument,
+    confirmDeleteIdentityDocument,
+    removeIdentityDocument,
+    saveIdentityDocument,
+    cancelEditIdentityDocument,
+    editIdentityDocument,
+    getDocumentTypeLabel,
+    getDocumentTypeIcon,
+  } = createIdentityDocumentHandlers({
+    profileData,
+    setHasChanges,
+    setIdentityDocToDelete,
+    setIdentityDocsInEditMode,
+    setProfileData,
+  });
+
+  const {
+    handleProofOfResidenceUpload,
+    editProofOfResidence,
+    saveProofOfResidence,
+    confirmDeleteProofOfResidence,
+    removeProofOfResidence,
+  } = createProofOfResidenceHandlers({
+    setHasChanges,
+    setProfileData,
+    setProofOfResidenceInEditMode,
+    setProofOfResidenceToDelete,
+  });
+
+  const {
+    addEmployer,
+    confirmDeleteEmployer,
+    removeEmployer,
+    updateEmployer,
+    saveEmployer,
+    editEmployer,
+    cancelEditEmployer,
+    saveSelfEmployed,
+    cancelEditSelfEmployed,
+    editSelfEmployed,
+  } = createEmployerHandlers({
+    employerToDelete,
+    profileData,
+    setEmployerToDelete,
+    setEmployersInEditMode,
+    setHasChanges,
+    setProfileData,
+    setSelfEmployedInEditMode,
+  });
+
+  const {
+    addChronicCondition,
+    confirmDeleteChronicCondition,
+    removeChronicCondition,
+    updateChronicCondition,
+    saveChronicCondition,
+    editChronicCondition,
+    cancelEditChronicCondition,
+  } = createChronicConditionHandlers({
+    chronicConditionToDelete,
+    profileData,
+    setChronicConditionToDelete,
+    setChronicConditionsInEditMode,
+    setHasChanges,
+    setProfileData,
+  });
+
+  const {
+    addFamilyMember,
+    confirmDeleteFamilyMember,
+    removeFamilyMember,
+    updateFamilyMember,
+    saveFamilyMember,
+    editFamilyMember,
+    cancelEditFamilyMember,
+  } = createFamilyMemberHandlers({
+    familyMemberToDelete,
+    profileData,
+    setFamilyMemberToDelete,
+    setFamilyMembersInEditMode,
+    setHasChanges,
+    setProfileData,
+  });
+
+  const {
+    addBankAccount,
+    confirmDeleteBankAccount,
+    removeBankAccount,
+    updateBankAccount,
+    saveBankAccount,
+    editBankAccount,
+    cancelEditBankAccount,
+    handleProofOfBankUpload,
+    confirmDeleteProofOfBank,
+    removeProofOfBank,
+  } = createBankAccountHandlers({
+    bankAccountToDelete,
+    profileData,
+    proofOfBankToDelete,
+    setBankAccountToDelete,
+    setBankAccountsInEditMode,
+    setHasChanges,
+    setProfileData,
+    setProofOfBankToDelete,
+  });
+
+  const { updateRiskQuestion, resetRiskAssessment } = createRiskAssessmentHandlers({
+    setAssessmentStarted,
+    setHasChanges,
+    setProfileData,
+  });
+
+  const {
+    addAsset,
+    confirmDeleteAsset,
+    removeAsset,
+    updateAsset,
+    saveAsset,
+    editAsset,
+    cancelEditAsset,
+  } = createAssetHandlers({
+    assetToDelete,
+    profileData,
+    setAssetDisplayValues,
+    setAssetToDelete,
+    setAssetsInEditMode,
+    setHasChanges,
+    setProfileData,
+  });
+
+  const {
+    addLiability,
+    confirmDeleteLiability,
+    removeLiability,
+    updateLiability,
+    saveLiability,
+    editLiability,
+    cancelEditLiability,
+  } = createLiabilityHandlers({
+    liabilityToDelete,
+    profileData,
+    setHasChanges,
+    setLiabilitiesInEditMode,
+    setLiabilityDisplayValues,
+    setLiabilityToDelete,
+    setProfileData,
+  });
 
   return {
     state: {
