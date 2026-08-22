@@ -85,6 +85,26 @@ const USE_RE = /\b(\w+)\.use\(\s*(['"`])([^'"`]*)\2\s*,/g;
 const IMPORT_RE = /import\s+(\w+)\s+from\s+'\.\/([^']+)'/g;
 const ROUTE_MOUNT_RE = /\b(\w+)\.route\(\s*(['"`])([^'"`]*)\2\s*,\s*(\w+)\s*\)/g;
 
+/**
+ * True when `index` falls on a line that is commented out — a JSDoc body
+ * (` * routes.post('/login', …)`) or a `//` line.
+ *
+ * Without this the analysis counts EXAMPLES as routes. It was found the honest
+ * way: adding a usage example to `validate.ts`'s docblock pushed the count from
+ * 127 to 128 and failed this ratchet, for a route that does not exist. Any
+ * commented-out registration had the same effect.
+ *
+ * Deliberately line-based rather than a comment-stripping pass: stripping `//`
+ * with a regex mangles every `https://` in the file, and a real tokenizer is
+ * far more machinery than this needs. A route registration is never indented
+ * behind a `*` or `//` in real code.
+ */
+function isOnACommentLine(src: string, index: number): boolean {
+  const lineStart = src.lastIndexOf('\n', index) + 1;
+  const line = src.slice(lineStart, index).trimStart();
+  return line.startsWith('*') || line.startsWith('//') || line.startsWith('/*');
+}
+
 /** How far past a registration to look for an in-handler auth check. */
 const HANDLER_SCAN_CHARS = 3000;
 /** How far past `app.use(` to look for an auth marker in its middleware list. */
@@ -148,7 +168,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
   let totalRoutes = 0;
 
   for (const [file, src] of sources) {
-    const routes = [...src.matchAll(ROUTE_RE)];
+    const routes = [...src.matchAll(ROUTE_RE)].filter((m) => !isOnACommentLine(src, m.index!));
     if (routes.length === 0) continue;
     routeCounts.set(file.slice(SERVER_DIR.length + 1), routes.length);
     totalRoutes += routes.length;

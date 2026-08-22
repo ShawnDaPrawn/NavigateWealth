@@ -112,3 +112,77 @@ export const SignerSubmitSchema = z
     signatureData: z.string().optional(),
   })
   .passthrough();
+
+// ============================================================================
+// SIGNER PORTAL — snake_case wire format (Stage B / B2)
+// ============================================================================
+//
+// READ THIS BEFORE ADDING A SCHEMA HERE.
+//
+// There are TWO e-sign APIs with different wire formats, and confusing them is
+// not hypothetical — it already happened in this file:
+//
+//   * SENDER-facing (`esign-sender-*-routes.ts`) — camelCase. The schemas
+//     above (SignEnvelopeSchema, RejectEnvelopeSchema, …) belong to these and
+//     are correctly wired.
+//   * SIGNER-facing (`esign-signer-*-routes.ts`) — snake_case. Consumed by
+//     `src/components/esign-signer/services/esignSignerService.ts`, which posts
+//     `access_token` / `signature_data` / `field_values`. These are PUBLIC
+//     routes: the caller is an unauthenticated third party holding a link.
+//
+// `SignerSubmitSchema` above was written for the signer routes but in the
+// SENDER format (`token`, `signatureData`, `fieldValues` — the last as a
+// record, where the handler actually iterates an ARRAY of
+// `{ field_id, value }`). It has never been wired to anything. Attaching it to
+// `/signer/submit` would have rejected every real signature submission in
+// production. It is left in place rather than deleted only because deleting it
+// is a separate decision from this change; see A19 in the remediation plan.
+//
+// The schemas below were derived by reading each handler's own destructuring
+// and its own `if (!x) return 400` guards, so they reject exactly what the
+// handler already rejects and nothing more. `.passthrough()` throughout: these
+// are a GATE against missing/malformed required input, not a closed contract,
+// and an unknown extra field must never be the reason a signature fails.
+
+/** POST /signer/submit — handler requires access_token AND signature_data. */
+export const SignerSubmitBodySchema = z
+  .object({
+    access_token: z.string().min(1, 'access_token required'),
+    signature_data: z.string().min(1, 'signature_data required'),
+    // Iterated as an array of { field_id, value }; entries missing either are
+    // skipped by the handler, so they are tolerated rather than rejected here.
+    field_values: z
+      .array(
+        z.object({ field_id: z.string().optional(), value: z.unknown().optional() }).passthrough(),
+      )
+      .optional(),
+    consent_version: z.string().optional(),
+    consent_accepted_at: z.string().optional(),
+    signing_reason: z.string().optional(),
+    signature_telemetry: z.unknown().optional(),
+  })
+  .passthrough();
+
+/** POST /signer/reject — handler requires access_token only; reason is free-form. */
+export const SignerRejectBodySchema = z
+  .object({
+    access_token: z.string().min(1, 'access_token required'),
+    reason: z.string().max(2000).optional(),
+  })
+  .passthrough();
+
+/**
+ * POST /signer/resend-otp and POST /signer/verify-otp.
+ *
+ * `otp` is deliberately NOT required here. The handler only demands it when
+ * `signer.requires_otp` is true, which is known solely after the token lookup —
+ * so requiring it in middleware would reject valid no-OTP envelopes. That check
+ * stays in the handler.
+ */
+export const SignerOtpBodySchema = z
+  .object({
+    access_token: z.string().min(1, 'access_token required'),
+    otp: z.string().optional(),
+    access_code: z.string().optional(),
+  })
+  .passthrough();
