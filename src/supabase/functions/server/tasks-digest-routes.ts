@@ -25,6 +25,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
 import { constantTimeEqual } from './crypto-utils.ts';
+import { resolveTrustedRole } from './constants.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
@@ -162,8 +163,16 @@ async function requireCronOrAdminAuth(
         error,
       } = await supabase.auth.getUser(token);
       if (!error && user?.id) {
-        const role = user.user_metadata?.role || user.user_metadata?.systemRole;
-        if (role === 'admin' || role === 'super_admin') {
+        // Role from TRUSTED sources only (super-admin allowlist, app_metadata,
+        // NW_ADMIN_EMAILS). This previously read
+        // `user.user_metadata?.role || user.user_metadata?.systemRole`, which is
+        // client-editable — any signed-in user could call
+        // `supabase.auth.updateUser({ data: { role: 'admin' } })` and pass this
+        // check. resolveTrustedRole refuses exactly that: `admin` and
+        // `super_admin` are in PRIVILEGED_ROLES and are never honoured from
+        // user_metadata (constants.ts:132-135).
+        const role = resolveTrustedRole(user);
+        if (role === 'admin' || role === 'super_admin' || role === 'super-admin') {
           c.set('userId', user.id);
           return next();
         }

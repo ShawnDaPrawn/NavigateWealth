@@ -281,6 +281,31 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   `src/assets` — `vite.config.ts:19-24` already prefers it. Weigh that against
   adding more binaries to an already-892 MB `.git`; generating at build time
   avoids the git cost.
+- **S12 — Admin gate on `/tasks-digest` accepted a client-editable role — FIXED
+  2026-08-22.** _(Found while consolidating auth onto `auth-mw`; a drifted copy
+  of the canonical check.)_
+
+  `tasks-digest-routes.ts` resolved the caller's role as
+  `user.user_metadata?.role || user.user_metadata?.systemRole` and granted
+  admin on it. `user_metadata` is **client-editable** — any signed-in user can
+  call `supabase.auth.updateUser({ data: { role: 'admin' } })` — so the gate on
+  `GET /tasks-digest/status` and `POST /tasks-digest/send-overdue` could be
+  passed by anyone holding an account. The second route sends the overdue-task
+  digest email to staff.
+
+  This is exactly what `resolveTrustedRole` exists to prevent: `admin` and
+  `super_admin` are in `PRIVILEGED_ROLES` and are never honoured from
+  `user_metadata` (`constants.ts:132-135`). Four sibling modules already used
+  it, with a comment saying "never from client-editable user_metadata" — this
+  one had drifted. Fixed to `resolveTrustedRole`, and
+  `.auth-implementations-baseline` now ratchets the number of modules that
+  verify tokens themselves so a sixth cannot appear silently.
+
+  Impact bounded: two admin-only routes, no arbitrary client-PII read. Rated
+  HIGH rather than critical for that reason, but it is a genuine
+  privilege-boundary bypass and the class of bug is the point — five copies of
+  an auth check drift, and one did.
+
 - **A17 — The runtime-error recorder is an awaited, non-atomic read-modify-write
   on a single KV row, now on the error path of every route (NEW, 2026-08-22).**
   _(Found by an adversarial review of the B1 change; one of 37 candidate
