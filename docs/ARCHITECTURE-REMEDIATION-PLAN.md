@@ -281,6 +281,56 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   `src/assets` — `vite.config.ts:19-24` already prefers it. Weigh that against
   adding more binaries to an already-892 MB `.git`; generating at build time
   avoids the git cost.
+- **A17 — The runtime-error recorder is an awaited, non-atomic read-modify-write
+  on a single KV row, now on the error path of every route (NEW, 2026-08-22).**
+  _(Found by an adversarial review of the B1 change; one of 37 candidate
+  findings and the only one that survived adversarial verification. NOT fixed —
+  deliberately out of scope for that PR, see below.)_
+
+  `recordRuntimeServerIssue` reads the entire issues array with
+  `kv.get(RUNTIME_SERVER_ISSUES_KEY)` (`quality-issues-runtime-server.ts:113`),
+  mutates it in memory, and writes the whole array back with `kv.set` (`:145`).
+  `kv.set` is a bare upsert (`kv_store.tsx:21-31`) — no compare-and-set, no row
+  lock. It is `await`ed inside the handler (`error.middleware.ts:134`), and each
+  half constructs a fresh Supabase client, so **every unexpected 500 pays two
+  serialised HTTP round-trips before responding**.
+
+  Two consequences, of quite different weight:
+  1. _Lost updates_ — **low**. Concurrent writers read the same snapshot and
+     last-write-wins, so occurrence counts under-report during exactly the
+     incident the dashboard exists to surface. Ground truth is NOT lost: the
+     full message, name and stack go to stderr first (`error.middleware.ts:72`,
+     `:124-128`), and the module already declares that it swallows failures. The
+     dashboard is an aggregation, not the system of record.
+  2. _Latency and self-amplification on the error path_ — **the substantive
+     half**. During a downstream outage, every 500 adds two round-trips to the
+     same Supabase project that is already degraded.
+
+  **Why B1 matters here even though the code is unchanged:** B1 widened the
+  population reaching this from the ~50 `asyncHandler` modules to every route
+  behind the 77 lazy mounts. The defect is pre-existing; its blast radius is
+  not.
+
+  **Fixes, cheapest first:** (a) stop `await`ing the recorder in the request
+  path — use the edge runtime's background-task hook rather than blocking the
+  response (the existing `await` is justified by isolate suspension, which such
+  a hook addresses properly); (b) coalesce in-isolate writers behind a
+  module-level promise chain, which removes same-isolate lost updates for free;
+  (c) if cross-isolate accuracy matters, move occurrence counting off the single
+  JSONB row to per-fingerprint keys or a Postgres atomic upsert. Do NOT add CAS
+  to `kv_store` for this alone.
+
+- **A18 — `index.tsx`'s root error handler has no test coverage (NEW,
+  2026-08-22).** `index.tsx` calls `Deno.serve(app.fetch)` at module scope, so
+  the module cannot be imported by a test without starting a server. The root
+  `onError` added by B1 — including its fallback path and its `x-request-id`
+  stamp — is therefore asserted by nothing. It covers only the three health
+  probes and throws inside lazy-router's proxy handler, so the exposure is
+  small, but "small and untested" is still untested. The fix is to extract the
+  app construction into a `createApp()` module that `index.tsx` imports and
+  serves, which makes the whole entry point testable; that is a structural
+  change and belongs with the bounded-context split (§3), not bolted onto B1.
+
 - **A16 — The eager entry graph preloaded 735 KB of vendor chunks — FIXED
   2026-08-21.** _(Found by F6; the original diagnosis here was WRONG and is
   corrected below.)_

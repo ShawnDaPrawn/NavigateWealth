@@ -33,6 +33,9 @@
  * Run: npx vitest run src/supabase/functions/server/__tests__/lazy-router.test.ts
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 
 beforeAll(() => {
@@ -159,12 +162,18 @@ describe('lazy-router: shared error handler attachment', () => {
 
     lazy(parent, path, () => Promise.resolve({ default: child }));
 
-    await parent.fetch(
-      new Request(`http://x${PREFIX}${path}/boom`, { headers: { 'x-request-id': 'rid-12345678' } }),
-    );
+    // Deliberately sends NO x-request-id. An earlier version of this test sent
+    // one, which made it pass even with the forwarding deleted — the caller's
+    // own header reached the sub-router on its own and the test could not tell
+    // the difference. Only a PARENT-GENERATED id proves the forwarding works.
+    await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
 
     expect(recordRuntimeServerIssue).toHaveBeenCalledWith(
-      expect.objectContaining({ requestId: 'rid-12345678', statusCode: 500, method: 'GET' }),
+      expect.objectContaining({
+        requestId: 'generated-request-id',
+        statusCode: 500,
+        method: 'GET',
+      }),
     );
   });
 
@@ -479,6 +488,34 @@ describe('error.middleware: the request-id validation is defence in depth', () =
 
     const recorded = recordRuntimeServerIssue.mock.calls[0][0] as { requestId?: string };
     expect(recorded.requestId).toBe('well-formed-id-123');
+  });
+});
+
+describe('the request-id policy is stated identically everywhere it is enforced', () => {
+  /**
+   * The same pattern is enforced in three places that cannot import from each
+   * other cheaply: index.tsx (a boot module that must stay minimal),
+   * error.middleware.ts (lazily loaded), and this test file's `makeParent`.
+   * Three unlinked copies is exactly how a security policy rots — someone
+   * loosens one and the others keep asserting the old rule.
+   *
+   * Rather than pay boot payload for a shared constant, this pins them: change
+   * one and CI tells you about the other two.
+   */
+  it('index.tsx, error.middleware.ts and this test agree on the pattern', () => {
+    const read = (name: string) =>
+      readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', name), 'utf8');
+    const extract = (src: string, file: string) => {
+      const m = src.match(/\/\^\[A-Za-z0-9_-\]\{8,64\}\$\//);
+      expect(m, `no request-id pattern found in ${file}`).not.toBeNull();
+      return m![0];
+    };
+
+    const inIndex = extract(read('index.tsx'), 'index.tsx');
+    const inMiddleware = extract(read('error.middleware.ts'), 'error.middleware.ts');
+
+    expect(inIndex).toBe(inMiddleware);
+    expect(REQUEST_ID_PATTERN.source).toBe(new RegExp(inIndex.slice(1, -1)).source);
   });
 });
 

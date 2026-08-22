@@ -142,11 +142,15 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
   }
 
   const unguarded: string[] = [];
+  const analysedFiles = [...sources.keys()];
+  /** Route count per file, so an anchor can prove the file it names is real. */
+  const routeCounts = new Map<string, number>();
   let totalRoutes = 0;
 
   for (const [file, src] of sources) {
     const routes = [...src.matchAll(ROUTE_RE)];
     if (routes.length === 0) continue;
+    routeCounts.set(file.slice(SERVER_DIR.length + 1), routes.length);
     totalRoutes += routes.length;
     if (parentGuarded.has(file)) continue;
 
@@ -190,6 +194,19 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     // break. A regression here is either a removed guard on client documents —
     // the IDOR reopening — or an analysis that no longer understands scoped
     // middleware. Both must fail CI.
+    // Prove the file is actually IN the analysis first. Without this the
+    // assertion below passes trivially the moment documents.tsx is renamed,
+    // deleted, or stops being scanned — a check that cannot fail is worth less
+    // than no check, because it reads as coverage.
+    expect(
+      analysedFiles.some((f) => f.endsWith('/documents.tsx')),
+      'documents.tsx is no longer being analysed — re-point this anchor at whichever module now carries router-scoped AND path-scoped guards',
+    ).toBe(true);
+    expect(
+      routeCounts.get('documents.tsx') ?? 0,
+      'documents.tsx no longer registers any routes — re-point this anchor',
+    ).toBeGreaterThan(0);
+
     const leaked = unguarded.filter((entry) => entry.startsWith('documents.tsx '));
     expect(leaked, 'documents.tsx routes lost their guard, or guard resolution broke').toEqual([]);
   });
