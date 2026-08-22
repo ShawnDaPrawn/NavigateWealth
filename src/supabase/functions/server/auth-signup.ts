@@ -6,6 +6,8 @@
 import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
+import { validateBody } from './validate.ts';
+import { PublicSignupSchema } from './auth-validation.ts';
 import { sendAdminSignupNotification } from './email-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { recalculateAllGroupMemberships } from './communication-repo.ts';
@@ -29,7 +31,7 @@ const getSupabaseClient = () => {
  * POST /signup
  * Create user account and automatically generate application
  */
-app.post('/signup', async (c) => {
+app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
   const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
   if (blockedIpAddress) {
     log.warn('Blocked auth signup from abusive IP address', { blockedIpAddress });

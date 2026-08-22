@@ -306,6 +306,39 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   privilege-boundary bypass and the class of bug is the point — five copies of
   an auth check drift, and one did.
 
+- **S15 — The super-admin secret was compared in variable time on two of the
+  three routes that check it (NEW, 2026-08-22).** `auth-admin-routes.ts` has
+  three routes, all gated by the shared `SUPER_ADMIN_PASSWORD`.
+  `/ensure-dev-user` compared it with `constantTimeEqual` and carried a comment
+  explaining exactly why. `/create-superadmin` — the route that **creates a
+  super-admin account** — and `/clear-rate-limit` used a plain `!==`.
+
+  `!==` on strings short-circuits at the first differing byte, so how long the
+  comparison takes correlates with how much of the secret the caller already
+  guessed. Exploiting that across a network is hard and noisy, which is an
+  argument about difficulty rather than about correctness: the correct helper
+  was already imported at the top of the same file, used by one sibling, and
+  the fix is one line. Two of three had simply drifted from it.
+
+  Rated MEDIUM: real side-channel, high-value target, low practical
+  exploitability. Found while adding body validation to the same three routes —
+  the seventh finding in this project that surfaced from doing architectural
+  work rather than from looking for bugs.
+
+- **A21 — The signup schema was on the route nobody calls (NEW, 2026-08-22).**
+  There are two signup endpoints. `POST /auth/signup` (`auth-routes.ts`) got a
+  `validateBody(SignupSchema)` in Stage B. `POST /auth-signup/signup`
+  (`auth-signup.ts`, mounted separately in `mount-core.ts`) had none — and it is
+  the one the SPA actually calls, from both `authService.ts` and
+  `SignupPage.tsx`. `POST /auth/signup` has no caller in the SPA at all.
+
+  Not a vulnerability: the live handler does guard its four required fields by
+  hand. But the gate was on the wrong door, and a reader checking "is signup
+  validated?" would have found the answer yes and been wrong. Both routes are
+  now validated, each against a schema derived from its own destructuring —
+  they genuinely differ, so a shared schema would have been the A19 mistake
+  again.
+
 - **A20 — Every ratchet's "you can tighten this now" notice was invisible
   (NEW, 2026-08-22).** All seven baseline ratchets end with the same branch:
   the measured count came in BELOW the committed floor, so somebody fixed
