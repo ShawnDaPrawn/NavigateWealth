@@ -532,6 +532,77 @@ means choosing a sink (Supabase logs, an OTLP endpoint, the in-house
 quality-issues store) — a decision with operational cost that belongs with the
 observability work in §22, not bolted onto a logging change.
 
+## 10c. Stage C — first adopter, and the finding that forced it (2026-08-22)
+
+Stage C is "stand up `src/shared/contracts`; response validation on high-value
+endpoints; delete duplicated `types.ts`." Checking its state for a progress
+report turned up something worse than "not started".
+
+**`src/shared/contracts` had zero consumers, and its own docblock described a
+ratchet that did not exist.** The comment read: "Adoption is deliberately
+incremental: `.contract-coverage-baseline` ratchets the number of validated
+call sites upward." There was no such file, nothing in CI referenced one, and
+no call site anywhere in the codebase imported the module.
+
+That is the **fifth** instance of this codebase's signature failure — a
+capability written, wired to nothing, and then trusted by whoever read its
+name. The other four: `assertFirmAccess` (0 call sites), `security.middleware.ts`
+(113 lines, 0 importers, self-described as "the authoritative suspension
+check"), six e-sign schemas (unused _and_ in the wrong wire format), and
+`performSecurityCheck`/`checkAccountSuspension` (0 call sites). This one is my
+own Stage A work, which is the only reason it is worth spelling out again: the
+pattern does not require carelessness, only a gap between shipping a mechanism
+and connecting it.
+
+The resolution was to build the ratchet rather than soften the sentence.
+
+**The first adopter is the client list, chosen on evidence rather than
+convenience.** `GetClientsResponse` carries a field marked `@deprecated` —
+"Server now returns `clients` — kept for backward compatibility" — so this exact
+response shape has already drifted once in production. `useClientList` absorbed
+it by reading whichever field was present and falling back to `[]` when neither
+is. An empty client list is indistinguishable from "this firm has no clients",
+so the rename could have shipped silently. That is precisely what F8 exists to
+make loud.
+
+Two call sites, both report-only, both zero behaviour change:
+
+- the response **envelope**, which catches the rename and the silent-empty-list
+  failure; and
+- the **transform's output** checked against `BaseClientSchema` — giving that
+  schema its first real consumer. Checking the output rather than the input is
+  what makes it meaningful: `resolvePersonName` supplies name fallbacks, so a
+  missing name is not a violation, while a missing `id` or `email` comes
+  straight from the server and is.
+
+**`.contract-coverage-baseline` ratchets the other way round from every other
+baseline here.** The rest cap a backlog and fail when a count rises. This one
+floors a gain and fails when a count **falls** — `parseContract` call sites are
+coverage, not debt. Getting the direction backwards would build a gate that
+punishes the thing it exists to encourage, so the test says so explicitly.
+
+**A mutation test caught a decorative test of mine.** Removing `.passthrough()`
+from the entry schema broke nothing, because the hook discards `parseContract`'s
+return value and reads the original response — so schema lossiness is invisible
+from the hook, and the hook test claiming to cover it could not fail. The
+property is now pinned directly against the schema, where it is falsifiable,
+and the hook test says in its own comment what it does and does not prove. The
+schema's docblock was corrected the same way: `.passthrough()` is defensive at
+this call site, not load-bearing, and the next caller that uses the parsed value
+is the one it protects.
+
+_Gate:_ 28 tests. Six mutations checked — dropping either call site, stripping
+`.passthrough()` from either schema, dropping the `neither clients nor users`
+refinement, and making `parseContract` throw instead of report. The last one
+matters most: report-only is the property that makes every future adoption safe,
+so a mutation that breaks it must fail loudly.
+
+_Still outstanding on Stage C:_ 63 unvalidated request bodies, 47 scattered
+`types.ts` files, and response validation on the remaining high-value endpoints.
+The mechanism now has an adopter and a floor; the migration has not happened.
+
+---
+
 ## 11. Definition of "production-grade organised" — exit checklist
 
 The target is reached when all of these are _true and CI-enforced_:
