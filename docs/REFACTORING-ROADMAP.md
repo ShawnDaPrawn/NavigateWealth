@@ -371,17 +371,26 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    was — expect to find more dead features). The §4.2 wizard work and §4.4
    convergence remove a large fraction for free.
    _Gate:_ `.anon-key-bearer-baseline` → 0, then ban the pattern outright.
-2. **Stage E, slice 1 — the `public` function.** Move health + the
-   `PUBLIC_ROUTERS` set (quote/contact/consultation lead-gen, `sign-by-token`,
-   RSS proxy, openclaw webhook) into an unauthenticated sibling function. The
-   §5.5 route classification is the input inventory.
+2. **Stage E, slice 1 — the `public` function.** Move health plus **every
+   route that must work without a user session** into an unauthenticated
+   sibling function. The current `PUBLIC_ROUTERS` allowlist
+   (`router-auth-guard.test.ts`) is the verified starting inventory —
+   `auth-signup.ts` (**account creation: the SPA posts to
+   `/auth-signup/signup` before any JWT exists — leaving it behind the flip
+   breaks signup outright**), the three lead-gen forms
+   (quote/contact/consultation), the RSS proxy, and the static FNA directory
+   — plus the token- and secret-authenticated routes that carry no user JWT
+   (`sign-by-token` signer access, the openclaw webhook, the portal-worker
+   secret routes need the same review). The §5.5 route classification is the
+   authoritative, complete inventory; do not flip on this named list alone.
 3. **P1.3 — flip `verify_jwt = true`** on the main function once slice 1
    serves the public surface. This structurally closes the "auth by
    convention" posture (S3) — the gateway rejects tokenless requests before
    Hono runs.
    _Gate:_ unauthenticated requests to business routes 401 at the gateway;
-   public forms, signer links, health all work from the sibling; live smoke
-   passes on both functions.
+   **signup**, public forms, signer links, and health all work from the
+   sibling — signup and one lead-gen submit are part of the post-flip smoke;
+   live smoke passes on both functions.
 4. **Stage E, slice 2 — carve out `esign`** (heaviest cold path, most
    compliance-sensitive), converting the heavy PDF/crypto libraries to dynamic
    imports at their routes. Measure cold-start before/after. Further splits
@@ -434,13 +443,19 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
 ## 9. Assets & bundle hygiene (batch, high visual payoff)
 
 - **A7 — the 853 MB of raw Figma images** (`src/assets`, 154 files; 906 MB of
-  images in `dist/`). Generate hashed `.webp` **at build time** (the
-  `vite.config.ts` resolver already prefers them; `optimize:images` already
-  exists — wire it into `npm run build` output rather than committing more
-  binaries to an already-892 MB `.git`). Then step `imageBytes` in
-  `.bundle-size-baseline.json` down an order of magnitude so it can never
-  return. Consider `git filter-repo` on the worst blobs only as a separate,
-  explicitly-approved operation.
+  images in `dist/`). Generate hashed `.webp` **at build time**, into the
+  shape the resolver actually looks for. **Note the existing pieces do not
+  yet connect:** the `figmaAssetResolver` in `vite.config.ts` prefers exactly
+  `src/assets/<hash>.webp`, while `scripts/optimize-images.mjs` writes
+  `<hash>-<width>.webp` under `public/img/optimized/` — so merely wiring
+  `optimize:images` into `npm run build` changes nothing that
+  `figma:asset/<hash>.png` imports resolve to. The fix is a pre-build step
+  that emits `<hash>.webp` where the resolver expects it (or teaches the
+  resolver/optimizer one shared contract), preferably to a git-ignored
+  location rather than committing more binaries to an already-892 MB `.git`.
+  Then step `imageBytes` in `.bundle-size-baseline.json` down an order of
+  magnitude so it can never return. Consider `git filter-repo` on the worst
+  blobs only as a separate, explicitly-approved operation.
   _Effort:_ M. _Gate:_ `imageBytes` < 50 MB; largest emitted image < 500 KB;
   no 28 MB PNG reachable from any route.
 - **Bundle budget steps.** After A16's −24%, ratchet `entryGzipBytes`
