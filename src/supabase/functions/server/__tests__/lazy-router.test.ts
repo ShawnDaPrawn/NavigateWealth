@@ -64,11 +64,22 @@ const { lazy } = await import('../lazy-router.ts');
 
 const PREFIX = '/make-server-91ed8379';
 
-/** Build a parent app shaped like index.tsx: request-id middleware, then mounts. */
+/**
+ * Build a parent app shaped like index.tsx: request-id middleware, then mounts.
+ * The validation below is copied from index.tsx deliberately — a parent that
+ * accepted any header would make the propagation tests agree with a version of
+ * lazy-router that leaks unvalidated ids downstream.
+ */
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
 function makeParent() {
   const app = new Hono();
   app.use('*', async (c, next) => {
-    c.set('requestId', c.req.header('x-request-id') ?? 'generated-request-id');
+    const incoming = c.req.header('x-request-id');
+    c.set(
+      'requestId',
+      incoming && REQUEST_ID_PATTERN.test(incoming) ? incoming : 'generated-request-id',
+    );
     await next();
   });
   return app;
@@ -271,7 +282,7 @@ describe('lazy-router: dispatch is otherwise unchanged', () => {
     expect(seenPath).toBe('/');
   });
 
-  it('never overwrites a request id the caller supplied', async () => {
+  it('propagates a request id the caller supplied, when it passes validation', async () => {
     const parent = makeParent();
     const path = nextPath();
     let seenId: string | null = null;
@@ -306,6 +317,168 @@ describe('lazy-router: dispatch is otherwise unchanged', () => {
       error: `Failed to load module: ${path}`,
       details: 'module blew up',
     });
+  });
+});
+
+describe('lazy-router: a caller cannot inject a request id downstream', () => {
+  /**
+   * index.tsx accepts a caller-supplied x-request-id only if it matches
+   * /^[A-Za-z0-9_-]{8,64}$/, and otherwise generates a UUID. That policy is
+   * worthless if lazy-router then hands the sub-router the RAW header: the
+   * shared error handler falls back to it, and recordRuntimeServerIssue
+   * interpolates it unbounded into an issue message persisted to KV and
+   * rendered on the admin quality dashboard — the one field it does not clip.
+   *
+   * So lazy-router overwrites unconditionally. These tests are the reason that
+   * is not an oversight.
+   */
+  const MALFORMED = `${'a'.repeat(300)} <img src=x onerror=alert(1)> Request-ID: spoofed`;
+
+  it('replaces a malformed caller id with the validated one before dispatch', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+    let seenId: string | null = null;
+
+    const child = new Hono();
+    child.get('/id', (c) => {
+      seenId = c.req.header('x-request-id') ?? null;
+      return c.json({ ok: true });
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    await parent.fetch(
+      new Request(`http://x${PREFIX}${path}/id`, { headers: { 'x-request-id': MALFORMED } }),
+    );
+
+    expect(seenId).toBe('generated-request-id');
+  });
+
+  it('never records a malformed caller id as telemetry', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw new Error('unanticipated failure');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    await parent.fetch(
+      new Request(`http://x${PREFIX}${path}/boom`, { headers: { 'x-request-id': MALFORMED } }),
+    );
+
+    expect(recordRuntimeServerIssue).toHaveBeenCalledTimes(1);
+    const recorded = recordRuntimeServerIssue.mock.calls[0][0] as { requestId?: string };
+    expect(recorded.requestId).toBe('generated-request-id');
+    expect(recorded.requestId ?? '').not.toContain('<img');
+  });
+});
+
+describe('error.middleware: unexpected-500 disclosure fails closed', () => {
+  it('does not return error details or a stack trace when DENO_ENV is unset', async () => {
+    // DENO_ENV is set NOWHERE in this repo or its deployment config, so "unset"
+    // is the production reality. The gate must therefore treat unset as
+    // production — it previously read `!== 'production'` and disclosed on every
+    // unexpected 500. B1 widened this path from ~50 asyncHandler modules to
+    // every route behind a lazy mount, so it must not disclose by default.
+    vi.stubGlobal('Deno', { env: { get: () => undefined } });
+
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw new Error('secret internal detail: connection string leaked');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(res.status).toBe(500);
+    expect(body.code).toBe('INTERNAL_ERROR');
+    expect(body).not.toHaveProperty('details');
+    expect(body).not.toHaveProperty('stack');
+    expect(body).not.toHaveProperty('errorName');
+    expect(JSON.stringify(body)).not.toContain('connection string leaked');
+
+    vi.stubGlobal('Deno', { env: { get: () => 'test' } });
+  });
+
+  it('still discloses when DENO_ENV is explicitly development', async () => {
+    // The opt-in half — otherwise the gate is dead code rather than fail-closed.
+    vi.stubGlobal('Deno', { env: { get: () => 'development' } });
+
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw new Error('a developer needs to see this');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.details).toBe('a developer needs to see this');
+
+    vi.stubGlobal('Deno', { env: { get: () => 'test' } });
+  });
+});
+
+describe('error.middleware: the request-id validation is defence in depth', () => {
+  /**
+   * lazy-router already overwrites x-request-id with the validated id, so the
+   * validation inside errorHandler is unreachable THROUGH lazy-router — which
+   * means a test that only goes through lazy-router does not exercise it at
+   * all. (Confirmed by mutation: deleting the validation left every
+   * lazy-router test passing.) This repo has been bitten by gates that
+   * measured nothing, so the second line of defence gets its own test against
+   * the path that actually reaches it: `asyncHandler`, used directly by ~50
+   * modules, where no lazy-router overwrite has happened.
+   */
+  it('ignores a malformed x-request-id when there is no context id', async () => {
+    const { asyncHandler } = await import('../error.middleware.ts');
+    const app = new Hono();
+    app.get(
+      '/direct',
+      asyncHandler(async () => {
+        throw new Error('unanticipated failure');
+      }),
+    );
+
+    await app.fetch(
+      new Request('http://x/direct', {
+        headers: { 'x-request-id': '<img src=x onerror=alert(1)>' },
+      }),
+    );
+
+    expect(recordRuntimeServerIssue).toHaveBeenCalledTimes(1);
+    const recorded = recordRuntimeServerIssue.mock.calls[0][0] as { requestId?: string };
+    expect(recorded.requestId).toBeUndefined();
+  });
+
+  it('accepts a well-formed x-request-id on that same path', async () => {
+    const { asyncHandler } = await import('../error.middleware.ts');
+    const app = new Hono();
+    app.get(
+      '/direct',
+      asyncHandler(async () => {
+        throw new Error('unanticipated failure');
+      }),
+    );
+
+    await app.fetch(
+      new Request('http://x/direct', { headers: { 'x-request-id': 'well-formed-id-123' } }),
+    );
+
+    const recorded = recordRuntimeServerIssue.mock.calls[0][0] as { requestId?: string };
+    expect(recorded.requestId).toBe('well-formed-id-123');
   });
 });
 

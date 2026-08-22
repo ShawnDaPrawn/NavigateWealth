@@ -51,6 +51,23 @@ export class NotFoundError extends APIError {
 // ERROR HANDLER
 // ============================================================================
 
+/**
+ * The shape index.tsx accepts for a caller-supplied request id. Kept identical
+ * on purpose: a value that policy would not accept at the edge must not become
+ * acceptable further in.
+ */
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** Context-set id first, then the forwarded header — never an unvalidated one. */
+function resolveRequestId(c: Context): string | undefined {
+  const fromContext = c.get('requestId') as string | undefined;
+  if (typeof fromContext === 'string' && REQUEST_ID_PATTERN.test(fromContext)) return fromContext;
+  const fromHeader = c.req.header('x-request-id');
+  return typeof fromHeader === 'string' && REQUEST_ID_PATTERN.test(fromHeader)
+    ? fromHeader
+    : undefined;
+}
+
 export async function errorHandler(error: Error, c: Context) {
   logger.error('API Error occurred', error, { path: c.req.url });
 
@@ -91,8 +108,17 @@ export async function errorHandler(error: Error, c: Context) {
     );
   }
 
-  // For unexpected errors, include more details in development/logging
-  const isDevelopment = Deno.env.get('DENO_ENV') !== 'production';
+  // For unexpected errors, include more details in development/logging.
+  //
+  // FAILS CLOSED. This used to read `!== 'production'`, which meant an UNSET
+  // DENO_ENV counted as development — and DENO_ENV is set nowhere in this repo
+  // or its deployment config, so the deployed edge function was returning
+  // `details`, `errorName` and five frames of stack trace to callers on every
+  // unexpected 500. Opting IN to disclosure is the only safe direction for a
+  // backend holding client PII, ID documents and e-signatures. Nothing is lost
+  // operationally: the full stack is still written to stderr just below, where
+  // Supabase's logs keep it.
+  const isDevelopment = Deno.env.get('DENO_ENV') === 'development';
 
   // Always log the full error stack to stderr for debugging
   logger.error('Unhandled error details', {
@@ -113,7 +139,14 @@ export async function errorHandler(error: Error, c: Context) {
     // Lazily-mounted sub-routers are dispatched via `router.fetch()` into a
     // separate Hono instance, so index.tsx's `c.set('requestId')` is not
     // visible there — lazy-router forwards the id as a header instead.
-    requestId: (c.get('requestId') as string | undefined) ?? c.req.header('x-request-id'),
+    //
+    // The header is re-validated rather than trusted. lazy-router already
+    // overwrites it with the id index.tsx validated, but this function is also
+    // reachable directly through `asyncHandler` in ~50 modules, and the value
+    // lands unbounded and unsanitised in a KV-persisted issue message that the
+    // admin dashboard renders. One validation at the point of use is cheaper
+    // than trusting every future call path.
+    requestId: resolveRequestId(c),
   });
 
   return c.json(

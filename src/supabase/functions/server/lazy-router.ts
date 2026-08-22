@@ -180,11 +180,25 @@ export function lazy(app: Hono, path: string, load: () => Promise<{ default: Laz
     // separate Hono instance with its own Context, so the `c.set('requestId')`
     // done by index.tsx's middleware is NOT visible inside it; without this the
     // shared error handler would record every one of these routes' failures
-    // with no correlation id. The header is the transport, and an id the caller
-    // supplied is never overwritten.
+    // with no correlation id.
+    //
+    // This OVERWRITES unconditionally, and that is the security-relevant part.
+    // index.tsx already decides whether to honour a caller-supplied id — it
+    // accepts one only if it matches /^[A-Za-z0-9_-]{8,64}$/ and otherwise
+    // generates a UUID. Preserving the caller's RAW header here would hand a
+    // malformed value straight past that policy: `errorHandler` falls back to
+    // this header, and `recordRuntimeServerIssue` interpolates it unbounded
+    // into an issue message that is persisted to KV and rendered on the admin
+    // quality dashboard (every other field it takes is length-clipped; this one
+    // is not). Downstream must see the VALIDATED id or nothing.
     const requestId = c.get('requestId');
-    if (typeof requestId === 'string' && !subRequest.headers.has('x-request-id')) {
+    if (typeof requestId === 'string') {
       subRequest.headers.set('x-request-id', requestId);
+    } else {
+      // No id upstream (a sub-router reached without index.tsx's middleware, or
+      // a future caller of lazy()): drop any caller-supplied value rather than
+      // letting it through unvalidated.
+      subRequest.headers.delete('x-request-id');
     }
 
     return router.fetch(subRequest);
