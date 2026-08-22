@@ -17,6 +17,13 @@
  *
  * The fix that does work is to install the shared handler on the sub-router
  * itself, once, at cache time (see `attachSharedErrorHandler` below).
+ *
+ * ONE EXCEPTION, and the earlier version of this note got it wrong. "A
+ * try/catch around router.fetch() fails identically because there is no throw
+ * to catch" is true for `Error` throws only. Hono's `#handleError` re-throws
+ * anything that is not `instanceof Error`, so `throw null` or `throw 'oops'`
+ * escapes both the sub-router's handler and this app's — see the catch around
+ * the dispatch below, which exists for exactly that case and nothing else.
  */
 
 import { Hono } from 'npm:hono';
@@ -201,7 +208,48 @@ export function lazy(app: Hono, path: string, load: () => Promise<{ default: Laz
       subRequest.headers.delete('x-request-id');
     }
 
-    return router.fetch(subRequest);
+    try {
+      return await router.fetch(subRequest);
+    } catch (thrown: unknown) {
+      // The ONE thing a try/catch here actually buys, and the reason the note
+      // at the top of this file says errors "never propagate" only for the
+      // ordinary case. Hono's dispatch does:
+      //
+      //   #handleError(err, c) {
+      //     if (err instanceof Error) return this.errorHandler(err, c);
+      //     throw err;
+      //   }
+      //
+      // so `throw 'a string'` or `throw null` is RE-THROWN past the
+      // sub-router's onError — and past this app's onError too, for the same
+      // reason — escaping app.fetch() entirely and reaching Deno.serve as an
+      // opaque 500 with no log and no telemetry. That is precisely the hole B1
+      // exists to close, and attaching a handler to the sub-router does not
+      // close it.
+      //
+      // This is NOT a substitute for that attachment: ordinary Error throws
+      // never reach here, because router.fetch() has already handled them.
+      // This catch exists solely for the non-Error case.
+      const normalised =
+        thrown instanceof Error
+          ? thrown
+          : Object.assign(new Error(`Non-Error value thrown: ${String(thrown)}`), {
+              name: 'NonErrorThrow',
+            });
+      try {
+        const { errorHandler } = await import('./error.middleware.ts');
+        // Handled against the PARENT context on purpose: it carries the
+        // request id, and its url is the full public path rather than the
+        // mount-stripped one, which is the more useful thing to record.
+        return await errorHandler(normalised, c);
+      } catch (handlerError: unknown) {
+        console.error(
+          `[LAZY] Error handler failed for ${path}:`,
+          handlerError instanceof Error ? handlerError.message : handlerError,
+        );
+        return c.json({ message: 'An unexpected error occurred', code: 'INTERNAL_ERROR' }, 500);
+      }
+    }
   };
 
   // Register both exact-match and wildcard to cover all cases:

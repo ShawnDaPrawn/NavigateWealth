@@ -373,6 +373,58 @@ describe('the shared handler is a superset of the one it replaces', () => {
   });
 });
 
+describe('the error handler survives a non-Error throw', () => {
+  /**
+   * `throw null` and `throw 'a string'` are legal JavaScript, and B1 routes
+   * every one of the ~584 lazily-mounted routes through this handler. A
+   * handler that itself throws is the one failure mode with no recovery left,
+   * so it must tolerate whatever it is handed.
+   *
+   * Nothing in this repo throws a non-Error today (verified: no
+   * `throw null|undefined|'string'|{}` anywhere in the server tree), so these
+   * are guards against a future one, not a fix for a live bug.
+   */
+  it('handles a thrown string without crashing', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw 'a bare string';
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ code: 'INTERNAL_ERROR' });
+    // The point is not just "does not crash" — it is that the failure is now
+    // RECORDED. Before, it escaped app.fetch() with no log and no telemetry.
+    expect(recordRuntimeServerIssue).toHaveBeenCalledTimes(1);
+    const recorded = recordRuntimeServerIssue.mock.calls[0][0] as { error?: Error };
+    expect(recorded.error?.name).toBe('NonErrorThrow');
+    expect(recorded.error?.message).toContain('a bare string');
+  });
+
+  it('handles a thrown null without crashing', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/boom', () => {
+      throw null;
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/boom`));
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+});
+
 describe('lazy-router: a caller cannot inject a request id downstream', () => {
   /**
    * index.tsx accepts a caller-supplied x-request-id only if it matches

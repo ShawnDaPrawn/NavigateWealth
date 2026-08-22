@@ -89,8 +89,17 @@ export async function errorHandler(error: Error, c: Context) {
   //
   // Checked before the typed branches so a deliberate response is never
   // recorded as an unexpected 500.
-  if (typeof (error as { getResponse?: unknown }).getResponse === 'function') {
-    const carried = (error as unknown as { getResponse: () => Response }).getResponse();
+  //
+  // Reached via optional chaining because this is now the FIRST thing in the
+  // handler that touches `error`, and `throw null` / `throw undefined` are
+  // legal JavaScript. Nothing in this codebase does that today, but an error
+  // handler is the one place that must not become the failure — and
+  // recordRuntimeServerIssue below already assumes a possibly-null error
+  // (`error?.name`, `error?.message`), so this file was the odd one out.
+  const carriedResponse = (error as { getResponse?: () => Response } | null | undefined)
+    ?.getResponse;
+  if (typeof carriedResponse === 'function') {
+    const carried = carriedResponse.call(error);
     return c.newResponse(carried.body, carried);
   }
 
@@ -145,9 +154,9 @@ export async function errorHandler(error: Error, c: Context) {
 
   // Always log the full error stack to stderr for debugging
   logger.error('Unhandled error details', {
-    message: error.message,
-    name: error.name,
-    stack: error.stack,
+    message: error?.message,
+    name: error?.name,
+    stack: error?.stack,
   });
 
   // Record unexpected 500s into the in-house quality-issues pipeline so backend
@@ -180,9 +189,9 @@ export async function errorHandler(error: Error, c: Context) {
       endpoint: new URL(c.req.url).pathname,
       method: c.req.method,
       ...(isDevelopment && {
-        details: error.message,
-        errorName: error.name,
-        stack: error.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines only
+        details: error?.message,
+        errorName: error?.name,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines only
       }),
       timestamp: new Date().toISOString(),
     },

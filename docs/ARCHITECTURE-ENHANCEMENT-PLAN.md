@@ -411,6 +411,18 @@ the request-id middleware, **not the 584 routes behind lazy mounts**. A root
 `try/catch` around `router.fetch()` fails for the same reason: there is no
 throw to catch.
 
+> **Correction (2026-08-22).** That last sentence is true only for `Error`
+> throws, and the implementation found the exception. Hono's dispatch does
+> `#handleError(err, c) { if (err instanceof Error) return this.errorHandler(err, c); throw err; }`
+> (`hono-base.js:272-277`), so a **non-`Error`** throw — `throw null`,
+> `throw 'oops'` — is re-thrown past the sub-router's handler AND past the root
+> app's, escaping `app.fetch()` entirely and reaching `Deno.serve` as an opaque
+> 500 with no log and no telemetry. Attaching the handler to each sub-router
+> does not close that; a `try/catch` around the dispatch is the only thing that
+> does, and it now exists for exactly that case. Nothing in the codebase throws
+> a non-`Error` today, so this was a latent hole rather than a live one — but
+> it was a hole in the invariant B1 claims.
+
 _The fix that does work_ is one place: when `lazy-router` caches a module, call
 `mod.default.onError(errorHandler)` on it. Sub-routers `export default app`
 (a real Hono instance), so `.onError` is available at runtime, and
