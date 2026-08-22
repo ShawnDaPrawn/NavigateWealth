@@ -329,6 +329,50 @@ describe('lazy-router: dispatch is otherwise unchanged', () => {
   });
 });
 
+describe('the shared handler is a superset of the one it replaces', () => {
+  /**
+   * lazy-router replaces Hono's built-in error handler on all 77 mounts. That
+   * built-in handler has a branch this one did not: an error carrying its own
+   * Response (`getResponse()`) is returned as-is. HTTPException uses it, and so
+   * does every Hono middleware that throws one — jwt, bearerAuth, bodyLimit,
+   * timeout, the validator.
+   *
+   * Nothing in this repo throws one today, so this is not a live bug; it is a
+   * trap for whoever adds one of those middlewares next, who would watch a
+   * deliberate 401 become a generic 500 across every mount. Replacing a
+   * handler with one that handles strictly less is the defect — this test is
+   * what stops it coming back.
+   */
+  class ResponseCarryingError extends Error {
+    getResponse() {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+  }
+
+  it('returns an error-carried Response untouched instead of a generic 500', async () => {
+    const parent = makeParent();
+    const path = nextPath();
+
+    const child = new Hono();
+    child.get('/guarded', () => {
+      throw new ResponseCarryingError('unauthorized');
+    });
+
+    lazy(parent, path, () => Promise.resolve({ default: child }));
+
+    const res = await parent.fetch(new Request(`http://x${PREFIX}${path}/guarded`));
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'Unauthorized' });
+    // A deliberate response is not an unexpected failure and must not pollute
+    // the unexpected-500 telemetry feed.
+    expect(recordRuntimeServerIssue).not.toHaveBeenCalled();
+  });
+});
+
 describe('lazy-router: a caller cannot inject a request id downstream', () => {
   /**
    * index.tsx accepts a caller-supplied x-request-id only if it matches

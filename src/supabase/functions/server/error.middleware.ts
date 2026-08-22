@@ -71,6 +71,29 @@ function resolveRequestId(c: Context): string | undefined {
 export async function errorHandler(error: Error, c: Context) {
   logger.error('API Error occurred', error, { path: c.req.url });
 
+  // Hono's built-in handler — the one lazy-router REPLACES on all 77 mounts —
+  // honours an error that carries its own Response via `getResponse()`
+  // (hono-base.js: `if ("getResponse" in err)`). That is how HTTPException, and
+  // every Hono middleware that throws it (jwt, bearerAuth, bodyLimit, timeout,
+  // the validator), communicates a deliberate status and body.
+  //
+  // Nothing in this codebase throws one today — verified: zero references to
+  // HTTPException or hono/http-exception anywhere in src/, and the only Hono
+  // submodules the server imports are `cors` and a type-only http-status. So
+  // this is not a live bug. It is a TRAP: replacing a handler with one that
+  // handles strictly less means the first person to add `bearerAuth` to a
+  // sub-router would watch their 401 silently become a generic 500, on all 77
+  // mounts at once, with no clue why. Handling it here makes the replacement a
+  // superset of what it replaced, which is the only safe way to replace
+  // something.
+  //
+  // Checked before the typed branches so a deliberate response is never
+  // recorded as an unexpected 500.
+  if (typeof (error as { getResponse?: unknown }).getResponse === 'function') {
+    const carried = (error as unknown as { getResponse: () => Response }).getResponse();
+    return c.newResponse(carried.body, carried);
+  }
+
   if (error instanceof ZodError) {
     // Shared utility for consistent validation error formatting
     const formatted = formatZodError(error);
