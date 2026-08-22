@@ -20,6 +20,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { resolveTrustedRole } from './constants.ts';
+import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
@@ -70,6 +71,14 @@ export async function authenticateUser(
       throw new Error('Unauthorized');
     }
 
+    // Same account-security policy as every auth-mw route (P1.5). Without this
+    // a SUSPENDED or DELETED user kept full access to everything behind this
+    // gateway — FNA, tax, estate, wills, form-prefill — for as long as their
+    // JWT stayed valid, because suspending an account never invalidates an
+    // already-issued token. Throws AuthError (403), preserved by the catch
+    // below and mapped by fnaErrorResponse.
+    await enforceAccountSecurity(user.id);
+
     // Role from trusted sources only — isFnaAdminRole grants admin powers to
     // 'adviser' as well, so privileged values in client-editable user_metadata
     // must not be honoured here either. See resolveTrustedRole in constants.ts.
@@ -86,6 +95,13 @@ export async function authenticateUser(
     if (err instanceof Error && err.message === 'Unauthorized') {
       throw err;
     }
+    // An AuthError carries a deliberate status and code (ACCOUNT_SUSPENDED,
+    // ACCOUNT_DELETED, TWO_FACTOR_REQUIRED). Flattening it to a generic
+    // 'Unauthorized' would turn a 403 "you are suspended" into a 401 "log in
+    // again", which sends the user round a login loop that cannot succeed.
+    if (err instanceof AuthError) {
+      throw err;
+    }
     log.error(`[${context}] Unexpected auth failure`, err);
     throw new Error('Unauthorized', { cause: err });
   }
@@ -100,6 +116,16 @@ export function isFnaUnauthorized(error: unknown): boolean {
 export function fnaErrorResponse(c: Context, error: unknown) {
   if (isFnaUnauthorized(error)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+
+  // Account-security rejections carry their own status and code. Matched
+  // structurally rather than by message text, so the reason survives to the
+  // client — AuthContext.tsx keys off `code === 'TWO_FACTOR_REQUIRED'`.
+  if (error instanceof AuthError) {
+    return c.json(
+      { success: false, error: error.message, code: error.code },
+      error.statusCode as 403,
+    );
   }
 
   if (error instanceof Error && error.name === 'FnaIntakeError' && 'status' in error) {

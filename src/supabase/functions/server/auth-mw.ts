@@ -43,7 +43,18 @@ export class AuthError extends Error {
 
 const TWO_FACTOR_GRACE_MS = 3 * 60 * 60 * 1000;
 
-async function enforceAccountSecurity(userId: string): Promise<void> {
+/**
+ * The ONE account-security policy: reject deleted, suspended, and stale-2FA
+ * accounts. Exported so `fna-auth.ts` applies the same rules rather than a
+ * second, weaker copy — a suspended user was previously still able to reach
+ * every route behind the FNA gateway (14 modules covering FNA, tax, estate,
+ * wills and form-prefill), because that gateway validated the token and
+ * stopped there.
+ *
+ * Do not fork this. Two divergent account-security policies is precisely the
+ * drift that produced S12.
+ */
+export async function enforceAccountSecurity(userId: string): Promise<void> {
   let status: Record<string, unknown> | null;
   try {
     status = (await kv.get(`security:${userId}`)) as Record<string, unknown> | null;

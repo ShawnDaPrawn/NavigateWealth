@@ -597,10 +597,39 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    existing `admin-audit-service` into export/delete paths.
    _Gate:_ contract tests assert a client A token is 403'd on client B's
    documents/FNA/envelopes; audit rows are written for exports and deletes.
-5. **P1.5 — Enforce account suspension (found dead in the backend audit).**
-   Wire `performSecurityCheck`/`checkAccountSuspension` into the request path
-   (they currently have zero call sites).
-   _Gate:_ a suspended user's existing JWT is rejected; test covers it.
+5. **P1.5 — Enforce account suspension.** _(DONE 2026-08-22, but not the way
+   this item described — see below.)_
+
+   The premise here was wrong in a useful way. It said to wire
+   `performSecurityCheck`/`checkAccountSuspension` into the request path. Those
+   live in `security.middleware.ts`, which had **zero importers** and whose own
+   docblock claimed "CRITICAL: This is now the authoritative suspension check"
+   — authoritative for nothing. Meanwhile `auth-mw.ts`'s
+   `enforceAccountSecurity` had been doing the job correctly on every auth-mw
+   route the whole time. Wiring up the dead pair would have created a second,
+   divergent policy, which is exactly the drift that produced **S12**.
+
+   **S14 — a suspended user kept full access to the FNA family.**
+   `fna-auth.authenticateUser` — the gateway for **14 modules** covering FNA,
+   tax, estate planning, wills and form-prefill, i.e. client financial and
+   medical data — validated the token, resolved the role, and stopped.
+   Suspending an account does not invalidate an already-issued JWT, so
+   "suspended" meant nothing there until the token expired on its own.
+
+   Fixed by exporting `enforceAccountSecurity` and calling it from
+   `fna-auth`, so both gateways apply one policy. The rejection now also
+   survives to the client with its status and code intact (`AuthError` is
+   matched structurally in `fnaErrorResponse` rather than by message text) —
+   flattening it to a generic 401 would tell a suspended user to log in again,
+   sending them round a loop that cannot succeed.
+
+   `security.middleware.ts` (113 lines, 5 exports, 0 importers) was deleted
+   rather than corrected: a module that falsely advertises itself as the
+   authoritative security check is a trap for whoever reads it next.
+   _Gate:_ a suspended user's existing JWT is rejected on the FNA gateway;
+   nine tests cover suspended / deleted / stale-2FA / within-grace / clean, and
+   the status-and-code mapping. Both the enforcement call and the AuthError
+   pass-through are mutation-checked.
 
 ### P2 — Make the architecture's guardrails real
 
