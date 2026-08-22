@@ -68,6 +68,98 @@ for (const file of listServerFiles(SERVER_DIR)) {
   }
 }
 
+/** Modules that call `auth.getUser(` — the hand-rolled token verifiers. */
+const verifiers = offenders;
+
+describe('every hand-rolled verifier applies the account-security policy', () => {
+  /**
+   * The count ratchet below caps how many copies exist. It says nothing about
+   * whether a copy is CORRECT, and all five were not: none called
+   * `enforceAccountSecurity`, so a SUSPENDED or DELETED account kept full
+   * access to the AI advisor, the AI intelligence admin routes, the admin
+   * security dashboard and the task digest for as long as its JWT stayed valid.
+   * Suspending an account never invalidates an already-issued token. That is
+   * S14 again, in four more places (P1.2).
+   *
+   * So: as long as a module verifies tokens itself, it must apply the same
+   * account-security policy the canonical path does.
+   */
+  it('names the verifiers it is checking (analysis sanity check)', () => {
+    // If the detector stops finding them, the assertion below passes vacuously.
+    expect(verifiers.length).toBeGreaterThan(0);
+    expect(verifiers).toContain('fna-auth.ts');
+  });
+
+  it('requires enforceAccountSecurity in every module that verifies a token', () => {
+    const missing = verifiers.filter(
+      (rel) => !readFileSync(join(SERVER_DIR, rel), 'utf8').includes('enforceAccountSecurity'),
+    );
+
+    expect(
+      missing,
+      `These modules verify bearer tokens themselves but never check whether the\n` +
+        `account is suspended, deleted or overdue for 2FA. Import\n` +
+        `enforceAccountSecurity from auth-mw.ts and call it with the resolved\n` +
+        `user id, mapping AuthError to its own statusCode and code — flattening\n` +
+        `it into a 401 sends a suspended user round a login loop that cannot\n` +
+        `succeed. Better still, delegate to requireAuth/requireAdmin.\n\n` +
+        `Missing:\n  ${missing.join('\n  ')}`,
+    ).toEqual([]);
+  });
+});
+
+describe('the anon key is not an admin credential (S1)', () => {
+  /**
+   * P1.2's original instruction was to delete an anon-key-as-admin branch in
+   * `fna-auth.ts`. By the time it came up the branch was already gone — but
+   * "already gone" is not a guarantee, and the shape it took (compare the
+   * bearer token against an env key, mint a synthetic admin) is easy to
+   * reintroduce as a convenience. This is the gate that stops that.
+   */
+  it('finds the env reads it is scanning for (analysis sanity check)', () => {
+    // security-shared legitimately reads the anon key to build a password
+    // verifier for signInWithPassword. If this stops matching, the check below
+    // is scanning nothing.
+    const shared = readFileSync(join(SERVER_DIR, 'security-shared.ts'), 'utf8');
+    expect(shared).toContain('SUPABASE_ANON_KEY');
+  });
+
+  it('never compares a bearer token against an anon key', () => {
+    const offending: string[] = [];
+    for (const file of listServerFiles(SERVER_DIR)) {
+      const src = readFileSync(file, 'utf8');
+      const lines = src.split('\n');
+      lines.forEach((line, i) => {
+        const trimmed = line.trimStart();
+        if (trimmed.startsWith('*') || trimmed.startsWith('//') || trimmed.startsWith('/*')) return;
+        // A token being tested against an anon key — in either order, and
+        // whether by ===, includes, or a constant-time compare.
+        if (!/ANON_KEY|anonKey|publicAnonKey/.test(line)) return;
+        if (!/\btoken\b|\bauthHeader\b|\bbearer\b/i.test(line)) return;
+        offending.push(`${file.slice(SERVER_DIR.length + 1)}:${i + 1}  ${trimmed}`);
+      });
+    }
+
+    expect(
+      offending,
+      `A bearer token is being compared against the public anon key. The anon\n` +
+        `key is shipped to every browser — treating it as a credential makes\n` +
+        `every visitor whatever it authenticates as. That was S1.\n\n` +
+        `Found:\n  ${offending.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  it('mints no synthetic admin identity from the FNA gateway', () => {
+    // `isSyntheticAdminUser` checks for the literal id 'admin', which only ever
+    // existed because the anon-key branch minted one. authenticateUser now
+    // returns ids straight from Supabase Auth, which are UUIDs, and
+    // FNAAuthUser is constructed nowhere else — so nothing can produce it.
+    const fnaAuth = readFileSync(join(SERVER_DIR, 'fna-auth.ts'), 'utf8');
+    const constructions = fnaAuth.match(/id:\s*'admin'/g) ?? [];
+    expect(constructions, "fna-auth must not construct a user with id 'admin'").toEqual([]);
+  });
+});
+
 describe('auth implementations outside auth-mw', () => {
   it('still finds the canonical implementation (analysis sanity check)', () => {
     // If the detector stops matching auth-mw's own call, it is broken and the

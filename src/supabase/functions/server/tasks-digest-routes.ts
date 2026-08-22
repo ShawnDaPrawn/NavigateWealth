@@ -26,6 +26,7 @@ import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { resolveTrustedRole } from './constants.ts';
+import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
@@ -163,6 +164,27 @@ async function requireCronOrAdminAuth(
         error,
       } = await supabase.auth.getUser(token);
       if (!error && user?.id) {
+        // Same account-security policy as auth-mw (P1.2). Answered HERE rather
+        // than by throwing: the catch below swallows everything into a generic
+        // 401, and `error.middleware` does not know auth-mw's AuthError, so a
+        // rethrow would surface as an opaque 500. Both outcomes would tell a
+        // suspended admin to log in again — a loop that cannot succeed — so the
+        // status and code are returned directly instead.
+        try {
+          await enforceAccountSecurity(user.id);
+        } catch (securityError) {
+          if (securityError instanceof AuthError) {
+            return new Response(
+              JSON.stringify({ error: securityError.message, code: securityError.code }),
+              {
+                status: securityError.statusCode,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            );
+          }
+          throw securityError;
+        }
+
         // Role from TRUSTED sources only (super-admin allowlist, app_metadata,
         // NW_ADMIN_EMAILS). This previously read
         // `user.user_metadata?.role || user.user_metadata?.systemRole`, which is

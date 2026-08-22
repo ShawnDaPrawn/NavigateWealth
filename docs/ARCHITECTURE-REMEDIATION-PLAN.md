@@ -591,11 +591,77 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    (send a real token; those calls are currently broken like S13 was). Each needs
    reading, so the count is floored rather than banned.
 
-2. **P1.2 — Remove the anon-key-as-admin branch (S1).** Delete `fna-auth.ts:85-89`
-   once P1.1 lands. Collapse the 6 auth mechanisms toward one
-   (`auth-mw.ts`), and make `fna-auth`'s `authenticateUser` delegate to it.
-   _Gate:_ a contract test asserts the anon key returns 401 on every FNA/tax/
-   estate/medical route.
+2. **P1.2 — Remove the anon-key-as-admin branch (S1).** _(DONE 2026-08-22 —
+   but the branch this item was written to delete was already gone, and what
+   was actually wrong was something else.)_
+
+   **The stated premise was stale.** `fna-auth.ts` no longer compares the
+   bearer token against `SUPABASE_ANON_KEY`, and `authenticateUser` returns ids
+   straight from Supabase Auth. `isSyntheticAdminUser` (`user.id === 'admin'`)
+   survives as the vestige of the removed branch and is now unreachable:
+   `FNAAuthUser` is constructed nowhere outside `fna-auth.ts`, and a real
+   Supabase id is a UUID. This is the **fourth** plan item whose premise had
+   moved by the time it came up, which is itself the finding — a remediation
+   plan is a snapshot, and every item needs re-verifying before it is acted on.
+
+   **What was actually wrong: five hand-rolled token verifiers, none of which
+   applied the account-security policy.** `.auth-implementations-baseline`
+   capped how many copies exist and said nothing about whether a copy is
+   _correct_. Four of the five — `ai-intelligence.tsx`, `ai-advisor.ts`,
+   `auth-routes.ts` (`GET /security-status`) and `tasks-digest-routes.ts` —
+   verified the token and stopped. No `enforceAccountSecurity`. So a SUSPENDED
+   or DELETED account kept full access to the AI advisor, the AI intelligence
+   admin routes, the admin security dashboard and the task digest for as long
+   as its JWT stayed valid, because suspending an account never invalidates an
+   already-issued token.
+
+   That is **S14 again, in four more places** — the same defect the FNA gateway
+   had, found the same way, and a direct demonstration that a count ratchet is
+   not a policy check. Fixed by calling `enforceAccountSecurity` in each,
+   mapping `AuthError` to its own `statusCode`/`code` rather than flattening it
+   into a 401.
+
+   `tasks-digest` was the awkward one. Its JWT branch sits inside a bare
+   `catch {}` that falls through to a generic 401, and `error.middleware` does
+   not know auth-mw's `AuthError` — so swallowing would have produced "log in
+   again" for a suspended admin (a loop that cannot succeed) and rethrowing
+   would have produced an opaque 500. The denial is therefore answered in place
+   with its own status and code.
+
+   **Two role sources besides `resolveTrustedRole` were checked and cleared.**
+   `ai-intelligence.tsx` and `auth-routes.ts` grant admin from the KV profile
+   `user_profile:<id>:personal_info.role`. That would be S12 all over again if a
+   client could write it — they cannot: the one route that accepts a profile
+   body strips `role`, `accountStatus`, `adviserAssigned` and `suspended` for
+   non-admin callers, with the reasoning already in the code. Every other write
+   path is admin- or service-only. Left as-is.
+
+   **Deliberately not changed.** `form-prefill-auth.assertPrefillClientAccess`
+   is a _looser_ policy than `client-access` — any adviser may prefill any
+   client, assignment scoping intentionally not enforced, documented as such at
+   a single chokepoint. It is a decision, not drift, so it was not "fixed".
+   Worth flagging to the product owner though: after P1.4, an adviser can
+   prefill a form for a client whose FNA they can no longer read.
+
+   _Gate:_ two static and one behavioural, all mutation-checked.
+   (1) Every module that calls `auth.getUser(` must also call
+   `enforceAccountSecurity` — this is what the count ratchet could not say.
+   (2) No file may compare a bearer token against an anon key, and `fna-auth`
+   may not construct a user with `id: 'admin'` — the shape S1 took, so it
+   cannot be reintroduced as a convenience. Both carry sanity checks so they
+   cannot pass vacuously. (3) Six tests drive the real `tasks-digest` router:
+   a suspended admin gets 403 `ACCOUNT_SUSPENDED`, a deleted one 403
+   `ACCOUNT_DELETED`, a clean non-admin still gets the original 401, and an
+   unreadable security store gets 503 rather than being read as "nobody is
+   suspended". Removing the enforcement call fails 3; flattening the AuthError
+   into a 401 fails 3.
+
+   _Still outstanding on this item:_ making `fna-auth.authenticateUser`
+   delegate to `auth-mw` outright, which would take the verifier count from 5
+   to 4. Not done here — the two gateways now apply the same policy, so the
+   remaining duplication is a maintenance concern rather than a security one,
+   and collapsing them touches every FNA route's error contract.
+
 3. **P1.3 — Flip the gateway to `verify_jwt = true` (S3).** Supabase's
    `verify_jwt` is **per-function**, so flipping it on `make-server-91ed8379`
    makes the gateway reject _every_ request without a valid JWT — before Hono

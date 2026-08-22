@@ -21,7 +21,7 @@ import {
   getBlockedIpAddressWarning,
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
-import { requireSuperAdmin } from './auth-mw.ts';
+import { requireSuperAdmin, enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import { validateBody } from './validate.ts';
 import {
   SignupValidateSchema,
@@ -612,6 +612,21 @@ authRoutes.get('/security-status', async (c) => {
 
     if (error || !user) {
       return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Same account-security policy as auth-mw (P1.2). This handler verifies the
+    // token itself rather than going through requireAdmin, and so had skipped
+    // the suspended/deleted/stale-2FA check entirely.
+    try {
+      await enforceAccountSecurity(user.id);
+    } catch (securityError) {
+      if (securityError instanceof AuthError) {
+        return c.json(
+          { error: securityError.message, code: securityError.code },
+          securityError.statusCode as 403,
+        );
+      }
+      throw securityError;
     }
 
     // Check if user is admin
