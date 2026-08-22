@@ -174,10 +174,23 @@ and it is where bounded, paginated reads replace unbounded `getByPrefix`.
 
 ### 3.2 Split the god files
 
-Decompose along the layering, not by line count:
+Decompose along the layering, not by line count.
 
-- `resources-service.ts` (1,702) → `resources-repository` + `legal-documents-service`
-  - `rss-service` + `zip-archive-service`. (Nine bounded contexts in one class today.)
+**Progress: 74 → 71 files over 1,000 lines.** Each split is verified as a pure
+move — every function body compared before and after, whitespace- and
+trailing-comma-insensitive — rather than trusted to be one.
+
+| File                           | Was   | Now | Into                                                     |
+| ------------------------------ | ----- | --- | -------------------------------------------------------- |
+| `RoAModuleContractManager.tsx` | 2,125 | 545 | a JSX-free helpers module + 9 editor components          |
+| `resources-service.ts`         | 1,725 | 309 | legal reads, legal authoring, zip tools                  |
+| `clientOverviewUtils.ts`       | 1,650 | —   | 10 modules under `clientOverview/`, the old file deleted |
+
+- `resources-service.ts` (1,725) → **DONE**, though not on the boundaries named
+  here: the file's own structure put reads and authoring on opposite sides of a
+  one-way dependency, and the zip tools owned the only Storage access. There was
+  no `resources-repository` to extract — the CRUD is eight lines of `kv` calls —
+  so inventing one would have been indirection for its own sake.
 - `communication-service.ts` (1,387) → `messaging-service` + `contact-group-service`
   - `email-template-service` + `campaign-service`, over a `communication-repository`.
 - `quote-request-routes.ts` (1,580, a single handler) → route (validate + rate-limit)

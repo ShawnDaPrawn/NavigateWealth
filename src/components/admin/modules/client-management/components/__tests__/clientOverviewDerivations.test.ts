@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type ActionItemsInputs,
+  deriveActionDistribution,
+  deriveActionItems,
+} from '../clientOverview/actionItems';
+import { deriveEnrichedActivityEvents } from '../clientOverview/activity';
+import {
+  deriveAssetAllocation,
+  deriveCashflowData,
+  deriveInsuranceCoverageItems,
+} from '../clientOverview/charts';
+import { extractRetirementResults, extractRiskFinalNeeds } from '../clientOverview/fnaExtract';
+import {
   addMonths,
   addressLine,
   calcAge,
@@ -11,34 +23,23 @@ import {
   fmtRelative,
   isPast,
   nextAnniversary,
-  numVal,
   pct,
+} from '../clientOverview/format';
+import { type GapAnalysisInputs, deriveGapAnalysis } from '../clientOverview/gapAnalysis';
+import { type HealthScoreInputs, deriveHealthScore } from '../clientOverview/healthScore';
+import { type KpiValuesInputs, deriveKpiValues } from '../clientOverview/kpiValues';
+import { type PillarsInputs, derivePillars } from '../clientOverview/pillars';
+import {
+  type Policy,
+  normalizePolicyData,
+  numVal,
   strVal,
   sumField,
   sumFirstNonZero,
   sumInvestmentPremiums,
   sumMultiField,
   worstGapStatus,
-  normalizePolicyData,
-  extractRiskFinalNeeds,
-  extractRetirementResults,
-  deriveGapAnalysis,
-  derivePillars,
-  deriveHealthScore,
-  deriveKpiValues,
-  deriveActionItems,
-  deriveAssetAllocation,
-  deriveInsuranceCoverageItems,
-  deriveCashflowData,
-  deriveActionDistribution,
-  deriveEnrichedActivityEvents,
-  type GapAnalysisInputs,
-  type PillarsInputs,
-  type HealthScoreInputs,
-  type KpiValuesInputs,
-  type ActionItemsInputs,
-  type Policy,
-} from '../clientOverviewUtils';
+} from '../clientOverview/policyFields';
 import type { ProfileData } from '../../types';
 
 const policy = (data: Record<string, unknown>): Policy => ({

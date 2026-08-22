@@ -85,35 +85,35 @@ import {
 import { getClientProfileQueryOptions } from '../api';
 import { Client, ProfileData } from '../types';
 import {
-  fmt,
-  calcAge,
-  fmtRelative,
-  addMonths,
-  isPast,
+  type ActionItem,
+  deriveActionDistribution,
+  deriveActionItems,
+} from './clientOverview/actionItems';
+import {
+  type ActivityEvent,
+  INITIAL_ACTIVITY_COUNT,
+  deriveEnrichedActivityEvents,
+} from './clientOverview/activity';
+import {
+  deriveAssetAllocation,
+  deriveCashflowData,
+  deriveInsuranceCoverageItems,
+} from './clientOverview/charts';
+import { extractRetirementResults } from './clientOverview/fnaExtract';
+import { addMonths, calcAge, fmt, fmtRelative, isPast } from './clientOverview/format';
+import { type GapItem, deriveGapAnalysis } from './clientOverview/gapAnalysis';
+import { deriveHealthScore } from './clientOverview/healthScore';
+import { deriveKpiValues } from './clientOverview/kpiValues';
+import { type PillarData, derivePillars } from './clientOverview/pillars';
+import {
+  type Policy,
+  normalizePolicyData,
   numVal,
   sumField,
-  sumInvestmentPremiums,
   sumFirstNonZero,
+  sumInvestmentPremiums,
   sumMultiField,
-  normalizePolicyData,
-  extractRetirementResults,
-  deriveGapAnalysis,
-  derivePillars,
-  deriveHealthScore,
-  deriveKpiValues,
-  deriveActionItems,
-  deriveAssetAllocation,
-  deriveInsuranceCoverageItems,
-  deriveCashflowData,
-  deriveActionDistribution,
-  deriveEnrichedActivityEvents,
-  INITIAL_ACTIVITY_COUNT,
-  type Policy,
-  type ActionItem,
-  type ActivityEvent,
-  type GapItem,
-  type PillarData,
-} from './clientOverviewUtils';
+} from './clientOverview/policyFields';
 import { PolicyOverviewTab } from '../../../../admin/profile-sections/PolicyOverviewTab';
 // Phase 1 KPI / Sub-Score imports
 import { KPISummaryTable } from './overview/KPISummaryTable';

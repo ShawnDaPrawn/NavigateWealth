@@ -9,7 +9,7 @@ import React from 'react';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Skeleton } from '../../../../../ui/skeleton';
-import { fmtDate, isPast } from '../clientOverviewUtils';
+import { fmtDate, isPast } from '../clientOverview/format';
 import { getFnaStatusLabel } from '@/shared/fna-intake/fna-intake-labels';
 import type { DashboardMode } from '../clientOverviewConstants';
 

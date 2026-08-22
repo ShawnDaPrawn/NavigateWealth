@@ -7,7 +7,8 @@
 
 import { Card, CardContent } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
-import type { PillarData, PillarHealth } from '../clientOverviewUtils';
+import type { PillarData } from '../clientOverview/pillars';
+import type { PillarHealth } from '../clientOverview/policyFields';
 
 // ── Pillar health config ─────────────────────────────────────────────────
 
