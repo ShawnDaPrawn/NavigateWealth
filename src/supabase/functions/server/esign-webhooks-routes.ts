@@ -19,6 +19,8 @@ import { resolveFirmId } from './esign-route-helpers.ts';
 import { logAuditEvent } from './esign-services.ts';
 import type { SenderEvent } from './esign-notification-prefs.ts';
 import { assertPublicHttpsUrl } from './ssrf-guard.ts';
+import { validateBody, validateOptionalBody } from './validate.ts';
+import { CreateWebhookSchema, UpdateWebhookSchema } from './esign-validation.ts';
 import {
   createSubscription as createWebhookSub,
   listSubscriptionsByFirm as listWebhookSubs,
@@ -51,64 +53,69 @@ const withoutSecret = <T extends { secret?: string }>(subscription: T): Omit<T, 
 };
 
 /** POST /webhooks — create a subscription. */
-webhooksRoutes.post('/webhooks', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const body = await c.req.json().catch(() => ({}));
-    const { url, events, description } = body as {
-      url?: string;
-      events?: string[];
-      description?: string;
-    };
-
-    if (!url || typeof url !== 'string') {
-      return c.json({ error: 'A valid https URL is required' }, 400);
-    }
+webhooksRoutes.post(
+  '/webhooks',
+  rateLimit('SENDER_MUTATE'),
+  validateBody(CreateWebhookSchema),
+  async (c) => {
     try {
-      assertPublicHttpsUrl(url);
-    } catch {
-      return c.json({ error: 'A public https URL is required' }, 400);
-    }
-    if (!Array.isArray(events) || events.length === 0) {
-      return c.json({ error: 'At least one event subscription is required' }, 400);
-    }
-    const filtered = events.filter(
-      (e): e is SenderEvent =>
-        typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
-    );
-    if (filtered.length === 0) {
-      return c.json({ error: 'No recognised events' }, 400);
-    }
+      const ctx = await getAuthContext(c);
+      const body = await c.req.json().catch(() => ({}));
+      const { url, events, description } = body as {
+        url?: string;
+        events?: string[];
+        description?: string;
+      };
 
-    const firmId = resolveFirmId(ctx.user);
-    const sub = await createWebhookSub({
-      firmId,
-      userId: ctx.user.id,
-      url,
-      events: filtered,
-      description: typeof description === 'string' ? description.slice(0, 300) : undefined,
-    });
+      if (!url || typeof url !== 'string') {
+        return c.json({ error: 'A valid https URL is required' }, 400);
+      }
+      try {
+        assertPublicHttpsUrl(url);
+      } catch {
+        return c.json({ error: 'A public https URL is required' }, 400);
+      }
+      if (!Array.isArray(events) || events.length === 0) {
+        return c.json({ error: 'At least one event subscription is required' }, 400);
+      }
+      const filtered = events.filter(
+        (e): e is SenderEvent =>
+          typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
+      );
+      if (filtered.length === 0) {
+        return c.json({ error: 'No recognised events' }, 400);
+      }
 
-    await logAuditEvent({
-      envelopeId: 'system',
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'webhook_subscription_created',
-      metadata: { id: sub.id, url: sub.url, events: sub.events },
-    });
+      const firmId = resolveFirmId(ctx.user);
+      const sub = await createWebhookSub({
+        firmId,
+        userId: ctx.user.id,
+        url,
+        events: filtered,
+        description: typeof description === 'string' ? description.slice(0, 300) : undefined,
+      });
 
-    return c.json({ subscription: sub });
-  } catch (error: unknown) {
-    log.error('Create webhook error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to create subscription',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+      await logAuditEvent({
+        envelopeId: 'system',
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'webhook_subscription_created',
+        metadata: { id: sub.id, url: sub.url, events: sub.events },
+      });
+
+      return c.json({ subscription: sub });
+    } catch (error: unknown) {
+      log.error('Create webhook error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to create subscription',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  },
+);
 
 /** GET /webhooks — list subscriptions for the current firm. */
 webhooksRoutes.get('/webhooks', async (c) => {
@@ -130,59 +137,64 @@ webhooksRoutes.get('/webhooks', async (c) => {
 });
 
 /** PATCH /webhooks/:id — update url / events / active / description. */
-webhooksRoutes.patch('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const existing = await getWebhookSub(id);
-    if (!existing) return c.json({ error: 'Subscription not found' }, 404);
-    if (existing.firm_id !== resolveFirmId(ctx.user)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    const body = await c.req.json().catch(() => ({}));
-    const patch: Partial<{
-      url: string;
-      events: SenderEvent[];
-      active: boolean;
-      description: string;
-    }> = {};
-    if (typeof body.url === 'string') {
-      try {
-        patch.url = assertPublicHttpsUrl(body.url).toString();
-      } catch {
-        return c.json({ error: 'A public https URL is required' }, 400);
+webhooksRoutes.patch(
+  '/webhooks/:id',
+  rateLimit('SENDER_MUTATE'),
+  validateOptionalBody(UpdateWebhookSchema),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const id = c.req.param('id')!;
+      const existing = await getWebhookSub(id);
+      if (!existing) return c.json({ error: 'Subscription not found' }, 404);
+      if (existing.firm_id !== resolveFirmId(ctx.user)) {
+        return c.json({ error: 'Forbidden' }, 403);
       }
-    }
-    if (Array.isArray(body.events)) {
-      patch.events = body.events.filter(
-        (e: unknown): e is SenderEvent =>
-          typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
+
+      const body = await c.req.json().catch(() => ({}));
+      const patch: Partial<{
+        url: string;
+        events: SenderEvent[];
+        active: boolean;
+        description: string;
+      }> = {};
+      if (typeof body.url === 'string') {
+        try {
+          patch.url = assertPublicHttpsUrl(body.url).toString();
+        } catch {
+          return c.json({ error: 'A public https URL is required' }, 400);
+        }
+      }
+      if (Array.isArray(body.events)) {
+        patch.events = body.events.filter(
+          (e: unknown): e is SenderEvent =>
+            typeof e === 'string' && (KNOWN_WEBHOOK_EVENTS as string[]).includes(e),
+        );
+      }
+      if (typeof body.active === 'boolean') patch.active = body.active;
+      if (typeof body.description === 'string') patch.description = body.description.slice(0, 300);
+
+      const updated = await updateWebhookSub(id, patch);
+      await logAuditEvent({
+        envelopeId: 'system',
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'webhook_subscription_updated',
+        metadata: { id, patch },
+      });
+      return c.json({ subscription: updated ? withoutSecret(updated) : null });
+    } catch (error: unknown) {
+      log.error('Update webhook error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to update subscription',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
       );
     }
-    if (typeof body.active === 'boolean') patch.active = body.active;
-    if (typeof body.description === 'string') patch.description = body.description.slice(0, 300);
-
-    const updated = await updateWebhookSub(id, patch);
-    await logAuditEvent({
-      envelopeId: 'system',
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'webhook_subscription_updated',
-      metadata: { id, patch },
-    });
-    return c.json({ subscription: updated ? withoutSecret(updated) : null });
-  } catch (error: unknown) {
-    log.error('Update webhook error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to update subscription',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+  },
+);
 
 /** POST /webhooks/:id/rotate-secret — issue a new signing secret. */
 webhooksRoutes.post('/webhooks/:id/rotate-secret', rateLimit('SENDER_MUTATE'), async (c) => {

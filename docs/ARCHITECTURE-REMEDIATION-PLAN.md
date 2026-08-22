@@ -306,6 +306,47 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   privilege-boundary bypass and the class of bug is the point — five copies of
   an auth check drift, and one did.
 
+- **A22 — The validation ratchet was counting 20 routes where satisfying it
+  would have broken production (NEW, 2026-08-22).** `.route-validation-baseline`
+  counted every `POST`/`PUT`/`PATCH` registration in the auth and e-sign
+  families that had no visible schema. Twenty of the fifty-nine it was reporting
+  **never read a body at all** — cancel, activate, rotate, sweep, mark-read,
+  remind, and the two cron probes.
+
+  `validateBody` calls `c.req.json()` and returns 400 when it throws, so a
+  request with no body 400s. Adding it to any of those twenty to satisfy the
+  ratchet would have rejected every caller. This is my own Stage B gate, and it
+  is the A19 shape exactly: a mechanism that looks like it is asking for a
+  safety improvement while actually asking for an outage.
+
+  Two fixes, not one:
+  1. **The ratchet now counts only routes that actually read a body**, taking
+     the floor 59 → 39. A narrowing is where a floor can quietly stop meaning
+     anything, so the classifier is itself gated: the excluded set must be
+     non-empty _and_ smaller than half the population, and a true-positive test
+     runs the real regex — not a copy — against every spelling of a body read.
+     Breaking the classifier fails two tests rather than passing vacuously.
+  2. **`validateOptionalBody`** was added for the seventeen routes that read
+     `await c.req.json().catch(() => ({}))` — a deliberate tolerance, because on
+     a PATCH route sending nothing means "change nothing". `validateBody` would
+     have 400'd those too. The variant treats an absent, unparseable, or
+     literal-`null` body as `{}` and validates anything that _is_ sent, so
+     adopting it on a live route changes no behaviour.
+
+  Getting the classification right took two attempts, which is worth recording:
+  the first pass matched `req.json()` with literal empty parens and so missed
+  `c.req.json<T>()`, undercounting body-reading routes by two and nearly
+  putting a wrong number in a report. The corrected detector handles the type
+  parameter.
+
+  Four routes were then wired in the same change — `POST`/`PATCH` on
+  `/api-keys` and `/webhooks`, using the strict variant on the creates and the
+  tolerant one on the patches — taking the floor 39 → 35.
+
+  _Not a finding, but worth noting for once:_ the webhook routes already run
+  every submitted URL through `assertPublicHttpsUrl` on both create and update.
+  A capability correctly connected.
+
 - **S15 — The super-admin secret was compared in variable time on two of the
   three routes that check it (NEW, 2026-08-22).** `auth-admin-routes.ts` has
   three routes, all gated by the shared `SUPER_ADMIN_PASSWORD`.

@@ -27,7 +27,7 @@ const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
 const BASELINE_FILE = join(REPO_ROOT, '.route-validation-baseline');
 
-const { validateBody, validateQuery, body } = await import('../validate.ts');
+const { validateBody, validateOptionalBody, validateQuery, body } = await import('../validate.ts');
 
 const Schema = z.object({ email: z.string().min(1), count: z.number().optional() }).passthrough();
 
@@ -104,6 +104,78 @@ describe('validateBody', () => {
   });
 });
 
+describe('validateOptionalBody — the tolerance is the point', () => {
+  /**
+   * Roughly a third of the e-sign routes read their body as
+   * `await c.req.json().catch(() => ({}))`, because sending nothing means
+   * "change nothing". `validateBody` 400s those callers. If this variant does
+   * not preserve the tolerance exactly, adopting it on a PATCH route would be a
+   * production break dressed as a safety improvement.
+   */
+  const Patch = z.object({ name: z.string().optional(), active: z.boolean().optional() });
+
+  function patchApp(mw: ReturnType<typeof validateOptionalBody>) {
+    const app = new Hono();
+    app.patch('/x', mw, (c) => c.json({ got: c.get('validatedBody') }));
+    return app;
+  }
+
+  const send = (app: Hono, payload?: string) =>
+    app.fetch(
+      new Request('http://x/x', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        ...(payload === undefined ? {} : { body: payload }),
+      }),
+    );
+
+  it('accepts a request with no body at all', async () => {
+    const res = await send(patchApp(validateOptionalBody(Patch)));
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ got: {} });
+  });
+
+  it('accepts a body that is not valid JSON, as the handlers already did', async () => {
+    const res = await send(patchApp(validateOptionalBody(Patch)), 'not json');
+
+    expect(res.status).toBe(200);
+  });
+
+  it('accepts a literal null body without handing null to the schema', async () => {
+    // `null` is valid JSON, so it survives the try/catch and would otherwise
+    // reach a z.object() as a non-object — a rejection the old handlers never
+    // made.
+    const res = await send(patchApp(validateOptionalBody(Patch)), 'null');
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ got: {} });
+  });
+
+  it('still validates a body that IS sent', async () => {
+    const res = await send(patchApp(validateOptionalBody(Patch)), '{"active":"yes-please"}');
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({ error: 'Validation failed' });
+  });
+
+  it('passes a valid body through to the handler', async () => {
+    const res = await send(patchApp(validateOptionalBody(Patch)), '{"name":"renamed"}');
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ got: { name: 'renamed' } });
+  });
+
+  it('differs from validateBody exactly where it is supposed to', async () => {
+    // The contrast that justifies two entry points rather than one.
+    const strict = new Hono();
+    strict.patch('/x', validateBody(Patch), (c) => c.json({ ok: true }));
+
+    expect((await send(strict)).status).toBe(400);
+    expect((await send(patchApp(validateOptionalBody(Patch)))).status).toBe(200);
+  });
+});
+
 describe('validateQuery', () => {
   const QuerySchema = z.object({ limit: z.coerce.number().max(100) });
 
@@ -134,6 +206,24 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
   const ROUTE_RE = /\b(\w+)\.(post|put|patch)\(\s*(['"`])(\/[^'"`]*)\3([\s\S]{0,240}?)=>/g;
 
   /**
+   * A route only belongs in this count if it actually READS a body.
+   *
+   * This was wrong until 2026-08-22, and wrong in the direction that matters:
+   * the count included every POST/PUT/PATCH registration, and 20 of the 59 it
+   * was reporting never touch the body at all — cancel, activate, rotate,
+   * sweep, mark-read, remind. `validateBody` calls `c.req.json()` and returns
+   * 400 when it throws, so "fixing" any of those to satisfy the ratchet would
+   * have 400'd every caller. A gate that invites an outage is worse than no
+   * gate; this is the same shape as A19.
+   *
+   * The type parameter in `c.req.json<T>()` is the reason the first attempt at
+   * this classification undercounted — `req.json()` with literal empty parens
+   * does not match it, and `PUT /retention` reads its body exactly that way.
+   */
+  const READS_BODY =
+    /req\s*\.\s*(json|formData|parseBody|text|arrayBuffer|blob)\s*(<[^>()]*>)?\s*\(/;
+
+  /**
    * Skip registrations that live inside a comment — JSDoc usage examples and
    * commented-out routes are not routes. Same guard, same reason, as
    * route-auth-granular.test.ts: this file's own docblock example would
@@ -149,6 +239,7 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
   );
 
   const unvalidated: string[] = [];
+  const bodylessRoutes: string[] = [];
   let bodyRoutes = 0;
 
   for (const file of files) {
@@ -160,9 +251,14 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
       const end = i + 1 < matches.length ? matches[i + 1].index! : src.length;
       const registration = matches[i][5];
       const handler = src.slice(start, end);
-      if (/validateBody\s*\(/.test(registration)) continue;
-      if (/safeParse|validateBody\s*\(/.test(handler)) continue;
-      unvalidated.push(`${file} ${matches[i][2].toUpperCase()} ${matches[i][4]}`);
+      const label = `${file} ${matches[i][2].toUpperCase()} ${matches[i][4]}`;
+      if (!READS_BODY.test(handler)) {
+        bodylessRoutes.push(label);
+        continue;
+      }
+      if (/validate(Optional)?Body\s*\(/.test(registration)) continue;
+      if (/safeParse|validate(Optional)?Body\s*\(/.test(handler)) continue;
+      unvalidated.push(label);
     }
   }
 
@@ -170,6 +266,42 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
     // Guards against the regex silently breaking and reporting a vacuous 0 —
     // the failure mode that made the dependency-cruiser gate useless.
     expect(bodyRoutes).toBeGreaterThan(50);
+  });
+
+  it('excludes routes that read no body, and finds some (analysis sanity check)', () => {
+    // The exclusion added on 2026-08-22 narrows what this ratchet counts, and a
+    // narrowing is exactly where a floor can quietly stop meaning anything. Two
+    // guards: the excluded set must be non-empty (or the classifier broke open
+    // and the floor is being met by exclusion), and it must not have swallowed
+    // the whole population.
+    expect(bodylessRoutes.length).toBeGreaterThan(5);
+    expect(bodylessRoutes.length).toBeLessThan(bodyRoutes / 2);
+  });
+
+  it('classifies a body-reading handler as counted, in every spelling', () => {
+    // A true-positive check on the classifier itself. If READS_BODY stopped
+    // matching, every route would be excluded and the ratchet would pass
+    // vacuously at any floor.
+    //
+    // Deliberately uses the REAL regex rather than a copy. A duplicated pattern
+    // here would keep passing after someone edited the original, which is the
+    // decorative-test shape this repo keeps finding.
+    for (const spelling of [
+      'const b = await c.req.json();',
+      'const b = await c.req.json<{ a?: string }>();',
+      'const b = await c.req.json().catch(() => ({}));',
+      'const f = await c.req.formData();',
+      'const p = await c.req.parseBody();',
+    ]) {
+      expect(READS_BODY.test(spelling), spelling).toBe(true);
+    }
+    expect(READS_BODY.test("const id = c.req.param('id');")).toBe(false);
+  });
+
+  it('names the body-less routes so the exclusion stays reviewable', () => {
+    // Not an assertion about which ones — an assertion that they are listed at
+    // all. An exclusion nobody can see is indistinguishable from a silent cap.
+    expect(bodylessRoutes.every((r) => /^[\w.-]+ (POST|PUT|PATCH) \//.test(r))).toBe(true);
   });
 
   it('confirms the routes wired in this change are counted as validated', () => {

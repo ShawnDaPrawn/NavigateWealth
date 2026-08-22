@@ -86,6 +86,43 @@ export function validateBody<S extends { safeParse: (i: unknown) => unknown }>(s
 }
 
 /**
+ * Validate the JSON body against `schema`, treating an ABSENT or unparseable
+ * body as `{}` instead of rejecting it.
+ *
+ * WHY THIS EXISTS AS A SEPARATE ENTRY POINT
+ * -----------------------------------------
+ * A large share of the e-sign routes read their body as
+ * `await c.req.json().catch(() => ({}))` — a deliberate tolerance, because
+ * these are PATCH-style routes where sending nothing means "change nothing".
+ * `validateBody` would turn every one of those callers into a 400.
+ *
+ * So adopting validation on them needs a variant that preserves the tolerance
+ * exactly: no body behaves as before, and a body that IS sent gets checked.
+ * Without this the only way to satisfy the adoption ratchet on those routes
+ * would be to break them, which is a gate inviting an outage rather than
+ * preventing one.
+ *
+ * Use `validateBody` wherever the handler does a bare `await c.req.json()` —
+ * there, an unparseable body is already a failure and should stay one.
+ */
+export function validateOptionalBody<S extends { safeParse: (i: unknown) => unknown }>(schema: S) {
+  return async (c: Context, next: Next) => {
+    let raw: unknown;
+    try {
+      raw = await c.req.json();
+    } catch {
+      raw = {};
+    }
+    // `null` is valid JSON and would otherwise reach the schema as a non-object.
+    if (raw === null || raw === undefined) raw = {};
+    const parsed = (schema as unknown as Schema<unknown>).safeParse(raw);
+    if (!parsed.success) return rejection(c, parsed.error);
+    c.set('validatedBody', parsed.data);
+    await next();
+  };
+}
+
+/**
  * Validate the query string against `schema`. Every value arrives as a string,
  * so schemas here want `z.coerce.number()` / explicit enums rather than
  * `z.number()`.

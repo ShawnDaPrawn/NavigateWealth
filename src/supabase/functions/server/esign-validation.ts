@@ -186,3 +186,59 @@ export const SignerOtpBodySchema = z
     access_code: z.string().optional(),
   })
   .passthrough();
+
+// ============================================================================
+// API keys and webhooks (B2 burn-down, 2026-08-22)
+// ============================================================================
+//
+// Derived from each handler's own destructuring, per A19 — the six schemas
+// higher in this file were written against an imagined API shape and would have
+// rejected live traffic, so nothing here is guessed.
+//
+// The CREATE routes use `validateBody`: they do a bare `await c.req.json()`
+// today via `.catch(() => ({}))` and then reject an empty body themselves, so
+// a 400 is already the outcome. The PATCH routes use `validateOptionalBody`:
+// they treat an absent body as "change nothing" and return 200, and turning
+// that into a 400 would be a behaviour change on a live route.
+
+/** POST /api-keys — `name` is the only field the handler requires. */
+export const CreateApiKeySchema = z
+  .object({
+    name: z.string().min(1, 'A name is required').max(200),
+    scopes: z.array(z.string()).optional(),
+    expiresAt: z.string().optional(),
+  })
+  .passthrough();
+
+/** PATCH /api-keys/:id — every field optional; an empty patch is a valid no-op.
+ *  `expiresAt` accepts null explicitly, which the handler reads as "clear it". */
+export const UpdateApiKeySchema = z
+  .object({
+    name: z.string().max(200).optional(),
+    active: z.boolean().optional(),
+    scopes: z.array(z.string()).optional(),
+    expiresAt: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+/** POST /webhooks — the handler additionally runs `assertPublicHttpsUrl` on the
+ *  URL and filters `events` against KNOWN_WEBHOOK_EVENTS. Both stay in the
+ *  handler: the SSRF check is a network-policy decision, not a shape one, and
+ *  the event filter drops unknown values rather than rejecting the request. */
+export const CreateWebhookSchema = z
+  .object({
+    url: z.string().min(1, 'A valid https URL is required'),
+    events: z.array(z.string()).min(1, 'At least one event subscription is required'),
+    description: z.string().optional(),
+  })
+  .passthrough();
+
+/** PATCH /webhooks/:id — every field optional; an empty patch is a valid no-op. */
+export const UpdateWebhookSchema = z
+  .object({
+    url: z.string().optional(),
+    events: z.array(z.string()).optional(),
+    active: z.boolean().optional(),
+    description: z.string().optional(),
+  })
+  .passthrough();
