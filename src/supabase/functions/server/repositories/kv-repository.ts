@@ -26,11 +26,12 @@
  *
  * WHAT IT DELIBERATELY IS NOT
  * ---------------------------
- * Not an ORM, and not a migration of the 178 importers — that is a long strangler
- * job, not a single change. This is the seed plus a ratchet
- * (`.kv-direct-import-baseline`) so importer #179 cannot land silently. F10
- * deferred banning direct `kv_store` imports on the explicit grounds that "the
- * repositories/ layer it should point at does not exist yet". It does now.
+ * Not an ORM, and not a migration of the 1,780 direct `kv.*` calls spread over
+ * 177 modules — that is a long strangler job, not a single change. This is the
+ * seed plus a ratchet (`.kv-direct-access-baseline`) so direct call #1,781
+ * cannot land silently. F10 deferred banning direct `kv_store` access on the
+ * explicit grounds that "the repositories/ layer it should point at does not
+ * exist yet". It does now.
  */
 
 import * as kv from '../kv_store.tsx';

@@ -501,13 +501,13 @@ Stage B's five workstreams (§10) were: introduce `repositories/`; global
 `onError`; request-id logging + metrics; consolidate auth onto `auth-mw`;
 `zValidator` on auth + esign.
 
-| Workstream                        | State                                                                                                                                                     |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Global `onError` (B1)             | **DONE.** Shared handler on all 77 lazy mounts, plus the non-`Error` dispatch gap and two disclosure fixes found reviewing it.                            |
-| `zValidator` on auth + esign (B2) | **MECHANISM DONE, ADOPTION RATCHETED.** `validate.ts` + 13 routes wired; `.route-validation-baseline` = 63 remaining.                                     |
-| Request-id logging (B4)           | **DONE.** `request-context.ts` (AsyncLocalStorage, feature-detected); every log line via one change to `formatMessage`. **Metrics NOT done** — see below. |
-| Consolidate auth onto `auth-mw`   | **PARTLY DONE + RATCHETED.** 7 → 5 hand-rolled implementations; `.auth-implementations-baseline` floors it. Found and fixed S12.                          |
-| Introduce `repositories/`         | **SEEDED + RATCHETED.** Typed base with bounded reads by default; one namespace migrated; `.kv-direct-import-baseline` = 176.                             |
+| Workstream                        | State                                                                                                                                                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Global `onError` (B1)             | **DONE.** Shared handler on all 77 lazy mounts, plus the non-`Error` dispatch gap and two disclosure fixes found reviewing it.                                                                                              |
+| `zValidator` on auth + esign (B2) | **MECHANISM DONE, ADOPTION RATCHETED.** `validate.ts` + 13 routes wired; `.route-validation-baseline` = 63 remaining.                                                                                                       |
+| Request-id logging (B4)           | **DONE.** `request-context.ts` (AsyncLocalStorage, feature-detected); every log line via one change to `formatMessage`. **Metrics NOT done** — see below.                                                                   |
+| Consolidate auth onto `auth-mw`   | **PARTLY DONE + RATCHETED.** 7 → 5 hand-rolled implementations; `.auth-implementations-baseline` floors it. Found and fixed S12.                                                                                            |
+| Introduce `repositories/`         | **SEEDED + RATCHETED.** Typed base with bounded reads by default; one namespace migrated; `.kv-direct-access-baseline` = 1780 direct `kv.*` calls (counts calls, not importing modules, so a file split cannot inflate it). |
 
 **Three of the five are ratcheted rather than finished, and that is the honest
 description.** Each backlog is too large to clear in one pass without changing

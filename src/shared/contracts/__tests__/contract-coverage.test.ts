@@ -3,7 +3,7 @@
  * ======================================================================
  *
  * Every other baseline in this repo caps a backlog: `.route-auth-baseline`,
- * `.raw-fetch-baseline`, `.kv-direct-import-baseline` and the rest all fail
+ * `.raw-fetch-baseline`, `.kv-direct-access-baseline` and the rest all fail
  * when their count RISES, and the win is driving them toward zero.
  *
  * This one is the mirror image. It floors a gain. `parseContract` call sites
