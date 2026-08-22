@@ -8,7 +8,7 @@
  * - Request/response interceptors
  */
 
-import { publicAnonKey, supabaseUrl } from '../supabase/info';
+import { supabaseUrl } from '../supabase/info';
 import { createClient } from '../supabase/client';
 
 /**
@@ -70,7 +70,7 @@ class APIClient {
    * Proactively refreshes expired tokens before returning them, and deduplicates
    * concurrent refresh attempts so only one refreshSession() call is in-flight.
    */
-  private async getAuthToken(): Promise<string> {
+  private async getAuthToken(): Promise<string | null> {
     try {
       const supabase = createClient();
       const {
@@ -79,7 +79,7 @@ class APIClient {
 
       if (!session) {
         // No session from getSession() — this can happen when:
-        // 1. The user genuinely isn't logged in (anon key is appropriate)
+        // 1. The user genuinely isn't logged in
         // 2. The session is being loaded/refreshed asynchronously
         // 3. The stored session expired and getSession() cleared it
         // Try refreshSession() as a fallback — if a refresh_token exists in
@@ -97,7 +97,7 @@ class APIClient {
           dispatchSessionExpired();
           this.hadAuthenticatedSession = false;
         }
-        return publicAnonKey;
+        return null;
       }
 
       // We have a valid session — track that fact so we can detect expiry later
@@ -112,14 +112,13 @@ class APIClient {
         // Refresh failed for an expired token — session is dead
         dispatchSessionExpired();
         this.hadAuthenticatedSession = false;
-        return publicAnonKey;
+        return null;
       }
 
       return session.access_token;
     } catch (error) {
-      console.error('Failed to get auth token, falling back to anon key:', error);
-      // Fallback to anon key if session retrieval fails
-      return publicAnonKey;
+      console.error('Failed to get auth token; sending the request unauthenticated:', error);
+      return null;
     }
   }
 
@@ -183,9 +182,22 @@ class APIClient {
     const token = await this.getAuthToken();
     const { retryTransientFailures = true, ...fetchOptions } = options ?? {};
 
+    // No session => NO Authorization header, rather than the public anon key.
+    //
+    // The anon key was never a credential: it ships in the browser bundle, and
+    // since PR #207 removed the last server branch that accepted it as auth
+    // (`fna-auth.ts`), every authenticated route rejects it. Sending it changed
+    // nothing except to disguise "not logged in" as "authenticated with a
+    // useless token" — which is how `communication/api.ts`'s file upload came
+    // to POST the anon key at a `requireAuth, requireAdmin` route and appear to
+    // be wired up while never once succeeding.
+    //
+    // Public routes (quote-request, contact-form, consultation, the health
+    // probes) require no bearer at all, and `verify_jwt = false` means the
+    // gateway does not demand one either, so omitting it is safe for them.
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...fetchOptions.headers,
     };
 
@@ -330,9 +342,15 @@ class APIClient {
   }
 
   /**
-   * Bearer token for authenticated Edge Function calls (session JWT when logged in).
+   * Session JWT for authenticated Edge Function calls, or `null` when there is
+   * no session.
+   *
+   * Returns `null` rather than the public anon key on purpose (see the note in
+   * `request`). Callers must omit the Authorization header when this is null;
+   * sending `Bearer null` — or the anon key — produces the same 401 with a
+   * worse trail.
    */
-  async getAccessToken(): Promise<string> {
+  async getAccessToken(): Promise<string | null> {
     return this.getAuthToken();
   }
 

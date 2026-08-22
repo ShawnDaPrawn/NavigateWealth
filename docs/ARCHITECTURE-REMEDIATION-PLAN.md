@@ -529,8 +529,10 @@ check, not a code change.**
 This is the largest single piece of work and it gates the most. Do it as its
 own tracked epic, in slices, behind the router-auth-guard ratchet.
 
-1. **P1.1 — Frontend auth-token migration.** Stop sending the public anon key
-   as a bearer token when unauthenticated (`client.ts:100,115,122`). Introduce
+1. **P1.1 — Frontend auth-token migration.** _(STARTED 2026-08-22: the central
+   client is done and the backlog is ratcheted at
+   `.anon-key-bearer-baseline` = 78. See the note below.)_ Stop sending the
+   public anon key as a bearer token when unauthenticated. Introduce
    an explicit notion of _public_ endpoints (quote/contact/consultation) that
    need no bearer, versus _authenticated_ endpoints that must have a real JWT or
    fail. Migrate the known offenders that rely on the anon key
@@ -538,6 +540,35 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    `pages/*.tsx` raw fetchers).
    _Gate:_ no SPA code path sends `publicAnonKey` as `Authorization` for an
    authenticated route; the app still boots and public forms still work.
+
+   **The sequencing in this plan was overtaken by events, in a way that made
+   P1.1 safer.** This item said P1.2 should wait for it ("Delete
+   `fna-auth.ts:85-89` once P1.1 lands"), because removing the server's
+   anon-key-as-admin branch would break the frontend callers relying on it.
+   Main's PR #207 did P1.2 **first**. The consequence is that the anon key is
+   now authenticated by no route at all — so removing it from the SPA is pure
+   cleanup with no behavioural coupling, where under the original order it
+   would have been a coordinated flip.
+
+   **S13 — `communication` file upload has never worked.** Found while doing
+   this. `communication/api.ts`'s `uploadFile()` sent
+   `Authorization: Bearer ${publicAnonKey}` to `POST /communication/upload`,
+   which has carried `requireAuth, requireAdmin` since the file was created
+   (`communication-routes.ts:88`, commit `8440657`). The anon key is not a
+   credential, so the call always 401'd: attaching a file to a communication
+   has never once succeeded. Not a regression from #207 — dead on arrival, and
+   invisible because a 401 on a request that _is_ carrying a token reads like a
+   session problem rather than a wiring bug. Its unit test asserted
+   `expect(options.headers.Authorization).toContain('Bearer')`, which passed on
+   the anon key, so the test certified the broken call as working. Fixed by
+   routing through the shared client, and the test rewritten to assert the
+   behaviour instead.
+
+   **Remaining: 78 call sites across ~47 files.** They are not equivalent — some
+   hit genuinely public endpoints (send no bearer), some hit authenticated ones
+   (send a real token; those calls are currently broken like S13 was). Each needs
+   reading, so the count is floored rather than banned.
+
 2. **P1.2 — Remove the anon-key-as-admin branch (S1).** Delete `fna-auth.ts:85-89`
    once P1.1 lands. Collapse the 6 auth mechanisms toward one
    (`auth-mw.ts`), and make `fna-auth`'s `authenticateUser` delegate to it.

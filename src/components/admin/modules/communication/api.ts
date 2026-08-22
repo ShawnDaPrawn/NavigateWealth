@@ -1,7 +1,5 @@
 import { api } from '../../../../utils/api/client';
-import { publicAnonKey } from '../../../../utils/supabase/info';
-import { createClient } from '../../../../utils/supabase/client';
-import { ENDPOINTS, BASE_URL } from './constants';
+import { ENDPOINTS } from './constants';
 import {
   Client,
   ClientGroup,
@@ -331,20 +329,13 @@ export const communicationApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    // We use raw fetch here because we need to handle FormData and specific auth headers
-    const res = await fetch(`${BASE_URL}/${ENDPOINTS.UPLOAD}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to upload file');
-    }
-    return res.json();
+    // Was a raw fetch sending `Bearer ${publicAnonKey}` at a route guarded by
+    // `requireAuth, requireAdmin` (communication-routes.ts:88) — so this upload
+    // could never have succeeded, from the day it was written. The anon key is
+    // not a credential; it 401s. The shared client sends the real session JWT,
+    // and already strips Content-Type for FormData so the browser can set the
+    // multipart boundary.
+    return api.post<AttachmentFile>(ENDPOINTS.UPLOAD, formData);
   },
 
   // Direct Messages & Inbox
@@ -372,37 +363,13 @@ export const communicationApi = {
       cc: data.cc, // Pass CCs
     };
 
-    // Manual fetch to ensure consistent auth and headers for this specific endpoint
-    // which might differ in behavior or strictness
+    // Was a hand-rolled fetch falling back to `publicAnonKey` when there was no
+    // session — which cannot authenticate, so the fallback only ever turned
+    // "logged out" into a confusing 401. The shared client sends the session JWT
+    // (or no Authorization header at all), and applies the same error handling
+    // this block was duplicating.
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token || publicAnonKey;
-
-      const response = await fetch(`${BASE_URL}/${ENDPOINTS.SEND_DIRECT}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || data.message || `Failed to send: ${response.statusText}`);
-        }
-        return data;
-      } else {
-        if (!response.ok) {
-          throw new Error(`Failed to send: ${response.status} ${response.statusText}`);
-        }
-        return { success: true, messageId: 'unknown' };
-      }
+      return await api.post<SendMessageResponse>(ENDPOINTS.SEND_DIRECT, payload);
     } catch (error: unknown) {
       console.error('Error sending message:', error);
       throw error;
