@@ -34,6 +34,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { announceRatchetSlack } from '../../../test/ratchet-notice';
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const REPO_ROOT = resolve(SRC_DIR, '..');
@@ -104,10 +105,7 @@ describe('raw-fetch convergence ratchet (Stage A / F10)', () => {
     }
 
     if (total < floor) {
-      console.warn(
-        `[raw-fetch] ${total} raw fetch() calls, below floor ${floor} — ` +
-          `tighten the ratchet by setting .raw-fetch-baseline to ${total}.`,
-      );
+      announceRatchetSlack('raw-fetch', total, floor, '.raw-fetch-baseline', 'raw fetch() calls');
     }
   });
 });

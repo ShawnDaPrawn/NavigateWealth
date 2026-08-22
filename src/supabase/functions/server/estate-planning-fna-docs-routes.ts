@@ -2,7 +2,8 @@ import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
 const app = new Hono();
@@ -57,6 +58,8 @@ app.post('/estate-docs/:clientId/upload', async (c) => {
     await ensureLegalDocsBucket();
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:doc-upload');
+
     const formData = await c.req.formData();
 
     const file = formData.get('file') as File | null;
@@ -133,17 +136,18 @@ app.post('/estate-docs/:clientId/upload', async (c) => {
     return c.json({ success: true, data: document });
   } catch (error: unknown) {
     log.error('Error uploading estate document:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
 app.get('/estate-docs/:clientId', async (c) => {
   try {
     log.info('GET /estate-planning-fna/estate-docs/:clientId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:doc-list');
+
     const docs = await kv.getByPrefix(`estate_doc:${clientId}:`);
 
     const sorted = (docs || []).sort(
@@ -156,18 +160,18 @@ app.get('/estate-docs/:clientId', async (c) => {
     return c.json({ success: true, data: sorted });
   } catch (error: unknown) {
     log.error('Error fetching estate documents:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
 app.get('/estate-docs/:clientId/:docId/download', async (c) => {
   try {
     log.info('GET /estate-planning-fna/estate-docs/:clientId/:docId/download');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
     const docId = c.req.param('docId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:doc-download');
 
     const kvKey = `estate_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -193,18 +197,18 @@ app.get('/estate-docs/:clientId/:docId/download', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error fetching estate document download URL:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
 app.delete('/estate-docs/:clientId/:docId', async (c) => {
   try {
     log.info('DELETE /estate-planning-fna/estate-docs/:clientId/:docId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
     const docId = c.req.param('docId')!;
+    await assertClientAccess(user, clientId, 'estate-planning-fna:doc-delete');
 
     const kvKey = `estate_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -231,8 +235,7 @@ app.delete('/estate-docs/:clientId/:docId', async (c) => {
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('Error deleting estate document:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

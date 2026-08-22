@@ -306,6 +306,28 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   privilege-boundary bypass and the class of bug is the point — five copies of
   an auth check drift, and one did.
 
+- **A20 — Every ratchet's "you can tighten this now" notice was invisible
+  (NEW, 2026-08-22).** All seven baseline ratchets end with the same branch:
+  the measured count came in BELOW the committed floor, so somebody fixed
+  something and the floor should be lowered to lock the win in. That branch
+  called `console.log` / `console.warn`.
+
+  Under this repo's Vitest (4.1.7, default reporter) console output from a
+  **passing** test is swallowed — verified by probe: a `console.warn` marker
+  never reaches the terminal, a `process.stdout.write` marker always does. So
+  every one of those notices was dead code. The failing half worked the whole
+  time; the tightening half never told anyone anything, which is how floors
+  drift upward into meaning nothing.
+
+  It had already cost something. The moment the notices were made visible
+  (shared `src/test/ratchet-notice.ts` writing to stdout), two ratchets
+  immediately reported slack that had been sitting unnoticed: direct
+  `kv_store` importers at 175 against a floor of 176, and raw `fetch()` calls
+  at 185 against a floor of 187. Both floors were tightened in the same change.
+
+  Small bug, but it is the house failure mode in miniature — a gate that looks
+  like it reports and does not.
+
 - **A19 — Six e-sign schemas are written against an API shape that does not
   exist (NEW, 2026-08-22).** `esign-validation.ts` defines
   `EnvelopeContextSchema`, `SignerSchema`, `InviteSignersSchema`,
@@ -590,13 +612,108 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    lead-gen forms, signer-token access, and health all still return their
    normal responses from the unauthenticated function; live smoke passes on
    both functions.
-4. **P1.4 — Object-level authorization (S2/S6/S7).** Add per-resource ownership/
-   firm checks to `documents.tsx`, the 8 e-sign download/audit handlers, and the
-   FNA read/delete routes — modelled on the reference implementation already in
-   `client-portal-routes.ts:48-57` (`isAdmin || userId === callerId`). Wire the
-   existing `admin-audit-service` into export/delete paths.
-   _Gate:_ contract tests assert a client A token is 403'd on client B's
-   documents/FNA/envelopes; audit rows are written for exports and deletes.
+4. **P1.4 — Object-level authorization (S2/S6/S7).** _(DONE 2026-08-22 for the
+   e-sign and FNA halves; `documents.tsx` was already fixed on main by #207, and
+   the `admin-audit-service` wiring is still outstanding — see below.)_
+
+   **S6 — the e-sign half: eight handlers that authenticated and then discarded
+   the answer.** Three download routes, three audit routes and two field routes
+   opened with `const _ctx = await getAuthContext(c);` — the underscore an
+   explicit acknowledgement that the answer was unused — and then served any
+   envelope's signed PDF, audit trail, certificate, evidence pack or field
+   definitions to any caller who knew an envelope id.
+
+   `assertFirmAccess` already existed to stop precisely this and had **zero call
+   sites**. That is the **fourth** instance of the same pattern in this codebase:
+   a capability written, tested by nothing, wired to nothing, and then trusted by
+   whoever read its name. (The others: `security.middleware.ts`, 113 lines and 0
+   importers, whose docblock called itself "the authoritative suspension check";
+   six e-sign Zod schemas, unused _and_ in the wrong wire format; and
+   `performSecurityCheck`/`checkAccountSuspension`, 0 call sites.) The recurring
+   lesson is that a capability nobody calls is worse than a missing one, because
+   it reads as coverage.
+
+   Fixed with a shared `requireOwnedEnvelope` in `esign-route-helpers.ts` that
+   loads the envelope and runs `assertFirmAccess` before the handler sees it, and
+   a `firmScopeResponse` that renders the denial as a bare 403. An envelope with
+   **no `firm_id`** is denied rather than allowed, with a distinct log line: the
+   creation path requires a firm id, but two services already defend against its
+   absence, so a legacy envelope is possible and "unowned" must not mean
+   "unguarded".
+
+   **S7 — the FNA half, which was larger.** Thirty-three handlers across risk
+   planning, medical, retirement, tax, investment, estate planning, wills, and
+   the two AI chat services (`will-chat`, `tax-agent`) called
+   `await authenticateUser(...)` and threw the user away, then read, wrote,
+   published, archived or hard-deleted whatever `:clientId` / `:fnaId` /
+   `:sessionId` / `:willId` / `:docId` the caller named. Any signed-in account
+   could read any client's cover analysis, medical FNA, retirement projection,
+   will, tax documents or AI interview transcript. `DELETE /medical-fna/delete/
+:fnaId` did not even load the record first — it went straight to `kv.del`, so
+   there was nothing to check an owner against.
+
+   Two handlers that _did_ capture the user were no better: `PUT /update/:fnaId`
+   and `POST /publish/:fnaId` captured it only to stamp `createdBy`/`publishedBy`
+   and never asked whether that user was allowed near the record. That is why the
+   gate for this is structural (below) and not just the discard ratchet — the
+   next variant of this mistake will capture the user.
+
+   **One policy, two adapters.** The rule already existed in `client-access.ts`
+   and was already enforced on `advice-engine-fna-routes.ts` and
+   `client-management-documents-routes.ts`: self, or platform admin, or the
+   server-resolved _assigned_ adviser; every other personnel role denied.
+   `client-access.ts` now exposes a context-free `canAccessClientAs` core, with
+   the Hono-context form as a thin adapter over it, plus `assertClientAccess` /
+   `assertRecordClientAccess` that throw a `ClientAccessError` the existing
+   `fnaErrorResponse` catch renders as 403 `FORBIDDEN_CLIENT`. Writing a second
+   copy of the policy for the FNA gateway is exactly the drift that produced S12
+   and S14, so it was not done.
+
+   Three consequences worth stating plainly:
+   - **Operational.** Advisers now need a resolvable assignment
+     (`user_profile:<clientId>:personal_info.adviserId`, or an application
+     record) to reach a client's FNA data. This is already true on the
+     advice-engine and client-document routes, so it is consistency rather than
+     a new rule — but if assignment records are sparse in production, advisers
+     will see 403s where they used to see data. Denials log at `warn` with the
+     caller id, role and client id specifically so "attacker" and "adviser with
+     a missing assignment record" can be told apart, which a bare 403 cannot.
+   - **Fail-closed on unowned records.** A stored FNA with no `clientId` is
+     denied, to an administrator included, for the same reason as the missing
+     `firm_id` case.
+   - **Still open, deliberately.** Three `/client/:clientId/latest-published`
+     routes (medical, investment, estate) keep a documented anon-key bypass for
+     the client portal, each with its own weaker inline check that admits admins
+     and self but not advisers. Removing it breaks client-facing display until
+     the portal passes a session token; P1.3 addresses it structurally. They are
+     named individually in the coverage gate's `EXEMPT` map with their reason,
+     so the exemption is visible rather than an absence.
+
+   Five hand-rolled `message === 'Unauthorized' ? 401 : 500` catches in the tax,
+   investment, estate-doc and chat route files were replaced with
+   `fnaErrorResponse`, which is a strict superset of that mapping — without it a
+   403 denial would have been rendered as a 500.
+
+   _Gate:_ three layers, all mutation-checked. (1) 15 policy tests over
+   `canAccessClientAs` / `assertClientAccess` / `assertRecordClientAccess`,
+   including fail-closed on a missing caller id, a missing owner, and an
+   unassigned adviser. (2) 17 route-level tests that drive the real routers and
+   assert both the 403 _and_ that `kv.set`/`kv.del` never ran — a 403 rendered
+   after the write would be a leak dressed as a denial. (3) A structural sweep
+   requiring every resource-keyed handler in all ten FNA route files to call the
+   shared policy, which is what catches route number 34. Removing any of: the
+   ownership check on a route, the caller-id guard, the unowned-record guard, or
+   the `ClientAccessError` branch in `fnaErrorResponse` fails 2–3 tests each.
+   `.auth-without-authz-baseline` moved 31 → 33 when the ratchet was widened to
+   count `authenticateUser` discards as well as `getAuthContext` ones; the two
+   survivors are the `/status` endpoints on will-chat and tax-agent, which take
+   no resource id.
+
+   _Still outstanding on this item:_ wiring `admin-audit-service` into the
+   export and delete paths, so that a denied — or permitted — delete leaves a
+   row. Not done here; it is a separate concern from the authorization check
+   itself.
+
 5. **P1.5 — Enforce account suspension.** _(DONE 2026-08-22, but not the way
    this item described — see below.)_
 

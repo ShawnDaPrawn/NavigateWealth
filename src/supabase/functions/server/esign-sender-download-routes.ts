@@ -1,7 +1,12 @@
 import { Hono } from 'npm:hono';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getRequestMetadata, resolveFirmId } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  resolveFirmId,
+  requireOwnedEnvelope,
+  firmScopeResponse,
+} from './esign-route-helpers.ts';
 import { PDFService } from './esign-pdf.service.ts';
 import {
   getEnvelopeDetails,
@@ -26,11 +31,12 @@ const app = new Hono();
 app.get('/envelopes/:envelopeId/download', async (c) => {
   try {
     // Authenticate
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership, not just authentication (S6): this returned any completed
+    // envelope's signed PDF to any authenticated caller who knew its id.
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
@@ -114,6 +120,8 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
     }
   } catch (error: unknown) {
     log.error('❌ Download envelope error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -166,6 +174,8 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Evidence pack export error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -184,12 +194,17 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
  */
 app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
   try {
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+    // Ownership before configuration (S6).
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
     const config = await getReminderConfig(envelopeId);
     return c.json({ config });
   } catch (error: unknown) {
     log.error('Get reminder config error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -245,6 +260,8 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
     return c.json({ config: updated });
   } catch (error: unknown) {
     log.error('Update reminder config error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -302,6 +319,8 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
     return c.json({ success: true, signing_mode });
   } catch (error: unknown) {
     log.error('Update signing mode error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({
@@ -320,8 +339,13 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
  */
 app.get('/envelopes/:envelopeId/audit/export', async (c) => {
   try {
-    const _ctx = await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+
+    // An exported audit trail names every signer, their IPs and timestamps.
+    // Ownership first (S6).
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
     const events = await getAuditTrail(envelopeId);
     if (!events || events.length === 0) {
@@ -361,6 +385,8 @@ app.get('/envelopes/:envelopeId/audit/export', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Audit export error:', error);
+    const forbidden = firmScopeResponse(c, error);
+    if (forbidden) return forbidden;
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
       JSON.stringify({

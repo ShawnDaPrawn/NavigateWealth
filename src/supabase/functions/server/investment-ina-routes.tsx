@@ -6,7 +6,8 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { SaveInvestmentSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
@@ -32,22 +33,16 @@ investmentInaRoutes.get('', (c) => c.json({ service: 'investment-ina', status: '
  */
 investmentInaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'investment-ina:auto-populate');
 
     const inputs = await autoPopulateFromProfile(clientId);
 
     return c.json({ success: true, data: inputs });
   } catch (error: unknown) {
     log.error('❌ Error auto-populating Investment INA:', error);
-    const message = getErrMsg(error);
-    return c.json(
-      {
-        success: false,
-        error: message,
-      },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -57,8 +52,10 @@ investmentInaRoutes.get('/client/:clientId/auto-populate', async (c) => {
  */
 investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'investment-ina:calculate');
+
     const inputs = await c.req.json();
 
     log.info('📊 Calculating Investment INA for client:', { clientId });
@@ -68,14 +65,7 @@ investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
     return c.json({ success: true, data: results });
   } catch (error: unknown) {
     log.error('❌ Error calculating Investment INA:', error);
-    const message = getErrMsg(error);
-    return c.json(
-      {
-        success: false,
-        error: message,
-      },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -87,6 +77,8 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'investment-ina:save');
+
     const body = await c.req.json();
 
     // Validate input per §4.2 / fna-validation.ts
@@ -124,14 +116,7 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('❌ Error saving Investment INA:', error);
-    const message = getErrMsg(error);
-    return c.json(
-      {
-        success: false,
-        error: message,
-      },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -141,8 +126,9 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
  */
 investmentInaRoutes.get('/client/:clientId/sessions', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'investment-ina:sessions');
 
     const sessions = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
 
@@ -154,14 +140,7 @@ investmentInaRoutes.get('/client/:clientId/sessions', async (c) => {
     return c.json({ success: true, data: sorted });
   } catch (error: unknown) {
     log.error('❌ Error fetching Investment INA sessions:', error);
-    const message = getErrMsg(error);
-    return c.json(
-      {
-        success: false,
-        error: message,
-      },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -231,11 +210,14 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
  */
 investmentInaRoutes.get('/session/:sessionId', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const sessionId = c.req.param('sessionId')!;
 
     // Extract clientId from sessionId (format: clientId-vN)
     const clientId = sessionId.split('-v')[0];
+    // The KV key below is built from this same derived id, so authorizing the
+    // derived owner authorizes exactly the record that gets read.
+    await assertClientAccess(user, clientId, 'investment-ina:session-read');
 
     const key = `investment-ina:client:${clientId}:${sessionId}`;
     const session = await kv.get(key);
@@ -253,14 +235,7 @@ investmentInaRoutes.get('/session/:sessionId', async (c) => {
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('❌ Error fetching Investment INA session:', error);
-    const message = getErrMsg(error);
-    return c.json(
-      {
-        success: false,
-        error: message,
-      },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -271,12 +246,13 @@ investmentInaRoutes.get('/session/:sessionId', async (c) => {
 investmentInaRoutes.delete('/session/:sessionId', async (c) => {
   try {
     log.info('📥 DELETE /investment-ina/session/:sessionId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const sessionId = c.req.param('sessionId')!;
 
     // Extract clientId from sessionId (format: clientId-vN)
     const clientId = sessionId.split('-v')[0];
+    await assertClientAccess(user, clientId, 'investment-ina:session-delete');
 
     const key = `investment-ina:client:${clientId}:${sessionId}`;
     await kv.del(key);
@@ -285,14 +261,7 @@ investmentInaRoutes.delete('/session/:sessionId', async (c) => {
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('❌ Error deleting Investment INA session:', error);
-    const message = getErrMsg(error);
-    return c.json(
-      {
-        success: false,
-        error: message,
-      },
-      message === 'Unauthorized' ? 401 : 500,
-    );
+    return fnaErrorResponse(c, error);
   }
 });
 

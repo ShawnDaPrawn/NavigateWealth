@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 beforeAll(() => {
   vi.stubGlobal('Deno', { env: { get: () => 'test' } });
@@ -212,9 +213,12 @@ describe('direct kv_store import ratchet', () => {
     }
 
     if (importers.length < floor) {
-      console.warn(
-        `[kv-repository] ${importers.length} direct kv_store importers, below floor ` +
-          `${floor} — tighten by setting .kv-direct-import-baseline to ${importers.length}.`,
+      announceRatchetSlack(
+        'kv-repository',
+        importers.length,
+        floor,
+        '.kv-direct-import-baseline',
+        'direct kv_store importers',
       );
     }
   });

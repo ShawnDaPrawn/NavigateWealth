@@ -17,6 +17,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 beforeAll(() => {
   vi.stubGlobal('Deno', { env: { get: () => 'test' } });
@@ -206,9 +207,12 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
     }
 
     if (unvalidated.length < floor) {
-      console.warn(
-        `[route-validation] ${unvalidated.length} unvalidated body routes, below floor ` +
-          `${floor} — tighten the ratchet by setting .route-validation-baseline to ${unvalidated.length}.`,
+      announceRatchetSlack(
+        'route-validation',
+        unvalidated.length,
+        floor,
+        '.route-validation-baseline',
+        'unvalidated body routes',
       );
     }
   });

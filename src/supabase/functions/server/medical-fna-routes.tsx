@@ -7,6 +7,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess, assertRecordClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { CreateSessionSchema, UpdateResultsSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
@@ -166,9 +167,10 @@ medicalFnaRoutes.get('/health', async (c) => {
 medicalFnaRoutes.get('/client/:clientId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'medical-fna:list');
 
     // Support both legacy (colon) and new (underscore) ID formats
     const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];
@@ -271,9 +273,11 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 medicalFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId/auto-populate');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'medical-fna:auto-populate');
+
     const inputs = await autoPopulateFromProfile(clientId);
 
     log.info('✅ Auto-population data generated');
@@ -343,7 +347,7 @@ medicalFnaRoutes.post('/create', async (c) => {
 medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/inputs/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const inputUpdates = await c.req.json();
@@ -353,6 +357,8 @@ medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:update-inputs');
 
     // Merge inputs
     fna.inputs = {
@@ -379,7 +385,7 @@ medicalFnaRoutes.put('/inputs/:fnaId', async (c) => {
 medicalFnaRoutes.put('/results/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/results/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const { results, adjustments } = await c.req.json();
@@ -389,6 +395,8 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:update-results');
 
     // Validate results update
     const validationResult = UpdateResultsSchema.safeParse({ results, adjustments });
@@ -424,7 +432,7 @@ medicalFnaRoutes.put('/results/:fnaId', async (c) => {
 medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ POST /medical-fna/calculate/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -432,6 +440,8 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:calculate');
 
     log.info('ðŸ§® Running Medical FNA calculation...');
 
@@ -460,7 +470,7 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
 medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/draft/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -468,6 +478,8 @@ medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:draft');
 
     fna.status = 'draft';
     fna.updatedAt = new Date().toISOString();
@@ -513,6 +525,8 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
 
+    await assertRecordClientAccess(user, fna, 'medical-fna:publish');
+
     fna.status = 'published';
     fna.publishedAt = new Date().toISOString();
     fna.publishedBy = user.id;
@@ -549,7 +563,7 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
 medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
     log.info('ðŸ”¥ POST /medical-fna/unpublish/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -557,6 +571,8 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:unpublish');
 
     fna.status = 'draft';
     fna.updatedAt = new Date().toISOString();
@@ -578,7 +594,7 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
 medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ PUT /medical-fna/archive/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -586,6 +602,8 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:archive');
 
     fna.status = 'archived';
     fna.updatedAt = new Date().toISOString();
@@ -607,9 +625,19 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
 medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ DELETE /medical-fna/delete/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
+
+    // The record has to be read before it can be deleted: this handler went
+    // straight to kv.del, so there was nothing to check an owner against.
+    const fna = await kv.get(`medical-fna:${fnaId}`);
+
+    if (!fna) {
+      return c.json({ success: false, error: 'Medical FNA not found' }, 404);
+    }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:delete');
 
     await kv.del(`medical-fna:${fnaId}`);
 
@@ -629,7 +657,7 @@ medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
 medicalFnaRoutes.get('/:fnaId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /medical-fna/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
     const fna = await kv.get(`medical-fna:${fnaId}`);
@@ -637,6 +665,8 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+
+    await assertRecordClientAccess(user, fna, 'medical-fna:read');
 
     log.info('✅ Medical FNA retrieved');
     return c.json({ success: true, data: fna });

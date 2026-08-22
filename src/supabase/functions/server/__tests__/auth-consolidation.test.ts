@@ -32,6 +32,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
@@ -101,9 +102,12 @@ describe('auth implementations outside auth-mw', () => {
     }
 
     if (offenders.length < floor) {
-      console.warn(
-        `[auth-consolidation] ${offenders.length} hand-rolled auth implementations, below ` +
-          `floor ${floor} — tighten by setting .auth-implementations-baseline to ${offenders.length}.`,
+      announceRatchetSlack(
+        'auth-consolidation',
+        offenders.length,
+        floor,
+        '.auth-implementations-baseline',
+        'hand-rolled auth implementations',
       );
     }
   });

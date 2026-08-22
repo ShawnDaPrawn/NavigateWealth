@@ -21,6 +21,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { resolveTrustedRole } from './constants.ts';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import { ClientAccessError } from './client-access.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
@@ -116,6 +117,14 @@ export function isFnaUnauthorized(error: unknown): boolean {
 export function fnaErrorResponse(c: Context, error: unknown) {
   if (isFnaUnauthorized(error)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+
+  // Object-level authorization rejections (P1.4). A 403 with FORBIDDEN_CLIENT
+  // must not be flattened into a 401: telling an adviser who is simply not
+  // assigned to this client to "log in again" sends them round a loop that
+  // cannot succeed, and hides a real authorization decision from the client.
+  if (error instanceof ClientAccessError) {
+    return c.json({ success: false, error: error.message, code: error.code }, error.statusCode);
   }
 
   // Account-security rejections carry their own status and code. Matched

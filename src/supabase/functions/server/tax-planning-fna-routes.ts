@@ -7,7 +7,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
+import { assertClientAccess, assertRecordClientAccess } from './client-access.ts';
 import { SaveTaxPlanningSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
@@ -55,9 +55,11 @@ taxPlanningRoutes.get('', (c) => c.json({ service: 'tax-planning-fna', status: '
 taxPlanningRoutes.post('/client/:clientId/auto-populate', async (c) => {
   try {
     log.info('POST /tax-planning-fna/client/:clientId/auto-populate');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'tax-planning-fna:auto-populate');
+
     const { taxAutoPopulateFromResolver, enrichTaxFromDomainSessions } =
       await import('./form-prefill-auto-populate.ts');
     let inputs = await taxAutoPopulateFromResolver(clientId);
@@ -88,6 +90,8 @@ taxPlanningRoutes.post('/save', async (c) => {
     // Destructure new fields: adjustments, recommendations, finalResults
     const { clientId, inputs, finalResults, adjustments, recommendations, adviserNotes, status } =
       body;
+
+    await assertClientAccess(authUser, clientId, 'tax-planning-fna:save');
 
     // Validate the input data
     const validationResult = SaveTaxPlanningSessionSchema.safeParse(body);
@@ -152,9 +156,11 @@ taxPlanningRoutes.post('/save', async (c) => {
 taxPlanningRoutes.get('/client/:clientId', async (c) => {
   try {
     log.info('ðŸ“¥ GET /tax-planning-fna/client/:clientId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'tax-planning-fna:list');
+
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
     const sortedSessions = (sessions || []).sort(
       (a: VersionedSession, b: VersionedSession) => b.version - a.version,
@@ -176,8 +182,8 @@ taxPlanningRoutes.get('/client/:clientId', async (c) => {
 taxPlanningRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     const clientId = c.req.param('clientId')!;
-    // Simplified auth check for read
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
+    await assertClientAccess(user, clientId, 'tax-planning-fna:latest-published');
 
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
     const published = (sessions || [])
@@ -205,6 +211,8 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
     await ensureTaxDocsBucket();
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'tax-planning-fna:doc-upload');
+
     const formData = await c.req.formData();
 
     const file = formData.get('file') as File | null;
@@ -283,8 +291,7 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
     return c.json({ success: true, data: document });
   } catch (error: unknown) {
     log.error('Error uploading tax document:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -295,9 +302,11 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
 taxPlanningRoutes.get('/tax-docs/:clientId', async (c) => {
   try {
     log.info('GET /tax-planning-fna/tax-docs/:clientId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'tax-planning-fna:doc-list');
+
     const docs = await kv.getByPrefix(`tax_doc:${clientId}:`);
 
     const sorted = (docs || []).sort(
@@ -310,8 +319,7 @@ taxPlanningRoutes.get('/tax-docs/:clientId', async (c) => {
     return c.json({ success: true, data: sorted });
   } catch (error: unknown) {
     log.error('Error fetching tax documents:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -322,10 +330,11 @@ taxPlanningRoutes.get('/tax-docs/:clientId', async (c) => {
 taxPlanningRoutes.get('/tax-docs/:clientId/:docId/download', async (c) => {
   try {
     log.info('GET /tax-planning-fna/tax-docs/:clientId/:docId/download');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
     const docId = c.req.param('docId')!;
+    await assertClientAccess(user, clientId, 'tax-planning-fna:doc-download');
 
     const kvKey = `tax_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -351,8 +360,7 @@ taxPlanningRoutes.get('/tax-docs/:clientId/:docId/download', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error fetching tax document download URL:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -363,10 +371,11 @@ taxPlanningRoutes.get('/tax-docs/:clientId/:docId/download', async (c) => {
 taxPlanningRoutes.delete('/tax-docs/:clientId/:docId', async (c) => {
   try {
     log.info('DELETE /tax-planning-fna/tax-docs/:clientId/:docId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const clientId = c.req.param('clientId')!;
     const docId = c.req.param('docId')!;
+    await assertClientAccess(user, clientId, 'tax-planning-fna:doc-delete');
 
     const kvKey = `tax_doc:${clientId}:${docId}`;
     const doc = await kv.get(kvKey);
@@ -395,8 +404,7 @@ taxPlanningRoutes.delete('/tax-docs/:clientId/:docId', async (c) => {
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('Error deleting tax document:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -410,7 +418,7 @@ taxPlanningRoutes.delete('/tax-docs/:clientId/:docId', async (c) => {
 taxPlanningRoutes.get('/:fnaId', async (c) => {
   try {
     log.info('GET /tax-planning-fna/:fnaId');
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
 
@@ -423,6 +431,9 @@ taxPlanningRoutes.get('/:fnaId', async (c) => {
       const fna = await kv.get(key);
 
       if (fna) {
+        // The owner comes from the stored record, not from the id the caller
+        // supplied — the two only agree for a caller who already knew both.
+        await assertRecordClientAccess(user, fna, 'tax-planning-fna:read');
         return c.json({ success: true, data: fna });
       }
     }
@@ -432,14 +443,14 @@ taxPlanningRoutes.get('/:fnaId', async (c) => {
     const found = (allSessions || []).find((s: VersionedSession) => s.id === fnaId);
 
     if (found) {
+      await assertRecordClientAccess(user, found, 'tax-planning-fna:read');
       return c.json({ success: true, data: found });
     }
 
     return c.json({ success: false, error: 'Tax Planning FNA not found' }, 404);
   } catch (error: unknown) {
     log.error('Error fetching Tax Planning FNA by ID:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

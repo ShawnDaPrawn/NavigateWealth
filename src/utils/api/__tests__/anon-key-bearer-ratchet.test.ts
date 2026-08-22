@@ -36,6 +36,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { announceRatchetSlack } from '../../../test/ratchet-notice';
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const REPO_ROOT = resolve(SRC_DIR, '..');
@@ -136,9 +137,12 @@ describe('anon key used as a bearer token', () => {
     }
 
     if (total < floor) {
-      console.warn(
-        `[anon-key-bearer] ${total} call sites, below floor ${floor} — tighten by ` +
-          `setting .anon-key-bearer-baseline to ${total}.`,
+      announceRatchetSlack(
+        'anon-key-bearer',
+        total,
+        floor,
+        '.anon-key-bearer-baseline',
+        'anon-key bearer call sites',
       );
     }
   });

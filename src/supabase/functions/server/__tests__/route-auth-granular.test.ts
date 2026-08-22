@@ -69,6 +69,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
@@ -252,9 +253,12 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     }
 
     if (unguarded.length < floor) {
-      console.log(
-        `[route-auth] ${unguarded.length} unguarded routes, below floor ${floor} — ` +
-          `tighten the ratchet by setting .route-auth-baseline to ${unguarded.length}.`,
+      announceRatchetSlack(
+        'route-auth',
+        unguarded.length,
+        floor,
+        '.route-auth-baseline',
+        'unguarded routes',
       );
     }
   });

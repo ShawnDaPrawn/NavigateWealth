@@ -9,6 +9,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess, assertRecordClientAccess } from './client-access.ts';
 import { CreateSessionSchema, UpdateInputsSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 
@@ -213,8 +214,9 @@ function performCalculations(inputs: RetirementCalcInputs, adjustments: Retireme
 // GET All for Client
 retirementFnaRoutes.get('/client/:clientId', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'retirement-fna:list');
 
     // Fetch all sessions (using list pattern or prefix scan)
     const listKey = `retirement_fna:${clientId}:list`;
@@ -239,11 +241,13 @@ retirementFnaRoutes.get('/client/:clientId', async (c) => {
 // GET By ID
 retirementFnaRoutes.get('/:fnaId', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const fnaId = c.req.param('fnaId')!;
     const session = await kv.get(`retirement_fna:${fnaId}`);
 
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+
+    await assertRecordClientAccess(user, session, 'retirement-fna:read');
 
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
@@ -261,6 +265,7 @@ retirementFnaRoutes.post('/create', async (c) => {
       return c.json({ success: false, error: formatZodError(parsed.error) }, 400);
     }
     const { clientId } = parsed.data;
+    await assertClientAccess(user, clientId, 'retirement-fna:create');
 
     const id = generateFnaId();
     const version = await getNextVersionNumber(clientId);
@@ -302,7 +307,7 @@ retirementFnaRoutes.post('/create', async (c) => {
 // UPDATE Inputs
 retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const fnaId = c.req.param('fnaId')!;
     const body = await c.req.json();
     const parsed = UpdateInputsSchema.safeParse(body);
@@ -313,6 +318,8 @@ retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+
+    await assertRecordClientAccess(user, session, 'retirement-fna:update-inputs');
 
     session.inputs = { ...session.inputs, ...inputUpdates };
     session.updatedAt = new Date().toISOString();
@@ -328,11 +335,13 @@ retirementFnaRoutes.put('/:fnaId/inputs', async (c) => {
 // CALCULATE Results
 retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const fnaId = c.req.param('fnaId')!;
 
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+
+    await assertRecordClientAccess(user, session, 'retirement-fna:calculate');
 
     log.info(`Calculating FNA ${fnaId} with inputs:`, session.inputs);
 
@@ -361,6 +370,8 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
     const session = await kv.get(`retirement_fna:${fnaId}`);
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
 
+    await assertRecordClientAccess(user, session, 'retirement-fna:publish');
+
     session.status = 'published';
     session.publishedAt = new Date().toISOString();
     session.publishedBy = user.id;
@@ -380,8 +391,9 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
 // GET Latest Published
 retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'retirement-fna:latest-published');
 
     const latest = await kv.get(`retirement_fna:${clientId}:latest`);
 
@@ -409,8 +421,9 @@ retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 // Auto Populate (Refactored to use helper)
 retirementFnaRoutes.get('/client/:clientId/auto-populate', async (c) => {
   try {
-    await authenticateUser(c.req.header('Authorization'));
+    const user = await authenticateUser(c.req.header('Authorization'));
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'retirement-fna:auto-populate');
 
     const inputs = await autoPopulateFromProfile(clientId);
 

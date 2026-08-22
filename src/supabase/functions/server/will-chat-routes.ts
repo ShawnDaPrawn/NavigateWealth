@@ -21,7 +21,8 @@
  */
 
 import { Hono } from 'npm:hono';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as service from './will-chat-service.ts';
@@ -46,6 +47,7 @@ app.post('/create-session', async (c) => {
 
     const body = await c.req.json();
     const { clientId, clientName } = body;
+    await assertClientAccess(user, clientId, 'will-chat:create-session');
 
     if (!clientId || !clientName) {
       return c.json(
@@ -80,8 +82,7 @@ app.post('/create-session', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error creating session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -94,6 +95,7 @@ app.post('/chatkit-session', async (c) => {
 
     const body = await c.req.json();
     const { clientId, clientName } = body;
+    await assertClientAccess(user, clientId, 'will-chat:create-session');
 
     if (!clientId || !clientName) {
       return c.json(
@@ -118,8 +120,7 @@ app.post('/chatkit-session', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error creating session (compat)', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -127,6 +128,7 @@ app.post('/chatkit-session', async (c) => {
 
 app.get('/status', async (c) => {
   try {
+    // Not keyed by a resource: proving the caller is signed in is the whole check.
     await authenticateUser(c.req.header('Authorization'), 'will-chat');
     const configured = !!Deno.env.get('OPENAI_API_KEY');
     return c.json({ configured });
@@ -142,9 +144,11 @@ app.get('/status', async (c) => {
 app.get('/sessions/client/:clientId', async (c) => {
   try {
     log.info('GET /sessions/client/:clientId');
-    await authenticateUser(c.req.header('Authorization'), 'will-chat');
+    const user = await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
     const clientId = c.req.param('clientId')!;
+    await assertClientAccess(user, clientId, 'will-chat:list');
+
     const sessions = await service.getClientSessions(clientId);
 
     const summaries = sessions.map((s) => ({
@@ -161,8 +165,7 @@ app.get('/sessions/client/:clientId', async (c) => {
     return c.json({ success: true, data: summaries });
   } catch (error: unknown) {
     log.error('Error listing sessions', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -171,10 +174,11 @@ app.get('/sessions/client/:clientId', async (c) => {
 app.get('/sessions/:sessionId', async (c) => {
   try {
     log.info('GET /sessions/:sessionId');
-    await authenticateUser(c.req.header('Authorization'), 'will-chat');
+    const user = await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
+    await assertClientAccess(user, clientId, 'will-chat:session');
 
     const session = await service.getSession(clientId, sessionId);
     if (!session) {
@@ -199,8 +203,7 @@ app.get('/sessions/:sessionId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error getting session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -213,10 +216,11 @@ app.get('/sessions/:sessionId', async (c) => {
 app.post('/sessions/:sessionId/send', async (c) => {
   try {
     log.info('POST /sessions/:sessionId/send');
-    await authenticateUser(c.req.header('Authorization'), 'will-chat');
+    const user = await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
+    await assertClientAccess(user, clientId, 'will-chat:session');
 
     const body = await c.req.json();
     const { message, previousResponseId } = body;
@@ -245,8 +249,7 @@ app.post('/sessions/:sessionId/send', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error sending message to agent', error);
-    const errMsg = getErrMsg(error);
-    return c.json({ success: false, error: errMsg }, errMsg === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -256,10 +259,11 @@ app.post('/sessions/:sessionId/send', async (c) => {
 app.post('/sessions/:sessionId/persist', async (c) => {
   try {
     log.info('POST /sessions/:sessionId/persist');
-    await authenticateUser(c.req.header('Authorization'), 'will-chat');
+    const user = await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
+    await assertClientAccess(user, clientId, 'will-chat:session');
 
     const body = await c.req.json();
     const { userMessage, assistantReply } = body;
@@ -284,8 +288,7 @@ app.post('/sessions/:sessionId/persist', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error persisting exchange', error);
-    const errMsg = getErrMsg(error);
-    return c.json({ success: false, error: errMsg }, errMsg === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -298,14 +301,14 @@ app.post('/sessions/:sessionId/save', async (c) => {
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
+    await assertClientAccess(user, clientId, 'will-chat:session');
 
     const result = await service.saveCompletedWill(clientId, sessionId, user.id);
 
     return c.json({ success: true, data: result });
   } catch (error: unknown) {
     log.error('Error saving completed will', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -314,17 +317,17 @@ app.post('/sessions/:sessionId/save', async (c) => {
 app.delete('/sessions/:sessionId', async (c) => {
   try {
     log.info('DELETE /sessions/:sessionId');
-    await authenticateUser(c.req.header('Authorization'), 'will-chat');
+    const user = await authenticateUser(c.req.header('Authorization'), 'will-chat');
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-wc-\d+$/, '');
+    await assertClientAccess(user, clientId, 'will-chat:session');
 
     await service.deleteSession(clientId, sessionId);
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('Error deleting session', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
