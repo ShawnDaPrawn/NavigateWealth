@@ -18,7 +18,7 @@
  * §5.3 — Constants centralised below
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Label } from '../../../ui/label';
@@ -35,6 +35,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { StepIndicator, type WizardStep } from './wizard/StepIndicator';
 
 // ── Constants (§5.3) ────────────────────────────────────────────────────────────
 
@@ -178,55 +179,13 @@ function ynsLabel(val: string): string {
 
 // ── Step Indicator ──────────────────────────────────────────────────────────────
 
-function StepIndicator({ currentStep }: { currentStep: number }) {
-  const steps = [
-    { num: 1, label: 'Documents', icon: FileText },
-    { num: 2, label: 'Existing', icon: FolderSearch },
-    { num: 3, label: 'Context', icon: User },
-    { num: 4, label: 'Review', icon: ClipboardList },
-  ];
-
-  return (
-    <div className="flex items-center justify-between w-full mb-6">
-      {steps.map((step, idx) => {
-        const isCompleted = currentStep > step.num;
-        const isActive = currentStep === step.num;
-        const IconComp = step.icon;
-        return (
-          <React.Fragment key={step.num}>
-            {idx > 0 && (
-              <div
-                className={`flex-1 h-0.5 mx-1 sm:mx-2 transition-colors ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`}
-              />
-            )}
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  isCompleted
-                    ? 'bg-green-600 text-white'
-                    : isActive
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-gray-400 border border-gray-200'
-                }`}
-              >
-                {isCompleted ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <IconComp className="h-4 w-4" />
-                )}
-              </div>
-              <span
-                className={`text-[10px] sm:text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}
-              >
-                {step.label}
-              </span>
-            </div>
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
+/** This wizard's steps. The indicator itself is shared — see wizard/StepIndicator. */
+const WIZARD_STEPS: WizardStep[] = [
+  { num: 1, label: 'Documents', icon: FileText },
+  { num: 2, label: 'Existing', icon: FolderSearch },
+  { num: 3, label: 'Context', icon: User },
+  { num: 4, label: 'Review', icon: ClipboardList },
+];
 
 // ── Step 1: Document Type ───────────────────────────────────────────────────────
 
@@ -885,7 +844,7 @@ export function EstatePlanningQuoteWizard({
 
   return (
     <div className="space-y-6">
-      <StepIndicator currentStep={currentStep} />
+      <StepIndicator currentStep={currentStep} steps={WIZARD_STEPS} />
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div className="p-5 sm:p-6">
