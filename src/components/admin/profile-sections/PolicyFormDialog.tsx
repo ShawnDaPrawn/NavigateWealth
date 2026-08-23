@@ -17,9 +17,6 @@ import {
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Textarea } from '../../ui/textarea';
-import { Switch } from '../../ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import {
   AlertCircle,
   ChevronRight,
@@ -35,38 +32,19 @@ import {
 import { toast } from 'sonner';
 import { api } from '../../../utils/api';
 import { formatCurrency } from '../../../utils/currencyFormatter';
-import { CurrencyInputField } from '../../ui/currency-input';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { calculateRetirementMaturityValue } from '../../../utils/retirementCalculations';
 import { PolicyDocumentUpload } from './PolicyDocumentUpload';
-
-// Map subtab IDs to Product Category IDs
-const SUBTAB_TO_CATEGORY: Record<string, string> = {
-  'risk-planning': 'risk_planning',
-  'medical-aid': 'medical_aid',
-  retirement: 'retirement_planning',
-  investments: 'investments',
-  'employee-benefits': 'employee_benefits',
-  'tax-planning': 'tax_planning',
-  'estate-planning': 'estate_planning',
-};
-
-interface Provider {
-  id: string;
-  name: string;
-  description: string;
-  categoryIds: string[];
-  logoUrl?: string;
-}
-
-interface ProductField {
-  id: string;
-  name: string;
-  type: string;
-  required: boolean;
-  options?: string[];
-  keyId?: string;
-}
+import {
+  SUBTAB_TO_CATEGORY,
+  findFieldByKeyIds,
+  hasPolicyValue,
+  normalizePolicyDataForStructure,
+  getApplyableExtractedFields,
+  type Provider,
+  type ProductField,
+} from './policyFormModel';
+import { renderPolicyFieldInput } from './policyFieldInputs';
 
 interface PolicyFormDialogProps {
   isOpen: boolean;
@@ -81,60 +59,6 @@ interface PolicyFormDialogProps {
     [key: string]: unknown;
   };
   onSave: () => void;
-}
-
-/** First matching field by keyId — schemas may use legacy aliases (e.g. fund value vs current value). */
-function findFieldByKeyIds(structure: ProductField[], keyIds: string[]): ProductField | undefined {
-  for (const keyId of keyIds) {
-    const found = structure.find((f) => f.keyId === keyId);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-const DEFAULT_FIELD_KEY_IDS = new Map<string, string>();
-for (const schema of Object.values(DEFAULT_SCHEMAS)) {
-  for (const field of schema.fields) {
-    if (field.keyId) {
-      DEFAULT_FIELD_KEY_IDS.set(field.id, field.keyId);
-    }
-  }
-}
-
-function hasPolicyValue(value: unknown): boolean {
-  if (value === null || value === undefined) return false;
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (typeof value === 'number') return Number.isFinite(value);
-  return true;
-}
-
-function normalizePolicyDataForStructure(
-  data: Record<string, unknown>,
-  structure: ProductField[],
-  fallbackData: Record<string, unknown> = {},
-): Record<string, unknown> {
-  const normalized = { ...fallbackData, ...data };
-
-  for (const field of structure) {
-    if (!field.keyId || hasPolicyValue(normalized[field.id])) continue;
-
-    for (const [sourceFieldId, sourceValue] of Object.entries(normalized)) {
-      if (
-        sourceFieldId !== field.id &&
-        DEFAULT_FIELD_KEY_IDS.get(sourceFieldId) === field.keyId &&
-        hasPolicyValue(sourceValue)
-      ) {
-        normalized[field.id] = sourceValue;
-        break;
-      }
-    }
-  }
-
-  return normalized;
-}
-
-function getApplyableExtractedFields(fields: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(fields).filter(([, value]) => hasPolicyValue(value)));
 }
 
 export function PolicyFormDialog({
@@ -688,235 +612,16 @@ export function PolicyFormDialog({
     );
   };
 
-  const renderFieldInput = (field: ProductField) => {
-    // formData is Record<string, unknown>; coerce to string for input/select
-    // bindings (the boolean case below reads formData[field.id] directly).
-    const value = (formData[field.id] || '') as string;
-    const hasError = !!errors[field.id];
-
-    // Normalize type to lowercase for safety
-    const fieldType = (field.type || 'text').toLowerCase();
-
-    switch (fieldType) {
-      case 'text':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.id}
-              value={value}
-              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              placeholder={`Enter ${field.name.toLowerCase()}`}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'number':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.id}
-              type="number"
-              value={value}
-              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              placeholder={`Enter ${field.name.toLowerCase()}`}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'currency':
-        return (
-          <div key={field.id} className="space-y-2">
-            <div className="flex justify-between items-end min-h-5 gap-2">
-              <Label htmlFor={field.id}>
-                {field.name}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-
-              {/* Assumptions + explicit recalculate (drivers may use legacy keyIds, e.g. retirement_fund_value) */}
-              {(field.keyId === 'retirement_estimated_maturity_value' ||
-                field.keyId === 'invest_maturity_value') && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <AssumptionsTool field={field} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs px-2 border-dashed border-slate-300 text-slate-700 hover:bg-slate-50"
-                    onClick={() => setFormData((prev) => recalcMaturityValues({ ...prev }))}
-                  >
-                    Recalculate
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            <CurrencyInputField
-              id={field.id}
-              value={value}
-              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              placeholder="0.00"
-              className={hasError ? 'border-red-500' : ''}
-              // If calculated, maybe make it read-only? User said "Assumptions can be edited", implies result is output.
-              // But usually users want to override manually too. I'll leave it editable.
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'percentage':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <div className="relative">
-              <Input
-                id={field.id}
-                type="number"
-                value={value}
-                onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                placeholder="0"
-                className={`pr-8 ${hasError ? 'border-red-500' : ''}`}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-            </div>
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'date':
-      case 'date_inception':
-      case 'date_maturity': // Explicitly handle maturity date if named this way
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.id}
-              type="date"
-              value={value}
-              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'boolean':
-        return (
-          <div key={field.id} className="flex items-center justify-between space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Switch
-              id={field.id}
-              checked={formData[field.id] === true || formData[field.id] === 'true'}
-              onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
-            />
-          </div>
-        );
-
-      case 'dropdown':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Select value={value} onValueChange={(val) => handleFieldChange(field.id, val)}>
-              <SelectTrigger className={hasError ? 'border-red-500' : ''}>
-                <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'long_text':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Textarea
-              id={field.id}
-              value={value}
-              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              placeholder={`Enter ${field.name.toLowerCase()}`}
-              rows={4}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      case 'file_upload':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.id}
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFieldChange(field.id, file.name);
-                }
-              }}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-
-      default:
-        // Fallback for unknown types - render as text so they are at least visible
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.id}>
-              {field.name}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-              <span className="ml-2 text-xs text-gray-400 font-normal">(Type: {field.type})</span>
-            </Label>
-            <Input
-              id={field.id}
-              value={value}
-              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-              placeholder={`Enter ${field.name.toLowerCase()}`}
-              className={hasError ? 'border-red-500' : ''}
-            />
-            {hasError && <p className="text-xs text-red-500">{errors[field.id]}</p>}
-          </div>
-        );
-    }
-  };
+  const renderFieldInput = (field: ProductField) =>
+    renderPolicyFieldInput({
+      field,
+      formData,
+      setFormData,
+      errors,
+      handleFieldChange,
+      recalcMaturityValues,
+      AssumptionsTool,
+    });
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
