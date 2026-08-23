@@ -20,7 +20,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import { generateContactPdf, type ContactPdfData } from './contact-pdf-generator.ts';
 import { QuoteRequestSubmitSchema } from './contact-form-validation.ts';
-import { formatZodError } from './shared-validation-utils.ts';
+import { escapeHtml, escapeHtmlDeep, formatZodError } from './shared-validation-utils.ts';
 import { submissionsService } from './submissions-service.ts';
 import { asyncHandler } from './error.middleware.ts';
 import {
@@ -769,15 +769,25 @@ app.post(
       timeStyle: 'long',
     });
 
-    // Build product details rows for admin email
+    // Build product details rows for admin email.
+    //
+    // SECURITY (SECURITY-AUDIT S10): everything from here down is interpolated
+    // into the staff notification email as HTML, and `productDetails` is an
+    // anonymous visitor's `z.record(z.string(), z.unknown())` payload — arbitrary
+    // keys and values that clear validation with only a length cap. This section
+    // therefore reads `safeProductDetails`, an escaped view of that payload, so
+    // that no interpolation site below can reintroduce the injection. The KV,
+    // submissions and PDF paths ABOVE deliberately keep the raw values: escaping
+    // those would show `&amp;` to staff rather than protect anyone.
+    const safeProductDetails = escapeHtmlDeep(productDetails);
     let productDetailsRows = '';
-    if (isFullStage && productDetails && typeof productDetails === 'object') {
+    if (isFullStage && safeProductDetails && typeof safeProductDetails === 'object') {
       // Phase 2 risk management: render structured HTML sections
-      if (productDetails.phase === 2 && productDetails.risk_needs) {
+      if (safeProductDetails.phase === 2 && safeProductDetails.risk_needs) {
         const sections: string[] = [];
 
         // Risk covers
-        const rn = productDetails.risk_needs as Record<string, Record<string, unknown>>;
+        const rn = safeProductDetails.risk_needs as Record<string, Record<string, unknown>>;
         const coverRows = Object.entries(rn)
           .filter(([, e]) => e.selected)
           .map(([id, e]) => {
@@ -796,7 +806,7 @@ app.post(
         }
 
         // Personal details
-        const pd = productDetails.personal_details as Record<string, unknown> | undefined;
+        const pd = safeProductDetails.personal_details as Record<string, unknown> | undefined;
         if (pd) {
           const pRows: string[] = [];
           if (pd.occupation)
@@ -835,7 +845,7 @@ app.post(
         }
 
         // Health
-        const hd = productDetails.health_disclosures as Record<string, unknown> | undefined;
+        const hd = safeProductDetails.health_disclosures as Record<string, unknown> | undefined;
         if (hd) {
           let healthLine = '';
           if (hd.has_conditions === false) {
@@ -854,12 +864,12 @@ app.post(
         }
 
         productDetailsRows = sections.join('');
-      } else if (productDetails.phase === 2 && productDetails.vertical === 'MedicalAid') {
+      } else if (safeProductDetails.phase === 2 && safeProductDetails.vertical === 'MedicalAid') {
         // Phase 2 Medical Aid structured payload
         const sections: string[] = [];
 
         // Members
-        const mem = productDetails.members as Record<string, unknown> | undefined;
+        const mem = safeProductDetails.members as Record<string, unknown> | undefined;
         if (mem) {
           const mRows: string[] = [];
           if (mem.membership_type)
@@ -899,7 +909,7 @@ app.post(
         }
 
         // Preferences
-        const prefs = productDetails.preferences as Record<string, unknown> | undefined;
+        const prefs = safeProductDetails.preferences as Record<string, unknown> | undefined;
         if (prefs) {
           const pRows: string[] = [];
           if (prefs.cover_type)
@@ -926,7 +936,7 @@ app.post(
         }
 
         // Medical aid history
-        const hist = productDetails.medical_aid_history as Record<string, unknown> | undefined;
+        const hist = safeProductDetails.medical_aid_history as Record<string, unknown> | undefined;
         if (hist) {
           const hRows: string[] = [];
           if (hist.current_status)
@@ -961,7 +971,7 @@ app.post(
         }
 
         // Health
-        const health = productDetails.health as Record<string, unknown> | undefined;
+        const health = safeProductDetails.health as Record<string, unknown> | undefined;
         if (health) {
           let healthLine = '';
           if (health.has_chronic_conditions === false) {
@@ -980,12 +990,12 @@ app.post(
         }
 
         productDetailsRows = sections.join('');
-      } else if (productDetails.phase === 2 && productDetails.vertical === 'Investment') {
+      } else if (safeProductDetails.phase === 2 && safeProductDetails.vertical === 'Investment') {
         // Phase 2 Investment structured payload
         const sections: string[] = [];
 
         // Selected types
-        const types = productDetails.selected_types as string[] | undefined;
+        const types = safeProductDetails.selected_types as string[] | undefined;
         if (types && types.length > 0) {
           sections.push(
             `<h4 style="margin: 12px 0 4px; color: #374151;">Investment Types</h4><p style="margin: 4px 0;">${types.join(', ')}</p>`,
@@ -993,7 +1003,7 @@ app.post(
         }
 
         // Contributions
-        const contribs = productDetails.contributions as
+        const contribs = safeProductDetails.contributions as
           | Record<string, Record<string, unknown>>
           | undefined;
         if (contribs) {
@@ -1036,7 +1046,7 @@ app.post(
         }
 
         // Objective
-        const obj = productDetails.objective as Record<string, unknown> | undefined;
+        const obj = safeProductDetails.objective as Record<string, unknown> | undefined;
         if (obj) {
           const oRows: string[] = [];
           if (obj.primary_objective)
@@ -1059,7 +1069,7 @@ app.post(
         }
 
         // Financial snapshot
-        const fin = productDetails.financial_snapshot as Record<string, unknown> | undefined;
+        const fin = safeProductDetails.financial_snapshot as Record<string, unknown> | undefined;
         if (fin) {
           const fRows: string[] = [];
           if (fin.income_gross_monthly)
@@ -1091,21 +1101,21 @@ app.post(
         }
 
         productDetailsRows = sections.join('');
-      } else if (productDetails.phase === 2 && productDetails.vertical === 'Retirement') {
+      } else if (safeProductDetails.phase === 2 && safeProductDetails.vertical === 'Retirement') {
         // Phase 2 Retirement Planning structured payload
         const sections: string[] = [];
 
         // Selected product
-        if (productDetails.selected_product) {
+        if (safeProductDetails.selected_product) {
           sections.push(
-            `<h4 style="margin: 12px 0 4px; color: #374151;">Retirement Product</h4><p style="margin: 4px 0;">${productDetails.selected_product}</p>`,
+            `<h4 style="margin: 12px 0 4px; color: #374151;">Retirement Product</h4><p style="margin: 4px 0;">${safeProductDetails.selected_product}</p>`,
           );
         }
 
         // Funding
-        const funding = productDetails.funding as Record<string, unknown> | undefined;
+        const funding = safeProductDetails.funding as Record<string, unknown> | undefined;
         if (funding) {
-          const productId = productDetails.selected_product_id as string | undefined;
+          const productId = safeProductDetails.selected_product_id as string | undefined;
           if (productId === 'ra') {
             const fRows: string[] = [];
             if (funding.contribution_type)
@@ -1200,7 +1210,7 @@ app.post(
         }
 
         // Timeline
-        const tl = productDetails.timeline as Record<string, unknown> | undefined;
+        const tl = safeProductDetails.timeline as Record<string, unknown> | undefined;
         if (tl) {
           const tRows: string[] = [];
           if (tl.current_age)
@@ -1228,7 +1238,7 @@ app.post(
         }
 
         // Financial snapshot
-        const finR = productDetails.financial_snapshot as Record<string, unknown> | undefined;
+        const finR = safeProductDetails.financial_snapshot as Record<string, unknown> | undefined;
         if (finR) {
           const fRows: string[] = [];
           if (finR.income_gross_monthly)
@@ -1255,12 +1265,15 @@ app.post(
         }
 
         productDetailsRows = sections.join('');
-      } else if (productDetails.phase === 2 && productDetails.vertical === 'EmployeeBenefits') {
+      } else if (
+        safeProductDetails.phase === 2 &&
+        safeProductDetails.vertical === 'EmployeeBenefits'
+      ) {
         // Phase 2 Employee Benefits structured payload
         const sections: string[] = [];
 
         // Business details
-        const biz = productDetails.business as Record<string, unknown> | undefined;
+        const biz = safeProductDetails.business as Record<string, unknown> | undefined;
         if (biz) {
           const bRows: string[] = [];
           if (biz.company_name)
@@ -1289,14 +1302,14 @@ app.post(
         }
 
         // Benefit type
-        if (productDetails.benefit_type) {
+        if (safeProductDetails.benefit_type) {
           sections.push(
-            `<h4 style="margin: 12px 0 4px; color: #374151;">Benefit Type</h4><p style="margin: 4px 0;">${productDetails.benefit_type}</p>`,
+            `<h4 style="margin: 12px 0 4px; color: #374151;">Benefit Type</h4><p style="margin: 4px 0;">${safeProductDetails.benefit_type}</p>`,
           );
         }
 
         // Budget
-        const bdgt = productDetails.budget as Record<string, unknown> | undefined;
+        const bdgt = safeProductDetails.budget as Record<string, unknown> | undefined;
         if (bdgt) {
           const bRows: string[] = [];
           if (bdgt.budget_adviser_assist) {
@@ -1324,7 +1337,7 @@ app.post(
         }
 
         // Workforce
-        const wf = productDetails.workforce as Record<string, unknown> | undefined;
+        const wf = safeProductDetails.workforce as Record<string, unknown> | undefined;
         if (wf) {
           const wRows: string[] = [];
           if (wf.average_age_band)
@@ -1352,11 +1365,11 @@ app.post(
         }
 
         productDetailsRows = sections.join('');
-      } else if (productDetails.phase === 2 && productDetails.vertical === 'TaxPlanning') {
+      } else if (safeProductDetails.phase === 2 && safeProductDetails.vertical === 'TaxPlanning') {
         // Phase 2 Tax Planning structured payload
         const sections: string[] = [];
 
-        const taxTypesEmail = productDetails.selected_types as string[] | undefined;
+        const taxTypesEmail = safeProductDetails.selected_types as string[] | undefined;
         if (taxTypesEmail && taxTypesEmail.length > 0) {
           const items = taxTypesEmail
             .map((t: string) => `<li style="margin: 2px 0;">${t}</li>`)
@@ -1366,7 +1379,7 @@ app.post(
           );
         }
 
-        const tcEmail = productDetails.taxpayer_context as Record<string, unknown> | undefined;
+        const tcEmail = safeProductDetails.taxpayer_context as Record<string, unknown> | undefined;
         if (tcEmail) {
           const tRows: string[] = [];
           if (tcEmail.taxpayer_type)
@@ -1392,7 +1405,7 @@ app.post(
           }
         }
 
-        const fsEmail = productDetails.financial_scope as Record<string, unknown> | undefined;
+        const fsEmail = safeProductDetails.financial_scope as Record<string, unknown> | undefined;
         if (fsEmail) {
           const fRows: string[] = [];
           if (fsEmail.turnover_band)
@@ -1421,7 +1434,7 @@ app.post(
         productDetailsRows = sections.join('');
       } else {
         // Standard flat entries
-        const entries = Object.entries(productDetails).filter(([, v]) => v);
+        const entries = Object.entries(safeProductDetails).filter(([, v]) => v);
         if (entries.length > 0) {
           productDetailsRows = entries
             .map(([key, value]) => {
@@ -1442,12 +1455,12 @@ app.post(
 
       <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin-top: 0; font-size: 18px; color: #111827;">Contact Details</h3>
-        <p style="margin: 8px 0;"><strong>Name:</strong> ${fullName}</p>
-        <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${email}" style="color: #6d28d9;">${email}</a></p>
-        <p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${phone}" style="color: #6d28d9;">${phone}</a></p>
-        ${displayService ? `<p style="margin: 8px 0;"><strong>Service:</strong> ${displayService}</p>` : ''}
-        ${coverageFormatted ? `<p style="margin: 8px 0;"><strong>Coverage Amount:</strong> ${coverageFormatted}</p>` : ''}
-        ${preferredProvider ? `<p style="margin: 8px 0;"><strong>Preferred Provider:</strong> ${preferredProvider}</p>` : ''}
+        <p style="margin: 8px 0;"><strong>Name:</strong> ${escapeHtml(fullName)}</p>
+        <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}" style="color: #6d28d9;">${escapeHtml(email)}</a></p>
+        <p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${escapeHtml(phone)}" style="color: #6d28d9;">${escapeHtml(phone)}</a></p>
+        ${displayService ? `<p style="margin: 8px 0;"><strong>Service:</strong> ${escapeHtml(displayService)}</p>` : ''}
+        ${coverageFormatted ? `<p style="margin: 8px 0;"><strong>Coverage Amount:</strong> ${escapeHtml(coverageFormatted)}</p>` : ''}
+        ${preferredProvider ? `<p style="margin: 8px 0;"><strong>Preferred Provider:</strong> ${escapeHtml(preferredProvider)}</p>` : ''}
         <p style="margin: 8px 0;"><strong>Submitted:</strong> ${formattedTimestamp}</p>
       </div>
 
@@ -1468,7 +1481,7 @@ app.post(
       <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin-top: 0; font-size: 18px; color: #111827;">Submission Lineage</h3>
         <p style="margin: 8px 0;"><strong>Stage:</strong> ${stageLabel}</p>
-        <p style="margin: 8px 0;"><strong>Parent Submission:</strong> ${parentSubmissionId}</p>
+        <p style="margin: 8px 0;"><strong>Parent Submission:</strong> ${escapeHtml(parentSubmissionId)}</p>
       </div>
       `
           : ''
@@ -1485,7 +1498,7 @@ app.post(
 
     const adminHtml = createEmailTemplate(adminHtmlContent, {
       title: isFullStage ? 'Full Quote Request' : 'New Quote Enquiry',
-      subtitle: `From ${fullName}${displayService ? ` — ${displayService}` : ''}`,
+      subtitle: `From ${escapeHtml(fullName)}${displayService ? ` — ${escapeHtml(displayService)}` : ''}`,
       buttonUrl: adminDeepLink,
       buttonLabel: 'View in Submissions Manager',
       footerSettings,
@@ -1494,8 +1507,8 @@ app.post(
     // ── Client acknowledgment email ──────────────────────────────────────────
     const clientHtmlContent = isFullStage
       ? `
-        <p>Dear ${fullName},</p>
-        <p>Thank you for your ${displayService || 'quote'} request. We have received your detailed requirements and one of our qualified advisers will be in touch shortly with a personalised, no-obligation quote.</p>
+        <p>Dear ${escapeHtml(fullName)},</p>
+        <p>Thank you for your ${escapeHtml(displayService || 'quote')} request. We have received your detailed requirements and one of our qualified advisers will be in touch shortly with a personalised, no-obligation quote.</p>
         <div style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 8px; margin: 24px 0;">
           <h3 style="margin-top: 0; font-size: 18px; color: #166534;">What Happens Next?</h3>
           <p style="color: #15803d; margin: 8px 0;">&#10003; An adviser will review your specific requirements</p>
@@ -1505,8 +1518,8 @@ app.post(
         <p>Best regards,<br><strong>The Navigate Wealth Team</strong></p>
       `
       : `
-        <p>Dear ${fullName},</p>
-        <p>Thank you for your interest in Navigate Wealth${displayService ? `'s ${displayService} services` : ''}. We've received your details and will be in touch shortly.</p>
+        <p>Dear ${escapeHtml(fullName)},</p>
+        <p>Thank you for your interest in Navigate Wealth${displayService ? `'s ${escapeHtml(displayService)} services` : ''}. We've received your details and will be in touch shortly.</p>
         <div style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 8px; margin: 24px 0;">
           <h3 style="margin-top: 0; font-size: 18px; color: #166534;">What Happens Next?</h3>
           <p style="color: #15803d; margin: 8px 0;">&#10003; A member of our team will review your enquiry</p>

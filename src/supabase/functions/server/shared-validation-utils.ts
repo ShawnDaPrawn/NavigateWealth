@@ -155,6 +155,52 @@ export function escapeHtml(text: string): string {
 }
 
 /**
+ * Recursively escape every string in a value, preserving its shape.
+ *
+ * SECURITY (SECURITY-AUDIT S10): the public lead-gen forms accept
+ * `z.record(z.string(), z.unknown())` payloads from anonymous visitors and
+ * render them into the staff notification emails. Escaping each interpolation
+ * site by hand does not scale — `quote-request-routes.ts` alone has over 140 of
+ * them across seven verticals, so a single missed site reintroduces the hole.
+ * Escaping the whole object graph once, at the boundary where it enters an HTML
+ * builder, cannot miss a site.
+ *
+ * Only strings are transformed. Numbers, booleans and null pass through
+ * unchanged so downstream `Number()`/`formatRand()` calls still work, and the
+ * plain-text, PDF and KV paths must keep using the UNESCAPED original — escaping
+ * those would show `&amp;` to staff rather than protect anyone.
+ *
+ * Cycles are not expected (the input is parsed JSON) but are handled rather than
+ * overflowing the stack, because the input is attacker-controlled.
+ */
+export function escapeHtmlDeep<T>(value: T, seen = new WeakSet<object>()): T {
+  if (typeof value === 'string') {
+    return escapeHtml(value) as unknown as T;
+  }
+
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  if (seen.has(value as object)) {
+    return value;
+  }
+  seen.add(value as object);
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => escapeHtmlDeep(entry, seen)) as unknown as T;
+  }
+
+  const escaped: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    // Keys are interpolated as labels too (`id.replace(/_/g, ' ')`), so they are
+    // attacker-controlled on a `z.record` payload and must be escaped as well.
+    escaped[escapeHtml(key)] = escapeHtmlDeep(entry, seen);
+  }
+  return escaped as unknown as T;
+}
+
+/**
  * Strip HTML tags
  */
 export function stripHtml(text: string): string {
