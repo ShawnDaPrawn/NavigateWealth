@@ -8,9 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../ui/button';
-import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
-import { Progress } from '../../../ui/progress';
 import {
   ArrowLeft,
   Save,
@@ -21,13 +19,9 @@ import {
   CheckCircle,
   X,
   Clock,
-  Mail,
   History,
-  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
-import { ImageUploader } from './ImageUploader';
-import { RichTextEditor } from './RichTextEditor';
 import { VersionHistory } from './components/VersionHistory';
 
 // Import from refactored modules
@@ -43,10 +37,6 @@ import { useArticleForm, useCategories, useTypes, useArticleActions } from './ho
 import {
   TextField,
   TextareaField,
-  SelectField,
-  CheckboxField,
-  DateTimeField,
-  NumberStepperField,
   StatusBadge,
   ErrorList,
   LoadingState,
@@ -55,13 +45,14 @@ import {
   ArticlePreview,
 } from './components';
 
-import { generateSlug, formatDate } from './utils';
+import { generateSlug } from './utils';
 
 import { type Article, type ArticleFormData } from './types';
 
-import { VALIDATION_RULES, PRESS_CATEGORY_OPTIONS } from './constants';
-
 import { toast } from 'sonner';
+import { PublishProgressDialog } from './editor/PublishProgressDialog';
+import { ScheduleDialog } from './editor/ScheduleDialog';
+import { EditorTabContent } from './editor/EditorTabContent';
 
 interface ArticleEditorProps {
   article?: Article | null;
@@ -755,236 +746,17 @@ export function ArticleEditor({
       </div>
 
       {/* Editor Tab */}
-      {activeTab === 'editor' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <TextField
-                  label="Title"
-                  name="title"
-                  value={formData.title}
-                  onChange={(value) => updateField('title', value)}
-                  placeholder="Enter article title"
-                  required
-                  maxLength={VALIDATION_RULES.title.maxLength}
-                />
-
-                <TextField
-                  label="Subtitle"
-                  name="subtitle"
-                  value={formData.subtitle || ''}
-                  onChange={(value) => updateField('subtitle', value)}
-                  placeholder="Optional subtitle"
-                  maxLength={VALIDATION_RULES.subtitle.maxLength}
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    URL Slug <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={formData.slug}
-                      onChange={(e) => {
-                        updateField('slug', e.target.value);
-                        setAutoSlug(false);
-                      }}
-                      placeholder="article-url-slug"
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAutoSlug(true)}
-                      disabled={autoSlug}
-                    >
-                      Auto
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">URL: /resources/{formData.slug}</p>
-                </div>
-
-                <TextareaField
-                  label="Excerpt"
-                  name="excerpt"
-                  value={formData.excerpt}
-                  onChange={(value) => updateField('excerpt', value)}
-                  placeholder="Brief summary (160-250 characters recommended)"
-                  rows={3}
-                  required
-                  maxLength={VALIDATION_RULES.excerpt.maxLength}
-                  showCharCount
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Article Body <span className="text-red-500">*</span>
-                  </label>
-                  <RichTextEditor
-                    value={formData.body ?? ''}
-                    onChange={(value) => updateField('body', value)}
-                    placeholder='Start writing, or type "/" for commands…'
-                    articleTitle={formData.title}
-                    articleExcerpt={formData.excerpt}
-                    articleCategory={categories.find((c) => c.id === formData.category_id)?.name}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Images */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Images</CardTitle>
-                <CardDescription>Upload images or provide URLs</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <ImageUploader
-                  label="Hero Image"
-                  value={formData.feature_image_url || ''}
-                  onChange={(value) => updateField('feature_image_url', value)}
-                  description="Main image displayed at the top of the article (1200x630px recommended)"
-                  onUploadStateChange={setIsHeroImageUploading}
-                />
-
-                <ImageUploader
-                  label="Thumbnail Image"
-                  value={formData.thumbnail_image_url || ''}
-                  onChange={(value) => updateField('thumbnail_image_url', value)}
-                  description="Smaller image for lists and cards (400x300px recommended)"
-                  onUploadStateChange={setIsThumbnailUploading}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Publishing Options */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Publishing</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <SelectField
-                  label="Category"
-                  name="category_id"
-                  value={formData.category_id}
-                  onChange={(value) => updateField('category_id', value)}
-                  options={categories
-                    .filter((cat) => cat.id)
-                    .map((cat) => ({
-                      value: cat.id,
-                      label: cat.name,
-                    }))}
-                  required
-                />
-
-                <TextField
-                  label="Author Name"
-                  name="author_name"
-                  value={formData.author_name || 'Navigate Wealth Editorial Team'}
-                  onChange={(value) => updateField('author_name', value)}
-                  placeholder="Author name"
-                />
-
-                <NumberStepperField
-                  label="Reading Time (minutes)"
-                  name="reading_time_minutes"
-                  value={formData.reading_time_minutes ?? 5}
-                  onChange={(value) => updateField('reading_time_minutes', value)}
-                  min={VALIDATION_RULES.readingTime.min}
-                  max={VALIDATION_RULES.readingTime.max}
-                  suffix="min"
-                />
-
-                <CheckboxField
-                  label="Featured Article"
-                  name="is_featured"
-                  checked={formData.is_featured}
-                  onChange={(checked) => updateField('is_featured', checked)}
-                  description="Display prominently on the homepage"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Press Release */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Press Page</CardTitle>
-                <CardDescription className="text-xs">
-                  Optionally feature this article on the public Press page
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <SelectField
-                  label="Press Category"
-                  name="press_category"
-                  value={formData.press_category || '__none__'}
-                  onChange={(value) =>
-                    updateField(
-                      'press_category',
-                      (value === '__none__' ? null : value) as ArticleFormData['press_category'],
-                    )
-                  }
-                  options={[
-                    { value: '__none__', label: 'None (not a press release)' },
-                    ...PRESS_CATEGORY_OPTIONS.map((opt) => ({
-                      value: opt.value,
-                      label: opt.label,
-                    })),
-                  ]}
-                />
-                {formData.press_category && (
-                  <p className="text-xs text-purple-600">
-                    This article will appear on the Press page under the "
-                    {PRESS_CATEGORY_OPTIONS.find((o) => o.value === formData.press_category)?.label}
-                    " tab when published.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Status Info */}
-            {article && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Status</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Current Status:</span>
-                    <StatusBadge status={article.status} />
-                  </div>
-                  {article.published_at && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Published:</span>
-                      <span className="text-sm">{formatDate(article.published_at)}</span>
-                    </div>
-                  )}
-                  {article.scheduled_for && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Scheduled:</span>
-                      <span className="text-sm">{formatDate(article.scheduled_for)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Last Updated:</span>
-                    <span className="text-sm">{formatDate(article.updated_at)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      )}
+      <EditorTabContent
+        article={article ?? undefined}
+        activeTab={activeTab}
+        autoSlug={autoSlug}
+        categories={categories}
+        formData={formData}
+        setAutoSlug={setAutoSlug}
+        setIsHeroImageUploading={setIsHeroImageUploading}
+        setIsThumbnailUploading={setIsThumbnailUploading}
+        updateField={updateField}
+      />
 
       {/* Preview Tab */}
       {activeTab === 'preview' && (
@@ -1046,322 +818,39 @@ export function ArticleEditor({
         </Card>
       )}
 
-      {/* Publish Confirmation Dialog */}
-      {showPublishDialog && (
-        <div className="contents">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
-            onClick={
-              !publishDialogBusy && !publishCampaign && !publishJob
-                ? () => closePublishDialog(false)
-                : undefined
-            }
-            aria-hidden="true"
-          />
-          {/* Dialog */}
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="publish-dialog-title"
-            aria-describedby="publish-dialog-description"
-          >
-            <div
-              className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {isPublishingNow && !publishCampaign && !publishJob ? (
-                <>
-                  <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
-                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                  </div>
+      <PublishProgressDialog
+        activePublishFailedCount={activePublishFailedCount}
+        activePublishLastError={activePublishLastError}
+        activePublishPendingCount={activePublishPendingCount}
+        activePublishProcessedCount={activePublishProcessedCount}
+        activePublishProgressPercent={activePublishProgressPercent}
+        activePublishRecipientCount={activePublishRecipientCount}
+        activePublishSentCount={activePublishSentCount}
+        activePublishStatus={activePublishStatus}
+        closePublishDialog={closePublishDialog}
+        handlePublishConfirm={handlePublishConfirm}
+        isEditMode={isEditMode}
+        isPublishingNow={isPublishingNow}
+        notifySubscribers={notifySubscribers}
+        publishActivityStep={publishActivityStep}
+        publishCampaign={publishCampaign}
+        publishDialogBusy={publishDialogBusy}
+        publishInFlight={publishInFlight}
+        publishJob={publishJob}
+        setNotifySubscribers={setNotifySubscribers}
+        showPublishDialog={showPublishDialog}
+      />
 
-                  <h3 id="publish-dialog-title" className="text-xl mb-2 text-gray-900">
-                    Publishing Article
-                  </h3>
-                  <p id="publish-dialog-description" className="text-gray-600 mb-5">
-                    Please keep this window open while we prepare the article, publish it live, and
-                    queue newsletter delivery.
-                  </p>
-
-                  <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-blue-950">Live publish activity</p>
-                        <p className="text-xs text-blue-700 mt-1">
-                          This can take a moment while the newsletter audience is prepared.
-                        </p>
-                      </div>
-                      <Sparkles className="h-4 w-4 text-blue-500" />
-                    </div>
-
-                    <Progress
-                      value={
-                        publishActivityStep === 'preparing'
-                          ? 20
-                          : publishActivityStep === 'saving'
-                            ? 45
-                            : publishActivityStep === 'publishing'
-                              ? 70
-                              : 90
-                      }
-                      className="h-2.5"
-                      indicatorClassName="bg-blue-600"
-                    />
-
-                    <div className="space-y-2">
-                      <PublishActivityRow
-                        label="Preparing publish request"
-                        status={publishActivityStep === 'preparing' ? 'active' : 'done'}
-                      />
-                      <PublishActivityRow
-                        label={
-                          isEditMode ? 'Saving latest article changes' : 'Creating article record'
-                        }
-                        status={
-                          publishActivityStep === 'saving'
-                            ? 'active'
-                            : publishActivityStep === 'publishing' ||
-                                publishActivityStep === 'queueing'
-                              ? 'done'
-                              : 'pending'
-                        }
-                      />
-                      <PublishActivityRow
-                        label="Publishing article to the website"
-                        status={
-                          publishActivityStep === 'publishing'
-                            ? 'active'
-                            : publishActivityStep === 'queueing'
-                              ? 'done'
-                              : 'pending'
-                        }
-                      />
-                      <PublishActivityRow
-                        label={
-                          notifySubscribers ? 'Queueing newsletter delivery' : 'Finalizing publish'
-                        }
-                        status={publishActivityStep === 'queueing' ? 'active' : 'pending'}
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : !publishCampaign && !publishJob ? (
-                <>
-                  <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  </div>
-
-                  <h3 id="publish-dialog-title" className="text-xl mb-2 text-gray-900">
-                    Publish Article
-                  </h3>
-                  <p id="publish-dialog-description" className="text-gray-600 mb-4">
-                    Are you sure you want to publish this article? It will be immediately visible to
-                    all users.
-                  </p>
-
-                  <div className="bg-gray-50 rounded-lg p-3 mb-6">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={notifySubscribers}
-                        onChange={(e) => setNotifySubscribers(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-purple-600" />
-                          Notify newsletter subscribers
-                        </span>
-                        <span className="text-xs text-gray-500 block mt-0.5">
-                          Send an email notification to all confirmed subscribers with a link to
-                          this article
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-
-                  <div className="flex gap-3 justify-end">
-                    <Button
-                      variant="outline"
-                      onClick={() => closePublishDialog(false)}
-                      disabled={publishDialogBusy}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={handlePublishConfirm}
-                      disabled={publishDialogBusy}
-                    >
-                      {publishDialogBusy ? 'Publishing...' : 'Publish Now'}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                      <h3 id="publish-dialog-title" className="text-xl text-gray-900">
-                        {publishInFlight ? 'Publishing And Sending' : 'Publish Delivery Summary'}
-                      </h3>
-                      <p id="publish-dialog-description" className="text-sm text-gray-600 mt-1">
-                        {publishInFlight
-                          ? 'The article is live and newsletter delivery is progressing in the queued sender.'
-                          : activePublishStatus === 'queue_failed'
-                            ? 'The article is live, but the newsletter campaign could not be queued.'
-                            : activePublishStatus === 'no_recipients'
-                              ? 'The article is live, and no eligible newsletter recipients were found for this send.'
-                              : 'The article is live and the queued newsletter delivery has finished its current run.'}
-                      </p>
-                    </div>
-                    <Badge
-                      className={cn(
-                        activePublishStatus === 'completed'
-                          ? 'bg-green-100 text-green-700'
-                          : activePublishStatus === 'completed_with_failures'
-                            ? 'bg-amber-100 text-amber-800'
-                            : activePublishStatus === 'queue_failed'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-blue-100 text-blue-700',
-                      )}
-                    >
-                      {(activePublishStatus || 'queued').replace(/_/g, ' ')}
-                    </Badge>
-                  </div>
-
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between text-sm mb-2">
-                        <span className="text-gray-600">Newsletter progress</span>
-                        <span className="font-medium text-gray-900">
-                          {activePublishProcessedCount} / {activePublishRecipientCount}
-                        </span>
-                      </div>
-                      <Progress
-                        value={activePublishProgressPercent}
-                        className="h-2.5"
-                        indicatorClassName="bg-green-600"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Recipients</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {activePublishRecipientCount}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Remaining</p>
-                        <p className="text-lg font-semibold text-amber-700">
-                          {activePublishPendingCount}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Sent</p>
-                        <p className="text-lg font-semibold text-green-700">
-                          {activePublishSentCount}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-white border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Failed</p>
-                        <p className="text-lg font-semibold text-red-700">
-                          {activePublishFailedCount}
-                        </p>
-                      </div>
-                    </div>
-
-                    {activePublishLastError &&
-                      (activePublishFailedCount > 0 || activePublishStatus === 'queue_failed') && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                          <p className="text-xs font-medium text-amber-900">
-                            Latest delivery issue
-                          </p>
-                          <p className="text-xs text-amber-800 mt-1">{activePublishLastError}</p>
-                        </div>
-                      )}
-                  </div>
-
-                  <div className="flex gap-3 justify-end mt-6">
-                    {publishInFlight ? (
-                      <Button variant="outline" onClick={() => closePublishDialog(true)}>
-                        Continue in Background
-                      </Button>
-                    ) : (
-                      <Button
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => closePublishDialog(true)}
-                      >
-                        Done
-                      </Button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Dialog */}
-      {showScheduleDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Schedule Publication</CardTitle>
-              <CardDescription>Choose when this article should be published</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <DateTimeField
-                label="Publication Date & Time"
-                name="scheduled_publish_at"
-                value={scheduledDate}
-                onChange={setScheduledDate}
-                required
-                min={new Date().toISOString().slice(0, 16)}
-              />
-
-              {/* Notification Toggle for Scheduled Publish */}
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifyOnScheduledPublish}
-                    onChange={(e) => setNotifyOnScheduledPublish(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-purple-600" />
-                      Notify newsletter subscribers on publish
-                    </span>
-                    <span className="text-xs text-gray-500 block mt-0.5">
-                      Automatically send an email notification to all confirmed subscribers when
-                      this article is published on the scheduled date
-                    </span>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <Button onClick={handleScheduleConfirm} disabled={isProcessing || !scheduledDate}>
-                  <Clock className="h-4 w-4 mr-2" />
-                  {isProcessing ? 'Scheduling...' : 'Schedule'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowScheduleDialog(false)}
-                  disabled={isProcessing}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <ScheduleDialog
+        handleScheduleConfirm={handleScheduleConfirm}
+        isProcessing={isProcessing}
+        notifyOnScheduledPublish={notifyOnScheduledPublish}
+        scheduledDate={scheduledDate}
+        setNotifyOnScheduledPublish={setNotifyOnScheduledPublish}
+        setScheduledDate={setScheduledDate}
+        setShowScheduleDialog={setShowScheduleDialog}
+        showScheduleDialog={showScheduleDialog}
+      />
 
       {/* Unsaved Changes Dialog */}
       {confirmDialog.isOpen && confirmDialog.config && (
@@ -1385,38 +874,6 @@ export function ArticleEditor({
           currentBody={formData.body}
         />
       )}
-    </div>
-  );
-}
-
-function PublishActivityRow({
-  label,
-  status,
-}: {
-  label: string;
-  status: 'pending' | 'active' | 'done';
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-lg bg-white/80 border border-blue-100 px-3 py-2">
-      {status === 'done' ? (
-        <CheckCircle className="h-4 w-4 text-green-600" />
-      ) : status === 'active' ? (
-        <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-      ) : (
-        <div className="h-4 w-4 rounded-full border border-slate-300 bg-slate-100" />
-      )}
-      <span
-        className={cn(
-          'text-sm',
-          status === 'active'
-            ? 'text-blue-950 font-medium'
-            : status === 'done'
-              ? 'text-slate-800'
-              : 'text-slate-500',
-        )}
-      >
-        {label}
-      </span>
     </div>
   );
 }
