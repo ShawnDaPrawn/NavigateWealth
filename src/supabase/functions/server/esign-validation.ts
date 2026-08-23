@@ -7,20 +7,6 @@
 
 import { z } from 'npm:zod';
 
-// --- Envelope Context (for upload) ---
-
-export const EnvelopeContextSchema = z
-  .object({
-    clientId: z.string().optional(),
-    adviceCaseId: z.string().optional(),
-    requestId: z.string().optional(),
-    productId: z.string().optional(),
-    title: z.string().min(1, 'Envelope title is required').max(300),
-    message: z.string().max(5000).optional(),
-    expiryDays: z.number().int().min(1).max(365).optional(),
-  })
-  .passthrough();
-
 // --- Signers ---
 
 export const SignerSchema = z
@@ -40,12 +26,6 @@ export const SignerSchema = z
 
 export const DraftSignersSchema = z.object({
   signers: z.array(SignerSchema).min(1, 'At least one signer is required'),
-});
-
-export const InviteSignersSchema = z.object({
-  signers: z.array(SignerSchema).min(1, 'At least one signer is required'),
-  message: z.string().max(2000).optional(),
-  siteUrl: z.string().max(500).optional(),
 });
 
 // --- Fields ---
@@ -70,15 +50,7 @@ export const UpdateFieldsSchema = z.object({
   fields: z.array(EsignFieldSchema).min(1, 'At least one field is required'),
 });
 
-export const UpdateFieldValueSchema = z.object({
-  value: z.string().max(10000),
-});
-
 // --- OTP / Verification ---
-
-export const OtpSendSchema = z.object({
-  method: z.enum(['email', 'sms']).optional().default('email'),
-});
 
 export const OtpVerifySchema = z.object({
   otp: z.string().min(4).max(10),
@@ -105,14 +77,6 @@ export const SignerValidateSchema = z.object({
   token: z.string().min(1, 'Signer token is required'),
 });
 
-export const SignerSubmitSchema = z
-  .object({
-    token: z.string().min(1, 'Signer token is required'),
-    fieldValues: z.record(z.string(), z.string()).optional(),
-    signatureData: z.string().optional(),
-  })
-  .passthrough();
-
 // ============================================================================
 // SIGNER PORTAL — snake_case wire format (Stage B / B2)
 // ============================================================================
@@ -130,13 +94,21 @@ export const SignerSubmitSchema = z
 //     `access_token` / `signature_data` / `field_values`. These are PUBLIC
 //     routes: the caller is an unauthenticated third party holding a link.
 //
-// `SignerSubmitSchema` above was written for the signer routes but in the
-// SENDER format (`token`, `signatureData`, `fieldValues` — the last as a
-// record, where the handler actually iterates an ARRAY of
-// `{ field_id, value }`). It has never been wired to anything. Attaching it to
+// This file used to carry a `SignerSubmitSchema` written for the signer routes
+// but in the SENDER format (`token`, `signatureData`, `fieldValues` — the last
+// as a record, where the handler actually iterates an ARRAY of
+// `{ field_id, value }`). It was wired to nothing, and attaching it to
 // `/signer/submit` would have rejected every real signature submission in
-// production. It is left in place rather than deleted only because deleting it
-// is a separate decision from this change; see A19 in the remediation plan.
+// production. It has been DELETED (A19), along with four other schemas that
+// were likewise unreferenced: EnvelopeContextSchema, InviteSignersSchema,
+// UpdateFieldValueSchema and OtpSendSchema.
+//
+// The reasoning is worth keeping even though the code is gone: a hand-written
+// schema that no handler validates against is not neutral. It reads as
+// coverage, it drifts silently because nothing exercises it, and it invites the
+// "this looks ready, just wire it up" change that takes production down. If a
+// schema here has no import, delete it rather than leaving it for someone to
+// trust.
 //
 // The schemas below were derived by reading each handler's own destructuring
 // and its own `if (!x) return 400` guards, so they reject exactly what the

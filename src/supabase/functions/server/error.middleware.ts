@@ -13,7 +13,7 @@ import type { Context } from 'npm:hono';
 import { ZodError } from 'npm:zod';
 import { logger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
-import { recordRuntimeServerIssue } from './quality-issues-runtime-server.ts';
+import { scheduleRuntimeServerIssue } from './quality-issues-runtime-server.ts';
 
 // ============================================================================
 // ERROR CLASSES
@@ -161,9 +161,14 @@ export async function errorHandler(error: Error, c: Context) {
 
   // Record unexpected 500s into the in-house quality-issues pipeline so backend
   // exceptions surface on the same dashboard as client runtime errors (source:
-  // 'runtime-server'). Awaited so the KV write completes before the isolate may
-  // suspend; recordRuntimeServerIssue never throws.
-  await recordRuntimeServerIssue({
+  // 'runtime-server').
+  //
+  // SECURITY-AUDIT A17: this used to await the KV round-trips before responding,
+  // on the error path of every route behind the 77 lazy mounts. It is now
+  // scheduled instead — kept alive past the response via EdgeRuntime.waitUntil
+  // where that exists, and awaited where it does not, so nothing is lost to an
+  // isolate suspending. Never throws either way.
+  await scheduleRuntimeServerIssue({
     error,
     path: new URL(c.req.url).pathname,
     method: c.req.method,

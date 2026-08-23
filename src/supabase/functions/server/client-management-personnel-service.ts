@@ -7,7 +7,7 @@ import {
 } from './client-management-personnel-types.ts';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { SUPER_ADMIN_EMAIL } from './constants.ts';
+import { isSuperAdminEmail } from './constants.ts';
 import { sendEmail } from './email-service.tsx';
 
 const log = createModuleLogger('personnel-service');
@@ -248,9 +248,9 @@ export const PersonnelService = {
 
     // Auto-bootstrap: if the current user is the super admin and their profile
     // doesn't exist in KV yet, create it so they appear in the personnel table.
-    if (currentUserEmail && currentUserEmail.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+    if (isSuperAdminEmail(currentUserEmail)) {
       const alreadyExists = allProfiles.some(
-        (p) => p.id === currentUserId || p.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase(),
+        (p) => p.id === currentUserId || isSuperAdminEmail(p.email),
       );
 
       if (!alreadyExists) {

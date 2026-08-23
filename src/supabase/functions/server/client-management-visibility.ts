@@ -1,4 +1,4 @@
-import { PERSONNEL_ROLES, SUPER_ADMIN_EMAIL } from './constants.ts';
+import { PERSONNEL_ROLES, isSuperAdminEmail } from './constants.ts';
 
 interface AuthUserLike {
   id: string;
@@ -34,7 +34,7 @@ export function shouldLoadClientManagementProfile(
   personnelIds: Set<string>,
 ): boolean {
   // Super admin may have a dual personal-client profile — always load KV first
-  if (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+  if (isSuperAdminEmail(user.email)) {
     return true;
   }
 
@@ -55,10 +55,7 @@ export function shouldIncludeInClientManagement({
   applicationStatus,
 }: ClientManagementVisibilityInput): boolean {
   // Shawn-only: super admin can also appear as a test personal client in Client Management
-  if (
-    user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() &&
-    profile?.personalClientEnabled === true
-  ) {
+  if (isSuperAdminEmail(user.email) && profile?.personalClientEnabled === true) {
     return true;
   }
 

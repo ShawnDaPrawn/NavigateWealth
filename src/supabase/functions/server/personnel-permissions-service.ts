@@ -30,7 +30,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { SUPER_ADMIN_EMAIL } from './constants.ts';
+import { isSuperAdminEmail } from './constants.ts';
 
 const log = createModuleLogger('permissions');
 
@@ -51,10 +51,14 @@ interface PermissionSet {
 
 export const PermissionsService = {
   /**
-   * Check if an email is the super admin (hardcoded bypass)
+   * Check if an email is a super admin (permission bypass).
+   *
+   * SECURITY-AUDIT A10: authorises against the full allowlist (plus the
+   * SUPER_ADMIN_EMAILS env override) rather than the single deprecated const,
+   * so a recovery super-admin is not silently denied the bypass.
    */
   isSuperAdmin(email: string): boolean {
-    return email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    return isSuperAdminEmail(email);
   },
 
   /**
