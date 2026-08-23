@@ -9,7 +9,7 @@
  * Hardened with:
  *   - Zod schema validation
  *   - Honeypot field (silent rejection for bots)
- *   - Email-based rate limiting (5 per hour per email)
+ *   - Rate limiting per email AND per client IP (see public-form-rate-limit.ts)
  *   - asyncHandler for consistent error handling
  *   - Footer settings for template consistency
  *
@@ -30,6 +30,7 @@ import { submissionsService } from './submissions-service.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { ConsultationRequestSchema } from './consultation-validation.ts';
 import { escapeHtml, formatZodError } from './shared-validation-utils.ts';
+import { checkPublicFormRateLimit } from './public-form-rate-limit.ts';
 import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
@@ -204,26 +205,22 @@ app.post(
       );
     }
 
-    // --- Rate limit: max 5 submissions per email per hour -------------------------
-    const rateLimitKey = `rate_limit:consultation:${email}`;
-    const rateData = await kv.get(rateLimitKey);
-    const now = Date.now();
-    const oneHour = 60 * 60 * 1000;
-
-    if (rateData && Array.isArray(rateData.timestamps)) {
-      const recent = rateData.timestamps.filter((t: number) => now - t < oneHour);
-      if (recent.length >= 5) {
-        log.info('Consultation rate limit exceeded', { email });
-        return c.json(
-          {
-            error: 'Too many requests. Please wait a while before trying again.',
-          },
-          429,
-        );
-      }
-      await kv.set(rateLimitKey, { timestamps: [...recent, now] });
-    } else {
-      await kv.set(rateLimitKey, { timestamps: [now] });
+    // --- Rate limit: per email AND per IP ---------------------------------------
+    // SECURITY (SECURITY-AUDIT S11): this used to key on the submitted email
+    // alone, which the caller chooses — rotating one character reset the bucket
+    // and the limit bounded nothing. See public-form-rate-limit.ts for the
+    // per-dimension budgets and the (deliberate) fail-open posture.
+    const rateLimit = await checkPublicFormRateLimit('consultation', email, (headerName) =>
+      c.req.header(headerName),
+    );
+    if (!rateLimit.allowed) {
+      log.info('Consultation rate limit exceeded', { limitedBy: rateLimit.limitedBy });
+      return c.json(
+        {
+          error: 'Too many requests. Please wait a while before trying again.',
+        },
+        429,
+      );
     }
 
     // --- Server-side date validation (mirrors ConsultationModal client rules) ──
