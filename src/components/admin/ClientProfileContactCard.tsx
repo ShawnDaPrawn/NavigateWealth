@@ -8,9 +8,7 @@ import { SelectItem } from '../ui/select';
 import { Separator } from '../ui/separator';
 import { Phone } from 'lucide-react';
 import { InputWithCopy, SelectWithCopy } from './ProfileFieldsWithCopy';
-import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
-
-type ClientProfileHook = ReturnType<typeof useClientProfile>;
+import type { ClientProfileHook } from './clientProfileHook';
 
 interface ClientProfileContactCardProps {
   state: ClientProfileHook['state'];

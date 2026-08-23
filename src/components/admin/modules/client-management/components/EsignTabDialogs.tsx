@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '../../../../ui/dialog';
 import { Loader2 } from 'lucide-react';
-import type { EsignEnvelope } from '../../esign/types';
+import type { EsignEnvelope } from './esignTabModel';
 
 interface EsignTabDialogsProps {
   deleteDialogOpen: boolean;

@@ -46,7 +46,7 @@ import { EmptyState } from '../../esign/components/EmptyState';
 import { EnvelopeManagementTableRow } from '../../esign/components/EnvelopeManagementTableRow';
 import { EnvelopeDetailsDialog } from '../../esign/components/EnvelopeDetailsDialog';
 
-import type { EsignEnvelope, EsignField, SignerFormData } from '../../esign/types';
+import type { EsignEnvelope, EsignField, SignerFormData } from './esignTabModel';
 
 // Lazy-load heavy wizard components (same as standalone module)
 const DocumentUploadStep = React.lazy(() =>

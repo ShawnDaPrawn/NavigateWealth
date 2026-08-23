@@ -40,7 +40,7 @@ import { AssetsLiabilitiesSection } from './profile-sections/AssetsLiabilitiesSe
 import { BudgetingPage } from '../pages/BudgetingPage';
 import { IdentitySection } from './profile-sections/IdentitySection';
 import { Client, ProfileData } from './modules/client-management/types';
-import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
+import { useClientProfile } from './clientProfileHook';
 import { copyToClipboard } from '../../utils/clipboard';
 import { api } from '../../utils/api';
 import {

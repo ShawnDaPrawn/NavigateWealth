@@ -12,9 +12,7 @@ import { formatCurrencyDisplay } from '../../utils/currencyFormatter';
 import { User, Shield, Banknote } from 'lucide-react';
 import { CountrySelect } from '../pages/profile/CountrySelect';
 import { InputWithCopy, SelectWithCopy } from './ProfileFieldsWithCopy';
-import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
-
-type ClientProfileHook = ReturnType<typeof useClientProfile>;
+import type { ClientProfileHook } from './clientProfileHook';
 
 interface ClientProfilePersonalCardProps {
   state: ClientProfileHook['state'];
