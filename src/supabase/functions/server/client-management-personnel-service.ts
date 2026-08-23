@@ -249,8 +249,16 @@ export const PersonnelService = {
     // Auto-bootstrap: if the current user is the super admin and their profile
     // doesn't exist in KV yet, create it so they appear in the personnel table.
     if (isSuperAdminEmail(currentUserEmail)) {
+      // Matched against the CURRENT caller, not "any allowlisted super admin".
+      // With the allowlist in play those are different questions: if the primary
+      // super admin's profile exists, `isSuperAdminEmail(p.email)` is true for
+      // THAT row, so a recovery admin would be treated as already bootstrapped
+      // and never get a profile of their own.
+      const normalizedCurrentEmail = currentUserEmail?.toLowerCase();
       const alreadyExists = allProfiles.some(
-        (p) => p.id === currentUserId || isSuperAdminEmail(p.email),
+        (p) =>
+          p.id === currentUserId ||
+          (!!normalizedCurrentEmail && p.email?.toLowerCase() === normalizedCurrentEmail),
       );
 
       if (!alreadyExists) {

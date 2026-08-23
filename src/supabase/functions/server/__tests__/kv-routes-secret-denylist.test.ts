@@ -125,6 +125,58 @@ describe('secret-key denylist', () => {
   });
 });
 
+describe('audit entries do not leak the key itself', () => {
+  it('redacts the identifying tail of a PII-bearing key', async () => {
+    // KV keys embed the data this route is being hardened around:
+    // `rate_limit:contact:<email>` is PII, `esign:token:<token>` is a live
+    // credential. `/admin-audit/log` is readable by any `admin` while this
+    // route now needs super-admin, so recording the raw key would leak to a
+    // WEAKER role exactly what the restriction exists to protect.
+    await call('rate_limit:contact:victim@example.com');
+
+    const entry = auditRecord.mock.calls[0][0] as { summary: string; entityId: string };
+    expect(entry.entityId).not.toContain('victim@example.com');
+    expect(entry.summary).not.toContain('victim@example.com');
+  });
+
+  it('keeps the namespace, so the trail still says what was touched', async () => {
+    await call('rate_limit:contact:victim@example.com');
+
+    const entry = auditRecord.mock.calls[0][0] as { entityId: string };
+    expect(entry.entityId).toContain('rate_limit:contact:');
+  });
+
+  it('is stable, so two reads of one key correlate', async () => {
+    await call('user_profile:123:personal_info');
+    const first = (auditRecord.mock.calls[0][0] as { entityId: string }).entityId;
+
+    auditRecord.mockClear();
+    await call('user_profile:123:personal_info');
+    const second = (auditRecord.mock.calls[0][0] as { entityId: string }).entityId;
+
+    expect(second).toBe(first);
+  });
+
+  it('distinguishes different keys in the same namespace', async () => {
+    await call('user_profile:aaa:personal_info');
+    const a = (auditRecord.mock.calls[0][0] as { entityId: string }).entityId;
+
+    auditRecord.mockClear();
+    await call('user_profile:bbb:personal_info');
+    const b = (auditRecord.mock.calls[0][0] as { entityId: string }).entityId;
+
+    expect(b).not.toBe(a);
+  });
+
+  it('redacts the denied-read entry too', async () => {
+    await call('esign_config:platform_signing_cert');
+
+    const entry = auditRecord.mock.calls[0][0] as { summary: string; entityId: string };
+    expect(entry.entityId).not.toContain('platform_signing_cert');
+    expect(entry.summary).not.toContain('platform_signing_cert');
+  });
+});
+
 describe('role gate', () => {
   it('rejects a plain admin — the principal the audit called out', async () => {
     currentRole = 'admin';

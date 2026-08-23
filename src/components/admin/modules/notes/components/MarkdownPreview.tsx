@@ -92,7 +92,12 @@ function processInline(text: string): string {
       // rejected link is visible to the author instead of silently vanishing.
       return label;
     }
-    return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="text-purple-600 underline hover:text-purple-700">${label}</a>`;
+    // NOT re-escaped: `processInline` ran `escapeHtml` over the whole line
+    // before this regex matched, so `safeUrl` is ALREADY entity-encoded.
+    // Escaping again turned `&` into `&amp;amp;`, and a link like
+    // `[s](https://x.com?a=1&b=2)` then navigated to a parameter named
+    // `amp;b`. The first escape is what keeps quotes out of the attribute.
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-purple-600 underline hover:text-purple-700">${label}</a>`;
   });
 
   // Checklist items

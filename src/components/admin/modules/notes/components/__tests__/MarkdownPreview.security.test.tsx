@@ -54,6 +54,15 @@ describe('MarkdownPreview link scheme handling', () => {
     expect(container.textContent).toContain('important note');
   });
 
+  it('does not double-escape an ampersand in the query string', () => {
+    // `processInline` escapes the whole line BEFORE the link regex runs, so the
+    // captured URL already reads `&amp;`. Escaping it a second time produced
+    // `&amp;amp;`, and the browser then navigated to a parameter literally named
+    // `amp;b` — a silently wrong link rather than a blocked one.
+    const anchor = renderLink('[site](https://example.com?a=1&b=2)');
+    expect(anchor?.getAttribute('href')).toBe('https://example.com?a=1&b=2');
+  });
+
   it('keeps ordinary links working', () => {
     expect(renderLink('[site](https://navigatewealth.co)')?.getAttribute('href')).toBe(
       'https://navigatewealth.co',

@@ -52,6 +52,34 @@ function isSecretKey(key: string): boolean {
   return SECRET_KEY_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
+/**
+ * Reduce a KV key to something safe to persist in the audit trail.
+ *
+ * KV keys are not neutral identifiers — they embed the very data this route is
+ * being hardened around. `rate_limit:contact:<email>` carries PII;
+ * `esign:token:<access token>` carries a live credential. Writing the raw key
+ * into `admin-audit` would be a privilege INVERSION: this route now requires
+ * super-admin, but `/admin-audit/log` is readable by any `admin`, so auditing
+ * the read would leak to a weaker role exactly what the read was restricted for
+ * — and keep it for the retention window.
+ *
+ * What is kept is the namespace (everything up to the last `:`) plus a short
+ * SHA-256 fingerprint of the whole key. That preserves what the audit trail is
+ * for — which namespace was accessed, and whether two entries touched the same
+ * key — while discarding the identifying tail.
+ */
+async function redactKeyForAudit(key: string): Promise<string> {
+  const lastColon = key.lastIndexOf(':');
+  const namespace = lastColon > 0 ? key.slice(0, lastColon + 1) : '';
+
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+  const fingerprint = Array.from(new Uint8Array(digest).slice(0, 6))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `${namespace}#${fingerprint}`;
+}
+
 // SECURITY: a generic KV reader exposes the entire datastore. It must never be
 // reachable unauthenticated, and `admin` is not a strong enough principal for
 // it — see the header note.
@@ -80,15 +108,16 @@ app.get('/:key', async (c) => {
 
     if (isSecretKey(key)) {
       log.warn('Refused KV read of a secret-bearing key', { key, actorId });
+      const redacted = await redactKeyForAudit(key);
       await AdminAuditService.record({
         actorId,
         actorRole,
         category: 'security',
         action: 'kv_secret_read_denied',
-        summary: `Denied read of secret-bearing KV key "${key}"`,
+        summary: `Denied read of secret-bearing KV key ${redacted}`,
         severity: 'critical',
         entityType: 'kv_key',
-        entityId: key,
+        entityId: redacted,
       });
       return c.json(
         {
@@ -110,15 +139,16 @@ app.get('/:key', async (c) => {
 
     // Recorded AFTER the value is known to exist, so the log reflects reads that
     // actually returned data rather than probes for keys that do not exist.
+    const redacted = await redactKeyForAudit(key);
     await AdminAuditService.record({
       actorId,
       actorRole,
       category: 'security',
       action: 'kv_read',
-      summary: `Read KV key "${key}" through the generic KV API`,
+      summary: `Read KV key ${redacted} through the generic KV API`,
       severity: 'warning',
       entityType: 'kv_key',
-      entityId: key,
+      entityId: redacted,
     });
 
     log.info(`Key found: ${key}`);
