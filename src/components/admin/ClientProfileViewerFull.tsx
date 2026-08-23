@@ -6,24 +6,17 @@
  * including CRUD operations, validations, file uploads, risk assessment, and more.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Separator } from '../ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { toast } from 'sonner';
 import {
   formatCurrency,
   formatCurrencyInput,
   cleanCurrencyInput,
-  formatCurrencyDisplay,
 } from '../../utils/currencyFormatter';
 import {
   User,
   Mail,
-  Phone,
   MapPin,
   Briefcase,
   Heart,
@@ -33,12 +26,9 @@ import {
   Target,
   Save,
   PieChart,
-  Check,
   Wallet,
   Loader2,
-  Copy,
   AlertCircle,
-  Banknote,
 } from 'lucide-react';
 import { AddressSection } from './profile-sections/AddressSection';
 import { EmploymentSection } from './profile-sections/EmploymentSection';
@@ -49,8 +39,6 @@ import { RiskProfileSection } from './profile-sections/RiskProfileSection';
 import { AssetsLiabilitiesSection } from './profile-sections/AssetsLiabilitiesSection';
 import { BudgetingPage } from '../pages/BudgetingPage';
 import { IdentitySection } from './profile-sections/IdentitySection';
-import { FieldWithCopy } from './FieldWithCopy';
-import { CountrySelect } from '../pages/profile/CountrySelect';
 import { Client, ProfileData } from './modules/client-management/types';
 import { useClientProfile } from './modules/client-management/hooks/useClientProfile';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -66,98 +54,8 @@ import {
   type PolicyAssetSourceRecord,
 } from '../../utils/derivedPolicyAssets';
 
-// Wrapper component for input with copy button using the reusable FieldWithCopy
-const InputWithCopy = ({
-  label,
-  value,
-  fieldName,
-  id,
-  ...inputProps
-}: {
-  label: string;
-  value: string | number;
-  fieldName: string;
-  id?: string;
-  [key: string]: unknown;
-}) => {
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <FieldWithCopy id={id ?? fieldName} {...inputProps} value={value} className="mt-1.5" />
-    </div>
-  );
-};
-
-// Wrapper component for select with copy button
-const SelectWithCopy = ({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  children,
-  id,
-}: {
-  label: string;
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder: string;
-  children: React.ReactNode;
-  id: string;
-}) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async (_e: React.MouseEvent) => {
-    // Don't prevent default/propagation as it might interfere with clipboard operations
-    // _e.preventDefault();
-    // e.stopPropagation();
-
-    try {
-      const textToCopy = String(value || '');
-
-      if (!textToCopy) {
-        toast.error('Nothing to copy');
-        return;
-      }
-
-      await copyToClipboard(textToCopy);
-      setCopied(true);
-      toast.success('Copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (_err) {
-      toast.error('Failed to copy');
-    }
-  };
-
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative mt-1.5">
-        <Select value={value} onValueChange={onValueChange}>
-          <SelectTrigger id={id} className="pr-10">
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent>{children}</SelectContent>
-        </Select>
-        {value && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            tabIndex={-1}
-            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-green-600" />
-            ) : (
-              <Copy className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-            )}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
+import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
+import { ClientProfileContactCard } from './ClientProfileContactCard';
 
 interface ClientProfileViewerFullProps {
   clientData: Client;
@@ -342,515 +240,23 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
       <div className="flex-1 overflow-y-auto pr-2">
         {/* Personal Information Section */}
         {activeSection === 'personal' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#6d28d9]/10 flex items-center justify-center">
-                  <User className="h-5 w-5 text-[#6d28d9]" />
-                </div>
-                <div>
-                  <CardTitle>Personal Information</CardTitle>
-                  <CardDescription>Basic personal details</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Title"
-                    value={state.profileData.title}
-                    id="title"
-                    fieldName="title"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('title', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="First Name"
-                    value={state.profileData.firstName}
-                    id="firstName"
-                    fieldName="firstName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('firstName', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Middle Name"
-                    value={state.profileData.middleName}
-                    id="middleName"
-                    fieldName="middleName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('middleName', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Last Name"
-                    value={state.profileData.lastName}
-                    id="lastName"
-                    fieldName="lastName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('lastName', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Date of Birth"
-                    value={state.profileData.dateOfBirth}
-                    id="dateOfBirth"
-                    fieldName="dateOfBirth"
-                    type="date"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('dateOfBirth', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Age"
-                    value={(() => {
-                      if (!state.profileData.dateOfBirth) return '';
-                      const birthDate = new Date(state.profileData.dateOfBirth);
-                      const today = new Date();
-                      let age = today.getFullYear() - birthDate.getFullYear();
-                      const monthDiff = today.getMonth() - birthDate.getMonth();
-                      if (
-                        monthDiff < 0 ||
-                        (monthDiff === 0 && today.getDate() < birthDate.getDate())
-                      ) {
-                        age--;
-                      }
-                      return age >= 0 ? age : '';
-                    })()}
-                    id="age"
-                    fieldName="age"
-                    readOnly
-                    className="bg-gray-50 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <SelectWithCopy
-                    label="Gender"
-                    value={state.profileData.gender}
-                    onValueChange={(value) => actions.handleInputChange('gender', value)}
-                    placeholder="Select gender"
-                    id="gender"
-                  >
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectWithCopy>
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Nationality"
-                    value={state.profileData.nationality}
-                    id="nationality"
-                    fieldName="nationality"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('nationality', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Tax Number"
-                    value={state.profileData.taxNumber}
-                    id="taxNumber"
-                    fieldName="taxNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('taxNumber', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <SelectWithCopy
-                    label="Marital Status"
-                    value={state.profileData.maritalStatus}
-                    onValueChange={(value) => actions.handleInputChange('maritalStatus', value)}
-                    placeholder="Select status"
-                    id="maritalStatus"
-                  >
-                    <SelectItem value="single">Single</SelectItem>
-                    <SelectItem value="married">Married</SelectItem>
-                    <SelectItem value="divorced">Divorced</SelectItem>
-                    <SelectItem value="widowed">Widowed</SelectItem>
-                  </SelectWithCopy>
-                </div>
-                {state.profileData.maritalStatus === 'married' && (
-                  <div className="space-y-2">
-                    <SelectWithCopy
-                      label="Marital Regime"
-                      value={state.profileData.maritalRegime}
-                      onValueChange={(value) => actions.handleInputChange('maritalRegime', value)}
-                      placeholder="Select regime"
-                      id="maritalRegime"
-                    >
-                      <SelectItem value="in_community">In Community of Property</SelectItem>
-                      <SelectItem value="out_community_accrual">
-                        Out of Community with Accrual
-                      </SelectItem>
-                      <SelectItem value="out_community_no_accrual">
-                        Out of Community without Accrual
-                      </SelectItem>
-                    </SelectWithCopy>
-                  </div>
-                )}
-              </div>
-
-              <Separator className="my-6" />
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Banknote className="h-5 w-5 text-green-600" />
-                </div>
-                <h3 className="text-lg font-medium">Income Information</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Gross Monthly Income (R)"
-                    value={
-                      grossIncomeDisplay !== null
-                        ? grossIncomeDisplay
-                        : formatCurrencyDisplay(state.profileData.grossMonthlyIncome)
-                    }
-                    id="grossMonthlyIncome"
-                    fieldName="grossMonthlyIncome"
-                    type="text"
-                    placeholder="0.00"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      // Allow raw typing — no reformatting while editing to avoid cursor issues
-                      const raw = e.target.value.replace(/[^0-9.]/g, '');
-                      setGrossIncomeDisplay(raw);
-                    }}
-                    onBlur={() => {
-                      const numValue = parseFloat(grossIncomeDisplay || '0') || 0;
-                      // Only mark dirty if value actually changed
-                      if (numValue !== (state.profileData.grossMonthlyIncome || 0)) {
-                        actions.handleInputChange('grossMonthlyIncome', numValue);
-                      }
-                      setGrossIncomeDisplay(null);
-                    }}
-                    onFocus={() => {
-                      if (grossIncomeDisplay === null) {
-                        const val = state.profileData.grossMonthlyIncome;
-                        setGrossIncomeDisplay(val ? val.toString() : '');
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Net Monthly Income (R)"
-                    value={
-                      netIncomeDisplay !== null
-                        ? netIncomeDisplay
-                        : formatCurrencyDisplay(state.profileData.netMonthlyIncome)
-                    }
-                    id="netMonthlyIncome"
-                    fieldName="netMonthlyIncome"
-                    type="text"
-                    placeholder="0.00"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const raw = e.target.value.replace(/[^0-9.]/g, '');
-                      setNetIncomeDisplay(raw);
-                    }}
-                    onBlur={() => {
-                      const numValue = parseFloat(netIncomeDisplay || '0') || 0;
-                      if (numValue !== (state.profileData.netMonthlyIncome || 0)) {
-                        actions.handleInputChange('netMonthlyIncome', numValue);
-                      }
-                      setNetIncomeDisplay(null);
-                    }}
-                    onFocus={() => {
-                      if (netIncomeDisplay === null) {
-                        const val = state.profileData.netMonthlyIncome;
-                        setNetIncomeDisplay(val ? val.toString() : '');
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Gross Annual Income (R)"
-                    value={
-                      grossAnnualIncomeDisplay !== null
-                        ? grossAnnualIncomeDisplay
-                        : formatCurrencyDisplay(state.profileData.grossAnnualIncome)
-                    }
-                    id="grossAnnualIncome"
-                    fieldName="grossAnnualIncome"
-                    type="text"
-                    placeholder="0.00"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const raw = e.target.value.replace(/[^0-9.]/g, '');
-                      setGrossAnnualIncomeDisplay(raw);
-                    }}
-                    onBlur={() => {
-                      const numValue = parseFloat(grossAnnualIncomeDisplay || '0') || 0;
-                      if (numValue !== (state.profileData.grossAnnualIncome || 0)) {
-                        actions.handleInputChange('grossAnnualIncome', numValue);
-                      }
-                      setGrossAnnualIncomeDisplay(null);
-                    }}
-                    onFocus={() => {
-                      if (grossAnnualIncomeDisplay === null) {
-                        const val = state.profileData.grossAnnualIncome;
-                        setGrossAnnualIncomeDisplay(val ? val.toString() : '');
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Net Annual Income (R)"
-                    value={
-                      netAnnualIncomeDisplay !== null
-                        ? netAnnualIncomeDisplay
-                        : formatCurrencyDisplay(state.profileData.netAnnualIncome)
-                    }
-                    id="netAnnualIncome"
-                    fieldName="netAnnualIncome"
-                    type="text"
-                    placeholder="0.00"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const raw = e.target.value.replace(/[^0-9.]/g, '');
-                      setNetAnnualIncomeDisplay(raw);
-                    }}
-                    onBlur={() => {
-                      const numValue = parseFloat(netAnnualIncomeDisplay || '0') || 0;
-                      if (numValue !== (state.profileData.netAnnualIncome || 0)) {
-                        actions.handleInputChange('netAnnualIncome', numValue);
-                      }
-                      setNetAnnualIncomeDisplay(null);
-                    }}
-                    onFocus={() => {
-                      if (netAnnualIncomeDisplay === null) {
-                        const val = state.profileData.netAnnualIncome;
-                        setNetAnnualIncomeDisplay(val ? val.toString() : '');
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <Separator className="my-6" />
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-medium">Identity</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="idCountry">ID Country</Label>
-                  <div className="mt-1.5">
-                    <CountrySelect
-                      id="idCountry"
-                      value={state.profileData.idCountry}
-                      onValueChange={(value) => actions.handleInputChange('idCountry', value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="ID Number"
-                    value={state.profileData.idNumber}
-                    id="idNumber"
-                    fieldName="idNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('idNumber', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="passportCountry">Passport Country</Label>
-                  <div className="mt-1.5">
-                    <CountrySelect
-                      id="passportCountry"
-                      value={state.profileData.passportCountry}
-                      onValueChange={(value) => actions.handleInputChange('passportCountry', value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Passport Number"
-                    value={state.profileData.passportNumber}
-                    id="passportNumber"
-                    fieldName="passportNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('passportNumber', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="employmentCountry">Country of Employment</Label>
-                  <div className="mt-1.5">
-                    <CountrySelect
-                      id="employmentCountry"
-                      value={state.profileData.employmentCountry}
-                      onValueChange={(value) =>
-                        actions.handleInputChange('employmentCountry', value)
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Work Permit Number"
-                    value={state.profileData.workPermitNumber}
-                    id="workPermitNumber"
-                    fieldName="workPermitNumber"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('workPermitNumber', e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ClientProfilePersonalCard
+            state={state}
+            actions={actions}
+            grossIncomeDisplay={grossIncomeDisplay}
+            setGrossIncomeDisplay={setGrossIncomeDisplay}
+            netIncomeDisplay={netIncomeDisplay}
+            setNetIncomeDisplay={setNetIncomeDisplay}
+            grossAnnualIncomeDisplay={grossAnnualIncomeDisplay}
+            setGrossAnnualIncomeDisplay={setGrossAnnualIncomeDisplay}
+            netAnnualIncomeDisplay={netAnnualIncomeDisplay}
+            setNetAnnualIncomeDisplay={setNetAnnualIncomeDisplay}
+          />
         )}
 
         {/* Contact Details Section */}
         {activeSection === 'contact' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#6d28d9]/10 flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-[#6d28d9]" />
-                </div>
-                <div>
-                  <CardTitle>Contact Details</CardTitle>
-                  <CardDescription>Contact information and preferences</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Email"
-                    value={state.profileData.email}
-                    id="email"
-                    fieldName="email"
-                    type="email"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('email', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Secondary Email"
-                    value={state.profileData.secondaryEmail}
-                    id="secondaryEmail"
-                    fieldName="secondaryEmail"
-                    type="email"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('secondaryEmail', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Phone Number"
-                    value={state.profileData.phoneNumber}
-                    id="phoneNumber"
-                    fieldName="phoneNumber"
-                    type="tel"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('phoneNumber', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Alternative Phone"
-                    value={state.profileData.alternativePhone}
-                    id="alternativePhone"
-                    fieldName="alternativePhone"
-                    type="tel"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('alternativePhone', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <SelectWithCopy
-                    label="Preferred Contact Method"
-                    value={state.profileData.preferredContactMethod}
-                    onValueChange={(value) =>
-                      actions.handleInputChange('preferredContactMethod', value)
-                    }
-                    placeholder="Select method"
-                    id="preferredContactMethod"
-                  >
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Phone</SelectItem>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  </SelectWithCopy>
-                </div>
-              </div>
-
-              <Separator className="my-6" />
-              <h3 className="text-lg font-medium mb-4">Emergency Contact</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Contact Name"
-                    value={state.profileData.emergencyContactName}
-                    id="emergencyContactName"
-                    fieldName="emergencyContactName"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('emergencyContactName', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Relationship"
-                    value={state.profileData.emergencyContactRelationship}
-                    id="emergencyContactRelationship"
-                    fieldName="emergencyContactRelationship"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('emergencyContactRelationship', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Phone Number"
-                    value={state.profileData.emergencyContactPhone}
-                    id="emergencyContactPhone"
-                    fieldName="emergencyContactPhone"
-                    type="tel"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('emergencyContactPhone', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <InputWithCopy
-                    label="Email"
-                    value={state.profileData.emergencyContactEmail}
-                    id="emergencyContactEmail"
-                    fieldName="emergencyContactEmail"
-                    type="email"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      actions.handleInputChange('emergencyContactEmail', e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ClientProfileContactCard state={state} actions={actions} />
         )}
 
         {/* KYC Section */}
