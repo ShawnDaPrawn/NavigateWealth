@@ -69,6 +69,12 @@ describe('provider portal golden flows', () => {
     readRepoFile('src/supabase/functions/server/integrations-portal-flow-routes.ts'),
     readRepoFile('src/supabase/functions/server/integrations-portal-jobs-routes.ts'),
     readRepoFile('src/supabase/functions/server/integrations-portal-worker-routes.ts'),
+    // The worker routes are themselves split into brain/item/lifecycle slices
+    // (plus shared helpers); the anchors live in the slices now.
+    readRepoFile('src/supabase/functions/server/integrations-portal-worker-shared.ts'),
+    readRepoFile('src/supabase/functions/server/integrations-portal-worker-brain-routes.ts'),
+    readRepoFile('src/supabase/functions/server/integrations-portal-worker-item-routes.ts'),
+    readRepoFile('src/supabase/functions/server/integrations-portal-worker-lifecycle-routes.ts'),
   ].join('\n');
   const portalDefaultFlowsSource = readRepoFile(
     'src/supabase/functions/server/portal-default-flows.ts',
