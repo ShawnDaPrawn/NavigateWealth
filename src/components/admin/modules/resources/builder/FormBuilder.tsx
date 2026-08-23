@@ -5,7 +5,7 @@ import { InteractiveFormRenderer } from './InteractiveFormRenderer';
 import { PropertiesPanel } from './PropertiesPanel';
 import { FormBlock, BlockType } from './types';
 import { useUndoRedo } from './hooks/useUndoRedo';
-import { useAutosave, AutosaveStatus } from './hooks/useAutosave';
+import { useAutosave } from './hooks/useAutosave';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import {
@@ -16,82 +16,22 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
-import {
-  ArrowLeft,
-  Save,
-  Loader2,
-  Undo2,
-  Redo2,
-  AlertCircle,
-  Cloud,
-  CloudOff,
-  Eye,
-  PenTool,
-} from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Undo2, Redo2, Eye, PenTool } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../../../utils/api';
-import { getBlockDefinition } from './registry';
-import { logger } from '../../../../../utils/logger';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
 // Phase 1/Phase 2 imports
 import { TemplateGallery } from './components/TemplateGallery';
 import { type StarterTemplate } from './constants';
-
-// Simple ID generator
-const generateId = () => {
-  return Math.random().toString(36).substring(2, 15);
-};
-
-// ============================================================================
-// Payload shape sent to the API
-// ============================================================================
-interface SavePayload {
-  title: string;
-  description: string;
-  category: string;
-  blocks: FormBlock[];
-  clientTypes: string[];
-  version: string;
-  letterMeta?: LetterMeta;
-}
-
-// initialData arrives as a loose Record from callers; this is the subset of
-// fields the builder actually reads. Aliased locally (not on the prop) so
-// callers passing a looser record are unaffected.
-interface FormResourceData {
-  id?: string;
-  name?: string;
-  category?: string;
-  description?: string;
-  blocks?: FormBlock[];
-  letterMeta?: LetterMeta;
-  clientTypes?: string[];
-  version?: string;
-}
-
-// ============================================================================
-// Core API save — shared by manual save and autosave
-// Returns the response data on success, throws on failure.
-// ============================================================================
-async function saveToApi(
-  payload: SavePayload,
-  resourceId: string | undefined,
-): Promise<Record<string, unknown>> {
-  logger.info('[FormBuilder] Saving form', {
-    isUpdate: !!resourceId,
-    formId: resourceId,
-    title: payload.title,
-    blocksCount: payload.blocks.length,
-  });
-
-  const data = resourceId
-    ? await api.put<Record<string, unknown>>(`/resources/${resourceId}`, payload)
-    : await api.post<Record<string, unknown>>('/resources', payload);
-
-  logger.info('[FormBuilder] Save successful', { data });
-  return data;
-}
+import {
+  generateId,
+  saveToApi,
+  getInitialBlockData,
+  getLetterStarterBlocks,
+  type FormResourceData,
+  type SavePayload,
+} from './formBuilderModel';
+import { AutosaveIndicator } from './AutosaveIndicator';
 
 // ============================================================================
 // FormBuilder component
@@ -840,214 +780,3 @@ const FormBuilderWorkspace = ({
     </TooltipProvider>
   );
 };
-
-// ============================================================================
-// AutosaveIndicator — shows save status in the header
-// ============================================================================
-
-function AutosaveIndicator({
-  status,
-  lastSavedAt,
-  isNew,
-  manualSaving,
-}: {
-  status: AutosaveStatus;
-  isDirty: boolean;
-  lastSavedAt: Date | null;
-  isNew: boolean;
-  manualSaving: boolean;
-}) {
-  // Format relative time
-  const timeAgo = lastSavedAt ? formatTimeAgo(lastSavedAt) : null;
-
-  // During manual save, show saving state
-  if (manualSaving) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
-        <span>Saving…</span>
-      </div>
-    );
-  }
-
-  // New resource — no autosave yet
-  if (isNew) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-gray-400">
-        <CloudOff className="h-3.5 w-3.5" />
-        <span>Not saved yet</span>
-      </div>
-    );
-  }
-
-  switch (status) {
-    case 'saving':
-      return (
-        <div className="flex items-center gap-1.5 text-xs text-purple-600">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          <span>Saving…</span>
-        </div>
-      );
-
-    case 'saved':
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 text-xs text-green-600 cursor-default">
-              <Cloud className="h-3.5 w-3.5" />
-              <span>Saved</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            {timeAgo ? `Last saved ${timeAgo}` : 'All changes saved'}
-          </TooltipContent>
-        </Tooltip>
-      );
-
-    case 'unsaved':
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 cursor-default">
-              <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <span>Unsaved changes</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            Changes will be auto-saved in a few seconds
-            {timeAgo && <p className="text-gray-400 mt-0.5">Last saved {timeAgo}</p>}
-          </TooltipContent>
-        </Tooltip>
-      );
-
-    case 'error':
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 text-xs text-red-600 cursor-default">
-              <AlertCircle className="h-3.5 w-3.5" />
-              <span>Save failed</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            Auto-save failed. Will retry shortly — or save manually.
-            {timeAgo && <p className="text-gray-400 mt-0.5">Last saved {timeAgo}</p>}
-          </TooltipContent>
-        </Tooltip>
-      );
-
-    default:
-      return null;
-  }
-}
-
-// ============================================================================
-// Relative time formatter — e.g. "just now", "2 min ago", "1 hr ago"
-// ============================================================================
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 10) return 'just now';
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours} hr${hours !== 1 ? 's' : ''} ago`;
-}
-
-// ============================================================================
-// INITIAL DATA FACTORIES
-// ============================================================================
-
-const getInitialBlockData = (type: BlockType) => {
-  const definition = getBlockDefinition(type);
-  if (definition) {
-    return { ...definition.initialData }; // Return a copy
-  }
-
-  switch (type) {
-    case 'section_header':
-      return { number: '1.', title: 'SECTION TITLE' };
-    case 'text':
-      return { content: '<p>Enter your text here...</p>' };
-    case 'field_grid':
-      return { columns: 2, fields: [{ label: 'First Name' }, { label: 'Last Name' }] };
-    case 'signature':
-      return { signatories: [{ label: 'Client Signature', key: 'client' }], showDate: true };
-    case 'table':
-      return {
-        hasColumnHeaders: true,
-        hasRowHeaders: false,
-        columnHeaders: ['Column 1', 'Column 2'],
-        rowHeaders: ['Row 1', 'Row 2'],
-        rows: [
-          {
-            id: 'row-1',
-            cells: [
-              { type: 'static', value: '' },
-              { type: 'static', value: '' },
-            ],
-          },
-          {
-            id: 'row-2',
-            cells: [
-              { type: 'static', value: '' },
-              { type: 'static', value: '' },
-            ],
-          },
-        ],
-      };
-    case 'checkbox_table':
-      return {
-        columns: ['Yes', 'No', 'N/A'],
-        rows: ['Question 1', 'Question 2', 'Question 3'],
-      };
-    case 'radio_options':
-      return {
-        label: 'Select an option:',
-        options: ['Option 1', 'Option 2', 'Option 3'],
-        layout: 'vertical',
-      };
-    default:
-      return {};
-  }
-};
-
-// ============================================================================
-// LETTER STARTER BLOCKS — pre-populated content for new letters
-// ============================================================================
-
-function getLetterStarterBlocks(): FormBlock[] {
-  return [
-    {
-      id: generateId(),
-      type: 'text',
-      data: {
-        content: '<p>Dear Sir / Madam,</p>',
-      },
-    },
-    {
-      id: generateId(),
-      type: 'text',
-      data: {
-        content:
-          '<p>We write to you regarding your financial planning portfolio with Navigate Wealth. Please find the details outlined below.</p>',
-      },
-    },
-    {
-      id: generateId(),
-      type: 'text',
-      data: {
-        content:
-          '<p>[Continue composing your letter here. You can add tables, field grids, signature blocks, and other components from the toolbox on the left.]</p>',
-      },
-    },
-    {
-      id: generateId(),
-      type: 'text',
-      data: {
-        content:
-          '<p>Should you have any queries or require further clarification, please do not hesitate to contact our office.</p>',
-      },
-    },
-  ];
-}
