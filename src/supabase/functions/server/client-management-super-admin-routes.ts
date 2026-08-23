@@ -2,7 +2,7 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import * as kv from './kv_store.tsx';
-import { SUPER_ADMIN_EMAIL } from './constants.ts';
+import { SUPER_ADMIN_EMAIL, isSuperAdminEmail } from './constants.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { UpdateSuperAdminProfileSchema } from './client-management-validation.ts';
 import { requireSuperAdmin } from './auth-mw.ts';
@@ -180,7 +180,12 @@ app.post(
     const authUser = c.get('user') as { id: string; email?: string } | undefined;
     const callerEmail = authUser?.email?.toLowerCase();
 
-    if (callerEmail !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+    // SECURITY-AUDIT A10: this re-check used to compare against the single
+    // deprecated SUPER_ADMIN_EMAIL const, so a recovery super-admin who had
+    // already satisfied `requireSuperAdmin` above (which honours the allowlist
+    // via resolveTrustedRole) was then refused by the very route built for
+    // recovery. Two copies of one rule, and the narrower copy won.
+    if (!isSuperAdminEmail(callerEmail)) {
       return c.json(
         { error: 'Forbidden: only the super admin account can enable personal client testing' },
         403,

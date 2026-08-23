@@ -1,4 +1,4 @@
-type HeaderGetter = (headerName: string) => string | null | undefined;
+export type HeaderGetter = (headerName: string) => string | null | undefined;
 
 export const BLOCKED_IP_ADDRESSES = ['105.224.67.241'] as const;
 

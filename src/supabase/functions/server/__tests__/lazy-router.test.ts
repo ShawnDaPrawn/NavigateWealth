@@ -57,8 +57,14 @@ vi.mock('../stderr-logger.ts', () => ({
   }),
 }));
 
+// A17: error.middleware now SCHEDULES the write rather than awaiting it, so the
+// telemetry assertions below track `scheduleRuntimeServerIssue`. The variable
+// keeps its old name so the ~15 assertions that use it stay untouched — what is
+// being asserted (an unexpected 500 produces exactly one telemetry record, with
+// the right request id) is unchanged by A17.
 const recordRuntimeServerIssue = vi.fn(async () => {});
 vi.mock('../quality-issues-runtime-server.ts', () => ({
+  scheduleRuntimeServerIssue: (...args: unknown[]) => recordRuntimeServerIssue(...args),
   recordRuntimeServerIssue: (...args: unknown[]) => recordRuntimeServerIssue(...args),
   RUNTIME_SERVER_ISSUES_KEY: 'quality_issues:runtime_server',
 }));

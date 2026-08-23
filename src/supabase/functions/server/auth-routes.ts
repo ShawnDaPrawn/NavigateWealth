@@ -296,7 +296,16 @@ authRoutes.post('/login-validate', validateBody(EmailOnlySchema), async (c) => {
   try {
     const { email } = await c.req.json();
 
-    // Super admin email - exempt from rate limiting
+    // Super admin email - exempt from rate limiting.
+    //
+    // SECURITY-AUDIT A10: deliberately NOT widened to `isSuperAdminEmail()`.
+    // Every other super-admin check moved to the allowlist, but this one runs
+    // BEFORE authentication on an address taken straight from the request body,
+    // and what it grants is exemption from login rate limiting. Widening it
+    // would hand unlimited login attempts to more addresses — and, through the
+    // SUPER_ADMIN_EMAILS env override, to whatever that variable happens to
+    // contain. A brute-force bypass is the one place where the narrower rule is
+    // the safer one, so this keeps the single owner identity on purpose.
     const isSuperAdmin = email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
     if (isSuperAdmin) {

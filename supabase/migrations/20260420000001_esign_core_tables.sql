@@ -1,4 +1,18 @@
 -- =============================================================================
+-- WARNING: NOT APPLIED IN PRODUCTION - DO NOT `db push` WITHOUT READING THIS
+-- =============================================================================
+--
+-- Verified 2026-08-23 against project vpjmdsltwrnpefzcgdmz: there are NO
+-- esign_* tables in any schema, and this migration is absent from the applied
+-- migration list. All e-signature data lives in KV today.
+--
+-- Applying this file on its own creates empty tables that nothing backfills,
+-- which would split e-sign state across two stores. It needs the treatment the
+-- FNA-intake cutover got: migration -> dual-write -> backfill -> read flag ->
+-- cutover. See supabase/migrations/README.md (finding D2).
+-- =============================================================================
+
+-- =============================================================================
 -- E-Sign Core Tables (Phase 0.1 — Postgres migration)
 -- =============================================================================
 --

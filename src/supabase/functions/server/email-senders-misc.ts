@@ -14,6 +14,7 @@ import {
   getFooterSettings,
   getEmailTemplate,
 } from './email-core.ts';
+import { escapeHtml } from './shared-validation-utils.ts';
 
 const log = createModuleLogger('email-senders-misc');
 
@@ -158,21 +159,33 @@ export async function sendContactFormAdminNotification(
   const normalizedPhone = data.phone?.trim();
   const hasPhone = Boolean(normalizedPhone);
 
-  const resolve = (text: string) => text.replace(/\{\{ \.Name \}\}/g, fullName);
+  // SECURITY (SECURITY-AUDIT S10): every value below comes from an anonymous
+  // website visitor and is interpolated into the HTML of the staff notification
+  // email. Validation caps the length of these fields but permits any character,
+  // so each one is escaped here. The plain-text body and the PDF attachment
+  // deliberately keep the raw values.
+  const safeFullName = escapeHtml(fullName);
+  const safeEmail = escapeHtml(data.email);
+  const safePhone = normalizedPhone ? escapeHtml(normalizedPhone) : '';
+  const safeClientTypeLabel = escapeHtml(clientTypeLabel);
+  const safeService = data.service ? escapeHtml(data.service) : '';
+  const safeMessage = data.message ? escapeHtml(data.message) : '';
+
+  const resolve = (text: string) => text.replace(/\{\{ \.Name \}\}/g, safeFullName);
 
   const detailsHtml = `
     ${resolve(template.bodyHtml)}
     <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
       <h3 style="margin-top: 0; font-size: 18px; color: #111827;">Contact Details</h3>
-      <p style="margin: 8px 0;"><strong>Name:</strong> ${fullName}</p>
-      <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${data.email}" style="color: #6d28d9;">${data.email}</a></p>
+      <p style="margin: 8px 0;"><strong>Name:</strong> ${safeFullName}</p>
+      <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color: #6d28d9;">${safeEmail}</a></p>
       ${
         hasPhone
-          ? `<p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${normalizedPhone}" style="color: #6d28d9;">${normalizedPhone}</a></p>`
+          ? `<p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${safePhone}" style="color: #6d28d9;">${safePhone}</a></p>`
           : `<p style="margin: 8px 0;"><strong>Phone:</strong> Not provided</p>`
       }
-      <p style="margin: 8px 0;"><strong>Client Type:</strong> ${clientTypeLabel}</p>
-      ${data.service ? `<p style="margin: 8px 0;"><strong>Service Interest:</strong> ${data.service}</p>` : ''}
+      <p style="margin: 8px 0;"><strong>Client Type:</strong> ${safeClientTypeLabel}</p>
+      ${safeService ? `<p style="margin: 8px 0;"><strong>Service Interest:</strong> ${safeService}</p>` : ''}
       <p style="margin: 8px 0;"><strong>Submitted:</strong> ${timestamp}</p>
     </div>
     ${
@@ -180,7 +193,7 @@ export async function sendContactFormAdminNotification(
         ? `
       <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin-top: 0; font-size: 18px; color: #111827;">Message</h3>
-        <p style="margin: 8px 0; padding: 16px; background-color: #fff; border-left: 3px solid #6d28d9; border-radius: 4px; white-space: pre-wrap;">${data.message}</p>
+        <p style="margin: 8px 0; padding: 16px; background-color: #fff; border-left: 3px solid #6d28d9; border-radius: 4px; white-space: pre-wrap;">${safeMessage}</p>
       </div>
     `
         : ''
@@ -249,7 +262,7 @@ export async function sendContactFormAcknowledgment(data: ContactFormData): Prom
   const footerSettings = await getFooterSettings();
   const fullName = `${data.firstName} ${data.lastName}`.trim();
 
-  const resolve = (text: string) => text.replace(/\{\{ \.Name \}\}/g, fullName);
+  const resolve = (text: string) => text.replace(/\{\{ \.Name \}\}/g, escapeHtml(fullName));
 
   const bodyContent = `
     ${resolve(template.bodyHtml)}

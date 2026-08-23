@@ -9,7 +9,7 @@
  *       signing → rejected (signer declines)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Loader2, AlertCircle, ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
@@ -39,7 +39,34 @@ type SigningStep =
 export function SignerLandingPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token');
+
+  // SECURITY (SECURITY-AUDIT S8): the access token arrives as `/sign?token=…`
+  // and IS the signer's credential. Left in the address bar it reaches browser
+  // history, the `Referer` header on any outbound link, and anything reading
+  // `location.href`. It is therefore captured ONCE here and stripped from the
+  // URL below.
+  //
+  // The capture must be a ref rather than a plain read: after the
+  // `replaceState` the query string is gone, so re-reading `searchParams` on a
+  // later render would yield null and bounce a valid signer to the "expired"
+  // screen. Every later use in this component (OTP, KBA, submit, reject) reads
+  // this captured value.
+  const tokenRef = useRef<string | null>(searchParams.get('token'));
+  const token = tokenRef.current;
+
+  useEffect(() => {
+    if (!token) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('token')) return;
+    url.searchParams.delete('token');
+    // replaceState, not pushState: the token-bearing entry must be REPLACED, or
+    // Back would restore it to the address bar.
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, [token]);
 
   const [currentStep, setCurrentStep] = useState<SigningStep>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');

@@ -167,6 +167,39 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
     return { p12Buffer: Buffer.from(envP12, 'base64'), passphrase: envPassphrase };
   }
 
+  // SECURITY-AUDIT S4 — the KV fallback below keeps the signing private key and
+  // its passphrase in application-readable storage. Reading it back out through
+  // the generic KV API is now blocked outright (kv-routes.ts denies the
+  // `esign_config:` namespace to every caller), but the material is still at
+  // rest in KV, and only the operator can finish the move by provisioning the
+  // two secrets above.
+  //
+  // Deleting this fallback in code would be the wrong way to force that: if the
+  // secrets are not yet set in the deployed environment, every envelope
+  // completion would start failing — an outage on a compliance path, caused by
+  // a security fix. So the switch is left to the operator instead:
+  // NW_ESIGN_REQUIRE_ENV_CERT=true makes the absence of the secrets a hard
+  // error rather than a silent downgrade, and can be flipped without a deploy
+  // once they are confirmed present. Same posture as NW_ALLOWED_ORIGINS: fail
+  // open with a loud warning until explicitly configured to fail closed.
+  if (Deno.env.get('NW_ESIGN_REQUIRE_ENV_CERT') === 'true') {
+    log.error(
+      'NW_ESIGN_REQUIRE_ENV_CERT is set but NW_ESIGN_PLATFORM_P12_BASE64 / ' +
+        'NW_ESIGN_PLATFORM_P12_PASSPHRASE are not both present — refusing to fall back to KV',
+    );
+    throw new Error(
+      'Platform signing certificate is not provisioned via environment secrets ' +
+        'and the KV fallback is disabled (NW_ESIGN_REQUIRE_ENV_CERT=true)',
+    );
+  }
+
+  log.warn(
+    'Platform signing certificate is being read from KV — the private key and passphrase ' +
+      'are in application-readable storage (SECURITY-AUDIT S4). Provision ' +
+      'NW_ESIGN_PLATFORM_P12_BASE64 and NW_ESIGN_PLATFORM_P12_PASSPHRASE, then set ' +
+      'NW_ESIGN_REQUIRE_ENV_CERT=true to close this path.',
+  );
+
   try {
     const cached = (await kv.get(PLATFORM_CERT_KV_KEY)) as CachedPlatformCert | null;
 
