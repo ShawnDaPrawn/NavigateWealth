@@ -264,11 +264,14 @@ describe('signersFromResumedEnvelope', () => {
     const out = signersFromResumedEnvelope(
       envelope({
         signers: [],
+        // The declared draft_signers shape requires role/order, but the
+        // runtime tolerates their absence (older drafts) — that tolerance is
+        // exactly what this test pins, hence the unknown-cast.
         draft_signers: [
           { name: 'A', email: 'a@x.co' },
           { name: 'B', email: 'b@x.co', clientId: 'c-1' },
         ],
-      } as Partial<EsignEnvelope>),
+      } as unknown as Partial<EsignEnvelope>),
     );
     expect(out[0]).toMatchObject({ role: 'Signer', otpRequired: false, isSystemClient: false });
     expect(out[1]).toMatchObject({ clientId: 'c-1', isSystemClient: true });
