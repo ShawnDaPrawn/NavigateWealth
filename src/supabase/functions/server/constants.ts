@@ -50,8 +50,18 @@ export const SUPER_ADMIN_EMAIL = 'shawn@navigatewealth.co';
  * allowlist UNION any emails listed in the `SUPER_ADMIN_EMAILS` environment
  * variable (comma/semicolon/whitespace-separated). The env var is the
  * deploy-free recovery path. Returns false for empty/undefined input.
+ *
+ * Declared as a TYPE PREDICATE (`email is string`), not a plain boolean. The
+ * checks this replaced were written `if (currentUserEmail && currentUserEmail
+ * .toLowerCase() === SUPER_ADMIN_EMAIL...)`, and that leading truthiness test
+ * narrowed the optional away for the rest of the block. Swapping in a
+ * boolean-returning call silently dropped the narrowing, so a
+ * `string | undefined` flowed into a `string` field and only `deno check`
+ * caught it — the SPA tsc run excludes the edge source. The predicate is sound
+ * (every `true` path requires a non-empty string) and restores the narrowing at
+ * every call site rather than leaving each one to re-guard by hand.
  */
-export function isSuperAdminEmail(email: string | null | undefined): boolean {
+export function isSuperAdminEmail(email: string | null | undefined): email is string {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;

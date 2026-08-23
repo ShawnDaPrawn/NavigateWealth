@@ -525,6 +525,38 @@ block. Everything else rides touch-it-you-fix-it plus dedicated slices.
 
 ---
 
+## 10a. Running the Deno gate locally (do this — it is not optional)
+
+`npm run typecheck:deno` is the one CI gate the SPA `tsc` run cannot stand in
+for: `tsconfig.typecheck.json` **excludes the edge source**, so an edge-only
+type error passes every other local gate and fails only in CI. WS0 shipped one
+that way — replacing an `if (email && ...)` guard with a boolean helper dropped
+the type narrowing the guard had been providing, and nothing local noticed.
+
+The ledger says this check is "not verifiable in restricted sandboxes". That is
+half right, and the useful half is the other one:
+
+```bash
+# deno.land is blocked, but the same binary ships on npm
+npm i --no-save --prefix /tmp/denoenv deno@2.8.1     # match CI's pin exactly
+NO_COLOR=1 /tmp/denoenv/node_modules/.bin/deno check \
+  --config src/supabase/functions/server/deno.json \
+  src/supabase/functions/server/index.tsx 2>&1 | tee /tmp/deno.log
+
+# The sandbox blocks jsr.io, so supabase-js types do not resolve and ~34
+# SPURIOUS TS7006 implicit-any errors appear on its callback parameters.
+# Filter them out and the remainder is real:
+grep -E '^TS' /tmp/deno.log | grep -v TS7006     # must print NOTHING
+```
+
+**The usable signal is "zero non-TS7006 errors", not "exit 0".** That
+distinction is what makes the gate runnable here at all — it caught the WS0
+regression on the first try once the filter was applied, and it reproduced the
+CI failure exactly (34 artifacts + 1 real error). Treat a non-TS7006 error as a
+CI failure you have already been told about.
+
+---
+
 ## 11. Working rules (how this stays landed)
 
 1. **One reviewable slice per PR**, verified locally per `AGENTS.md` (format,

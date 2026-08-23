@@ -254,11 +254,9 @@ export const PersonnelService = {
       // super admin's profile exists, `isSuperAdminEmail(p.email)` is true for
       // THAT row, so a recovery admin would be treated as already bootstrapped
       // and never get a profile of their own.
-      const normalizedCurrentEmail = currentUserEmail?.toLowerCase();
+      const normalizedCurrentEmail = currentUserEmail.toLowerCase();
       const alreadyExists = allProfiles.some(
-        (p) =>
-          p.id === currentUserId ||
-          (!!normalizedCurrentEmail && p.email?.toLowerCase() === normalizedCurrentEmail),
+        (p) => p.id === currentUserId || p.email?.toLowerCase() === normalizedCurrentEmail,
       );
 
       if (!alreadyExists) {
