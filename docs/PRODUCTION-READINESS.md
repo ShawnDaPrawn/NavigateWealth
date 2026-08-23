@@ -17,7 +17,19 @@ those proposed files exist on `main`.
 
 ---
 
-## Section 0 - Current Addendum As Of 2026-08-21 (architecture-quality verification)
+## Section 0 - Current Addendum As Of 2026-08-22 (refactoring roadmap)
+
+The consolidated execution roadmap for the remaining technical-debt,
+readability, and code-organisation work now lives in
+[`docs/REFACTORING-ROADMAP.md`](REFACTORING-ROADMAP.md), verified against
+`main` @ `255f708` on 2026-08-22. It supersedes neither the remediation plan
+nor the enhancement plan — it sequences what is still open in both after the
+Stage A/B/C and P1-keystone work landed. For "what should we refactor next?",
+read that file first, then Section 4 below for history.
+
+---
+
+## Section 0 - Prior Addendum As Of 2026-08-21 (architecture-quality verification)
 
 Full quality-gate baseline re-verified locally on `main` commit `23b3e16`
 (`Ship canonical SEO fixes and medical-aid quote landing (#204)`), 2026-08-21:
@@ -989,3 +1001,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-04-20 | Corrected the roadmap against the clean repository state after the CORS restore. Added deployed verification, stash quarantine status, tooling-hook incident, accurate command list, and landed-vs-proposed inventory.                                                                                                                                                                     | Codex           |
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script.                                                                                                                                                                                                                                                                                          | Agent           |
 | 2026-08-21 | Architecture-quality verification: re-ran every quality gate on `main`, marked the completed roadmap items done (`integrations.tsx` split, Vitest suite fix, tooling gates, audit logging, super-admin allowlist), corrected the Section 2 rubric and Section 8 command list, and recorded remaining debt (four >1000-line server modules, ~31% coverage floor, 59-warning lint baseline). | Claude          |
+| 2026-08-22 | Added `docs/REFACTORING-ROADMAP.md`: the consolidated, re-verified execution roadmap for the remaining technical-debt / readability / code-organisation work (security remainder WS0, frontend and backend organisation, data layer, platform split, delivery confidence), with current ratchet values measured from the tree at `255f708`.                                                | Claude          |
