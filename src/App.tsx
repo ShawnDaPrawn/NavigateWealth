@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
+
+import { scrubSensitiveUrl } from './utils/analytics/scrubSensitiveUrl';
 import { logger } from './utils/logger';
 import { validateEnv, logEnvironmentInfo } from './config/env';
 import { AppProviders } from './components/providers/AppProviders';
@@ -137,13 +139,22 @@ export default function App() {
     script1.async = true;
     document.head.appendChild(script1);
 
-    // Add gtag configuration
+    // Add gtag configuration.
+    //
+    // SECURITY (SECURITY-AUDIT S8): `gtag('config', …)` sends an automatic
+    // page_view whose `page_location` is the FULL current URL. Signer links are
+    // `/sign?token=<uuid>`, and that token is the signer's credential, so the
+    // default behaviour copied it to Google on the first paint of the page the
+    // signer landed on. `page_location` is therefore pinned to a scrubbed URL
+    // rather than left to default.
     const script2 = document.createElement('script');
     script2.innerHTML = `
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-11PXRZJXB6');
+      gtag('config', 'G-11PXRZJXB6', ${JSON.stringify({
+        page_location: scrubSensitiveUrl(window.location.href),
+      })});
     `;
     document.head.appendChild(script2);
 
@@ -206,7 +217,8 @@ export default function App() {
     >
       <SkipToContent targetId="main-content" />
       <SpeedInsights />
-      <Analytics />
+      {/* beforeSend drops the signer token before it leaves the browser (S8). */}
+      <Analytics beforeSend={(event) => ({ ...event, url: scrubSensitiveUrl(event.url) })} />
       <AppProviders />
     </ErrorBoundary>
   );

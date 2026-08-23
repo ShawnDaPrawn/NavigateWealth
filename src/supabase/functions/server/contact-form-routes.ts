@@ -20,6 +20,7 @@ import {
 import { generateContactPdf, type ContactPdfData } from './contact-pdf-generator.ts';
 import { ContactFormSubmitSchema } from './contact-form-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { checkPublicFormRateLimit } from './public-form-rate-limit.ts';
 import { submissionsService } from './submissions-service.ts';
 import { asyncHandler } from './error.middleware.ts';
 import {
@@ -97,27 +98,22 @@ app.post(
       );
     }
 
-    // --- Rate limit: max 5 submissions per email per hour -------------------------
-    const rateLimitKey = `rate_limit:contact:${email.toLowerCase()}`;
-    const rateData = await kv.get(rateLimitKey);
-    const now = Date.now();
-    const oneHour = 60 * 60 * 1000;
-
-    if (rateData && Array.isArray(rateData.timestamps)) {
-      const recent = rateData.timestamps.filter((t: number) => now - t < oneHour);
-      if (recent.length >= 5) {
-        log.info('Contact form rate limit exceeded', { email });
-        return c.json(
-          {
-            error: 'Too many submissions. Please wait a while before trying again.',
-          },
-          429,
-        );
-      }
-      // Update with new timestamp
-      await kv.set(rateLimitKey, { timestamps: [...recent, now] });
-    } else {
-      await kv.set(rateLimitKey, { timestamps: [now] });
+    // --- Rate limit: per email AND per IP ---------------------------------------
+    // SECURITY (SECURITY-AUDIT S11): this used to key on the submitted email
+    // alone, which the caller chooses — rotating one character reset the bucket
+    // and the limit bounded nothing. See public-form-rate-limit.ts for the
+    // per-dimension budgets and the (deliberate) fail-open posture.
+    const rateLimit = await checkPublicFormRateLimit('contact', email, (headerName) =>
+      c.req.header(headerName),
+    );
+    if (!rateLimit.allowed) {
+      log.info('Contact form rate limit exceeded', { limitedBy: rateLimit.limitedBy });
+      return c.json(
+        {
+          error: 'Too many submissions. Please wait a while before trying again.',
+        },
+        429,
+      );
     }
 
     // --- Persist to KV -----------------------------------------------------------

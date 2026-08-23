@@ -72,11 +72,68 @@ export async function getRuntimeServerIssues(): Promise<QualityIssue[]> {
 }
 
 /**
+ * Serialises this isolate's writes to the single issues row.
+ *
+ * SECURITY-AUDIT A17: `recordRuntimeServerIssue` is a read-modify-write over one
+ * KV row, and `kv.set` is a bare upsert — no compare-and-set, no row lock. Two
+ * concurrent 500s therefore read the same snapshot and the second write loses
+ * the first's occurrence increment, under-reporting during exactly the incident
+ * the dashboard exists to surface.
+ *
+ * Chaining every write in this isolate behind the previous one removes the
+ * same-isolate half of that for free. It does NOT make the write atomic across
+ * isolates — that needs per-fingerprint keys or a Postgres upsert, which is a
+ * data-layer change and stays on the roadmap. Ground truth is not at stake
+ * either way: the full error, name and stack reach stderr before this runs.
+ */
+let writeChain: Promise<void> = Promise.resolve();
+
+/**
+ * Record an issue WITHOUT blocking the caller's response.
+ *
+ * The `await` this replaces sat on the error path of every route behind the 77
+ * lazy mounts, so each unexpected 500 paid two serialised Supabase round-trips
+ * before responding — worst during a downstream outage, when the same degraded
+ * project is what makes them slow, and the error path amplifies its own load.
+ *
+ * Dropping the `await` outright would be wrong: the isolate may suspend as soon
+ * as the response is returned, losing the write. `EdgeRuntime.waitUntil` is the
+ * supported way to keep work alive past the response in Supabase's edge runtime,
+ * so it is used when present and awaited otherwise — which keeps the previous
+ * behaviour exactly in the Vitest suite and any runtime without the hook.
+ */
+export function scheduleRuntimeServerIssue(input: RuntimeServerIssueInput): Promise<void> {
+  const pending = recordRuntimeServerIssue(input);
+
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
+    .EdgeRuntime;
+
+  if (typeof runtime?.waitUntil === 'function') {
+    runtime.waitUntil(pending);
+    return Promise.resolve();
+  }
+
+  return pending;
+}
+
+/**
  * Persist an unhandled server exception as a 'runtime-server' quality issue.
  * Deduplicates by fingerprint (same error name + endpoint) and increments an
  * occurrence counter, mirroring the `/runtime-client` ingest behaviour.
+ *
+ * Prefer {@link scheduleRuntimeServerIssue} from a request path — this one
+ * resolves only once the KV write has completed.
  */
 export async function recordRuntimeServerIssue(input: RuntimeServerIssueInput): Promise<void> {
+  // Queue behind any write already in flight in this isolate, so two concurrent
+  // 500s cannot both read the same snapshot. Failures are swallowed inside the
+  // body below, so the chain cannot be poisoned by one bad write.
+  const queued = writeChain.then(() => writeIssue(input));
+  writeChain = queued;
+  return queued;
+}
+
+async function writeIssue(input: RuntimeServerIssueInput): Promise<void> {
   try {
     const now = new Date().toISOString();
     const { error, path, method, statusCode, requestId } = input;

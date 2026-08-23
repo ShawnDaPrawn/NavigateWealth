@@ -16,6 +16,8 @@
  * §7 — Presentation only
  */
 
+import DOMPurify from 'dompurify';
+
 interface MarkdownPreviewProps {
   content: string;
   className?: string;
@@ -30,6 +32,35 @@ function escapeHtml(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * Schemes permitted in a `[text](url)` link target.
+ *
+ * SECURITY (SECURITY-AUDIT S9): `escapeHtml` above neutralises raw tags, so the
+ * only way markup reached the DOM here was the link rule — it dropped the
+ * captured URL straight into `href="…"`, and `javascript:alert(1)` is not
+ * blocked by entity-escaping. Anything not on this list renders as an inert
+ * anchor instead. `data:` is deliberately absent: `data:text/html` is a
+ * navigation-based script vector in the same way.
+ */
+const SAFE_URL_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
+
+function sanitizeUrl(rawUrl: string): string | null {
+  const url = rawUrl.trim();
+
+  // Relative and anchor targets never carry a scheme, so they are safe and are
+  // the common case for internal note links.
+  if (url.startsWith('/') || url.startsWith('#')) return url;
+
+  try {
+    // A base is required so protocol-relative and relative inputs parse rather
+    // than throw; only the resulting protocol is consulted.
+    const parsed = new URL(url, 'https://navigatewealth.co');
+    return SAFE_URL_SCHEMES.includes(parsed.protocol) ? url : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -53,11 +84,21 @@ function processInline(text: string): string {
   // Strikethrough
   result = result.replace(/~~(.+?)~~/g, '<del class="text-gray-400">$1</del>');
 
-  // Links [text](url)
-  result = result.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-purple-600 underline hover:text-purple-700">$1</a>',
-  );
+  // Links [text](url) — the URL is scheme-checked, never interpolated blindly.
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, url: string) => {
+    const safeUrl = sanitizeUrl(url);
+    if (!safeUrl) {
+      // Render the label as plain text rather than dropping the content, so a
+      // rejected link is visible to the author instead of silently vanishing.
+      return label;
+    }
+    // NOT re-escaped: `processInline` ran `escapeHtml` over the whole line
+    // before this regex matched, so `safeUrl` is ALREADY entity-encoded.
+    // Escaping again turned `&` into `&amp;amp;`, and a link like
+    // `[s](https://x.com?a=1&b=2)` then navigated to a parameter named
+    // `amp;b`. The first escape is what keeps quotes out of the attribute.
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-purple-600 underline hover:text-purple-700">${label}</a>`;
+  });
 
   // Checklist items
   result = result.replace(
@@ -204,7 +245,11 @@ function parseMarkdown(content: string): string {
 }
 
 export function MarkdownPreview({ content, className = '' }: MarkdownPreviewProps) {
-  const html = parseMarkdown(content);
+  // Defence in depth: `parseMarkdown` escapes its inputs and scheme-checks link
+  // targets, but it is a hand-rolled parser with a dozen regex rules, and this
+  // output goes to `dangerouslySetInnerHTML`. DOMPurify is the backstop for the
+  // rule that gets added later without an escape.
+  const html = DOMPurify.sanitize(parseMarkdown(content));
 
   return (
     <div className={`markdown-preview ${className}`} dangerouslySetInnerHTML={{ __html: html }} />

@@ -65,11 +65,17 @@ export default defineConfig({
         'src/supabase/functions/**/*.spec.{ts,tsx}',
       ],
       // Floors set just below the current measurement. Ratchet UP only.
+      //
+      // Raised 2026-08-23 (13.6 / 9.7 / 13.3 / 14.0) after the WS0 security
+      // work brought the measurement to 15.11 / 10.75 / 14.91 / 15.52 across
+      // 798 tests. Lifting the floor in the same change is the point of the
+      // ratchet: a coverage gain that is not floored is a gain the next PR can
+      // silently give back.
       thresholds: {
-        statements: 13.6,
-        branches: 9.7,
-        functions: 13.3,
-        lines: 14.0,
+        statements: 15.0,
+        branches: 10.6,
+        functions: 14.8,
+        lines: 15.4,
       },
     },
   },

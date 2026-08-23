@@ -137,6 +137,48 @@ Refactoring on top of open exposures is polishing a house with the door
 unlocked. Every item here is small, local, and already fully specified in the
 remediation plan; this is the punch list with current state folded in.
 
+> **Status 2026-08-23 — WS0 worked; 0.1–0.5, 0.8 and 0.9 are DONE, 0.6 and 0.7
+> are partial.** What was completed, and the three places reality differed from
+> the estimate above:
+>
+> - **0.1 (S10) done.** Bigger than "apply escapeHtml": `quote-request-routes`
+>   has 140+ interpolation sites across seven verticals, so hand-escaping would
+>   have left the next missed one as the hole. It builds its HTML from an
+>   escaped view of the payload (`escapeHtmlDeep`) instead.
+> - **0.2 (S11) done**, one shared limiter replacing three inline copies. Fail
+>   posture is **open**, not closed as this table speculated — reasoning in
+>   `public-form-rate-limit.ts`, pinned by a test. The non-atomic
+>   read-modify-write is the outstanding half.
+> - **0.3 (S9), 0.4 (S8), 0.8 (A17), 0.9 (A19) done** as specified. A19 was
+>   five schemas, not six: `SignerSchema` and `EsignFieldSchema` back live
+>   schemas and were kept.
+> - **0.5 (S4) partial.** The reader is locked down (super-admin + a secret
+>   denylist that refuses `esign_config:*` to everyone + audit logging). The KV
+>   cert fallback is deliberately NOT deleted — the operator must confirm the
+>   env secrets first, and `NW_ESIGN_REQUIRE_ENV_CERT=true` now closes the path
+>   without a deploy. **Operator step still outstanding.**
+> - **0.6 (A10) partial.** Not 12 call sites but ~30, across two separate
+>   constants (edge _and_ SPA, and the SPA has no allowlist at all). The
+>   authorization sites are migrated, including the recovery-route lockout the
+>   audit named. Deliberately excluded: the login rate-limit exemption, which
+>   stays keyed on the single owner identity because widening a brute-force
+>   bypass is the wrong direction. **Still open:** the SPA has no
+>   `isSuperAdminEmail` equivalent, ~8 display-only sites remain, and the const
+>   is not deleted. Its own docblock legitimises it as _owner identity_; only
+>   _authorization_ use is deprecated.
+> - **0.7 (D2) partial — but now verified rather than assumed.** Checked
+>   read-only against production: the drift is worse and different than
+>   recorded. `20260611000001_fna_intake_rls_draft_only.sql` is **also**
+>   unapplied (an H-12 RLS tightening — possibly a live security gap), applied
+>   version stamps do not match repo filenames, and **seven** tables exist with
+>   no migration file, not one. Findings are written up in
+>   `supabase/migrations/README.md` and the unapplied e-sign migration now
+>   carries a do-not-push banner. No migration files were generated:
+>   reconstructing DDL from introspection would produce files that look
+>   authoritative while omitting indexes, policies and constraints — the same
+>   failure one level deeper. Closing it needs `supabase db pull` by someone
+>   holding the credentials.
+
 | #   | Item                                                                                                                                                                                             | Effort | Acceptance gate                                                                                                         |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | 0.1 | **S10** — apply the existing `escapeHtml` to every interpolated field in the three lead-gen email builders                                                                                       | S      | Test injects `<script>` into each form; rendered email escapes it                                                       |
@@ -480,6 +522,38 @@ under the AGENTS.md finalization protocol (verify locally → PR → auto-merge)
 
 **New feature work continues throughout** — WS0 is the only stop-the-line
 block. Everything else rides touch-it-you-fix-it plus dedicated slices.
+
+---
+
+## 10a. Running the Deno gate locally (do this — it is not optional)
+
+`npm run typecheck:deno` is the one CI gate the SPA `tsc` run cannot stand in
+for: `tsconfig.typecheck.json` **excludes the edge source**, so an edge-only
+type error passes every other local gate and fails only in CI. WS0 shipped one
+that way — replacing an `if (email && ...)` guard with a boolean helper dropped
+the type narrowing the guard had been providing, and nothing local noticed.
+
+The ledger says this check is "not verifiable in restricted sandboxes". That is
+half right, and the useful half is the other one:
+
+```bash
+# deno.land is blocked, but the same binary ships on npm
+npm i --no-save --prefix /tmp/denoenv deno@2.8.1     # match CI's pin exactly
+NO_COLOR=1 /tmp/denoenv/node_modules/.bin/deno check \
+  --config src/supabase/functions/server/deno.json \
+  src/supabase/functions/server/index.tsx 2>&1 | tee /tmp/deno.log
+
+# The sandbox blocks jsr.io, so supabase-js types do not resolve and ~34
+# SPURIOUS TS7006 implicit-any errors appear on its callback parameters.
+# Filter them out and the remainder is real:
+grep -E '^TS' /tmp/deno.log | grep -v TS7006     # must print NOTHING
+```
+
+**The usable signal is "zero non-TS7006 errors", not "exit 0".** That
+distinction is what makes the gate runnable here at all — it caught the WS0
+regression on the first try once the filter was applied, and it reproduced the
+CI failure exactly (34 artifacts + 1 real error). Treat a non-TS7006 error as a
+CI failure you have already been told about.
 
 ---
 

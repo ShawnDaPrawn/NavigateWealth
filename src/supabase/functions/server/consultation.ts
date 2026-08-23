@@ -9,7 +9,7 @@
  * Hardened with:
  *   - Zod schema validation
  *   - Honeypot field (silent rejection for bots)
- *   - Email-based rate limiting (5 per hour per email)
+ *   - Rate limiting per email AND per client IP (see public-form-rate-limit.ts)
  *   - asyncHandler for consistent error handling
  *   - Footer settings for template consistency
  *
@@ -29,7 +29,8 @@ import { generateContactPdf, type ContactPdfData } from './contact-pdf-generator
 import { submissionsService } from './submissions-service.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { ConsultationRequestSchema } from './consultation-validation.ts';
-import { formatZodError } from './shared-validation-utils.ts';
+import { escapeHtml, formatZodError } from './shared-validation-utils.ts';
+import { checkPublicFormRateLimit } from './public-form-rate-limit.ts';
 import {
   getBlockedEmailDomain,
   getBlockedEmailDomainWarning,
@@ -204,26 +205,22 @@ app.post(
       );
     }
 
-    // --- Rate limit: max 5 submissions per email per hour -------------------------
-    const rateLimitKey = `rate_limit:consultation:${email}`;
-    const rateData = await kv.get(rateLimitKey);
-    const now = Date.now();
-    const oneHour = 60 * 60 * 1000;
-
-    if (rateData && Array.isArray(rateData.timestamps)) {
-      const recent = rateData.timestamps.filter((t: number) => now - t < oneHour);
-      if (recent.length >= 5) {
-        log.info('Consultation rate limit exceeded', { email });
-        return c.json(
-          {
-            error: 'Too many requests. Please wait a while before trying again.',
-          },
-          429,
-        );
-      }
-      await kv.set(rateLimitKey, { timestamps: [...recent, now] });
-    } else {
-      await kv.set(rateLimitKey, { timestamps: [now] });
+    // --- Rate limit: per email AND per IP ---------------------------------------
+    // SECURITY (SECURITY-AUDIT S11): this used to key on the submitted email
+    // alone, which the caller chooses — rotating one character reset the bucket
+    // and the limit bounded nothing. See public-form-rate-limit.ts for the
+    // per-dimension budgets and the (deliberate) fail-open posture.
+    const rateLimit = await checkPublicFormRateLimit('consultation', email, (headerName) =>
+      c.req.header(headerName),
+    );
+    if (!rateLimit.allowed) {
+      log.info('Consultation rate limit exceeded', { limitedBy: rateLimit.limitedBy });
+      return c.json(
+        {
+          error: 'Too many requests. Please wait a while before trying again.',
+        },
+        429,
+      );
     }
 
     // --- Server-side date validation (mirrors ConsultationModal client rules) ──
@@ -367,6 +364,16 @@ app.post(
         ? 'Virtual Meeting (Video Call)'
         : 'Telephonic Meeting (Phone Call)';
 
+    // SECURITY (SECURITY-AUDIT S10): name/email/phone/notes come from an anonymous
+    // visitor and are interpolated into both the client and staff emails as HTML.
+    // `preferredTimes` and `meetingTypeText` are derived server-side from parsed
+    // dates and a fixed ternary, so they need no escaping. The plain-text bodies
+    // and the PDF attachment keep the raw values on purpose.
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safePhone = escapeHtml(phone);
+    const safeAdditionalNotes = additionalNotes ? escapeHtml(additionalNotes) : '';
+
     // Build deep link to the specific submission in the admin Submissions Manager
     const adminSubmissionUrl = submissionId
       ? `https://www.navigatewealth.co/admin?module=submissions&type=consultation&id=${encodeURIComponent(submissionId)}`
@@ -377,7 +384,7 @@ app.post(
 
     // Client confirmation email content
     const clientContent = `
-    <p>Dear ${name},</p>
+    <p>Dear ${safeName},</p>
     <p>Thank you for scheduling a consultation with Navigate Wealth. We have received your request and one of our team members will reach out to you soon to confirm a meeting time.</p>
     
     <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
@@ -405,7 +412,7 @@ app.post(
           ? `
         <div style="margin: 16px 0;">
           <p style="margin: 8px 0;"><strong>Your Notes:</strong></p>
-          <p style="margin: 8px 0; padding: 12px; background-color: #fff; border-left: 3px solid #6d28d9; border-radius: 4px;">${additionalNotes}</p>
+          <p style="margin: 8px 0; padding: 12px; background-color: #fff; border-left: 3px solid #6d28d9; border-radius: 4px;">${safeAdditionalNotes}</p>
         </div>
       `
           : ''
@@ -438,9 +445,9 @@ app.post(
     <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
       <h2 style="margin-top: 0; font-size: 20px; color: #000;">Client Information</h2>
       
-      <p style="margin: 8px 0;"><strong>Name:</strong> ${name}</p>
-      <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${email}" style="color: #6d28d9;">${email}</a></p>
-      <p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${phone}" style="color: #6d28d9;">${phone}</a></p>
+      <p style="margin: 8px 0;"><strong>Name:</strong> ${safeName}</p>
+      <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${safeEmail}" style="color: #6d28d9;">${safeEmail}</a></p>
+      <p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${safePhone}" style="color: #6d28d9;">${safePhone}</a></p>
       <p style="margin: 8px 0;"><strong>Meeting Type:</strong> ${meetingTypeText}</p>
       <p style="margin: 8px 0;"><strong>Request ID:</strong> ${consultationId}</p>
       ${submissionId ? `<p style="margin: 8px 0;"><strong>Submission ID:</strong> <a href="${adminSubmissionUrl}" style="color: #6d28d9;">${submissionId}</a></p>` : ''}
@@ -465,7 +472,7 @@ app.post(
         ? `
       <div style="background-color: #f8f9fa; padding: 24px; border-radius: 8px; margin: 24px 0;">
         <h2 style="margin-top: 0; font-size: 20px; color: #000;">Additional Notes from Client</h2>
-        <p style="margin: 8px 0; padding: 16px; background-color: #fff; border-radius: 4px; white-space: pre-wrap;">${additionalNotes}</p>
+        <p style="margin: 8px 0; padding: 16px; background-color: #fff; border-radius: 4px; white-space: pre-wrap;">${safeAdditionalNotes}</p>
       </div>
     `
         : ''
