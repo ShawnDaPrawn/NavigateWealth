@@ -27,6 +27,8 @@ export default defineConfig({
       { find: 'pdf-lib@1.17.1', replacement: 'pdf-lib' },
       { find: 'npm:pdf-lib@1.17.1', replacement: 'pdf-lib' },
       { find: 'npm:docx', replacement: 'docx' },
+      { find: 'npm:jspdf-autotable', replacement: 'jspdf-autotable' },
+      { find: 'npm:jspdf', replacement: 'jspdf' },
       { find: 'npm:zod', replacement: 'zod' },
       { find: 'npm:hono', replacement: 'hono' },
       { find: 'npm:hono/cors', replacement: 'hono/cors' },
