@@ -1,58 +1,31 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useAuth } from '../auth/AuthContext';
 import {
   User,
   Phone,
   Mail,
-  Calendar,
-  MessageSquare,
   Star,
   Clock,
   Award,
-  FileText,
-  Download,
-  Video,
   Users,
-  Send,
   CheckCircle,
   UserCheck,
   MapPin,
   GraduationCap,
   Globe,
   Briefcase,
-  TrendingUp,
-  Shield,
-  Target,
-  ExternalLink,
-  PieChart,
-  BarChart3,
-  FileCheck,
-  Upload,
-  MessageCircle,
-  ArrowRight,
   Info,
-  BookOpen,
   Handshake,
 } from 'lucide-react';
+
+import { formatDate, formatRelativeDate } from './myAdviserPageShared';
+import { AdviserQuickActionDialogs } from './AdviserQuickActionDialogs';
+import { AdviserContentTabs } from './AdviserContentTabs';
 
 export function MyAdviserPage() {
   const { user } = useAuth();
@@ -275,104 +248,6 @@ export function MyAdviserPage() {
     }
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return '';
-    return date.toLocaleDateString('en-ZA', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatRelativeDate = (date: Date | null) => {
-    if (!date) return '';
-    const now = new Date();
-    const diffTime = now.getTime() - date.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return '1 day ago';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    return `${Math.ceil(diffDays / 30)} months ago`;
-  };
-
-  const getDocumentIcon = (type: string) => {
-    switch (type) {
-      case 'report':
-        return <BarChart3 className="h-4 w-4 text-blue-600" />;
-      case 'recommendations':
-        return <Target className="h-4 w-4 text-purple-600" />;
-      case 'strategy':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'legal':
-        return <Shield className="h-4 w-4 text-red-600" />;
-      case 'analysis':
-        return <PieChart className="h-4 w-4 text-orange-600" />;
-      case 'forms':
-        return <FileCheck className="h-4 w-4 text-gray-600" />;
-      case 'assessment':
-        return <CheckCircle className="h-4 w-4 text-blue-600" />;
-      case 'notes':
-        return <BookOpen className="h-4 w-4 text-indigo-600" />;
-      case 'certificates':
-        return <Award className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <FileText className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getCommunicationIcon = (type: string) => {
-    switch (type) {
-      case 'email':
-        return <Mail className="h-4 w-4 text-blue-600" />;
-      case 'message':
-        return <MessageCircle className="h-4 w-4 text-purple-600" />;
-      case 'call':
-        return <Phone className="h-4 w-4 text-green-600" />;
-      case 'meeting_confirmation':
-        return <Calendar className="h-4 w-4 text-orange-600" />;
-      case 'document_upload':
-        return <Upload className="h-4 w-4 text-gray-600" />;
-      default:
-        return <MessageSquare className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getMeetingTypeIcon = (type: string) => {
-    switch (type) {
-      case 'video_call':
-        return <Video className="h-4 w-4 text-blue-600" />;
-      case 'phone_call':
-        return <Phone className="h-4 w-4 text-green-600" />;
-      case 'in_person':
-        return <Users className="h-4 w-4 text-purple-600" />;
-      default:
-        return <Calendar className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return <Badge className="bg-red-100 text-red-800 text-xs">High Priority</Badge>;
-      case 'normal':
-        return (
-          <Badge variant="outline" className="text-xs">
-            Normal
-          </Badge>
-        );
-      case 'low':
-        return (
-          <Badge variant="outline" className="text-gray-500 text-xs">
-            Low
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -538,154 +413,22 @@ export function MyAdviserPage() {
 
                   {/* Quick Actions */}
                   <div className="space-y-3">
-                    <Dialog open={scheduleMeetingOpen} onOpenChange={setScheduleMeetingOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Schedule Meeting
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Schedule a Meeting with {adviserData.name}</DialogTitle>
-                          <DialogDescription>
-                            Please select 3 available time slots next week (10:00 AM - 4:00 PM).
-                            Your adviser's Personal Assistant will contact you to confirm the best
-                            time slot.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-6">
-                          <div>
-                            <Label htmlFor="purpose">Meeting Purpose *</Label>
-                            <Select value={meetingPurpose} onValueChange={setMeetingPurpose}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select meeting purpose" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="annual_review">
-                                  Annual Portfolio Review
-                                </SelectItem>
-                                <SelectItem value="tax_planning">Tax Planning Session</SelectItem>
-                                <SelectItem value="investment_review">
-                                  Investment Strategy Review
-                                </SelectItem>
-                                <SelectItem value="insurance_review">
-                                  Insurance Coverage Review
-                                </SelectItem>
-                                <SelectItem value="estate_planning">
-                                  Estate Planning Discussion
-                                </SelectItem>
-                                <SelectItem value="general_consultation">
-                                  General Financial Consultation
-                                </SelectItem>
-                                <SelectItem value="urgent_matter">
-                                  Urgent Financial Matter
-                                </SelectItem>
-                                <SelectItem value="goal_review">Financial Goals Review</SelectItem>
-                                <SelectItem value="market_discussion">Market Discussion</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label>Available Time Slots (Select 3) *</Label>
-                            <p className="text-sm text-gray-600 mb-3">
-                              Selected: {selectedTimeSlots.length}/3 time slots
-                            </p>
-                            <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                              {timeSlots.map((slot) => (
-                                <div
-                                  key={slot}
-                                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                                    selectedTimeSlots.includes(slot)
-                                      ? 'border-purple-300 bg-purple-50'
-                                      : 'border-gray-200 hover:border-gray-300'
-                                  }`}
-                                  onClick={() => handleTimeSlotToggle(slot)}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm">{slot}</span>
-                                    {selectedTimeSlots.includes(slot) && (
-                                      <CheckCircle className="h-4 w-4 text-purple-600" />
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <Alert className="bg-blue-50 border-blue-200">
-                            <Info className="h-4 w-4 text-blue-600" />
-                            <AlertDescription className="text-blue-800">
-                              Meetings will be conducted via video call or phone. Your adviser's PA
-                              will send you the meeting details and agenda 24 hours before the
-                              confirmed time.
-                            </AlertDescription>
-                          </Alert>
-                        </div>
-
-                        <DialogFooter>
-                          <Button
-                            onClick={handleScheduleMeeting}
-                            disabled={selectedTimeSlots.length !== 3 || !meetingPurpose}
-                            className="bg-purple-600 hover:bg-purple-700"
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            Submit Meeting Request
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={messageAdviserOpen} onOpenChange={setMessageAdviserOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full border-purple-600 text-purple-600 hover:bg-purple-50"
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Message Adviser
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Send Message to {adviserData.name}</DialogTitle>
-                          <DialogDescription>
-                            Send a secure message to your adviser. You'll receive a response within
-                            24 hours.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="message">Your Message *</Label>
-                            <Textarea
-                              id="message"
-                              value={messageContent}
-                              onChange={(e) => setMessageContent(e.target.value)}
-                              placeholder="Type your message here..."
-                              rows={6}
-                              className="resize-none"
-                            />
-                            <p className="text-sm text-gray-500 mt-1">
-                              {messageContent.length}/1000 characters
-                            </p>
-                          </div>
-                        </div>
-
-                        <DialogFooter>
-                          <Button
-                            onClick={handleSendMessage}
-                            disabled={!messageContent.trim()}
-                            className="bg-purple-600 hover:bg-purple-700"
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send Message
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                    <AdviserQuickActionDialogs
+                      adviserData={adviserData}
+                      scheduleMeetingOpen={scheduleMeetingOpen}
+                      setScheduleMeetingOpen={setScheduleMeetingOpen}
+                      messageAdviserOpen={messageAdviserOpen}
+                      setMessageAdviserOpen={setMessageAdviserOpen}
+                      timeSlots={timeSlots}
+                      selectedTimeSlots={selectedTimeSlots}
+                      handleTimeSlotToggle={handleTimeSlotToggle}
+                      meetingPurpose={meetingPurpose}
+                      setMeetingPurpose={setMeetingPurpose}
+                      messageContent={messageContent}
+                      setMessageContent={setMessageContent}
+                      handleScheduleMeeting={handleScheduleMeeting}
+                      handleSendMessage={handleSendMessage}
+                    />
 
                     <Button
                       variant="outline"
@@ -790,228 +533,13 @@ export function MyAdviserPage() {
         </div>
 
         {/* Main Content Tabs - Show appropriate content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="meetings">Meeting History</TabsTrigger>
-            <TabsTrigger value="communications">Communications</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <Card className="border-gray-200">
-              <CardHeader>
-                <CardTitle className="text-black">Recent Activity Summary</CardTitle>
-                <CardDescription>Latest interactions and important updates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isAdviserAssigned ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-medium text-black mb-3">Last Meeting</h4>
-                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center space-x-2 mb-2">
-                          {getMeetingTypeIcon(meetingHistory[0]?.meetingType)}
-                          <span className="text-sm font-medium text-blue-800">
-                            {meetingHistory[0]?.type || 'No meetings yet'}
-                          </span>
-                          <div className="flex">
-                            {[...Array(meetingHistory[0]?.rating || 0)].map((_, i) => (
-                              <Star key={i} className="h-3 w-3 text-yellow-500 fill-current" />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-sm text-blue-700">
-                          {formatDate(meetingHistory[0]?.date)} • {meetingHistory[0]?.duration}
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">{meetingHistory[0]?.summary}</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium text-black mb-3">Recent Communication</h4>
-                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            {getCommunicationIcon(communicationHistory[0]?.type)}
-                            <span className="text-sm font-medium text-green-800">
-                              {communicationHistory[0]?.subject || 'No communications yet'}
-                            </span>
-                          </div>
-                          {communicationHistory[0]?.priority &&
-                            getPriorityBadge(communicationHistory[0].priority)}
-                        </div>
-                        <p className="text-sm text-green-700">
-                          {formatDate(communicationHistory[0]?.date)}
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                          {communicationHistory[0]?.summary}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h4 className="font-medium text-black mb-2">
-                      Ready for Your Financial Journey
-                    </h4>
-                    <p className="text-gray-600 max-w-md mx-auto">
-                      Once your adviser is assigned, you'll see your meeting history,
-                      communications, and relationship metrics here.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="meetings" className="space-y-6">
-            <Card className="border-gray-200">
-              <CardHeader>
-                <CardTitle className="text-black">Meeting History</CardTitle>
-                <CardDescription>
-                  Complete record of all advisory meetings and sessions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isAdviserAssigned && meetingHistory.length > 0 ? (
-                  <div className="space-y-6">
-                    {meetingHistory.map((meeting, _index) => (
-                      <div key={meeting.id} className="border border-gray-200 rounded-lg p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="font-medium text-black">{meeting.type}</h3>
-                              <Badge className="bg-green-100 text-green-800">
-                                {meeting.status}
-                              </Badge>
-                              <span className="text-sm text-gray-500">{meeting.duration}</span>
-                              {getMeetingTypeIcon(meeting.meetingType)}
-                              <div className="flex">
-                                {[...Array(meeting.rating)].map((_, i) => (
-                                  <Star key={i} className="h-3 w-3 text-yellow-500 fill-current" />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-600">{formatDate(meeting.date)}</p>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                        </div>
-
-                        <p className="text-sm text-gray-700 mb-4">{meeting.summary}</p>
-
-                        {meeting.documents.length > 0 && (
-                          <div>
-                            <h4 className="font-medium text-black text-sm mb-3">
-                              Meeting Documents
-                            </h4>
-                            <div className="grid md:grid-cols-2 gap-3">
-                              {meeting.documents.map((doc, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                                >
-                                  <div className="flex items-center space-x-3">
-                                    {getDocumentIcon(doc.type)}
-                                    <div>
-                                      <p className="text-sm font-medium text-black">{doc.name}</p>
-                                      <p className="text-xs text-gray-500">{doc.size}</p>
-                                    </div>
-                                  </div>
-                                  <Button variant="ghost" size="sm">
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h4 className="font-medium text-black mb-2">No Meetings Yet</h4>
-                    <p className="text-gray-600">
-                      {isAdviserAssigned
-                        ? 'Once you start meeting with your adviser, your meeting history will appear here.'
-                        : 'Your meeting history will appear here once an adviser is assigned.'}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="communications" className="space-y-6">
-            <Card className="border-gray-200">
-              <CardHeader>
-                <CardTitle className="text-black">Communication Timeline</CardTitle>
-                <CardDescription>
-                  Chronological view of all client-adviser interactions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isAdviserAssigned && communicationHistory.length > 0 ? (
-                  <div className="space-y-4">
-                    {communicationHistory.map((comm, _index) => (
-                      <div
-                        key={comm.id}
-                        className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg"
-                      >
-                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          {getCommunicationIcon(comm.type)}
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-black">{comm.subject}</h4>
-                            <div className="flex items-center space-x-2">
-                              {comm.priority && getPriorityBadge(comm.priority)}
-                              <Badge variant="outline" className="text-xs">
-                                {comm.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{comm.summary}</p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span>
-                              {formatDate(comm.date)} • {formatRelativeDate(comm.date)}
-                            </span>
-                            {comm.attachments && (
-                              <span className="flex items-center space-x-1">
-                                <FileText className="h-3 w-3" />
-                                <span>{comm.attachments.length} attachment(s)</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h4 className="font-medium text-black mb-2">No Communications Yet</h4>
-                    <p className="text-gray-600">
-                      {isAdviserAssigned
-                        ? 'Your communication history with your adviser will appear here.'
-                        : 'Communication history will appear here once an adviser is assigned.'}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <AdviserContentTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isAdviserAssigned={isAdviserAssigned}
+          meetingHistory={meetingHistory}
+          communicationHistory={communicationHistory}
+        />
       </div>
     </div>
   );
