@@ -510,10 +510,55 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    serves the public surface. This structurally closes the "auth by
    convention" posture (S3) — the gateway rejects tokenless requests before
    Hono runs.
-   _Gate:_ unauthenticated requests to business routes 401 at the gateway;
-   **signup**, public forms, signer links, and health all work from the
-   sibling — signup and one lead-gen submit are part of the post-flip smoke;
-   live smoke passes on both functions.
+
+   > **RE-ASSESSED 2026-08-24 — this item is worth materially less than it
+   > looks, and the roadmap overstated it.** `verify_jwt = true` makes the
+   > gateway verify that the request carries a _validly signed_ Supabase JWT.
+   > The SPA ships `publicAnonKey` (`src/utils/supabase/info`), which **is** a
+   > validly signed JWT with `role: anon` — the post-deploy smoke already
+   > exercises exactly this, sending the anon key as a bearer and asserting the
+   > app (not the gateway) rejects it. So after the flip, any attacker who reads
+   > the JS bundle sends that key and passes the gateway unchanged.
+   >
+   > What the flip actually buys is blocking **tokenless** probing. What it does
+   > NOT buy is blocking anonymous access, which is the thing "auth by
+   > convention" is scary about. The real protection remains each route's own
+   > guard — which §5.5 has now verified end to end: all 123 review-list routes
+   > are classified, and the only three genuine gaps are fixed.
+   >
+   > Risk, by contrast, is high and immediate: get the public surface wrong and
+   > signup, login, the lead-gen forms and every signer link break at the
+   > gateway, with health probes still green. **Recommendation: do this one
+   > attended, not on a schedule**, and treat it as defence-in-depth rather than
+   > as the keystone. The higher-value successor is deny-by-default _inside_
+   > `createApp()` driven by `PUBLIC_BY_DESIGN_ROUTES`, which also rejects
+   > anon-key-only callers on non-public routes — the protection this item was
+   > assumed to give.
+
+   **Prerequisites landed 2026-08-24** (both were called for above and did not
+   exist):
+   - **The smoke now probes the public surface.** `post-deploy-smoke.mjs` gained
+     `POST /auth-signup/signup` (expects 400 `VALIDATION_ERROR` — reachable
+     without a token, and side-effect free because `validateBody` rejects at the
+     schema before Supabase Auth is touched) and `GET /contact-form/`. Probes
+     now declare `surface: 'public' | 'gated'`, and the structural test enforces
+     that no gated probe expects 200 and no public probe expects 401 — replacing
+     a hardcoded `['/health','/health/ready']` list that would have forced
+     someone to weaken the gate to add these.
+   - **The inventory exists as URLs, not module paths.**
+     `public-surface-inventory.test.ts` joins the §5.5 classification to the
+     77-entry lazy mount table and resolves every public route to its real URL.
+     Writing it surfaced two things a hand-written list would have got wrong:
+     mount-core mounts **extension proxies** (`./security.ts` for
+     `security.tsx`), and the e-sign / publications families nest **three levels
+     deep** (`lazy → esign-routes → esign-sender-routes →
+esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
+     than a fixed depth. 28 routes were unresolvable before those two fixes.
+     _Gate:_ unauthenticated requests to business routes 401 at the gateway;
+     **signup**, public forms, signer links, and health all work from the
+     sibling — signup and one lead-gen submit are part of the post-flip smoke;
+     live smoke passes on both functions.
+
 4. **Stage E, slice 2 — carve out `esign`** (heaviest cold path, most
    compliance-sensitive), converting the heavy PDF/crypto libraries to dynamic
    imports at their routes. Measure cold-start before/after. Further splits

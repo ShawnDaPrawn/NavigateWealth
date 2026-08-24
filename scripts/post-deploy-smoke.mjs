@@ -52,12 +52,20 @@ export const RETRYABLE_STATUSES = new Set([502, 503, 504]);
  * `auth: 'none'` — no Authorization header (app must 401 on gated paths).
  * `auth: 'anon'` — Bearer public anon key (must 401 AUTH_INVALID, not admin).
  *
+ * `surface` — 'gated' means the route MUST reject an unauthenticated caller;
+ * 'public' means it MUST answer one. The structural test enforces that no
+ * gated probe expects 200 and no public probe expects 401, which is what stops
+ * this table from going vacuous by drift rather than by a hardcoded path list.
+ *
  * @typedef {{
  *   name: string,
  *   path: string,
  *   expectedStatus: number,
  *   json?: Record<string, string>,
  *   auth: 'none' | 'anon',
+ *   surface: 'public' | 'gated',
+ *   method?: 'GET' | 'POST',
+ *   body?: unknown,
  * }} Probe
  */
 
@@ -69,6 +77,7 @@ export const PROBES = [
     expectedStatus: 200,
     json: { status: 'healthy' },
     auth: 'none',
+    surface: 'public',
   },
   {
     name: 'readiness',
@@ -76,9 +85,11 @@ export const PROBES = [
     expectedStatus: 200,
     json: { status: 'ready' },
     auth: 'none',
+    surface: 'public',
   },
   {
     name: 'kv-store unauthenticated',
+    surface: 'gated',
     path: '/kv-store/__smoke_probe__',
     expectedStatus: 401,
     json: { code: 'AUTH_REQUIRED' },
@@ -86,6 +97,7 @@ export const PROBES = [
   },
   {
     name: 'documents unauthenticated',
+    surface: 'gated',
     path: '/documents/',
     expectedStatus: 401,
     json: { code: 'AUTH_REQUIRED' },
@@ -93,6 +105,7 @@ export const PROBES = [
   },
   {
     name: 'profile unauthenticated',
+    surface: 'gated',
     path: '/profile/personal-info',
     expectedStatus: 401,
     json: { code: 'AUTH_REQUIRED' },
@@ -100,10 +113,40 @@ export const PROBES = [
   },
   {
     name: 'kv-store anon-key-as-bearer',
+    surface: 'gated',
     path: '/kv-store/__smoke_probe__',
     expectedStatus: 401,
     json: { code: 'AUTH_INVALID' },
     auth: 'anon',
+  },
+  // ── Public surface (roadmap §7.2/§7.3 prerequisite) ───────────────────────
+  // The flip to `verify_jwt = true` breaks EXACTLY these routes if the public
+  // surface is got wrong, and breaks them silently — health would stay green
+  // while signup 401s at the gateway. Probing them here is what makes the flip
+  // reversible on evidence instead of on a bug report from a customer.
+  //
+  // Both are side-effect free by construction, which is why these two were
+  // chosen over a real form submit: signup runs validateBody(PublicSignupSchema)
+  // BEFORE it touches Supabase Auth, so an empty body is rejected at the schema
+  // and creates no user; the contact-form descriptor is a pure read that sends
+  // no email.
+  {
+    name: 'signup reachable without a token',
+    surface: 'public',
+    path: '/auth-signup/signup',
+    method: 'POST',
+    body: {},
+    expectedStatus: 400,
+    json: { code: 'VALIDATION_ERROR' },
+    auth: 'none',
+  },
+  {
+    name: 'lead-gen form reachable without a token',
+    surface: 'public',
+    path: '/contact-form/',
+    expectedStatus: 200,
+    json: { service: 'contact-form' },
+    auth: 'none',
   },
 ];
 
@@ -223,6 +266,25 @@ export async function fetchWithRetry(url, init, opts) {
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
+/**
+ * Request init for a probe. Defaults to GET; a probe carrying a `body` becomes
+ * a POST with a JSON content-type, which is what lets the signup probe exercise
+ * the real unauthenticated path instead of a GET that would 404 and prove
+ * nothing.
+ *
+ * @param {Probe} probe
+ * @returns {RequestInit}
+ */
+function buildInit(probe) {
+  const headers = headersFor(probe);
+  if (probe.body === undefined) return { method: probe.method || 'GET', headers };
+  return {
+    method: probe.method || 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(probe.body),
+  };
+}
+
 function headersFor(probe) {
   /** @type {Record<string, string>} */
   const headers = { Accept: 'application/json' };
@@ -261,11 +323,11 @@ export async function runSmoke(options = {}) {
     const url = `${baseUrl}${probe.path}`;
     const started = Date.now();
     try {
-      const { response, text } = await fetchWithRetry(
-        url,
-        { method: 'GET', headers: headersFor(probe) },
-        { timeoutMs, retries, fetchImpl },
-      );
+      const { response, text } = await fetchWithRetry(url, buildInit(probe), {
+        timeoutMs,
+        retries,
+        fetchImpl,
+      });
       let body = /** @type {unknown} */ (null);
       try {
         body = JSON.parse(text);
