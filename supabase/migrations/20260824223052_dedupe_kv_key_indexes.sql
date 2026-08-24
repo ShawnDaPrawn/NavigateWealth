@@ -1,0 +1,60 @@
+-- ============================================================================
+-- APPLIED IN PRODUCTION 2026-08-24 as version 20260824223052.
+--
+-- Migration 20260316213718 ended with an UNNAMED, non-idempotent
+-- `CREATE INDEX ON kv_store_91ed8379 (key text_pattern_ops)`. Postgres
+-- auto-names such an index `kv_store_91ed8379_key_idx` and auto-suffixes it on
+-- every re-run: `_key_idx1`, `_key_idx2`, … It had been re-executed 1,084 times
+-- against the application's PRIMARY DATASTORE.
+--
+-- Measured on production before this migration:
+--   heap 8,288 kB · indexes 1,573 MB · index_count 1,085
+-- Measured after:
+--   heap 8,288 kB · indexes 2,456 kB · index_count 2
+--
+-- Total relation size 1,595 MB → 24 MB, and — the part that matters for
+-- request latency — every INSERT/UPDATE/DELETE on the KV table now maintains
+-- 2 B-trees instead of 1,085. Query planning also stopped considering a
+-- thousand identical candidates on every KV statement.
+--
+-- One text_pattern_ops index IS wanted: getByPrefix issues LIKE 'prefix%',
+-- which the primary key's default opclass cannot serve. Verified after the
+-- change with EXPLAIN ANALYZE — the prefix scan is an Index Only Scan on
+-- kv_store_91ed8379_key_prefix_idx, 0.24 ms. It now has a stable explicit
+-- name, so a re-run can never collide into a new suffix again.
+--
+-- The 1,083 duplicates were dropped in batches OUTSIDE any transaction, because
+-- a single transaction dropping them holds ACCESS EXCLUSIVE on the KV table —
+-- i.e. blocks every read and write in the product — for its whole duration.
+--
+-- THIS MIGRATION DELIBERATELY DOES NOT REPRODUCE THAT BULK CLEANUP.
+-- An earlier draft looped over every matching index inside a DO block. That is
+-- a no-op here (production is already reconciled), but `supabase db push` runs
+-- a migration in a transaction — so against any OTHER database that had
+-- accumulated the duplicates (a restored backup, a staging clone) it would
+-- have caused exactly the outage this comment claims to avoid. It now touches
+-- at most ONE index: the single unsuffixed legacy name that a fresh rebuild of
+-- 20260316213718 creates. Bulk cleanup of an already-degraded database is an
+-- operational procedure, not a migration — see
+-- `scripts/dedupe-kv-key-indexes.sql`.
+--
+-- DISCLOSURE — this file is NOT byte-identical to what production ran.
+-- The statement recorded against version 20260824223052 in
+-- `supabase_migrations.schema_migrations` is the earlier draft described above,
+-- the one with the DO loop. It executed against an already-reconciled database,
+-- so it dropped nothing and the end state is identical (index_count = 2). The
+-- file was corrected before merge so that a REBUILD does not reproduce the
+-- locking hazard. The recorded statement was deliberately left untouched: a
+-- migration ledger that gets edited after the fact is worth nothing, and this
+-- repo has just spent a whole change proving that point. Where the two differ,
+-- the ledger is history and this file is the intent.
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS kv_store_91ed8379_key_prefix_idx
+  ON public.kv_store_91ed8379 USING btree (key text_pattern_ops);
+
+-- Exactly one index, by exact name: the unsuffixed index that a fresh run of
+-- 20260316213718 leaves behind. Bounded work, bounded lock. Suffixed duplicates
+-- (_key_idx1 …) only exist on a database that re-ran that migration, and are
+-- handled by the operational script, never here.
+DROP INDEX IF EXISTS public.kv_store_91ed8379_key_idx;
