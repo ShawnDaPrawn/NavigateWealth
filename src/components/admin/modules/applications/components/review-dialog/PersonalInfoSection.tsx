@@ -1,13 +1,6 @@
 import { User } from 'lucide-react';
-import {
-  ReviewSection,
-  ViewField,
-  EditField,
-  EditSelect,
-  SectionProps,
-  TITLES,
-  GENDERS,
-} from './shared';
+import { ReviewSection, ViewField, EditField, EditSelect, SectionProps } from './shared';
+import { TITLES, GENDERS } from './reviewDialogOptions';
 
 export function PersonalInfoSection({
   isEditing,

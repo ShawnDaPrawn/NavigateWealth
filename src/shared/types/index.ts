@@ -23,6 +23,7 @@ export type {
   Address,
   StatusConfig,
   StatusConfigMap,
+  RiskAssessment,
 
   // API response wrappers
   SuccessResponse,
@@ -62,6 +63,11 @@ export type {
   Asset,
   Liability,
 } from './balance-sheet';
+
+export type {
+  // Admin dashboard statistics (edge /admin/stats response)
+  ApplicationStats,
+} from './admin-stats';
 
 export type {
   // Logging & error types

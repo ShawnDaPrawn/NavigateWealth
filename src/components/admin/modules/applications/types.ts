@@ -103,17 +103,11 @@ export interface Application {
   user_name?: string;
 }
 
-export interface ApplicationStats {
-  total: number;
-  submitted_for_review: number;
-  approved: number;
-  declined: number;
-  application_in_progress: number;
-  invited?: number;
-  /** Draft-only signups (subset of incomplete when not in progress) */
-  draft?: number;
-  incomplete?: number;
-}
+// Canonical definition lives in src/shared/types (§9.3 — single source of truth).
+// This module previously carried a narrower copy that had drifted from the
+// response the edge route actually returns.
+export type { ApplicationStats } from '../../../../shared/types';
+import type { ApplicationStats } from '../../../../shared/types';
 
 export interface ApplicationsResponse {
   applications: Application[];

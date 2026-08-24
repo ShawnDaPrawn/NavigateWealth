@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../utils/api/client';
-import type { ApplicationStats } from '../../../supabase/functions/server/types';
+import type { ApplicationStats } from '../../../shared/types';
 import { useAuth } from '../../auth/AuthContext';
 import { logError } from '../../../utils/errorUtils';
 import { adminStatsKeys } from '../../../utils/queryKeys';

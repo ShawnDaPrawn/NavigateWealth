@@ -12,7 +12,7 @@ import type { PillarHealth } from '../clientOverview/policyFields';
 
 // ── Pillar health config ─────────────────────────────────────────────────
 
-export const PILLAR_HEALTH_CONFIG: Record<
+const PILLAR_HEALTH_CONFIG: Record<
   PillarHealth,
   { bg: string; border: string; dot: string; dotBg: string; label: string }
 > = {

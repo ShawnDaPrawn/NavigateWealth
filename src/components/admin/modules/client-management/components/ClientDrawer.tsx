@@ -22,7 +22,9 @@ import { AskVascoPortalTab } from './AskVascoPortalTab';
 import { useOptionalUnsavedChangesRegistry } from '../../../../shared/unsaved-changes';
 
 const loadClientProfileViewerFull = () =>
-  import('../../../ClientProfileViewerFull').then((m) => ({ default: m.ClientProfileViewerFull }));
+  import('./clientProfile/ClientProfileViewerFull').then((m) => ({
+    default: m.ClientProfileViewerFull,
+  }));
 const ClientProfileViewerFull = React.lazy(loadClientProfileViewerFull);
 const loadPolicyDetailsSection = () =>
   import('../../../profile-sections/PolicyDetailsSection').then((m) => ({

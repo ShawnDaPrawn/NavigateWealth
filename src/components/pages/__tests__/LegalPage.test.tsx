@@ -22,7 +22,7 @@ vi.mock('../../../utils/pdfPrintTitle', () => ({
   escapeHtmlText: (s: string) => s,
   navigateWealthPdfDocumentTitle: (s: string) => s,
 }));
-vi.mock('../../admin/modules/resources/templates/BasePdfLayout', () => ({
+vi.mock('../../shared/pdf', () => ({
   BASE_PDF_CSS: '',
 }));
 

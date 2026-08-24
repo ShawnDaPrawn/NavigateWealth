@@ -1,13 +1,7 @@
 import { Briefcase, DollarSign, Building } from 'lucide-react';
 import { Badge } from '../../../../../ui/badge';
-import {
-  ReviewSection,
-  ViewField,
-  EditField,
-  EditSelect,
-  SectionProps,
-  EMPLOYMENT_STATUSES,
-} from './shared';
+import { ReviewSection, ViewField, EditField, EditSelect, SectionProps } from './shared';
+import { EMPLOYMENT_STATUSES } from './reviewDialogOptions';
 
 export function EmploymentSection({
   isEditing,

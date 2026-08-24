@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
+import { FNAWizardLayout } from '../../fna';
+import type { FNAWizardStepConfig } from '../../fna';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';

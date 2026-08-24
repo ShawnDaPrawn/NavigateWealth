@@ -31,55 +31,21 @@ import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable'
 
 import { renderPolicyTables as renderPolicyTablesView } from './policyTables';
 
-// Heavy FNA management views — lazy-loaded to reduce initial bundle
-const FNAManagementView = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/FNAManagementView').then((m) => ({
-    default: m.FNAManagementView,
-  })),
-);
-const PreviousFNAsDialog = React.lazy(
-  () => import('../modules/risk-planning-fna/components/PreviousFNAsDialog'),
-);
-const WillManagementView = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillManagementView').then((m) => ({
-    default: m.WillManagementView,
-  })),
-);
-const WillDraftingWizard = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillDraftingWizard').then((m) => ({
-    default: m.WillDraftingWizard,
-  })),
-);
-const WillPdfView = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillPdfView').then((m) => ({
-    default: m.WillPdfView,
-  })),
-);
-const WillChatInterface = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/WillChatInterface').then((m) => ({
-    default: m.WillChatInterface,
-  })),
-);
+// The goal dashboard is a heavy tree opened from a dialog, so it stays lazy.
 const GoalDashboard = React.lazy(() =>
-  import('../modules/client-management/components/goals/GoalDashboard').then((m) => ({
-    default: m.GoalDashboard,
-  })),
+  import('./goals/GoalDashboard').then((m) => ({ default: m.GoalDashboard })),
 );
 
-const EstateDocumentsSection = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/EstateDocumentsSection').then((m) => ({
-    default: m.EstateDocumentsSection,
-  })),
-);
-
-const TaxDocumentsSection = React.lazy(() =>
-  import('../modules/tax-planning-fna/components/TaxDocumentsSection').then((m) => ({
-    default: m.TaxDocumentsSection,
-  })),
-);
-
-import { Goal } from '../modules/client-management/components/goals/types';
-import { calculateGoalStatus } from '../modules/client-management/components/goals/utils';
+import { PreviousFNAsDialog } from '../modules/risk-planning-fna';
+import { calculateGoalStatus } from '../../../shared/goals';
+import type { Goal } from '../../../shared/goals';
+import { FNAManagementView as FNAManagementView } from '../modules/risk-planning-fna';
+import { WillManagementView as WillManagementView } from '../modules/estate-planning-fna';
+import { WillDraftingWizard as WillDraftingWizard } from '../modules/estate-planning-fna';
+import { WillPdfView as WillPdfView } from '../modules/estate-planning-fna';
+import { WillChatInterface as WillChatInterface } from '../modules/estate-planning-fna';
+import { EstateDocumentsSection as EstateDocumentsSection } from '../modules/estate-planning-fna';
+import { TaxDocumentsSection as TaxDocumentsSection } from '../modules/tax-planning-fna';
 
 interface PolicyCategoryTabProps {
   categorySubtabId: string; // e.g., 'risk-planning'

@@ -6,7 +6,7 @@
  */
 import { type LivingWillDataPayload, formatDate } from './willPdfShared';
 
-export const TREATMENT_PREF_LABELS: Record<string, string> = {
+const TREATMENT_PREF_LABELS: Record<string, string> = {
   accept: 'Accept',
   refuse: 'Refuse',
   limited: 'Limited Trial',

@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { Client } from '../types';
 import { KEY_CATEGORIES } from '../../product-management';
 import { ProductKeyCategory } from '../../product-management';
-import { useClientKeys, useRecalculateClientKeys } from '../hooks/useClientKeys';
+import { useClientKeys, useRecalculateClientKeys } from '../../client-keys';
 import { CATEGORY_ICONS } from '../../resources';
 
 interface KeyInspectorTabProps {

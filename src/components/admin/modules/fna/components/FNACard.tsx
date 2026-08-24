@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Edit, Trash2, Eye } from 'lucide-react';
 import { FNAStatusBadge } from './FNAStatusBadge';
-import type { FNAConfig } from '../../../profile-sections/fna-config';
+import type { FNAConfig } from '../types';
 
 interface FNACardProps {
   fna: {

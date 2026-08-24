@@ -2,12 +2,10 @@
  * FNA Configuration
  * Central configuration for all FNA types to eliminate duplication.
  *
- * API services are imported eagerly (lightweight).
- * Wizard and ResultsView components use React.lazy to defer heavy
- * component trees until the user actually opens a wizard or views results.
+ * API services are imported eagerly (lightweight). Each FNA module lazy-loads
+ * its own Wizard and ResultsView behind its barrel, so the heavy component
+ * trees still load only when the user opens a wizard or views results.
  */
-
-import React from 'react';
 
 // API services are lightweight (no JSX, no component trees) — safe to import eagerly
 import { RiskPlanningFnaAPI } from '../modules/risk-planning-fna';
@@ -17,78 +15,24 @@ import { EstatePlanningAPI as EstatePlanningApiService } from '../modules/estate
 import { InvestmentINAApiService } from '../modules/investment-ina';
 import { TaxPlanningFnaAPI } from '../modules/tax-planning-fna';
 
-// ==================== LAZY WIZARD / RESULTS COMPONENTS ====================
-// These are heavy components with deep dependency trees.
-// Lazy-loading them avoids pulling in all FNA step forms, calculations,
-// results views, and their own dependencies at initial page load.
+// The registry's entry shape is owned by the shared FNA module that consumes it.
+import type { FNAConfig } from '../modules/fna';
 
-const LazyRiskPlanningFNAWizard = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/RiskPlanningFNAWizard').then((m) => ({
-    default: m.RiskPlanningFNAWizard,
-  })),
-);
-const LazyRiskPlanningFNAResultsView = React.lazy(() =>
-  import('../modules/risk-planning-fna/components/RiskPlanningFNAResultsView').then((m) => ({
-    default: m.RiskPlanningFNAResultsView,
-  })),
-);
-
-const LazyMedicalFNAWizard = React.lazy(() =>
-  import('../modules/medical-fna/components/MedicalFNAWizard').then((m) => ({
-    default: m.MedicalFNAWizard,
-  })),
-);
-const LazyMedicalFNAResultsView = React.lazy(() =>
-  import('../modules/medical-fna/components/MedicalFNAResultsView').then((m) => ({
-    default: m.MedicalFNAResultsView,
-  })),
-);
-
-const LazyRetirementFNAWizard = React.lazy(() =>
-  import('../modules/retirement-fna/components/RetirementFNAWizard').then((m) => ({
-    default: m.RetirementFNAWizard,
-  })),
-);
-const LazyRetirementFNAResultsView = React.lazy(() =>
-  import('../modules/retirement-fna/components/RetirementFNAResultsView').then((m) => ({
-    default: m.RetirementFNAResultsView,
-  })),
-);
-
-const LazyEstatePlanningFNAWizard = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/EstatePlanningFNAWizard').then((m) => ({
-    default: m.EstatePlanningFNAWizard,
-  })),
-);
-const LazyEstatePlanningResultsView = React.lazy(() =>
-  import('../modules/estate-planning-fna/components/EstatePlanningResultsView').then((m) => ({
-    default: m.EstatePlanningResultsView,
-  })),
-);
-
-const LazyInvestmentINAWizard = React.lazy(() =>
-  import('../modules/investment-ina/components/InvestmentINAWizard').then((m) => ({
-    default: m.InvestmentINAWizard,
-  })),
-);
-const LazyInvestmentINAResultsView = React.lazy(() =>
-  import('../modules/investment-ina/components/InvestmentINAResultsView').then((m) => ({
-    default: m.InvestmentINAResultsView,
-  })),
-);
-
-const LazyTaxPlanningFNAWizard = React.lazy(() =>
-  import('../modules/tax-planning-fna/components/TaxPlanningFNAWizard').then((m) => ({
-    default: m.TaxPlanningFNAWizard,
-  })),
-);
-const LazyTaxPlanningResultsView = React.lazy(() =>
-  import('../modules/tax-planning-fna/components/TaxPlanningResultsView').then((m) => ({
-    default: m.TaxPlanningResultsView,
-  })),
-);
-
-// ==================== CONFIG TYPE ====================
+// ==================== WIZARD / RESULTS COMPONENTS ====================
+// Each module lazy-loads its own heavy tree behind its barrel, so these are
+// ordinary imports here and the chunks still load on demand.
+import { EstatePlanningFNAWizard as LazyEstatePlanningFNAWizard } from '../modules/estate-planning-fna';
+import { EstatePlanningResultsView as LazyEstatePlanningResultsView } from '../modules/estate-planning-fna';
+import { InvestmentINAResultsView as LazyInvestmentINAResultsView } from '../modules/investment-ina';
+import { InvestmentINAWizard as LazyInvestmentINAWizard } from '../modules/investment-ina';
+import { MedicalFNAResultsView as LazyMedicalFNAResultsView } from '../modules/medical-fna';
+import { MedicalFNAWizard as LazyMedicalFNAWizard } from '../modules/medical-fna';
+import { RetirementFNAResultsView as LazyRetirementFNAResultsView } from '../modules/retirement-fna';
+import { RetirementFNAWizard as LazyRetirementFNAWizard } from '../modules/retirement-fna';
+import { RiskPlanningFNAResultsView as LazyRiskPlanningFNAResultsView } from '../modules/risk-planning-fna';
+import { RiskPlanningFNAWizard as LazyRiskPlanningFNAWizard } from '../modules/risk-planning-fna';
+import { TaxPlanningFNAWizard as LazyTaxPlanningFNAWizard } from '../modules/tax-planning-fna';
+import { TaxPlanningResultsView as LazyTaxPlanningResultsView } from '../modules/tax-planning-fna';
 
 // The registry is a dynamic dispatch table: each module's concrete session /
 // result type is erased to a generic Record so consumers can share one config
@@ -100,26 +44,12 @@ const asRecordOrNull = <T>(p: Promise<T | null>): Promise<Record<string, unknown
 const asRecord = <T>(p: Promise<T>): Promise<Record<string, unknown>> =>
   p as unknown as Promise<Record<string, unknown>>;
 
-export interface FNAConfig {
-  type: 'risk' | 'medical' | 'retirement' | 'investment' | 'estate' | 'tax';
-  name: string;
-  // Wizard/ResultsView are rendered with dynamically-spread props
-  // (`<config.Wizard {...props} />`), so each module's specific prop type is
-  // intentionally erased here.
-  Wizard: React.ComponentType<any>;
-  ResultsView: React.ComponentType<any>;
-  // API functions
-  getLatestPublished: (clientId: string) => Promise<Record<string, unknown> | null>;
-  deleteFNA: (fnaId: string) => Promise<void>;
-  publishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
-  unpublishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
-  // Wizard props mapping
-  wizardProps?: {
-    onCompleteKey?: string;
-  };
-  // Results props mapping
-  resultsPropsKey?: string;
-}
+/**
+ * The registry conforms to the contract the shared FNA module publishes, so
+ * the type lives there and is re-exported here for the existing consumers of
+ * this file.
+ */
+export type { FNAConfig };
 
 // ==================== CONFIG REGISTRY ====================
 

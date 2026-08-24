@@ -19,7 +19,7 @@
  *   SS19.1 -- Query keys via centralised registry
  */
 
-import React, { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -48,26 +48,12 @@ import {
   EmptyState,
   EnvelopeManagementTableRow,
   EnvelopeDetailsDialog,
+  DocumentUploadStep,
+  RecipientsManager,
+  PrepareFormStudio,
 } from '../../esign';
 
 import type { EsignEnvelope, EsignField, SignerFormData } from './esignTabModel';
-
-// Lazy-load heavy wizard components (same as standalone module)
-const DocumentUploadStep = React.lazy(() =>
-  import('../../esign/components/DocumentUploadStep').then((m) => ({
-    default: m.DocumentUploadStep,
-  })),
-);
-const RecipientsManager = React.lazy(() =>
-  import('../../esign/components/RecipientsManager').then((m) => ({
-    default: m.RecipientsManager,
-  })),
-);
-const PrepareFormStudio = React.lazy(() =>
-  import('../../esign/components/PrepareFormStudio').then((m) => ({
-    default: m.PrepareFormStudio,
-  })),
-);
 
 import {
   STAT_CONFIG,

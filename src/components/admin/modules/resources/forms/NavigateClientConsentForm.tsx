@@ -1,4 +1,4 @@
-import { BasePdfLayout } from '../templates/BasePdfLayout';
+import { BasePdfLayout } from '../../../../shared/pdf';
 
 export const NavigateClientConsentForm = ({ data = {} }: { data?: Record<string, unknown> }) => {
   // Form values are rendered as text; read them as an optional-string record.

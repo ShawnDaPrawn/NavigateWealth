@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { FileText } from 'lucide-react';
-import { BasePdfLayout } from '../templates/BasePdfLayout';
+import { BasePdfLayout } from '../../../../shared/pdf';
 import { FormBlock } from '../builder/types';
 import { DynamicFormRendererProps } from '../types';
 import { renderBlock } from './renderBlock';

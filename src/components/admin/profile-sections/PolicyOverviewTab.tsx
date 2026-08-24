@@ -23,8 +23,8 @@ import { api } from '../../../utils/api';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
-import { Goal } from '../modules/client-management/components/goals/types';
-import { calculateGoalStatus } from '../modules/client-management/components/goals/utils';
+import { calculateGoalStatus } from '../../../shared/goals';
+import type { Goal } from '../../../shared/goals';
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
 
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';

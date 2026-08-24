@@ -35,7 +35,7 @@ import {
   ScrollText,
   Send,
 } from 'lucide-react';
-import { clientApi } from '../../client-management/api';
+import { fetchClientDirectory } from '../../../../../shared/api/clientDirectory';
 import { SIGNER_ROLES, SIGNER_COLORS, CURRENT_MAX_SIGNERS } from '../constants';
 import type { SignerFormData, SignerKind } from '../types';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
@@ -61,6 +61,20 @@ interface RecipientsManagerProps {
 }
 
 import { RecipientAddForm, type AddMode, type SystemClient } from './RecipientAddForm';
+
+/**
+ * The directory fields this picker reads. Passed to fetchClientDirectory so the
+ * shared envelope is typed with exactly what is used here — the server may
+ * return `profile` flat or nested, hence the loose record.
+ */
+interface DirectoryClient {
+  id: string;
+  email?: string;
+  name?: string;
+  user_metadata?: Record<string, unknown>;
+  profile?: Record<string, unknown>;
+  application_status?: string;
+}
 
 export function RecipientsManager({
   signers,
@@ -112,42 +126,33 @@ export function RecipientsManager({
     if (clientsLoaded) return;
     setLoadingClients(true);
     try {
-      const response = await clientApi.getClients();
+      const response = await fetchClientDirectory<DirectoryClient>();
       const users = response?.users || response?.clients || [];
       // Filter to active and pending clients only, then map to simplified shape
       const eligible = users
-        .map(
-          (u: {
-            id: string;
-            email?: string;
-            name?: string;
-            user_metadata?: Record<string, unknown>;
-            profile?: Record<string, unknown>;
-            application_status?: string;
-          }) => {
-            // Server may return profile as flat ProfileData or nested ClientProfile
-            const pi =
-              (u.profile?.personalInformation as Record<string, unknown> | undefined) || u.profile;
-            return {
-              id: u.id,
-              firstName: String(
-                u.user_metadata?.firstName || pi?.firstName || u.name?.split(' ')[0] || '',
-              ),
-              lastName: String(
-                u.user_metadata?.surname ||
-                  pi?.lastName ||
-                  u.name?.split(' ').slice(1).join(' ') ||
-                  '',
-              ),
-              email: u.email || '',
-              status: u.application_status || 'active',
-              nationalId: (u.user_metadata?.nationalId ||
-                pi?.idNumber ||
-                pi?.passportNumber ||
-                undefined) as string | undefined,
-            };
-          },
-        )
+        .map((u) => {
+          // Server may return profile as flat ProfileData or nested ClientProfile
+          const pi =
+            (u.profile?.personalInformation as Record<string, unknown> | undefined) || u.profile;
+          return {
+            id: u.id,
+            firstName: String(
+              u.user_metadata?.firstName || pi?.firstName || u.name?.split(' ')[0] || '',
+            ),
+            lastName: String(
+              u.user_metadata?.surname ||
+                pi?.lastName ||
+                u.name?.split(' ').slice(1).join(' ') ||
+                '',
+            ),
+            email: u.email || '',
+            status: u.application_status || 'active',
+            nationalId: (u.user_metadata?.nationalId ||
+              pi?.idNumber ||
+              pi?.passportNumber ||
+              undefined) as string | undefined,
+          };
+        })
         .filter((client: SystemClient) => {
           const status = client.status.toLowerCase();
           // Include active, pending, approved, onboarded clients

@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { FNAWizardLayout, FNAWizardStepConfig } from '../../fna/FNAWizardLayout';
+import { FNAWizardLayout } from '../../fna';
+import type { FNAWizardStepConfig } from '../../fna';
 import { CheckCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { EstatePlanningAPI } from '../api';

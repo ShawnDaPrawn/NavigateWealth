@@ -78,7 +78,7 @@ import type {
   CashflowWaterfallData,
   ActionDistribution,
 } from '../overview/OverviewCharts';
-import { deriveDocumentChecklist } from '../overview/DocumentsChecklist';
+import { deriveDocumentChecklist } from '../overview/deriveDocumentChecklist';
 import type { DocumentItem } from '../overview/DocumentsChecklist';
 import { deriveCategoryKPIs } from '../overview/CategoryPolicyKPIs';
 import type { CategoryKPI } from '../overview/CategoryPolicyKPIs';
@@ -652,7 +652,6 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
       totalMonthlyDebt,
       totalRetirementPremium,
       totalInvestmentPremium,
-      gapAnalysis,
       riskFnaPublished,
       fnaResultsMap,
       retResultsForSubScore,
@@ -663,9 +662,15 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
 
   // ── Phase 2: Chart Data ───────────────────────────────────────────────
 
+  const profileAssets = p?.assets;
   const assetAllocationData = useMemo<AssetAllocationData>(
-    () => deriveAssetAllocation({ profile: p, retirementCurrentValue, investmentCurrentValue }),
-    [p?.assets, retirementCurrentValue, investmentCurrentValue],
+    () =>
+      deriveAssetAllocation({
+        assets: profileAssets,
+        retirementCurrentValue,
+        investmentCurrentValue,
+      }),
+    [profileAssets, retirementCurrentValue, investmentCurrentValue],
   );
 
   const insuranceCoverageItems = useMemo<InsuranceCoverageItem[]>(

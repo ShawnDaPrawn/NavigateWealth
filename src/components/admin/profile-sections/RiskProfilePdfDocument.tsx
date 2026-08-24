@@ -1,5 +1,5 @@
-import { BasePdfLayout } from '../modules/resources';
-import type { RiskAssessment } from '../modules/client-management/types';
+import { BasePdfLayout } from '../../shared/pdf';
+import type { RiskAssessment } from '../../../shared/types';
 import {
   getRiskCategorySummary,
   getSelectedRiskAnswerLabel,

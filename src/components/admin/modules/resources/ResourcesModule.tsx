@@ -76,7 +76,7 @@ const LetterRenderer = React.lazy(() =>
 );
 const ClientConsentForm = React.lazy(() => import('./forms/ClientConsentForm'));
 const ClientPicker = React.lazy(() =>
-  import('./components/ClientPicker').then((m) => ({ default: m.ClientPicker })),
+  import('../../../shared/ClientPicker').then((m) => ({ default: m.ClientPicker })),
 );
 const UniversalKeyManager = React.lazy(() =>
   import('./UniversalKeyManager').then((m) => ({ default: m.UniversalKeyManager })),

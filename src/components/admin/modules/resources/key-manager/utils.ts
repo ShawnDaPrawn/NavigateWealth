@@ -5,7 +5,7 @@
 
 import { ProductKey, ProductKeyCategory, KeyMetadata, CategoryMetadata } from './types';
 import { KEY_USAGE_MAP, PROFILE_CATEGORIES, PRODUCT_CATEGORIES } from './constants';
-import { ALL_PRODUCT_KEYS, KEY_CATEGORIES } from '../../product-management';
+import { ALL_PRODUCT_KEYS, KEY_CATEGORIES } from '@/shared/product-keys';
 
 // ----------------------------------------------------------------------------
 // Key Classification Utilities

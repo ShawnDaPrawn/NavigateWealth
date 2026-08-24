@@ -46,9 +46,9 @@ export function isShadowExtractionEnabled(flow) {
  * "R 1,234.56" (1234.56) distinct from "R 123,456" (123456.00).
  */
 function normaliseCurrencyAmount(text) {
-  const match = String(text).match(/-?\d[\d\s., ]*/);
+  const match = String(text).match(/-?\d[\d\s.,\u00a0]*/);
   if (!match) return '';
-  let raw = match[0].replace(/[\s ]+/g, '');
+  let raw = match[0].replace(/[\s\u00a0]+/g, '');
   const decimal = raw.match(/[.,](\d{1,2})$/);
   let cents = '00';
   if (decimal) {

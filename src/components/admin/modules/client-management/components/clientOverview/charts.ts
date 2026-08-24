@@ -15,19 +15,25 @@ import { extractRiskFinalNeeds } from './fnaExtract';
 // ── Chart-data derivations ───────────────────────────────────────────────
 
 export interface AssetAllocationInputs {
-  profile:
-    | { assets?: Array<{ type?: string; value?: number; description?: string }> }
-    | null
-    | undefined;
+  /**
+   * The balance-sheet assets only — not the whole profile.
+   *
+   * This took `profile` and read exactly one field off it, which forced its
+   * caller to either depend on the entire profile object (recomputing on every
+   * unrelated field change) or narrow the dependency and be flagged by
+   * react-hooks/exhaustive-deps for using a value it had not declared. Taking
+   * the array makes the real dependency the visible one.
+   */
+  assets: Array<{ type?: string; value?: number; description?: string }> | null | undefined;
   retirementCurrentValue: number;
   investmentCurrentValue: number;
 }
 
 /** Build the asset-allocation chart payload from the profile balance sheet. */
 export function deriveAssetAllocation(inputs: AssetAllocationInputs): AssetAllocationData {
-  const { profile: p, retirementCurrentValue, investmentCurrentValue } = inputs;
+  const { assets, retirementCurrentValue, investmentCurrentValue } = inputs;
   return {
-    assets: (p?.assets || []).map((a) => ({
+    assets: (assets || []).map((a) => ({
       type: a.type,
       value: Number(a.value) || 0,
       description: a.description,

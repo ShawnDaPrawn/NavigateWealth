@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { FNAConfig } from '../../../profile-sections/fna-config';
+import type { FNAConfig } from '../types';
 import { logger } from '../../../../../utils/logger';
 
 interface UseFNAManagementOptions {

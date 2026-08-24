@@ -36,7 +36,7 @@ vi.mock('../../../../../utils/queryKeys', () => ({
   },
 }));
 
-vi.mock('../../product-management/keyManagerConstants', () => ({
+vi.mock('@/shared/product-keys', () => ({
   ALL_PRODUCT_KEYS: [
     {
       id: 'medical_aid_premium',
@@ -174,81 +174,6 @@ describe('clientApi', () => {
     it('throws on API error', async () => {
       mockApiPut.mockRejectedValue(new Error('Update failed'));
       await expect(clientApi.updateClientMetadata('u-001', {})).rejects.toThrow('Update failed');
-    });
-  });
-
-  describe('getClientKeys', () => {
-    it('returns structured key data from KV response', async () => {
-      mockApiGet.mockResolvedValue({
-        value: { medical_aid_premium: 3500, profile_personal_age: 40 },
-      });
-      const result = await clientApi.getClientKeys('u-001');
-      expect(result.keys.length).toBe(2);
-      const premiumKey = result.keys.find((k) => k.keyId === 'medical_aid_premium');
-      expect(premiumKey?.name).toBe('Medical Aid Premium');
-      expect(premiumKey?.dataType).toBe('currency');
-    });
-
-    it('falls back to inference for keys not in registry', async () => {
-      mockApiGet.mockResolvedValue({ value: { unknown_custom_key: 100 } });
-      const result = await clientApi.getClientKeys('u-001');
-      expect(result.keys.length).toBe(1);
-      expect(result.keys[0].keyId).toBe('unknown_custom_key');
-    });
-
-    it('returns empty keys on 404 (first-time setup)', async () => {
-      mockApiGet.mockRejectedValue({ statusCode: 404 });
-      const result = await clientApi.getClientKeys('u-001');
-      expect(result.keys).toEqual([]);
-      expect(result.totalCategories).toBe(0);
-    });
-
-    it('returns empty keys on message-based 404', async () => {
-      mockApiGet.mockRejectedValue({ message: '404 Not Found' });
-      const result = await clientApi.getClientKeys('u-001');
-      expect(result.keys).toEqual([]);
-    });
-
-    it('throws on non-404 errors', async () => {
-      mockApiGet.mockRejectedValue(new Error('Server error'));
-      await expect(clientApi.getClientKeys('u-001')).rejects.toThrow('Server error');
-    });
-
-    it('marks boolean values as boolean dataType', async () => {
-      mockApiGet.mockResolvedValue({ value: { unknown_flag: true } });
-      const result = await clientApi.getClientKeys('u-001');
-      expect(result.keys[0].dataType).toBe('boolean');
-    });
-
-    it('marks numeric values as currency dataType when not in registry', async () => {
-      mockApiGet.mockResolvedValue({ value: { unknown_amount: 500 } });
-      const result = await clientApi.getClientKeys('u-001');
-      expect(result.keys[0].dataType).toBe('currency');
-    });
-  });
-
-  describe('recalculateClientKeys', () => {
-    it('triggers recalculation and returns success', async () => {
-      mockApiPost.mockResolvedValue({ success: true });
-      const result = await clientApi.recalculateClientKeys('u-001');
-      expect(result.success).toBe(true);
-      expect(mockApiPost).toHaveBeenCalledWith('/integrations/recalculate-totals', {
-        clientId: 'u-001',
-      });
-    });
-
-    it('throws on API error', async () => {
-      mockApiPost.mockRejectedValue(new Error('Recalc failed'));
-      await expect(clientApi.recalculateClientKeys('u-001')).rejects.toThrow('Recalc failed');
-    });
-  });
-
-  describe('getClientKeyHistory', () => {
-    it('returns hardcoded history stub', async () => {
-      const result = await clientApi.getClientKeyHistory('u-001', 'medical_aid_premium');
-      expect(result.history).toHaveLength(1);
-      expect(result.history[0].value).toBe(1000000);
-      expect(result.history[0].changedBy).toBe('System (Auto-calculation)');
     });
   });
 

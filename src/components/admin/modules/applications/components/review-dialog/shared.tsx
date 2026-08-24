@@ -18,37 +18,6 @@ import { Link2 } from 'lucide-react';
 import { SYNCED_FIELDS, APPLICATION_PROFILE_FIELD_MAP } from '../../constants';
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-export const TITLES = ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'];
-export const GENDERS = ['Male', 'Female', 'Other', 'Prefer not to say'];
-export const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed', 'Life Partner'];
-export const MARITAL_REGIMES = [
-  'In Community of Property',
-  'Out of Community of Property (with accrual)',
-  'Out of Community of Property (without accrual)',
-];
-export const PROVINCES = [
-  'Eastern Cape',
-  'Free State',
-  'Gauteng',
-  'KwaZulu-Natal',
-  'Limpopo',
-  'Mpumalanga',
-  'Northern Cape',
-  'North West',
-  'Western Cape',
-];
-export const EMPLOYMENT_STATUSES = [
-  { value: 'employed', label: 'Employed' },
-  { value: 'self-employed', label: 'Self-Employed' },
-  { value: 'contract', label: 'Contract Worker' },
-  { value: 'unemployed', label: 'Unemployed' },
-  { value: 'retired', label: 'Retired' },
-  { value: 'student', label: 'Student' },
-];
-
-// ---------------------------------------------------------------------------
 // Shared prop type for section sub-components
 // ---------------------------------------------------------------------------
 export interface SectionProps {

@@ -3,6 +3,8 @@
  * Risk Planning feature for Navigate Wealth Admin Portal
  */
 
+import type React from 'react';
+
 // ==================== INPUT TYPES ====================
 
 export interface FNADependant {
@@ -227,4 +229,36 @@ export interface FNAWizardState {
   completedSteps: FNAWizardStep[];
   inputs: Partial<FNAInputs>;
   errors: Record<string, string>;
+}
+
+// ==================== FNA REGISTRY CONTRACT ====================
+
+/**
+ * The shape of one entry in the FNA registry.
+ *
+ * The shared FNA components consume this — FNACard renders `Wizard` and
+ * `ResultsView`, useFNAManagement calls the API functions — so the contract
+ * belongs to this module and the registry that populates it (the FNA_CONFIGS
+ * table in profile-sections) conforms to it. Keeping the type here also keeps
+ * this module from importing anything outside itself.
+ */
+export interface FNAConfig {
+  type: 'risk' | 'medical' | 'retirement' | 'investment' | 'estate' | 'tax';
+  name: string;
+  // Wizard/ResultsView are rendered with dynamically-spread props
+  // (`<config.Wizard {...props} />`), so each module's specific prop type is
+  // intentionally erased here.
+  Wizard: React.ComponentType<any>;
+  ResultsView: React.ComponentType<any>;
+  // API functions
+  getLatestPublished: (clientId: string) => Promise<Record<string, unknown> | null>;
+  deleteFNA: (fnaId: string) => Promise<void>;
+  publishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
+  unpublishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
+  // Wizard props mapping
+  wizardProps?: {
+    onCompleteKey?: string;
+  };
+  // Results props mapping
+  resultsPropsKey?: string;
 }

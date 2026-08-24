@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { clientApi } from '../../client-management/api';
+import { clientKeysApi } from '../../client-keys';
 import { clientDataKeys } from '../../../../../utils/queryKeys';
 
 export function useClientKeys(clientId: string | undefined) {
@@ -14,7 +14,7 @@ export function useClientKeys(clientId: string | undefined) {
       if (!clientId) {
         throw new Error('Client ID is required');
       }
-      return clientApi.getClientKeys(clientId);
+      return clientKeysApi.getClientKeys(clientId);
     },
     enabled: !!clientId,
     staleTime: 5 * 60 * 1000, // 5 minutes

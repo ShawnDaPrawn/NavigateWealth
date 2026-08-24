@@ -19,8 +19,8 @@ vi.mock('@tanstack/react-query', () => ({
 
 const mockGetClientKeys = vi.fn();
 
-vi.mock('../../../client-management/api', () => ({
-  clientApi: {
+vi.mock('../../../client-keys', () => ({
+  clientKeysApi: {
     getClientKeys: (...args: unknown[]) => mockGetClientKeys(...args),
   },
 }));
@@ -84,7 +84,7 @@ describe('useClientKeys (risk-planning-fna)', () => {
     expect(() => opts.queryFn()).toThrow('Client ID is required');
   });
 
-  it('queryFn calls clientApi.getClientKeys when clientId is defined', async () => {
+  it('queryFn calls clientKeysApi.getClientKeys when clientId is defined', async () => {
     const keysData = { totalAssets: 500000, totalLiabilities: 200000 };
     mockGetClientKeys.mockResolvedValue(keysData);
     renderHook(() => useClientKeys('client-123'));

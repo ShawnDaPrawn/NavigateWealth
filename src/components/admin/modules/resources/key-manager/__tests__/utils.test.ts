@@ -51,7 +51,7 @@ const fx = vi.hoisted(() => ({
   PRODUCT_CATEGORIES: ['life'],
 }));
 
-vi.mock('../../../product-management', () => ({
+vi.mock('@/shared/product-keys', () => ({
   ALL_PRODUCT_KEYS: fx.ALL_PRODUCT_KEYS,
   KEY_CATEGORIES: fx.KEY_CATEGORIES,
 }));

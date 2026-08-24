@@ -1,4 +1,4 @@
-import type { RiskAssessment } from '../modules/client-management/types';
+import type { RiskAssessment } from '../../../shared/types';
 
 type RiskQuestionNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 

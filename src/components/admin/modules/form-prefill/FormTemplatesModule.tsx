@@ -31,7 +31,7 @@ import {
   uploadFormTemplate,
 } from '../../../../services/form-prefill-api';
 import { PrefillReviewModal } from './PrefillReviewModal';
-import { ClientPicker } from '../resources/components/ClientPicker';
+import { ClientPicker } from '../../../shared/ClientPicker';
 import { api } from '../../../../utils/api';
 
 interface ClientOption {

@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 const mockGetKeysByCategory = vi.fn();
 
-vi.mock('../keyManagerConstants', () => ({
+vi.mock('@/shared/product-keys', () => ({
   getKeysByCategory: (...args: unknown[]) => mockGetKeysByCategory(...args),
 }));
 

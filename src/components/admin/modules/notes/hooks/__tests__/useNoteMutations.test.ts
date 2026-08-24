@@ -76,19 +76,20 @@ import { tasksKeys } from '../../../../../../utils/queryKeys';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Captures the options object passed to useMutation and returns it. */
-function captureOptions<T = unknown>(): {
+/**
+ * The options object the notes hooks hand to useMutation.
+ *
+ * This was a function that was never called — every use was
+ * `CapturedMutationOptions`, i.e. only its signature. (Its body
+ * would have returned undefined: it registered a mock and then read the
+ * variable the mock had not yet populated.) It is the type it was standing in
+ * for.
+ */
+type CapturedMutationOptions<T = unknown> = {
   mutationFn: (input: T) => Promise<unknown>;
   onSuccess: (data: unknown, variables: T) => void;
   onError: (error: Error) => void;
-} {
-  let captured: ReturnType<typeof captureOptions<T>> | undefined;
-  mockUseMutation.mockImplementationOnce((opts: typeof captured) => {
-    captured = opts as typeof captured;
-    return {}; // the hook returns the useMutation result; we don't need it here
-  });
-  return captured!;
-}
+};
 
 /** Minimal Note shape returned by mutations */
 const NOTE = {
@@ -113,7 +114,7 @@ describe('useCreateNote', () => {
 
   it('calls NotesAPI.createNote in mutationFn', async () => {
     mockCreateNote.mockResolvedValue(NOTE);
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -128,7 +129,7 @@ describe('useCreateNote', () => {
   });
 
   it('onSuccess invalidates personnel list and toasts success', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -144,7 +145,7 @@ describe('useCreateNote', () => {
   });
 
   it('onSuccess also invalidates clientNotes when clientId is present', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -159,7 +160,7 @@ describe('useCreateNote', () => {
   });
 
   it('onSuccess does NOT invalidate clientNotes when clientId is absent', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -176,7 +177,7 @@ describe('useCreateNote', () => {
   });
 
   it('onError calls toast.error with the error message', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -198,7 +199,7 @@ describe('useUpdateNote', () => {
 
   it('calls NotesAPI.updateNote in mutationFn', async () => {
     mockUpdateNote.mockResolvedValue(NOTE);
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -212,7 +213,7 @@ describe('useUpdateNote', () => {
   });
 
   it('onSuccess invalidates list, detail, clientNotes, and all', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -229,7 +230,7 @@ describe('useUpdateNote', () => {
   });
 
   it('onSuccess does NOT call clientNotes invalidation when clientId is null', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -246,7 +247,7 @@ describe('useUpdateNote', () => {
   });
 
   it('onError calls toast.error with the error message', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -268,7 +269,7 @@ describe('useDeleteNote', () => {
 
   it('calls NotesAPI.deleteNote in mutationFn', async () => {
     mockDeleteNote.mockResolvedValue(undefined);
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -281,7 +282,7 @@ describe('useDeleteNote', () => {
   });
 
   it('onSuccess invalidates all notes and toasts success', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -295,7 +296,7 @@ describe('useDeleteNote', () => {
   });
 
   it('onError calls toast.error with the error message', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -317,7 +318,7 @@ describe('useConvertNoteToTask', () => {
 
   it('calls NotesAPI.convertToTask in mutationFn', async () => {
     mockConvertToTask.mockResolvedValue({ taskId: 't-1', note: NOTE });
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -330,7 +331,7 @@ describe('useConvertNoteToTask', () => {
   });
 
   it('onSuccess invalidates all notes, all tasks, and toasts success', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};
@@ -349,7 +350,7 @@ describe('useConvertNoteToTask', () => {
   });
 
   it('onError calls toast.error with the error message', () => {
-    let opts: ReturnType<typeof captureOptions> | undefined;
+    let opts: CapturedMutationOptions | undefined;
     mockUseMutation.mockImplementationOnce((o: unknown) => {
       opts = o as typeof opts;
       return {};

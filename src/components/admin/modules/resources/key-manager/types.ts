@@ -3,7 +3,7 @@
  * Type definitions specific to the Universal Key Manager
  */
 
-import { ProductKey, ProductKeyCategory } from '../../product-management';
+import type { ProductKey, ProductKeyCategory } from '@/shared/types/product-keys';
 
 // Re-export base types for convenience
 export type { ProductKey, ProductKeyCategory };

@@ -1,15 +1,8 @@
 import { Heart, Users } from 'lucide-react';
 import { Label } from '../../../../../ui/label';
 import { Separator } from '../../../../../ui/separator';
-import {
-  ReviewSection,
-  ViewField,
-  EditField,
-  EditSelect,
-  SectionProps,
-  MARITAL_STATUSES,
-  MARITAL_REGIMES,
-} from './shared';
+import { ReviewSection, ViewField, EditField, EditSelect, SectionProps } from './shared';
+import { MARITAL_STATUSES, MARITAL_REGIMES } from './reviewDialogOptions';
 
 export function MaritalStatusSection({
   isEditing,

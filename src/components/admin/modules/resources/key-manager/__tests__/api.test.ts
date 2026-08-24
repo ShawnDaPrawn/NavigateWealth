@@ -81,7 +81,7 @@ const fx = vi.hoisted(() => {
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
-vi.mock('../../../product-management', () => ({
+vi.mock('@/shared/product-keys', () => ({
   ALL_PRODUCT_KEYS: fx.ALL_PRODUCT_KEYS,
   KEY_CATEGORIES: fx.KEY_CATEGORIES,
   getKeysByCategory: (cat: ProductKeyCategory) =>
