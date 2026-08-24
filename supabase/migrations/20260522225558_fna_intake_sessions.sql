@@ -11,21 +11,22 @@
 -- has been deleted and replaced by this one so that filename == applied version.
 --
 -- ---------------------------------------------------------------------------
--- ⚠️  THE UPDATE POLICY BELOW IS SUPERSEDED AND IS A LIVE SECURITY GAP.
+-- ℹ️  THE UPDATE POLICY BELOW IS SUPERSEDED — AND THE REPLACEMENT IS APPLIED.
 --
--- `fna_intake_client_update_draft` here permits a client to UPDATE their own
--- session while status IN ('client_draft','submitted'), and its WITH CHECK
--- constrains only ownership — not status. Verified against production
--- 2026-08-24: this is still the policy in force.
+-- `fna_intake_client_update_draft` as written here permitted a client to UPDATE
+-- their own session while status IN ('client_draft','submitted'), with a WITH
+-- CHECK that constrained only ownership — not status. A client could therefore
+-- mutate an FNA the adviser had already begun reviewing, and move a 'submitted'
+-- row to 'accepted', self-accepting their own Financial Needs Analysis.
 --
--- Consequence: a client can mutate an FNA the adviser has already begun
--- reviewing, and can move a 'submitted' row to 'accepted' — self-accepting
--- their own Financial Needs Analysis. (The status CHECK constraint bounds the
--- values, so it is a transition problem, not an arbitrary-write problem.)
+-- That was SECURITY-AUDIT H-12. The fix is
+-- `20260824222932_fna_intake_rls_draft_only.sql`, APPLIED to production on
+-- 2026-08-24 and verified: USING and WITH CHECK now both read
+-- `(auth.uid() = client_id) AND (status = 'client_draft')`.
 --
--- `20260611000001_fna_intake_rls_draft_only.sql` in this folder is the fix
--- (SECURITY-AUDIT H-12) and is NOT APPLIED. See README.md §"Open remediation".
--- Do not "fix" this file — it must keep asserting what production ran.
+-- The statement below is retained because this file records what production
+-- ran in May, not what is in force today. Do not "fix" it here — read the
+-- 20260824222932 migration for the policy currently in effect.
 -- ---------------------------------------------------------------------------
 
 -- FNA Intake Sessions (Postgres migration — launch blocker)

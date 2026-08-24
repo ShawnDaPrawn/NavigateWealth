@@ -92,6 +92,13 @@ Every KV write had been maintaining 1,085 B-trees. Fixed and recorded in
 `20260824223052`, with the surviving index given a stable explicit name so a
 re-run can never collide into a suffix again.
 
+That migration drops **at most one** index — the unsuffixed legacy name a fresh
+rebuild creates. Bulk cleanup of an already-degraded database (a restored backup,
+a staging clone taken before 2026-08-24) is an operational procedure, not a
+migration: `db push` runs migrations in a transaction, so a bulk drop there would
+hold `ACCESS EXCLUSIVE` on the KV table for its whole duration and cause exactly
+the outage it is meant to avoid. Use `scripts/dedupe-kv-key-indexes.sql`.
+
 ---
 
 ## Open remediation — not done here
