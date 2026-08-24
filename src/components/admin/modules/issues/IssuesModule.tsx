@@ -66,7 +66,7 @@ export function IssuesModule() {
   const [categoryFilter, setCategoryFilter] = useState<'all' | QualityIssueCategory>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | QualityIssuePriority>('all');
   const [severityFilter, setSeverityFilter] = useState<'all' | QualityIssueSeverity>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | QualityIssueStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | QualityIssueStatus>('open');
   const [selectedFingerprint, setSelectedFingerprint] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<QualityIssueStatus>('open');
   const [draftOwnerName, setDraftOwnerName] = useState('');

@@ -303,11 +303,8 @@ jobs:
         # the job fails if it RISES, so no new high/critical can be introduced
         # while the residual backlog is burned down.
         #
-        # Floor is currently 1: `sharp` (<0.35.0, inherited libvips CVEs) needs a
-        # semver-MAJOR bump. It is a devDependency used only by local image
-        # generation scripts (scripts/generate-brand-*.mjs) and never ships to
-        # users, so it is accepted rather than forced. LOWER .npm-audit-baseline
-        # when it is upgraded; at 0, gate on the count directly for a hard zero.
+        # Floor is currently 0: `sharp` was upgraded to ^0.35.3 (libvips CVEs).
+        # Keep the ratchet at 0 so a new high/critical fails the job.
         #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,

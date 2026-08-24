@@ -230,9 +230,9 @@ Landed since the 2026-04-20 CORS restore:
   step ran with `|| true` and no threshold, so drift was invisible. Re-measured
   2026-08-21: 7 high + 2 moderate had accumulated (including a runtime
   `react-router` XSS/open-redirect advisory). `npm audit fix` cleared 6 highs and
-  both moderates with no `package.json` change; the residual 1 high is `sharp`
-  (dev-only, needs a semver-major bump). The count is now ratcheted against
-  `.npm-audit-baseline` (Stage A / F7) so it cannot silently drift again.
+  both moderates with no `package.json` change; the residual 1 high was `sharp`
+  (dev-only, semver-major). **Burned to 0 on 2026-08-24** by upgrading `sharp`
+  to `^0.35.3`. The count remains ratcheted against `.npm-audit-baseline`.
 
 Remaining production-readiness blockers are now mainly:
 
@@ -1002,3 +1002,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script.                                                                                                                                                                                                                                                                                          | Agent           |
 | 2026-08-21 | Architecture-quality verification: re-ran every quality gate on `main`, marked the completed roadmap items done (`integrations.tsx` split, Vitest suite fix, tooling gates, audit logging, super-admin allowlist), corrected the Section 2 rubric and Section 8 command list, and recorded remaining debt (four >1000-line server modules, ~31% coverage floor, 59-warning lint baseline). | Claude          |
 | 2026-08-22 | Added `docs/REFACTORING-ROADMAP.md`: the consolidated, re-verified execution roadmap for the remaining technical-debt / readability / code-organisation work (security remainder WS0, frontend and backend organisation, data layer, platform split, delivery confidence), with current ratchet values measured from the tree at `255f708`.                                                | Claude          |
+| 2026-08-24 | Issue Manager burn-down: upgraded `sharp` to `^0.35.3` (npm audit high+critical floor 0), treat stale React.lazy `.default` crashes as a one-shot chunk reload, and default the findings list to Open.                                                                                                                                                                                     | Agent           |

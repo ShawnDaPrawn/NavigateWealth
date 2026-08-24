@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
 import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
+import { isStaleChunkLoadFailure, reloadOnceForStaleChunk } from '../../utils/staleChunkRecovery';
 
 interface Props {
   children: ReactNode;
@@ -45,6 +46,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Stale-deploy chunk failures: reload once instead of recording a
+    // runtime issue. The same fingerprint was filling Issue Manager after
+    // every Vercel publish while an old tab still held the previous shell.
+    if (isStaleChunkLoadFailure(error) && reloadOnceForStaleChunk()) {
+      return;
+    }
+
     // Log using unified logger
     logger.error('ErrorBoundary caught an error', error, {
       componentStack: errorInfo.componentStack,
@@ -88,10 +96,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private isDynamicImportError(error: Error | null): boolean {
-    const message = `${error?.name || ''} ${error?.message || ''}`;
-    return /failed to fetch dynamically imported module|loading chunk|chunkloaderror/i.test(
-      message,
-    );
+    return isStaleChunkLoadFailure(error);
   }
 
   private isDevelopment(): boolean {
