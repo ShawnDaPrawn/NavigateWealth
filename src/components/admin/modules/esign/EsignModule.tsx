@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 /**
  * E-Signature Module - Standalone Admin Module
  * Allows admins to send documents for e-signature to any user (existing clients or new recipients)
@@ -898,11 +897,3 @@ export function EsignModule() {
     </div>
   );
 }
-
-// ============================================================================
-// Public barrel exports — only what external consumers actually import
-// EsignTab in client-management imports useEnvelopes from this barrel.
-// All other imports go directly to submodules (e.g. ../../esign/types).
-// ============================================================================
-
-export { useEnvelopes } from './hooks';
