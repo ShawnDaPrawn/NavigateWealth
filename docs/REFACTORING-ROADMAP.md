@@ -56,27 +56,27 @@ strict types, the API client, lazy-router, code splitting,
 
 ### 1.2 The measured debt that remains
 
-| Ratchet / measure                                 | Current             | Target          | Meaning                                                            |
-| ------------------------------------------------- | ------------------- | --------------- | ------------------------------------------------------------------ |
-| `quality/baselines/anon-key-bearer-baseline`      | 78                  | 0               | SPA call sites still sending the public anon key as a bearer       |
-| `quality/baselines/auth-implementations-baseline` | 5                   | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)     |
-| `quality/baselines/auth-without-authz-baseline`   | 33                  | ~2              | Handlers that authenticate and discard the answer                  |
-| `quality/baselines/route-validation-baseline`     | 35                  | 0               | Body-reading mutating routes with no schema                        |
-| `quality/baselines/route-auth-baseline`           | 123                 | reviewed list   | Routes with no visible guard (includes public-by-design)           |
-| `quality/baselines/depcruise-baseline`            | 210                 | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin) |
-| `.kv-direct-import-baseline`                      | 175                 | 0               | Files importing `kv_store` instead of a repository                 |
-| `quality/baselines/raw-fetch-baseline`            | 185                 | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)      |
-| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`) | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                   |
-| `quality/baselines/contract-coverage-baseline`    | 2                   | grows           | Validated response call sites (floors a gain, fails on falls)      |
-| `quality/baselines/npm-audit-baseline`            | 1                   | 0               | High/critical advisories (`sharp`, dev-only, major bump)           |
-| `quality/baselines/deno-check-baseline`           | 0                   | hold            | Done — keep at zero                                                |
-| Backend coverage (floored)                        | ~13.7% stmts        | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                |
-| SPA coverage (floored)                            | ~31% stmts          | 50%+            | Excludes backend; per-layer by design                              |
-| Files > 1,000 raw lines                           | 74 (40 counted)     | 0 at budget 600 | Readability ceiling; god files listed in §4                        |
-| `src/assets`                                      | 853 MB PNG/JPG      | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)          |
-| Edge function                                     | 1 × ~136K lines     | 4–6 functions   | Stage E bounded-context split not started                          |
-| E2E in CI                                         | 0 journeys          | 3 seeded        | A9 — all specs credential-skipped                                  |
-| Metrics                                           | none                | minimal set     | Correlation IDs exist; no counters/latency                         |
+| Ratchet / measure                                 | Current             | Target          | Meaning                                                             |
+| ------------------------------------------------- | ------------------- | --------------- | ------------------------------------------------------------------- |
+| `quality/baselines/anon-key-bearer-baseline`      | 78                  | 0               | SPA call sites still sending the public anon key as a bearer        |
+| `quality/baselines/auth-implementations-baseline` | 5                   | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)      |
+| `quality/baselines/auth-without-authz-baseline`   | 33                  | ~2              | Handlers that authenticate and discard the answer                   |
+| `quality/baselines/route-validation-baseline`     | 35                  | 0               | Body-reading mutating routes with no schema                         |
+| `quality/baselines/route-auth-baseline`           | 123                 | reviewed list   | Routes with no visible guard (includes public-by-design)            |
+| `quality/baselines/depcruise-baseline`            | 210                 | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin)  |
+| `.kv-direct-import-baseline`                      | 175                 | 0               | Files importing `kv_store` instead of a repository                  |
+| `quality/baselines/raw-fetch-baseline`            | 185                 | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)       |
+| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`) | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                    |
+| `quality/baselines/contract-coverage-baseline`    | 2                   | grows           | Validated response call sites (floors a gain, fails on falls)       |
+| `quality/baselines/npm-audit-baseline`            | 0                   | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24 |
+| `quality/baselines/deno-check-baseline`           | 0                   | hold            | Done — keep at zero                                                 |
+| Backend coverage (floored)                        | ~13.7% stmts        | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                 |
+| SPA coverage (floored)                            | ~31% stmts          | 50%+            | Excludes backend; per-layer by design                               |
+| Files > 1,000 raw lines                           | 74 (40 counted)     | 0 at budget 600 | Readability ceiling; god files listed in §4                         |
+| `src/assets`                                      | 853 MB PNG/JPG      | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)           |
+| Edge function                                     | 1 × ~136K lines     | 4–6 functions   | Stage E bounded-context split not started                           |
+| E2E in CI                                         | 0 journeys          | 3 seeded        | A9 — all specs credential-skipped                                   |
+| Metrics                                           | none                | minimal set     | Correlation IDs exist; no counters/latency                          |
 
 ### 1.3 Security remainder — still open at HEAD, re-verified today
 

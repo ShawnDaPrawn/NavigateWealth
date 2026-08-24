@@ -13,42 +13,7 @@ import {
   runtimeIssueFromUnknown,
 } from './utils/quality/runtimeIssueReporter';
 import { isWebLockStealAbort } from './utils/errorUtils';
-
-const CHUNK_LOAD_RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
-const CHUNK_LOAD_RELOAD_WINDOW_MS = 60_000;
-
-function isDynamicImportLoadFailure(value: unknown): boolean {
-  const message =
-    value instanceof Error
-      ? value.message
-      : typeof value === 'string'
-        ? value
-        : String(value ?? '');
-
-  return (
-    message.includes('Failed to fetch dynamically imported module') ||
-    message.includes('Importing a module script failed') ||
-    message.includes('ChunkLoadError')
-  );
-}
-
-function reloadOnceForChunkLoadFailure(): boolean {
-  try {
-    const now = Date.now();
-    const lastReload = Number(window.sessionStorage.getItem(CHUNK_LOAD_RELOAD_KEY) || '0');
-
-    if (Number.isFinite(lastReload) && now - lastReload < CHUNK_LOAD_RELOAD_WINDOW_MS) {
-      return false;
-    }
-
-    window.sessionStorage.setItem(CHUNK_LOAD_RELOAD_KEY, String(now));
-    window.location.reload();
-    return true;
-  } catch {
-    window.location.reload();
-    return true;
-  }
-}
+import { isStaleChunkLoadFailure, reloadOnceForStaleChunk } from './utils/staleChunkRecovery';
 
 export default function App() {
   // Validate environment variables on first render
@@ -72,9 +37,9 @@ export default function App() {
     // cross-origin iframes, which is unavailable in sandboxed contexts (e.g. preview iframes).
     // This is non-fatal — widgets may still render correctly in production.
     const handleWindowError = (event: ErrorEvent) => {
-      if (isDynamicImportLoadFailure(event.message) || isDynamicImportLoadFailure(event.error)) {
+      if (isStaleChunkLoadFailure(event.message) || isStaleChunkLoadFailure(event.error)) {
         event.preventDefault();
-        return reloadOnceForChunkLoadFailure();
+        return reloadOnceForStaleChunk();
       }
 
       if (
@@ -108,9 +73,9 @@ export default function App() {
       }
 
       const reason = String(event.reason ?? '');
-      if (isDynamicImportLoadFailure(event.reason) || isDynamicImportLoadFailure(reason)) {
+      if (isStaleChunkLoadFailure(event.reason) || isStaleChunkLoadFailure(reason)) {
         event.preventDefault();
-        reloadOnceForChunkLoadFailure();
+        reloadOnceForStaleChunk();
         return;
       }
 
@@ -129,7 +94,7 @@ export default function App() {
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
     const handleVitePreloadError = (event: Event) => {
       event.preventDefault();
-      reloadOnceForChunkLoadFailure();
+      reloadOnceForStaleChunk();
     };
     window.addEventListener('vite:preloadError', handleVitePreloadError);
 

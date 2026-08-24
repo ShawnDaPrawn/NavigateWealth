@@ -3,20 +3,15 @@
  * recipients → prepare). Pure view: the module root owns the wizard state
  * and passes the slice this step reads plus the handlers it fires.
  */
-import React, { Suspense } from 'react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 
-import { StepFallback } from './StepFallback';
 import type { TemplateContext } from '../wizardDerivations';
 import type { SignerFormData } from '../types';
-
-const RecipientsManager = React.lazy(() =>
-  import('./RecipientsManager').then((m) => ({ default: m.RecipientsManager })),
-);
+import { RecipientsManager } from './RecipientsManager';
 
 interface RecipientsStepViewProps {
   signers: SignerFormData[];
@@ -79,9 +74,7 @@ export function RecipientsStepView({
 
       <Card>
         <CardContent className="p-6">
-          <Suspense fallback={<StepFallback />}>
-            <RecipientsManager signers={signers} onChange={onSignersChange} />
-          </Suspense>
+          <RecipientsManager signers={signers} onChange={onSignersChange} />
         </CardContent>
       </Card>
 
