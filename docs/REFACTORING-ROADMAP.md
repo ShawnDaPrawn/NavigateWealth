@@ -452,11 +452,14 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
 
 ## 8. WS5 — Delivery confidence (tests, smoke, CI)
 
-1. **Blocking post-deploy smoke** in `deploy-supabase-function.yml`: hit
-   health + 2–3 gated routes, assert 200/401, fail the deploy on red, with a
-   documented rollback. The backend still deploys ~136K lines on faith; this
-   is the single cheapest release-confidence win in the whole roadmap.
-   _Effort:_ S/M.
+1. **Blocking post-deploy smoke** in `deploy-supabase-function.yml`: **DONE
+   2026-08-24.** `scripts/post-deploy-smoke.mjs` hits `/health` + `/health/ready`
+   (200) and `/kv-store`, `/documents`, `/profile` (401), plus the anon-key-as-
+   bearer case (401 `AUTH_INVALID`). The job fails on red. Rollback is documented
+   in the workflow and the script header: re-run this workflow on the last green
+   SHA, or revert the merge on main. Credentialed form-prefill smoke stays
+   `continue-on-error`.
+   _Effort:_ S.
 2. **Backend coverage ratchet, worked not watched.** Floors only prevent
    regression; the plan is contract tests. Every route family gets an
    `*-routes.contract.test.ts` (mount the real router, mock only IO, assert
