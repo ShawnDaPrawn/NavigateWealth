@@ -374,7 +374,7 @@ Provider portal automation lives outside the Edge Function because Playwright re
 Key files and docs:
 
 - `scripts/provider-portal-worker.mjs`
-- `Dockerfile.portal-worker`
+- `scripts/Dockerfile.portal-worker`
 - `docs/provider-portal-worker.md`
 - `docs/provider-automation-golden-flows.md`
 - `.github/workflows/provider-portal-worker.yml` if present in the current branch

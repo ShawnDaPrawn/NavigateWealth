@@ -565,7 +565,7 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   deploys with only a non-blocking, credential-gated smoke test.** Combined with
   A2, ~136K lines ship to production essentially unverified.
   _Measurement half FIXED (Stage A / F4, 2026-08-21):_ the backend is now
-  measured and floored separately via `vitest.config.server.ts` —
+  measured and floored separately via `quality/vitest.config.server.ts` —
   **statements 13.43%, branches 9.38%, functions 12.88%, lines 13.79%** across
   573 tests, gated as its own CI step. So the number is real and can only
   ratchet up. **Still open:** the blocking post-deploy smoke test in
@@ -1080,7 +1080,7 @@ known to overstate reality and should be corrected there:
    ~136K-line backend was excluded from measurement and that ~16 marketing pages
    are silently dropped by the v8 parser, so the figure described the SPA subset
    only. _Fixed 2026-08-21 (Stage A / F4):_ the backend is measured and floored
-   separately (`vitest.config.server.ts`) at **statements 13.43% / branches
+   separately (`quality/vitest.config.server.ts`) at **statements 13.43% / branches
    9.38% / functions 12.88% / lines 13.79%**, and the ledger now reports the two
    layers as two numbers. The v8-unparseable-pages caveat still applies to the
    SPA figure. (Findings A8, §2.)

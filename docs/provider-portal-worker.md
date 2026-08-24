@@ -230,7 +230,7 @@ NW_PORTAL_WORKER_SECRET=<same value configured on the worker host>
 
 ## Container command
 
-Use `Dockerfile.portal-worker` and run:
+Use `scripts/Dockerfile.portal-worker` and run:
 
 ```bash
 npm run provider:worker

@@ -72,7 +72,7 @@ jobs:
         #
         # First honest measurement (2026-08-21): statements 13.43%,
         # branches 9.38%, functions 12.88%, lines 13.79%. Floors sit just below
-        # in vitest.config.server.ts and ratchet UP as backend tests land.
+        # in quality/vitest.config.server.ts and ratchet UP as backend tests land.
         shell: bash
         run: |
           set +e
@@ -246,15 +246,15 @@ jobs:
         # EXCEEDS the committed floor in quality/baselines/depcruise-baseline — no NEW boundary
         # violation can be introduced while the backlog is burned down.
         # LOWER quality/baselines/depcruise-baseline as violations are fixed; at 0, flip the
-        # rules back to `error` in .dependency-cruiser.cjs and gate on the exit
+        # rules back to `error` in quality/dependency-cruiser.cjs and gate on the exit
         # code directly for a hard zero.
         #
-        # Config: .dependency-cruiser.cjs
+        # Config: quality/dependency-cruiser.cjs
         # Run locally: npm run depcruise
         shell: bash
         run: |
           set +e
-          npx dependency-cruiser@16 'src/**/*.{ts,tsx}' --config .dependency-cruiser.cjs 2>&1 | tee quality-depcruise.log
+          npx dependency-cruiser@16 'src/**/*.{ts,tsx}' --config quality/dependency-cruiser.cjs 2>&1 | tee quality-depcruise.log
           echo "${PIPESTATUS[0]}" > quality-depcruise.exit
           # Authoritative count = dep-cruiser's own summary line, e.g.
           #   "x 210 dependency violations (0 errors, 210 warnings)."
@@ -430,7 +430,7 @@ jobs:
             echo "::notice::npm audit high/critical vulnerabilities dropped to $audit_count (below floor $audit_baseline) — tighten the ratchet by setting quality/baselines/npm-audit-baseline to $audit_count."
           fi
           if [ "$server_cov_exit" != "0" ]; then
-            echo "::error::Backend (Edge Function) coverage fell below its floor, or its suite failed. The backend is measured separately from the SPA (vitest.config.server.ts) because it holds auth, client PII and e-signature logic. Add tests for the code you changed — contract tests in the esign-routes.contract.test.ts style are the highest-value kind. See quality-test-server.log"
+            echo "::error::Backend (Edge Function) coverage fell below its floor, or its suite failed. The backend is measured separately from the SPA (quality/vitest.config.server.ts) because it holds auth, client PII and e-signature logic. Add tests for the code you changed — contract tests in the esign-routes.contract.test.ts style are the highest-value kind. See quality-test-server.log"
             failed=1
           fi
           if [ "$bundle_exit" = "2" ]; then
