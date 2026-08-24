@@ -410,7 +410,7 @@ the Stage E split (both need the app factored out of the serve call).
 > 28 tests; backend coverage floors raised 15.0/10.6/14.8/15.4 →
 > 17.3/12.5/16.8/17.7.
 
-### 5.5 Review the route-auth list (F3)
+### 5.5 Review the route-auth list (F3) — **DONE 2026-08-24**
 
 `quality/baselines/route-auth-baseline` = 123 is a **review list**, not a vulnerability count.
 Classify every entry once: public-by-design (annotate in the test's expected
@@ -420,6 +420,41 @@ public-API inventory the P1.3 split needs.
 
 - **Effort:** M. **Gate:** every one of the 123 carries a classification;
   unguarded count is 0.
+
+> **Landed.** All 123 classified in
+> `src/supabase/functions/server/__tests__/route-auth-classification.ts`, each
+> with a reason, grouped by the 14 distinct mechanisms in play. The split:
+> **85 public by design**, **35 guarded by something the detector cannot see**,
+> and **exactly 3 real gaps** — the read routes in
+> `integrations-schema-routes.ts`, which served integration field schemas and
+> custom key definitions to unauthenticated callers while `POST /schemas` beside
+> them required admin. Fixed with `requireAuth` (not `requireAdmin`: it closes
+> the anonymous exposure without risking a role-based break for non-admin staff
+> who legitimately render policy forms). Baseline 123 → 120.
+>
+> Three findings worth carrying forward:
+>
+> - **The contract suite was pinning the vulnerability.**
+>   `integrations-routes.contract.test.ts` asserted those reads answer 200
+>   _without_ an Authorization header. That is how the gap survived review: it
+>   had tests, and the tests agreed with it. Updated, plus explicit 401 cases.
+> - **Widening `AUTH_MARKERS` was tried and rejected.** Adding the real guards
+>   the detector is missing (`requirePrimaryAuth`, `requireRole`,
+>   `assertClientAccess`, …) moved 123 → 113 — and would have masked all three
+>   genuine gaps, because those files import guards they do not apply to every
+>   route. The detector stays narrow and over-reports; the registry carries the
+>   judgement. A number that shrinks without anyone reading the routes is worse
+>   than the number it replaced.
+> - **Two "gaps" were public on purpose and nearly broken.**
+>   `requests-routes.ts GET /:id` is fetched by the public
+>   `RequestCompletionPage` from an emailed link, and the vasco session routes
+>   are capability URLs keyed on `crypto.randomUUID()`. Adding a guard to either
+>   would have broken a live client-facing flow. Both are now recorded as
+>   capability-URL public surface, with that reasoning attached.
+>
+> The registry doubles as the **public-surface inventory** §7.2/§7.3 needs: the
+> `verify_jwt` flip must be driven from `PUBLIC_BY_DESIGN_ROUTES`, not a
+> hand-written list.
 
 ---
 

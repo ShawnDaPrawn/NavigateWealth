@@ -21,13 +21,25 @@ import { DEFAULT_SCHEMAS } from './default-schemas.ts';
 import { SaveSchemaInputSchema } from './integrations-validation.ts';
 import type { KvSchema, SchemaField } from './integrations-types.ts';
 import { autoGenerateCustomKeysForSchema } from './integrations-derive.ts';
-import { requireAdmin } from './auth-mw.ts';
+import { requireAdmin, requireAuth } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-schema');
 
 // GET /schemas
-app.get('/schemas', async (c) => {
+/**
+ * SECURITY (2026-08-24, roadmap §5.5 route classification): these three READ
+ * routes carried NO guard while `POST /schemas` in the same file carried
+ * `requireAdmin` — so integration field schemas and custom key definitions were
+ * readable by any unauthenticated caller. Found by classifying the 123-route
+ * F3 review list; it was the only genuine gap in the whole list.
+ *
+ * `requireAuth` (not `requireAdmin`) is deliberate: it closes the anonymous
+ * exposure, which is the actual finding, without risking a role-based breakage
+ * for non-admin staff who legitimately render policy forms. Tightening to
+ * `requireAdmin` is a follow-up once role usage on these reads is confirmed.
+ */
+app.get('/schemas', requireAuth, async (c) => {
   const categoryId = c.req.query('categoryId');
   if (!categoryId) return c.json({ error: 'Missing categoryId' }, 400);
 
@@ -50,7 +62,7 @@ app.get('/schemas', async (c) => {
 
 // GET /schemas/batch — returns all schemas in one call (defaults merged with custom overrides)
 // Used by the client overview dashboard to avoid 13+ individual schema calls
-app.get('/schemas/batch', async (c) => {
+app.get('/schemas/batch', requireAuth, async (c) => {
   try {
     // Fetch all custom schema overrides in one batch KV read
     const customSchemas = await kv.getByPrefix('config:schema:');
@@ -84,7 +96,7 @@ app.get('/schemas/batch', async (c) => {
 });
 
 // GET /custom-keys
-app.get('/custom-keys', async (c) => {
+app.get('/custom-keys', requireAuth, async (c) => {
   const categoryId = c.req.query('categoryId');
 
   if (!categoryId) {
