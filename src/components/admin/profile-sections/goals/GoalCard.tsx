@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
-import { Badge } from '../../../../../ui/badge';
-import { Progress } from '../../../../../ui/progress';
-import { Button } from '../../../../../ui/button';
-import { Goal } from './types';
-import { calculateGoalStatus } from './utils';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../ui/card';
+import { Badge } from '../../../ui/badge';
+import { Progress } from '../../../ui/progress';
+import { Button } from '../../../ui/button';
+import { Goal } from '../../../../shared/goals';
+import { calculateGoalStatus } from '../../../../shared/goals';
 import { Pencil, AlertTriangle, CheckCircle, XCircle, Target } from 'lucide-react';
-import { formatCurrency } from '../../../../../../utils/currencyFormatter';
+import { formatCurrency } from '../../../../utils/currencyFormatter';
 
 interface GoalCardProps {
   goal: Goal;

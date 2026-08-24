@@ -6,22 +6,16 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from '../../../../../ui/dialog';
-import { Button } from '../../../../../ui/button';
-import { Input } from '../../../../../ui/input';
-import { Label } from '../../../../../ui/label';
-import { Goal, GoalType, AdHocContribution } from './types';
-import { Checkbox } from '../../../../../ui/checkbox';
+} from '../../../ui/dialog';
+import { Button } from '../../../ui/button';
+import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
+import { Goal, GoalType, AdHocContribution } from '../../../../shared/goals';
+import { Checkbox } from '../../../ui/checkbox';
 import { Trash2, Info, Plus, X } from 'lucide-react';
-import { formatCurrency } from '../../../../../../utils/currencyFormatter';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../../ui/select';
+import { formatCurrency } from '../../../../utils/currencyFormatter';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 /** Loosely-typed policy record — shape varies by product category */
 type PolicyRecord = {

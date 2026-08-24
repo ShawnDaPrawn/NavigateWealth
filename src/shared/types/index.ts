@@ -23,6 +23,7 @@ export type {
   Address,
   StatusConfig,
   StatusConfigMap,
+  RiskAssessment,
 
   // API response wrappers
   SuccessResponse,

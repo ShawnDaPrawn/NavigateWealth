@@ -1,5 +1,5 @@
 /**
- * goals/utils — unit tests (Phase 4 coverage push).
+ * goals/calculations — unit tests (Phase 4 coverage push).
  *
  * Financial goal projections: calculatePolicyFV (lump-sum + escalating-annuity
  * future value) and calculateGoalStatus (aggregate linked policies, project to
@@ -8,7 +8,7 @@
  * where the projection depends on today's date.
  */
 import { describe, expect, it } from 'vitest';
-import { calculatePolicyFV, calculateGoalStatus } from '../utils';
+import { calculatePolicyFV, calculateGoalStatus } from '../calculations';
 import type { Goal } from '../types';
 
 function goal(over: Record<string, unknown> = {}): Goal {

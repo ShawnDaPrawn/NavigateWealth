@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '../../../../../ui/button';
+import { Button } from '../../../ui/button';
 import { Plus, Loader2 } from 'lucide-react';
-import { Goal } from './types';
+import { Goal } from '../../../../shared/goals';
 import { GoalCard } from './GoalCard';
-import { api } from '../../../../../../utils/api';
+import { api } from '../../../../utils/api';
 import { GoalFormDialog } from './GoalFormDialog';
 
 interface GoalDashboardProps {

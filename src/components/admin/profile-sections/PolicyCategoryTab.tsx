@@ -31,18 +31,14 @@ import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable'
 
 import { renderPolicyTables as renderPolicyTablesView } from './policyTables';
 
-// Heavy FNA management views — lazy-loaded to reduce initial bundle
-const PreviousFNAsDialog = React.lazy(
-  () => import('../modules/risk-planning-fna/components/PreviousFNAsDialog'),
-);
+// The goal dashboard is a heavy tree opened from a dialog, so it stays lazy.
 const GoalDashboard = React.lazy(() =>
-  import('../modules/client-management/components/goals/GoalDashboard').then((m) => ({
-    default: m.GoalDashboard,
-  })),
+  import('./goals/GoalDashboard').then((m) => ({ default: m.GoalDashboard })),
 );
 
-import { Goal } from '../modules/client-management/components/goals/types';
-import { calculateGoalStatus } from '../modules/client-management/components/goals/utils';
+import { PreviousFNAsDialog } from '../modules/risk-planning-fna';
+import { calculateGoalStatus } from '../../../shared/goals';
+import type { Goal } from '../../../shared/goals';
 import { FNAManagementView as FNAManagementView } from '../modules/risk-planning-fna';
 import { WillManagementView as WillManagementView } from '../modules/estate-planning-fna';
 import { WillDraftingWizard as WillDraftingWizard } from '../modules/estate-planning-fna';

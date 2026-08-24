@@ -7,8 +7,9 @@ export type {
   ClientSecurity,
   Address,
   BaseClient,
+  RiskAssessment,
 } from '../../../../shared/types';
-import type { BaseClient } from '../../../../shared/types';
+import type { BaseClient, RiskAssessment } from '../../../../shared/types';
 
 /** Dashboard display mode for ClientOverviewTab — Phase C */
 export type { DashboardMode } from './components/clientOverviewConstants';
@@ -149,23 +150,6 @@ export interface ChronicCondition {
   yearDiagnosed: string;
   onTreatment: boolean;
   treatingDoctor: string;
-}
-
-export interface RiskAssessment {
-  question1: number;
-  question2: number;
-  question3: number;
-  question4: number;
-  question5: number;
-  question6: number;
-  question7: number;
-  question8: number;
-  question9: number;
-  question10: number;
-  totalScore: number;
-  riskCategory: string;
-  dateCompleted: string;
-  canRetake: boolean;
 }
 
 export interface BudgetExpense {

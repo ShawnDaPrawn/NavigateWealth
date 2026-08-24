@@ -166,3 +166,32 @@ export interface StatusConfig {
  * Green = Active/Success, Amber = Warning/Suspended, Red = Closed/Error.
  */
 export type StatusConfigMap = Record<AccountStatus, StatusConfig>;
+
+// ============================================================================
+// RISK PROFILE
+// ============================================================================
+
+/**
+ * A completed client risk-tolerance questionnaire.
+ *
+ * Lives here rather than inside the client-management module because the risk
+ * profile sections that render and print it sit outside that module: keeping
+ * the shape in the shared layer is what lets them describe it without reaching
+ * into another module's internals.
+ */
+export interface RiskAssessment {
+  question1: number;
+  question2: number;
+  question3: number;
+  question4: number;
+  question5: number;
+  question6: number;
+  question7: number;
+  question8: number;
+  question9: number;
+  question10: number;
+  totalScore: number;
+  riskCategory: string;
+  dateCompleted: string;
+  canRetake: boolean;
+}
