@@ -10,7 +10,9 @@
  * Rollback (this runs AFTER deploy, so a red smoke means a bad revision is
  * already live):
  *   1. gh run list --workflow=deploy-supabase-function.yml
- *   2. gh workflow run deploy-supabase-function.yml --ref <last-green-sha>
+ *   2. gh workflow run deploy-supabase-function.yml -f revision=<last-green-sha>
+ *      (`--ref` is a branch/tag, not a SHA. The workflow input checks out the
+ *      green commit while still using the workflow file on main.)
  *      or revert the merge on main (this workflow then redeploys).
  *   Do not "fix forward" on a 200/401 inversion — that is an auth regression.
  *
@@ -134,9 +136,52 @@ function sleep(ms) {
 }
 
 /**
+ * Rejects when `signal` aborts, including after headers have already arrived.
+ * Real `fetch()` aborts body reads via the same signal; mocked responses that
+ * stall in `.text()` still need this race so the 45s gate cannot hang.
+ *
+ * @param {AbortSignal} signal
+ * @returns {Promise<never>}
+ */
+function aborted(signal) {
+  return new Promise((_, reject) => {
+    const rejectAbort = () => {
+      reject(
+        signal.reason instanceof Error ? signal.reason : new Error('The operation was aborted'),
+      );
+    };
+    if (signal.aborted) {
+      rejectAbort();
+      return;
+    }
+    signal.addEventListener('abort', rejectAbort, { once: true });
+  });
+}
+
+/**
+ * @param {{ text?: () => Promise<string>, body?: { cancel?: () => unknown } }} response
+ * @param {AbortSignal} signal
+ */
+async function readBody(response, signal) {
+  const textPromise = typeof response.text === 'function' ? response.text() : Promise.resolve('');
+  try {
+    return await Promise.race([textPromise, aborted(signal)]);
+  } finally {
+    if (signal.aborted && response.body && typeof response.body.cancel === 'function') {
+      try {
+        response.body.cancel();
+      } catch {
+        // Best-effort; a hung mock has no cancelable stream.
+      }
+    }
+  }
+}
+
+/**
  * @param {string} url
  * @param {RequestInit} init
  * @param {{ timeoutMs: number, retries: number, fetchImpl: typeof fetch }} opts
+ * @returns {Promise<{ response: Response, text: string }>}
  */
 export async function fetchWithRetry(url, init, opts) {
   const { timeoutMs, retries, fetchImpl } = opts;
@@ -147,12 +192,14 @@ export async function fetchWithRetry(url, init, opts) {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetchImpl(url, { ...init, signal: controller.signal });
-      clearTimeout(timer);
       if (isRetryableStatus(response.status) && attempt < retries) {
+        clearTimeout(timer);
         await sleep(1000 * (attempt + 1));
         continue;
       }
-      return response;
+      const text = await readBody(response, controller.signal);
+      clearTimeout(timer);
+      return { response, text };
     } catch (error) {
       clearTimeout(timer);
       lastError = error;
@@ -205,12 +252,11 @@ export async function runSmoke(options = {}) {
     const url = `${baseUrl}${probe.path}`;
     const started = Date.now();
     try {
-      const response = await fetchWithRetry(
+      const { response, text } = await fetchWithRetry(
         url,
         { method: 'GET', headers: headersFor(probe) },
         { timeoutMs, retries, fetchImpl },
       );
-      const text = await response.text();
       let body = /** @type {unknown} */ (null);
       try {
         body = JSON.parse(text);
@@ -266,7 +312,7 @@ async function main() {
   if (failed > 0) {
     process.stdout.write(
       `\nPost-deploy smoke failed (${failed} probe(s)) against ${baseUrl}.\n` +
-        'A bad revision is already live. Rollback: re-run this workflow on the last green SHA,\n' +
+        'A bad revision is already live. Rollback: gh workflow run deploy-supabase-function.yml -f revision=<last-green-sha>,\n' +
         'or revert the merge on main.\n',
     );
     process.exit(1);

@@ -837,8 +837,11 @@ npm run deploy:smoke
 
 Health probes must return 200; `/kv-store`, `/documents`, and `/profile` must
 return 401 (including when the public anon key is sent as a bearer token).
-A red smoke means the revision is already live — rollback by re-running the
-deploy workflow on the last green SHA, or by reverting the merge on `main`.
+A red smoke means the revision is already live — rollback by dispatching the
+deploy workflow with the last green SHA as an input (`gh workflow run
+deploy-supabase-function.yml -f revision=<last-green-sha>`), or by reverting
+the merge on `main`. Do not pass the SHA to `--ref`; that option is a
+branch/tag name, not a commit.
 
 ### CORS Preflight Checks
 

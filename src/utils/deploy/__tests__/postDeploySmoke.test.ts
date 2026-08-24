@@ -34,6 +34,7 @@ function callSmoke(expression: string): unknown {
   const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', source], {
     encoding: 'utf8',
     cwd: repoRoot,
+    timeout: 15_000,
   });
   return JSON.parse(stdout) as unknown;
 }
@@ -116,6 +117,28 @@ describe('retry policy', () => {
     expect(callSmoke('smoke.isRetryableStatus(200)')).toBe(false);
     expect(callSmoke('smoke.isRetryableStatus(500)')).toBe(false);
   });
+
+  it('keeps the request timeout armed while the response body is read', () => {
+    const started = Date.now();
+    expect(() =>
+      callSmoke(`
+        smoke.fetchWithRetry(
+          'https://example.test/health',
+          {},
+          {
+            timeoutMs: 80,
+            retries: 0,
+            fetchImpl: async () => ({
+              status: 200,
+              headers: { get: () => null },
+              text: () => new Promise(() => {}),
+            }),
+          },
+        )
+      `),
+    ).toThrow(/abort/i);
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
 });
 
 describe('deploy workflow wires the smoke as blocking', () => {
@@ -132,5 +155,11 @@ describe('deploy workflow wires the smoke as blocking', () => {
       ?.split('Post-deploy form prefill')[0];
     expect(blockingStep, 'blocking step missing').toBeTruthy();
     expect(blockingStep).not.toContain('continue-on-error');
+  });
+
+  it('rolls back by dispatching a revision SHA, not --ref <sha>', () => {
+    expect(workflow).toContain('github.event.inputs.revision || github.sha');
+    expect(workflow).toContain('-f revision=<last-green-sha>');
+    expect(workflow).not.toMatch(/workflow run deploy-supabase-function\.yml --ref <[^>]*sha/);
   });
 });
