@@ -19,7 +19,7 @@ import {
 } from '../../../../ui/table';
 import { toast } from 'sonner';
 import { api, APIError, resolveApiEndpoint } from '../../../../../utils/api';
-import { normalizeFnaListResponse } from '../../fna/fnaListUtils';
+import { normalizeFnaListResponse } from '../../fna';
 
 interface FNASummary {
   id: string;

@@ -16,3 +16,7 @@ import { RiskPlanningFNAResultsView } from './components/RiskPlanningFNAResultsV
 
 export { RiskPlanningFNAWizard, RiskPlanningFNAResultsView };
 export default RiskPlanningFNAWizard;
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { RiskPlanningFnaAPI } from './api';
+export type { FinalRiskNeed, InformationGatheringInput } from './types';

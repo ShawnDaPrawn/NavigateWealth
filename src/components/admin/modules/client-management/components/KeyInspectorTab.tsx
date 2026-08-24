@@ -25,7 +25,7 @@ import { Client } from '../types';
 import { KEY_CATEGORIES } from '../../product-management';
 import { ProductKeyCategory } from '../../product-management';
 import { useClientKeys, useRecalculateClientKeys } from '../hooks/useClientKeys';
-import { CATEGORY_ICONS } from '../../resources/key-manager/constants';
+import { CATEGORY_ICONS } from '../../resources';
 
 interface KeyInspectorTabProps {
   selectedClient: Client;

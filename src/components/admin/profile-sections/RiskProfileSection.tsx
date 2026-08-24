@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '../../ui/alert';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 import { Target, Sparkles, Info, Calendar, Download } from 'lucide-react';
 import type { RiskAssessment } from '../modules/client-management/types';
-import { PdfTemplateViewer } from '../modules/resources/PdfTemplateViewer';
+import { PdfTemplateViewer } from '../modules/resources';
 import { RiskProfilePdfDocument } from './RiskProfilePdfDocument';
 import {
   getRiskAssessmentClientName,

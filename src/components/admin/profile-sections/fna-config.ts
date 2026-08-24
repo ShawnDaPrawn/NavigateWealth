@@ -10,12 +10,12 @@
 import React from 'react';
 
 // API services are lightweight (no JSX, no component trees) — safe to import eagerly
-import { RiskPlanningFnaAPI } from '../modules/risk-planning-fna/api';
-import { MedicalFNAApiService } from '../modules/medical-fna/api';
-import { RetirementFnaAPI } from '../modules/retirement-fna/api';
-import { EstatePlanningAPI as EstatePlanningApiService } from '../modules/estate-planning-fna/api';
-import { InvestmentINAApiService } from '../modules/investment-ina/api';
-import { TaxPlanningFnaAPI } from '../modules/tax-planning-fna/api';
+import { RiskPlanningFnaAPI } from '../modules/risk-planning-fna';
+import { MedicalFNAApiService } from '../modules/medical-fna';
+import { RetirementFnaAPI } from '../modules/retirement-fna';
+import { EstatePlanningAPI as EstatePlanningApiService } from '../modules/estate-planning-fna';
+import { InvestmentINAApiService } from '../modules/investment-ina';
+import { TaxPlanningFnaAPI } from '../modules/tax-planning-fna';
 
 // ==================== LAZY WIZARD / RESULTS COMPONENTS ====================
 // These are heavy components with deep dependency trees.

@@ -9,7 +9,7 @@ import { useAutoContentProcessor } from '../admin/modules/publications';
 import { useArticleNotificationProcessor } from '../admin/modules/publications';
 import { useScheduledPublishProcessor } from '../admin/modules/publications';
 import { useOverdueDigestProcessor } from '../admin/modules/tasks';
-import { useMaintenanceCronProcessor } from '../admin/modules/client-management/hooks/useMaintenanceCronProcessor';
+import { useMaintenanceCronProcessor } from '../admin/modules/client-management';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -20,14 +20,14 @@ import { toast } from 'sonner';
 // ============================================================================
 
 import { DashboardSkeleton } from '../admin/modules/dashboard';
-import { ClientManagementSkeleton } from '../admin/modules/client-management/components/ClientManagementSkeleton';
+import { ClientManagementSkeleton } from '../admin/modules/client-management';
 import { ApplicationsSkeleton } from '../admin/modules/applications';
 import { TasksSkeleton } from '../admin/modules/tasks';
 import { PersonnelSkeleton } from '../admin/modules/personnel';
 import { EsignSkeleton } from '../admin/modules/esign';
 import { AdviceEngineSkeleton } from '../admin/modules/advice-engine';
 import { ProductManagementSkeleton } from '../admin/modules/product-management';
-import { ResourcesSkeleton } from '../admin/modules/resources/components/ResourcesSkeleton';
+import { ResourcesSkeleton } from '../admin/modules/resources';
 import { PublicationsSkeleton } from '../admin/modules/publications';
 import { ComplianceSkeleton } from '../admin/modules/compliance';
 import { CommunicationSkeleton } from '../admin/modules/communication';

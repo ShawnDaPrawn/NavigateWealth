@@ -8,7 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../../../utils/api/client';
-import { clientApi } from '../../client-management/api';
+import { clientApi } from '../../client-management';
 import type { CalendarEvent } from '../types';
 import { parseISO, isValid, setYear } from 'date-fns';
 import { logger } from '../../../../../utils/logger';

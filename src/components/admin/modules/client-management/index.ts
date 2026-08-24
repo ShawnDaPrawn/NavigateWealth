@@ -6,3 +6,12 @@
  * module's internals stay private (see .dependency-cruiser.cjs).
  */
 export { ClientManagementModule } from './ClientManagementModule';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { clientApi } from './api';
+export { ClientManagementSkeleton } from './components/ClientManagementSkeleton';
+export { ClientOverviewTab } from './components/ClientOverviewTab';
+export { useClientKeys } from './hooks/useClientKeys';
+export { useMaintenanceCronProcessor } from './hooks/useMaintenanceCronProcessor';
+export { normalizeClientProfileKv } from './normalizeClientProfileKv';
+export type { ApiUser, Client } from './types';

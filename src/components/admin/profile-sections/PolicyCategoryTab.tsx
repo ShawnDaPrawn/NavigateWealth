@@ -25,7 +25,7 @@ import {
 } from '../../ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { getFNAConfig, hasFNASupport } from './fna-config';
-import { useFNAManagement } from '../modules/fna/hooks/useFNAManagement';
+import { useFNAManagement } from '../modules/fna';
 import { FNACard, PublishFNADialog, ViewPublishedFNADialog } from '../modules/fna';
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
 

@@ -14,7 +14,7 @@ import { Loader2, CheckCircle2, Calendar, Mail, Phone, MapPin } from 'lucide-rea
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { Logo } from '../layout/Logo';
 import { Badge } from '../ui/badge';
-import { InteractiveFormRenderer } from '../admin/modules/resources/builder/InteractiveFormRenderer';
+import { InteractiveFormRenderer } from '../admin/modules/resources';
 import { PageLoader } from '../ui/page-loader';
 
 // Minimal type definitions for request completion (module has been deleted)

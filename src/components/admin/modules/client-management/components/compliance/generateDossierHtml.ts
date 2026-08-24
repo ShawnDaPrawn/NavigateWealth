@@ -1,4 +1,4 @@
-import { BASE_PDF_CSS } from '../../../resources/templates/BasePdfLayout';
+import { BASE_PDF_CSS } from '../../../resources';
 import {
   escapeHtmlText,
   navigateWealthPdfDocumentTitle,
