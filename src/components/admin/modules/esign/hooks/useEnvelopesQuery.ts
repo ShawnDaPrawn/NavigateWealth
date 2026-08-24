@@ -7,6 +7,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { esignApi } from '../api';
+import { parseContract } from '../../../../../shared/contracts';
+import { EnvelopeListSchema } from '../contracts';
 import type { EsignEnvelope } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
 import { logger } from '../../../../../utils/logger';
@@ -47,6 +49,9 @@ export function useAllEnvelopes(status?: string, enabled: boolean = true) {
     queryFn: async () => {
       logger.debug('[E-Sign Query] Fetching all envelopes...');
       const response = await esignApi.getAllEnvelopes(status);
+      // Report-only: a renamed/dropped `envelopes` field would otherwise fall
+      // through to [] and render as "no envelopes" rather than as an error.
+      parseContract(EnvelopeListSchema, response, { endpoint: 'GET esign/envelopes' });
       logger.debug('[E-Sign Query] Fetched envelopes', { count: response.envelopes?.length || 0 });
       return response.envelopes || [];
     },
@@ -81,6 +86,11 @@ export function useClientEnvelopes(
     queryFn: async () => {
       logger.debug('[E-Sign Query] Fetching envelopes for client', { clientId });
       const response = await esignApi.getClientEnvelopes(clientId, clientEmail);
+      // Same guard on the per-client history — the view a client is shown of
+      // their own signature record.
+      parseContract(EnvelopeListSchema, response, {
+        endpoint: 'GET esign/clients/:id/envelopes',
+      });
       logger.debug('[E-Sign Query] Fetched client envelopes', {
         count: response.envelopes?.length || 0,
       });
