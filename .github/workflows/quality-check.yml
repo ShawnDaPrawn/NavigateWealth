@@ -31,7 +31,7 @@ jobs:
         with:
           # Pinned (not the floating v2.x) so `deno check`'s error count is
           # deterministic — the ratchet gate compares it against a committed
-          # baseline (.deno-check-baseline), which is only meaningful against a
+          # baseline (quality/baselines/deno-check-baseline), which is only meaningful against a
           # fixed compiler version. Bump deliberately (and re-measure the floor).
           deno-version: v2.8.1
 
@@ -104,7 +104,7 @@ jobs:
         # completely ungated, so the backlog could grow silently — including the
         # `max-lines` file-size budget, which warned constantly and blocked
         # nothing. The warning COUNT is now compared against the committed floor
-        # in .eslint-warning-baseline; the job fails if it RISES. This is
+        # in quality/baselines/eslint-warning-baseline; the job fails if it RISES. This is
         # deliberately the TOTAL count rather than a max-lines-only count: it is
         # strictly stronger (a new oversized file, a new exhaustive-deps
         # suppression, or a new unused var all raise it) and needs one mechanism
@@ -112,7 +112,7 @@ jobs:
         #
         # Floor is currently 55: max-lines 40, react-refresh 9,
         # no-irregular-whitespace 2, exhaustive-deps 2, no-unused-vars 1,
-        # prefer-const 1. LOWER .eslint-warning-baseline as warnings are fixed.
+        # prefer-const 1. LOWER quality/baselines/eslint-warning-baseline as warnings are fixed.
         #
         # F2 burn-down path for the file-size budget: `max-lines` is 1000 in
         # eslint.config.mjs (skipBlankLines + skipComments; scripts/** exempt).
@@ -137,7 +137,7 @@ jobs:
           lint_warnings="$(grep -oE '\([0-9]+ errors?, [0-9]+ warnings?\)' quality-lint.log | tail -n1 | grep -oE '[0-9]+ warnings?' | grep -oE '^[0-9]+')"
           lint_warnings="${lint_warnings:-0}"
           echo "$lint_warnings" > quality-lint-warnings.count
-          echo "ESLint warnings: $lint_warnings (ratchet floor: $(cat .eslint-warning-baseline 2>/dev/null || echo '?'))"
+          echo "ESLint warnings: $lint_warnings (ratchet floor: $(cat quality/baselines/eslint-warning-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Run Prettier format check (blocking)
@@ -179,10 +179,10 @@ jobs:
         # RATCHETED (not yet zero): the edge code carries a large pre-existing
         # type-error backlog (it was never tsc-checked). Rather than block on
         # zero, the "Enforce quality gates" step fails the job only if the error
-        # count EXCEEDS the committed floor in .deno-check-baseline — so no NEW
+        # count EXCEEDS the committed floor in quality/baselines/deno-check-baseline — so no NEW
         # edge type error (notably a used-but-unimported reference, the class
         # behind the OTP and `log` ReferenceErrors) can be introduced, while the
-        # backlog is burned down over time. LOWER .deno-check-baseline as errors
+        # backlog is burned down over time. LOWER quality/baselines/deno-check-baseline as errors
         # are fixed; when it reaches 0, gate on `deno_exit` directly (and drop
         # the edge exclude note in tsconfig.typecheck.json) for a hard zero.
         shell: bash
@@ -200,7 +200,7 @@ jobs:
             deno_count="${deno_count:-999999}"
           fi
           echo "$deno_count" > quality-typecheck-deno.count
-          echo "Deno type-error count: $deno_count (ratchet floor: $(cat .deno-check-baseline 2>/dev/null || echo '?'))"
+          echo "Deno type-error count: $deno_count (ratchet floor: $(cat quality/baselines/deno-check-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Run FNA intake test suite
@@ -243,9 +243,9 @@ jobs:
         # resolver fixed the rules work and expose a real pre-existing backlog
         # (210 violations), so the three rules are `warn` (depcruise exits 0)
         # and "Enforce quality gates" fails the job only if the violation count
-        # EXCEEDS the committed floor in .depcruise-baseline — no NEW boundary
+        # EXCEEDS the committed floor in quality/baselines/depcruise-baseline — no NEW boundary
         # violation can be introduced while the backlog is burned down.
-        # LOWER .depcruise-baseline as violations are fixed; at 0, flip the
+        # LOWER quality/baselines/depcruise-baseline as violations are fixed; at 0, flip the
         # rules back to `error` in .dependency-cruiser.cjs and gate on the exit
         # code directly for a hard zero.
         #
@@ -263,13 +263,13 @@ jobs:
           depcruise_count="$(grep -oE '[0-9]+ dependency violations' quality-depcruise.log | grep -oE '^[0-9]+' | tail -n1)"
           depcruise_count="${depcruise_count:-0}"
           echo "$depcruise_count" > quality-depcruise.count
-          echo "dependency-cruiser violations: $depcruise_count (ratchet floor: $(cat .depcruise-baseline 2>/dev/null || echo '?'))"
+          echo "dependency-cruiser violations: $depcruise_count (ratchet floor: $(cat quality/baselines/depcruise-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Check bundle size budget (ratcheted)
         # Stage A / F6. Nothing measured build output before this, so weight
         # could grow invisibly. Compares dist/ against the committed floors in
-        # .bundle-size-baseline.json; "Enforce quality gates" fails the job if a
+        # quality/baselines/bundle-size-baseline.json; "Enforce quality gates" fails the job if a
         # metric exceeds its floor + 5% headroom (exact-byte comparison would
         # fail on content-hash and ordinary-feature noise and get switched off).
         #
@@ -299,14 +299,14 @@ jobs:
         # threshold — a fresh critical CVE in a direct dependency could never fail
         # a PR, on a platform holding client financial/medical PII, ID documents
         # and digital signatures. Now the HIGH+CRITICAL count is compared against
-        # the committed floor in .npm-audit-baseline by "Enforce quality gates";
+        # the committed floor in quality/baselines/npm-audit-baseline by "Enforce quality gates";
         # the job fails if it RISES, so no new high/critical can be introduced
         # while the residual backlog is burned down.
         #
         # Floor is currently 1: `sharp` (<0.35.0, inherited libvips CVEs) needs a
         # semver-MAJOR bump. It is a devDependency used only by local image
         # generation scripts (scripts/generate-brand-*.mjs) and never ships to
-        # users, so it is accepted rather than forced. LOWER .npm-audit-baseline
+        # users, so it is accepted rather than forced. LOWER quality/baselines/npm-audit-baseline
         # when it is upgraded; at 0, gate on the count directly for a hard zero.
         #
         # `|| true` is retained on the audit command itself because npm audit
@@ -324,7 +324,7 @@ jobs:
             } catch (e) { console.log('999999'); }
           ")"
           echo "$audit_high" > quality-npm-audit.count
-          echo "npm audit high+critical: $audit_high (ratchet floor: $(cat .npm-audit-baseline 2>/dev/null || echo '?'))"
+          echo "npm audit high+critical: $audit_high (ratchet floor: $(cat quality/baselines/npm-audit-baseline 2>/dev/null || echo '?'))"
           exit 0
 
       - name: Publish quality issue snapshot
@@ -387,13 +387,13 @@ jobs:
           deno_exit="$(cat quality-typecheck-deno.exit 2>/dev/null || echo 1)"
           depcruise_exit="$(cat quality-depcruise.exit 2>/dev/null || echo 1)"
           deno_count="$(cat quality-typecheck-deno.count 2>/dev/null | tr -dc '0-9')"; deno_count="${deno_count:-999999}"
-          deno_baseline="$(cat .deno-check-baseline 2>/dev/null | tr -dc '0-9')"; deno_baseline="${deno_baseline:-0}"
+          deno_baseline="$(cat quality/baselines/deno-check-baseline 2>/dev/null | tr -dc '0-9')"; deno_baseline="${deno_baseline:-0}"
           depcruise_count="$(cat quality-depcruise.count 2>/dev/null | tr -dc '0-9')"; depcruise_count="${depcruise_count:-999999}"
-          depcruise_baseline="$(cat .depcruise-baseline 2>/dev/null | tr -dc '0-9')"; depcruise_baseline="${depcruise_baseline:-0}"
+          depcruise_baseline="$(cat quality/baselines/depcruise-baseline 2>/dev/null | tr -dc '0-9')"; depcruise_baseline="${depcruise_baseline:-0}"
           audit_count="$(cat quality-npm-audit.count 2>/dev/null | tr -dc '0-9')"; audit_count="${audit_count:-999999}"
-          audit_baseline="$(cat .npm-audit-baseline 2>/dev/null | tr -dc '0-9')"; audit_baseline="${audit_baseline:-0}"
+          audit_baseline="$(cat quality/baselines/npm-audit-baseline 2>/dev/null | tr -dc '0-9')"; audit_baseline="${audit_baseline:-0}"
           lint_warnings="$(cat quality-lint-warnings.count 2>/dev/null | tr -dc '0-9')"; lint_warnings="${lint_warnings:-999999}"
-          lint_warn_baseline="$(cat .eslint-warning-baseline 2>/dev/null | tr -dc '0-9')"; lint_warn_baseline="${lint_warn_baseline:-0}"
+          lint_warn_baseline="$(cat quality/baselines/eslint-warning-baseline 2>/dev/null | tr -dc '0-9')"; lint_warn_baseline="${lint_warn_baseline:-0}"
           bundle_exit="$(cat quality-bundle-size.exit 2>/dev/null || echo 1)"
           server_cov_exit="$(cat quality-test-server.exit 2>/dev/null || echo 1)"
           echo "build exit code:           $build_exit"
@@ -418,39 +418,39 @@ jobs:
           if [ "$mw_exit" != "0" ]; then echo "::error::Middleware typecheck failed — middleware.ts must not import 'next/server' (see quality-typecheck-middleware.log)"; failed=1; fi
           if [ "$depcruise_exit" != "0" ]; then echo "::error::dependency-cruiser reported an ERROR-severity boundary violation (or failed to run) — a feature module is importing another module's internals, or SPA code is importing edge-function source at runtime. Fix the import or export through the module's index barrel. See quality-depcruise.log"; failed=1; fi
           if [ "$depcruise_count" -gt "$depcruise_baseline" ]; then
-            echo "::error::Module-boundary violations rose to $depcruise_count (ratchet floor $depcruise_baseline) — a NEW cross-module/outsider import was introduced. Import through the module's public index barrel instead, or move the shared code to src/shared. If you deliberately changed the floor, update .depcruise-baseline. See quality-depcruise.log"
+            echo "::error::Module-boundary violations rose to $depcruise_count (ratchet floor $depcruise_baseline) — a NEW cross-module/outsider import was introduced. Import through the module's public index barrel instead, or move the shared code to src/shared. If you deliberately changed the floor, update quality/baselines/depcruise-baseline. See quality-depcruise.log"
             failed=1
           elif [ "$depcruise_count" -lt "$depcruise_baseline" ]; then
-            echo "::notice::Module-boundary violations dropped to $depcruise_count (below floor $depcruise_baseline) — tighten the ratchet by setting .depcruise-baseline to $depcruise_count."
+            echo "::notice::Module-boundary violations dropped to $depcruise_count (below floor $depcruise_baseline) — tighten the ratchet by setting quality/baselines/depcruise-baseline to $depcruise_count."
           fi
           if [ "$audit_count" -gt "$audit_baseline" ]; then
-            echo "::error::npm audit high/critical vulnerabilities rose to $audit_count (ratchet floor $audit_baseline) — a NEW high or critical advisory affects this dependency tree. Run 'npm audit' to see it and 'npm audit fix' for a non-breaking fix; pin/override or alias the package if no clean fix exists. If you deliberately accepted it, update .npm-audit-baseline WITH a justification comment in quality-check.yml. See quality-npm-audit-report.json"
+            echo "::error::npm audit high/critical vulnerabilities rose to $audit_count (ratchet floor $audit_baseline) — a NEW high or critical advisory affects this dependency tree. Run 'npm audit' to see it and 'npm audit fix' for a non-breaking fix; pin/override or alias the package if no clean fix exists. If you deliberately accepted it, update quality/baselines/npm-audit-baseline WITH a justification comment in quality-check.yml. See quality-npm-audit-report.json"
             failed=1
           elif [ "$audit_count" -lt "$audit_baseline" ]; then
-            echo "::notice::npm audit high/critical vulnerabilities dropped to $audit_count (below floor $audit_baseline) — tighten the ratchet by setting .npm-audit-baseline to $audit_count."
+            echo "::notice::npm audit high/critical vulnerabilities dropped to $audit_count (below floor $audit_baseline) — tighten the ratchet by setting quality/baselines/npm-audit-baseline to $audit_count."
           fi
           if [ "$server_cov_exit" != "0" ]; then
             echo "::error::Backend (Edge Function) coverage fell below its floor, or its suite failed. The backend is measured separately from the SPA (vitest.config.server.ts) because it holds auth, client PII and e-signature logic. Add tests for the code you changed — contract tests in the esign-routes.contract.test.ts style are the highest-value kind. See quality-test-server.log"
             failed=1
           fi
           if [ "$bundle_exit" = "2" ]; then
-            echo "::error::Bundle-size check could not run (missing dist/ or unreadable .bundle-size-baseline.json). If the production build failed, fix that first — this check needs its output. See quality-bundle-size.log"
+            echo "::error::Bundle-size check could not run (missing dist/ or unreadable quality/baselines/bundle-size-baseline.json). If the production build failed, fix that first — this check needs its output. See quality-bundle-size.log"
             failed=1
           elif [ "$bundle_exit" != "0" ]; then
             echo "::error::Bundle-size budget exceeded — a metric grew past its floor + 5% headroom, usually because a large dependency was pulled into an eagerly-loaded chunk. Lazy-load it (React.lazy / dynamic import()), or re-baseline with 'npm run bundle:check -- --write-baseline' and justify it. See quality-bundle-size.log"
             failed=1
           fi
           if [ "$lint_warnings" -gt "$lint_warn_baseline" ]; then
-            echo "::error::ESLint warnings rose to $lint_warnings (ratchet floor $lint_warn_baseline) — new lint warnings were introduced (e.g. a file over the 1000-line max-lines budget, a react-hooks/exhaustive-deps suppression, or an unused variable). Fix them, or if you deliberately changed the floor, update .eslint-warning-baseline. See quality-lint.log"
+            echo "::error::ESLint warnings rose to $lint_warnings (ratchet floor $lint_warn_baseline) — new lint warnings were introduced (e.g. a file over the 1000-line max-lines budget, a react-hooks/exhaustive-deps suppression, or an unused variable). Fix them, or if you deliberately changed the floor, update quality/baselines/eslint-warning-baseline. See quality-lint.log"
             failed=1
           elif [ "$lint_warnings" -lt "$lint_warn_baseline" ]; then
-            echo "::notice::ESLint warnings dropped to $lint_warnings (below floor $lint_warn_baseline) — tighten the ratchet by setting .eslint-warning-baseline to $lint_warnings."
+            echo "::notice::ESLint warnings dropped to $lint_warnings (below floor $lint_warn_baseline) — tighten the ratchet by setting quality/baselines/eslint-warning-baseline to $lint_warnings."
           fi
           if [ "$deno_count" -gt "$deno_baseline" ]; then
-            echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update .deno-check-baseline. See quality-typecheck-deno.log"
+            echo "::error::Deno edge-code type errors rose to $deno_count (ratchet floor $deno_baseline) — a NEW edge-code type error was introduced (e.g. a used-but-unimported reference, the class behind the OTP/log ReferenceErrors). Fix it; or, if you deliberately changed the floor, update quality/baselines/deno-check-baseline. See quality-typecheck-deno.log"
             failed=1
           elif [ "$deno_count" -lt "$deno_baseline" ]; then
-            echo "::notice::Deno edge-code type errors dropped to $deno_count (below floor $deno_baseline) — tighten the ratchet by setting .deno-check-baseline to $deno_count."
+            echo "::notice::Deno edge-code type errors dropped to $deno_count (below floor $deno_baseline) — tighten the ratchet by setting quality/baselines/deno-check-baseline to $deno_count."
           fi
           if [ "$failed" != "0" ]; then
             echo "Quality gates FAILED."

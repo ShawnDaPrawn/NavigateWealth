@@ -25,7 +25,7 @@ beforeAll(() => {
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
-const BASELINE_FILE = join(REPO_ROOT, '.route-validation-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/route-validation-baseline');
 
 const { validateBody, validateOptionalBody, validateQuery, body } = await import('../validate.ts');
 
@@ -322,7 +322,7 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.route-validation-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/route-validation-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (unvalidated.length > floor) {
@@ -343,7 +343,7 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
         'route-validation',
         unvalidated.length,
         floor,
-        '.route-validation-baseline',
+        'quality/baselines/route-validation-baseline',
         'unvalidated body routes',
       );
     }

@@ -241,7 +241,7 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   first honest run surfaced **210 real violations** (109 cross-feature-internals,
   100 outsider-admin-internals, 1 spa-edge type-only false positive) — well
   above the ~83 estimable by hand. The three rules are now `warn` (visible,
-  non-blocking) **and ratcheted against `.depcruise-baseline`** — CI fails if
+  non-blocking) **and ratcheted against `quality/baselines/depcruise-baseline`** — CI fails if
   the count rises above the committed floor, so the backlog is strictly
   non-worsening while it is burned down under touch-it-you-fix-it. At 0, flip
   the rules to `error` for a hard zero.
@@ -276,7 +276,7 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   `optimize:images` is not in `npm run build`. Individual 28–32 MB PNGs are
   emitted to `dist/`. All 154 are tracked in git (`.git` is 892 MB).
   _Now measured and gated (Stage A / F6): `imageBytes` is **864 MB** of an
-  882 MB `dist/`, ratcheted in `.bundle-size-baseline.json` so it cannot grow._
+  882 MB `dist/`, ratcheted in `quality/baselines/bundle-size-baseline.json` so it cannot grow._
   The fix the resolver was written for is to generate `<hash>.webp` into
   `src/assets` — `vite.config.ts:19-24` already prefers it. Weigh that against
   adding more binaries to an already-892 MB `.git`; generating at build time
@@ -298,7 +298,7 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   `user_metadata` (`constants.ts:132-135`). Four sibling modules already used
   it, with a comment saying "never from client-editable user_metadata" — this
   one had drifted. Fixed to `resolveTrustedRole`, and
-  `.auth-implementations-baseline` now ratchets the number of modules that
+  `quality/baselines/auth-implementations-baseline` now ratchets the number of modules that
   verify tokens themselves so a sixth cannot appear silently.
 
   Impact bounded: two admin-only routes, no arbitrary client-PII read. Rated
@@ -352,7 +352,7 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   that file finally has the negative test it was named for.
 
 - **A22 — The validation ratchet was counting 20 routes where satisfying it
-  would have broken production (NEW, 2026-08-22).** `.route-validation-baseline`
+  would have broken production (NEW, 2026-08-22).** `quality/baselines/route-validation-baseline`
   counted every `POST`/`PUT`/`PATCH` registration in the auth and e-sign
   families that had no visible schema. Twenty of the fifty-nine it was reporting
   **never read a body at all** — cancel, activate, rotate, sweep, mark-read,
@@ -583,7 +583,7 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   had accumulated unnoticed, including a runtime `react-router`
   XSS/open-redirect. `npm audit fix` cleared 6 highs + both moderates with no
   `package.json` change; high+critical is now ratcheted against
-  `.npm-audit-baseline` (floor 1: dev-only `sharp`). **Still open:** two fake CI
+  `quality/baselines/npm-audit-baseline` (floor 1: dev-only `sharp`). **Still open:** two fake CI
   test steps write `.exit` files nothing reads, and the "publish quality
   snapshot" step can fail every PR on a Supabase outage (no
   `continue-on-error`).
@@ -672,7 +672,7 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
 
 1. **P1.1 — Frontend auth-token migration.** _(STARTED 2026-08-22: the central
    client is done and the backlog is ratcheted at
-   `.anon-key-bearer-baseline` = 78. See the note below.)_ Stop sending the
+   `quality/baselines/anon-key-bearer-baseline` = 78. See the note below.)_ Stop sending the
    public anon key as a bearer token when unauthenticated. Introduce
    an explicit notion of _public_ endpoints (quote/contact/consultation) that
    need no bearer, versus _authenticated_ endpoints that must have a real JWT or
@@ -724,7 +724,7 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    plan is a snapshot, and every item needs re-verifying before it is acted on.
 
    **What was actually wrong: five hand-rolled token verifiers, none of which
-   applied the account-security policy.** `.auth-implementations-baseline`
+   applied the account-security policy.** `quality/baselines/auth-implementations-baseline`
    capped how many copies exist and said nothing about whether a copy is
    _correct_. Four of the five — `ai-intelligence.tsx`, `ai-advisor.ts`,
    `auth-routes.ts` (`GET /security-status`) and `tasks-digest-routes.ts` —
@@ -889,7 +889,7 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    shared policy, which is what catches route number 34. Removing any of: the
    ownership check on a route, the caller-id guard, the unowned-record guard, or
    the `ClientAccessError` branch in `fnaErrorResponse` fails 2–3 tests each.
-   `.auth-without-authz-baseline` moved 31 → 33 when the ratchet was widened to
+   `quality/baselines/auth-without-authz-baseline` moved 31 → 33 when the ratchet was widened to
    count `authenticateUser` discards as well as `getAuthContext` ones; the two
    survivors are the `/status` endpoints on will-chat and tax-agent, which take
    no resource id.
@@ -1003,7 +1003,7 @@ own tracked epic, in slices, behind the router-auth-guard ratchet.
    one submit-path test per wizard.
    _Gate:_ ~2,500 lines removed; public quote path has route + submit tests.
 4. **A11 — Fix the CI theater.** Gate `npm audit` on high/critical (with an
-   allowlist ratchet like `.deno-check-baseline`); delete the two fake test
+   allowlist ratchet like `quality/baselines/deno-check-baseline`); delete the two fake test
    steps; add `continue-on-error: true` to the quality-snapshot publish.
    _Gate:_ a seeded high CVE fails a PR; a Supabase outage does not.
 5. **A12–A15 — Batch the minor cleanups.** Mount a `<ToastContainer>` or move
@@ -1093,7 +1093,7 @@ known to overstate reality and should be corrected there:
    `no-unused-vars` 1, `prefer-const` 1 — no `no-console` at all. Note the
    `max-lines` figure is **40 files**, not the 74 that exceed 1000 _raw_ lines:
    the rule skips blanks/comments and exempts `scripts/**`. The count is now
-   ratcheted against `.eslint-warning-baseline`.
+   ratcheted against `quality/baselines/eslint-warning-baseline`.
 
 Additionally, the Section 2 rubric's remaining unchecked box — "Backup, DR,
 POPIA, FAIS, Sentry, CSP…" — should be split: **CSP is still absent**

@@ -2,8 +2,8 @@
  * Contract adoption ratchet (Stage C / F8) — the one that counts UPWARD.
  * ======================================================================
  *
- * Every other baseline in this repo caps a backlog: `.route-auth-baseline`,
- * `.raw-fetch-baseline`, `.kv-direct-access-baseline` and the rest all fail
+ * Every other baseline in this repo caps a backlog: `quality/baselines/route-auth-baseline`,
+ * `quality/baselines/raw-fetch-baseline`, `quality/baselines/kv-direct-access-baseline` and the rest all fail
  * when their count RISES, and the win is driving them toward zero.
  *
  * This one is the mirror image. It floors a gain. `parseContract` call sites
@@ -43,7 +43,7 @@ import { fileURLToPath } from 'node:url';
 const CONTRACTS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC_DIR = resolve(CONTRACTS_DIR, '../..');
 const REPO_ROOT = resolve(SRC_DIR, '..');
-const BASELINE_FILE = join(REPO_ROOT, '.contract-coverage-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/contract-coverage-baseline');
 
 /** Both variants count — strict is adoption too, just further along. */
 const CALL = /\bparseContract(?:Strict)?\s*\(/;
@@ -106,7 +106,7 @@ describe('runtime contract adoption', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.contract-coverage-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/contract-coverage-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (total < floor) {
@@ -128,7 +128,7 @@ describe('runtime contract adoption', () => {
     if (total > floor) {
       process.stdout.write(
         `\n[contract-coverage] ${total} validated boundaries, above floor ${floor} — ` +
-          `lock the gain in by setting .contract-coverage-baseline to ${total}.\n`,
+          `lock the gain in by setting quality/baselines/contract-coverage-baseline to ${total}.\n`,
       );
     }
   });

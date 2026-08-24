@@ -40,7 +40,7 @@ import { announceRatchetSlack } from '../../../test/ratchet-notice';
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const REPO_ROOT = resolve(SRC_DIR, '..');
-const BASELINE_FILE = join(REPO_ROOT, '.anon-key-bearer-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/anon-key-bearer-baseline');
 
 /**
  * The shapes that put the anon key where a credential belongs:
@@ -116,7 +116,7 @@ describe('anon key used as a bearer token', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.anon-key-bearer-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/anon-key-bearer-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (total > floor) {
@@ -131,7 +131,7 @@ describe('anon key used as a bearer token', () => {
           `route authenticates it, so this only disguises "logged out" as a rejected\n` +
           `token. Use api.* from utils/api/client.ts, which sends the session JWT or\n` +
           `no Authorization header at all. If the endpoint is public, send no bearer.\n` +
-          `If you deliberately changed the floor, update .anon-key-bearer-baseline.\n\n` +
+          `If you deliberately changed the floor, update quality/baselines/anon-key-bearer-baseline.\n\n` +
           `Worst offenders:\n  ${worst}`,
       );
     }
@@ -141,7 +141,7 @@ describe('anon key used as a bearer token', () => {
         'anon-key-bearer',
         total,
         floor,
-        '.anon-key-bearer-baseline',
+        'quality/baselines/anon-key-bearer-baseline',
         'anon-key bearer call sites',
       );
     }
