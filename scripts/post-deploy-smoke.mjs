@@ -16,6 +16,15 @@
  *      or revert the merge on main (this workflow then redeploys).
  *   Do not "fix forward" on a 200/401 inversion — that is an auth regression.
  *
+ * Reading a red readiness probe (added 2026-08-24 with A18): `/health/ready`
+ * now reports two checks, and the 503 body says which failed.
+ *   - `checks.kv: 'fail'`     — the KV store is unreachable from the isolate.
+ *   - `checks.mounts: 'fail'` — a route family threw while registering, and
+ *     `failedMounts` names it. The revision is live and serving a SUBSET of its
+ *     routes; roll back rather than investigate in production. (Retries here
+ *     are wasted — a bad module fails identically in every fresh isolate — but
+ *     503 stays retryable because a genuinely cold one may not be ready yet.)
+ *
  * Run: npm run deploy:smoke
  */
 import { pathToFileURL } from 'node:url';

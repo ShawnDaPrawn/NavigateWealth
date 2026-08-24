@@ -106,8 +106,8 @@ These survived the P0/P1 push and are the only items below that outrank
   migrations folder still does not tell the truth.
 - **A10.** Deprecated `SUPER_ADMIN_EMAIL` const: still present with production
   call sites, including the recovery-route lockout.
-- **A17/A18.** Error-path recorder is an awaited non-atomic KV read-modify-write
-  on every 500; `index.tsx` remains untestable (`Deno.serve` at module scope).
+- **A17.** Error-path recorder is an awaited non-atomic KV read-modify-write
+  on every 500. (**A18 closed 2026-08-24** — see §5.4.)
 
 ---
 
@@ -119,7 +119,7 @@ each item is an independent, reviewable slice). Effort: S = hours, M = 1–3
 days, L = a week-plus of slices.
 
 ```
-WS0  Close the security remainder      S4 S8 S9 S10 S11 · A10 · D2 · A17/A18     (mostly S/M)
+WS0  Close the security remainder      S4 S8 S9 S10 S11 · A10 · D2 · A17          (mostly S/M)
 WS1  Frontend organisation             boundaries · wizards · god files · app/    (L, slices)
 WS2  Backend organisation              layering · god services · validation      (L, slices)
 WS3  Data layer                        repositories · bounded reads · Postgres   (L, long pole)
@@ -191,8 +191,8 @@ remediation plan; this is the punch list with current state folded in.
 | 0.8 | **A17** — take the runtime-issue recorder off the request path (background task hook), coalesce same-isolate writers behind a promise chain                                                      | S/M    | A thrown 500 responds without awaiting two KV round-trips; test pins it                                                 |
 | 0.9 | **A19** — correct-or-delete the six drifted e-sign schemas in `esign-validation.ts` (currently a loaded trap behind a warning comment)                                                           | S      | No unused schema left that contradicts its handler's wire format                                                        |
 
-WS0 exit: Section 1.3 above is empty except P1.1/P1.3 (owned by WS4) and
-A18 (owned by WS2's entry-point refactor).
+WS0 exit: Section 1.3 above is empty except P1.1/P1.3 (owned by WS4).
+A18 was owned by WS2's entry-point refactor and closed on 2026-08-24 (§5.4).
 
 ---
 
@@ -354,7 +354,7 @@ load-bearing, ~5 routes per PR.
 - **Effort:** M. **Gate:** `quality/baselines/route-validation-baseline` → 0; malformed bodies
   get typed 400s on every mutating route.
 
-### 5.4 Make the entry point testable (A18)
+### 5.4 Make the entry point testable (A18) — **DONE 2026-08-24**
 
 Extract `createApp()` from `index.tsx` so `Deno.serve(createApp().fetch)` is
 the only module-scope side effect. This puts the root `onError`, the health
@@ -363,6 +363,47 @@ the Stage E split (both need the app factored out of the serve call).
 
 - **Effort:** S/M. **Gate:** root error handler has direct tests; boot
   behaviour asserted (a failed mount is no longer silently swallowed).
+
+> **Landed** as `src/supabase/functions/server/create-app.ts` (`createApp()`,
+> with an injectable `mounts` list so a test — or a Stage E sibling function —
+> can compose a different subset). `index.tsx` is now the console override plus
+> `Deno.serve(createApp().fetch)`, 201 lines lighter, and a structural test
+> fails if middleware, routes or mounts reappear there.
+>
+> Three findings from doing it, all of which changed the shipped code:
+>
+> - **The gate's second half was the real work.** A mount registrar that threw
+>   logged to stderr and continued, so a deploy could lose a third of its routes
+>   while `/health` and `/health/ready` both answered 200 — and
+>   `post-deploy-smoke.mjs` would have called that deploy green. Failures are
+>   now recorded per app and `/health/ready` answers 503 `checks.mounts: 'fail'`
+>   with the failing registrar **names** (never the caught message — that probe
+>   is unauthenticated). No new probe was needed: §8.1's smoke already asserts
+>   `status: 'ready'`, so a partial boot now fails the deploy job. Continuing
+>   past a bad registrar is still right; being quiet about it was not.
+> - **A comment in the moved code was wrong, and a test proved it.** It claimed
+>   the request-id middleware's post-`await next()` stamp "never runs when the
+>   handler throws", justifying a second stamp inside `onError`. Against the
+>   installed Hono it does run — the error is handled at that dispatch level and
+>   `next()` resolves. The `onError` stamp is still load-bearing, but for the
+>   other case: a throw in the middleware chain _before_ that line
+>   (`runWithRequestContext` failing). The comment now says that, and the test
+>   pins the case it is actually true of. Deleting the stamp fails CI.
+> - **The health paths stay literal strings** rather than interpolating the new
+>   `SERVER_PREFIX` const: the F3 route-auth scanner only matches literal paths,
+>   and these three routes are its true-positive anchors — interpolating them
+>   would have silently dropped them from the scan and quietly hollowed out the
+>   123-route floor. Noted in both files.
+> - **A CORS quirk was pinned rather than fixed.** Rewriting the allow-list
+>   parse tidily turned `NW_ALLOWED_ORIGINS=" , ,"` from deny-everything into
+>   permissive reflection. That is a security control loosened as a side effect
+>   of a refactor, so it was reverted to the verbatim original: separators-only
+>   still denies every origin (silently), empty-string still falls through to
+>   permissive. Both branches now have tests. Deciding the case properly —
+>   probably failing the boot on a misconfigured allow-list — is its own change.
+>
+> 28 tests; backend coverage floors raised 15.0/10.6/14.8/15.4 →
+> 17.3/12.5/16.8/17.7.
 
 ### 5.5 Review the route-auth list (F3)
 
@@ -517,7 +558,7 @@ under the AGENTS.md finalization protocol (verify locally → PR → auto-merge)
 | Order        | Do                                                                                                                  | Why now                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Now**      | WS0 punch list (0.1–0.9)                                                                                            | Open exposures; every item small and fully specified     |
-| **Next**     | §5.4 `createApp()` · §8.1 blocking smoke · §8.4 CI tail · §4.5 `src/app/` · §4.7 + §9 hygiene batch                 | Cheap, independent, unlock testing + Stage E             |
+| **Next**     | ~~§5.4 `createApp()`~~ · ~~§8.1 blocking smoke~~ · §8.4 CI tail · §4.5 `src/app/` · §4.7 + §9 hygiene batch         | Cheap, independent, unlock testing + Stage E             |
 | **Then**     | §4.2 quote wizards · §4.4 raw-fetch convergence · §5.3 validation → 0 · §5.5 route-auth review · §5.1 auth 5→2      | Burns four ratchets hard; feeds P1.1                     |
 | **Then**     | §7.1 P1.1 → 0 · §7.2–7.3 public split + `verify_jwt=true`                                                           | The keystone's final flip; needs §5.5's inventory        |
 | **Parallel** | §4.1 boundaries → 0 · §4.3/§5.2 god-file splits · §4.6 contracts · §6 repositories → Postgres · §8.2 contract tests | Long-running strangler tracks; touch-it-you-fix-it       |
