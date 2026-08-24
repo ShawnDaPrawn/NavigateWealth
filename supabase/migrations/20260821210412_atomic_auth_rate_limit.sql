@@ -1,3 +1,20 @@
+-- ============================================================================
+-- APPLIED IN PRODUCTION as version 20260821210412 (name: atomic_auth_rate_limit)
+--
+-- RECONSTRUCTED? NO. Body copied verbatim from
+-- `supabase_migrations.schema_migrations.statements` on 2026-08-24.
+--
+-- STAMP CORRECTION: previously carried here as
+-- `20260821000001_atomic_auth_rate_limit.sql`. Production recorded
+-- 20260821210412. The mis-stamped file has been deleted and replaced by this
+-- one so filename == applied version.
+--
+-- This one is the good example in the folder: named, idempotent, EXECUTE
+-- revoked from public/anon/authenticated and granted only to service_role, and
+-- `set search_path = public` on a SECURITY DEFINER function. The five older
+-- functions in the baseline migration do none of that — see README.md.
+-- ============================================================================
+
 -- Atomic authentication rate-limit decision.
 -- The service-role Edge function is the only caller; advisory locking covers
 -- both first-write and update races for a given action/identifier pair.

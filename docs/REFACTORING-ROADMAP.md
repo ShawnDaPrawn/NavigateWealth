@@ -101,9 +101,14 @@ These survived the P0/P1 push and are the only items below that outrank
 - **P1.1.** 78 anon-key bearer call sites (ratcheted, not banned).
 - **P1.3.** `verify_jwt = false` — flipping it requires the `public` sibling
   function split (Stage E's first slice).
-- **D2 (remainder).** `kv_store_91ed8379` has no migration file;
-  `20260420000001_esign_core_tables.sql` sits unapplied in the repo — the
-  migrations folder still does not tell the truth.
+- **D2 — CLOSED 2026-08-24.** Reconciled against production with database
+  access: every applied version now has a matching file (five carrying verbatim
+  applied SQL), the five untracked tables are captured in an idempotent
+  baseline, and two mis-stamped files were corrected. Two live defects were
+  found and fixed in the process: the unapplied H-12 RLS tightening (a client
+  could mutate a submitted FNA, or self-accept it) and 1,084 duplicate indexes
+  on the KV table (1,573 MB of indexes on 8 MB of data; every write maintained
+  1,085 B-trees). See `supabase/migrations/README.md` for what remains open.
 - **A10.** Deprecated `SUPER_ADMIN_EMAIL` const: still present with production
   call sites, including the recovery-route lockout.
 - **A17.** Error-path recorder is an awaited non-atomic KV read-modify-write
