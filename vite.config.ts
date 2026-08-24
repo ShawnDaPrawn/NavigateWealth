@@ -61,11 +61,7 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-feedback';
   }
 
-  if (
-    id.includes('/@hello-pangea/dnd/') ||
-    id.includes('/react-dnd/') ||
-    id.includes('/react-dnd-html5-backend/')
-  ) {
+  if (id.includes('/@hello-pangea/dnd/')) {
     return 'vendor-dnd';
   }
 
