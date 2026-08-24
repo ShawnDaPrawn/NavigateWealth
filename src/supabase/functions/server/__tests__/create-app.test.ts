@@ -323,6 +323,80 @@ describe('createApp: root error handler (Stage B / B1)', () => {
     expect(res.status).toBe(500);
     expect(res.headers.get('x-request-id')).toBe('reqid-ctx-fail');
   });
+
+  it('carries the id in the header, not in the shared handler’s body', async () => {
+    // Pinning an asymmetry rather than endorsing it. The shared handler's body
+    // has no `requestId` — the id travels in the header and the telemetry
+    // record — whereas the fallback body below DOES carry one. Worth knowing
+    // before anyone writes a client that reads the id out of the body: it
+    // would work only on the rarer of the two paths.
+    const app = createApp({
+      mounts: [
+        {
+          name: 'boom',
+          register: (a: Hono) => {
+            a.get(`${PREFIX}/boom-body`, () => {
+              throw new Error('unanticipated failure');
+            });
+          },
+        },
+      ],
+    });
+
+    const res = await get(app, `${PREFIX}/boom-body`, {
+      headers: { 'x-request-id': 'reqid-boom-3' },
+    });
+
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(res.headers.get('x-request-id')).toBe('reqid-boom-3');
+    expect(body.requestId).toBeUndefined();
+    expect(body).toMatchObject({ code: 'INTERNAL_ERROR', endpoint: `${PREFIX}/boom-body` });
+  });
+
+  it('falls back to a plain JSON 500 when the shared handler itself fails', async () => {
+    // The last line of defence, and the one hardest to reach: `onError`
+    // dynamically imports error.middleware, so if THAT import fails the safety
+    // net is the thing that broke. Without the fallback, Deno.serve emits an
+    // opaque 500 with no code and no correlation id — on exactly the requests
+    // an operator most needs to trace. Simulated by making the import reject,
+    // which needs a fresh module registry, hence the re-import.
+    vi.resetModules();
+    vi.doMock('../error.middleware.ts', () => {
+      throw new Error('error.middleware failed to load');
+    });
+    try {
+      const { createApp: freshCreateApp } = await import('../create-app.ts');
+      const app = freshCreateApp({
+        mounts: [
+          {
+            name: 'boom',
+            register: (a: Hono) => {
+              a.get(`${PREFIX}/boom-fallback`, () => {
+                throw new Error('unanticipated failure');
+              });
+            },
+          },
+        ],
+      });
+
+      const res = await get(app, `${PREFIX}/boom-fallback`, {
+        headers: { 'x-request-id': 'reqid-fallback' },
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.headers.get('x-request-id')).toBe('reqid-fallback');
+      // The fallback body is the one that DOES carry the id (see above), and it
+      // must still be structured JSON rather than Hono's bare text 500.
+      expect(await res.json()).toMatchObject({
+        message: 'An unexpected error occurred',
+        code: 'INTERNAL_ERROR',
+        requestId: 'reqid-fallback',
+      });
+    } finally {
+      vi.doUnmock('../error.middleware.ts');
+      vi.resetModules();
+    }
+  });
 });
 
 describe('createApp: CORS allow-list (Guidelines §12.4)', () => {
