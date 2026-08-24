@@ -19,7 +19,7 @@ import { Button } from '../../../../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { Form } from '../../../../ui/form';
 import { Alert, AlertDescription } from '../../../../ui/alert';
-import { clientApi } from '../../client-management/api';
+import { clientKeysApi } from '../../client-keys';
 import { useClientProfile, useClientKeys } from '../hooks';
 import { DEFAULT_FORM_VALUES, QUERY_KEYS } from '../constants';
 import {
@@ -203,13 +203,13 @@ export function Step1InformationGathering({
     setIsRecalculating(true);
     try {
       // 1. Trigger recalculation on backend
-      await clientApi.recalculateClientKeys(clientId);
+      await clientKeysApi.recalculateClientKeys(clientId);
 
       // 2. Invalidate query to refresh cache
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CLIENT_KEYS(clientId) });
 
       // 3. Explicitly fetch new keys to update form immediately
-      const newKeys = await clientApi.getClientKeys(clientId);
+      const newKeys = await clientKeysApi.getClientKeys(clientId);
 
       if (newKeys && newKeys.keys && newKeys.keys.length > 0) {
         // Map of client key IDs to form field names

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useClientKeys, useRecalculateClientKeys, useClientKeyHistory } from '../useClientKeys';
+import { useClientKeys, useRecalculateClientKeys, useClientKeyHistory } from '../hooks';
 
 // ============================================================================
 // MOCKS
@@ -27,10 +27,12 @@ const mockGetClientKeys = vi.fn();
 const mockRecalculateClientKeys = vi.fn();
 const mockGetClientKeyHistory = vi.fn();
 
-vi.mock('../../api', () => ({
-  getClientKeys: (...args: unknown[]) => mockGetClientKeys(...args),
-  recalculateClientKeys: (...args: unknown[]) => mockRecalculateClientKeys(...args),
-  getClientKeyHistory: (...args: unknown[]) => mockGetClientKeyHistory(...args),
+vi.mock('../api', () => ({
+  clientKeysApi: {
+    getClientKeys: (...args: unknown[]) => mockGetClientKeys(...args),
+    recalculateClientKeys: (...args: unknown[]) => mockRecalculateClientKeys(...args),
+    getClientKeyHistory: (...args: unknown[]) => mockGetClientKeyHistory(...args),
+  },
 }));
 
 beforeEach(() => {
@@ -56,7 +58,7 @@ describe('useClientKeys', () => {
     expect(captured.queryKey).toEqual(['client-keys', 'client-123']);
   });
 
-  it('queryFn calls api.getClientKeys with clientId', async () => {
+  it('queryFn calls clientKeysApi.getClientKeys with clientId', async () => {
     let captured: Record<string, unknown> = {};
     mockUseQuery.mockImplementationOnce((opts: Record<string, unknown>) => {
       captured = opts;
@@ -113,7 +115,7 @@ describe('useClientKeys', () => {
 // ============================================================================
 
 describe('useRecalculateClientKeys', () => {
-  it('mutationFn calls api.recalculateClientKeys with clientId', async () => {
+  it('mutationFn calls clientKeysApi.recalculateClientKeys with clientId', async () => {
     let captured: Record<string, unknown> = {};
     mockUseMutation.mockImplementationOnce((opts: Record<string, unknown>) => {
       captured = opts;
@@ -193,7 +195,7 @@ describe('useClientKeyHistory', () => {
     expect(captured.queryKey).toEqual(['client-key-history', 'client-123', 'key-abc']);
   });
 
-  it('queryFn calls api.getClientKeyHistory with clientId and keyId', async () => {
+  it('queryFn calls clientKeysApi.getClientKeyHistory with clientId and keyId', async () => {
     let captured: Record<string, unknown> = {};
     mockUseQuery.mockImplementationOnce((opts: Record<string, unknown>) => {
       captured = opts;

@@ -16,7 +16,7 @@ vi.mock('@tanstack/react-query', () => ({
 // Mock useClientKeys which is imported from client-management
 const mockUseClientKeys = vi.fn();
 
-vi.mock('../../../client-management/hooks/useClientKeys', () => ({
+vi.mock('../../../client-keys', () => ({
   useClientKeys: (...args: unknown[]) => mockUseClientKeys(...args),
 }));
 

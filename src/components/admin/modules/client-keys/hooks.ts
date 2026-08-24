@@ -1,37 +1,15 @@
 /**
- * useClientKeys Hook
- * Fetch and manage client key values from KV store
+ * Client keys — React Query hooks.
+ *
+ * Moved verbatim out of client-management/hooks/useClientKeys.ts, together
+ * with the API calls they wrap. The query keys still come from the shared
+ * registry, so cache entries are unchanged by the move.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import * as api from '../api';
-import { clientKeys } from './queryKeys';
-
-export interface ClientKeyValue {
-  keyId: string;
-  name: string;
-  value: number | string | boolean | null;
-  dataType: 'currency' | 'number' | 'percentage' | 'text' | 'date' | 'boolean';
-  category: string;
-  isCalculated: boolean;
-  lastUpdated?: string;
-  contributingPolicies?: ContributingPolicy[];
-}
-
-export interface ContributingPolicy {
-  policyId: string;
-  policyName: string;
-  provider: string;
-  value: number;
-  fieldName: string;
-}
-
-export interface ClientKeysResponse {
-  keys: ClientKeyValue[];
-  lastCalculated: string;
-  totalCategories: number;
-}
+import { clientKeysApi } from './api';
+import { clientKeys } from '../../../../utils/queryKeys';
 
 /**
  * Fetch client key values
@@ -39,7 +17,7 @@ export interface ClientKeysResponse {
 export function useClientKeys(clientId: string) {
   return useQuery({
     queryKey: clientKeys.clientKeys.all(clientId),
-    queryFn: () => api.getClientKeys(clientId),
+    queryFn: () => clientKeysApi.getClientKeys(clientId),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!clientId,
   });
@@ -52,7 +30,7 @@ export function useRecalculateClientKeys() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (clientId: string) => api.recalculateClientKeys(clientId),
+    mutationFn: (clientId: string) => clientKeysApi.recalculateClientKeys(clientId),
     onSuccess: (_data, clientId) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.clientKeys.all(clientId) });
       toast.success('Keys recalculated successfully', {
@@ -73,7 +51,7 @@ export function useRecalculateClientKeys() {
 export function useClientKeyHistory(clientId: string, keyId: string) {
   return useQuery({
     queryKey: clientKeys.clientKeys.history(clientId, keyId),
-    queryFn: () => api.getClientKeyHistory(clientId, keyId),
+    queryFn: () => clientKeysApi.getClientKeyHistory(clientId, keyId),
     staleTime: 10 * 60 * 1000, // 10 minutes
     enabled: !!clientId && !!keyId,
   });
