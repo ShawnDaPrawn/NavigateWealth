@@ -1,6 +1,7 @@
 import { api, APIError } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import {
+  ApiUser,
   GetClientsResponse,
   UpdateClientMetadataResponse,
   GetClientProfileResponse,
@@ -9,29 +10,17 @@ import {
   KvCleanupResult,
 } from './types';
 import { ENDPOINTS } from './constants';
+import { fetchClientDirectory } from '../../../../shared/api/clientDirectory';
 import { clientKeys } from '../../../../utils/queryKeys';
 
 export const clientApi = {
   /**
-   * Fetch all clients (users)
-   * Supports optional pagination via page/perPage query params.
-   * When omitted, the server returns the full unpaginated list.
+   * Fetch all clients (users).
+   * Delegates to the shared client directory, typed with this module's richer
+   * entry so callers here still see the nested profile and application objects.
    */
-  getClients: async (params?: { page?: number; perPage?: number }): Promise<GetClientsResponse> => {
-    try {
-      let endpoint: string = ENDPOINTS.ALL_USERS;
-      if (params?.page || params?.perPage) {
-        const qs = new URLSearchParams();
-        if (params.page) qs.set('page', String(params.page));
-        if (params.perPage) qs.set('perPage', String(params.perPage));
-        endpoint = `${endpoint}?${qs.toString()}`;
-      }
-      return await api.get<GetClientsResponse>(endpoint);
-    } catch (error) {
-      logger.error('Failed to fetch clients', error);
-      throw error;
-    }
-  },
+  getClients: (params?: { page?: number; perPage?: number }): Promise<GetClientsResponse> =>
+    fetchClientDirectory<ApiUser>(params),
 
   /**
    * Fetch client personal profile

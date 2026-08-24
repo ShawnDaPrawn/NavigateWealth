@@ -10,6 +10,10 @@ export type {
   RiskAssessment,
 } from '../../../../shared/types';
 import type { BaseClient, RiskAssessment } from '../../../../shared/types';
+import type {
+  ClientDirectoryEntry,
+  ClientDirectoryResponse,
+} from '../../../../shared/types/client-directory';
 
 /** Dashboard display mode for ClientOverviewTab — Phase C */
 export type { DashboardMode } from './components/clientOverviewConstants';
@@ -234,39 +238,16 @@ export interface ProfileData {
 }
 
 // API Responses
-export interface ApiUser {
-  id: string;
-  email: string;
-  created_at: string;
-  user_metadata?: {
-    firstName?: string;
-    surname?: string;
-    /** Additional metadata fields from Supabase Auth */
-    [key: string]: unknown;
-  };
-  name?: string;
-  application_number?: string;
-  application_status?: string;
-  account_type?: string;
-  deleted?: boolean;
-  suspended?: boolean;
-  account_status?: string;
+/**
+ * A directory entry as this module models it: the shared wire shape plus the
+ * nested profile and application objects it knows how to read.
+ */
+export interface ApiUser extends ClientDirectoryEntry {
   profile?: ClientProfile;
   application?: ClientApplication;
 }
 
-export interface GetClientsResponse {
-  count?: number;
-  /** @deprecated Server now returns `clients` — kept for backward compatibility */
-  users?: ApiUser[];
-  /** Current server response field (PaginatedClientResponse shape) */
-  clients?: ApiUser[];
-  /** Pagination fields — present when page/perPage query params are sent */
-  total?: number;
-  page?: number;
-  perPage?: number;
-  totalPages?: number;
-}
+export type GetClientsResponse = ClientDirectoryResponse<ApiUser>;
 
 export interface UpdateClientMetadataResponse {
   success: boolean;
