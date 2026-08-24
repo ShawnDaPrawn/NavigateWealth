@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFNAManagement } from '../useFNAManagement';
-import type { FNAConfig } from '../../../../profile-sections/fna-config';
+import type { FNAConfig } from '../../types';
 
 // ============================================================================
 // MOCKS

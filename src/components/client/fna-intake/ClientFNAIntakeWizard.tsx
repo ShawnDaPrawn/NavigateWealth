@@ -2,7 +2,7 @@
  * ClientFNAIntakeWizard — client-led Step 1 intake per FNA domain
  */
 
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -28,32 +28,10 @@ import type {
 import type { MedicalFNAInputs } from '../../admin/modules/medical-fna';
 import type { InformationGatheringInput } from '../../admin/modules/risk-planning-fna';
 import type { TaxPlanningInputs } from '../../admin/modules/tax-planning-fna';
-
-const LazyRetirementStep1 = React.lazy(() =>
-  import('../../admin/modules/retirement-fna/components/Step1InputForm').then((m) => ({
-    default: m.Step1InputForm,
-  })),
-);
-
-const LazyMedicalStep1 = React.lazy(() =>
-  import('../../admin/modules/medical-fna/components/Step1InputForm').then((m) => ({
-    default: m.Step1InputForm,
-  })),
-);
-
-const LazyRiskStep1 = React.lazy(() =>
-  import('../../admin/modules/risk-planning-fna/components/Step1InformationGathering').then(
-    (m) => ({
-      default: m.Step1InformationGathering,
-    }),
-  ),
-);
-
-const LazyTaxStep1 = React.lazy(() =>
-  import('../../admin/modules/tax-planning-fna/components/Step1InputForm').then((m) => ({
-    default: m.Step1InputForm,
-  })),
-);
+import { Step1InputForm as LazyRetirementStep1 } from '../../admin/modules/retirement-fna';
+import { Step1InputForm as LazyMedicalStep1 } from '../../admin/modules/medical-fna';
+import { Step1InformationGathering as LazyRiskStep1 } from '../../admin/modules/risk-planning-fna';
+import { Step1InputForm as LazyTaxStep1 } from '../../admin/modules/tax-planning-fna';
 
 interface ClientFNAIntakeWizardProps {
   clientId: string;

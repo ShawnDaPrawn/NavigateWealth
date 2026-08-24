@@ -23,6 +23,7 @@ export { FNAAPI } from './api';
 
 // ── Types (re-exported for convenience — canonical source is ./types) ──────
 export type {
+  FNAConfig,
   FNAInputs,
   FNAResults,
   FNASession,

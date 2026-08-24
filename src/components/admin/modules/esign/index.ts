@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 /**
  * esign module — public API.
  *
@@ -12,7 +13,13 @@
  */
 
 // Module entry point
-export { EsignModule } from './EsignModule';
+// Lazy: the module entry pulls the PDF studio (pdf.js). Keeping it behind
+// lazy() means a light consumer importing esignApi or a type from this barrel
+// no longer drags pdf.js in — which is exactly what broke VerifyDocumentPage
+// with "DOMMatrix is not defined". Render inside <Suspense>.
+export const EsignModule = lazy(() =>
+  import('./EsignModule').then((m) => ({ default: m.EsignModule })),
+);
 
 // API client
 export { esignApi } from './api';
@@ -39,3 +46,14 @@ export { EsignSkeleton } from './components/EsignSkeleton';
 
 // Types
 export type { EsignEnvelope, EnvelopeStatus, EsignField, SignerFormData } from './types';
+
+// Heavy wizard steps — each keeps its own chunk; render inside <Suspense>.
+export const DocumentUploadStep = lazy(() =>
+  import('./components/DocumentUploadStep').then((m) => ({ default: m.DocumentUploadStep })),
+);
+export const RecipientsManager = lazy(() =>
+  import('./components/RecipientsManager').then((m) => ({ default: m.RecipientsManager })),
+);
+export const PrepareFormStudio = lazy(() =>
+  import('./components/PrepareFormStudio').then((m) => ({ default: m.PrepareFormStudio })),
+);

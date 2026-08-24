@@ -285,7 +285,10 @@ beforeAll(() => {
   }
 });
 
-import { EsignModule } from '../index';
+// Import the component file, not the barrel: the barrel exports EsignModule
+// lazily so light consumers do not pull pdf.js, and these tests render it
+// directly without a Suspense boundary.
+import { EsignModule } from '../EsignModule';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
