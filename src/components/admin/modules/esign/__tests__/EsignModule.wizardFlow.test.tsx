@@ -204,11 +204,12 @@ vi.mock('../components/DocumentUploadStep', () => ({
   DocumentUploadStep: () => <div data-testid="upload-step" />,
 }));
 
-vi.mock('../components/RecipientsManager', () => ({
-  RecipientsManager: ({ signers }: { signers: unknown[] }) => (
+vi.mock('../components/RecipientsManager', () => {
+  const RecipientsManager = ({ signers }: { signers: unknown[] }) => (
     <div data-testid="recipients-manager">{JSON.stringify(signers)}</div>
-  ),
-}));
+  );
+  return { RecipientsManager, default: RecipientsManager };
+});
 
 vi.mock('../components/PrepareFormStudio', () => ({
   PrepareFormStudio: (props: {
@@ -316,6 +317,8 @@ async function openTemplate(testId: string) {
   render(<EsignModule />);
   fireEvent.click(screen.getByTestId(testId));
   await waitFor(() => screen.getByText('Add Recipients'));
+  // RecipientsManager is React.lazy — the heading paints before the child.
+  await waitFor(() => screen.getByTestId('recipients-manager'));
 }
 
 beforeEach(() => {

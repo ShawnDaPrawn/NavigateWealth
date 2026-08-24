@@ -220,7 +220,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     // deleted, or stops being scanned — a check that cannot fail is worth less
     // than no check, because it reads as coverage.
     expect(
-      analysedFiles.some((f) => f.endsWith('/documents.tsx')),
+      analysedFiles.some((f) => f.replaceAll('\\', '/').endsWith('/documents.tsx')),
       'documents.tsx is no longer being analysed — re-point this anchor at whichever module now carries router-scoped AND path-scoped guards',
     ).toBe(true);
     expect(
