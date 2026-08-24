@@ -313,6 +313,8 @@ async function openTemplate(testId: string) {
   render(<EsignModule />);
   fireEvent.click(screen.getByTestId(testId));
   await waitFor(() => screen.getByText('Add Recipients'));
+  // RecipientsManager is React.lazy — the heading paints before the child.
+  await waitFor(() => screen.getByTestId('recipients-manager'));
 }
 
 beforeEach(() => {
