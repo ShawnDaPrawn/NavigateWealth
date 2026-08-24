@@ -70,7 +70,7 @@ strict types, the API client, lazy-router, code splitting,
 | `quality/baselines/contract-coverage-baseline`    | 2                   | grows           | Validated response call sites (floors a gain, fails on falls)       |
 | `quality/baselines/npm-audit-baseline`            | 0                   | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24 |
 | `quality/baselines/deno-check-baseline`           | 0                   | hold            | Done — keep at zero                                                 |
-| Backend coverage (floored)                        | ~13.7% stmts        | 40%+            | `vitest.config.server.ts`, ratchets up only                         |
+| Backend coverage (floored)                        | ~13.7% stmts        | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                 |
 | SPA coverage (floored)                            | ~31% stmts          | 50%+            | Excludes backend; per-layer by design                               |
 | Files > 1,000 raw lines                           | 74 (40 counted)     | 0 at budget 600 | Readability ceiling; god files listed in §4                         |
 | `src/assets`                                      | 853 MB PNG/JPG      | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)           |
@@ -213,7 +213,7 @@ god files**. Work the ratchets down; never mass-rename.
   pulling a 1,615-line admin component) and `AdminDashboardPage` → 19
   module-internal skeletons.
 - **Slices:** ~10–20 violations per PR, lowering `quality/baselines/depcruise-baseline` each
-  time. At 0, flip the three rules to `error` in `.dependency-cruiser.cjs`.
+  time. At 0, flip the three rules to `error` in `quality/dependency-cruiser.cjs`.
 - **Effort:** L (mechanical after the first few).
   **Gate:** baseline reaches 0; rules at `error`; a deliberate internal import
   fails CI.
@@ -464,7 +464,7 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    regression; the plan is contract tests. Every route family gets an
    `*-routes.contract.test.ts` (mount the real router, mock only IO, assert
    status/authz/validation) — required for new routes, added for existing ones
-   as WS2 touches them. Ratchet `vitest.config.server.ts` floors upward on
+   as WS2 touches them. Ratchet `quality/vitest.config.server.ts` floors upward on
    every land. Target: 40% statements by the time Stage D's first entity cuts
    over.
    _Effort:_ ongoing, absorbed into WS2/WS3 PRs.
