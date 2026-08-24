@@ -276,33 +276,8 @@ export interface ApplicationDetailResponse {
 /**
  * Application statistics
  */
-export interface ApplicationStats {
-  total: number;
-  submitted_for_review: number;
-  approved: number;
-  declined: number;
-  application_in_progress: number;
-  invited?: number;
-  /** Signups that have not submitted — `draft` count only */
-  draft: number;
-  /** `draft` + `in_progress` (incomplete onboarding) */
-  incomplete: number;
-  no_application: number;
-  new_applications_7d: number;
-  new_this_month: number;
-  new_last_month: number;
-  // Task statistics
-  new_tasks: number;
-  pending_tasks: number;
-  // Request statistics
-  pending_requests: number;
-  total_requests: number;
-  // E-Signature statistics
-  pending_esignatures: number;
-  // User statistics
-  active_users: number;
-  total_clients: number;
-}
+// Canonical definition lives in src/shared/types (§9.3 — single source of truth).
+export type { ApplicationStats } from '../../../shared/types/admin-stats.ts';
 
 /**
  * Success response

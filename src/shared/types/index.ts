@@ -65,6 +65,11 @@ export type {
 } from './balance-sheet';
 
 export type {
+  // Admin dashboard statistics (edge /admin/stats response)
+  ApplicationStats,
+} from './admin-stats';
+
+export type {
   // Logging & error types
   LogLevel,
   LogContext,
