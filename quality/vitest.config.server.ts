@@ -71,11 +71,18 @@ export default defineConfig({
       // 798 tests. Lifting the floor in the same change is the point of the
       // ratchet: a coverage gain that is not floored is a gain the next PR can
       // silently give back.
+      //
+      // Raised again 2026-08-24 (15.0 / 10.6 / 14.8 / 15.4) with the A18
+      // entry-point extraction. Measured 17.39 / 12.62 / 16.95 / 17.86 across
+      // 912 tests — of which the create-app suite contributed
+      // +0.16 / +0.11 / +0.20 / +0.15; the rest was slack the intervening PRs
+      // gained and never claimed, which is exactly what this comment exists to
+      // stop happening twice.
       thresholds: {
-        statements: 15.0,
-        branches: 10.6,
-        functions: 14.8,
-        lines: 15.4,
+        statements: 17.3,
+        branches: 12.5,
+        functions: 16.8,
+        lines: 17.7,
       },
     },
   },

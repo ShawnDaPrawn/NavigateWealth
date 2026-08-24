@@ -74,10 +74,10 @@ const { lazy } = await import('../lazy-router.ts');
 const PREFIX = '/make-server-91ed8379';
 
 /**
- * Build a parent app shaped like index.tsx: request-id middleware, then mounts.
- * The validation below is copied from index.tsx deliberately — a parent that
- * accepted any header would make the propagation tests agree with a version of
- * lazy-router that leaks unvalidated ids downstream.
+ * Build a parent app shaped like create-app.ts: request-id middleware, then
+ * mounts. The validation below is copied from create-app.ts deliberately — a
+ * parent that accepted any header would make the propagation tests agree with a
+ * version of lazy-router that leaks unvalidated ids downstream.
  */
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
@@ -596,7 +596,8 @@ describe('error.middleware: the request-id validation is defence in depth', () =
 describe('the request-id policy is stated identically everywhere it is enforced', () => {
   /**
    * The same pattern is enforced in three places that cannot import from each
-   * other cheaply: index.tsx (a boot module that must stay minimal),
+   * other cheaply: create-app.ts (the boot module, which must stay minimal —
+   * it held this middleware inline in index.tsx until the A18 extraction),
    * error.middleware.ts (lazily loaded), and this test file's `makeParent`.
    * Three unlinked copies is exactly how a security policy rots — someone
    * loosens one and the others keep asserting the old rule.
@@ -604,7 +605,7 @@ describe('the request-id policy is stated identically everywhere it is enforced'
    * Rather than pay boot payload for a shared constant, this pins them: change
    * one and CI tells you about the other two.
    */
-  it('index.tsx, error.middleware.ts and this test agree on the pattern', () => {
+  it('create-app.ts, error.middleware.ts and this test agree on the pattern', () => {
     const read = (name: string) =>
       readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', name), 'utf8');
     const extract = (src: string, file: string) => {
@@ -613,11 +614,11 @@ describe('the request-id policy is stated identically everywhere it is enforced'
       return m![0];
     };
 
-    const inIndex = extract(read('index.tsx'), 'index.tsx');
+    const inApp = extract(read('create-app.ts'), 'create-app.ts');
     const inMiddleware = extract(read('error.middleware.ts'), 'error.middleware.ts');
 
-    expect(inIndex).toBe(inMiddleware);
-    expect(REQUEST_ID_PATTERN.source).toBe(new RegExp(inIndex.slice(1, -1)).source);
+    expect(inApp).toBe(inMiddleware);
+    expect(REQUEST_ID_PATTERN.source).toBe(new RegExp(inApp.slice(1, -1)).source);
   });
 });
 

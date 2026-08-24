@@ -196,13 +196,17 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
 
   it('still reports routes that are public by definition (true positives)', () => {
     // These cannot ever be guarded: a login endpoint behind requireAuth is a
-    // bootstrap paradox, and index.tsx documents the health probes as the only
+    // bootstrap paradox, and the health probes are documented as the only
     // endpoints reachable without a bearer token. If the analysis stops
     // reporting them it has gone blind, and the floor below means nothing.
+    //
+    // The health anchor moved from index.tsx to create-app.ts with the A18
+    // entry-point extraction; its registrations stay literal paths precisely
+    // so this scan keeps finding them.
     for (const expected of [
       'auth-routes.ts POST /login-validate',
       'auth-routes.ts POST /signup',
-      'index.tsx GET /make-server-91ed8379/health',
+      'create-app.ts GET /make-server-91ed8379/health',
     ]) {
       expect(unguarded, `expected the analysis to still report "${expected}"`).toContain(expected);
     }
