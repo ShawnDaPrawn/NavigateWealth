@@ -4,13 +4,13 @@
  * became a prop (state/actions come from useClientProfile at the root).
  */
 import React from 'react';
-import { Label } from '../ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { SelectItem } from '../ui/select';
-import { Separator } from '../ui/separator';
-import { formatCurrencyDisplay } from '../../utils/currencyFormatter';
+import { Label } from '../../../../../ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../ui/card';
+import { SelectItem } from '../../../../../ui/select';
+import { Separator } from '../../../../../ui/separator';
+import { formatCurrencyDisplay } from '../../../../../../utils/currencyFormatter';
 import { User, Shield, Banknote } from 'lucide-react';
-import { CountrySelect } from '../pages/profile/CountrySelect';
+import { CountrySelect } from '../../../../../pages/profile/CountrySelect';
 import { InputWithCopy, SelectWithCopy } from './ProfileFieldsWithCopy';
 import type { ClientProfileHook } from './clientProfileHook';
 

@@ -7,13 +7,13 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Button } from '../ui/button';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Button } from '../../../../../ui/button';
+import { Alert, AlertDescription, AlertTitle } from '../../../../../ui/alert';
 import {
   formatCurrency,
   formatCurrencyInput,
   cleanCurrencyInput,
-} from '../../utils/currencyFormatter';
+} from '../../../../../../utils/currencyFormatter';
 import {
   User,
   Mail,
@@ -30,29 +30,29 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react';
-import { AddressSection } from './profile-sections/AddressSection';
-import { EmploymentSection } from './profile-sections/EmploymentSection';
-import { HealthSection } from './profile-sections/HealthSection';
-import { FamilySection } from './profile-sections/FamilySection';
-import { BankingSection } from './profile-sections/BankingSection';
-import { RiskProfileSection } from './profile-sections/RiskProfileSection';
-import { AssetsLiabilitiesSection } from './profile-sections/AssetsLiabilitiesSection';
-import { BudgetingPage } from '../pages/BudgetingPage';
-import { IdentitySection } from './profile-sections/IdentitySection';
-import { Client, ProfileData } from './modules/client-management/types';
+import { AddressSection } from '../../../../profile-sections/AddressSection';
+import { EmploymentSection } from '../../../../profile-sections/EmploymentSection';
+import { HealthSection } from '../../../../profile-sections/HealthSection';
+import { FamilySection } from '../../../../profile-sections/FamilySection';
+import { BankingSection } from '../../../../profile-sections/BankingSection';
+import { RiskProfileSection } from '../../../../profile-sections/RiskProfileSection';
+import { AssetsLiabilitiesSection } from '../../../../profile-sections/AssetsLiabilitiesSection';
+import { BudgetingPage } from '../../../../../pages/BudgetingPage';
+import { IdentitySection } from '../../../../profile-sections/IdentitySection';
+import { Client, ProfileData } from '../../types';
 import { useClientProfile } from './clientProfileHook';
-import { copyToClipboard } from '../../utils/clipboard';
-import { api } from '../../utils/api';
+import { copyToClipboard } from '../../../../../../utils/clipboard';
+import { api } from '../../../../../../utils/api';
 import {
   UnsavedChangesDialog,
   useUnsavedChangesGuard,
   useUnsavedChangesRegistry,
-} from '../shared/unsaved-changes';
+} from '../../../../../shared/unsaved-changes';
 import {
   derivePolicyAssetsFromPolicies,
   type DerivedPolicyAsset,
   type PolicyAssetSourceRecord,
-} from '../../utils/derivedPolicyAssets';
+} from '../../../../../../utils/derivedPolicyAssets';
 
 import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
 import { ClientProfileContactCard } from './ClientProfileContactCard';

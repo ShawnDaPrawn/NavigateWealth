@@ -5,11 +5,11 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Input } from '../../../../ui/input';
-import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { Search, User, X, Loader2, CheckCircle2 } from 'lucide-react';
-import { api } from '../../../../../utils/api';
+import { api } from '../../utils/api';
 
 interface ClientOption {
   id: string;

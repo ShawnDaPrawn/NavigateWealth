@@ -3,13 +3,13 @@
  * client profile viewer cards. Moved verbatim from ClientProfileViewerFull.
  */
 import React, { useState } from 'react';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '../../../../../ui/button';
+import { Label } from '../../../../../ui/label';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '../../../../../ui/select';
 import { toast } from 'sonner';
 import { Check, Copy } from 'lucide-react';
-import { FieldWithCopy } from './FieldWithCopy';
-import { copyToClipboard } from '../../utils/clipboard';
+import { FieldWithCopy } from '../../../../FieldWithCopy';
+import { copyToClipboard } from '../../../../../../utils/clipboard';
 
 // Wrapper component for input with copy button using the reusable FieldWithCopy
 export const InputWithCopy = ({

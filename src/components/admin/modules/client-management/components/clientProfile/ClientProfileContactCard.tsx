@@ -3,9 +3,9 @@
  * verbatim from ClientProfileViewerFull.tsx; every captured name became a
  * prop (state/actions come from useClientProfile at the root).
  */
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { SelectItem } from '../ui/select';
-import { Separator } from '../ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../ui/card';
+import { SelectItem } from '../../../../../ui/select';
+import { Separator } from '../../../../../ui/separator';
 import { Phone } from 'lucide-react';
 import { InputWithCopy, SelectWithCopy } from './ProfileFieldsWithCopy';
 import type { ClientProfileHook } from './clientProfileHook';
