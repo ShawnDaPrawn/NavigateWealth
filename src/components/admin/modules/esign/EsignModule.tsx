@@ -485,18 +485,29 @@ export function EsignModule() {
     }
   };
 
-  const handleSend = async (currentFields?: EsignField[]) => {
-    if (!activeEnvelope) return;
+  /**
+   * @param currentFields Fields to send with, when the caller already holds
+   *   them (the studio passes its live ref).
+   * @param envelopeOverride The envelope to send. Callers that have JUST
+   *   materialised one must pass it: `setActiveEnvelope` does not update the
+   *   binding this closure captured, so on a first-time express send the state
+   *   value is still null here and the send would abort silently. The studio
+   *   path omits it and falls back to state, which is set by then (the studio
+   *   only renders when `activeEnvelope` is non-null).
+   */
+  const handleSend = async (currentFields?: EsignField[], envelopeOverride?: EsignEnvelope) => {
+    const envelope = envelopeOverride ?? activeEnvelope;
+    if (!envelope) return;
 
     // Use passed fields if provided (handles race condition), otherwise use state
-    const fieldsToUse = currentFields || activeEnvelope.fields || [];
+    const fieldsToUse = currentFields || envelope.fields || [];
 
     try {
       // fieldsToUse contains fields where signer_id is the signer's email;
       // the backend wants each field stamped with the signer's index.
       const fieldsForInvite = attachSignerIndexes(fieldsToUse, wizardData.signers);
 
-      await sendInvites(activeEnvelope.id, {
+      await sendInvites(envelope.id, {
         signers: toInviteSignerPayload(wizardData.signers),
         fields: fieldsForInvite,
         message: wizardData.message,
@@ -608,10 +619,11 @@ export function EsignModule() {
       const out = await materialiseEnvelopeFromWizard();
       if (!out) return;
 
-      // The active envelope is now set in state, but `handleSend` reads
-      // from state — pass the hydrated fields explicitly to dodge the
-      // setActiveEnvelope race.
-      await handleSend(out.fields);
+      // Pass BOTH the hydrated fields and the envelope explicitly. Reading
+      // either from state here would see this render's captured values, where
+      // a first-time express send still has activeEnvelope === null — which
+      // aborted handleSend before any invite was dispatched.
+      await handleSend(out.fields, out.envelope);
     } catch (error: unknown) {
       logger.error('Express send failed:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send envelope');
