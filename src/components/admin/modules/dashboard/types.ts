@@ -1,5 +1,5 @@
 import { LucideIcon } from 'lucide-react';
-import type { TaskPriority } from '../tasks/types';
+import type { TaskPriority } from '../tasks';
 
 // Re-export TaskPriority so dashboard/utils.ts and other consumers can import it from here
 export type { TaskPriority };

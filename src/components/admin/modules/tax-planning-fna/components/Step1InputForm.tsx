@@ -15,7 +15,7 @@ import { TaxPlanningInputs } from '../types';
 import { ArrowRight, Info, User, Wallet, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
-import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { useFormPrefill } from '../../form-prefill';
 
 interface Step1Props {
   clientId?: string;

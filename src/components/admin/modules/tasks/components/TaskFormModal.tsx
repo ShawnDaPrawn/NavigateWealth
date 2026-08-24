@@ -9,7 +9,7 @@ import type {
 } from '../types';
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../hooks';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../constants';
-import { communicationApi } from '../../communication/api';
+import { communicationApi } from '../../communication';
 import { api } from '../../../../../utils/api';
 import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';

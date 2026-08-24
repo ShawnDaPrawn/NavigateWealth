@@ -17,7 +17,7 @@ import { Logo } from '../../layout/Logo';
 import { AdminModule, PendingCounts } from './types';
 import { alwaysShowCounterModules, moduleConfig, moduleGroups, operationsModules } from './config';
 import { useAuth } from '../../auth/AuthContext';
-import { useCurrentUserPermissions } from '../modules/personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../modules/personnel';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { InstallAppMenuItem } from './InstallAppMenuItem';

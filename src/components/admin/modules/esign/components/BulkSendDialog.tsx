@@ -48,8 +48,8 @@ import { toast } from 'sonner';
 import { esignApi } from '../api';
 import type { EsignTemplateRecord, CampaignRecord, CampaignRecipientResult } from '../types';
 import { logger } from '../../../../../utils/logger';
-import { communicationApi } from '../../communication/api';
-import type { Client, ClientGroup } from '../../communication/types';
+import { communicationApi } from '../../communication';
+import type { Client, ClientGroup } from '../../communication';
 
 interface BulkSendDialogProps {
   open: boolean;

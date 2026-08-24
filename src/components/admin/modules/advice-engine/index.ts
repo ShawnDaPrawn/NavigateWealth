@@ -6,3 +6,6 @@
  * module's internals stay private (see .dependency-cruiser.cjs).
  */
 export { AdviceEngineModule } from './AdviceEngineModule';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { AdviceEngineSkeleton } from './components/AdviceEngineSkeleton';

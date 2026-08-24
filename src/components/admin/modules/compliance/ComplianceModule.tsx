@@ -14,7 +14,7 @@ import {
   FileBarChart,
   Loader2,
 } from 'lucide-react';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 // Heavy tab components — lazy-loaded (only one is rendered at a time)
 const CDDTab = React.lazy(() => import('./components/CDDTab').then((m) => ({ default: m.CDDTab })));

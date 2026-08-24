@@ -13,7 +13,7 @@ import { ProviderManagementTab } from './ProviderManagementTab';
 import { ProductManagementTab } from './ProductManagementTab';
 import { IntegrationsTab } from './IntegrationsTab';
 import { UniversalKeyManager } from '../resources/UniversalKeyManager';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 import { ProductManagementSkeleton } from './components/ProductManagementSkeleton';
 
 // Lazy-load the Document AI tab since it's less frequently accessed

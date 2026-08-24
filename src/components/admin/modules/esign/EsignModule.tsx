@@ -39,7 +39,7 @@ import {
 } from './wizardDerivations';
 
 import type { EsignEnvelope, SignerFormData, EsignField, EsignTemplateRecord } from './types';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 // Heavy wizard / studio components — lazy-loaded (only rendered on user action)
 const DocumentUploadStep = React.lazy(() =>

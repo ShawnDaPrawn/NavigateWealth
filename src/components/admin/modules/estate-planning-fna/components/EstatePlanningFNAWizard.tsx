@@ -12,7 +12,7 @@ import { EstatePlanningCalculationService } from '../utils';
 import type { EstatePlanningInputs } from '../types';
 import { ESTATE_PLANNING_CONSTANTS } from '../constants';
 import { ReviewStep } from './ReviewStep';
-import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { useFormPrefill } from '../../form-prefill';
 import { logger } from '../../../../../utils/logger';
 
 interface EstatePlanningFNAWizardProps {

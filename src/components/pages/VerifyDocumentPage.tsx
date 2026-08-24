@@ -23,7 +23,9 @@ import {
   AlertCircle,
   ArrowLeft,
 } from 'lucide-react';
-import { esignApi } from '../admin/modules/esign';
+// Direct import, NOT the esign barrel: the barrel re-exports EsignModule, whose
+// PDF preview pulls pdf.js (DOMMatrix) into this lightweight public page.
+import { esignApi } from '../admin/modules/esign/api';
 
 type VerificationState = 'idle' | 'hashing' | 'verifying' | 'verified' | 'not_found' | 'error';
 

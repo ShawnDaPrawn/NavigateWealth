@@ -23,7 +23,7 @@ import { ArchivedTasksView } from './components/ArchivedTasksView';
 import { TasksSkeleton } from './components/TasksSkeleton';
 import { STATUS_LABELS } from './constants';
 import { Button } from '../../../ui/button';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 interface TaskManagementModuleProps {
   /** When provided, auto-opens the task detail modal for this task ID on mount */

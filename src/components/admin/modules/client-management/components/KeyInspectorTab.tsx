@@ -22,8 +22,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../..
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { toast } from 'sonner';
 import { Client } from '../types';
-import { KEY_CATEGORIES } from '../../product-management/keyManagerConstants';
-import { ProductKeyCategory } from '../../product-management/types';
+import { KEY_CATEGORIES } from '../../product-management';
+import { ProductKeyCategory } from '../../product-management';
 import { useClientKeys, useRecalculateClientKeys } from '../hooks/useClientKeys';
 import { CATEGORY_ICONS } from '../../resources/key-manager/constants';
 

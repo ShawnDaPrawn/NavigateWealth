@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { linkedinApi } from '../admin/modules/social-media/api';
+import { linkedinApi } from '../admin/modules/social-media';
 import { Linkedin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 type CallbackState = 'processing' | 'success' | 'error';

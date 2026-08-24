@@ -13,7 +13,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../ui/popover';
 import { Badge } from '../../../../../ui/badge';
 import { KeyAPI } from '../../key-manager/api';
-import { ProductKey } from '../../../product-management/types';
+import { ProductKey } from '../../../product-management';
 
 interface KeySelectorProps {
   value?: string;

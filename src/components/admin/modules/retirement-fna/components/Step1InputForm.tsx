@@ -19,7 +19,7 @@ import { User, Wallet, Info, ArrowRight, Loader2, CalendarDays, TrendingUp } fro
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
 import { RetirementFNAInputs, RetirementFNAAdjustments } from '../types';
 import { DEFAULT_RETIREMENT_ASSUMPTIONS } from '../utils/calculation-engine';
-import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { useFormPrefill } from '../../form-prefill';
 
 interface Step1InputFormProps {
   clientId?: string;

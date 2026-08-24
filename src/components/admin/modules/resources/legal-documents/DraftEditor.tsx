@@ -43,7 +43,7 @@ import {
   Save,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { RichTextEditor } from '../../publications/RichTextEditor';
+import { RichTextEditor } from '../../publications';
 import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
 import { LegalDocumentPdfDialog } from '../../../../shared/LegalDocumentPdf';

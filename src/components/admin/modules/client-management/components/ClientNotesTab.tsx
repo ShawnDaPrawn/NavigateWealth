@@ -12,18 +12,18 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../../auth/AuthContext';
 import type { Client } from '../types';
-import type { Note, CreateNoteInput, UpdateNoteInput } from '../../notes/types';
+import type { Note, CreateNoteInput, UpdateNoteInput } from '../../notes';
 import {
   useClientNotes,
   useCreateNote,
   useUpdateNote,
   useDeleteNote,
   useConvertNoteToTask,
-} from '../../notes/hooks';
-import { NotesAPI } from '../../notes/api';
+} from '../../notes';
+import { NotesAPI } from '../../notes';
 import { noteKeys } from '../../../../../utils/queryKeys';
-import { NoteCard } from '../../notes/components/NoteCard';
-import { NoteEditorModal } from '../../notes/components/NoteEditorModal';
+import { NoteCard } from '../../notes';
+import { NoteEditorModal } from '../../notes';
 
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';

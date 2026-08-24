@@ -121,3 +121,6 @@ export {
   useDocumentsInsuranceRecordsLegacy,
   useComplianceOverviewLegacy,
 } from './hooks';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { ComplianceSkeleton } from './components/ComplianceSkeleton';

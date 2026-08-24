@@ -5,7 +5,7 @@ import { Input } from '../../../../../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
 import { ClientGroup, Client, GroupFilterConfig, ExternalContact } from '../../types';
-import { Provider } from '../../../product-management/types';
+import { Provider } from '../../../product-management';
 import { FilterBuilder } from './FilterBuilder';
 import { ManualSelection } from './ManualSelection';
 import { toast } from 'sonner';

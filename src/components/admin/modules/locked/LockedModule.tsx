@@ -13,7 +13,7 @@ import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { ComingSoonBadge } from './components/ComingSoonBadge';
 import { AccountsPanel } from './refund-clusters/AccountsPanel';

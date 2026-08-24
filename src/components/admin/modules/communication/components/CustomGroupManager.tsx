@@ -42,7 +42,7 @@ import {
 import { ClientGroup, Client } from '../types';
 import { communicationApi } from '../api';
 import { toast } from 'sonner';
-import { Provider } from '../../product-management/types';
+import { Provider } from '../../product-management';
 import { GroupEditor } from './groups/GroupEditor';
 import { logger } from '../../../../../utils/logger';
 
