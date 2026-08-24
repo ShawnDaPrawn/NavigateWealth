@@ -826,6 +826,23 @@ Expected shape:
 { "status": "healthy", "version": "4.1.0", "requestId": "..." }
 ```
 
+### Blocking post-deploy smoke
+
+Runs automatically after every Edge Function deploy (`deploy-supabase-function.yml`).
+Locally, against the currently deployed function:
+
+```powershell
+npm run deploy:smoke
+```
+
+Health probes must return 200; `/kv-store`, `/documents`, and `/profile` must
+return 401 (including when the public anon key is sent as a bearer token).
+A red smoke means the revision is already live — rollback by dispatching the
+deploy workflow with the last green SHA as an input (`gh workflow run
+deploy-supabase-function.yml -f revision=<last-green-sha>`), or by reverting
+the merge on `main`. Do not pass the SHA to `--ref`; that option is a
+branch/tag name, not a commit.
+
 ### CORS Preflight Checks
 
 Production `www` origin:
@@ -1002,3 +1019,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script.                                                                                                                                                                                                                                                                                          | Agent           |
 | 2026-08-21 | Architecture-quality verification: re-ran every quality gate on `main`, marked the completed roadmap items done (`integrations.tsx` split, Vitest suite fix, tooling gates, audit logging, super-admin allowlist), corrected the Section 2 rubric and Section 8 command list, and recorded remaining debt (four >1000-line server modules, ~31% coverage floor, 59-warning lint baseline). | Claude          |
 | 2026-08-22 | Added `docs/REFACTORING-ROADMAP.md`: the consolidated, re-verified execution roadmap for the remaining technical-debt / readability / code-organisation work (security remainder WS0, frontend and backend organisation, data layer, platform split, delivery confidence), with current ratchet values measured from the tree at `255f708`.                                                | Claude          |
+| 2026-08-24 | Blocking post-deploy smoke (roadmap §8.1): health + gated-route 200/401 probes fail the Edge Function deploy job; rollback documented in the workflow.                                                                                                                                                                                                                                     | Agent           |
