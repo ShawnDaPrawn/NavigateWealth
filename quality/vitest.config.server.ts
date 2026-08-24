@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react-swc';
-import baseConfig from './vitest.config';
+import baseConfig from '../vitest.config';
 
 /**
  * Backend (Supabase Edge Function) coverage config — Stage A / F4.

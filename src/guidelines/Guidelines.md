@@ -126,7 +126,7 @@ This structure exists for discoverability, ownership, and safe evolution.
 
 **Cross-module access rule (enforced by dependency-cruiser in CI):**
 
-Code outside a module may only import from that module's `index.tsx` barrel. Importing `api.ts`, `types.ts`, `hooks/`, `components/`, or any internal file from a _different_ feature module is forbidden — it creates hidden coupling that makes decomposition risky. This is blocked at PR time by the `no-cross-feature-internals` rule in `.dependency-cruiser.cjs`.
+Code outside a module may only import from that module's `index.tsx` barrel. Importing `api.ts`, `types.ts`, `hooks/`, `components/`, or any internal file from a _different_ feature module is forbidden — it creates hidden coupling that makes decomposition risky. This is blocked at PR time by the `no-cross-feature-internals` rule in `quality/dependency-cruiser.cjs`.
 
 ```
 ✅  import { ClientList }   from '@/components/admin/modules/client-management';        // index barrel

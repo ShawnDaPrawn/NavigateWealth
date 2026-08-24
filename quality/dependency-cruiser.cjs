@@ -1,7 +1,7 @@
 /**
  * dependency-cruiser boundary rules (Phase 7 hardening; resolver fixed 2026-08-21).
  *
- * Run locally:  npx dependency-cruiser@16 'src/**\/*.{ts,tsx}' --config .dependency-cruiser.cjs
+ * Run locally:  npx dependency-cruiser@16 'src/**\/*.{ts,tsx}' --config quality/dependency-cruiser.cjs
  * CI gate:      see .github/workflows/quality-check.yml "Run dependency-cruiser"
  *
  * ---------------------------------------------------------------------------

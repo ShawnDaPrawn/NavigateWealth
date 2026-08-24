@@ -144,7 +144,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage:server": "vitest run --coverage --config vitest.config.server.ts",
+    "test:coverage:server": "vitest run --coverage --config quality/vitest.config.server.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "fna-intake:backfill": "node ./scripts/fna-intake-backfill.mjs",
@@ -155,6 +155,13 @@
     "form-prefill:smoke": "node ./scripts/form-prefill-api-smoke.mjs",
     "form-prefill:e2e": "playwright test e2e/form-prefill-smoke.spec.ts --project=desktop-chromium",
     "form-prefill:migrate-templates": "node ./scripts/migrate-form-templates-to-storage.mjs",
-    "depcruise": "npx dependency-cruiser@16 \"src/**/*.{ts,tsx}\" --config .dependency-cruiser.cjs"
+    "depcruise": "npx dependency-cruiser@16 \"src/**/*.{ts,tsx}\" --config quality/dependency-cruiser.cjs"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,md,yml,yaml}": "prettier --write"
   }
 }
