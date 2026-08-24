@@ -24,7 +24,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { api } from '../../../../../utils/api/client';
-import type { SchemaField } from './clientOverviewUtils';
+import type { SchemaField } from './clientOverview/policyFields';
 
 // ── Dashboard display mode ──────────────────────────────────────────────
 

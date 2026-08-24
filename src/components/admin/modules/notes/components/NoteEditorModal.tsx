@@ -19,27 +19,15 @@ import type { CustomColourLabels } from '../types';
 import { NOTE_COLOR_CONFIG, NOTE_COLORS } from '../constants';
 import { getColourTooltipLabel } from '../hooks/useColourLabels';
 import { useAutoSave } from '../hooks/useAutoSave';
-import type { AutoSaveStatus } from '../hooks/useAutoSave';
 import { useSummariseNote } from '../hooks/useSummariseNote';
 import { MarkdownPreview } from './MarkdownPreview';
 import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Textarea } from '../../../../ui/textarea';
-import { Label } from '../../../../ui/label';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '../../../../ui/command';
-import { cn } from '../../../../ui/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,21 +40,12 @@ import {
 } from '../../../../ui/alert-dialog';
 import {
   Save,
-  Tag,
-  User,
-  Link2,
-  Unlink,
-  Check,
-  ChevronsUpDown,
   ListTodo,
   CheckCircle2,
   Trash2,
   Loader2,
   Pencil,
   PenLine,
-  Cloud,
-  CloudOff,
-  HelpCircle,
   Sparkles,
   RotateCcw,
   FileText,
@@ -108,95 +87,8 @@ interface NoteEditorModalProps {
 // ============================================================================
 // AUTO-SAVE STATUS INDICATOR
 // ============================================================================
-
-function AutoSaveIndicator({ status }: { status: AutoSaveStatus }) {
-  if (status === 'idle') return null;
-
-  const configs: Record<
-    Exclude<AutoSaveStatus, 'idle'>,
-    { icon: React.ReactNode; text: string; className: string }
-  > = {
-    saving: {
-      icon: <Loader2 className="h-3 w-3 animate-spin" />,
-      text: 'Saving...',
-      className: 'text-gray-400',
-    },
-    saved: {
-      icon: <Cloud className="h-3 w-3" />,
-      text: 'Saved',
-      className: 'text-green-500',
-    },
-    error: {
-      icon: <CloudOff className="h-3 w-3" />,
-      text: 'Save failed',
-      className: 'text-red-500',
-    },
-  };
-
-  const cfg = configs[status];
-
-  return (
-    <span className={`flex items-center gap-1 text-[11px] ${cfg.className} transition-opacity`}>
-      {cfg.icon}
-      {cfg.text}
-    </span>
-  );
-}
-
-// ============================================================================
-// MARKDOWN HELP TOOLTIP
-// ============================================================================
-
-function MarkdownHelpTooltip() {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button type="button" className="text-gray-400 hover:text-gray-500 transition-colors">
-            <HelpCircle className="h-3.5 w-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed p-3">
-          <p className="font-semibold mb-1">Markdown shortcuts</p>
-          <div className="space-y-0.5 text-gray-600">
-            <p>
-              <code className="bg-gray-100 px-1 rounded">**bold**</code> → <strong>bold</strong>
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">*italic*</code> → <em>italic</em>
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded"># Heading</code> → heading
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">- item</code> → bullet list
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">1. item</code> → numbered list
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">- [ ] task</code> → checklist
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">`code`</code> →{' '}
-              <code className="bg-gray-100 px-0.5 text-pink-600 rounded">code</code>
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">&gt; quote</code> → blockquote
-            </p>
-            <p>
-              <code className="bg-gray-100 px-1 rounded">[text](url)</code> → link
-            </p>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+import { AutoSaveIndicator, MarkdownHelpTooltip } from './noteEditorChrome';
+import { NoteEditorMetadata } from './NoteEditorMetadata';
 
 export function NoteEditorModal({
   isOpen,
@@ -771,146 +663,21 @@ export function NoteEditorModal({
 
             <Separator />
 
-            {/* ── Metadata section ─────────────────────────────────────── */}
-            <div className="space-y-4">
-              {/* Tags */}
-              <div className="flex items-start gap-3">
-                <Tag className="h-4 w-4 text-gray-400 mt-2.5 shrink-0" />
-                <div className="flex-1">
-                  <Label className="text-xs font-medium text-gray-500 uppercase">Tags</Label>
-                  <Input
-                    value={tagsInput}
-                    onChange={(e) => handleTagsChange(e.target.value)}
-                    onBlur={handleTagsBlur}
-                    placeholder="meeting, follow-up, important (comma-separated)"
-                    className="h-9 text-sm mt-1"
-                  />
-                </div>
-              </div>
-
-              {/* Client link */}
-              <div className="flex items-start gap-3">
-                <User className="h-4 w-4 text-gray-400 mt-2.5 shrink-0" />
-                <div className="flex-1">
-                  <Label className="text-xs font-medium text-gray-500 uppercase">
-                    Link to Client
-                  </Label>
-                  {clients.length > 0 ? (
-                    <Popover
-                      open={clientPickerOpen}
-                      onOpenChange={setClientPickerOpen}
-                      modal={true}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={clientPickerOpen}
-                          className="w-full justify-between h-9 text-sm mt-1 font-normal"
-                        >
-                          <span className="flex items-center gap-2 truncate">
-                            {clientId && clientName ? (
-                              <span className="contents">
-                                <Link2 className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-                                <span className="truncate">{clientName}</span>
-                              </span>
-                            ) : (
-                              <span className="contents">
-                                <Unlink className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                                <span className="text-gray-500">No client linked</span>
-                              </span>
-                            )}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[360px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search clients..." />
-                          <CommandList>
-                            <CommandEmpty>No client found.</CommandEmpty>
-                            <CommandGroup className="max-h-[240px] overflow-auto">
-                              <CommandItem
-                                value="__none__"
-                                onSelect={() => {
-                                  handleClientChange('__none__');
-                                  setClientPickerOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    !clientId ? 'opacity-100' : 'opacity-0',
-                                  )}
-                                />
-                                <Unlink className="h-3.5 w-3.5 text-gray-400" /> No client linked
-                              </CommandItem>
-                              {clients.map((c) => (
-                                <CommandItem
-                                  key={c.id}
-                                  value={`${c.name} ${c.id}`}
-                                  onSelect={() => {
-                                    handleClientChange(c.id);
-                                    setClientPickerOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      clientId === c.id ? 'opacity-100' : 'opacity-0',
-                                    )}
-                                  />
-                                  <Link2 className="h-3.5 w-3.5 text-purple-500" /> {c.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  ) : clientName ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge className="bg-purple-100 text-purple-700 border-purple-200">
-                        <User className="h-3 w-3 mr-1" /> {clientName}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-1">
-                      No clients available for linking. You can create notes from the client
-                      management screen to auto-link.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Summary indicator */}
-              {localSummary && editorMode === 'write' && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 border border-purple-200">
-                  <Sparkles className="h-4 w-4 text-purple-600 shrink-0" />
-                  <span className="text-sm text-purple-800 flex-1">
-                    AI summary available — will be used when converting to task.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEditorMode('summarise')}
-                    className="text-xs font-medium text-purple-700 hover:text-purple-900 underline underline-offset-2"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-
-              {/* Converted task indicator */}
-              {isConverted && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                  <span className="text-sm text-green-800">
-                    This note has been converted to a task.
-                  </span>
-                </div>
-              )}
-            </div>
+            <NoteEditorMetadata
+              tagsInput={tagsInput}
+              handleTagsChange={handleTagsChange}
+              handleTagsBlur={handleTagsBlur}
+              clientId={clientId}
+              clientName={clientName}
+              clients={clients}
+              clientPickerOpen={clientPickerOpen}
+              setClientPickerOpen={setClientPickerOpen}
+              handleClientChange={handleClientChange}
+              editorMode={editorMode}
+              setEditorMode={setEditorMode}
+              localSummary={localSummary}
+              isConverted={isConverted}
+            />
           </div>
 
           {/* ── Footer ─────────────────────────────────────────────────── */}

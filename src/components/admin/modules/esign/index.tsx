@@ -9,106 +9,48 @@
  * 3. Add Recipients - Step 2 of creation
  * 4. Prepare Form - Drag/drop fields
  * 5. Send
+ *
+ * This file owns the wizard state machine and the handlers. The pure
+ * template/envelope ↔ wizard mappings live in ./wizardDerivations; the
+ * recipients step's markup in ./components/RecipientsStepView; the dialog
+ * layer in ./components/EsignModuleDialogs.
  */
 
 import React, { useState, Suspense } from 'react';
-import { Button } from '../../../ui/button';
-import { Card, CardContent } from '../../../ui/card';
-import { Label } from '../../../ui/label';
-import { Switch } from '../../../ui/switch';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '../../../../utils/logger';
 
 import { useEnvelopeActions } from './hooks/useEnvelopeActions';
 import { EsignDashboard } from './components/EsignDashboard';
+import { StepFallback } from './components/StepFallback';
+import { RecipientsStepView } from './components/RecipientsStepView';
+import { EsignModuleDialogs } from './components/EsignModuleDialogs';
 import { esignApi } from './api';
+import {
+  templateHasSavedDocuments,
+  mapTemplateRecipientsToWizard,
+  toDraftSignerPayload,
+  buildTemplateFieldsForEnvelope,
+  attachSignerIndexes,
+  toInviteSignerPayload,
+  signersFromResumedEnvelope,
+  deriveExpiryDays,
+  type TemplateContext,
+  type TemplateBuilderContext,
+} from './wizardDerivations';
 
-import type {
-  EsignEnvelope,
-  SignerFormData,
-  EsignField,
-  EsignTemplateRecord,
-  EsignSigner,
-} from './types';
+import type { EsignEnvelope, SignerFormData, EsignField, EsignTemplateRecord } from './types';
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
-// Heavy wizard / inspector components — lazy-loaded (only rendered on user action)
+// Heavy wizard / studio components — lazy-loaded (only rendered on user action)
 const DocumentUploadStep = React.lazy(() =>
   import('./components/DocumentUploadStep').then((m) => ({ default: m.DocumentUploadStep })),
-);
-const RecipientsManager = React.lazy(() =>
-  import('./components/RecipientsManager').then((m) => ({ default: m.RecipientsManager })),
 );
 const PrepareFormStudio = React.lazy(() =>
   import('./components/PrepareFormStudio').then((m) => ({ default: m.PrepareFormStudio })),
 );
-const EnvelopeInspector = React.lazy(() =>
-  import('./components/EnvelopeInspector').then((m) => ({ default: m.EnvelopeInspector })),
-);
-const TemplatePickerDialog = React.lazy(() =>
-  import('./components/TemplatePickerDialog').then((m) => ({ default: m.TemplatePickerDialog })),
-);
-const BulkSendDialog = React.lazy(() =>
-  import('./components/BulkSendDialog').then((m) => ({ default: m.BulkSendDialog })),
-);
-const PacketsDialog = React.lazy(() =>
-  import('./components/PacketsDialog').then((m) => ({ default: m.PacketsDialog })),
-);
-const NotificationPrefsDialog = React.lazy(() =>
-  import('./components/NotificationPrefsDialog').then((m) => ({
-    default: m.NotificationPrefsDialog,
-  })),
-);
-const WebhooksDialog = React.lazy(() =>
-  import('./components/WebhooksDialog').then((m) => ({ default: m.WebhooksDialog })),
-);
-const RecoveryBinDialog = React.lazy(() =>
-  import('./components/RecoveryBinDialog').then((m) => ({ default: m.RecoveryBinDialog })),
-);
-// P7.3 — searchable global audit log; lazy-loaded when the admin opens it.
-const AuditLogDialog = React.lazy(() =>
-  import('./components/AuditLogDialog').then((m) => ({ default: m.AuditLogDialog })),
-);
-// P7.7 — retention policy editor; lazy-loaded.
-const RetentionPolicyDialog = React.lazy(() =>
-  import('./components/RetentionPolicyDialog').then((m) => ({ default: m.RetentionPolicyDialog })),
-);
-// P8.6 — Per-firm signer-page branding dialog; lazy-loaded.
-const BrandingDialog = React.lazy(() =>
-  import('./components/BrandingDialog').then((m) => ({ default: m.BrandingDialog })),
-);
-
-function StepFallback() {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-    </div>
-  );
-}
 
 type ViewState = 'dashboard' | 'wizard-upload' | 'wizard-recipients' | 'prepare';
-
-/**
- * P4.1 / P4.3 — Template provenance carried through the wizard.
- * When the user picks a template the picker stamps these onto state so the
- * eventual upload can pin the envelope to the exact template snapshot,
- * and the studio can hydrate the field layout without an extra round-trip.
- */
-interface TemplateContext {
-  template: EsignTemplateRecord;
-  /** Pinned at pick-time so later template edits do not retroactively
-   *  rewrite this draft envelope's field layout. */
-  version: number;
-}
-
-interface TemplateBuilderContext {
-  mode: 'create' | 'edit';
-  templateId?: string;
-  name: string;
-  description?: string;
-  category?: string;
-}
 
 export function EsignModule() {
   const [view, setView] = useState<ViewState>('dashboard');
@@ -205,38 +147,8 @@ export function EsignModule() {
     setView('wizard-upload');
   };
 
-  const templateHasSavedDocuments = (template: EsignTemplateRecord | null | undefined): boolean =>
-    Array.isArray(template?.documents) && template.documents.length > 0;
-
-  const mapTemplateRecipientsToWizard = (template: EsignTemplateRecord): SignerFormData[] =>
-    template.recipients.map((recipient, index) => ({
-      name: recipient.name || '',
-      email: recipient.email || '',
-      role: recipient.role || 'Signer',
-      order: recipient.order ?? index + 1,
-      otpRequired: recipient.otpRequired ?? false,
-      accessCode: recipient.accessCode,
-      kind: recipient.kind,
-      clientId: undefined,
-      isSystemClient: false,
-    }));
-
   const syncDraftSigners = async (envelopeId: string, signers: SignerFormData[]) => {
-    await esignApi.saveDraftSigners(
-      envelopeId,
-      signers.map((signer, index) => ({
-        name: signer.name,
-        email: signer.email,
-        phone: signer.phone,
-        role: signer.role || 'Signer',
-        order: signer.order ?? index + 1,
-        otpRequired: signer.otpRequired,
-        accessCode: signer.accessCode,
-        clientId: signer.clientId,
-        isSystemClient: signer.isSystemClient,
-        smsOptIn: signer.smsOptIn,
-      })),
-    );
+    await esignApi.saveDraftSigners(envelopeId, toDraftSignerPayload(signers));
   };
 
   const hydrateTemplateFieldsOntoEnvelope = async (params: {
@@ -245,41 +157,7 @@ export function EsignModule() {
     signers: SignerFormData[];
     documentMap?: Record<string, string>;
   }): Promise<EsignField[]> => {
-    if (params.template.fields.length === 0) {
-      return [];
-    }
-
-    const nowIso = new Date().toISOString();
-    const primaryDocumentId =
-      params.envelope.document?.id ??
-      params.envelope.document_id ??
-      Object.values(params.documentMap || {})[0];
-
-    const fields = params.template.fields
-      .map((templateField, index): EsignField | null => {
-        const recipient = params.signers[templateField.recipientIndex];
-        if (!recipient) return null;
-
-        return {
-          id: `tpl-${params.envelope.id}-${index}`,
-          envelope_id: params.envelope.id,
-          document_id:
-            (templateField.documentId && params.documentMap?.[templateField.documentId]) ||
-            primaryDocumentId,
-          signer_id: recipient.email,
-          type: templateField.type,
-          page: templateField.page,
-          x: templateField.x,
-          y: templateField.y,
-          width: templateField.width,
-          height: templateField.height,
-          required: templateField.required,
-          metadata: templateField.metadata ?? {},
-          created_at: nowIso,
-          updated_at: nowIso,
-        } satisfies EsignField;
-      })
-      .filter((field): field is EsignField => field !== null);
+    const fields = buildTemplateFieldsForEnvelope(params);
 
     if (fields.length > 0) {
       await saveFields(params.envelope.id, fields);
@@ -615,28 +493,12 @@ export function EsignModule() {
     const fieldsToUse = currentFields || activeEnvelope.fields || [];
 
     try {
-      // Map fields to include signerIndex for the backend
-      // fieldsToUse contains fields where signer_id is the signer's email
-      const fieldsForInvite = fieldsToUse.map((f) => {
-        const signerIndex = wizardData.signers.findIndex((s) => s.email === f.signer_id);
-        return {
-          ...f,
-          signerIndex: signerIndex >= 0 ? signerIndex : 0,
-        };
-      });
+      // fieldsToUse contains fields where signer_id is the signer's email;
+      // the backend wants each field stamped with the signer's index.
+      const fieldsForInvite = attachSignerIndexes(fieldsToUse, wizardData.signers);
 
       await sendInvites(activeEnvelope.id, {
-        signers: wizardData.signers.map((s) => ({
-          name: s.name,
-          email: s.email,
-          phone: s.phone,
-          role: s.role,
-          order: s.order,
-          otpRequired: s.otpRequired,
-          accessCode: s.accessCode,
-          clientId: s.clientId,
-          smsOptIn: s.smsOptIn,
-        })),
+        signers: toInviteSignerPayload(wizardData.signers),
         fields: fieldsForInvite,
         message: wizardData.message,
         expiryDays: wizardData.expiryDays,
@@ -803,57 +665,8 @@ export function EsignModule() {
         return;
       }
 
-      // 3. Reconstruct signers from the best available source:
-      //    a) Real signer records (created during invite flow — present if envelope was sent)
-      //    b) draft_signers stored on the envelope record (persisted when moving recipients → prepare)
-      //    c) Empty array (shouldn't happen for a properly created draft)
-      let signers: SignerFormData[] = [];
-
-      const realSigners = fullEnvelope.signers || [];
-      const draftSigners = fullEnvelope.draft_signers || [];
-
-      if (realSigners.length > 0) {
-        // Sent envelopes or envelopes that already went through invite
-        signers = realSigners.map((s: EsignSigner & { requires_otp?: boolean }) => ({
-          name: s.name,
-          email: s.email,
-          role: s.role || 'Signer',
-          order: s.order,
-          otpRequired: s.otp_required ?? s.requires_otp ?? false,
-          accessCode: s.access_code || undefined,
-          clientId: s.client_id || undefined,
-          isSystemClient: !!s.client_id,
-        }));
-      } else if (draftSigners.length > 0) {
-        // Draft envelope resumed via "Continue Editing" — signers not yet
-        // created as real records, but persisted as lightweight form data
-        signers = draftSigners.map(
-          (s: {
-            name: string;
-            email: string;
-            role?: string;
-            order?: number;
-            otpRequired?: boolean;
-            accessCode?: string;
-            clientId?: string;
-            isSystemClient?: boolean;
-          }) => ({
-            name: s.name,
-            email: s.email,
-            role: s.role || 'Signer',
-            order: s.order,
-            otpRequired: s.otpRequired ?? false,
-            accessCode: s.accessCode || undefined,
-            clientId: s.clientId || undefined,
-            isSystemClient: s.isSystemClient ?? !!s.clientId,
-          }),
-        );
-        logger.info(`Restored ${signers.length} draft signer(s) for envelope ${fullEnvelope.id}`);
-      } else {
-        logger.warn(
-          `No signers or draft_signers found for envelope ${fullEnvelope.id} — prepare studio will have no recipients`,
-        );
-      }
+      // 3. Reconstruct signers (real records first, then draft_signers)
+      const signers = signersFromResumedEnvelope(fullEnvelope);
 
       // 4. Populate wizard data and prepare state.
       //    CRITICAL: reset `files` to []. If a previous "Start New" session
@@ -865,12 +678,7 @@ export function EsignModule() {
       const expiresAtIso =
         (fullEnvelope as { expires_at?: string; expiresAt?: string }).expires_at ??
         (fullEnvelope as { expiresAt?: string }).expiresAt;
-      let expiryDays = 30;
-      if (expiresAtIso) {
-        const diffMs = new Date(expiresAtIso).getTime() - Date.now();
-        const diffDays = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-        if (Number.isFinite(diffDays) && diffDays > 0) expiryDays = diffDays;
-      }
+      const expiryDays = deriveExpiryDays(expiresAtIso, Date.now(), 30);
 
       setTemplateBuilder(null);
       setTemplateContext(null);
@@ -942,13 +750,11 @@ export function EsignModule() {
               const expiresAtIso =
                 (updated as { expires_at?: string; expiresAt?: string }).expires_at ??
                 (updated as { expiresAt?: string }).expiresAt;
-              let expiryDays = wizardData.expiryDays;
-              if (expiresAtIso) {
-                const diffMs =
-                  new Date(expiresAtIso).getTime() - new Date(updated.created_at).getTime();
-                const diffDays = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-                if (Number.isFinite(diffDays) && diffDays > 0) expiryDays = diffDays;
-              }
+              const expiryDays = deriveExpiryDays(
+                expiresAtIso,
+                new Date(updated.created_at).getTime(),
+                wizardData.expiryDays,
+              );
               setWizardData((prev) => ({
                 ...prev,
                 title: updated.title,
@@ -1008,277 +814,87 @@ export function EsignModule() {
           )}
 
           {view === 'wizard-recipients' && (
-            <div className="max-w-4xl mx-auto space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-gray-900">Add Recipients</h2>
-                <p className="text-sm text-gray-500">Who needs to sign these documents?</p>
-              </div>
-
-              {/* P4.3 — Express-send banner. When the wizard is using a
-                  template that already has a complete field layout, surface
-                  a clear shortcut so the user can skip the studio. */}
-              {!templateBuilder &&
-                templateContext &&
-                templateContext.template.fields.length > 0 && (
-                  <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-md bg-purple-100 flex items-center justify-center shrink-0">
-                      <ArrowRight className="h-4 w-4 text-purple-700" />
-                    </div>
-                    <div className="flex-1 text-sm">
-                      <p className="font-medium text-gray-900">
-                        Express send from "{templateContext.template.name}"
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        This template already has {templateContext.template.fields.length} field
-                        {templateContext.template.fields.length === 1 ? '' : 's'} placed. Fill in
-                        recipient emails, then send directly without opening the field studio.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-              <Card>
-                <CardContent className="p-6">
-                  <Suspense fallback={<StepFallback />}>
-                    <RecipientsManager
-                      signers={wizardData.signers}
-                      onChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
-                    />
-                  </Suspense>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <Label
-                        htmlFor="auto-populate-suggested-fields"
-                        className="text-sm font-medium text-gray-900"
-                      >
-                        Auto-add suggested PDF fields
-                      </Label>
-                      <p className="text-xs text-muted-foreground max-w-2xl">
-                        When Navigate detects fillable fields or signature anchors during upload,
-                        add those suggestions automatically before the field studio opens. You can
-                        still move, edit, or delete them manually afterward.
-                      </p>
-                    </div>
-                    <Switch
-                      id="auto-populate-suggested-fields"
-                      checked={autoPopulateSuggestedFields}
-                      onCheckedChange={setAutoPopulateSuggestedFields}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-between">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (
-                      wizardData.files.length > 0 ||
-                      (templateBuilder && !templateHasSavedDocuments(templateContext?.template))
-                    ) {
-                      setView('wizard-upload');
-                    } else {
-                      resetWizardState();
-                      setView('dashboard');
-                    }
-                  }}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <div className="flex items-center gap-2">
-                  {!templateBuilder &&
-                    templateContext &&
-                    templateContext.template.fields.length > 0 &&
-                    canSend && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleExpressSend}
-                        disabled={uploading || sending}
-                        className="border-purple-300 text-purple-700 hover:bg-purple-50"
-                      >
-                        {uploading || sending ? (
-                          <div className="contents">
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Sending…
-                          </div>
-                        ) : (
-                          <div className="contents">
-                            Send now (express)
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </div>
-                        )}
-                      </Button>
-                    )}
-                  <Button
-                    onClick={handleRecipientsNext}
-                    disabled={uploading}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    {uploading ? (
-                      <div className="contents">
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating Envelope...
-                      </div>
-                    ) : (
-                      <div className="contents">
-                        Next: Prepare Fields
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <RecipientsStepView
+              signers={wizardData.signers}
+              onSignersChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
+              templateContext={templateContext}
+              isTemplateBuilder={!!templateBuilder}
+              canSend={canSend}
+              autoPopulateSuggestedFields={autoPopulateSuggestedFields}
+              onAutoPopulateChange={setAutoPopulateSuggestedFields}
+              uploading={uploading}
+              sending={sending}
+              onBack={() => {
+                if (
+                  wizardData.files.length > 0 ||
+                  (templateBuilder && !templateHasSavedDocuments(templateContext?.template))
+                ) {
+                  setView('wizard-upload');
+                } else {
+                  resetWizardState();
+                  setView('dashboard');
+                }
+              }}
+              onExpressSend={handleExpressSend}
+              onNext={handleRecipientsNext}
+            />
           )}
         </div>
       )}
 
-      {/* P4.1 / P4.3 — Template picker is shown when starting a new
-          envelope. "Start blank" jumps to the upload step; "Use
-          template" pre-fills recipients/message/expiry and pins the
-          template on the eventual envelope. */}
-      {templatePickerOpen && (
-        <Suspense fallback={null}>
-          <TemplatePickerDialog
-            open={templatePickerOpen}
-            onOpenChange={setTemplatePickerOpen}
-            onStartBlank={handleStartBlank}
-            onSelectTemplate={(template) => handleSelectTemplate(template)}
-          />
-        </Suspense>
-      )}
-
-      {/* P4.7 — Bulk send dialog. Mounted lazily; the dialog drives the
-          campaign + per-row dispatch loop on the client side. */}
-      {bulkSendOpen && (
-        <Suspense fallback={null}>
-          <BulkSendDialog
-            open={bulkSendOpen}
-            onOpenChange={setBulkSendOpen}
-            onCompleted={() => setRefreshTrigger((prev) => prev + 1)}
-          />
-        </Suspense>
-      )}
-
-      {/* P4.8 — Packet workflows dialog (author packets, start runs,
-          monitor live chains). */}
-      {packetsOpen && (
-        <Suspense fallback={null}>
-          <PacketsDialog
-            open={packetsOpen}
-            onOpenChange={setPacketsOpen}
-            onCompleted={() => setRefreshTrigger((prev) => prev + 1)}
-          />
-        </Suspense>
-      )}
-
-      {/* P5.2 — Sender notification preferences dialog. */}
-      {notificationPrefsOpen && (
-        <Suspense fallback={null}>
-          <NotificationPrefsDialog
-            open={notificationPrefsOpen}
-            onOpenChange={setNotificationPrefsOpen}
-          />
-        </Suspense>
-      )}
-
-      {/* P5.4 — Webhook management dialog (endpoints, recent deliveries, DLQ). */}
-      {webhooksOpen && (
-        <Suspense fallback={null}>
-          <WebhooksDialog open={webhooksOpen} onOpenChange={setWebhooksOpen} />
-        </Suspense>
-      )}
-
-      {/* P6.8 — Recovery Bin. Lists soft-deleted envelopes and offers
-          restore / immediate purge for the 90-day retention window. */}
-      {recoveryBinOpen && (
-        <Suspense fallback={null}>
-          <RecoveryBinDialog
-            open={recoveryBinOpen}
-            onOpenChange={setRecoveryBinOpen}
-            onChanged={() => setRefreshTrigger((prev) => prev + 1)}
-          />
-        </Suspense>
-      )}
-
-      {/* P7.3 — Global audit log search across the firm. */}
-      {auditLogOpen && (
-        <Suspense fallback={null}>
-          <AuditLogDialog
-            open={auditLogOpen}
-            onOpenChange={setAuditLogOpen}
-            onOpenEnvelope={(envelopeId) => {
-              esignApi
-                .getEnvelope(envelopeId)
-                .then((env) => {
-                  if (env) {
-                    setSelectedEnvelope(env);
-                    setDetailsDialogOpen(true);
-                  }
-                })
-                .catch((err) => logger.warn('Failed to open envelope from audit log', err));
-            }}
-          />
-        </Suspense>
-      )}
-
-      {/* P7.7 — Retention policy editor. */}
-      {retentionOpen && (
-        <Suspense fallback={null}>
-          <RetentionPolicyDialog open={retentionOpen} onOpenChange={setRetentionOpen} />
-        </Suspense>
-      )}
-
-      {/* P8.6 — Per-firm signer-page branding editor. */}
-      {brandingOpen && (
-        <Suspense fallback={null}>
-          <BrandingDialog open={brandingOpen} onOpenChange={setBrandingOpen} />
-        </Suspense>
-      )}
-
-      {/* Details Modal */}
-      {selectedEnvelope && (
-        <Suspense fallback={<StepFallback />}>
-          <EnvelopeInspector
-            envelope={selectedEnvelope}
-            open={detailsDialogOpen}
-            onOpenChange={setDetailsDialogOpen}
-            onDownloadDocument={handleDownloadDocument}
-            onResumePrepare={canCreate ? handleResumePrepare : undefined}
-            resumingEnvelopeId={resumingEnvelopeId}
-            onVoidEnvelope={
-              canSend
-                ? async (id, reason) => {
-                    await voidEnvelope(id, reason);
-                    setDetailsDialogOpen(false);
-                    setRefreshTrigger((prev) => prev + 1);
-                    toast.success('Voided successfully');
-                  }
-                : undefined
-            }
-            onDeleteEnvelope={
-              canDelete
-                ? async (id) => {
-                    await deleteEnvelope(id);
-                    setDetailsDialogOpen(false);
-                    setRefreshTrigger((prev) => prev + 1);
-                    // P6.8 — soft delete: signal to the user that this is
-                    // recoverable, so they feel safe discarding without
-                    // reaching for "Are you sure?" guardrails.
-                    toast.success('Envelope moved to Recovery Bin (restorable for 90 days).');
-                  }
-                : undefined
-            }
-          />
-        </Suspense>
-      )}
+      <EsignModuleDialogs
+        templatePickerOpen={templatePickerOpen}
+        onTemplatePickerOpenChange={setTemplatePickerOpen}
+        onStartBlank={handleStartBlank}
+        onSelectTemplate={handleSelectTemplate}
+        bulkSendOpen={bulkSendOpen}
+        onBulkSendOpenChange={setBulkSendOpen}
+        packetsOpen={packetsOpen}
+        onPacketsOpenChange={setPacketsOpen}
+        notificationPrefsOpen={notificationPrefsOpen}
+        onNotificationPrefsOpenChange={setNotificationPrefsOpen}
+        webhooksOpen={webhooksOpen}
+        onWebhooksOpenChange={setWebhooksOpen}
+        recoveryBinOpen={recoveryBinOpen}
+        onRecoveryBinOpenChange={setRecoveryBinOpen}
+        auditLogOpen={auditLogOpen}
+        onAuditLogOpenChange={setAuditLogOpen}
+        retentionOpen={retentionOpen}
+        onRetentionOpenChange={setRetentionOpen}
+        brandingOpen={brandingOpen}
+        onBrandingOpenChange={setBrandingOpen}
+        onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
+        onInspectEnvelope={handleViewEnvelope}
+        selectedEnvelope={selectedEnvelope}
+        detailsDialogOpen={detailsDialogOpen}
+        onDetailsOpenChange={setDetailsDialogOpen}
+        onDownloadDocument={handleDownloadDocument}
+        onResumePrepare={canCreate ? handleResumePrepare : undefined}
+        resumingEnvelopeId={resumingEnvelopeId}
+        onVoidEnvelope={
+          canSend
+            ? async (id, reason) => {
+                await voidEnvelope(id, reason);
+                setDetailsDialogOpen(false);
+                setRefreshTrigger((prev) => prev + 1);
+                toast.success('Voided successfully');
+              }
+            : undefined
+        }
+        onDeleteEnvelope={
+          canDelete
+            ? async (id) => {
+                await deleteEnvelope(id);
+                setDetailsDialogOpen(false);
+                setRefreshTrigger((prev) => prev + 1);
+                // P6.8 — soft delete: signal to the user that this is
+                // recoverable, so they feel safe discarding without
+                // reaching for "Are you sure?" guardrails.
+                toast.success('Envelope moved to Recovery Bin (restorable for 90 days).');
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

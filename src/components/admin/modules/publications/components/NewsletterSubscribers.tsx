@@ -17,31 +17,18 @@ import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
 import { Skeleton } from '../../../../ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   Users,
   UserPlus,
   Upload,
-  Download,
   Trash2,
   Search,
-  Loader2,
   CheckCircle,
   XCircle,
   Clock,
   Mail,
-  FileSpreadsheet,
-  AlertCircle,
   RefreshCw,
   Info,
   UserMinus,
@@ -79,6 +66,9 @@ import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofi
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
+
+import { SubscriberDialogs } from './SubscriberDialogs';
+import { SubscriberBulkImportDialog } from './SubscriberBulkImportDialog';
 
 export function NewsletterSubscribers() {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'newsletter-subscribers-search' });
@@ -494,426 +484,52 @@ export function NewsletterSubscribers() {
         </Card>
       )}
 
-      {/* ═══════ Add Single Subscriber Dialog ═══════ */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-purple-500" />
-              Add Newsletter Subscriber
-            </DialogTitle>
-            <DialogDescription>
-              Add a subscriber who has provided offline opt-in consent. This bypasses double opt-in
-              and immediately activates them.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>
-                Email Address <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                type="email"
-                value={addEmail}
-                onChange={(e) => setAddEmail(e.target.value)}
-                placeholder="subscriber@example.com"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSingle()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>
-                First Name <span className="text-muted-foreground text-xs">(optional)</span>
-              </Label>
-              <Input
-                value={addFirstName}
-                onChange={(e) => setAddFirstName(e.target.value)}
-                placeholder="John"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSingle()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>
-                Surname <span className="text-muted-foreground text-xs">(optional)</span>
-              </Label>
-              <Input
-                value={addSurname}
-                onChange={(e) => setAddSurname(e.target.value)}
-                placeholder="Smith"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSingle()}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700"
-              onClick={handleAddSingle}
-              disabled={!addEmail.trim().includes('@') || addMutation.isPending}
-            >
-              {addMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <UserPlus className="h-4 w-4 mr-1.5" />
-              )}
-              Add Subscriber
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══════ Edit Subscriber Dialog ═══════ */}
-      <Dialog
-        open={!!editTarget}
-        onOpenChange={(open) => {
-          if (!open) setEditTarget(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="h-4 w-4 text-purple-500" />
-              Edit Subscriber Details
-            </DialogTitle>
-            <DialogDescription>
-              Update the subscriber name and email address. The newsletter audience will use the new
-              details immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-2">
-              <Label>
-                Email Address <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                placeholder="subscriber@example.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>First Name</Label>
-              <Input
-                value={editFirstName}
-                onChange={(e) => setEditFirstName(e.target.value)}
-                placeholder="John"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Surname</Label>
-              <Input
-                value={editSurname}
-                onChange={(e) => setEditSurname(e.target.value)}
-                placeholder="Smith"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-purple-600 hover:bg-purple-700"
-              onClick={handleUpdateSubscriber}
-              disabled={!editEmail.trim().includes('@') || updateMutation.isPending}
-            >
-              {updateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Pencil className="h-4 w-4 mr-1.5" />
-              )}
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══════ Bulk Import Dialog ═══════ */}
-      <Dialog
-        open={bulkOpen}
-        onOpenChange={(open) => {
-          setBulkOpen(open);
-          if (!open) resetBulk();
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-purple-500" />
-              Bulk Import Subscribers
-            </DialogTitle>
-            <DialogDescription>
-              Upload an Excel spreadsheet with subscriber details. All imported subscribers are
-              assumed to have opted in offline.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Template download */}
-            <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-dashed">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Download Template</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Excel template with Email, First Name/s, and Surname columns
-                  </p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={handleDownloadTemplate}>
-                <Download className="h-3.5 w-3.5 mr-1.5" />
-                Template
-              </Button>
-            </div>
-
-            {/* File upload */}
-            <div className="space-y-2">
-              <Label>Upload File</Label>
-              <div
-                className="border-2 border-dashed rounded-lg p-6 text-center hover:border-purple-300 hover:bg-purple-50/30 transition-colors cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add('border-purple-400', 'bg-purple-50/50');
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50/50');
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove('border-purple-400', 'bg-purple-50/50');
-                  const file = e.dataTransfer.files[0];
-                  if (file) {
-                    setBulkFile(file);
-                    setBulkResult(null);
-                    parseSubscriberFile(file, (rows) => {
-                      if (rows.length === 0) {
-                        toast.error(
-                          'No valid email addresses found. Ensure your file has an "Email" column.',
-                        );
-                      }
-                      setBulkParsed(rows);
-                    });
-                  }
-                }}
-              >
-                <Upload className="h-6 w-6 text-muted-foreground/50 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  {bulkFile ? bulkFile.name : 'Drop an Excel file here or click to browse'}
-                </p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1">
-                  Accepts .xlsx, .xls, and .csv files (max 500 rows)
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </div>
-
-            {/* Parsed preview */}
-            {bulkParsed.length > 0 && !bulkResult && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">
-                    Preview ({bulkParsed.length} subscribers found)
-                  </p>
-                  <Button size="sm" variant="ghost" className="text-xs h-7" onClick={resetBulk}>
-                    Clear
-                  </Button>
-                </div>
-                <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-muted/40 border-b">
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
-                          #
-                        </th>
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
-                          First Name
-                        </th>
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
-                          Surname
-                        </th>
-                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">
-                          Email
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bulkParsed.slice(0, 10).map((row, i) => (
-                        <tr key={row.email} className="border-b last:border-0">
-                          <td className="py-1.5 px-3 text-muted-foreground">{i + 1}</td>
-                          <td className="py-1.5 px-3 text-foreground">
-                            {row.firstName || <span className="text-muted-foreground/40">—</span>}
-                          </td>
-                          <td className="py-1.5 px-3 text-foreground">
-                            {row.surname || <span className="text-muted-foreground/40">—</span>}
-                          </td>
-                          <td className="py-1.5 px-3 font-mono">{row.email}</td>
-                        </tr>
-                      ))}
-                      {bulkParsed.length > 10 && (
-                        <tr>
-                          <td colSpan={4} className="py-1.5 px-3 text-muted-foreground text-center">
-                            ...and {bulkParsed.length - 10} more
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Upload results */}
-            {bulkResult && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Import Results</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="flex items-center gap-2 p-2.5 bg-green-50 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <div>
-                      <p className="text-sm font-bold text-green-800">{bulkResult.added}</p>
-                      <p className="text-[10px] text-green-600">Added</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 bg-amber-50 rounded-lg">
-                    <Clock className="h-4 w-4 text-amber-600" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-800">{bulkResult.skipped}</p>
-                      <p className="text-[10px] text-amber-600">Skipped</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 bg-red-50 rounded-lg">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <div>
-                      <p className="text-sm font-bold text-red-800">{bulkResult.errors.length}</p>
-                      <p className="text-[10px] text-red-600">Errors</p>
-                    </div>
-                  </div>
-                </div>
-                {bulkResult.errors.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 max-h-24 overflow-y-auto">
-                    {bulkResult.errors.map((err, i) => (
-                      <p key={i} className="text-[11px] text-red-700">
-                        {err}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setBulkOpen(false);
-                resetBulk();
-              }}
-            >
-              {bulkResult ? 'Done' : 'Cancel'}
-            </Button>
-            {!bulkResult && (
-              <Button
-                className="bg-purple-600 hover:bg-purple-700"
-                onClick={handleBulkUpload}
-                disabled={bulkParsed.length === 0 || bulkMutation.isPending}
-              >
-                {bulkMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-1.5" />
-                )}
-                Import {bulkParsed.length} Subscriber{bulkParsed.length !== 1 ? 's' : ''}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══════ Remove Confirmation Dialog ═══════ */}
-      <Dialog
-        open={!!removeTarget}
-        onOpenChange={(open) => {
-          if (!open) setRemoveTarget(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              Remove Subscriber
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove <strong>{removeTarget}</strong> from the newsletter?
-              They will no longer receive future communications.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRemoveTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRemove}
-              disabled={removeMutation.isPending}
-            >
-              {removeMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-1.5" />
-              )}
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══════ Re-subscribe Confirmation Dialog ═══════ */}
-      <Dialog
-        open={!!resubscribeTarget}
-        onOpenChange={(open) => {
-          if (!open) setResubscribeTarget(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-5 w-5" />
-              Re-subscribe Subscriber
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to re-subscribe <strong>{resubscribeTarget}</strong> to the
-              newsletter? They will receive future communications.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setResubscribeTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleResubscribe}
-              disabled={resubscribeMutation.isPending}
-            >
-              {resubscribeMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <RotateCcw className="h-4 w-4 mr-1.5" />
-              )}
-              Re-subscribe
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SubscriberDialogs
+        addOpen={addOpen}
+        setAddOpen={setAddOpen}
+        addFirstName={addFirstName}
+        setAddFirstName={setAddFirstName}
+        addSurname={addSurname}
+        setAddSurname={setAddSurname}
+        addEmail={addEmail}
+        setAddEmail={setAddEmail}
+        addMutation={addMutation}
+        handleAddSingle={handleAddSingle}
+        editTarget={editTarget}
+        setEditTarget={setEditTarget}
+        editFirstName={editFirstName}
+        setEditFirstName={setEditFirstName}
+        editSurname={editSurname}
+        setEditSurname={setEditSurname}
+        editEmail={editEmail}
+        setEditEmail={setEditEmail}
+        updateMutation={updateMutation}
+        handleUpdateSubscriber={handleUpdateSubscriber}
+        removeTarget={removeTarget}
+        setRemoveTarget={setRemoveTarget}
+        removeMutation={removeMutation}
+        handleRemove={handleRemove}
+        resubscribeTarget={resubscribeTarget}
+        setResubscribeTarget={setResubscribeTarget}
+        resubscribeMutation={resubscribeMutation}
+        handleResubscribe={handleResubscribe}
+      />
+      <SubscriberBulkImportDialog
+        bulkOpen={bulkOpen}
+        setBulkOpen={setBulkOpen}
+        bulkFile={bulkFile}
+        setBulkFile={setBulkFile}
+        bulkParsed={bulkParsed}
+        setBulkParsed={setBulkParsed}
+        bulkResult={bulkResult}
+        setBulkResult={setBulkResult}
+        bulkMutation={bulkMutation}
+        fileInputRef={fileInputRef}
+        handleFileChange={handleFileChange}
+        handleBulkUpload={handleBulkUpload}
+        handleDownloadTemplate={handleDownloadTemplate}
+        resetBulk={resetBulk}
+      />
     </div>
   );
 }

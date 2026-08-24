@@ -12,7 +12,7 @@ import { Button } from '../../../../../ui/button';
 import { CheckCircle, Zap, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { ActionPriorityBar } from './OverviewCharts';
 import type { ActionDistribution } from './OverviewCharts';
-import type { ActionItem, ActionPriority } from '../clientOverviewUtils';
+import type { ActionItem, ActionPriority } from '../clientOverview/actionItems';
 import type { DashboardMode } from '../clientOverviewConstants';
 
 // ── Priority styles ──────────────────────────────────────────────────────

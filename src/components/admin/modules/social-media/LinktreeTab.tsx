@@ -14,7 +14,7 @@
  * @module social-media/LinktreeTab
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
@@ -23,7 +23,6 @@ import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
 import { Switch } from '../../../ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { toast } from 'sonner';
 import {
   Link as LinkIcon,
@@ -41,212 +40,21 @@ import {
   Settings,
   Inbox,
   MousePointer,
-  Linkedin,
-  Youtube,
-  Facebook,
-  Twitter,
-  Mail,
-  Phone,
-  MapPin,
-  CalendarCheck,
-  FileText,
-  BookOpen,
   Zap,
-  X,
 } from 'lucide-react';
-import { api } from '../../../../utils/api';
 import { normalizeNavigateWealthUrl } from '../../../../utils/siteOrigin';
 import { BRAND } from './constants';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface LinktreeLink {
-  id: string;
-  title: string;
-  url: string;
-  icon?: string;
-  description?: string;
-  enabled: boolean;
-  order: number;
-  clicks: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface LinktreeSettings {
-  title: string;
-  bio: string;
-  avatarUrl?: string;
-  theme: 'navy' | 'gold' | 'light' | 'dark';
-  showBranding: boolean;
-  socialProfiles?: Record<string, string>;
-}
-
-// ============================================================================
-// Quick Add Templates
-// ============================================================================
-
-interface QuickAddTemplate {
-  title: string;
-  url: string;
-  description: string;
-  icon: React.ReactNode;
-  category: 'website' | 'social' | 'contact' | 'content';
-}
-
-const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
-  {
-    title: 'Company Website',
-    url: 'https://www.navigatewealth.co',
-    description: 'Visit our official website',
-    icon: <Globe className="h-4 w-4" />,
-    category: 'website',
-  },
-  {
-    title: 'Book a Consultation',
-    url: 'https://www.navigatewealth.co/contact',
-    description: 'Schedule a free financial planning session',
-    icon: <CalendarCheck className="h-4 w-4" />,
-    category: 'contact',
-  },
-  {
-    title: 'Our Services',
-    url: 'https://www.navigatewealth.co/services',
-    description: 'Explore our financial planning solutions',
-    icon: <FileText className="h-4 w-4" />,
-    category: 'website',
-  },
-  {
-    title: 'Latest Blog Posts',
-    url: 'https://www.navigatewealth.co/resources',
-    description: 'Financial insights and market updates',
-    icon: <BookOpen className="h-4 w-4" />,
-    category: 'content',
-  },
-  {
-    title: 'LinkedIn',
-    url: 'https://www.linkedin.com/company/navigate-wealth',
-    description: 'Follow us on LinkedIn',
-    icon: <Linkedin className="h-4 w-4" />,
-    category: 'social',
-  },
-  {
-    title: 'Instagram',
-    url: 'https://www.instagram.com/navigatewealth',
-    description: 'Follow us on Instagram',
-    icon: <Instagram className="h-4 w-4" />,
-    category: 'social',
-  },
-  {
-    title: 'Facebook',
-    url: 'https://www.facebook.com/navigatewealth',
-    description: 'Like us on Facebook',
-    icon: <Facebook className="h-4 w-4" />,
-    category: 'social',
-  },
-  {
-    title: 'YouTube Channel',
-    url: 'https://www.youtube.com/@navigatewealth',
-    description: 'Watch our financial planning videos',
-    icon: <Youtube className="h-4 w-4" />,
-    category: 'content',
-  },
-  {
-    title: 'Email Us',
-    url: 'mailto:info@navigatewealth.co.za',
-    description: 'Get in touch via email',
-    icon: <Mail className="h-4 w-4" />,
-    category: 'contact',
-  },
-  {
-    title: 'Call Us',
-    url: 'tel:+27126672505',
-    description: '(012) 667 2505',
-    icon: <Phone className="h-4 w-4" />,
-    category: 'contact',
-  },
-  {
-    title: 'Office Location',
-    url: 'https://maps.google.com/?q=Route+21+Corporate+Park+Centurion',
-    description: 'Route 21 Corporate Park, Centurion',
-    icon: <MapPin className="h-4 w-4" />,
-    category: 'contact',
-  },
-];
-
-// Social profile platform definitions
-const SOCIAL_PLATFORMS = [
-  {
-    key: 'instagram',
-    label: 'Instagram',
-    icon: <Instagram className="h-4 w-4" />,
-    placeholder: 'https://instagram.com/navigatewealth',
-  },
-  {
-    key: 'linkedin',
-    label: 'LinkedIn',
-    icon: <Linkedin className="h-4 w-4" />,
-    placeholder: 'https://linkedin.com/company/navigate-wealth',
-  },
-  {
-    key: 'facebook',
-    label: 'Facebook',
-    icon: <Facebook className="h-4 w-4" />,
-    placeholder: 'https://facebook.com/navigatewealth',
-  },
-  {
-    key: 'youtube',
-    label: 'YouTube',
-    icon: <Youtube className="h-4 w-4" />,
-    placeholder: 'https://youtube.com/@navigatewealth',
-  },
-  {
-    key: 'twitter',
-    label: 'X (Twitter)',
-    icon: <Twitter className="h-4 w-4" />,
-    placeholder: 'https://x.com/navigatewealth',
-  },
-  {
-    key: 'email',
-    label: 'Email',
-    icon: <Mail className="h-4 w-4" />,
-    placeholder: 'mailto:info@navigatewealth.co.za',
-  },
-] as const;
-
-const CATEGORY_LABELS: Record<string, string> = {
-  website: 'Website',
-  social: 'Social Media',
-  contact: 'Contact',
-  content: 'Content',
-};
-
-// ============================================================================
-// API
-// ============================================================================
-
-const BASE = '/linktree';
-
-async function fetchJson<T>(url: string, opts?: RequestInit): Promise<T> {
-  // url is BASE + suffix (e.g. '/linktree/links'); strip to just the suffix
-  const path = url.startsWith('/linktree') ? url : BASE + url.replace(/^.*\/linktree/, '');
-  const method = (opts?.method || 'GET') as 'GET' | 'POST' | 'PUT' | 'DELETE';
-  const body = opts?.body ? JSON.parse(opts.body as string) : undefined;
-  const res = await (method === 'GET'
-    ? api.get<{ data: T }>(path)
-    : method === 'DELETE'
-      ? api.delete<{ data: T }>(path)
-      : method === 'PUT'
-        ? api.put<{ data: T }>(path, body)
-        : api.post<{ data: T }>(path, body));
-  return res.data;
-}
-
-// ============================================================================
-// Component
-// ============================================================================
+import {
+  QUICK_ADD_TEMPLATES,
+  SOCIAL_PLATFORMS,
+  BASE,
+  fetchJson,
+  type LinktreeLink,
+  type LinktreeSettings,
+  type QuickAddTemplate,
+} from './linktree/linktreeModel';
+import { QuickAddDialog } from './linktree/QuickAddDialog';
+import { LinktreeSettingsDialog } from './linktree/LinktreeSettingsDialog';
 
 export function LinktreeTab() {
   const [links, setLinks] = useState<LinktreeLink[]>([]);
@@ -831,98 +639,16 @@ export function LinktreeTab() {
       {/* ================================================================== */}
       {/* Quick Add Dialog                                                    */}
       {/* ================================================================== */}
-      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" style={{ color: BRAND.gold }} />
-              Quick Add Links
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground -mt-2">
-            Pre-configured templates for common Navigate Wealth links. Click to add instantly.
-          </p>
-
-          {/* Category filter */}
-          <div className="flex items-center gap-1.5 py-1">
-            {['all', 'website', 'social', 'contact', 'content'].map((cat) => (
-              <Button
-                key={cat}
-                variant={quickAddCategory === cat ? 'default' : 'outline'}
-                size="sm"
-                className={`h-7 text-xs ${quickAddCategory === cat ? 'text-white' : ''}`}
-                style={quickAddCategory === cat ? { backgroundColor: BRAND.navy } : undefined}
-                onClick={() => setQuickAddCategory(cat)}
-              >
-                {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
-              </Button>
-            ))}
-          </div>
-
-          {/* Templates grid */}
-          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-            {filteredTemplates.map((template) => {
-              const added = isTemplateAdded(template);
-              const templateKey = `${template.title}-${template.url}`;
-              const isAdding = addingTemplateId === templateKey;
-
-              return (
-                <div
-                  key={templateKey}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    added
-                      ? 'bg-green-50/50 border-green-200/50'
-                      : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div
-                    className="flex items-center justify-center h-9 w-9 rounded-lg flex-shrink-0"
-                    style={{ backgroundColor: added ? '#dcfce7' : BRAND.navyLight }}
-                  >
-                    <span style={{ color: added ? '#16a34a' : BRAND.navy }}>
-                      {added ? <Check className="h-4 w-4" /> : template.icon}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{template.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{template.description}</p>
-                  </div>
-                  {added ? (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] text-green-700 border-green-300 bg-green-50"
-                    >
-                      Added
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleQuickAdd(template)}
-                      disabled={isAdding}
-                      className="h-7 text-xs gap-1"
-                    >
-                      {isAdding ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Plus className="h-3 w-3" />
-                      )}
-                      Add
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      <QuickAddDialog
+        open={quickAddOpen}
+        onOpenChange={setQuickAddOpen}
+        quickAddCategory={quickAddCategory}
+        setQuickAddCategory={setQuickAddCategory}
+        filteredTemplates={filteredTemplates}
+        isTemplateAdded={isTemplateAdded}
+        addingTemplateId={addingTemplateId}
+        onQuickAdd={handleQuickAdd}
+      />
       {/* ================================================================== */}
       {/* Edit / Create Dialog                                                */}
       {/* ================================================================== */}
@@ -985,114 +711,20 @@ export function LinktreeTab() {
       {/* ================================================================== */}
       {/* Settings Dialog                                                     */}
       {/* ================================================================== */}
-      <Dialog open={settingsDialog} onOpenChange={setSettingsDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Page Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5 py-2">
-            {/* General */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                General
-              </h3>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Page Title</Label>
-                <Input value={sTitle} onChange={(e) => setSTitle(e.target.value)} maxLength={100} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Bio / Tagline</Label>
-                <Textarea
-                  value={sBio}
-                  onChange={(e) => setSBio(e.target.value)}
-                  rows={2}
-                  maxLength={200}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Theme</Label>
-                <Select
-                  value={sTheme}
-                  onValueChange={(v) => setSTheme(v as LinktreeSettings['theme'])}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="navy">Navy (Brand Default)</SelectItem>
-                    <SelectItem value="gold">Gold Accent</SelectItem>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Social Profiles */}
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Social Profiles
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Displayed as icon buttons below your bio on the public page
-                </p>
-              </div>
-              {SOCIAL_PLATFORMS.map((platform) => (
-                <div key={platform.key} className="flex items-center gap-2">
-                  <div
-                    className="flex items-center justify-center h-8 w-8 rounded-lg flex-shrink-0"
-                    style={{ backgroundColor: BRAND.navyLight }}
-                  >
-                    <span style={{ color: BRAND.navy }}>{platform.icon}</span>
-                  </div>
-                  <Input
-                    placeholder={platform.placeholder}
-                    value={sSocialProfiles[platform.key] || ''}
-                    onChange={(e) =>
-                      setSSocialProfiles((prev) => ({
-                        ...prev,
-                        [platform.key]: e.target.value,
-                      }))
-                    }
-                    className="flex-1 text-sm"
-                  />
-                  {sSocialProfiles[platform.key] && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
-                      onClick={() =>
-                        setSSocialProfiles((prev) => {
-                          const next = { ...prev };
-                          delete next[platform.key];
-                          return next;
-                        })
-                      }
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveSettings}
-              disabled={saving}
-              className="text-white"
-              style={{ backgroundColor: BRAND.navy }}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-              Save Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LinktreeSettingsDialog
+        open={settingsDialog}
+        onOpenChange={setSettingsDialog}
+        sTitle={sTitle}
+        setSTitle={setSTitle}
+        sBio={sBio}
+        setSBio={setSBio}
+        sTheme={sTheme}
+        setSTheme={setSTheme}
+        sSocialProfiles={sSocialProfiles}
+        setSSocialProfiles={setSSocialProfiles}
+        saving={saving}
+        onSave={handleSaveSettings}
+      />
 
       {/* ================================================================== */}
       {/* Delete Confirmation                                                 */}

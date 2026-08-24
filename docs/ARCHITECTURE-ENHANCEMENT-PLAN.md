@@ -174,10 +174,23 @@ and it is where bounded, paginated reads replace unbounded `getByPrefix`.
 
 ### 3.2 Split the god files
 
-Decompose along the layering, not by line count:
+Decompose along the layering, not by line count.
 
-- `resources-service.ts` (1,702) → `resources-repository` + `legal-documents-service`
-  - `rss-service` + `zip-archive-service`. (Nine bounded contexts in one class today.)
+**Progress: 74 → 71 files over 1,000 lines.** Each split is verified as a pure
+move — every function body compared before and after, whitespace- and
+trailing-comma-insensitive — rather than trusted to be one.
+
+| File                           | Was   | Now | Into                                                     |
+| ------------------------------ | ----- | --- | -------------------------------------------------------- |
+| `RoAModuleContractManager.tsx` | 2,125 | 545 | a JSX-free helpers module + 9 editor components          |
+| `resources-service.ts`         | 1,725 | 309 | legal reads, legal authoring, zip tools                  |
+| `clientOverviewUtils.ts`       | 1,650 | —   | 10 modules under `clientOverview/`, the old file deleted |
+
+- `resources-service.ts` (1,725) → **DONE**, though not on the boundaries named
+  here: the file's own structure put reads and authoring on opposite sides of a
+  one-way dependency, and the zip tools owned the only Storage access. There was
+  no `resources-repository` to extract — the CRUD is eight lines of `kv` calls —
+  so inventing one would have been indirection for its own sake.
 - `communication-service.ts` (1,387) → `messaging-service` + `contact-group-service`
   - `email-template-service` + `campaign-service`, over a `communication-repository`.
 - `quote-request-routes.ts` (1,580, a single handler) → route (validate + rate-limit)
@@ -501,13 +514,13 @@ Stage B's five workstreams (§10) were: introduce `repositories/`; global
 `onError`; request-id logging + metrics; consolidate auth onto `auth-mw`;
 `zValidator` on auth + esign.
 
-| Workstream                        | State                                                                                                                                                     |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Global `onError` (B1)             | **DONE.** Shared handler on all 77 lazy mounts, plus the non-`Error` dispatch gap and two disclosure fixes found reviewing it.                            |
-| `zValidator` on auth + esign (B2) | **MECHANISM DONE, ADOPTION RATCHETED.** `validate.ts` + 13 routes wired; `.route-validation-baseline` = 63 remaining.                                     |
-| Request-id logging (B4)           | **DONE.** `request-context.ts` (AsyncLocalStorage, feature-detected); every log line via one change to `formatMessage`. **Metrics NOT done** — see below. |
-| Consolidate auth onto `auth-mw`   | **PARTLY DONE + RATCHETED.** 7 → 5 hand-rolled implementations; `.auth-implementations-baseline` floors it. Found and fixed S12.                          |
-| Introduce `repositories/`         | **SEEDED + RATCHETED.** Typed base with bounded reads by default; one namespace migrated; `.kv-direct-import-baseline` = 176.                             |
+| Workstream                        | State                                                                                                                                                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Global `onError` (B1)             | **DONE.** Shared handler on all 77 lazy mounts, plus the non-`Error` dispatch gap and two disclosure fixes found reviewing it.                                                                                              |
+| `zValidator` on auth + esign (B2) | **MECHANISM DONE, ADOPTION RATCHETED.** `validate.ts` + 13 routes wired; `.route-validation-baseline` = 63 remaining.                                                                                                       |
+| Request-id logging (B4)           | **DONE.** `request-context.ts` (AsyncLocalStorage, feature-detected); every log line via one change to `formatMessage`. **Metrics NOT done** — see below.                                                                   |
+| Consolidate auth onto `auth-mw`   | **PARTLY DONE + RATCHETED.** 7 → 5 hand-rolled implementations; `.auth-implementations-baseline` floors it. Found and fixed S12.                                                                                            |
+| Introduce `repositories/`         | **SEEDED + RATCHETED.** Typed base with bounded reads by default; one namespace migrated; `.kv-direct-access-baseline` = 1780 direct `kv.*` calls (counts calls, not importing modules, so a file split cannot inflate it). |
 
 **Three of the five are ratcheted rather than finished, and that is the honest
 description.** Each backlog is too large to clear in one pass without changing

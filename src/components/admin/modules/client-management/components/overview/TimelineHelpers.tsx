@@ -7,8 +7,8 @@
 
 import { Badge } from '../../../../../ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { fmtDate, fmtDateTime, fmtRelative } from '../clientOverviewUtils';
-import type { ActivityEvent } from '../clientOverviewUtils';
+import { fmtDate, fmtDateTime, fmtRelative } from '../clientOverview/format';
+import type { ActivityEvent } from '../clientOverview/activity';
 
 // ── TimelineEvent component ──────────────────────────────────────────────
 

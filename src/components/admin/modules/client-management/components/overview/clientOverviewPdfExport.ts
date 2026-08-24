@@ -8,8 +8,11 @@
 import { api } from '../../../../../../utils/api/client';
 import { createClient as createSupabaseClient } from '../../../../../../utils/supabase/client';
 import { publicAnonKey, supabaseUrl } from '../../../../../../utils/supabase/info';
-import { addressLine, numVal } from '../clientOverviewUtils';
-import type { Policy, ActionItem, GapItem } from '../clientOverviewUtils';
+import { addressLine } from '../clientOverview/format';
+import { numVal } from '../clientOverview/policyFields';
+import type { ActionItem } from '../clientOverview/actionItems';
+import type { GapItem } from '../clientOverview/gapAnalysis';
+import type { Policy } from '../clientOverview/policyFields';
 import type { Client, ProfileData } from '../../types';
 import type { HealthSubScores } from '../../utils';
 import type { KPIValue } from './KPISummaryTable';

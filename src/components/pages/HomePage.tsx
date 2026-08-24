@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useImagePrefetch } from '../../hooks/useImagePrefetch';
+import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { Link } from 'react-router';
-import { SEO, createOrganizationSchema, createWebPageSchema, createFAQSchema } from '../seo/SEO';
-import { getSEOData, commonFAQs } from '../seo/seo-config';
-import { createWebSiteSchema } from '../seo/SEO';
+import { SEO } from '../seo/SEO';
+import { commonFAQs } from '../seo/seo-config';
 import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { OptimizedImage } from '../shared/OptimizedImage';
-import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { FAQSection } from '../shared/FAQSection';
-import { Avatar, AvatarFallback } from '../ui/avatar';
 const VideoModal = React.lazy(() =>
   import('../modals/VideoModal').then((m) => ({ default: m.VideoModal })),
 );
@@ -25,55 +23,31 @@ const FeaturedInsights = React.lazy(() =>
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import saFlag from 'figma:asset/543ae964645db88228743731ee3eebbbc2e3686e.png';
-import medicalAidImage from 'figma:asset/0e2b917f64eba502a24068ea5244bd25b0dfc9d5.png';
-import familyImage from 'figma:asset/8a93f2fa219696290136738d0dc439f43b6c6235.png';
-import consultationImage from 'figma:asset/b0b37f186d8c48117bede379a79e329626b6ac95.png';
-import investmentConsultationImage from 'figma:asset/fc6a85769d1248cdde73b1d2252674e730f0655a.png';
-import estatePlanningImage from 'figma:asset/482a45127e501f4b3cecd244241cff6024f47011.png';
-import {
-  allanGrayLogo,
-  brightRockLogo,
-  capitalLegacyLogo,
-  discoveryLogo,
-  hollardLogo,
-  libertyLogo,
-  momentumLogo,
-  oldMutualLogo,
-  sanlamLogo,
-  stanlibLogo,
-  sygniaLogo,
-  justLogo,
-} from '../shared/assets/provider-logos';
 // WORKAROUND: consultationImage reused as retirementPlanningImage — same asset hash.
 // If a distinct retirement image is added in Figma, replace this alias.
-const retirementPlanningImage = consultationImage;
-import taxPlanningImage from 'figma:asset/7f33deddff0f6240cb18dcef045f830436c30355.png';
-import southAfricanCurrencyImage from 'figma:asset/1f32a99aadd795f3c7f5c530f916c758d6ccb6f0.png';
-import employeeBenefitsTeamImage from 'figma:asset/dc2935371f93dc2f6da2f85cfa093001ca172d63.png';
-import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';
-import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import {
   ArrowRight,
   Shield,
   Target,
   TrendingUp,
-  FileText,
-  Calculator,
-  Briefcase,
   Gift,
   CheckCircle,
   Phone,
   Mail,
   MapPin,
   Star,
-  ChevronLeft,
-  ChevronRight,
   Zap,
   Heart,
   Globe,
-  Stethoscope,
   Loader2,
 } from 'lucide-react';
+import { seoData, homePageStructuredData, heroSlides, providers, services } from './homePageData';
+import {
+  ServicesPreviewSection,
+  WhyNavigateSection,
+  ProvidersCarouselSection,
+  ReviewsSection,
+} from './homePageSections';
 
 export function HomePage() {
   const [currentProviderIndex, setCurrentProviderIndex] = useState(0);
@@ -129,18 +103,6 @@ export function HomePage() {
   }, []);
 
   // Get SEO data for home page
-  const seoData = getSEOData('home');
-
-  // Combined structured data for homepage
-  const homePageStructuredData = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      createOrganizationSchema(),
-      createWebSiteSchema(),
-      createWebPageSchema(seoData.title, seoData.description, seoData.canonicalUrl!),
-      createFAQSchema(commonFAQs),
-    ],
-  };
 
   // Preload the smallest truly critical above-the-fold asset for better performance
   useEffect(() => {
@@ -166,162 +128,12 @@ export function HomePage() {
     };
   }, []);
 
-  const services = [
-    {
-      title: 'Risk Management',
-      description:
-        "Protect your family's financial future with comprehensive risk management solutions tailored to your needs.",
-      icon: Shield,
-      image: familyImage,
-      imageKey: 'risk-management-family',
-      link: '/risk-management',
-    },
-    {
-      title: 'Retirement Planning',
-      description:
-        'Build wealth for retirement with strategies designed to maintain your lifestyle and financial independence.',
-      icon: Target,
-      image: retirementPlanningImage,
-      link: '/retirement-planning',
-    },
-    {
-      title: 'Investment Management',
-      description:
-        'Grow your wealth with carefully selected local and offshore investments tailored to your risk profile.',
-      icon: TrendingUp,
-      image: investmentConsultationImage,
-      imageKey: 'investment-consultation',
-      link: '/investment-management',
-    },
-    {
-      title: 'Estate Planning',
-      description:
-        'Preserve your legacy and minimize taxes with comprehensive wills, trusts, and tailored estate strategies.',
-      icon: FileText,
-      image: estatePlanningImage,
-      imageKey: 'estate-planning',
-      link: '/estate-planning',
-    },
-    {
-      title: 'Tax Planning',
-      description:
-        'Minimize tax liabilities and ensure compliance with expert strategies that optimize your tax position.',
-      icon: Calculator,
-      image: taxPlanningImage,
-      link: '/tax-planning',
-    },
-    {
-      title: 'Employee Benefits',
-      description:
-        'Attract and retain top talent with comprehensive employee benefit plans that enhance company culture.',
-      icon: Briefcase,
-      image: employeeBenefitsTeamImage,
-      imageKey: 'employee-benefits',
-      link: '/employee-benefits',
-    },
-    {
-      title: 'Cashback',
-      description:
-        'Earn monthly cashback rewards on all policies and get rewarded for smart financial planning decisions.',
-      icon: Gift,
-      image: southAfricanCurrencyImage,
-      link: '/services',
-    },
-    {
-      title: 'Medical Aid',
-      description:
-        "Access quality healthcare with comprehensive medical aid schemes tailored to your family's needs.",
-      icon: Stethoscope,
-      image: medicalAidImage,
-      imageKey: 'medical-aid',
-      link: '/medical-aid',
-    },
-  ];
-
   // Background prefetch: while the user stays on Home, warm the cache for
   // likely next pages (optimized, right-sized variants only).
   useImagePrefetch(
     services.filter((s) => !!s.imageKey).map((s) => getOptimizedImageUrl(s.imageKey!, 768, 'webp')),
     { delayMs: 3000, idleTimeoutMs: 4000 },
   );
-
-  const providers = [
-    { name: 'Discovery', logo: discoveryLogo },
-    { name: 'Old Mutual', logo: oldMutualLogo },
-    { name: 'Sanlam', logo: sanlamLogo },
-    { name: 'Liberty', logo: libertyLogo },
-    { name: 'Momentum', logo: momentumLogo },
-    { name: 'Allan Gray', logo: allanGrayLogo },
-    { name: 'BrightRock', logo: brightRockLogo },
-    { name: 'Hollard', logo: hollardLogo },
-    { name: 'Stanlib', logo: stanlibLogo },
-    { name: 'Capital Legacy', logo: capitalLegacyLogo },
-    { name: 'Sygnia', logo: sygniaLogo },
-    { name: 'JUST', logo: justLogo },
-  ];
-
-  const heroSlides = [
-    {
-      id: 1,
-      title: 'Secure Your Financial',
-      titleAccent: ' Future.',
-      description:
-        'Create a financial future that matches your ambition with personal, comprehensive solutions designed with you in mind.',
-      primaryAction: {
-        text: 'Get Started',
-        link: '/signup',
-      },
-      secondaryAction: {
-        text: 'Our Services',
-        link: '/services',
-      },
-    },
-    {
-      id: 2,
-      title: 'Secure Your Retirement With',
-      titleAccent: ' Confidence.',
-      description:
-        'Build wealth systematically with retirement strategies designed to maintain your lifestyle and financial independence for years to come.',
-      primaryAction: {
-        text: 'Plan My Retirement',
-        link: '/retirement-planning',
-      },
-      secondaryAction: {
-        text: 'Get Quote',
-        link: '/get-quote',
-      },
-    },
-    {
-      id: 3,
-      title: 'Grow Your Wealth With',
-      titleAccent: ' Expert Guidance.',
-      description:
-        'Maximize returns with carefully selected local and offshore investments, tailored to your risk profile and financial goals.',
-      primaryAction: {
-        text: 'Explore Investments',
-        link: '/investment-management',
-      },
-      secondaryAction: {
-        text: 'Contact Adviser',
-        link: '/contact',
-      },
-    },
-    {
-      id: 4,
-      title: 'Protect What Matters',
-      titleAccent: ' Most.',
-      description:
-        "Safeguard your family's financial future with comprehensive risk management solutions tailored to your unique needs and circumstances.",
-      primaryAction: {
-        text: 'Protect My Family',
-        link: '/risk-management',
-      },
-      secondaryAction: {
-        text: 'Learn More',
-        link: '/services',
-      },
-    },
-  ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -571,350 +383,19 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Our Services Preview */}
-        <section className="py-24 section-white">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-            <div className="text-center mb-16">
-              <h2 className="text-black mb-6">Our Services</h2>
-              <p className="text-gray-600 max-w-3xl mx-auto text-lg">
-                Comprehensive financial solutions designed to protect and grow your wealth at every
-                stage of life.
-              </p>
-            </div>
+        <ServicesPreviewSection onOpenCashback={() => setCashbackModalOpen(true)} />
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {services.map((service, index) => {
-                const isPrimaryCard = index === 0;
-                const hoverPrefetch = () => {
-                  if (!service.imageKey) return;
-                  prefetchImages([getOptimizedImageUrl(service.imageKey, 1024, 'webp')]);
-                };
-                return (
-                  <Card
-                    key={index}
-                    className="group bg-white border border-gray-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
-                    onMouseEnter={hoverPrefetch}
-                  >
-                    {/* Clean Image Section */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      {service.imageKey ? (
-                        <ResponsiveImage
-                          imageKey={service.imageKey}
-                          fallbackSrc={service.image}
-                          alt={service.title}
-                          width={400}
-                          height={300}
-                          loading={isPrimaryCard ? 'eager' : 'lazy'}
-                          fetchPriority={isPrimaryCard ? 'high' : 'auto'}
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
-                        />
-                      ) : (
-                        <OptimizedImage
-                          src={service.image}
-                          alt={service.title}
-                          width={400}
-                          height={300}
-                          priority={isPrimaryCard}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 high-quality-image"
-                          loading={isPrimaryCard ? 'eager' : 'lazy'}
-                          fetchpriority={isPrimaryCard ? 'high' : 'auto'}
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                        />
-                      )}
+        <WhyNavigateSection />
 
-                      {/* Simple Icon Badge */}
-                      <div className="absolute top-3 left-3 w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                        <service.icon className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
+        <ProvidersCarouselSection
+          currentProviderIndex={currentProviderIndex}
+          onNext={nextProvider}
+          onPrev={prevProvider}
+          onGoTo={(index) => setCurrentProviderIndex(index)}
+          onViewAll={() => setProvidersModalOpen(true)}
+        />
 
-                    {/* Clean Content Section */}
-                    <div className="p-6">
-                      <div className="space-y-3">
-                        <h3 className="text-gray-900 text-lg font-semibold line-clamp-1">
-                          {service.title}
-                        </h3>
-
-                        <p className="text-gray-600 leading-relaxed line-clamp-3 text-[13px]">
-                          {service.description}
-                        </p>
-                      </div>
-
-                      {/* Clean Action Button */}
-                      <div className="mt-4 pt-2">
-                        {service.title === 'Cashback' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full group/btn border-gray-200 text-gray-700 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
-                            onClick={() => setCashbackModalOpen(true)}
-                          >
-                            <span>Learn More</span>
-                            <ArrowRight className="ml-2 h-3 w-3 group-hover/btn:translate-x-0.5 transition-transform duration-200" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full group/btn border-gray-200 text-gray-700 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
-                            asChild
-                          >
-                            <Link to={service.link}>
-                              <span>Learn More</span>
-                              <ArrowRight className="ml-2 h-3 w-3 group-hover/btn:translate-x-0.5 transition-transform duration-200" />
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Why Navigate Wealth */}
-        <section className="py-20 section-dark-gray">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-            <div className="text-center mb-16">
-              <h2 className="text-white mb-4">Why us?</h2>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8 lg:gap-12 xl:gap-16">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-                  <Globe className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-white">We're Independent</h3>
-                <p className="text-gray-300">
-                  Unbiased advice and access to top-tier products from multiple providers.
-                </p>
-              </div>
-
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-                  <Heart className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-white">We're Customer-Centric</h3>
-                <p className="text-gray-300">
-                  We tailor all planning around each client's goals, values, and timeline.
-                </p>
-              </div>
-
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-                  <Zap className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-white">We're Technology-Enabled</h3>
-                <p className="text-gray-300">
-                  We integrate tech to streamline onboarding, analysis, and portfolio monitoring.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Product Provider Logos */}
-        <section className="py-20 section-white">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-            <div className="text-center mb-16">
-              <h2 className="text-black mb-4">Trusted Partners</h2>
-              <p className="text-gray-600 max-w-3xl mx-auto">
-                Navigate Wealth only works with the best product providers to ensure that you
-                receive the highest quality financial solutions.
-              </p>
-            </div>
-
-            <div className="relative max-w-6xl mx-auto">
-              {/* Navigation Buttons */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={prevProvider}
-                className="absolute -left-4 lg:-left-8 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 text-gray-600 hover:text-primary hover:border-primary hover:shadow-lg transition-all duration-200"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={nextProvider}
-                className="absolute -right-4 lg:-right-8 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 text-gray-600 hover:text-primary hover:border-primary hover:shadow-lg transition-all duration-200"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-
-              {/* Logo Grid - Clean Layout */}
-              <div className="overflow-visible px-4 sm:px-8 lg:px-12">
-                <div className="flex justify-center">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-12 xl:gap-16 w-full max-w-5xl">
-                    {providers
-                      .slice(
-                        currentProviderIndex,
-                        Math.min(currentProviderIndex + 4, providers.length),
-                      )
-                      .map((provider, index) => {
-                        const actualIndex = currentProviderIndex + index;
-                        return (
-                          <div
-                            key={`${provider.name}-${actualIndex}`}
-                            className="flex items-center justify-center py-6 sm:py-8 px-2 group cursor-default"
-                          >
-                            <OptimizedImage
-                              src={provider.logo}
-                              alt={`${provider.name} logo`}
-                              width={200}
-                              height={100}
-                              className="h-12 sm:h-14 lg:h-20 xl:h-24 w-full max-w-full object-contain opacity-85 group-hover:opacity-100 transition-all duration-300 group-hover:scale-105 high-quality-image filter grayscale-0"
-                              loading="lazy"
-                              fetchpriority="auto"
-                              sizes="(max-width: 640px) 120px, (max-width: 768px) 150px, (max-width: 1024px) 180px, 200px"
-                              decoding="async"
-                            />
-                          </div>
-                        );
-                      })}
-
-                    {/* Fill empty spaces when less than 4 items */}
-                    {Array.from({
-                      length: Math.max(
-                        0,
-                        4 -
-                          (Math.min(currentProviderIndex + 4, providers.length) -
-                            currentProviderIndex),
-                      ),
-                    }).map((_, index) => (
-                      <div
-                        key={`empty-${index}`}
-                        className="py-6 sm:py-8 px-2 hidden lg:block"
-                      ></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Pagination Dots */}
-              <div className="flex justify-center mt-8 space-x-2">
-                {Array.from({ length: Math.ceil(providers.length / 4) }).map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentProviderIndex(index * 4)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      Math.floor(currentProviderIndex / 4) === index
-                        ? 'bg-primary scale-125'
-                        : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
-                    aria-label={`Go to provider group ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* View All Partners Button */}
-            <div className="text-center mt-12">
-              <Button
-                variant="outline"
-                className="border-gray-200 text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
-                onClick={() => setProvidersModalOpen(true)}
-              >
-                View All Partners
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Customer Reviews */}
-        <section className="py-20 section-dark-gray">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-            <div className="text-center mb-16">
-              <h2 className="text-white mb-4">What Our Clients Say</h2>
-              <p className="text-gray-300 max-w-3xl mx-auto">
-                Don't just take our word for it. Here's what our valued clients have to say about
-                their experience with Navigate Wealth.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-              {/* Review 1 */}
-              <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    "Navigate Wealth transformed our financial planning approach. Their independent
-                    advice and personalized strategies helped us achieve our retirement goals faster
-                    than we thought possible."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/20 text-primary">SM</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="text-white font-medium">Sarah Mitchell</div>
-                      <div className="text-gray-400 text-sm">Retired Teacher</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Review 2 */}
-              <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    "The team's expertise in risk management saved our family from financial
-                    uncertainty. Their comprehensive approach covers all aspects of our financial
-                    well-being."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/20 text-primary">DT</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="text-white font-medium">David Thompson</div>
-                      <div className="text-gray-400 text-sm">Business Owner</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Review 3 */}
-              <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    "Professional, knowledgeable, and truly independent. Navigate Wealth helped us
-                    navigate complex investment decisions with confidence and clarity."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/20 text-primary">LP</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="text-white font-medium">Lisa Patel</div>
-                      <div className="text-gray-400 text-sm">Medical Professional</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
+        <ReviewsSection />
 
         {/* Featured Insights — dynamically populated from published featured articles */}
         <Suspense fallback={null}>

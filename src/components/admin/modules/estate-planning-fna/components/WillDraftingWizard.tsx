@@ -16,26 +16,17 @@
  *  - Step counter in footer
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import {
   ArrowLeft,
   ArrowRight,
   Loader2,
-  User,
-  Users,
-  Home,
-  Briefcase,
   Heart,
   CheckCircle2,
-  FileText,
   AlertCircle,
   Scroll,
-  Shield,
-  Activity,
-  HandHeart,
-  Stethoscope,
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -46,9 +37,6 @@ import { logger } from '../../../../../utils/logger';
 import type {
   PersonalDetails,
   Beneficiary,
-  Guardian,
-  Executor,
-  SpecificBequest,
   WillData,
   LivingWillData,
   WizardStep,
@@ -74,6 +62,9 @@ import {
 
 // Re-export types for consumers that import from the main file
 export type { WillDraftingWizardProps } from './WillDraftingTypes';
+import { getWizardSteps } from './willWizardSteps';
+import { validateWizardStep, validateWillForSubmit } from './willWizardValidation';
+import { createWillCollectionHandlers } from './createWillCollectionHandlers';
 
 // ═══════════════════════════════════════════════════════
 // Component
@@ -317,172 +308,12 @@ export function WillDraftingWizard({
   }, [open, clientId, clientName, existingWillId, isLivingWill]);
 
   // ── Steps configuration ──────────────────────────────────────────
-  const steps: { id: WizardStep; label: string; icon: React.ElementType; description: string }[] =
-    isLivingWill
-      ? [
-          {
-            id: 'personal-details',
-            label: 'Personal Details',
-            icon: User,
-            description: 'Testator identification and address',
-          },
-          {
-            id: 'healthcare-agents',
-            label: 'Healthcare Agents',
-            icon: Shield,
-            description: 'Appoint healthcare decision-makers',
-          },
-          {
-            id: 'life-sustaining',
-            label: 'Treatment',
-            icon: Activity,
-            description: 'Life-sustaining treatment preferences',
-          },
-          {
-            id: 'pain-management',
-            label: 'Pain Management',
-            icon: Stethoscope,
-            description: 'Comfort care and pain relief',
-          },
-          {
-            id: 'organ-donation',
-            label: 'Organ Donation',
-            icon: HandHeart,
-            description: 'Organ and tissue donation wishes',
-          },
-          {
-            id: 'living-will-wishes',
-            label: 'Final Wishes',
-            icon: Heart,
-            description: 'Funeral and end-of-life directives',
-          },
-          {
-            id: 'review',
-            label: 'Review',
-            icon: CheckCircle2,
-            description: 'Review and save the draft',
-          },
-        ]
-      : [
-          {
-            id: 'personal-details',
-            label: 'Personal Details',
-            icon: User,
-            description: 'Testator identification and address',
-          },
-          {
-            id: 'executors',
-            label: 'Executors',
-            icon: Briefcase,
-            description: 'Appoint estate administrators',
-          },
-          {
-            id: 'beneficiaries',
-            label: 'Beneficiaries',
-            icon: Users,
-            description: 'Designate heirs and their shares',
-          },
-          {
-            id: 'guardians',
-            label: 'Guardians',
-            icon: Shield,
-            description: 'Guardians for minor children',
-          },
-          {
-            id: 'bequests',
-            label: 'Bequests',
-            icon: Home,
-            description: 'Specific items to specific people',
-          },
-          {
-            id: 'funeral-wishes',
-            label: 'Final Wishes',
-            icon: FileText,
-            description: 'Funeral wishes and additional clauses',
-          },
-          {
-            id: 'review',
-            label: 'Review',
-            icon: CheckCircle2,
-            description: 'Review and save the draft',
-          },
-        ];
-
+  const steps = getWizardSteps(isLivingWill);
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
   // ── Step Validation ──────────────────────────────────────────────
-  const validateCurrentStep = (): string[] => {
-    const errors: string[] = [];
-    const pd = isLivingWill ? livingWillData.personalDetails : willData.personalDetails;
-
-    switch (currentStep) {
-      case 'personal-details':
-        if (!pd.fullName.trim()) errors.push('Full name is required');
-        if (!pd.idNumber.trim()) errors.push('ID number is required');
-        if (!pd.dateOfBirth) errors.push('Date of birth is required');
-        if (!pd.physicalAddress.trim()) errors.push('Physical address is required');
-        break;
-
-      case 'healthcare-agents':
-        if (livingWillData.healthcareAgents.length === 0) {
-          errors.push('At least one healthcare agent is required');
-        } else {
-          const hasPrimary = livingWillData.healthcareAgents.some((a) => a.isPrimary);
-          if (!hasPrimary) errors.push('At least one agent must be designated as primary');
-          livingWillData.healthcareAgents.forEach((agent, idx) => {
-            if (!agent.name.trim()) errors.push(`Agent ${idx + 1}: Name is required`);
-          });
-        }
-        break;
-
-      case 'life-sustaining': {
-        const t = livingWillData.lifeSustainingTreatment;
-        const treatments = [
-          'ventilator',
-          'cpr',
-          'artificialNutrition',
-          'dialysis',
-          'antibiotics',
-        ] as const;
-        treatments.forEach((key) => {
-          if (!t[key]) errors.push(`Treatment preference for ${key} is required`);
-        });
-        break;
-      }
-
-      case 'executors':
-        if (willData.executors.length === 0) {
-          errors.push('At least one executor is recommended');
-        } else {
-          willData.executors.forEach((exec, idx) => {
-            if (!exec.name.trim()) errors.push(`Executor ${idx + 1}: Name is required`);
-          });
-        }
-        break;
-
-      case 'beneficiaries':
-        if (willData.beneficiaries.length === 0) {
-          errors.push('At least one beneficiary is recommended');
-        } else {
-          const total = willData.beneficiaries.reduce((s, b) => s + b.percentage, 0);
-          if (total > 0 && total !== 100) {
-            errors.push(`Beneficiary percentages total ${total}% — should equal 100%`);
-          }
-          willData.beneficiaries.forEach((b, idx) => {
-            if (!b.name.trim()) errors.push(`Beneficiary ${idx + 1}: Name is required`);
-          });
-        }
-        break;
-
-      // pain-management, organ-donation, living-will-wishes, guardians, bequests, funeral-wishes:
-      // These steps have no hard validation requirements
-      default:
-        break;
-    }
-
-    return errors;
-  };
-
+  const validateCurrentStep = (): string[] =>
+    validateWizardStep(currentStep, isLivingWill, willData, livingWillData);
   const handleNext = () => {
     const errors = validateCurrentStep();
     if (errors.length > 0) {
@@ -515,28 +346,8 @@ export function WillDraftingWizard({
   };
 
   // ── Submit-time validation (checks all critical fields) ──────────
-  const validateForSubmit = (): string[] => {
-    const errors: string[] = [];
-    const pd = isLivingWill ? livingWillData.personalDetails : willData.personalDetails;
-
-    // Personal details are always required
-    if (!pd.fullName.trim()) errors.push('Full name is required');
-    if (!pd.idNumber.trim()) errors.push('ID number is required');
-
-    if (isLivingWill) {
-      if (livingWillData.healthcareAgents.length === 0) {
-        errors.push('At least one healthcare agent is required');
-      } else {
-        const hasPrimary = livingWillData.healthcareAgents.some((a) => a.isPrimary);
-        if (!hasPrimary) errors.push('A primary healthcare agent must be designated');
-        const unnamed = livingWillData.healthcareAgents.filter((a) => !a.name.trim());
-        if (unnamed.length > 0) errors.push(`${unnamed.length} healthcare agent(s) have no name`);
-      }
-    }
-
-    return errors;
-  };
-
+  const validateForSubmit = (): string[] =>
+    validateWillForSubmit(isLivingWill, willData, livingWillData);
   const handleSubmit = async () => {
     // Run submit-level validation
     const submitErrors = validateForSubmit();
@@ -580,173 +391,24 @@ export function WillDraftingWizard({
     }
   };
 
-  const updatePersonalDetails = (field: keyof PersonalDetails, value: string) => {
-    if (isLivingWill) {
-      setLivingWillData((prev) => ({
-        ...prev,
-        personalDetails: { ...prev.personalDetails, [field]: value },
-      }));
-    } else {
-      setWillData((prev) => ({
-        ...prev,
-        personalDetails: { ...prev.personalDetails, [field]: value },
-      }));
-    }
-  };
-
-  // ── Living Will Helpers ──────────────────────────────────────────
-  const addHealthcareAgent = () => {
-    setLivingWillData((prev) => ({
-      ...prev,
-      healthcareAgents: [
-        ...prev.healthcareAgents,
-        {
-          id: Date.now().toString(),
-          name: '',
-          idNumber: '',
-          relationship: '',
-          contactDetails: '',
-          isPrimary: prev.healthcareAgents.length === 0,
-        },
-      ],
-    }));
-  };
-
-  const updateHealthcareAgent = (id: string, field: string, value: string | boolean) => {
-    setLivingWillData((prev) => ({
-      ...prev,
-      healthcareAgents: prev.healthcareAgents.map((a) =>
-        a.id === id ? { ...a, [field]: value } : a,
-      ),
-    }));
-  };
-
-  const removeHealthcareAgent = (id: string) => {
-    setLivingWillData((prev) => ({
-      ...prev,
-      healthcareAgents: prev.healthcareAgents.filter((a) => a.id !== id),
-    }));
-  };
-
-  const addExecutor = () => {
-    const newExecutor: Executor = {
-      id: Date.now().toString(),
-      type: 'individual',
-      name: '',
-      contactDetails: '',
-    };
-    setWillData((prev) => ({
-      ...prev,
-      executors: [...prev.executors, newExecutor],
-    }));
-  };
-
-  const updateExecutor = (id: string, field: keyof Executor, value: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      executors: prev.executors.map((exec) =>
-        exec.id === id ? { ...exec, [field]: value } : exec,
-      ),
-    }));
-  };
-
-  const removeExecutor = (id: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      executors: prev.executors.filter((exec) => exec.id !== id),
-    }));
-  };
-
-  const addBeneficiary = () => {
-    const newBeneficiary: Beneficiary = {
-      id: Date.now().toString(),
-      name: '',
-      idNumber: '',
-      relationship: '',
-      percentage: 0,
-    };
-    setWillData((prev) => ({
-      ...prev,
-      beneficiaries: [...prev.beneficiaries, newBeneficiary],
-    }));
-  };
-
-  const updateBeneficiary = (id: string, field: keyof Beneficiary, value: string | number) => {
-    setWillData((prev) => ({
-      ...prev,
-      beneficiaries: prev.beneficiaries.map((ben) =>
-        ben.id === id ? { ...ben, [field]: value } : ben,
-      ),
-    }));
-  };
-
-  const removeBeneficiary = (id: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      beneficiaries: prev.beneficiaries.filter((ben) => ben.id !== id),
-    }));
-  };
-
-  const addGuardian = () => {
-    const newGuardian: Guardian = {
-      id: Date.now().toString(),
-      name: '',
-      idNumber: '',
-      relationship: '',
-      address: '',
-    };
-    setWillData((prev) => ({
-      ...prev,
-      guardians: [...prev.guardians, newGuardian],
-    }));
-  };
-
-  const updateGuardian = (id: string, field: keyof Guardian, value: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      guardians: prev.guardians.map((guard) =>
-        guard.id === id ? { ...guard, [field]: value } : guard,
-      ),
-    }));
-  };
-
-  const removeGuardian = (id: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      guardians: prev.guardians.filter((guard) => guard.id !== id),
-    }));
-  };
-
-  const addBequest = () => {
-    const newBequest: SpecificBequest = {
-      id: Date.now().toString(),
-      itemDescription: '',
-      beneficiaryName: '',
-      beneficiaryIdNumber: '',
-    };
-    setWillData((prev) => ({
-      ...prev,
-      specificBequests: [...prev.specificBequests, newBequest],
-    }));
-  };
-
-  const updateBequest = (id: string, field: keyof SpecificBequest, value: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      specificBequests: prev.specificBequests.map((beq) =>
-        beq.id === id ? { ...beq, [field]: value } : beq,
-      ),
-    }));
-  };
-
-  const removeBequest = (id: string) => {
-    setWillData((prev) => ({
-      ...prev,
-      specificBequests: prev.specificBequests.filter((beq) => beq.id !== id),
-    }));
-  };
-
-  // ── Derived helpers ──────────────────────────────────────────────
+  const {
+    updatePersonalDetails,
+    addHealthcareAgent,
+    updateHealthcareAgent,
+    removeHealthcareAgent,
+    addExecutor,
+    updateExecutor,
+    removeExecutor,
+    addBeneficiary,
+    updateBeneficiary,
+    removeBeneficiary,
+    addGuardian,
+    updateGuardian,
+    removeGuardian,
+    addBequest,
+    updateBequest,
+    removeBequest,
+  } = createWillCollectionHandlers({ isLivingWill, setWillData, setLivingWillData });
   const beneficiaryTotal = useMemo(
     () => willData.beneficiaries.reduce((s, b) => s + b.percentage, 0),
     [willData.beneficiaries],

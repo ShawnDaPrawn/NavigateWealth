@@ -23,55 +23,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Checkbox } from '../../../../ui/checkbox';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
-import {
-  Paperclip,
-  X,
-  File as FileIcon,
   Trash2,
   Loader2,
-  Plus,
-  CheckSquare,
-  GripVertical,
   User,
-  Activity,
   AlignLeft,
   Tag as _TagIcon,
   CreditCard,
   Bell,
   Pencil,
 } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { logger } from '../../../../../utils/logger';
-
-interface Attachment {
-  id: string;
-  name: string;
-  url: string;
-  size: number;
-  type: string;
-  uploadedAt: string;
-}
-
-interface TaskComment {
-  id: string;
-  text: string;
-  taskId: string;
-  createdAt: string;
-  userId?: string; // In a real app, we'd have user info
-  userName?: string;
-}
+import { type Attachment, type TaskComment } from './taskFormModalModel';
+import { TaskChecklistSection } from './TaskChecklistSection';
+import { TaskAttachmentsSection } from './TaskAttachmentsSection';
+import { TaskActivitySection } from './TaskActivitySection';
+import { TaskFormModalDialogs } from './TaskFormModalDialogs';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -639,257 +608,33 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
               </div>
 
               {/* Checklist Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-gray-500">
-                      <CheckSquare className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-medium text-gray-900">Checklist</h3>
-                  </div>
-                </div>
-
-                <div className="pl-9 space-y-4">
-                  {/* Progress Bar */}
-                  {checklistItems.length > 0 && (
-                    <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
-                      <span className="text-xs font-medium w-8 text-right">
-                        {Math.round(
-                          (checklistItems.filter((i) => i.completed).length /
-                            checklistItems.length) *
-                            100,
-                        )}
-                        %
-                      </span>
-                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-500 transition-all duration-300"
-                          style={{
-                            width: `${Math.round((checklistItems.filter((i) => i.completed).length / checklistItems.length) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Checklist Items */}
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="checklist">
-                      {(provided) => (
-                        <div
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          className="space-y-2"
-                        >
-                          {checklistItems.map((item, index) => (
-                            <Draggable key={item.id} draggableId={item.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  className={`flex items-center gap-3 group p-2 hover:bg-gray-50 rounded-md transition-colors ${snapshot.isDragging ? 'bg-white shadow-lg z-50 ring-1 ring-gray-200' : ''}`}
-                                >
-                                  <div
-                                    {...provided.dragHandleProps}
-                                    className="text-gray-400 cursor-grab active:cursor-grabbing hover:text-gray-600"
-                                  >
-                                    <GripVertical className="h-4 w-4" />
-                                  </div>
-                                  <Checkbox
-                                    id={`checklist-${item.id}`}
-                                    checked={item.completed}
-                                    onCheckedChange={() => handleToggleChecklistItem(item.id)}
-                                  />
-                                  <Label
-                                    htmlFor={`checklist-${item.id}`}
-                                    className={`flex-1 text-sm cursor-pointer ${item.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}
-                                  >
-                                    {item.text}
-                                  </Label>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteChecklistItem(item.id)}
-                                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
-
-                  {/* Add Item Input */}
-                  <div className="pl-8">
-                    <div className="flex gap-2">
-                      <Input
-                        value={newChecklistItem}
-                        onChange={(e) => setNewChecklistItem(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === 'Enter' && (e.preventDefault(), handleAddChecklistItem())
-                        }
-                        placeholder="Add an item..."
-                        className="flex-1 h-9 text-sm"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleAddChecklistItem}
-                        disabled={!newChecklistItem.trim()}
-                        variant="secondary"
-                        className="shrink-0 h-9"
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <TaskChecklistSection
+                checklistItems={checklistItems}
+                newChecklistItem={newChecklistItem}
+                setNewChecklistItem={setNewChecklistItem}
+                handleAddChecklistItem={handleAddChecklistItem}
+                handleToggleChecklistItem={handleToggleChecklistItem}
+                handleDeleteChecklistItem={handleDeleteChecklistItem}
+                handleDragEnd={handleDragEnd}
+              />
 
               {/* Attachments Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-gray-500">
-                      <Paperclip className="w-5 h-5" />
-                    </div>
-                    <h3 className="font-medium text-gray-900">Attachments</h3>
-                  </div>
-                  <div>
-                    <input
-                      type="file"
-                      id="file-upload"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className={`text-xs font-medium flex items-center gap-2 cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-900 px-3 py-1.5 rounded-md transition-colors ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                    >
-                      {isUploading ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Plus className="h-3 w-3" />
-                      )}
-                      Add
-                    </label>
-                  </div>
-                </div>
-
-                <div className="pl-9 space-y-3">
-                  {attachments.map((att) => (
-                    <div
-                      key={att.id}
-                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors group"
-                    >
-                      <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center shrink-0">
-                        <FileIcon className="h-5 w-5 text-gray-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <a
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-sm text-gray-900 hover:underline truncate block"
-                        >
-                          {att.name}
-                        </a>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                          <span>{new Date(att.uploadedAt).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>{(att.size / 1024).toFixed(1)} KB</span>
-                          <span>•</span>
-                          <button
-                            onClick={() => handleDeleteAttachment(att.id)}
-                            className="text-gray-500 hover:text-red-600 underline"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {attachments.length === 0 && (
-                    <div className="text-sm text-gray-500 italic">No attachments</div>
-                  )}
-                </div>
-              </div>
+              <TaskAttachmentsSection
+                attachments={attachments}
+                isUploading={isUploading}
+                handleFileUpload={handleFileUpload}
+                handleDeleteAttachment={handleDeleteAttachment}
+              />
 
               {/* Activity Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-500">
-                    <Activity className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-medium text-gray-900">Activity</h3>
-                </div>
-
-                <div className="pl-9 space-y-6">
-                  {/* Comment Input */}
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 shrink-0">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <Textarea
-                        placeholder="Write a comment..."
-                        className="min-h-[80px] text-sm resize-y"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                      />
-                      {newComment.trim() && (
-                        <div className="flex justify-end">
-                          <Button
-                            size="sm"
-                            onClick={handleAddComment}
-                            disabled={isLoadingComments}
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                          >
-                            {isLoadingComments ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : null}
-                            Save Comment
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Comment List */}
-                  <div className="space-y-6">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3 text-sm group">
-                        <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 uppercase border border-purple-200">
-                          {(comment.userName || 'S').charAt(0)}
-                        </div>
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900">
-                              {comment.userName || 'Super Admin'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(comment.createdAt).toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="text-gray-800 leading-relaxed">{comment.text}</div>
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity pt-1">
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="text-xs text-gray-500 hover:text-red-600 hover:underline"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <TaskActivitySection
+                comments={comments}
+                isLoadingComments={isLoadingComments}
+                newComment={newComment}
+                setNewComment={setNewComment}
+                handleAddComment={handleAddComment}
+                handleDeleteComment={handleDeleteComment}
+              />
             </div>
 
             {/* RIGHT COLUMN (Sidebar) */}
@@ -978,65 +723,17 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
         </DialogContent>
       </Dialog>
 
-      {/* Delete Task Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this task? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Archive Task Confirmation Dialog */}
-      <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Archive Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to archive this task?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmArchive}>Archive</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Attachment Confirmation Dialog */}
-      <AlertDialog
-        open={!!attachmentToDelete}
-        onOpenChange={(open) => {
-          if (!open) setAttachmentToDelete(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this attachment? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteAttachment}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <TaskFormModalDialogs
+        showDeleteDialog={showDeleteDialog}
+        setShowDeleteDialog={setShowDeleteDialog}
+        showArchiveDialog={showArchiveDialog}
+        setShowArchiveDialog={setShowArchiveDialog}
+        attachmentToDelete={attachmentToDelete}
+        setAttachmentToDelete={setAttachmentToDelete}
+        confirmDelete={confirmDelete}
+        confirmArchive={confirmArchive}
+        confirmDeleteAttachment={confirmDeleteAttachment}
+      />
     </div>
   );
 }

@@ -5,13 +5,11 @@
 
 import React, { useState, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'react-router';
-import { Card, CardContent } from '../../../ui/card';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import {
   Dialog,
   DialogContent,
@@ -30,7 +28,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '../../../ui/alert';
 import {
   FileText,
-  Search,
   Settings,
   PenTool,
   Printer,
@@ -39,11 +36,6 @@ import {
   Scale,
   Loader2,
   MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  CheckSquare,
-  Square,
   Users,
   ChevronRight,
   X,
@@ -58,12 +50,12 @@ import { FormDefinition } from './types';
 import { generatePreviewData, getCategoryColor } from './utils';
 import { LEGAL_DOCUMENTS } from './legal-constants';
 import { api } from '../../../../utils/api';
-import { Skeleton } from '../../../ui/skeleton';
 
 import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
 
 // Phase 1 — Form status config
-import { FORM_STATUS_CONFIG, type FormStatus } from './builder/constants';
+import { FormsFilterBar } from './components/FormsFilterBar';
+import { FormsList } from './components/FormsList';
 
 // ---------------------------------------------------------------------------
 // Heavy sub-components — lazy-loaded to reduce initial chunk size.
@@ -592,127 +584,15 @@ export function ResourcesModule() {
           </div>
 
           {/* Filter Bar */}
-          <Card className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-end gap-4">
-                {/* Search */}
-                <div className="flex-1">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Search
-                  </Label>
-                  <div className="relative mt-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search forms by name or description..."
-                      value={filters.search}
-                      onChange={(e) => updateFilters({ search: e.target.value })}
-                      className="pl-10 h-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Category */}
-                <div className="w-44">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Category
-                  </Label>
-                  <Select
-                    value={filters.category}
-                    onValueChange={(value) => updateFilters({ category: value })}
-                  >
-                    <SelectTrigger className="h-10 mt-1">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Client Type */}
-                <div className="w-40">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Client Type
-                  </Label>
-                  <Select
-                    value={filters.clientType}
-                    onValueChange={(value) => updateFilters({ clientType: value })}
-                  >
-                    <SelectTrigger className="h-10 mt-1">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      {clientTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Phase 1: Status Filter */}
-                <div className="w-36">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Status
-                  </Label>
-                  <Select
-                    value={filters.status || 'all'}
-                    onValueChange={(value) => updateFilters({ status: value })}
-                  >
-                    <SelectTrigger className="h-10 mt-1">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="draft">
-                        <span className="flex items-center gap-1.5">
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
-                          Draft
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="published">
-                        <span className="flex items-center gap-1.5">
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
-                          Published
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="archived">
-                        <span className="flex items-center gap-1.5">
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          Archived
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Select mode toggle */}
-                <Button
-                  variant={isSelectMode ? 'default' : 'outline'}
-                  size="sm"
-                  className="h-10 shrink-0"
-                  onClick={() => {
-                    setIsSelectMode(!isSelectMode);
-                    if (isSelectMode) setSelectedFormIds(new Set());
-                  }}
-                >
-                  {isSelectMode ? (
-                    <CheckSquare className="h-4 w-4 mr-1.5" />
-                  ) : (
-                    <Square className="h-4 w-4 mr-1.5" />
-                  )}
-                  {isSelectMode ? 'Done' : 'Select'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
+          <FormsFilterBar
+            categories={categories}
+            clientTypes={clientTypes}
+            filters={filters}
+            updateFilters={updateFilters}
+            isSelectMode={isSelectMode}
+            setIsSelectMode={setIsSelectMode}
+            setSelectedFormIds={setSelectedFormIds}
+          />
           {/* Selection action bar */}
           {isSelectMode && selectedFormIds.size > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
@@ -739,242 +619,25 @@ export function ResourcesModule() {
           )}
 
           {/* Forms List */}
-          <div>
-            {loading ? (
-              <div className="border rounded-lg divide-y bg-white">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border">
-                    <Skeleton className="w-9 h-9 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-44" />
-                        <Skeleton className="h-5 w-16 rounded-full" />
-                      </div>
-                      <Skeleton className="h-3 w-64" />
-                    </div>
-                    <Skeleton className="h-3 w-8 hidden lg:block" />
-                    <Skeleton className="h-3 w-16 hidden lg:block" />
-                    <Skeleton className="h-7 w-16 rounded-md" />
-                    <Skeleton className="h-7 w-16 rounded-md" />
-                  </div>
-                ))}
-              </div>
-            ) : filteredForms.length > 0 ? (
-              <div className="border rounded-lg divide-y bg-white">
-                {filteredForms.map((form) => {
-                  const isSelected = selectedFormIds.has(form.id);
-                  return (
-                    <div
-                      key={form.id}
-                      className={`flex items-center gap-4 px-4 py-3 group hover:bg-gray-50/50 transition-colors ${
-                        isSelected ? 'bg-primary/5' : ''
-                      }`}
-                    >
-                      {/* Selection checkbox */}
-                      {isSelectMode && (
-                        <button onClick={() => toggleFormSelection(form.id)} className="shrink-0">
-                          {isSelected ? (
-                            <CheckSquare className="h-5 w-5 text-primary" />
-                          ) : (
-                            <Square className="h-5 w-5 text-gray-300 hover:text-gray-500" />
-                          )}
-                        </button>
-                      )}
-
-                      {/* Icon */}
-                      <div
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                          form.category === 'Letters' ? 'bg-violet-50' : 'bg-gray-100'
-                        }`}
-                      >
-                        {form.category === 'Letters' ? (
-                          <Mail className="h-4 w-4 text-violet-500" />
-                        ) : (
-                          <FileText className="h-4 w-4 text-gray-500" />
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold truncate">{form.name}</h3>
-                          <Badge
-                            variant="secondary"
-                            className={`text-[10px] px-1.5 py-0 h-5 ${getCategoryColor(form.category)}`}
-                          >
-                            {form.category}
-                          </Badge>
-                          {/* Phase 1: Status badge */}
-                          {form.status && FORM_STATUS_CONFIG[form.status as FormStatus] && (
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] px-1.5 py-0 h-5 ${FORM_STATUS_CONFIG[form.status as FormStatus].badgeClass}`}
-                            >
-                              <span
-                                className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${FORM_STATUS_CONFIG[form.status as FormStatus].dotClass}`}
-                              />
-                              {FORM_STATUS_CONFIG[form.status as FormStatus].label}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {form.description || 'No description'}
-                        </p>
-                      </div>
-
-                      {/* Meta */}
-                      <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground shrink-0">
-                        <span>v{form.version}</span>
-                        <span>{form.clientTypes[0] || 'Universal'}</span>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleQuickPreview(form)}
-                          title="Quick preview (empty data)"
-                        >
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          Preview
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs text-primary"
-                          onClick={() => handlePrefill([form])}
-                          title="Pre-fill with client data"
-                        >
-                          <Users className="h-3.5 w-3.5 mr-1" />
-                          Pre-fill
-                        </Button>
-                        {canEdit && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            onClick={() => handleEdit(form)}
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {/* Phase 1: Row-level actions menu (duplicate, status, delete) */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
-                            >
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            {canEdit && (
-                              <DropdownMenuItem onClick={() => handleEdit(form)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit in Builder
-                              </DropdownMenuItem>
-                            )}
-                            {canCreate && (
-                              <DropdownMenuItem onClick={() => duplicateResource(form.id)}>
-                                <FileText className="h-4 w-4 mr-2" />
-                                Duplicate
-                              </DropdownMenuItem>
-                            )}
-                            {canEdit && (
-                              <div className="contents">
-                                <DropdownMenuSeparator />
-                                {form.status !== 'published' && (
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      updateResource(form.id, { status: 'published' } as Record<
-                                        string,
-                                        unknown
-                                      >)
-                                    }
-                                  >
-                                    <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
-                                    Publish
-                                  </DropdownMenuItem>
-                                )}
-                                {form.status !== 'draft' && (
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      updateResource(form.id, { status: 'draft' } as Record<
-                                        string,
-                                        unknown
-                                      >)
-                                    }
-                                  >
-                                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2" />
-                                    Revert to Draft
-                                  </DropdownMenuItem>
-                                )}
-                                {form.status !== 'archived' && (
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      updateResource(form.id, { status: 'archived' } as Record<
-                                        string,
-                                        unknown
-                                      >)
-                                    }
-                                  >
-                                    <span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" />
-                                    Archive
-                                  </DropdownMenuItem>
-                                )}
-                              </div>
-                            )}
-                            {canDelete && (
-                              <div className="contents">
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-700"
-                                  onClick={() => handleDelete(form)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </div>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-16 text-muted-foreground border rounded-lg bg-white">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No forms available</p>
-                <p className="text-sm mt-1">
-                  {filters.search
-                    ? 'Try adjusting your search or filters'
-                    : 'Build a new form to get started'}
-                </p>
-              </div>
-            )}
-
-            {/* Count footer */}
-            {!loading && filteredForms.length > 0 && (
-              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground px-1">
-                <span>
-                  {filteredForms.length} form{filteredForms.length !== 1 ? 's' : ''}
-                </span>
-                <div className="flex gap-2">
-                  {Object.entries(categoryCounts).map(([cat, count]) => (
-                    <span key={cat}>
-                      {cat}: {count}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <FormsList
+            filteredForms={filteredForms}
+            loading={loading}
+            filters={filters}
+            updateFilters={updateFilters}
+            isSelectMode={isSelectMode}
+            selectedFormIds={selectedFormIds}
+            toggleFormSelection={toggleFormSelection}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            categoryCounts={categoryCounts}
+            handleQuickPreview={handleQuickPreview}
+            handlePrefill={handlePrefill}
+            handleEdit={handleEdit}
+            handleDelete={handleDelete}
+            duplicateResource={duplicateResource}
+            updateResource={updateResource}
+          />
         </TabsContent>
 
         <TabsContent value="legal-docs">

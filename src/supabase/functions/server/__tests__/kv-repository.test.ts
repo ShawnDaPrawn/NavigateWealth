@@ -22,7 +22,7 @@ beforeAll(() => {
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
-const BASELINE_FILE = join(REPO_ROOT, '.kv-direct-import-baseline');
+const BASELINE_FILE = join(REPO_ROOT, '.kv-direct-access-baseline');
 
 const store = new Map<string, unknown>();
 const calls: string[] = [];
@@ -159,15 +159,30 @@ describe('listAll() makes an unbounded scan deliberate', () => {
   });
 });
 
-describe('direct kv_store import ratchet', () => {
+describe('direct kv_store access ratchet', () => {
   /**
-   * F10 deferred banning direct `kv_store` imports on the explicit grounds that
+   * F10 deferred banning direct `kv_store` access on the explicit grounds that
    * "the repositories/ layer it should point at does not exist yet". It exists
-   * now, so the count is floored: importer #N+1 cannot land silently while the
-   * backlog is migrated.
+   * now, so the backlog is floored: access site #N+1 cannot land silently while
+   * the rest is migrated.
    *
-   * A ban would be wrong — 178 modules import it and the repositories cover one
-   * namespace so far. A floor is the honest instrument.
+   * A ban would be wrong — 177 modules reach the store directly and the
+   * repositories cover one namespace so far. A floor is the honest instrument.
+   *
+   * WHY THIS COUNTS CALLS AND NOT IMPORTING MODULES
+   * ----------------------------------------------
+   * It used to count modules with a `kv_store` import. That number moves when a
+   * file is SPLIT, even though splitting one 1,725-line service into three
+   * modules adds no coupling whatsoever — the same 59 `kv.*` calls simply live
+   * in three files instead of one. With 72 files still over 1,000 lines and 11
+   * of them reaching the store directly, a module count would have to be raised
+   * roughly twenty more times during the split-up, which is how a ratchet
+   * quietly stops meaning anything.
+   *
+   * Counting call sites is invariant under moving code between files, and it is
+   * strictly stricter in the direction that matters: a NEW `kv.get` added inside
+   * a module that already imported the store was invisible to the old measure
+   * and is caught by this one.
    */
   function walk(dir: string, acc: string[] = []): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -182,43 +197,76 @@ describe('direct kv_store import ratchet', () => {
     return acc;
   }
 
-  const importers = walk(SERVER_DIR).filter((f) => {
-    const rel = f.slice(SERVER_DIR.length + 1);
-    // The repositories layer and the store itself are allowed to.
-    if (rel.startsWith('repositories/') || rel === 'kv_store.tsx') return false;
-    return /from '\.{1,2}\/kv_store\.tsx'/.test(readFileSync(f, 'utf8'));
+  /**
+   * Every module in the tree imports the store the same way — `import * as kv`,
+   * 183 of 183 — so `kv.<method>(` finds the access sites without missing a
+   * destructured alias.
+   */
+  const CALL = /\bkv\.[a-zA-Z_]\w*\s*\(/g;
+
+  const accessSites = walk(SERVER_DIR)
+    .filter((f) => {
+      const rel = f.slice(SERVER_DIR.length + 1);
+      // The repositories layer and the store itself are allowed to.
+      if (rel.startsWith('repositories/') || rel === 'kv_store.tsx') return false;
+      return /from '\.{1,2}\/kv_store\.tsx'/.test(readFileSync(f, 'utf8'));
+    })
+    .map((f) => ({
+      file: f.slice(SERVER_DIR.length + 1),
+      count: (readFileSync(f, 'utf8').match(CALL) ?? []).length,
+    }))
+    .filter((row) => row.count > 0);
+
+  const totalCalls = accessSites.reduce((sum, row) => sum + row.count, 0);
+
+  it('recognises a call site, and does not count the import as one', () => {
+    // The inverse of the usual vacuous-gate risk: a detector that matched
+    // nothing would drive the count to zero and read as a clean sweep.
+    const probe = (s: string) => (s.match(new RegExp(CALL.source, 'g')) ?? []).length;
+    expect(probe('  const row = await kv.get(`resource:${id}`);')).toBe(1);
+    expect(probe('  await kv.set(k, v);\n  await kv.del(k);')).toBe(2);
+    expect(probe("import * as kv from './kv_store.tsx';")).toBe(0);
   });
 
-  it('finds a realistic number of direct importers', () => {
-    expect(importers.length).toBeGreaterThan(50);
+  it('finds a realistic number of direct access sites', () => {
+    expect(accessSites.length).toBeGreaterThan(50);
+    expect(totalCalls).toBeGreaterThan(200);
   });
 
-  it('does not add direct kv_store importers beyond the committed floor', () => {
+  it('does not add direct kv_store access beyond the committed floor', () => {
     const raw = existsSync(BASELINE_FILE) ? readFileSync(BASELINE_FILE, 'utf8') : '';
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.kv-direct-import-baseline missing or unparseable (got "${raw}")`,
+      `.kv-direct-access-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
-    if (importers.length > floor) {
+    if (totalCalls > floor) {
+      const worst = accessSites
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map((row) => `${String(row.count).padStart(4)}  ${row.file}`)
+        .join('\n  ');
       expect.fail(
-        `Modules importing kv_store directly rose to ${importers.length} (floor ${floor}).\n` +
+        `Direct kv_store calls rose to ${totalCalls} (floor ${floor}).\n` +
+          `Moving code between files does not move this number — only adding a\n` +
+          `kv.* call does — so this is new direct access, not a refactor.\n` +
           `Add a repository under repositories/ for the namespace instead — see\n` +
           `repositories/communication-groups-repository.ts for the shape. Prefer\n` +
-          `list() over listAll(): kv.getByPrefix has no limit and 278 call sites.\n` +
+          `list() over listAll(): kv.getByPrefix has no limit.\n` +
           `If direct access is genuinely right here, say why in the PR and\n` +
-          `re-baseline to ${importers.length}.`,
+          `re-baseline to ${totalCalls}.\n\n` +
+          `Heaviest callers:\n  ${worst}`,
       );
     }
 
-    if (importers.length < floor) {
+    if (totalCalls < floor) {
       announceRatchetSlack(
         'kv-repository',
-        importers.length,
+        totalCalls,
         floor,
-        '.kv-direct-import-baseline',
-        'direct kv_store importers',
+        '.kv-direct-access-baseline',
+        'direct kv_store calls',
       );
     }
   });
