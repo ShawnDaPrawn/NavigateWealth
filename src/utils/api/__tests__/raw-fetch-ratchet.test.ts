@@ -24,7 +24,7 @@
  * silently — without either failure mode.
  *
  * Burn this down by migrating callers to `api.get/post/put/patch/delete`, then
- * lower `.raw-fetch-baseline`. At zero, replace this with a lint rule at
+ * lower `quality/baselines/raw-fetch-baseline`. At zero, replace this with a lint rule at
  * `error` and delete the file.
  *
  * NOT COUNTED: the API client itself (it must call `fetch`), tests, and the
@@ -38,7 +38,7 @@ import { announceRatchetSlack } from '../../../test/ratchet-notice';
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const REPO_ROOT = resolve(SRC_DIR, '..');
-const BASELINE_FILE = join(REPO_ROOT, '.raw-fetch-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/raw-fetch-baseline');
 
 /** Areas the SPA writes feature code in. The edge function is server-side. */
 const SCANNED = ['components', 'hooks', 'services', 'shared'];
@@ -87,7 +87,7 @@ describe('raw-fetch convergence ratchet (Stage A / F10)', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.raw-fetch-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/raw-fetch-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (total > floor) {
@@ -100,12 +100,18 @@ describe('raw-fetch convergence ratchet (Stage A / F10)', () => {
           `Use the shared client instead — \`import { api } from '@/utils/api'\` — so the call\n` +
           `inherits token refresh, retry, APIError typing and session recovery.\n` +
           `If this call genuinely cannot use it, say why in the PR and re-baseline\n` +
-          `.raw-fetch-baseline to ${total}.\n\nBiggest current offenders:\n  ${top}`,
+          `quality/baselines/raw-fetch-baseline to ${total}.\n\nBiggest current offenders:\n  ${top}`,
       );
     }
 
     if (total < floor) {
-      announceRatchetSlack('raw-fetch', total, floor, '.raw-fetch-baseline', 'raw fetch() calls');
+      announceRatchetSlack(
+        'raw-fetch',
+        total,
+        floor,
+        'quality/baselines/raw-fetch-baseline',
+        'raw fetch() calls',
+      );
     }
   });
 });

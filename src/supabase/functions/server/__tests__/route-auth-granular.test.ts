@@ -62,7 +62,7 @@
  * Guard the new route (`requireAuth`/`requireAdmin`, router- or path-scoped
  * middleware, or an in-handler check). If the route is deliberately public,
  * lower the burden of proof by saying so in the PR, then re-baseline:
- *   node -e "require('fs').writeFileSync('.route-auth-baseline', <count> + '\n')"
+ *   node -e "require('fs').writeFileSync('quality/baselines/route-auth-baseline', <count> + '\n')"
  * Lower the floor whenever routes get guarded — it only ratchets down.
  */
 import { describe, it, expect } from 'vitest';
@@ -73,7 +73,7 @@ import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
-const BASELINE_FILE = join(REPO_ROOT, '.route-auth-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/route-auth-baseline');
 
 /** Kept in sync with router-auth-guard.test.ts, plus the portal-worker secret guard. */
 const AUTH_MARKERS =
@@ -237,7 +237,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.route-auth-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/route-auth-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (unguarded.length > floor) {
@@ -247,7 +247,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
           `A new route was added without a guard, or an existing guard was removed.\n` +
           `Cover it with requireAuth/requireAdmin (router- or path-scoped middleware, or an\n` +
           `in-handler check). If the route is deliberately public, say why in the PR and\n` +
-          `re-baseline .route-auth-baseline to ${unguarded.length}.\n\n` +
+          `re-baseline quality/baselines/route-auth-baseline to ${unguarded.length}.\n\n` +
           `Currently unguarded (first 20 of ${unguarded.length}):\n  ${added}`,
       );
     }
@@ -257,7 +257,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
         'route-auth',
         unguarded.length,
         floor,
-        '.route-auth-baseline',
+        'quality/baselines/route-auth-baseline',
         'unguarded routes',
       );
     }

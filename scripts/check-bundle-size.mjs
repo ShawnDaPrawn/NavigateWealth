@@ -3,7 +3,7 @@
  * Bundle-size budget checker (Stage A / F6).
  *
  * Measures the production build in `dist/` and compares each metric against the
- * committed floor in `.bundle-size-baseline.json`. Run after `npm run build`:
+ * committed floor in `quality/baselines/bundle-size-baseline.json`. Run after `npm run build`:
  *
  *   npm run build && npm run bundle:check
  *
@@ -40,7 +40,7 @@ import zlib from 'node:zlib';
 
 const ROOT = process.cwd();
 const DIST = path.join(ROOT, 'dist');
-const BASELINE_FILE = path.join(ROOT, '.bundle-size-baseline.json');
+const BASELINE_FILE = path.join(ROOT, 'quality/baselines/bundle-size-baseline.json');
 
 /** Headroom before a rise is treated as a regression. */
 const TOLERANCE_PCT = 5;

@@ -22,7 +22,7 @@ beforeAll(() => {
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
-const BASELINE_FILE = join(REPO_ROOT, '.kv-direct-access-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/kv-direct-access-baseline');
 
 const store = new Map<string, unknown>();
 const calls: string[] = [];
@@ -238,7 +238,7 @@ describe('direct kv_store access ratchet', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.kv-direct-access-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/kv-direct-access-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (totalCalls > floor) {
@@ -265,7 +265,7 @@ describe('direct kv_store access ratchet', () => {
         'kv-repository',
         totalCalls,
         floor,
-        '.kv-direct-access-baseline',
+        'quality/baselines/kv-direct-access-baseline',
         'direct kv_store calls',
       );
     }
