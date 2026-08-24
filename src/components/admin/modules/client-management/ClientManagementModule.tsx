@@ -47,13 +47,10 @@ import type { IntakeHandoffState } from './components/IntakeWizardHandoff';
 const ClientDrawer = React.lazy(() =>
   import('./components/ClientDrawer').then((m) => ({ default: m.ClientDrawer })),
 );
+import { CustomGroupManager } from '../communication';
+
 const ClientFieldRepository = React.lazy(() =>
   import('./components/ClientFieldRepository').then((m) => ({ default: m.ClientFieldRepository })),
-);
-const CustomGroupManager = React.lazy(() =>
-  import('../communication/components/CustomGroupManager').then((m) => ({
-    default: m.CustomGroupManager,
-  })),
 );
 const AddClientDialog = React.lazy(() =>
   import('./components/AddClientDialog').then((m) => ({ default: m.AddClientDialog })),

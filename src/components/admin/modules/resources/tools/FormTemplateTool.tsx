@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -16,12 +16,7 @@ import {
   DialogTitle,
 } from '../../../../ui/dialog';
 import { FileSpreadsheet, ChevronRight, Loader2 } from 'lucide-react';
-
-const FormTemplatesModule = React.lazy(() =>
-  import('../../form-prefill/FormTemplatesModule').then((m) => ({
-    default: m.FormTemplatesModule,
-  })),
-);
+import { FormTemplatesModule } from '../../form-prefill';
 
 function DialogFallback() {
   return (

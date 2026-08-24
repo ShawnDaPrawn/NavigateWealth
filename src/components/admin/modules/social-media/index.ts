@@ -8,8 +8,17 @@
  * @module social-media
  */
 
-// Main Module Component (used by AdminDashboardPage lazy import)
-export { SocialMediaModule } from './SocialMediaModule';
+import { lazy } from 'react';
+
+/**
+ * Main module component. The module owns its own code-splitting boundary:
+ * AdminDashboardPage used to React.lazy the deep path, which is what forced it
+ * past this barrel. Lazying it here means the dashboard makes an ordinary
+ * import of this barrel while the chunk still loads on demand.
+ */
+export const SocialMediaModule = lazy(() =>
+  import('./SocialMediaModule').then((m) => ({ default: m.SocialMediaModule })),
+);
 
 // Sub-Components (used by intra-module consumers)
 export { SocialMediaTab } from './SocialMediaTab';

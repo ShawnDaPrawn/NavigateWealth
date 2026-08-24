@@ -11,6 +11,8 @@ import { useScheduledPublishProcessor } from '../admin/modules/publications';
 import { useOverdueDigestProcessor } from '../admin/modules/tasks';
 import { useMaintenanceCronProcessor } from '../admin/modules/client-management';
 import { toast } from 'sonner';
+import { SocialMediaModule } from '../admin/modules/social-media';
+import { IssuesModule } from '../admin/modules/issues';
 
 // ============================================================================
 // EAGERLY IMPORTED SKELETONS
@@ -75,11 +77,6 @@ const ComplianceModule = React.lazy(() =>
 const CommunicationModule = React.lazy(() =>
   import('../admin/modules/communication').then((m) => ({ default: m.CommunicationModule })),
 );
-const SocialMediaModule = React.lazy(() =>
-  import('../admin/modules/social-media/SocialMediaModule').then((m) => ({
-    default: m.SocialMediaModule,
-  })),
-);
 const ProductManagementModule = React.lazy(() =>
   import('../admin/modules/product-management').then((m) => ({
     default: m.ProductManagementModule,
@@ -103,7 +100,6 @@ const NotesModule = React.lazy(() =>
 const AIManagementModule = React.lazy(() =>
   import('../admin/modules/ai-management').then((m) => ({ default: m.AIManagementModule })),
 );
-const IssuesModule = React.lazy(() => import('../admin/modules/issues/IssuesModule'));
 const LockedModule = React.lazy(() =>
   import('../admin/modules/locked').then((m) => ({ default: m.LockedModule })),
 );
