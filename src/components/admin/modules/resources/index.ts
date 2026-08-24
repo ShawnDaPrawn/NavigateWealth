@@ -22,3 +22,10 @@ export {
   LEGAL_SECTION_LABELS,
 } from './legal-constants';
 export type { LegalDocumentEntry } from './legal-constants';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { PdfTemplateViewer } from './PdfTemplateViewer';
+export { InteractiveFormRenderer } from './builder/InteractiveFormRenderer';
+export { ResourcesSkeleton } from './components/ResourcesSkeleton';
+export { CATEGORY_ICONS } from './key-manager/constants';
+export { BASE_PDF_CSS, BasePdfLayout } from './templates/BasePdfLayout';

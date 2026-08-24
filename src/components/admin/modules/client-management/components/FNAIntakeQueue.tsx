@@ -22,7 +22,7 @@ import {
   normalizeIntakeToWizard,
 } from '../../../../../shared/form-prefill/intake-field-mapping';
 import { FNAIntakeStatusBadge } from '@/shared/fna-intake/components/FNAIntakeStatusBadge';
-import { PrefillReviewModal } from '../../form-prefill/PrefillReviewModal';
+import { PrefillReviewModal } from '../../form-prefill';
 import { clientApi } from '../api';
 import type { IntakeHandoffState } from './IntakeWizardHandoff';
 

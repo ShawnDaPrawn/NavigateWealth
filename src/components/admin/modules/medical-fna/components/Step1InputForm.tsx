@@ -46,7 +46,7 @@ import { useClientProductKeys } from '../hooks/useClientProductKeys';
 import { MedicalFNAInputSchema, MedicalFNAFormValues } from '../schema';
 import { MedicalFNAInputs } from '../types';
 import { toast } from 'sonner';
-import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { useFormPrefill } from '../../form-prefill';
 
 interface Step1Props {
   clientId?: string;

@@ -21,7 +21,7 @@ import {
 import { Search, Loader2, MessageSquare, CheckCircle2, Eye, Paperclip, Trash2 } from 'lucide-react';
 import { useVirtualizedRows } from '../../../../../shared/useVirtualizedRows';
 import { getCategoryIcon, getCategoryColor, CATEGORIES } from './constants';
-import type { CommunicationLog } from '../../../communication/types';
+import type { CommunicationLog } from '../../../communication';
 
 export interface HistoryDialogProps {
   open: boolean;

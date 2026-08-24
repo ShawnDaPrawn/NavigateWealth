@@ -10,8 +10,8 @@ import {
 } from './types';
 import { ENDPOINTS } from './constants';
 import { ClientKeysResponse } from './hooks/useClientKeys';
-import { ALL_PRODUCT_KEYS } from '../product-management/keyManagerConstants';
-import type { ProductKey } from '../product-management/types';
+import { ALL_PRODUCT_KEYS } from '../product-management';
+import type { ProductKey } from '../product-management';
 import { clientKeys } from '../../../../utils/queryKeys';
 
 // ── Key registry lookup map ──────────────────────────────────────────────────

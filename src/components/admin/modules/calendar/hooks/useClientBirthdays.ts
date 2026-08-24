@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { clientApi } from '../../client-management/api';
+import { clientApi } from '../../client-management';
 import { CalendarEvent } from '../types';
 import { setYear, parseISO, isValid } from 'date-fns';
 import { calendarKeys } from './queryKeys';

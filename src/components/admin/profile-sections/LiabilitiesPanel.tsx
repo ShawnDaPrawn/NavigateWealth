@@ -23,8 +23,8 @@ import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
 import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 
 import { DetailChip } from './assetsLiabilitiesShared';
-import { getLiabilityTypeLabel } from './assetsLiabilitiesLabels';
-import type { Liability } from './assetsLiabilitiesTypes';
+import { getLiabilityTypeLabel } from '../../../shared/formatting';
+import type { Liability } from '../../../shared/types';
 
 interface LiabilitiesPanelProps {
   liabilities: Liability[];

@@ -27,8 +27,8 @@ import {
 } from 'lucide-react';
 import type { PortfolioFinancialOverview } from '../api';
 import { formatCurrency } from '../../../../utils/currencyFormatter';
-import { RiskPlanningFnaAPI } from '../../../admin/modules/risk-planning-fna/api';
-import type { FinalRiskNeed } from '../../../admin/modules/risk-planning-fna/types';
+import { RiskPlanningFnaAPI } from '../../../admin/modules/risk-planning-fna';
+import type { FinalRiskNeed } from '../../../admin/modules/risk-planning-fna';
 
 interface InsightsSectionProps {
   overview: PortfolioFinancialOverview;

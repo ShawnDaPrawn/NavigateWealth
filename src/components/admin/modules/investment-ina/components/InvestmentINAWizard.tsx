@@ -50,7 +50,7 @@ import { DEFAULT_ECONOMIC_ASSUMPTIONS, GOAL_TYPE_LABELS, RISK_PROFILE_LABELS } f
 import { InvestmentINAApiService } from '../api';
 import { InvestmentINACalculationService } from '../services/investmentINACalculationService';
 import { toast } from 'sonner';
-import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { useFormPrefill } from '../../form-prefill';
 import { logger } from '../../../../../utils/logger';
 
 interface InvestmentINAWizardProps {

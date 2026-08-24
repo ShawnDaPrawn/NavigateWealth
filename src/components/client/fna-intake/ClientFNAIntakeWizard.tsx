@@ -24,10 +24,10 @@ import { fnaKeys } from '../../../utils/queryKeys';
 import type {
   RetirementFNAInputs,
   RetirementFNAAdjustments,
-} from '../../admin/modules/retirement-fna/types';
-import type { MedicalFNAInputs } from '../../admin/modules/medical-fna/types';
-import type { InformationGatheringInput } from '../../admin/modules/risk-planning-fna/types';
-import type { TaxPlanningInputs } from '../../admin/modules/tax-planning-fna/types';
+} from '../../admin/modules/retirement-fna';
+import type { MedicalFNAInputs } from '../../admin/modules/medical-fna';
+import type { InformationGatheringInput } from '../../admin/modules/risk-planning-fna';
+import type { TaxPlanningInputs } from '../../admin/modules/tax-planning-fna';
 
 const LazyRetirementStep1 = React.lazy(() =>
   import('../../admin/modules/retirement-fna/components/Step1InputForm').then((m) => ({

@@ -30,7 +30,7 @@ import { DollarSign, Plus, Edit2, Trash2, X, Check, Landmark } from 'lucide-reac
 import { useInlineEditDialogClose } from '../../../shared/unsaved-changes';
 
 import { DetailChip } from './assetsLiabilitiesShared';
-import { getLiabilityTypeLabel } from './assetsLiabilitiesLabels';
+import { getLiabilityTypeLabel } from '../../../../shared/formatting';
 
 interface LiabilitiesPanelProps {
   profileData: ProfileData;

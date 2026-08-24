@@ -24,8 +24,8 @@ import {
   ArrowRight,
   Star,
 } from 'lucide-react';
-import { StatsAPI, ArticlesAPI } from '../../publications/api';
-import type { Article, ArticleStatus, PublicationStats } from '../../publications/types';
+import { StatsAPI, ArticlesAPI } from '../../publications';
+import type { Article, ArticleStatus, PublicationStats } from '../../publications';
 import type { PublicationsCardProps } from '../types';
 
 /** Status → badge styling + label (config-driven, §5.3). */

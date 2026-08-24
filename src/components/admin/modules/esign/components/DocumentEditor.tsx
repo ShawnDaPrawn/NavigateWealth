@@ -13,7 +13,7 @@ import { PDFViewer } from './PDFViewer';
 import { FieldPalette } from './FieldPalette';
 import { SignerManager } from './SignerManager';
 import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
-import type { Client } from '../../client-management/types';
+import type { Client } from '../../client-management';
 
 interface DocumentEditorProps {
   envelope: EsignEnvelope;

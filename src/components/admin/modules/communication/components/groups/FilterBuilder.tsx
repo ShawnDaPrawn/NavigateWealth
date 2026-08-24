@@ -12,7 +12,7 @@ import {
 import { Badge } from '../../../../../ui/badge';
 import { Separator } from '../../../../../ui/separator';
 import { GroupFilterConfig } from '../../types';
-import { Provider, PRODUCT_CATEGORIES } from '../../../product-management/types';
+import { Provider, PRODUCT_CATEGORIES } from '../../../product-management';
 import {
   MARITAL_STATUS_OPTIONS,
   EMPLOYMENT_STATUS_OPTIONS,

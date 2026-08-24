@@ -22,7 +22,7 @@ import { PolicyDetailModal } from '../modals/PolicyDetailModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { BrandPageLoader } from '../ui/brand-loader';
-import { DEFAULT_SCHEMAS } from '../admin/modules/product-management/defaults';
+import { DEFAULT_SCHEMAS } from '../admin/modules/product-management';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
 

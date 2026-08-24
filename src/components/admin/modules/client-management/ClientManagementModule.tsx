@@ -38,7 +38,7 @@ import {
   countByStatus,
 } from './utils';
 import { ACCOUNT_STATUS_CONFIG, ACCOUNT_STATUS_FILTER_OPTIONS, CONFIG } from './constants';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
 import type { IntakeHandoffState } from './components/IntakeWizardHandoff';

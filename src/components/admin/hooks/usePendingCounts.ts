@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
 import { getSession } from '../../../utils/auth';
-import type { ApplicationStats } from '../modules/applications/types';
+import type { ApplicationStats } from '../modules/applications';
 import type { AdminModule } from '../layout/types';
 import { pendingCountsKeys } from '../../../utils/queryKeys';
-import { getIncompleteCount } from '../modules/applications/utils';
+import { getIncompleteCount } from '../modules/applications';
 
 // All admin modules — stable list used for initialisation
 const ALL_MODULES: AdminModule[] = [

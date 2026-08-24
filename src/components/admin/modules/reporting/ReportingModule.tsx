@@ -14,7 +14,7 @@ import { ReportDialog } from './components/ReportDialog';
 
 // Import utilities
 import { executeReport, createReportRun } from './utils';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 /**
  * Pre-defined report definitions.

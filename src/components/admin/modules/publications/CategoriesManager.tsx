@@ -5,7 +5,7 @@
  * Now uses the new hooks, services, and shared components.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
@@ -20,8 +20,13 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+  type DraggableProvided,
+} from '@hello-pangea/dnd';
 
 // Import from refactored modules
 import { useCategories, useCategoryActions } from './hooks';
@@ -31,14 +36,14 @@ import { TextField, TextareaField, CheckboxField } from './components/FormField'
 import { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
 
 import { generateSlug } from './utils';
+import { moveItem } from '../../../../shared/utils';
 import type { Category, CreateCategoryInput } from './types';
-
-const DRAG_TYPE = 'CATEGORY_ROW';
 
 interface DraggableCategoryRowProps {
   category: Category;
-  index: number;
-  moveCategory: (dragIndex: number, hoverIndex: number) => void;
+  /** Wiring from @hello-pangea/dnd's Draggable render prop. */
+  provided: DraggableProvided;
+  isDragging: boolean;
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
   onToggleActive: (category: Category) => void;
@@ -47,77 +52,21 @@ interface DraggableCategoryRowProps {
 
 function DraggableCategoryRow({
   category,
-  index,
-  moveCategory,
+  provided,
+  isDragging,
   onEdit,
   onDelete,
   onToggleActive,
   isProcessing,
 }: DraggableCategoryRowProps) {
-  const ref = useRef<HTMLTableRowElement>(null);
-
-  const [{ handlerId }, drop] = useDrop<
-    { index: number },
-    unknown,
-    { handlerId: string | symbol | null }
-  >({
-    accept: DRAG_TYPE,
-    collect(monitor) {
-      return {
-        handlerId: monitor.getHandlerId(),
-      };
-    },
-    hover(item: { index: number }, monitor) {
-      if (!ref.current) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
-
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-        return;
-      }
-
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-        return;
-      }
-
-      moveCategory(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
-
-  const [{ isDragging }, drag, preview] = useDrag({
-    type: DRAG_TYPE,
-    item: () => {
-      return { index };
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  drag(drop(ref));
-
   return (
     <tr
-      ref={ref}
-      data-handler-id={handlerId}
-      className={cn('hover:bg-gray-50', isDragging && 'opacity-50')}
+      ref={provided.innerRef}
+      {...provided.draggableProps}
+      className={cn('hover:bg-gray-50', isDragging && 'opacity-50 bg-white shadow-lg')}
     >
-      <td className="px-4 py-4 cursor-move">
-        <div ref={preview}>
-          <GripVertical className="h-5 w-5 text-gray-400" />
-        </div>
+      <td className="px-4 py-4 cursor-move" {...provided.dragHandleProps}>
+        <GripVertical className="h-5 w-5 text-gray-400" />
       </td>
       <td className="px-4 py-4">
         <p className="font-medium text-gray-900">{category.name}</p>
@@ -297,11 +246,19 @@ export function CategoriesManager() {
   };
 
   const moveCategory = (dragIndex: number, hoverIndex: number) => {
-    const draggedCategory = categories[dragIndex];
-    const newCategories = [...categories];
-    newCategories.splice(dragIndex, 1);
-    newCategories.splice(hoverIndex, 0, draggedCategory);
-    setCategories(newCategories);
+    setCategories((prev) => moveItem(prev, dragIndex, hoverIndex));
+  };
+
+  /**
+   * @hello-pangea/dnd reports the move once, on drop. (react-dnd reported it
+   * repeatedly during hover, so the table rearranged live under the cursor;
+   * now the row animates and the list commits when it is released.) The
+   * resulting order, and the Save Order button that persists it, are unchanged.
+   */
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return; // dropped outside the table
+    if (result.destination.index === result.source.index) return;
+    moveCategory(result.source.index, result.destination.index);
   };
 
   const handleReorderComplete = async () => {
@@ -423,7 +380,7 @@ export function CategoriesManager() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <DndProvider backend={HTML5Backend}>
+            <DragDropContext onDragEnd={handleDragEnd}>
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
@@ -447,31 +404,43 @@ export function CategoriesManager() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {categories.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
-                        <FolderOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                        <p>No categories found</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    categories.map((category, index) => (
-                      <DraggableCategoryRow
-                        key={category.id}
-                        category={category}
-                        index={index}
-                        moveCategory={moveCategory}
-                        onEdit={handleEditClick}
-                        onDelete={handleDeleteClick}
-                        onToggleActive={handleToggleClick}
-                        isProcessing={isProcessing}
-                      />
-                    ))
+                <Droppable droppableId="categories">
+                  {(dropProvided) => (
+                    <tbody
+                      ref={dropProvided.innerRef}
+                      {...dropProvided.droppableProps}
+                      className="bg-white divide-y divide-gray-200"
+                    >
+                      {categories.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                            <FolderOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                            <p>No categories found</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        categories.map((category, index) => (
+                          <Draggable key={category.id} draggableId={category.id} index={index}>
+                            {(dragProvided, snapshot) => (
+                              <DraggableCategoryRow
+                                category={category}
+                                provided={dragProvided}
+                                isDragging={snapshot.isDragging}
+                                onEdit={handleEditClick}
+                                onDelete={handleDeleteClick}
+                                onToggleActive={handleToggleClick}
+                                isProcessing={isProcessing}
+                              />
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {dropProvided.placeholder}
+                    </tbody>
                   )}
-                </tbody>
+                </Droppable>
               </table>
-            </DndProvider>
+            </DragDropContext>
           </div>
 
           {/* Save Order Button */}

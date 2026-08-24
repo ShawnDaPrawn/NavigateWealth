@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
-import { BASE_PDF_CSS } from '../admin/modules/resources/templates/BasePdfLayout';
+import { BASE_PDF_CSS } from '../admin/modules/resources';
 
 // ============================================================================
 // TYPES

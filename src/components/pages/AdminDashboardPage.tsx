@@ -5,11 +5,11 @@ import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
-import { useAutoContentProcessor } from '../admin/modules/publications/hooks/useAutoContentProcessor';
-import { useArticleNotificationProcessor } from '../admin/modules/publications/hooks/useArticleNotificationProcessor';
-import { useScheduledPublishProcessor } from '../admin/modules/publications/hooks/useScheduledPublishProcessor';
-import { useOverdueDigestProcessor } from '../admin/modules/tasks/hooks/useOverdueDigestProcessor';
-import { useMaintenanceCronProcessor } from '../admin/modules/client-management/hooks/useMaintenanceCronProcessor';
+import { useAutoContentProcessor } from '../admin/modules/publications';
+import { useArticleNotificationProcessor } from '../admin/modules/publications';
+import { useScheduledPublishProcessor } from '../admin/modules/publications';
+import { useOverdueDigestProcessor } from '../admin/modules/tasks';
+import { useMaintenanceCronProcessor } from '../admin/modules/client-management';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -19,25 +19,25 @@ import { toast } from 'sonner';
 // These are intentionally NOT imported through the lazy module barrels.
 // ============================================================================
 
-import { DashboardSkeleton } from '../admin/modules/dashboard/components/DashboardSkeleton';
-import { ClientManagementSkeleton } from '../admin/modules/client-management/components/ClientManagementSkeleton';
-import { ApplicationsSkeleton } from '../admin/modules/applications/components/ApplicationsSkeleton';
-import { TasksSkeleton } from '../admin/modules/tasks/components/TasksSkeleton';
-import { PersonnelSkeleton } from '../admin/modules/personnel/components/PersonnelSkeleton';
-import { EsignSkeleton } from '../admin/modules/esign/components/EsignSkeleton';
-import { AdviceEngineSkeleton } from '../admin/modules/advice-engine/components/AdviceEngineSkeleton';
-import { ProductManagementSkeleton } from '../admin/modules/product-management/components/ProductManagementSkeleton';
-import { ResourcesSkeleton } from '../admin/modules/resources/components/ResourcesSkeleton';
-import { PublicationsSkeleton } from '../admin/modules/publications/components/PublicationsSkeleton';
-import { ComplianceSkeleton } from '../admin/modules/compliance/components/ComplianceSkeleton';
-import { CommunicationSkeleton } from '../admin/modules/communication/components/CommunicationSkeleton';
-import { SocialMediaSkeleton } from '../admin/modules/social-media/components/SocialMediaSkeleton';
-import { ReportingSkeleton } from '../admin/modules/reporting/components/ReportingSkeleton';
-import { CalendarSkeleton } from '../admin/modules/calendar/components/CalendarSkeleton';
-import { SubmissionsSkeleton } from '../admin/modules/submissions/components/SubmissionsSkeleton';
-import { NotesSkeleton } from '../admin/modules/notes/components/NotesSkeleton';
-import { AIManagementSkeleton } from '../admin/modules/ai-management/components/AIManagementSkeleton';
-import { IssuesSkeleton } from '../admin/modules/issues/components/IssuesSkeleton';
+import { DashboardSkeleton } from '../admin/modules/dashboard';
+import { ClientManagementSkeleton } from '../admin/modules/client-management';
+import { ApplicationsSkeleton } from '../admin/modules/applications';
+import { TasksSkeleton } from '../admin/modules/tasks';
+import { PersonnelSkeleton } from '../admin/modules/personnel';
+import { EsignSkeleton } from '../admin/modules/esign';
+import { AdviceEngineSkeleton } from '../admin/modules/advice-engine';
+import { ProductManagementSkeleton } from '../admin/modules/product-management';
+import { ResourcesSkeleton } from '../admin/modules/resources';
+import { PublicationsSkeleton } from '../admin/modules/publications';
+import { ComplianceSkeleton } from '../admin/modules/compliance';
+import { CommunicationSkeleton } from '../admin/modules/communication';
+import { SocialMediaSkeleton } from '../admin/modules/social-media';
+import { ReportingSkeleton } from '../admin/modules/reporting';
+import { CalendarSkeleton } from '../admin/modules/calendar';
+import { SubmissionsSkeleton } from '../admin/modules/submissions';
+import { NotesSkeleton } from '../admin/modules/notes';
+import { AIManagementSkeleton } from '../admin/modules/ai-management';
+import { IssuesSkeleton } from '../admin/modules/issues';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS

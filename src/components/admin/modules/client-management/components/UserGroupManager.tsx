@@ -22,8 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Plus, Edit, Trash2, Settings, UserCheck, Check } from 'lucide-react';
 // Cross-module dependency: client-management → communication (public API surface)
 // Justified: UserGroupManager manages communication groups from the client management context.
-import { communicationApi } from '../../communication/api';
-import { ClientGroup } from '../../communication/types';
+import { communicationApi } from '../../communication';
+import { ClientGroup } from '../../communication';
 import { toast } from 'sonner';
 
 interface UserGroupManagerProps {

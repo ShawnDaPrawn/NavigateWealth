@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BasePdfLayout } from '../../resources/templates/BasePdfLayout';
+import { BasePdfLayout } from '../../resources';
 import type { RiskCalculations, Adjustments } from '../types';
 import { COMPLIANCE_DISCLAIMERS } from '../constants';
 

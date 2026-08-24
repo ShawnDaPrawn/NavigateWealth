@@ -18,8 +18,8 @@ import {
   AreaChart,
 } from 'recharts';
 import { Loader2, TrendingUp, MessageSquare, Database, AlertTriangle } from 'lucide-react';
-import { PlatformFeaturesCard } from '../../dashboard/components/PlatformFeaturesCard';
-import { VascoAnalyticsCard } from '../../dashboard/components/VascoAnalyticsCard';
+import { PlatformFeaturesCard } from '../../dashboard';
+import { VascoAnalyticsCard } from '../../dashboard';
 import { useAnalyticsSummary } from '../hooks';
 
 export function AnalyticsDashboard() {
