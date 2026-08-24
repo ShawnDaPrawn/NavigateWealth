@@ -1,12 +1,6 @@
 import { MapPin, Globe } from 'lucide-react';
-import {
-  ReviewSection,
-  EditField,
-  EditSelect,
-  SyncIndicator,
-  SectionProps,
-  PROVINCES,
-} from './shared';
+import { ReviewSection, EditField, EditSelect, SyncIndicator, SectionProps } from './shared';
+import { PROVINCES } from './reviewDialogOptions';
 
 export function AddressSection({ isEditing, fv, updateField, data }: SectionProps) {
   const addressParts = [

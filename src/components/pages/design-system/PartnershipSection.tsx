@@ -18,7 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { COMPONENTS_COUNT } from './ComponentsTab';
-import { SECTIONS_COUNT } from './SectionsTab';
+import { SECTIONS_COUNT } from './sectionsData';
 
 const COLOR_TOKENS_COUNT = 10;
 

@@ -54,6 +54,15 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
+// Shared with the review dialog's selects — these were five byte-identical
+// local copies until reviewDialogOptions.ts became their one definition.
+import {
+  TITLES,
+  GENDERS,
+  MARITAL_STATUSES,
+  MARITAL_REGIMES,
+  PROVINCES,
+} from './review-dialog/reviewDialogOptions';
 
 const PREVIEW_STEPS: { number: number; title: string; icon: LucideIcon; subtitle: string }[] = [
   { number: 1, title: 'Personal', icon: User, subtitle: 'Tell us about yourself' },
@@ -63,25 +72,6 @@ const PREVIEW_STEPS: { number: number; title: string; icon: LucideIcon; subtitle
   { number: 5, title: 'Terms', icon: Shield, subtitle: 'Review and confirm' },
 ];
 
-const TITLES = ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'];
-const GENDERS = ['Male', 'Female', 'Other', 'Prefer not to say'];
-const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed', 'Life Partner'];
-const MARITAL_REGIMES = [
-  'In Community of Property',
-  'Out of Community of Property (with accrual)',
-  'Out of Community of Property (without accrual)',
-];
-const PROVINCES = [
-  'Eastern Cape',
-  'Free State',
-  'Gauteng',
-  'KwaZulu-Natal',
-  'Limpopo',
-  'Mpumalanga',
-  'Northern Cape',
-  'North West',
-  'Western Cape',
-];
 const ACCOUNT_REASON_OPTIONS = [
   'Investment Management',
   'Life Assurance',

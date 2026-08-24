@@ -15,7 +15,7 @@ import { useVoiceRecorder } from '../useVoiceRecorder';
 
 const mockStop = vi.fn();
 const mockStart = vi.fn();
-let mockRecorderState: 'inactive' | 'recording' = 'inactive';
+const mockRecorderState: 'inactive' | 'recording' = 'inactive';
 
 class MockMediaRecorder {
   state: string = mockRecorderState;

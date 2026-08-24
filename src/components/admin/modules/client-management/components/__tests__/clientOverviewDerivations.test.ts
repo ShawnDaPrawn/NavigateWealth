@@ -232,12 +232,10 @@ describe('deriveActionItems', () => {
 describe('chart-data derivations', () => {
   it('deriveAssetAllocation maps balance-sheet assets and carries FNA values', () => {
     const out = deriveAssetAllocation({
-      profile: {
-        assets: [
-          { type: 'cash', value: 5000, description: 'Savings' },
-          { type: 'property', value: 'oops' as unknown as number },
-        ],
-      },
+      assets: [
+        { type: 'cash', value: 5000, description: 'Savings' },
+        { type: 'property', value: 'oops' as unknown as number },
+      ],
       retirementCurrentValue: 100000,
       investmentCurrentValue: 50000,
     });
