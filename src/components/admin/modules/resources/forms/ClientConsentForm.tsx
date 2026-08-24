@@ -1,4 +1,4 @@
-import { BasePdfLayout } from '../templates/BasePdfLayout';
+import { BasePdfLayout } from '../../../../shared/pdf';
 
 export const ClientConsentForm = ({ data = {} }: { data?: Record<string, unknown> }) => {
   const d = data as Record<string, string | undefined>;

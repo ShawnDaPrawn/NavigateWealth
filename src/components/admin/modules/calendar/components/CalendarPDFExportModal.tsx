@@ -14,7 +14,7 @@ import {
 import { FileText, Download } from 'lucide-react';
 import { format, isSameDay, isSameMonth, isSameYear } from 'date-fns';
 import type { CalendarEvent } from '../types';
-import { BasePdfLayout, BASE_PDF_CSS } from '../../resources';
+import { BasePdfLayout, BASE_PDF_CSS } from '../../../../shared/pdf';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 
 interface CalendarPDFExportModalProps {

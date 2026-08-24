@@ -1,4 +1,4 @@
-import { BASE_PDF_CSS } from '../../../resources';
+import { BASE_PDF_CSS } from '../../../../../shared/pdf';
 import {
   escapeHtmlText,
   navigateWealthPdfDocumentTitle,

@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { FormBlock, BlockType } from './types';
 import { cn } from '../../../../ui/utils';
-import { BASE_PDF_CSS } from '../templates/BasePdfLayout';
+import { BASE_PDF_CSS } from '../../../../shared/pdf';
 import { LETTER_CSS } from '../templates/LetterheadPdfLayout';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 import { resolveSignatories } from '../templates/LetterheadPdfLayout';

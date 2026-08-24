@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  BasePdfLayout,
-  getPdfDimensions,
-} from '../admin/modules/resources/templates/BasePdfLayout';
+import { BasePdfLayout, getPdfDimensions } from './pdf';
 import {
   PdfTemplateViewer,
   exportPdfFromPreview,

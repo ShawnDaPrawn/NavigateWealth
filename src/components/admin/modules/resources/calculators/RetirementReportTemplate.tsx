@@ -1,5 +1,5 @@
 import React from 'react';
-import { BasePdfLayout } from '../templates/BasePdfLayout';
+import { BasePdfLayout } from '../../../../shared/pdf';
 import { RetirementInputs, RetirementResults } from './types';
 
 interface RetirementReportTemplateProps {

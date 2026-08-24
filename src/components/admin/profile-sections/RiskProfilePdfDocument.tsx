@@ -1,4 +1,4 @@
-import { BasePdfLayout } from '../modules/resources';
+import { BasePdfLayout } from '../../shared/pdf';
 import type { RiskAssessment } from '../../../shared/types';
 import {
   getRiskCategorySummary,

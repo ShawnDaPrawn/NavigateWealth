@@ -5,7 +5,7 @@ import {
   getPdfDimensions,
   type PdfOrientation,
   type PdfPageSize,
-} from './templates/BasePdfLayout';
+} from '../../../shared/pdf';
 import { LETTER_CSS } from './templates/LetterheadPdfLayout';
 import type { LetterMeta } from './templates/LetterheadPdfLayout';
 import type { FormBlock } from './builder/types';

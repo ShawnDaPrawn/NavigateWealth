@@ -15,7 +15,7 @@
  */
 
 import { ReactNode } from 'react';
-import { BASE_PDF_CSS } from './BasePdfLayout';
+import { BASE_PDF_CSS } from '../../../../shared/pdf';
 
 // ============================================================================
 // LETTER-SPECIFIC CSS (layered on top of BASE_PDF_CSS)
