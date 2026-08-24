@@ -1,9 +1,35 @@
--- =============================================================================
--- FNA Intake Sessions (Postgres migration — launch blocker)
--- Replaces fna-intake:session:* KV keys with indexed, transactional storage.
--- =============================================================================
+-- ============================================================================
+-- APPLIED IN PRODUCTION as version 20260522225558 (name: fna_intake_sessions)
+--
+-- RECONSTRUCTED? NO. Body copied verbatim from
+-- `supabase_migrations.schema_migrations.statements` on 2026-08-24.
+--
+-- STAMP CORRECTION: this repo previously carried the same migration as
+-- `20260520000001_fna_intake_sessions.sql`. That filename was never the applied
+-- version — production recorded 20260522225558, presumably because the SQL was
+-- run through the dashboard rather than `supabase db push`. The mis-stamped file
+-- has been deleted and replaced by this one so that filename == applied version.
+--
+-- ---------------------------------------------------------------------------
+-- ℹ️  THE UPDATE POLICY BELOW IS SUPERSEDED — AND THE REPLACEMENT IS APPLIED.
+--
+-- `fna_intake_client_update_draft` as written here permitted a client to UPDATE
+-- their own session while status IN ('client_draft','submitted'), with a WITH
+-- CHECK that constrained only ownership — not status. A client could therefore
+-- mutate an FNA the adviser had already begun reviewing, and move a 'submitted'
+-- row to 'accepted', self-accepting their own Financial Needs Analysis.
+--
+-- That was SECURITY-AUDIT H-12. The fix is
+-- `20260824222932_fna_intake_rls_draft_only.sql`, APPLIED to production on
+-- 2026-08-24 and verified: USING and WITH CHECK now both read
+-- `(auth.uid() = client_id) AND (status = 'client_draft')`.
+--
+-- The statement below is retained because this file records what production
+-- ran in May, not what is in force today. Do not "fix" it here — read the
+-- 20260824222932 migration for the policy currently in effect.
+-- ---------------------------------------------------------------------------
 
-BEGIN;
+-- FNA Intake Sessions (Postgres migration — launch blocker)
 
 CREATE TABLE IF NOT EXISTS public.fna_intake_sessions (
   id                   uuid PRIMARY KEY,
@@ -32,7 +58,6 @@ CREATE TABLE IF NOT EXISTS public.fna_intake_sessions (
 COMMENT ON TABLE public.fna_intake_sessions IS
   'Client-led FNA intake sessions. Canonical after FNA_INTAKE_READ_FROM=postgres cutover.';
 
--- One active intake per client+domain (draft or submitted awaiting accept)
 CREATE UNIQUE INDEX IF NOT EXISTS fna_intake_active_per_domain
   ON public.fna_intake_sessions (client_id, domain)
   WHERE status IN ('client_draft', 'submitted');
@@ -41,10 +66,16 @@ CREATE INDEX IF NOT EXISTS fna_intake_submitted_queue
   ON public.fna_intake_sessions (submitted_at DESC NULLS LAST)
   WHERE status = 'submitted';
 
+-- NOTE: duplicated statement, preserved verbatim from the applied migration.
+-- Harmless only because it carries IF NOT EXISTS — contrast with the kv-table
+-- migration, where the same copy-paste without IF NOT EXISTS cost 1.5 GB.
+CREATE INDEX IF NOT EXISTS fna_intake_submitted_queue
+  ON public.fna_intake_sessions (submitted_at DESC NULLS LAST)
+  WHERE status = 'submitted';
+
 CREATE INDEX IF NOT EXISTS fna_intake_client_domain
   ON public.fna_intake_sessions (client_id, domain, updated_at DESC);
 
--- updated_at trigger
 CREATE OR REPLACE FUNCTION public.fna_intake_sessions_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -59,7 +90,6 @@ CREATE TRIGGER fna_intake_sessions_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.fna_intake_sessions_set_updated_at();
 
--- RLS: clients read/update own active sessions; service role bypasses for Edge Function
 ALTER TABLE public.fna_intake_sessions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS fna_intake_client_select ON public.fna_intake_sessions;
@@ -67,10 +97,9 @@ CREATE POLICY fna_intake_client_select ON public.fna_intake_sessions
   FOR SELECT
   USING (auth.uid() = client_id);
 
+-- ⚠️ SUPERSEDED BY 20260611000001 (NOT APPLIED) — see banner above.
 DROP POLICY IF EXISTS fna_intake_client_update_draft ON public.fna_intake_sessions;
 CREATE POLICY fna_intake_client_update_draft ON public.fna_intake_sessions
   FOR UPDATE
   USING (auth.uid() = client_id AND status IN ('client_draft', 'submitted'))
   WITH CHECK (auth.uid() = client_id);
-
-COMMIT;

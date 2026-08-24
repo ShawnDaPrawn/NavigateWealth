@@ -107,8 +107,46 @@ Actions tab) and report it.
 
 - Do **not** run `supabase functions deploy` (or any `supabase` CLI deploy)
   manually.
-- Do **not** ask the user for, or generate, a Supabase access token. The token
-  already lives in the repo's Actions secret; the workflow uses it.
+- Do **not** run a deploy by hand just because you now have credentials. The
+  deploy path is automated and stays automated (see above).
+
+**UPDATED 2026-08-24 — asking for credentials is now ALLOWED.** The earlier
+blanket rule here ("do not ask the user for, or generate, a Supabase access
+token") is withdrawn by explicit standing permission from the repository owner.
+An agent MAY request tokens and credentials from the user, and use them, **for
+the purpose of establishing or inspecting the environment** — reconciling
+schema, reading migration state, running advisors, provisioning a staging
+project, and similar setup work.
+
+That permission has boundaries, and they are not negotiable:
+
+- **Never commit a credential.** Not to a file, not to a commit message, not to
+  a PR body, not to a doc, not in an example. Anything pasted into the session
+  stays in the session.
+- **Never send a credential to a third party**, or paste it into a URL, header
+  or payload bound for anywhere other than the service it authenticates.
+- **Least privilege, and say which.** Ask for the narrowest credential that does
+  the job, and name exactly what you will do with it before asking.
+- **Read before you write.** Introspect first; a write against production is a
+  separate decision that needs its own confirmation, credentials or not.
+- **Credentials do not widen the deploy rule.** Holding a Supabase token is
+  still not a licence to deploy the Edge Function by hand — merging to `main`
+  deploys it.
+
+**What is already wired (check before asking for anything).** This repo's
+sessions have a Supabase MCP server with read/write access to project
+`vpjmdsltwrnpefzcgdmz`: `list_migrations`, `list_tables`, `execute_sql`,
+`apply_migration`, `get_advisors`, `list_edge_functions`. That is how the
+2026-08-24 migration reconciliation (D2) was closed after two prior sessions had
+recorded it as blocked on credentials — it was never actually blocked. Try the
+MCP server before asking the user for anything.
+
+**What the MCP server does NOT cover**, and therefore still needs the operator:
+Edge Function **environment secrets**. There is no tool to read or set them, so
+anything gated on `NW_ESIGN_PLATFORM_P12_BASE64`, `NW_ESIGN_REQUIRE_ENV_CERT`,
+`ESIGN_DUAL_WRITE` or similar is an operator action in the Supabase dashboard
+(Project → Edge Functions → Secrets), not something an agent can do.
+
 - Do **not** try to deploy from the agent sandbox — its network egress blocks
   `api.supabase.com`, so manual attempts fail regardless.
 
