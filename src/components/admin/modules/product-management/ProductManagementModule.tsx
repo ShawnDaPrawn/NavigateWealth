@@ -12,7 +12,7 @@ import {
 import { ProviderManagementTab } from './ProviderManagementTab';
 import { ProductManagementTab } from './ProductManagementTab';
 import { IntegrationsTab } from './IntegrationsTab';
-import { UniversalKeyManager } from '../resources/UniversalKeyManager';
+import { UniversalKeyManager } from '../resources';
 import { useCurrentUserPermissions } from '../personnel';
 import { ProductManagementSkeleton } from './components/ProductManagementSkeleton';
 

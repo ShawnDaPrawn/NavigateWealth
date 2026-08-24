@@ -1,5 +1,5 @@
 import { ProductCategoryId, ProductKeyCategory } from './types';
-import { getKeysByCategory } from './keyManagerConstants';
+import { getKeysByCategory } from '../../../../shared/product-keys';
 
 /**
  * Maps product category IDs to key categories

@@ -609,39 +609,10 @@ export interface UploadPreviewResponse {
 // KEY MANAGER TYPES
 // ----------------------------------------------------------------------------
 
-export type ProductKeyCategory = 
-  | 'risk'
-  | 'medical_aid'
-  | 'retirement_pre'
-  | 'retirement_post'
-  | 'invest_voluntary'
-  | 'invest_guaranteed'
-  | 'employee_benefits'
-  | 'employee_benefits_risk'
-  | 'employee_benefits_retirement'
-  | 'estate_planning'
-  | 'tax'
-  | 'profile_personal'
-  | 'profile_contact'
-  | 'profile_identity'
-  | 'profile_address'
-  | 'profile_employment'
-  | 'profile_health'
-  | 'profile_family'
-  | 'profile_banking'
-  | 'profile_risk'
-  | 'profile_financial';
-
-export interface ProductKey {
-  id: string;
-  category: ProductKeyCategory;
-  name: string;
-  description: string;
-  dataType: 'number' | 'currency' | 'percentage' | 'date' | 'text' | 'boolean';
-  isCalculated?: boolean; // True for totals/calculated fields, false/undefined for assignable fields
-  calculatedFrom?: string[]; // Array of key IDs that this total is calculated from
-  isRecommendation?: boolean; // True for keys that store FNA recommended values
-}
+// Canonical definitions live in src/shared/types/product-keys.ts: the key
+// manager spans this module, resources/key-manager and client-keys, so none of
+// them owns the shape.
+export type { ProductKey, ProductKeyCategory } from '../../../../shared/types/product-keys';
 
 export interface FieldKeyMapping {
   fieldId: string;

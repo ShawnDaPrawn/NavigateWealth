@@ -8,7 +8,7 @@ import {
   ALL_PRODUCT_KEYS,
   KEY_CATEGORIES,
   getKeysByCategory as getKeysByCategoryInternal,
-} from '../../product-management';
+} from '@/shared/product-keys';
 import {
   ProductKey,
   ProductKeyCategory,

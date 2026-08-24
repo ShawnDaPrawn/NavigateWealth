@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { Info, Key, Database, Workflow, Calculator, UserCircle, Target } from 'lucide-react';
-import { ProductKeyCategory } from '../product-management';
+import type { ProductKeyCategory } from '@/shared/types/product-keys';
 import { KeyAPI, KeyList, CategoryFilter, SearchFilters, CATEGORY_ICONS } from './key-manager';
 
 export function UniversalKeyManager() {

@@ -10,8 +10,8 @@
 
 import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
-import { ALL_PRODUCT_KEYS } from '../product-management';
-import type { ProductKey } from '../product-management';
+import { ALL_PRODUCT_KEYS } from '@/shared/product-keys';
+import type { ProductKey } from '@/shared/types/product-keys';
 import type { ClientKeysResponse } from './types';
 
 // ── Key registry lookup map ──────────────────────────────────────────────────

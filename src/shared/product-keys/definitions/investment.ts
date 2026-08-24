@@ -6,7 +6,7 @@
  * `ALL_PRODUCT_KEYS` and dispatches them from `getKeysByCategory`; it just no
  * longer holds the definitions itself.
  */
-import type { ProductKey } from '../types';
+import type { ProductKey } from '../../types/product-keys';
 
 // Investment Keys (Voluntary)
 export const INVEST_VOLUNTARY_KEYS: ProductKey[] = [

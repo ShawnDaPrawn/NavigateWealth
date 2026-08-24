@@ -16,24 +16,24 @@
  * checks the aggregate against its parts — a dropped array is still a valid
  * `ProductKey[]`, just a shorter one, so the type system cannot see it.
  */
-import type { ProductKey, ProductKeyCategory } from './types';
+import type { ProductKey, ProductKeyCategory } from '../types/product-keys';
 
-import { RISK_KEYS } from './productKeys/risk';
-import { MEDICAL_AID_KEYS } from './productKeys/medical';
-import { RETIREMENT_PRE_KEYS, RETIREMENT_POST_KEYS } from './productKeys/retirement';
-import { INVEST_VOLUNTARY_KEYS, INVEST_GUARANTEED_KEYS } from './productKeys/investment';
+import { RISK_KEYS } from './definitions/risk';
+import { MEDICAL_AID_KEYS } from './definitions/medical';
+import { RETIREMENT_PRE_KEYS, RETIREMENT_POST_KEYS } from './definitions/retirement';
+import { INVEST_VOLUNTARY_KEYS, INVEST_GUARANTEED_KEYS } from './definitions/investment';
 import {
   EMPLOYEE_BENEFITS_RISK_KEYS,
   EMPLOYEE_BENEFITS_RETIREMENT_KEYS,
   EMPLOYEE_BENEFITS_KEYS,
-} from './productKeys/employeeBenefits';
-import { ESTATE_PLANNING_KEYS, TAX_KEYS } from './productKeys/estateAndTax';
+} from './definitions/employeeBenefits';
+import { ESTATE_PLANNING_KEYS, TAX_KEYS } from './definitions/estateAndTax';
 import {
   PROFILE_PERSONAL_KEYS,
   PROFILE_CONTACT_KEYS,
   PROFILE_IDENTITY_KEYS,
   PROFILE_ADDRESS_KEYS,
-} from './productKeys/profileIdentity';
+} from './definitions/profileIdentity';
 import {
   PROFILE_EMPLOYMENT_KEYS,
   PROFILE_HEALTH_KEYS,
@@ -41,25 +41,25 @@ import {
   PROFILE_BANKING_KEYS,
   PROFILE_RISK_KEYS,
   PROFILE_FINANCIAL_KEYS,
-} from './productKeys/profileFinancial';
+} from './definitions/profileFinancial';
 
 // Re-exported so consumers can keep importing the catalogue from one place.
-export { RISK_KEYS } from './productKeys/risk';
-export { MEDICAL_AID_KEYS } from './productKeys/medical';
-export { RETIREMENT_PRE_KEYS, RETIREMENT_POST_KEYS } from './productKeys/retirement';
-export { INVEST_VOLUNTARY_KEYS, INVEST_GUARANTEED_KEYS } from './productKeys/investment';
+export { RISK_KEYS } from './definitions/risk';
+export { MEDICAL_AID_KEYS } from './definitions/medical';
+export { RETIREMENT_PRE_KEYS, RETIREMENT_POST_KEYS } from './definitions/retirement';
+export { INVEST_VOLUNTARY_KEYS, INVEST_GUARANTEED_KEYS } from './definitions/investment';
 export {
   EMPLOYEE_BENEFITS_RISK_KEYS,
   EMPLOYEE_BENEFITS_RETIREMENT_KEYS,
   EMPLOYEE_BENEFITS_KEYS,
-} from './productKeys/employeeBenefits';
-export { ESTATE_PLANNING_KEYS, TAX_KEYS } from './productKeys/estateAndTax';
+} from './definitions/employeeBenefits';
+export { ESTATE_PLANNING_KEYS, TAX_KEYS } from './definitions/estateAndTax';
 export {
   PROFILE_PERSONAL_KEYS,
   PROFILE_CONTACT_KEYS,
   PROFILE_IDENTITY_KEYS,
   PROFILE_ADDRESS_KEYS,
-} from './productKeys/profileIdentity';
+} from './definitions/profileIdentity';
 export {
   PROFILE_EMPLOYMENT_KEYS,
   PROFILE_HEALTH_KEYS,
@@ -67,7 +67,7 @@ export {
   PROFILE_BANKING_KEYS,
   PROFILE_RISK_KEYS,
   PROFILE_FINANCIAL_KEYS,
-} from './productKeys/profileFinancial';
+} from './definitions/profileFinancial';
 
 // Consolidated key registry
 export const ALL_PRODUCT_KEYS: ProductKey[] = [

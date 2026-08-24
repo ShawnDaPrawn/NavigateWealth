@@ -36,7 +36,7 @@ vi.mock('../../../../../utils/queryKeys', () => ({
   },
 }));
 
-vi.mock('../../product-management/keyManagerConstants', () => ({
+vi.mock('@/shared/product-keys', () => ({
   ALL_PRODUCT_KEYS: [
     {
       id: 'medical_aid_premium',

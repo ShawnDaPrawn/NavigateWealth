@@ -9,7 +9,7 @@ import {
   ALL_PRODUCT_KEYS,
   KEY_CATEGORIES,
   getKeysByCategory,
-} from '../keyManagerConstants';
+} from '../registry';
 
 describe('keyManagerConstants', () => {
   it('RISK_KEYS is a non-empty array', () => {

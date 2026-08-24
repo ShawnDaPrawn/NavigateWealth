@@ -18,8 +18,8 @@
  * Adding a key is a deliberate act — update the count here in the same commit.
  */
 import { describe, expect, it } from 'vitest';
-import * as keys from '../keyManagerConstants';
-import type { ProductKey } from '../types';
+import * as keys from '../registry';
+import type { ProductKey } from '../../types/product-keys';
 
 /** Captured from the pre-split file. Total: 164 keys, all ids distinct. */
 const EXPECTED_COUNTS: Record<string, number> = {
