@@ -5,12 +5,12 @@
  * WHY THIS FILE EXISTS
  * --------------------
  * The obvious way to give the Edge Function a global error handler is
- * `app.onError(...)` in index.tsx. It does not work here, and the reason is
+ * `app.onError(...)` in app.ts. It does not work here, and the reason is
  * structural rather than incidental: `lazy()` dispatches each sub-router with
  * `router.fetch(new Request(...))`, and every sub-router is its OWN Hono
  * instance whose `.fetch()` catches errors internally and returns its own
  * Response. Nothing throws back out, so the parent's handler never sees it —
- * it would cover the three health routes in index.tsx and none of the ~584
+ * it would cover the three health routes in app.ts and none of the ~584
  * routes behind the 77 lazy mounts. A try/catch around `router.fetch()` fails
  * identically, because there is no throw to catch.
  *
@@ -74,8 +74,8 @@ const { lazy } = await import('../lazy-router.ts');
 const PREFIX = '/make-server-91ed8379';
 
 /**
- * Build a parent app shaped like index.tsx: request-id middleware, then mounts.
- * The validation below is copied from index.tsx deliberately — a parent that
+ * Build a parent app shaped like app.ts: request-id middleware, then mounts.
+ * The validation below is copied from app.ts deliberately — a parent that
  * accepted any header would make the propagation tests agree with a version of
  * lazy-router that leaks unvalidated ids downstream.
  */
@@ -107,7 +107,7 @@ beforeEach(() => {
 
 describe('lazy-router: the premise behind B1', () => {
   it('does NOT propagate a sub-router error to the parent onError', async () => {
-    // This is the finding that invalidates `app.onError(...)` in index.tsx.
+    // This is the finding that invalidates `app.onError(...)` in app.ts.
     const parentSawError = vi.fn();
     const parent = new Hono();
     parent.onError((_err, c) => {
@@ -433,7 +433,7 @@ describe('the error handler survives a non-Error throw', () => {
 
 describe('lazy-router: a caller cannot inject a request id downstream', () => {
   /**
-   * index.tsx accepts a caller-supplied x-request-id only if it matches
+   * app.ts accepts a caller-supplied x-request-id only if it matches
    * /^[A-Za-z0-9_-]{8,64}$/, and otherwise generates a UUID. That policy is
    * worthless if lazy-router then hands the sub-router the RAW header: the
    * shared error handler falls back to it, and recordRuntimeServerIssue
@@ -596,15 +596,16 @@ describe('error.middleware: the request-id validation is defence in depth', () =
 describe('the request-id policy is stated identically everywhere it is enforced', () => {
   /**
    * The same pattern is enforced in three places that cannot import from each
-   * other cheaply: index.tsx (a boot module that must stay minimal),
-   * error.middleware.ts (lazily loaded), and this test file's `makeParent`.
+   * other cheaply: app.ts (the boot module, which must stay minimal — §5.4 split
+   * it out of index.tsx, taking this pattern with it), error.middleware.ts
+   * (lazily loaded), and this test file's `makeParent`.
    * Three unlinked copies is exactly how a security policy rots — someone
    * loosens one and the others keep asserting the old rule.
    *
    * Rather than pay boot payload for a shared constant, this pins them: change
    * one and CI tells you about the other two.
    */
-  it('index.tsx, error.middleware.ts and this test agree on the pattern', () => {
+  it('app.ts, error.middleware.ts and this test agree on the pattern', () => {
     const read = (name: string) =>
       readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', name), 'utf8');
     const extract = (src: string, file: string) => {
@@ -613,11 +614,11 @@ describe('the request-id policy is stated identically everywhere it is enforced'
       return m![0];
     };
 
-    const inIndex = extract(read('index.tsx'), 'index.tsx');
+    const inApp = extract(read('app.ts'), 'app.ts');
     const inMiddleware = extract(read('error.middleware.ts'), 'error.middleware.ts');
 
-    expect(inIndex).toBe(inMiddleware);
-    expect(REQUEST_ID_PATTERN.source).toBe(new RegExp(inIndex.slice(1, -1)).source);
+    expect(inApp).toBe(inMiddleware);
+    expect(REQUEST_ID_PATTERN.source).toBe(new RegExp(inApp.slice(1, -1)).source);
   });
 });
 

@@ -50,7 +50,7 @@
  * The anchors below are stable under remediation instead:
  *   - routes that are public BY DEFINITION stay in the list — a `/login` that
  *     required auth would be a bootstrap paradox, and the health probes are
- *     documented in index.tsx as the only deliberately open endpoints;
+ *     documented in app.ts as the only deliberately open endpoints;
  *   - `documents.tsx` — now guarded at BOTH router scope and path scope — must
  *     stay OUT of it, which exercises the two hardest resolution rules and
  *     would catch either a regressed guard or a broken analysis;
@@ -196,13 +196,13 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
 
   it('still reports routes that are public by definition (true positives)', () => {
     // These cannot ever be guarded: a login endpoint behind requireAuth is a
-    // bootstrap paradox, and index.tsx documents the health probes as the only
+    // bootstrap paradox, and app.ts documents the health probes as the only
     // endpoints reachable without a bearer token. If the analysis stops
     // reporting them it has gone blind, and the floor below means nothing.
     for (const expected of [
       'auth-routes.ts POST /login-validate',
       'auth-routes.ts POST /signup',
-      'index.tsx GET /make-server-91ed8379/health',
+      'app.ts GET /make-server-91ed8379/health',
     ]) {
       expect(unguarded, `expected the analysis to still report "${expected}"`).toContain(expected);
     }
