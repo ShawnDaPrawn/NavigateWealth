@@ -25,24 +25,31 @@
  *   ------------------------------------
  *   total                        210
  *
- * Because 210 real violations cannot land as hard errors in one change, the
- * three rules are set to `warn` (they surface the backlog without blocking CI).
- * Burn the backlog down under touch-it-you-fix-it, then flip each back to
- * `error`. Warnings keep `npm run depcruise` at exit 0; a NEW `error`-severity
- * rule (or a rule flipped back to `error`) is what re-arms the block.
+ * That backlog is now cleared: the count is 0 and all three rules are back to
+ * `error`, so any new violation fails CI rather than accumulating. Getting
+ * there was mostly not a matter of rerouting imports through barrels — a
+ * barrel that also exports its module component transitively reaches most of
+ * the app, so routing through one usually closes a cycle instead. What worked
+ * was moving things to where they belong: shared data and contracts into
+ * src/shared (the product key registry, the goals domain, the client
+ * directory, the PDF page shell), a feature's UI into the module that renders
+ * it, and a cross-cutting domain into its own module (client-keys). Each such
+ * move was checked for cycle safety by reachability on the resolved graph
+ * before being applied.
  *
  * TYPE-ONLY CAVEAT: `npx dependency-cruiser@16` runs from its own install and
  * cannot load the project's `typescript`, so it uses a JS-only extractor that
  * does not tag `import type` edges as `type-only` (0 such tags across the graph).
  * That makes `no-spa-edge-source`'s `dependencyTypesNot: ['type-only']` a no-op,
- * so the one legitimate `import type` (useDashboardStats.ts → server/types.ts)
- * shows as a violation. The REAL SPA→edge runtime guard is the ESLint
- * `no-restricted-imports` rule (`allowTypeImports: true`), which is unaffected.
- * The clean fix is to move that shared type into `src/shared` (enhancement plan
- * §4) — a natural first burn-down item — after which this rule can return to
- * `error` cleanly.
+ * so a legitimate `import type` from edge source still counts as a violation.
+ * The one that did (useDashboardStats.ts → server/types.ts) has been fixed the
+ * way this note suggested — ApplicationStats now lives in src/shared/types —
+ * which also turned up that the type had been defined twice and had drifted.
+ * The caveat still applies to any FUTURE `import type` from edge source: move
+ * the type into src/shared rather than reaching across. The runtime guard is
+ * the ESLint `no-restricted-imports` rule (`allowTypeImports: true`).
  *
- * Boundaries enforced (as `warn` during burn-down):
+ * Boundaries enforced (all `error`):
  *   1. no-cross-feature-internals   — module A may not import module B's internals
  *   2. no-outsider-admin-internals  — outsiders may not import admin module internals
  *   3. no-spa-edge-source           — SPA must not import edge (Deno) source at runtime
@@ -58,7 +65,7 @@ module.exports = {
         "Any code inside module A reaching into module B's hooks/, components/, " +
         'api.ts, types.ts, constants.ts etc. creates hidden coupling. ' +
         "Import from B's public barrel instead.",
-      severity: 'warn',
+      severity: 'error',
       from: {
         // Any file inside any one named feature module (group $1 = module name).
         // `from` paths are always fully-resolved disk paths so only `src/` form needed.
@@ -92,7 +99,7 @@ module.exports = {
         'Examples of forbidden imports: /hooks/useX, /components/X, /api, /types, /constants. ' +
         'If a type or constant is needed outside the module, it should either be ' +
         're-exported from the barrel or moved to src/shared/.',
-      severity: 'warn',
+      severity: 'error',
       from: {
         // Any src/ file that is NOT inside an admin feature module
         path: '^src/',
@@ -122,7 +129,7 @@ module.exports = {
         'SPA source must not import Supabase Edge Function (Deno) source at runtime. ' +
         'Call those routes over HTTP; share types via `import type` only. ' +
         'Belt-and-suspenders guard on top of the ESLint no-restricted-imports error.',
-      severity: 'warn',
+      severity: 'error',
       from: {
         path: '^src/',
         pathNot: [

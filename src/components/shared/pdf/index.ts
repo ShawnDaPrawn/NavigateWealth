@@ -11,3 +11,8 @@
  */
 export { BasePdfLayout, BASE_PDF_CSS, getPdfDimensions } from './BasePdfLayout';
 export type { PdfOrientation, PdfPageSize } from './BasePdfLayout';
+export {
+  exportPdfFromPreview,
+  resolvePdfExportPages,
+  resolvePdfPreviewContainer,
+} from './pdfExport';

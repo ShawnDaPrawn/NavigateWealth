@@ -76,3 +76,15 @@ export function resolveLegalPdfRendererVersion({
     pagedAvailable,
   };
 }
+
+/**
+ * The renderer this build should use for legal PDFs.
+ *
+ * Lives here rather than beside the layout components: it is a plain function,
+ * and exporting it from a component module trips react-refresh.
+ */
+export function resolveActiveLegalPdfRenderer(): LegalPdfRendererResolution {
+  return resolveLegalPdfRendererVersion({
+    pagedAvailable: true,
+  });
+}

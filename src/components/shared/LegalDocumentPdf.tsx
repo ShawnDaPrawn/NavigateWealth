@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BasePdfLayout, getPdfDimensions } from './pdf';
+import { exportPdfFromPreview } from './pdf';
 import {
-  PdfTemplateViewer,
-  exportPdfFromPreview,
-} from '../admin/modules/resources/PdfTemplateViewer';
-import {
-  resolveLegalPdfRendererVersion,
-  type LegalPdfRendererResolution,
+  resolveActiveLegalPdfRenderer,
   type LegalPdfRendererVersion,
 } from './legalPdfRendererConfig';
 import {
@@ -789,12 +785,6 @@ function PagedLegalDocumentPdfLayout({
   );
 }
 
-function resolveActiveLegalPdfRenderer(): LegalPdfRendererResolution {
-  return resolveLegalPdfRendererVersion({
-    pagedAvailable: true,
-  });
-}
-
 export function LegalDocumentPdfLayout({
   document,
   rendererVersion,
@@ -828,65 +818,6 @@ export function LegalDocumentPdfLayout({
   }
 
   return <LegacyLegalDocumentPdfLayout document={document} />;
-}
-
-export function LegalDocumentPdfDialog({
-  open,
-  onOpenChange,
-  document,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  document: LegalPdfDocumentData | null;
-}) {
-  const rendererResolution = resolveActiveLegalPdfRenderer();
-  const [pagedRenderState, setPagedRenderState] = useState<{
-    ready: boolean;
-    error: string | null;
-    activeRenderer: LegalPdfRendererVersion;
-  }>({
-    ready: rendererResolution.effectiveVersion !== 'paged',
-    error: null,
-    activeRenderer: rendererResolution.effectiveVersion,
-  });
-
-  useEffect(() => {
-    setPagedRenderState({
-      ready: rendererResolution.effectiveVersion !== 'paged',
-      error: null,
-      activeRenderer: rendererResolution.effectiveVersion,
-    });
-  }, [document, rendererResolution.effectiveVersion]);
-
-  if (!document) return null;
-
-  const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
-  const activePageSelector =
-    pagedRenderState.activeRenderer === 'paged' ? '.pagedjs_page' : '.pdf-page';
-
-  return (
-    <PdfTemplateViewer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={document.title}
-      pageSize={pdfConfig.pageSize}
-      orientation={pdfConfig.orientation}
-      primaryActionLabel="Print / Save PDF"
-      pageSelector={activePageSelector}
-      pdfExportReady={
-        rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true
-      }
-      pdfPreparingLabel={
-        pagedRenderState.error ? 'Falling back to legacy preview...' : 'Preparing paged preview...'
-      }
-    >
-      <LegalDocumentPdfLayout
-        document={document}
-        rendererVersion={rendererResolution.effectiveVersion}
-        onPagedRendererStateChange={setPagedRenderState}
-      />
-    </PdfTemplateViewer>
-  );
 }
 
 export function LegalDocumentPdfDownloadSurface({
