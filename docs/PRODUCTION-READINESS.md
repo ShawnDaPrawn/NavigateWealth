@@ -34,15 +34,15 @@ read that file first, then Section 4 below for history.
 Full quality-gate baseline re-verified locally on `main` commit `23b3e16`
 (`Ship canonical SEO fixes and medical-aid quote landing (#204)`), 2026-08-21:
 
-| Gate                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run lint`                 | 0 errors, **55** warnings — ratcheted against `.eslint-warning-baseline` (Stage A / F2); CI fails if the count rises. Was 59; 4 dead `eslint-disable` directives removed. Actual composition (measured, not estimated): `max-lines` 40, `react-refresh/only-export-components` 9, `no-irregular-whitespace` 2, `react-hooks/exhaustive-deps` 2, `no-unused-vars` 1, `prefer-const` 1. There is **no complexity rule configured**, contrary to the earlier "mostly max-lines / complexity" note.                                                 |
-| `npm run typecheck`            | 0 errors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `npm run typecheck:middleware` | 0 errors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `npm run typecheck:deno`       | Ratchet floor is **0** (`.deno-check-baseline`); enforced green in CI (Quality Check run #801 on `main`, 2026-08-21). Not verifiable in restricted sandboxes — see note below.                                                                                                                                                                                                                                                                                                                                                                  |
-| `npm run depcruise`            | Exit 0. **NOTE (2026-08-21):** the "4683 modules / no violations" reading was vacuous — the resolver had no `extensions` list, so first-party TS never resolved and the boundary rules never fired. Resolver fixed in Stage A (see `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md` F1); it now cruises 2492 real modules and surfaces 210 real boundary violations as `warn`, **ratcheted against `.depcruise-baseline`** — CI fails if the count rises above the floor. Lower the floor as violations are fixed; at 0, flip the rules back to `error`. |
-| `npm test -- --coverage`       | 502 test files, 6842 tests, all pass. **SPA** coverage ~31% statements (`vitest.config.ts`) — note this figure EXCLUDED the backend and ~16 v8-unparseable marketing pages, so it never described the whole repo. **Backend** is now measured separately (Stage A / F4, `npm run test:coverage:server` → `vitest.config.server.ts`): statements **13.43%**, branches 9.38%, functions 12.88%, lines 13.79% across 573 tests, floored and gated in CI. Report the two layers as two numbers.                                                     |
-| `npm run build`                | Passes; SEO verification passes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Gate                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint`                 | 0 errors, **55** warnings — ratcheted against `quality/baselines/eslint-warning-baseline` (Stage A / F2); CI fails if the count rises. Was 59; 4 dead `eslint-disable` directives removed. Actual composition (measured, not estimated): `max-lines` 40, `react-refresh/only-export-components` 9, `no-irregular-whitespace` 2, `react-hooks/exhaustive-deps` 2, `no-unused-vars` 1, `prefer-const` 1. There is **no complexity rule configured**, contrary to the earlier "mostly max-lines / complexity" note.                                                 |
+| `npm run typecheck`            | 0 errors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `npm run typecheck:middleware` | 0 errors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `npm run typecheck:deno`       | Ratchet floor is **0** (`quality/baselines/deno-check-baseline`); enforced green in CI (Quality Check run #801 on `main`, 2026-08-21). Not verifiable in restricted sandboxes — see note below.                                                                                                                                                                                                                                                                                                                                                                  |
+| `npm run depcruise`            | Exit 0. **NOTE (2026-08-21):** the "4683 modules / no violations" reading was vacuous — the resolver had no `extensions` list, so first-party TS never resolved and the boundary rules never fired. Resolver fixed in Stage A (see `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md` F1); it now cruises 2492 real modules and surfaces 210 real boundary violations as `warn`, **ratcheted against `quality/baselines/depcruise-baseline`** — CI fails if the count rises above the floor. Lower the floor as violations are fixed; at 0, flip the rules back to `error`. |
+| `npm test -- --coverage`       | 502 test files, 6842 tests, all pass. **SPA** coverage ~31% statements (`vitest.config.ts`) — note this figure EXCLUDED the backend and ~16 v8-unparseable marketing pages, so it never described the whole repo. **Backend** is now measured separately (Stage A / F4, `npm run test:coverage:server` → `vitest.config.server.ts`): statements **13.43%**, branches 9.38%, functions 12.88%, lines 13.79% across 573 tests, floored and gated in CI. Report the two layers as two numbers.                                                                      |
+| `npm run build`                | Passes; SEO verification passes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Roadmap items from this file that are now **done and verified**:
 
@@ -57,7 +57,7 @@ Roadmap items from this file that are now **done and verified**:
   SPA/middleware/Deno typechecks, dependency-cruiser boundaries, coverage
   thresholds, and the production build all run in
   `.github/workflows/quality-check.yml` and gate every PR. The Deno typecheck
-  is ratcheted against `.deno-check-baseline`, which has been burned down to
+  is ratcheted against `quality/baselines/deno-check-baseline`, which has been burned down to
   **0**.
 - **Audit logging (Section 4.5) — LANDED (KV v1).** `admin-audit-service.ts`
   is an append-only KV audit trail (`audit:admin:*`) consumed by 23 server
@@ -82,7 +82,7 @@ Remaining architecture debt (tracked, non-blocking):
   regression but the floor is low. Raise thresholds as coverage grows.
 - The ESLint warning baseline (now **55**, was 59) should be burned down
   opportunistically. It can no longer grow silently — it is ratcheted against
-  `.eslint-warning-baseline` (Stage A / F2), so CI fails if the count rises.
+  `quality/baselines/eslint-warning-baseline` (Stage A / F2), so CI fails if the count rises.
   40 of the 55 are `max-lines`; splitting those is the path to stepping the
   file-size budget from 1000 to 800 to 600.
 
@@ -232,7 +232,7 @@ Landed since the 2026-04-20 CORS restore:
   `react-router` XSS/open-redirect advisory). `npm audit fix` cleared 6 highs and
   both moderates with no `package.json` change; the residual 1 high is `sharp`
   (dev-only, needs a semver-major bump). The count is now ratcheted against
-  `.npm-audit-baseline` (Stage A / F7) so it cannot silently drift again.
+  `quality/baselines/npm-audit-baseline` (Stage A / F7) so it cannot silently drift again.
 
 Remaining production-readiness blockers are now mainly:
 
@@ -826,6 +826,23 @@ Expected shape:
 { "status": "healthy", "version": "4.1.0", "requestId": "..." }
 ```
 
+### Blocking post-deploy smoke
+
+Runs automatically after every Edge Function deploy (`deploy-supabase-function.yml`).
+Locally, against the currently deployed function:
+
+```powershell
+npm run deploy:smoke
+```
+
+Health probes must return 200; `/kv-store`, `/documents`, and `/profile` must
+return 401 (including when the public anon key is sent as a bearer token).
+A red smoke means the revision is already live — rollback by dispatching the
+deploy workflow with the last green SHA as an input (`gh workflow run
+deploy-supabase-function.yml -f revision=<last-green-sha>`), or by reverting
+the merge on `main`. Do not pass the SHA to `--ref`; that option is a
+branch/tag name, not a commit.
+
 ### CORS Preflight Checks
 
 Production `www` origin:
@@ -1002,3 +1019,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-05-23 | Form Prefill refinement: expanded smoke, parity tests, CI hooks, E2E hardening, migration script.                                                                                                                                                                                                                                                                                          | Agent           |
 | 2026-08-21 | Architecture-quality verification: re-ran every quality gate on `main`, marked the completed roadmap items done (`integrations.tsx` split, Vitest suite fix, tooling gates, audit logging, super-admin allowlist), corrected the Section 2 rubric and Section 8 command list, and recorded remaining debt (four >1000-line server modules, ~31% coverage floor, 59-warning lint baseline). | Claude          |
 | 2026-08-22 | Added `docs/REFACTORING-ROADMAP.md`: the consolidated, re-verified execution roadmap for the remaining technical-debt / readability / code-organisation work (security remainder WS0, frontend and backend organisation, data layer, platform split, delivery confidence), with current ratchet values measured from the tree at `255f708`.                                                | Claude          |
+| 2026-08-24 | Blocking post-deploy smoke (roadmap §8.1): health + gated-route 200/401 probes fail the Edge Function deploy job; rollback documented in the workflow.                                                                                                                                                                                                                                     | Agent           |

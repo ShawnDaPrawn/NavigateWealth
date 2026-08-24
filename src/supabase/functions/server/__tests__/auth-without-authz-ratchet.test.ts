@@ -46,7 +46,7 @@ import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
-const BASELINE_FILE = join(REPO_ROOT, '.auth-without-authz-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/auth-without-authz-baseline');
 
 /**
  * A discarded auth result: a bare `await <gateway>(...)` statement, or one bound
@@ -125,7 +125,7 @@ describe('handlers that authenticate and discard the result', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.auth-without-authz-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/auth-without-authz-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (total > floor) {
@@ -149,7 +149,7 @@ describe('handlers that authenticate and discard the result', () => {
         'auth-without-authz',
         total,
         floor,
-        '.auth-without-authz-baseline',
+        'quality/baselines/auth-without-authz-baseline',
         'discarded auth contexts',
       );
     }

@@ -6,11 +6,19 @@
 # Project ref is fixed in supabase/config.toml (vpjmdsltwrnpefzcgdmz).
 
 # Trigger note: this workflow can be rerun via workflow_dispatch.
+# Rollback a bad live revision with a SHA input (not --ref <sha> — gh only
+# accepts a branch/tag for --ref, which would redeploy that branch's HEAD):
+#   gh workflow run deploy-supabase-function.yml -f revision=<last-green-sha>
 # CI trigger marker: token-variable verification.
 name: Deploy Supabase Edge Function
 
 on:
   workflow_dispatch:
+    inputs:
+      revision:
+        description: Git SHA or ref to deploy. Leave empty for the dispatched branch HEAD. For rollback, pass the last green commit SHA.
+        required: false
+        type: string
   push:
     branches: [main]
     paths:
@@ -18,6 +26,7 @@ on:
       - 'supabase/functions/**'
       - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase-function.yml'
+      - 'scripts/post-deploy-smoke.mjs'
 
 jobs:
   deploy:
@@ -25,6 +34,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.revision || github.sha }}
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -59,12 +70,21 @@ jobs:
           echo "::error::Supabase Edge Function deploy failed after 3 attempts."
           exit "$status"
 
+      # Blocking smoke (roadmap §8.1 / A8). Health must be 200; gated routes
+      # must be 401. No secrets. A red result means the revision just deployed
+      # is already live — rollback with
+      # `gh workflow run deploy-supabase-function.yml -f revision=<last-green-sha>`
+      # or by reverting the merge on main. Do not fix-forward a 200/401 inversion.
       - name: Setup Node.js for post-deploy smoke
         if: success()
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
+
+      - name: Blocking post-deploy smoke
+        if: success()
+        run: node ./scripts/post-deploy-smoke.mjs
 
       - name: Post-deploy form prefill API smoke
         if: success()

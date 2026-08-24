@@ -24,7 +24,7 @@
  * @param tag         short ratchet name, e.g. `route-auth`
  * @param actual      the count measured on this run
  * @param floor       the value currently committed in the baseline file
- * @param baselineFile the baseline filename to edit, e.g. `.route-auth-baseline`
+ * @param baselineFile the baseline filename to edit, e.g. `quality/baselines/route-auth-baseline`
  * @param unit        what is being counted, e.g. `unguarded routes`
  */
 export function announceRatchetSlack(
