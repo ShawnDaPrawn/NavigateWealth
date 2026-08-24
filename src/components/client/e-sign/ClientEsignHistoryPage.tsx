@@ -13,11 +13,13 @@ import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../ui/table';
 
-import { useClientEnvelopes } from '../../admin/modules/esign/hooks/useEnvelopesQuery';
-import { esignApi } from '../../admin/modules/esign/api';
-import { EnvelopeManagementTableRow } from '../../admin/modules/esign/components/EnvelopeManagementTableRow';
-import { EnvelopeDetailsDialog } from '../../admin/modules/esign/components/EnvelopeDetailsDialog';
-import type { EsignEnvelope, EnvelopeStatus } from '../../admin/modules/esign/types';
+import {
+  useClientEnvelopes,
+  esignApi,
+  EnvelopeManagementTableRow,
+  EnvelopeDetailsDialog,
+} from '../../admin/modules/esign';
+import type { EsignEnvelope, EnvelopeStatus } from '../../admin/modules/esign';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 
 /** Same grouping as Client Management E‑Sign tab ([EsignTab.tsx](client-management/components/EsignTab.tsx)) */

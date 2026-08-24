@@ -23,7 +23,7 @@ import {
   AlertCircle,
   ArrowLeft,
 } from 'lucide-react';
-import { esignApi } from '../admin/modules/esign/api';
+import { esignApi } from '../admin/modules/esign';
 
 type VerificationState = 'idle' | 'hashing' | 'verifying' | 'verified' | 'not_found' | 'error';
 

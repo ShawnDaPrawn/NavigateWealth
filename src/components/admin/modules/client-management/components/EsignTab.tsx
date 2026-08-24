@@ -36,15 +36,19 @@ import { toast } from 'sonner';
 import { logger } from '../../../../../utils/logger';
 
 // ==================== SHARED E-SIGN MODULE IMPORTS ====================
-// Direct imports -- avoid barrel (esign/index.tsx) to prevent circular dependency
-// with the full standalone page component.
+// Through the esign public barrel. (The old note here said direct imports were
+// needed to avoid a cycle with the standalone page component -- that stopped
+// being true once the module component moved out of index into EsignModule.tsx
+// and index became a pure re-export barrel.)
 
-import { useEnvelopes } from '../../esign/hooks/useEnvelopesQuery';
-import { esignApi } from '../../esign/api';
-import { useEnvelopeActions } from '../../esign/hooks/useEnvelopeActions';
-import { EmptyState } from '../../esign/components/EmptyState';
-import { EnvelopeManagementTableRow } from '../../esign/components/EnvelopeManagementTableRow';
-import { EnvelopeDetailsDialog } from '../../esign/components/EnvelopeDetailsDialog';
+import {
+  useEnvelopes,
+  esignApi,
+  useEnvelopeActions,
+  EmptyState,
+  EnvelopeManagementTableRow,
+  EnvelopeDetailsDialog,
+} from '../../esign';
 
 import type { EsignEnvelope, EsignField, SignerFormData } from './esignTabModel';
 

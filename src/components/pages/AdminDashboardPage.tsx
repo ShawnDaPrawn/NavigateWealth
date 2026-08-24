@@ -24,7 +24,7 @@ import { ClientManagementSkeleton } from '../admin/modules/client-management/com
 import { ApplicationsSkeleton } from '../admin/modules/applications/components/ApplicationsSkeleton';
 import { TasksSkeleton } from '../admin/modules/tasks/components/TasksSkeleton';
 import { PersonnelSkeleton } from '../admin/modules/personnel/components/PersonnelSkeleton';
-import { EsignSkeleton } from '../admin/modules/esign/components/EsignSkeleton';
+import { EsignSkeleton } from '../admin/modules/esign';
 import { AdviceEngineSkeleton } from '../admin/modules/advice-engine/components/AdviceEngineSkeleton';
 import { ProductManagementSkeleton } from '../admin/modules/product-management/components/ProductManagementSkeleton';
 import { ResourcesSkeleton } from '../admin/modules/resources/components/ResourcesSkeleton';

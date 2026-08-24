@@ -17,9 +17,7 @@ import { getClientProfileQueryOptions } from '../api';
 import { NotesAPI } from '../../notes/api';
 import { NOTES_STALE_TIME } from '../../notes/constants';
 import { noteKeys } from '../../../../../utils/queryKeys';
-import { esignApi } from '../../esign/api';
-import { QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign/constants';
-import { esignKeys } from '../../esign/hooks/useEnvelopesQuery';
+import { esignApi, esignKeys, QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign';
 import { AskVascoPortalTab } from './AskVascoPortalTab';
 import { useOptionalUnsavedChangesRegistry } from '../../../../shared/unsaved-changes';
 

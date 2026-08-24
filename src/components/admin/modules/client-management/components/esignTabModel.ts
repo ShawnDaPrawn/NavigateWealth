@@ -4,7 +4,7 @@
  */
 import { CheckCircle2, Clock, FileText, XCircle } from 'lucide-react';
 import type { Client } from '../types';
-import type { EnvelopeStatus, EsignEnvelope, EsignField, SignerFormData } from '../../esign/types';
+import type { EnvelopeStatus, EsignEnvelope, EsignField, SignerFormData } from '../../esign';
 
 // Single seam for the esign module's types within the client e-sign tab:
 // EsignTab.tsx and EsignTabDialogs.tsx take them from here so only this file
