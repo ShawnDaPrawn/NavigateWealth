@@ -112,12 +112,21 @@ export default tseslint.config(
     },
   },
 
-  // 5. Node-land: build scripts, root config files, Playwright e2e specs.
-  //    Browser globals are included because the provider-portal scripts and the
-  //    e2e specs embed Playwright `page.evaluate()` blocks that run in the page
-  //    context (document/window/HTMLElement/etc.).
+  // 5. Node-land: build scripts, config files (root and quality/), Playwright
+  //    e2e specs. Browser globals are included because the provider-portal
+  //    scripts and the e2e specs embed Playwright `page.evaluate()` blocks that
+  //    run in the page context (document/window/HTMLElement/etc.).
+  //
+  //    `*.{js,mjs,cjs,ts}` matches the repo root only, so tool configs that live
+  //    in quality/ need their own pattern — without it a CommonJS config there
+  //    loses `module`/`require` and fails no-undef.
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'e2e/**/*.{ts,js}', '*.{js,mjs,cjs,ts}'],
+    files: [
+      'scripts/**/*.{js,mjs,cjs}',
+      'e2e/**/*.{ts,js}',
+      '*.{js,mjs,cjs,ts}',
+      'quality/**/*.{js,mjs,cjs,ts}',
+    ],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
     },
