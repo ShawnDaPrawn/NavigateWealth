@@ -58,6 +58,12 @@ export type {
 } from './calendar';
 
 export type {
+  // Balance-sheet domain (client profile + admin profile viewer)
+  Asset,
+  Liability,
+} from './balance-sheet';
+
+export type {
   // Logging & error types
   LogLevel,
   LogContext,

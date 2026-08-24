@@ -27,8 +27,8 @@ import {
 import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 
 import { DetailChip } from './assetsLiabilitiesShared';
-import { getAssetTypeLabel } from './assetsLiabilitiesLabels';
-import type { Asset } from './assetsLiabilitiesTypes';
+import { getAssetTypeLabel } from '../../../shared/formatting';
+import type { Asset } from '../../../shared/types';
 
 interface AssetsPanelProps {
   assets: Asset[];

@@ -8,3 +8,5 @@ export {
   formatDateTime,
   formatFileSize,
 } from './format';
+
+export { getAssetTypeLabel, getLiabilityTypeLabel } from './balanceSheetLabels';
