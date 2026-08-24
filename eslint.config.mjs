@@ -131,7 +131,7 @@ export default tseslint.config(
 
   // 6. Service workers (self/caches/fetch/clients, no DOM).
   {
-    files: ['**/service-worker.js', 'public/**/*.js', 'src/public/**/*.js'],
+    files: ['**/service-worker.js', 'public/**/*.js'],
     languageOptions: {
       globals: { ...globals.serviceworker, ...globals.browser },
     },
