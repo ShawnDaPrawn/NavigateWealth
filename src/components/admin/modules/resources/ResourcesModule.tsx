@@ -51,7 +51,7 @@ import { generatePreviewData, getCategoryColor } from './utils';
 import { LEGAL_DOCUMENTS } from './legal-constants';
 import { api } from '../../../../utils/api';
 
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 // Phase 1 — Form status config
 import { FormsFilterBar } from './components/FormsFilterBar';

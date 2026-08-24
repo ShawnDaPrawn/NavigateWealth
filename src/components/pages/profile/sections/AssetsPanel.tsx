@@ -44,7 +44,7 @@ import {
 import { useInlineEditDialogClose } from '../../../shared/unsaved-changes';
 
 import { DetailChip } from './assetsLiabilitiesShared';
-import { getAssetTypeLabel } from './assetsLiabilitiesLabels';
+import { getAssetTypeLabel } from '../../../../shared/formatting';
 
 interface AssetsPanelProps {
   profileData: ProfileData;

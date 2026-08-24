@@ -13,7 +13,7 @@ import { Loader2, Printer, X, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
-import { BasePdfLayout, BASE_PDF_CSS } from '../../resources/templates/BasePdfLayout';
+import { BasePdfLayout, BASE_PDF_CSS } from '../../resources';
 import { downloadWillPdf, type WillRecord as WillRecordPdf } from '../utils/will-pdf-generator';
 import {
   type LivingWillDataPayload,

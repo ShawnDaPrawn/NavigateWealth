@@ -1,8 +1,12 @@
 /**
  * Per-type input rendering for one policy form field. A plain JSX-returning
- * function, not a component: PolicyFormDialog calls it through a thin
- * adapter so the render tree (and the nested AssumptionsTool's identity
- * semantics) stay exactly as before the split.
+ * function, not a component: PolicyFormDialog calls it through a thin adapter
+ * so the render tree stays as it was.
+ *
+ * The assumptions tool used to be injected as a `React.ComponentType` prop,
+ * because PolicyFormDialog declared it inside its own body. That indirection
+ * is gone: it is imported directly here, so its identity is fixed at module
+ * load and a parent re-render can no longer remount it.
  */
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -12,6 +16,7 @@ import { Switch } from '../../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { CurrencyInputField } from '../../ui/currency-input';
 import type { ProductField } from './policyFormModel';
+import { PolicyAssumptionsTool } from './PolicyAssumptionsTool';
 
 export function renderPolicyFieldInput({
   field,
@@ -20,7 +25,7 @@ export function renderPolicyFieldInput({
   errors,
   handleFieldChange,
   recalcMaturityValues,
-  AssumptionsTool,
+  tableStructure,
 }: {
   field: ProductField;
   formData: Record<string, unknown>;
@@ -28,7 +33,7 @@ export function renderPolicyFieldInput({
   errors: Record<string, string>;
   handleFieldChange: (fieldId: string, value: string | number | boolean) => void;
   recalcMaturityValues: (data: Record<string, unknown>) => Record<string, unknown>;
-  AssumptionsTool: React.ComponentType<{ field: ProductField }>;
+  tableStructure: ProductField[];
 }) {
   // formData is Record<string, unknown>; coerce to string for input/select
   // bindings (the boolean case below reads formData[field.id] directly).
@@ -89,7 +94,12 @@ export function renderPolicyFieldInput({
             {(field.keyId === 'retirement_estimated_maturity_value' ||
               field.keyId === 'invest_maturity_value') && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <AssumptionsTool field={field} />
+                <PolicyAssumptionsTool
+                  field={field}
+                  tableStructure={tableStructure}
+                  formData={formData}
+                  handleFieldChange={handleFieldChange}
+                />
                 <Button
                   type="button"
                   variant="outline"

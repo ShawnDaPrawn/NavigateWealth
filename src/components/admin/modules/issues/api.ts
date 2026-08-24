@@ -1,5 +1,5 @@
 import { api } from '../../../../utils/api/client';
-import { TasksAPI } from '../tasks/api';
+import { TasksAPI } from '../tasks';
 import type {
   QualityIssueAutomationRun,
   QualityIssue,

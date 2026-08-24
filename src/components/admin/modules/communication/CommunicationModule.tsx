@@ -8,7 +8,7 @@ import { Step3Review } from './components/steps/Step3Review';
 // Cross-module dependency: communication → personnel (public hook surface)
 // Justified: Communication module requires permission gating for admin actions.
 // §3.1 exception documented — shared permission context would be the ideal alternative.
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 // Heavy sub-views — lazy-loaded (only rendered on user action)
 const CommunicationHistory = React.lazy(() =>

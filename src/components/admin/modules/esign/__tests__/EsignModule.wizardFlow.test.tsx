@@ -429,13 +429,24 @@ describe('EsignModule wizard flow', () => {
       required: true,
     });
 
-    // CHARACTERIZATION OF A LATENT BUG, pinned deliberately: handleSend is
-    // invoked from the same render's closure, where `activeEnvelope` is still
-    // null, so a first-time express send stops after materialising the draft —
-    // no invite is dispatched and no success toast fires. Flagged to the
-    // maintainer; a fix belongs in its own change, not in the file split.
-    expect(spies.sendInvites).not.toHaveBeenCalled();
-    expect(toast.success).not.toHaveBeenCalledWith('Document sent for signature!');
+    // REGRESSION PIN for the first-time express-send bug. This used to assert
+    // the opposite: handleSend read `activeEnvelope` from the render closure
+    // that invoked it, where a first-time express send still had it as null,
+    // so the send aborted after materialising the draft — no invite, no toast,
+    // no error. The user saw the wizard close and believed the document was
+    // sent. handleSend now takes the envelope explicitly, so the invite goes
+    // out on the FIRST express send, not only on a retry.
+    expect(spies.sendInvites).toHaveBeenCalledTimes(1);
+    const [inviteEnvelopeId, invitePayload] = spies.sendInvites.mock.calls[0];
+    expect(inviteEnvelopeId).toBe('env-42');
+    expect(invitePayload.signers).toEqual([
+      expect.objectContaining({ email: 'client@x.co' }),
+      expect.objectContaining({ email: 'adviser@x.co' }),
+    ]);
+    // The hydrated template fields are the ones dispatched, stamped with each
+    // recipient's index rather than their email.
+    expect(invitePayload.fields).toHaveLength(1);
+    expect(toast.success).toHaveBeenCalledWith('Document sent for signature!');
   });
 
   it('Back from recipients with no files and no builder resets to the dashboard', async () => {

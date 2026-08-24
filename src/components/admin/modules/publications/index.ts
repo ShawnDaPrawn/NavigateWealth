@@ -30,3 +30,18 @@ export { CATEGORY_ICON_MAP } from './constants';
 
 // Utils consumed by external pages
 export { formatDate } from './utils';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { ArticleEditor } from './ArticleEditor';
+export { ArticlesListView } from './ArticlesListView';
+export { CategoriesManager } from './CategoriesManager';
+export { InitializePublications } from './InitializePublications';
+export { PublicationsSettings } from './PublicationsSettings';
+export { RichTextEditor } from './RichTextEditor';
+export { ArticlesAPI, StatsAPI } from './api';
+export { ConfirmDialog } from './components/ConfirmDialog';
+export { PublicationsSkeleton } from './components/PublicationsSkeleton';
+export { useArticleNotificationProcessor } from './hooks/useArticleNotificationProcessor';
+export { useAutoContentProcessor } from './hooks/useAutoContentProcessor';
+export { useScheduledPublishProcessor } from './hooks/useScheduledPublishProcessor';
+export type { PublicationStats } from './types';

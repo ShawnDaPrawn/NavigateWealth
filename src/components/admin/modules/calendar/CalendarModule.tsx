@@ -14,9 +14,9 @@ import {
   useClientBirthdays,
 } from './hooks';
 import { usePolicyRenewals } from './hooks/usePolicyRenewals';
-import { useTasks } from '../tasks/hooks/useTaskQueries';
+import { useTasks } from '../tasks';
 import type { CalendarEvent, CalendarFilters, CreateEventInput } from './types';
-import type { Task } from '../tasks/types';
+import type { Task } from '../tasks';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 export function CalendarModule() {
   const [filters, setFilters] = useState<Partial<CalendarFilters>>({

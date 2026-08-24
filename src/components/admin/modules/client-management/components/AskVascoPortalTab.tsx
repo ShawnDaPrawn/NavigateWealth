@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Dialog, DialogContent } from '../../../../ui/dialog';
-import { ConfirmDialog } from '../../publications/components/ConfirmDialog';
+import { ConfirmDialog } from '../../publications';
 import {
   VascoAvatar,
   VascoChatInput,

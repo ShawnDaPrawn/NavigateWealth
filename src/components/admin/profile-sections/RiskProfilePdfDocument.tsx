@@ -1,4 +1,4 @@
-import { BasePdfLayout } from '../modules/resources/templates/BasePdfLayout';
+import { BasePdfLayout } from '../modules/resources';
 import type { RiskAssessment } from '../modules/client-management/types';
 import {
   getRiskCategorySummary,

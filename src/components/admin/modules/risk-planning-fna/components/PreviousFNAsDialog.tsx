@@ -18,7 +18,7 @@ import {
 import { Eye, Loader2, FileText, Calendar, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, resolveApiEndpoint } from '../../../../../utils/api';
-import { normalizeFnaListResponse } from '../../fna/fnaListUtils';
+import { normalizeFnaListResponse } from '../../fna';
 
 interface PreviousFNAsDialogProps {
   open: boolean;

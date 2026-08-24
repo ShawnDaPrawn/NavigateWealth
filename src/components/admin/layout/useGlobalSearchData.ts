@@ -7,11 +7,11 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { clientApi } from '../modules/client-management/api';
-import { personnelApi } from '../modules/personnel/api';
+import { clientApi } from '../modules/client-management';
+import { personnelApi } from '../modules/personnel';
 import { clientKeys, personnelKeys } from '../../../utils/queryKeys';
-import type { ApiUser } from '../modules/client-management/types';
-import { normalizeClientProfileKv } from '../modules/client-management/normalizeClientProfileKv';
+import type { ApiUser } from '../modules/client-management';
+import { normalizeClientProfileKv } from '../modules/client-management';
 import { resolvePersonName } from '../../../utils/personName';
 
 // ============================================================================

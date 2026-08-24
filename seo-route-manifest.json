@@ -1,6 +1,6 @@
 {
   "generated": true,
-  "generatedAt": "2026-07-01T20:36:35.629Z",
+  "generatedAt": "2026-08-24T12:15:34.161Z",
   "paths": [
     "/",
     "/about",
@@ -12,6 +12,7 @@
     "/estate-planning",
     "/financial-planning",
     "/get-quote",
+    "/get-quote/medical-aid",
     "/investment-management",
     "/legal",
     "/medical-aid",

@@ -49,3 +49,6 @@ export {
   FNA_WIZARD_STEP_LABELS,
   FNA_QUERY_KEYS,
 } from './constants';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { normalizeFnaListResponse } from './fnaListUtils';

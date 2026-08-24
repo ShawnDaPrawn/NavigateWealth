@@ -32,7 +32,7 @@ import type { InformationGatheringInput } from '../types';
 import { IncomeDetailsForm } from './step1/IncomeDetailsForm';
 import { DependantsForm } from './step1/DependantsForm';
 import { ExistingCoverForm } from './step1/ExistingCoverForm';
-import { useFormPrefill } from '../../form-prefill/useFormPrefill';
+import { useFormPrefill } from '../../form-prefill';
 
 interface Step1Props {
   clientId?: string;

@@ -1,7 +1,11 @@
 /**
- * Type-label helpers for the admin assets and liabilities rows.
+ * Display labels for balance-sheet rows.
+ *
+ * Both profile surfaces render the same rule — fall back to `customType` when
+ * the type is 'Other', then to a generic noun when it is blank — and each kept
+ * its own identical copy. One copy, used by both.
  */
-import type { Asset, Liability } from './assetsLiabilitiesTypes';
+import type { Asset, Liability } from '../types';
 
 export function getAssetTypeLabel(asset: Asset) {
   return asset.type === 'Other' ? asset.customType || 'Other' : asset.type || 'Asset';

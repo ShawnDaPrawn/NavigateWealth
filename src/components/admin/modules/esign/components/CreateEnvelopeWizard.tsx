@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { SignerManager } from './SignerManager';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
-import type { Client } from '../../client-management/types';
+import type { Client } from '../../client-management';
 import type { SignerFormData, EsignEnvelope } from '../types';
 import type { SigningMode } from '../types';
 

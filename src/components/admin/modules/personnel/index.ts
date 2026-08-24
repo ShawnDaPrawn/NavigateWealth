@@ -91,3 +91,6 @@ export type { CapabilityMeta } from './constants';
 
 // Schemas
 export { inviteUserSchema, updateProfileSchema, commissionSchema } from './schema';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { PersonnelSkeleton } from './components/PersonnelSkeleton';

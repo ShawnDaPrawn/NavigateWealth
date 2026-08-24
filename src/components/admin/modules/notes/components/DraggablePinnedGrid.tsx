@@ -2,30 +2,29 @@
  * DraggablePinnedGrid — Drag-and-drop reordering for pinned notes
  *
  * §7 — Presentation + local UI state only
- * §8.4 — Uses react-dnd per Figma Make library guidance
+ * Reordering uses the platform's own HTML5 drag events rather than a library.
+ * The board renders as a multi-column CSS grid, and @hello-pangea/dnd — the one
+ * drag library this codebase keeps — states in its own README that "grid
+ * layouts are not supported (yet)". Rather than keep react-dnd alive for this
+ * one component, or downgrade the board to a single column to suit the library,
+ * the ~30 lines of native wiring below do the job and work in any layout.
+ *
+ * The ordering rules themselves live in ../pinOrder and the move in
+ * shared/utils/reorder, so what is here is only the gesture.
  *
  * Pin order is persisted to localStorage keyed by personnelId.
- * Falls back gracefully when DnD is unavailable.
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useCallback, useState, useEffect } from 'react';
 import type { Note, NoteViewMode } from '../types';
-import { PIN_ORDER_STORAGE_KEY } from '../constants';
+import { applyCustomOrder, loadPinOrder, savePinOrder } from '../pinOrder';
+import { moveItem } from '../../../../../shared/utils';
 import { NoteCard } from './NoteCard';
 import { GripVertical } from 'lucide-react';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-const DRAG_TYPE = 'PINNED_NOTE';
-
-interface DragItem {
-  id: string;
-  index: number;
-}
 
 interface NoteCardHandlers {
   onOpen: (note: Note) => void;
@@ -47,130 +46,71 @@ interface DraggablePinnedGridProps {
 }
 
 // ============================================================================
-// STORAGE HELPERS
-// ============================================================================
-
-function getStorageKey(personnelId: string): string {
-  return `${PIN_ORDER_STORAGE_KEY}_${personnelId}`;
-}
-
-function loadPinOrder(personnelId: string): string[] {
-  try {
-    const raw = localStorage.getItem(getStorageKey(personnelId));
-    if (!raw) return [];
-    return JSON.parse(raw) as string[];
-  } catch {
-    return [];
-  }
-}
-
-function savePinOrder(personnelId: string, order: string[]): void {
-  try {
-    localStorage.setItem(getStorageKey(personnelId), JSON.stringify(order));
-  } catch {
-    // Fail silently
-  }
-}
-
-// ============================================================================
-// APPLY CUSTOM ORDER
-// ============================================================================
-
-function applyCustomOrder(notes: Note[], savedOrder: string[]): Note[] {
-  if (savedOrder.length === 0) return notes;
-
-  const orderMap = new Map(savedOrder.map((id, idx) => [id, idx]));
-  const ordered = [...notes];
-
-  ordered.sort((a, b) => {
-    const aIdx = orderMap.get(a.id);
-    const bIdx = orderMap.get(b.id);
-    // Both in saved order — use saved positions
-    if (aIdx !== undefined && bIdx !== undefined) return aIdx - bIdx;
-    // Only one in saved order — it comes first
-    if (aIdx !== undefined) return -1;
-    if (bIdx !== undefined) return 1;
-    // Neither in saved order — keep original relative order
-    return 0;
-  });
-
-  return ordered;
-}
-
-// ============================================================================
 // DRAGGABLE CARD WRAPPER
 // ============================================================================
 
 function DraggableNoteWrapper({
   note,
   index,
-  moveNote,
   viewMode,
   handlers,
   isSelecting,
   isSelected,
   onToggleSelect,
+  isDragging,
+  isOver,
+  onDragStart,
+  onDragEnterIndex,
+  onDropAtIndex,
+  onDragFinish,
 }: {
   note: Note;
   index: number;
-  moveNote: (dragIndex: number, hoverIndex: number) => void;
   viewMode: NoteViewMode;
   handlers: NoteCardHandlers;
   isSelecting: boolean;
   isSelected: boolean;
   onToggleSelect: (noteId: string) => void;
+  /** This card is the one being dragged. */
+  isDragging: boolean;
+  /** This card is the current drop target. */
+  isOver: boolean;
+  onDragStart: (index: number) => void;
+  onDragEnterIndex: (index: number) => void;
+  onDropAtIndex: (index: number) => void;
+  onDragFinish: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const [{ isDragging }, drag, preview] = useDrag({
-    type: DRAG_TYPE,
-    item: (): DragItem => ({ id: note.id, index }),
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    canDrag: () => !isSelecting,
-  });
-
-  const [{ isOver }, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover(item: DragItem, monitor) {
-      if (!ref.current) return;
-      const dragIndex = item.index;
-      const hoverIndex = index;
-      if (dragIndex === hoverIndex) return;
-
-      // For list view, use vertical midpoint
-      const hoverBoundingRect = ref.current.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      if (!clientOffset) return;
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-
-      // Only move when cursor crosses midpoint
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
-
-      moveNote(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
-  });
-
-  preview(drop(ref));
-
   return (
     <div
-      ref={ref}
+      onDragOver={(event) => {
+        // Without preventDefault the browser refuses the drop outright.
+        if (isSelecting) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+      }}
+      onDragEnter={() => !isSelecting && onDragEnterIndex(index)}
+      data-testid={`pin-card-${note.id}`}
+      onDrop={(event) => {
+        if (isSelecting) return;
+        event.preventDefault();
+        onDropAtIndex(index);
+      }}
       className={`relative group/drag ${isDragging ? 'opacity-30' : ''} ${isOver ? 'ring-2 ring-purple-300 rounded-lg' : ''}`}
     >
       {/* Drag handle — shown on hover, not in select mode */}
       {!isSelecting && (
         <div
-          ref={drag}
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.effectAllowed = 'move';
+            // Firefox will not start a drag unless some data is set.
+            event.dataTransfer.setData('text/plain', note.id);
+            onDragStart(index);
+          }}
+          onDragEnd={onDragFinish}
           className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing opacity-0 group-hover/drag:opacity-100 transition-opacity"
           title="Drag to reorder"
+          data-testid={`pin-drag-handle-${note.id}`}
         >
           <div className="flex items-center justify-center w-5 h-8 rounded bg-gray-800/80 text-white shadow-md hover:bg-gray-700">
             <GripVertical className="h-3.5 w-3.5" />
@@ -237,6 +177,9 @@ export function DraggablePinnedGrid({
   onToggleSelect,
 }: DraggablePinnedGridProps) {
   const [orderedNotes, setOrderedNotes] = useState<Note[]>(notes);
+  /** Index the gesture started from, and the card currently under the cursor. */
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   // Re-derive order when notes change (new pins, unpins, etc.)
   useEffect(() => {
@@ -247,9 +190,7 @@ export function DraggablePinnedGrid({
   const moveNote = useCallback(
     (dragIndex: number, hoverIndex: number) => {
       setOrderedNotes((prev) => {
-        const updated = [...prev];
-        const [removed] = updated.splice(dragIndex, 1);
-        updated.splice(hoverIndex, 0, removed);
+        const updated = moveItem(prev, dragIndex, hoverIndex);
         // Persist new order
         savePinOrder(
           personnelId,
@@ -261,28 +202,54 @@ export function DraggablePinnedGrid({
     [personnelId],
   );
 
+  const handleDragStart = useCallback((index: number) => setDragIndex(index), []);
+  const handleDragEnterIndex = useCallback((index: number) => setOverIndex(index), []);
+  const handleDragFinish = useCallback(() => {
+    setDragIndex(null);
+    setOverIndex(null);
+  }, []);
+
+  /**
+   * The move commits on drop. react-dnd used to reorder repeatedly during
+   * hover; the persisted result is the same, but the cards no longer shuffle
+   * under the cursor mid-gesture.
+   */
+  const handleDropAtIndex = useCallback(
+    (targetIndex: number) => {
+      setDragIndex((from) => {
+        if (from !== null && from !== targetIndex) moveNote(from, targetIndex);
+        return null;
+      });
+      setOverIndex(null);
+    },
+    [moveNote],
+  );
+
   const containerClass =
     viewMode === 'list'
       ? 'space-y-2'
       : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className={containerClass}>
-        {orderedNotes.map((note, index) => (
-          <DraggableNoteWrapper
-            key={note.id}
-            note={note}
-            index={index}
-            moveNote={moveNote}
-            viewMode={viewMode}
-            handlers={handlers}
-            isSelecting={isSelecting}
-            isSelected={selectedIds.has(note.id)}
-            onToggleSelect={onToggleSelect}
-          />
-        ))}
-      </div>
-    </DndProvider>
+    <div className={containerClass}>
+      {orderedNotes.map((note, index) => (
+        <DraggableNoteWrapper
+          key={note.id}
+          note={note}
+          index={index}
+          viewMode={viewMode}
+          handlers={handlers}
+          isSelecting={isSelecting}
+          isSelected={selectedIds.has(note.id)}
+          onToggleSelect={onToggleSelect}
+          isDragging={dragIndex === index}
+          isOver={overIndex === index && dragIndex !== index}
+          onDragStart={handleDragStart}
+          onDragEnterIndex={handleDragEnterIndex}
+          onDropAtIndex={handleDropAtIndex}
+          onDragFinish={handleDragFinish}
+        />
+      ))}
+    </div>
   );
 }

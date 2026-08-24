@@ -20,7 +20,7 @@ import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 import { SummaryMetric } from './assetsLiabilitiesShared';
 import { AssetsPanel } from './AssetsPanel';
 import { LiabilitiesPanel } from './LiabilitiesPanel';
-import type { Asset, Liability } from './assetsLiabilitiesTypes';
+import type { Asset, Liability } from '../../../shared/types';
 
 interface AssetsLiabilitiesSectionProps {
   assets: Asset[];

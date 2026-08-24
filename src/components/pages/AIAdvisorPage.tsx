@@ -28,7 +28,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { advisorKeys } from '../../utils/queryKeys';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import { toast } from 'sonner';
-import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
+import { ConfirmDialog } from '../admin/modules/publications';
 import { VascoInlineChatCard, VascoSessionWorkspace, useVascoStream } from '../shared/vasco-chat';
 import type {
   VascoChatMessageType as ChatMessage,

@@ -5,7 +5,7 @@
  * named functions: the viewer, seventeen per-check result views, the primitives
  * they share, and an HTML report generator. Each was already self-contained.
  */
-import { BASE_PDF_CSS } from '../../../../resources/templates/BasePdfLayout';
+import { BASE_PDF_CSS } from '../../../../resources';
 import {
   escapeHtmlText,
   navigateWealthPdfDocumentTitle,

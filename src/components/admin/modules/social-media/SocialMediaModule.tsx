@@ -4,7 +4,7 @@ import { FileText, Share2, Link as LinkIcon, ShieldAlert } from 'lucide-react';
 import { PublicationsTab } from './PublicationsTab';
 import { SocialMediaTab } from './SocialMediaTab';
 import { LinktreeTab } from './LinktreeTab';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 import { SocialMediaSkeleton } from './components/SocialMediaSkeleton';
 
 export function SocialMediaModule() {

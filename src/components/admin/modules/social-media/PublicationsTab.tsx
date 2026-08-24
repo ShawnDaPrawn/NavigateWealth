@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { FileText, FolderTree, Settings as SettingsIcon, Loader2, AlertCircle } from 'lucide-react';
-import { ArticlesListView } from '../publications/ArticlesListView';
-import { ArticleEditor } from '../publications/ArticleEditor';
-import { CategoriesManager } from '../publications/CategoriesManager';
-import { PublicationsSettings } from '../publications/PublicationsSettings';
-import { InitializePublications } from '../publications/InitializePublications';
+import { ArticlesListView } from '../publications';
+import { ArticleEditor } from '../publications';
+import { CategoriesManager } from '../publications';
+import { PublicationsSettings } from '../publications';
+import { InitializePublications } from '../publications';
 import { api } from '../../../../utils/api';
 
 interface Article {

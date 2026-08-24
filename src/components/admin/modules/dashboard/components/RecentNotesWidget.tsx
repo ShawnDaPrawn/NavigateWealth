@@ -12,9 +12,9 @@ import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
 import { StickyNote, ArrowRight, Plus, User, Pin } from 'lucide-react';
 import { useAuth } from '../../../../auth/AuthContext';
-import { useNotes } from '../../notes/hooks';
-import { NOTE_COLOR_CONFIG } from '../../notes/constants';
-import type { Note } from '../../notes/types';
+import { useNotes } from '../../notes';
+import { NOTE_COLOR_CONFIG } from '../../notes';
+import type { Note } from '../../notes';
 
 interface RecentNotesWidgetProps {
   onModuleChange?: (module: string) => void;

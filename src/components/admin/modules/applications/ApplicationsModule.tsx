@@ -20,7 +20,7 @@ import { ApproveDialog, DeclineDialog } from './components/ActionDialogs';
 import { ApplicationPreviewDialog } from './components/ApplicationPreviewDialog';
 import { InviteDialog } from './components/InviteDialog';
 import { AdminCompleteDialog } from './components/AdminCompleteDialog';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 import { pendingCountsKeys } from '../../../../utils/queryKeys';
 
 export function ApplicationsModule() {

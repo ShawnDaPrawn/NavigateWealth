@@ -17,8 +17,8 @@ import { Client } from '../types';
 // Cross-module dependency: client-management → communication (public API surface)
 // Justified: CommunicationTab displays per-client communication history and compose UI.
 // Types and API are the communication module's public contract per §4.1.
-import { communicationApi } from '../../communication/api';
-import { CommunicationLog, SendMessageResponse, AttachmentFile } from '../../communication/types';
+import { communicationApi } from '../../communication';
+import { CommunicationLog, SendMessageResponse, AttachmentFile } from '../../communication';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';

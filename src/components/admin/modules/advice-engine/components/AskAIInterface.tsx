@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Brain, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConfirmDialog } from '../../publications/components/ConfirmDialog';
+import { ConfirmDialog } from '../../publications';
 
 // Custom Hooks
 import { useAIChat, useClientSearch } from '../hooks';

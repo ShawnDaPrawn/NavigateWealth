@@ -1,3 +1,10 @@
+// Asset and Liability are shared with the admin profile viewer, which kept a
+// byte-identical copy of both. One definition now, re-exported here so this
+// module's existing importers are unaffected.
+import type { Asset, Liability } from '../../../shared/types';
+
+export type { Asset, Liability };
+
 /**
  * Profile Type Definitions (Reconciled v2)
  *
@@ -54,29 +61,6 @@ export interface FamilyMember {
   shareProfileInformation: boolean;
   shareEmail: string;
   notes: string;
-}
-
-export interface Asset {
-  id: string;
-  type: string;
-  name: string;
-  description: string;
-  value: number;
-  ownershipType: string;
-  provider: string;
-  customType?: string;
-}
-
-export interface Liability {
-  id: string;
-  type: string;
-  name: string;
-  description: string;
-  provider: string;
-  outstandingBalance: number;
-  monthlyPayment: number;
-  interestRate: number;
-  customType?: string;
 }
 
 export interface IdentityDocument {

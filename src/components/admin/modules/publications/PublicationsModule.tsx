@@ -72,7 +72,7 @@ const CareersManager = React.lazy(() =>
 // Hooks
 import { usePublicationsInit, useArticles, useCategories } from './hooks';
 import { PublicationsAPI } from './api';
-import { useCurrentUserPermissions } from '../personnel/hooks/usePermissions';
+import { useCurrentUserPermissions } from '../personnel';
 
 // Types
 import type { Article, ArticleStatus, ContentTemplate } from './types';

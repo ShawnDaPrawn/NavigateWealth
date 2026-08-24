@@ -19,3 +19,7 @@ export { PostComposer } from './PostComposer';
 export { PostCalendar } from './PostCalendar';
 export { ProfileConnector } from './ProfileConnector';
 export { SocialAnalytics } from './SocialAnalytics';
+
+// --- public API used by other modules and by code outside admin/modules ---
+export { linkedinApi } from './api';
+export { SocialMediaSkeleton } from './components/SocialMediaSkeleton';

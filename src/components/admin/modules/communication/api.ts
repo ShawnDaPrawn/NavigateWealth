@@ -15,7 +15,7 @@ import {
   CommunicationMessage,
   EmailFooterSettings,
 } from './types';
-import { ProductProvider } from '../product-management/types';
+import { ProductProvider } from '../product-management';
 
 // Raw template shape from the backend
 interface BackendTemplate {

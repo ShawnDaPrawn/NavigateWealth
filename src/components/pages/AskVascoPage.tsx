@@ -32,7 +32,7 @@ import { api } from '../../utils/api';
 import { useQuery } from '@tanstack/react-query';
 import { vascoKeys } from '../../utils/queryKeys';
 import { toast } from 'sonner';
-import { ConfirmDialog } from '../admin/modules/publications/components/ConfirmDialog';
+import { ConfirmDialog } from '../admin/modules/publications';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 import {
   VascoAvatar,

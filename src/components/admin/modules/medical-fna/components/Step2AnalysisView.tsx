@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { useClientKeys } from '../../client-management/hooks/useClientKeys';
+import { useClientKeys } from '../../client-management';
 import { MedicalFNAResults } from '../types';
 
 interface Step2Props {
