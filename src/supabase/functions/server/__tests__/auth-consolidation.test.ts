@@ -36,7 +36,7 @@ import { announceRatchetSlack } from '../../../../test/ratchet-notice';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
-const BASELINE_FILE = join(REPO_ROOT, '.auth-implementations-baseline');
+const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/auth-implementations-baseline');
 
 /** The canonical implementation itself, plus the FNA gateway it fronts. */
 const CANONICAL = new Set(['auth-mw.ts']);
@@ -179,7 +179,7 @@ describe('auth implementations outside auth-mw', () => {
     const floor = Number.parseInt(raw.trim(), 10);
     expect(
       Number.isFinite(floor),
-      `.auth-implementations-baseline missing or unparseable (got "${raw}")`,
+      `quality/baselines/auth-implementations-baseline missing or unparseable (got "${raw}")`,
     ).toBe(true);
 
     if (offenders.length > floor) {
@@ -198,7 +198,7 @@ describe('auth implementations outside auth-mw', () => {
         'auth-consolidation',
         offenders.length,
         floor,
-        '.auth-implementations-baseline',
+        'quality/baselines/auth-implementations-baseline',
         'hand-rolled auth implementations',
       );
     }

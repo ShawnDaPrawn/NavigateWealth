@@ -6,7 +6,7 @@
  * so the two cannot drift.
  *
  * Adoption is deliberately incremental, and ratcheted the OTHER WAY ROUND from
- * every other baseline in this repo: `.contract-coverage-baseline` floors the
+ * every other baseline in this repo: `quality/baselines/contract-coverage-baseline` floors the
  * number of validated call sites, and CI fails when that number FALLS. Every
  * other ratchet here caps a backlog and fails when a count rises; this one
  * protects a gain and fails when a count drops. See `contract-coverage.test.ts`.

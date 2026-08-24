@@ -47,7 +47,7 @@ The heavy lifting of the last two months is real and enforced in CI
   `validateBody`/`validateOptionalBody`, a typed `repositories/` base with
   bounded reads, `src/shared/contracts` with its first real adopter.
 - **Structural wins**: `integrations.tsx` split into seven route modules,
-  Deno check burned to 0, `.eslint-warning-baseline` 55, eager entry −24%
+  Deno check burned to 0, `quality/baselines/eslint-warning-baseline` 55, eager entry −24%
   (A16), `react-toastify` deleted and banned (A12).
 
 Anything in the "do not regress" list of the remediation plan §3 stays binding:
@@ -56,27 +56,27 @@ strict types, the API client, lazy-router, code splitting,
 
 ### 1.2 The measured debt that remains
 
-| Ratchet / measure                | Current             | Target          | Meaning                                                            |
-| -------------------------------- | ------------------- | --------------- | ------------------------------------------------------------------ |
-| `.anon-key-bearer-baseline`      | 78                  | 0               | SPA call sites still sending the public anon key as a bearer       |
-| `.auth-implementations-baseline` | 5                   | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)     |
-| `.auth-without-authz-baseline`   | 33                  | ~2              | Handlers that authenticate and discard the answer                  |
-| `.route-validation-baseline`     | 35                  | 0               | Body-reading mutating routes with no schema                        |
-| `.route-auth-baseline`           | 123                 | reviewed list   | Routes with no visible guard (includes public-by-design)           |
-| `.depcruise-baseline`            | 210                 | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin) |
-| `.kv-direct-import-baseline`     | 175                 | 0               | Files importing `kv_store` instead of a repository                 |
-| `.raw-fetch-baseline`            | 185                 | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)      |
-| `.eslint-warning-baseline`       | 55 (40 `max-lines`) | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                   |
-| `.contract-coverage-baseline`    | 2                   | grows           | Validated response call sites (floors a gain, fails on falls)      |
-| `.npm-audit-baseline`            | 1                   | 0               | High/critical advisories (`sharp`, dev-only, major bump)           |
-| `.deno-check-baseline`           | 0                   | hold            | Done — keep at zero                                                |
-| Backend coverage (floored)       | ~13.7% stmts        | 40%+            | `vitest.config.server.ts`, ratchets up only                        |
-| SPA coverage (floored)           | ~31% stmts          | 50%+            | Excludes backend; per-layer by design                              |
-| Files > 1,000 raw lines          | 74 (40 counted)     | 0 at budget 600 | Readability ceiling; god files listed in §4                        |
-| `src/assets`                     | 853 MB PNG/JPG      | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)          |
-| Edge function                    | 1 × ~136K lines     | 4–6 functions   | Stage E bounded-context split not started                          |
-| E2E in CI                        | 0 journeys          | 3 seeded        | A9 — all specs credential-skipped                                  |
-| Metrics                          | none                | minimal set     | Correlation IDs exist; no counters/latency                         |
+| Ratchet / measure                                 | Current             | Target          | Meaning                                                            |
+| ------------------------------------------------- | ------------------- | --------------- | ------------------------------------------------------------------ |
+| `quality/baselines/anon-key-bearer-baseline`      | 78                  | 0               | SPA call sites still sending the public anon key as a bearer       |
+| `quality/baselines/auth-implementations-baseline` | 5                   | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)     |
+| `quality/baselines/auth-without-authz-baseline`   | 33                  | ~2              | Handlers that authenticate and discard the answer                  |
+| `quality/baselines/route-validation-baseline`     | 35                  | 0               | Body-reading mutating routes with no schema                        |
+| `quality/baselines/route-auth-baseline`           | 123                 | reviewed list   | Routes with no visible guard (includes public-by-design)           |
+| `quality/baselines/depcruise-baseline`            | 210                 | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin) |
+| `.kv-direct-import-baseline`                      | 175                 | 0               | Files importing `kv_store` instead of a repository                 |
+| `quality/baselines/raw-fetch-baseline`            | 185                 | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)      |
+| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`) | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                   |
+| `quality/baselines/contract-coverage-baseline`    | 2                   | grows           | Validated response call sites (floors a gain, fails on falls)      |
+| `quality/baselines/npm-audit-baseline`            | 1                   | 0               | High/critical advisories (`sharp`, dev-only, major bump)           |
+| `quality/baselines/deno-check-baseline`           | 0                   | hold            | Done — keep at zero                                                |
+| Backend coverage (floored)                        | ~13.7% stmts        | 40%+            | `vitest.config.server.ts`, ratchets up only                        |
+| SPA coverage (floored)                            | ~31% stmts          | 50%+            | Excludes backend; per-layer by design                              |
+| Files > 1,000 raw lines                           | 74 (40 counted)     | 0 at budget 600 | Readability ceiling; god files listed in §4                        |
+| `src/assets`                                      | 853 MB PNG/JPG      | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)          |
+| Edge function                                     | 1 × ~136K lines     | 4–6 functions   | Stage E bounded-context split not started                          |
+| E2E in CI                                         | 0 journeys          | 3 seeded        | A9 — all specs credential-skipped                                  |
+| Metrics                                           | none                | minimal set     | Correlation IDs exist; no counters/latency                         |
 
 ### 1.3 Security remainder — still open at HEAD, re-verified today
 
@@ -212,7 +212,7 @@ god files**. Work the ratchets down; never mass-rename.
   code-splitting: `HomeDashboardPage` → admin `ClientOverviewTab` (client page
   pulling a 1,615-line admin component) and `AdminDashboardPage` → 19
   module-internal skeletons.
-- **Slices:** ~10–20 violations per PR, lowering `.depcruise-baseline` each
+- **Slices:** ~10–20 violations per PR, lowering `quality/baselines/depcruise-baseline` each
   time. At 0, flip the three rules to `error` in `.dependency-cruiser.cjs`.
 - **Effort:** L (mechanical after the first few).
   **Gate:** baseline reaches 0; rules at `error`; a deliberate internal import
@@ -231,7 +231,7 @@ path.
   submit-path test added in the same PR (test-first: capture the exact request
   payload before refactoring, assert it unchanged after).
 - **Payoff:** ~2,500–3,000 lines deleted, 7 files drop below the size budget,
-  `.raw-fetch-baseline` and `.anon-key-bearer-baseline` both fall, and the
+  `quality/baselines/raw-fetch-baseline` and `quality/baselines/anon-key-bearer-baseline` both fall, and the
   revenue path gains its first tests.
 - **Effort:** M/L. **Gate:** shared module + 7 slim wizards, each with a
   submit test; ratchets lowered.
@@ -257,11 +257,11 @@ change pays its reading cost. Worst offenders re-measured today:
 Rules for every split: pure move first, behaviour later; keep the module's
 barrel the only public surface; add or keep a characterization test. When the
 `max-lines` contribution reaches 0, step the budget 1000 → 800 → 600,
-re-measuring and re-baselining `.eslint-warning-baseline` at each step
+re-measuring and re-baselining `quality/baselines/eslint-warning-baseline` at each step
 (files between thresholds surface only when the budget steps — expect the
 count to rise before it falls).
 
-- **Effort:** L (spread). **Gate:** `.eslint-warning-baseline` at 0 with the
+- **Effort:** L (spread). **Gate:** `quality/baselines/eslint-warning-baseline` at 0 with the
   budget at 600 and `max-lines` promoted to `error`.
 
 ### 4.4 Converge the two raw-fetch stragglers (A14, F10)
@@ -271,7 +271,7 @@ count to rise before it falls).
 client endpoint-by-endpoint (each endpoint is a tiny, testable diff), which
 also gives those modules retry, 401-refresh, and typed `APIError` for free.
 
-- **Effort:** M each. **Gate:** `.raw-fetch-baseline` drops ~103; the
+- **Effort:** M each. **Gate:** `quality/baselines/raw-fetch-baseline` drops ~103; the
   remaining legitimate sites (signer-facing anon calls) are individually
   commented.
 
@@ -294,7 +294,7 @@ publications/advice-engine responses — the last two because their hand-written
 43 scattered `types.ts` files under `src/components` re-export from contracts
 as they are touched; duplicated shapes are deleted, not maintained.
 
-- **Effort:** M (ongoing). **Gate:** `.contract-coverage-baseline` rises with
+- **Effort:** M (ongoing). **Gate:** `quality/baselines/contract-coverage-baseline` rises with
   each adoption; publications/advice-engine `types.ts` shrink to re-exports.
 
 ### 4.7 Dead weight and readability batch (A13, A15)
@@ -326,7 +326,7 @@ error contract, so do it as its own PR with the existing 9-test suspension
 suite as the harness. The AI modules' adviser-book checks become
 authorization adapters over `auth-mw` rather than parallel verifiers.
 
-- **Effort:** M. **Gate:** `.auth-implementations-baseline` 5 → 2 (auth-mw +
+- **Effort:** M. **Gate:** `quality/baselines/auth-implementations-baseline` 5 → 2 (auth-mw +
   the login endpoint itself); all FNA/suspension tests green unchanged.
 
 ### 5.2 Split the god services along the layering (§3.2)
@@ -342,7 +342,7 @@ before and after. `quote-request-routes.ts` doubles as WS0's S10 fix — do the
 escaping first, split second.
 
 - **Effort:** L (slices). **Gate:** no server module above the current lint
-  budget; each split lowers `.eslint-warning-baseline`.
+  budget; each split lowers `quality/baselines/eslint-warning-baseline`.
 
 ### 5.3 Burn down the validation ratchet (A5/A22 continuation)
 
@@ -351,7 +351,7 @@ the handler's own destructuring (the A19 lesson: never write the schema from
 imagination), use `validateOptionalBody` where absent-body tolerance is
 load-bearing, ~5 routes per PR.
 
-- **Effort:** M. **Gate:** `.route-validation-baseline` → 0; malformed bodies
+- **Effort:** M. **Gate:** `quality/baselines/route-validation-baseline` → 0; malformed bodies
   get typed 400s on every mutating route.
 
 ### 5.4 Make the entry point testable (A18)
@@ -366,7 +366,7 @@ the Stage E split (both need the app factored out of the serve call).
 
 ### 5.5 Review the route-auth list (F3)
 
-`.route-auth-baseline` = 123 is a **review list**, not a vulnerability count.
+`quality/baselines/route-auth-baseline` = 123 is a **review list**, not a vulnerability count.
 Classify every entry once: public-by-design (annotate in the test's expected
 set), guarded-but-invisible (improve the detector), or genuinely unguarded
 (fix). The number then becomes meaningful and the annotated list becomes the
@@ -412,7 +412,7 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    migrate to the shared client (those calls are currently broken the way S13
    was — expect to find more dead features). The §4.2 wizard work and §4.4
    convergence remove a large fraction for free.
-   _Gate:_ `.anon-key-bearer-baseline` → 0, then ban the pattern outright.
+   _Gate:_ `quality/baselines/anon-key-bearer-baseline` → 0, then ban the pattern outright.
 2. **Stage E, slice 1 — the `public` function.** Move health plus **every
    route that must work without a user session** into an unauthenticated
    sibling function. The current `PUBLIC_ROUTERS` allowlist
@@ -495,7 +495,7 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
   that emits `<hash>.webp` where the resolver expects it (or teaches the
   resolver/optimizer one shared contract), preferably to a git-ignored
   location rather than committing more binaries to an already-892 MB `.git`.
-  Then step `imageBytes` in `.bundle-size-baseline.json` down an order of
+  Then step `imageBytes` in `quality/baselines/bundle-size-baseline.json` down an order of
   magnitude so it can never return. Consider `git filter-repo` on the worst
   blobs only as a separate, explicitly-approved operation.
   _Effort:_ M. _Gate:_ `imageBytes` < 50 MB; largest emitted image < 500 KB;
@@ -589,10 +589,10 @@ this roadmap is complete when:
 
 - [ ] WS0 punch list empty; no open finding in the remediation plan's CRITICAL/HIGH sections.
 - [ ] `verify_jwt = true` in production; public surface served by its own function.
-- [ ] `.anon-key-bearer-baseline`, `.route-validation-baseline`,
-      `.depcruise-baseline`, `.kv-direct-import-baseline` all **0**, with
+- [ ] `quality/baselines/anon-key-bearer-baseline`, `quality/baselines/route-validation-baseline`,
+      `quality/baselines/depcruise-baseline`, `.kv-direct-import-baseline` all **0**, with
       depcruise rules and `max-lines` promoted to `error`.
-- [ ] `.auth-implementations-baseline` = 2; `.raw-fetch-baseline` ≤ ~10, each
+- [ ] `quality/baselines/auth-implementations-baseline` = 2; `quality/baselines/raw-fetch-baseline` ≤ ~10, each
       survivor individually justified in code.
 - [ ] File-size budget at 600 with zero warnings; no file in `src/` over
       1,000 raw lines.

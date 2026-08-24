@@ -54,7 +54,7 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    npm run lint              # eslint  (baseline: 0 errors)
    npm run typecheck         # SPA tsc (baseline: 0 errors)
    npm run typecheck:middleware
-   npm run typecheck:deno    # must not exceed .deno-check-baseline
+   npm run typecheck:deno    # must not exceed quality/baselines/deno-check-baseline
    npm run depcruise         # boundary rules (blocking)
    npm test -- --coverage    # vitest WITH coverage — CI enforces the thresholds
                              # in vitest.config.ts, so plain `npm test` can pass
