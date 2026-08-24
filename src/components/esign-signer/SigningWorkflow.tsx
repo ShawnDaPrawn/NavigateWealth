@@ -43,20 +43,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
-import { FileText, AlertCircle, ZoomIn, ZoomOut, Lock, Loader2 } from 'lucide-react';
+import { FileText, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { FieldHighlight } from './FieldHighlight';
 import type { SignerSessionData, SignatureData, SignerField } from './types';
+import { SigningWorkflowDialogs } from './SigningWorkflowDialogs';
+import { SigningZoomControls } from './SigningZoomControls';
 import { evaluateRuleState } from './services/ruleEngine';
 import { esignSignerService, uploadAttachmentForSigner } from './services/esignSignerService';
 import { SigningHeader } from './steps/SigningHeader';
 import { BottomActionBar } from './steps/BottomActionBar';
-import { SignatureDialog } from './steps/SignatureDialog';
-import { TextInputDialog } from './steps/TextInputDialog';
-import { DateInputDialog } from './steps/DateInputDialog';
-import { DropdownDialog } from './steps/DropdownDialog';
-import { ConsentDialog } from './steps/ConsentDialog';
-import { RejectDialog } from './steps/RejectDialog';
-import { PauseDialog } from './steps/PauseDialog';
 
 // ── pdf.js bootstrap (canvas-based rendering — works on all browsers including mobile) ──
 import * as pdfjsLib from 'pdfjs-dist';
@@ -78,38 +73,8 @@ interface SigningWorkflowProps {
 
 type WorkflowPhase = 'reading' | 'signing';
 
-/** Validate a 13-digit South African ID number with the Luhn-variant
- *  checksum used by Home Affairs. Returns true for valid IDs. */
-function isValidSaId(raw: string): boolean {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length !== 13) return false;
-  // Sum odd-positioned digits (1st, 3rd, ...) — index 0,2,4,...
-  let oddSum = 0;
-  for (let i = 0; i < 12; i += 2) oddSum += Number(digits[i]);
-  // Concatenate even-positioned digits and double, then sum each digit.
-  let evenConcat = '';
-  for (let i = 1; i < 12; i += 2) evenConcat += digits[i];
-  const evenDoubled = String(Number(evenConcat) * 2);
-  let evenSum = 0;
-  for (const ch of evenDoubled) evenSum += Number(ch);
-  const total = oddSum + evenSum;
-  const checkDigit = (10 - (total % 10)) % 10;
-  return checkDigit === Number(digits[12]);
-}
-
-/** Format a string of digits as "YYMMDD SSSS C AZ" (SA ID grouping). */
-function maskSaId(raw: string): string {
-  const d = raw.replace(/\D/g, '').slice(0, 13);
-  const parts: string[] = [];
-  if (d.length > 0) parts.push(d.slice(0, 6));
-  if (d.length > 6) parts.push(d.slice(6, 10));
-  if (d.length > 10) parts.push(d.slice(10, 11));
-  if (d.length > 11) parts.push(d.slice(11, 13));
-  return parts.join(' ');
-}
-
-/** localStorage key for in-progress signatures (keyed by signing token). */
-const inProgressKey = (token: string) => `nw-esign-inprogress:${token}`;
+import { isValidSaId, maskSaId, inProgressKey } from './signingIdentity';
+import { useInProgressSignatures } from './useInProgressSignatures';
 
 export function SigningWorkflow({
   token,
@@ -191,43 +156,8 @@ export function SigningWorkflow({
     });
   }, [sessionData]);
 
-  // ── Restore in-progress signatures from localStorage on mount ────────
-  // Lets a signer pause then return without losing any field they filled.
-  useEffect(() => {
-    if (!token || typeof window === 'undefined') return;
-    try {
-      const raw = window.localStorage.getItem(inProgressKey(token));
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { signatures?: SignatureData[]; phase?: WorkflowPhase };
-      if (Array.isArray(parsed.signatures) && parsed.signatures.length > 0) {
-        setSignatures((prev) => {
-          // Merge — anything already auto-filled (auto_date) wins.
-          const existingIds = new Set(prev.map((s) => s.field_id));
-          const merged = [...prev];
-          parsed.signatures!.forEach((s) => {
-            if (!existingIds.has(s.field_id)) merged.push(s);
-          });
-          return merged;
-        });
-        // If we restored work, jump straight to signing.
-        if (parsed.phase === 'signing' || parsed.signatures.length > 0) {
-          setPhase('signing');
-        }
-      }
-    } catch {
-      // best-effort
-    }
-  }, [token]);
-
-  // ── Persist in-progress signatures to localStorage on every change ───
-  useEffect(() => {
-    if (!token || typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(inProgressKey(token), JSON.stringify({ signatures, phase }));
-    } catch {
-      // quota / private mode — best-effort only
-    }
-  }, [token, signatures, phase]);
+  // Restores paused work on mount and saves it on every change.
+  useInProgressSignatures({ token, signatures, phase, setSignatures, setPhase });
 
   // ── pdf.js state ──────────────────────────────────────────────────────
   const pdfDocRef = useRef<Record<string, unknown> | null>(null);
@@ -1062,51 +992,7 @@ export function SigningWorkflow({
           )}
 
           <div className="flex flex-col items-center gap-8 min-h-full">
-            {/* Floating zoom controls — desktop */}
-            <div className="fixed bottom-24 left-6 z-30 bg-white shadow-lg border rounded-full p-1 hidden md:flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={handleZoomOut}
-                disabled={zoom <= 50}
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-xs font-medium w-10 text-center">{zoom}%</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={handleZoomIn}
-                disabled={zoom >= 200}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Floating zoom controls — mobile (sit above the bottom action bar) */}
-            <div className="fixed bottom-28 left-3 z-30 bg-white/95 shadow-lg border rounded-full p-0.5 flex md:hidden items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={handleZoomOut}
-                disabled={zoom <= 50}
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </Button>
-              <span className="text-[10px] font-medium w-8 text-center">{zoom}%</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={handleZoomIn}
-                disabled={zoom >= 200}
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            <SigningZoomControls zoom={zoom} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
 
             {/* Document */}
             {pdfLoading && (
@@ -1365,105 +1251,50 @@ export function SigningWorkflow({
         }}
       />
 
-      <SignatureDialog
-        open={showSignatureDialog}
-        onOpenChange={setShowSignatureDialog}
+      <SigningWorkflowDialogs
+        sessionData={sessionData}
+        envelope_title={envelope_title}
+        showSignatureDialog={showSignatureDialog}
+        setShowSignatureDialog={setShowSignatureDialog}
+        showTextDialog={showTextDialog}
+        setShowTextDialog={setShowTextDialog}
+        showDateDialog={showDateDialog}
+        setShowDateDialog={setShowDateDialog}
+        showDropdownDialog={showDropdownDialog}
+        setShowDropdownDialog={setShowDropdownDialog}
+        showConsentDialog={showConsentDialog}
+        setShowConsentDialog={setShowConsentDialog}
+        showRejectDialog={showRejectDialog}
+        setShowRejectDialog={setShowRejectDialog}
+        showPauseDialog={showPauseDialog}
+        setShowPauseDialog={setShowPauseDialog}
         currentField={currentField}
-        onCancel={() => {
-          setShowSignatureDialog(false);
-          setCurrentField(null);
-        }}
-        onSave={handleSignatureSave}
+        setCurrentField={setCurrentField}
         signatures={signatures}
         adoptedSignature={adoptedSignature}
         adoptedInitials={adoptedInitials}
-        signerName={sessionData.signer_name}
-      />
-
-      <TextInputDialog
-        open={showTextDialog}
-        onOpenChange={(open) => {
-          setShowTextDialog(open);
-          if (!open) {
-            setCurrentField(null);
-            setError(null);
-          }
-        }}
-        currentField={currentField}
         textInput={textInput}
-        onTextInputChange={setTextInput}
-        error={error}
-        onSave={handleTextSave}
-        onCancel={() => {
-          setShowTextDialog(false);
-          setCurrentField(null);
-          setError(null);
-        }}
-      />
-
-      <DateInputDialog
-        open={showDateDialog}
-        onOpenChange={(open) => {
-          setShowDateDialog(open);
-          if (!open) setCurrentField(null);
-        }}
+        setTextInput={setTextInput}
         dateInput={dateInput}
-        onDateInputChange={setDateInput}
-        onSave={handleDateSave}
-        onCancel={() => {
-          setShowDateDialog(false);
-          setCurrentField(null);
-        }}
-      />
-
-      <DropdownDialog
-        open={showDropdownDialog}
-        onOpenChange={(open) => {
-          setShowDropdownDialog(open);
-          if (!open) setCurrentField(null);
-        }}
-        currentField={currentField}
+        setDateInput={setDateInput}
         dropdownValue={dropdownValue}
-        onDropdownValueChange={setDropdownValue}
-        onSave={handleDropdownSave}
-        onCancel={() => {
-          setShowDropdownDialog(false);
-          setCurrentField(null);
-        }}
-      />
-
-      <ConsentDialog
-        open={showConsentDialog}
-        onOpenChange={setShowConsentDialog}
-        envelopeTitle={envelope_title}
-        signerName={sessionData.signer_name}
-        completedCount={completedFields.length}
-        requiredCount={requiredFields.length}
-        consentAccepted={consentAccepted}
-        onConsentChange={setConsentAccepted}
-        isSubmitting={isSubmitting}
-        onSubmit={handleFinalSubmit}
-        onCancel={() => {
-          setShowConsentDialog(false);
-          setConsentAccepted(false);
-        }}
-      />
-
-      <RejectDialog
-        open={showRejectDialog}
-        onOpenChange={setShowRejectDialog}
+        setDropdownValue={setDropdownValue}
         rejectReason={rejectReason}
-        onRejectReasonChange={setRejectReason}
-        onSubmit={handleRejectSubmit}
-        onCancel={() => setShowRejectDialog(false)}
-      />
-
-      <PauseDialog
-        open={showPauseDialog}
-        onOpenChange={setShowPauseDialog}
-        expiresAt={sessionData.expires_at}
-        onConfirm={handlePauseConfirm}
-        onCancel={() => setShowPauseDialog(false)}
+        setRejectReason={setRejectReason}
+        error={error}
+        setError={setError}
+        consentAccepted={consentAccepted}
+        setConsentAccepted={setConsentAccepted}
+        isSubmitting={isSubmitting}
+        completedFields={completedFields}
+        requiredFields={requiredFields}
+        handleSignatureSave={handleSignatureSave}
+        handleTextSave={handleTextSave}
+        handleDateSave={handleDateSave}
+        handleDropdownSave={handleDropdownSave}
+        handleRejectSubmit={handleRejectSubmit}
+        handleFinalSubmit={handleFinalSubmit}
+        handlePauseConfirm={handlePauseConfirm}
       />
     </div>
   );
