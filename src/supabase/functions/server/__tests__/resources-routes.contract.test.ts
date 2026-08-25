@@ -49,21 +49,51 @@ vi.mock('../admin-audit-service.ts', () => ({
   AdminAuditService: { record: vi.fn(async () => {}) },
 }));
 
-// Auth middleware: a pass-through that still enforces the header, so the
-// public/gated boundary is what is actually being measured here.
+/**
+ * Auth middleware mock — ROLE-AWARE ON PURPOSE.
+ *
+ * A first version had `requireAuth` force every bearer to `admin` and
+ * `requireAdmin` repeat the same header-only check. That suite passed whether or
+ * not the admin routes carried `requireAdmin` at all: losing the guard while
+ * keeping `requireAuth` was invisible, so the tests advertised a boundary they
+ * did not pin. That is the decorative-test shape this repo keeps finding.
+ *
+ * The role now comes from the token, and `requireAdmin` 403s a non-admin — so a
+ * dropped `requireAdmin` fails, which is the whole point of testing this family.
+ */
+const ROLE_BY_TOKEN: Record<string, string> = {
+  'admin-token': 'admin',
+  'user-token': 'client',
+};
+
+function roleFor(c: any): string | null {
+  const header = c.req.header('Authorization');
+  if (!header) return null;
+  return ROLE_BY_TOKEN[header.replace(/^Bearer\s+/, '')] ?? 'client';
+}
+
 vi.mock('../auth-mw.ts', () => ({
   requireAuth: async (c: any, next: any) => {
-    if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, 401);
-    c.set('userId', 'test-user');
-    c.set('userRole', 'admin');
+    const role = roleFor(c);
+    if (!role) return c.json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' }, 401);
+    c.set('userId', role === 'admin' ? 'admin-user' : 'client-user');
+    c.set('userRole', role);
     await next();
   },
   requireAdmin: async (c: any, next: any) => {
-    if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, 401);
+    const role = roleFor(c);
+    if (!role) return c.json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' }, 401);
+    if (role !== 'admin' && role !== 'super_admin') {
+      return c.json({ error: 'Forbidden: Admin access required', code: 'FORBIDDEN_ADMIN' }, 403);
+    }
     await next();
   },
   requireSuperAdmin: async (c: any, next: any) => {
-    if (!c.req.header('Authorization')) return c.json({ error: 'Unauthorized' }, 401);
+    const role = roleFor(c);
+    if (!role) return c.json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' }, 401);
+    if (role !== 'super_admin') {
+      return c.json({ error: 'Forbidden', code: 'FORBIDDEN_SUPER_ADMIN' }, 403);
+    }
     await next();
   },
 }));
@@ -84,7 +114,8 @@ vi.mock('../resources-service.ts', () => ({
 
 const app = (await import('../resources-routes.ts')).default;
 
-const AUTH = { Authorization: 'Bearer test-token' };
+const AUTH = { Authorization: 'Bearer admin-token' };
+const NON_ADMIN = { Authorization: 'Bearer user-token' };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -148,6 +179,22 @@ describe('resources-routes: the admin routes beside it are NOT public', () => {
       ...(method === 'POST' ? { headers: { 'Content-Type': 'application/json' }, body: '{}' } : {}),
     });
     expect(res.status).toBe(401);
+  });
+
+  it('rejects an authenticated NON-admin with 403, not 200', async () => {
+    // The assertion that makes the two above mean something. Without it, a route
+    // that lost `requireAdmin` but kept `requireAuth` would still pass every
+    // test in this file.
+    for (const path of ['/admin/legal-documents']) {
+      const res = await app.request(path, { headers: NON_ADMIN });
+      expect(res.status, `${path} let a non-admin through`).toBe(403);
+    }
+    const seed = await app.request('/legal/seed', {
+      method: 'POST',
+      headers: { ...NON_ADMIN, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    expect(seed.status, 'POST /legal/seed let a non-admin through').toBe(403);
   });
 
   it('serves the admin list once authenticated', async () => {

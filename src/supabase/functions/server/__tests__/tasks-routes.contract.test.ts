@@ -40,13 +40,28 @@ vi.mock('../stderr-logger.ts', () => ({
   }),
 }));
 
+/**
+ * ROLE-AWARE ON PURPOSE. A header-only mock would pass whether the router
+ * carried `requireAdmin` or merely `requireAuth`, so it would not pin the
+ * admin-only boundary this family's entire perimeter rests on.
+ */
+const ROLE_BY_TOKEN: Record<string, string> = {
+  'admin-token': 'admin',
+  'user-token': 'client',
+};
+
 vi.mock('../auth-mw.ts', () => ({
   requireAdmin: async (c: any, next: any) => {
-    if (!c.req.header('Authorization')) {
+    const header = c.req.header('Authorization');
+    if (!header) {
       return c.json({ error: 'Unauthorized', code: 'AUTH_REQUIRED' }, 401);
     }
+    const role = ROLE_BY_TOKEN[header.replace(/^Bearer\s+/, '')] ?? 'client';
+    if (role !== 'admin' && role !== 'super_admin') {
+      return c.json({ error: 'Forbidden: Admin access required', code: 'FORBIDDEN_ADMIN' }, 403);
+    }
     c.set('userId', 'admin-user');
-    c.set('userRole', 'admin');
+    c.set('userRole', role);
     await next();
   },
 }));
@@ -74,7 +89,8 @@ vi.mock('../kv_store.tsx', () => ({
 
 const app = (await import('../tasks-routes.ts')).default;
 
-const AUTH = { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' };
+const AUTH = { Authorization: 'Bearer admin-token', 'Content-Type': 'application/json' };
+const NON_ADMIN = { Authorization: 'Bearer user-token', 'Content-Type': 'application/json' };
 
 /** Minimal payload that CreateTaskSchema actually accepts — every other field defaults. */
 const VALID_TASK = { title: 'Review client file', reminder_frequency: null };
@@ -98,6 +114,24 @@ describe('tasks-routes: the router-scope guard is the whole perimeter', () => {
         : {}),
     });
     expect(res.status).toBe(401);
+  });
+
+  it('rejects an authenticated NON-admin with 403 on every verb', async () => {
+    // Without this, the 401 cases above pass identically whether the router
+    // carries `requireAdmin` or only `requireAuth` — the guard could be
+    // downgraded and no test would notice.
+    for (const [method, path] of [
+      ['GET', '/all'],
+      ['GET', '/stats'],
+      ['POST', '/'],
+    ] as const) {
+      const res = await app.request(path, {
+        method,
+        headers: NON_ADMIN,
+        ...(method === 'POST' ? { body: JSON.stringify(VALID_TASK) } : {}),
+      });
+      expect(res.status, `${method} ${path} let a non-admin through`).toBe(403);
+    }
   });
 
   it('leaks nothing in the rejection body', async () => {
