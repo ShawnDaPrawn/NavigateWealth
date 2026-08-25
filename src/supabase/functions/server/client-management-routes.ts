@@ -15,6 +15,7 @@ import { Hono } from 'npm:hono';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { requireCronAuth } from './cron-auth.ts';
 import { ClientsService } from './client-management-service.ts';
 import { runClientCleanup, getLastClientCleanupRun } from './client-cleanup-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
@@ -58,24 +59,15 @@ app.get(
 /**
  * POST /clients/cron/cleanup
  * Cron-safe endpoint for scheduled client profile cleanup.
- * Authenticated via SUPABASE_SERVICE_ROLE_KEY or SUPER_ADMIN_PASSWORD.
+ * Auth: requireCronAuth (cron-auth.ts) — Vault-backed shared token, with the
+ * service-role / super-admin bearer kept for manual runs. The inline
+ * comparison this replaced used raw `!==`, not a constant-time compare.
  * Runs in live mode (dryRun=false).
  */
 app.post(
   '/cron/cleanup',
+  requireCronAuth,
   asyncHandler(async (c) => {
-    const authHeader = c.req.header('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
-
-    if (
-      (!serviceRoleKey || token !== serviceRoleKey) &&
-      (!superAdminPw || token !== superAdminPw)
-    ) {
-      return c.json({ error: 'Unauthorized — cron auth required' }, 401);
-    }
-
     log.info('CRON: Starting scheduled client profile cleanup');
 
     const result = await runClientCleanup(false);

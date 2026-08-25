@@ -22,9 +22,9 @@
 
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
+import { isAuthorizedCronRequest } from './cron-auth.ts';
 import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
-import { constantTimeEqual } from './crypto-utils.ts';
 import { resolveTrustedRole } from './constants.ts';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
@@ -140,14 +140,10 @@ async function requireCronOrAdminAuth(
   const authHeader = c.req.header('Authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '');
 
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
-
-  // 1. Service-role key or super-admin password (cron path)
-  if (
-    (serviceRoleKey && constantTimeEqual(token, serviceRoleKey)) ||
-    (superAdminPw && constantTimeEqual(token, superAdminPw))
-  ) {
+  // 1. Cron path — Vault-backed shared token first, service-role/super-admin
+  //    bearer as the fallback. Shared with every other scheduled endpoint so
+  //    the drift that silenced them cannot reappear here alone.
+  if (await isAuthorizedCronRequest(c)) {
     return next();
   }
 
