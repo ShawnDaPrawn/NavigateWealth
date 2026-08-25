@@ -21,6 +21,7 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { getSmsProviderStatus } from './sms-service.ts';
 import { sendSigningReminder } from './email-service.ts';
 import { runExpirySweep } from './esign-expiry-service.ts';
+import { requireCronAuth } from './cron-auth.ts';
 import { runReminderSweep } from './esign-reminder-service.ts';
 import {
   getEnvelopeDetails,
@@ -88,27 +89,23 @@ opsRoutes.post('/maintenance/expiry-sweep', async (c) => {
 /**
  * POST /cron/expiry-sweep
  * Scheduled CRON endpoint — runs the expiry sweep in live mode.
- * Authenticated via the SUPABASE_SERVICE_ROLE_KEY (passed as Bearer token
- * by the Supabase scheduled function or external CRON scheduler).
+ * Auth: requireCronAuth (cron-auth.ts). The scheduled job sends the
+ * Vault-backed shared token in the x-nw-cron-auth header; a service-role or
+ * super-admin bearer still works for manual runs.
  *
- * Usage with Supabase Edge Function scheduling or external CRON:
+ * Until 2026-08-25 this compared the bearer to SUPABASE_SERVICE_ROLE_KEY
+ * inline, and had been answering 401 to its own cron job — envelopes were never
+ * being expired. See docs/runbooks/scheduled-jobs.md.
+ *
+ * Manual run:
  *   curl -X POST \
  *     -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
  *     https://<project>.supabase.co/functions/v1/make-server-91ed8379/esign/cron/expiry-sweep
  *
  * Runs live (dryRun=false) and logs audit events as actorType='system'.
  */
-opsRoutes.post('/cron/expiry-sweep', async (c) => {
+opsRoutes.post('/cron/expiry-sweep', requireCronAuth, async (c) => {
   try {
-    // Authenticate via service role key (no user session — system actor)
-    const authHeader = c.req.header('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!token || token !== serviceRoleKey) {
-      return c.json({ error: 'Unauthorized — CRON endpoint requires service role key' }, 401);
-    }
-
     log.info('CRON expiry sweep triggered');
     const result = await runExpirySweep(false); // Always live for scheduled runs
 

@@ -28,6 +28,7 @@
 
 import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { isAuthorizedCronRequest } from './cron-auth.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { AutoContentService } from './auto-content-service.ts';
 import type { PipelineId } from './auto-content-service.ts';
@@ -39,7 +40,24 @@ const log = createModuleLogger('auto-content-routes');
 // feed discovery) is back-office tooling — admin only. The only callers are
 // the admin dashboard AutoContentPanel and its client-side poller, both of
 // which send an admin session JWT.
-app.use('*', requireAdmin);
+//
+// ONE EXCEPTION, added 2026-08-25. `/process-due` is *also* driven by the
+// `auto-content-process-due` scheduled job, which has no user session and so
+// could never satisfy requireAdmin. That job had been answering 401 four times
+// a day since it was created — a different root cause from the other silent
+// cron failures (those compared a stale key; this one was never reachable by a
+// cron at all). The cron branch still demands a valid Vault-backed token, so
+// this widens the surface by exactly one path to exactly one credential.
+app.use('*', async (c, next) => {
+  if (
+    c.req.method === 'POST' &&
+    c.req.path.endsWith('/process-due') &&
+    (await isAuthorizedCronRequest(c))
+  ) {
+    return next();
+  }
+  return requireAdmin(c, next);
+});
 
 const VALID_PIPELINE_IDS: PipelineId[] = [
   'market_commentary',

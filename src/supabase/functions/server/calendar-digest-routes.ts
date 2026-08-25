@@ -11,7 +11,11 @@
  * Endpoint:
  *   POST /calendar-digest/send-daily
  *
- * Auth: Requires SUPABASE_SERVICE_ROLE_KEY or SUPER_ADMIN_PASSWORD
+ * Auth: requireCronAuth from cron-auth.ts — the Vault-backed shared token
+ *   scheduled jobs send, with the service-role/super-admin env comparison
+ *   kept as a fallback for manual runs. The local copy of this guard was
+ *   removed on 2026-08-25: it compared against SUPABASE_SERVICE_ROLE_KEY
+ *   only, and had been answering 401 to its own cron job silently.
  *       via the Authorization Bearer header (cron / server-to-server only).
  *
  * ****************************************************************************
@@ -21,7 +25,7 @@ import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { constantTimeEqual } from './crypto-utils.ts';
+import { requireCronAuth } from './cron-auth.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
 const app = new Hono();
@@ -75,30 +79,6 @@ const EVENT_TYPE_COLOURS: Record<string, { bg: string; text: string }> = {
   deadline: { bg: '#dc2626', text: '#ffffff' },
   other: { bg: '#9ca3af', text: '#ffffff' },
 };
-
-// ---------------------------------------------------------------------------
-// Auth middleware — cron-only (service-role key or super-admin password)
-// ---------------------------------------------------------------------------
-
-async function requireCronAuth(
-  c: { req: { header: (n: string) => string | undefined } },
-  next: () => Promise<void>,
-) {
-  const authHeader = c.req.header('Authorization') || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
-
-  if (
-    (serviceRoleKey && constantTimeEqual(token, serviceRoleKey)) ||
-    (superAdminPw && constantTimeEqual(token, superAdminPw))
-  ) {
-    return next();
-  }
-
-  return new Response('Unauthorized — cron auth required', { status: 401 });
-}
 
 // ---------------------------------------------------------------------------
 // POST /calendar-digest/send-daily
