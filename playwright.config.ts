@@ -55,6 +55,14 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
+    // Sandboxes and pre-baked images often ship a Chromium build that does not
+    // match the one this @playwright/test version expects, and `npx playwright
+    // install` may be blocked there. Point at the local binary instead of
+    // downloading. Unset in CI, where `playwright install` fetches the exact
+    // build — so this changes nothing about how the suite runs there.
+    ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+      ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } }
+      : {}),
     headless: true,
     trace: 'retain-on-failure',
     video: 'retain-on-failure',

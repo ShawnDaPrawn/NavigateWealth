@@ -144,6 +144,7 @@
     "test:watch": "vitest",
     "test:coverage:server": "vitest run --coverage --config quality/vitest.config.server.ts",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test e2e/public-render-smoke.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "fna-intake:backfill": "node ./scripts/fna-intake-backfill.mjs",
     "fna-intake:bootstrap-uat": "node ./scripts/fna-intake-bootstrap-uat-actors.mjs",
