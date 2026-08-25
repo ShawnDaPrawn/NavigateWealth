@@ -56,27 +56,27 @@ strict types, the API client, lazy-router, code splitting,
 
 ### 1.2 The measured debt that remains
 
-| Ratchet / measure                                 | Current             | Target          | Meaning                                                             |
-| ------------------------------------------------- | ------------------- | --------------- | ------------------------------------------------------------------- |
-| `quality/baselines/anon-key-bearer-baseline`      | 78                  | 0               | SPA call sites still sending the public anon key as a bearer        |
-| `quality/baselines/auth-implementations-baseline` | 5                   | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)      |
-| `quality/baselines/auth-without-authz-baseline`   | 33                  | ~2              | Handlers that authenticate and discard the answer                   |
-| `quality/baselines/route-validation-baseline`     | 35                  | 0               | Body-reading mutating routes with no schema                         |
-| `quality/baselines/route-auth-baseline`           | 123                 | reviewed list   | Routes with no visible guard (includes public-by-design)            |
-| `quality/baselines/depcruise-baseline`            | 210                 | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin)  |
-| `.kv-direct-import-baseline`                      | 175                 | 0               | Files importing `kv_store` instead of a repository                  |
-| `quality/baselines/raw-fetch-baseline`            | 185                 | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)       |
-| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`) | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                    |
-| `quality/baselines/contract-coverage-baseline`    | 2                   | grows           | Validated response call sites (floors a gain, fails on falls)       |
-| `quality/baselines/npm-audit-baseline`            | 0                   | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24 |
-| `quality/baselines/deno-check-baseline`           | 0                   | hold            | Done — keep at zero                                                 |
-| Backend coverage (floored)                        | ~13.7% stmts        | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                 |
-| SPA coverage (floored)                            | ~31% stmts          | 50%+            | Excludes backend; per-layer by design                               |
-| Files > 1,000 raw lines                           | 74 (40 counted)     | 0 at budget 600 | Readability ceiling; god files listed in §4                         |
-| `src/assets`                                      | 853 MB PNG/JPG      | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)           |
-| Edge function                                     | 1 × ~136K lines     | 4–6 functions   | Stage E bounded-context split not started                           |
-| E2E in CI                                         | 0 journeys          | 3 seeded        | A9 — all specs credential-skipped                                   |
-| Metrics                                           | none                | minimal set     | Correlation IDs exist; no counters/latency                          |
+| Ratchet / measure                                 | Current               | Target          | Meaning                                                             |
+| ------------------------------------------------- | --------------------- | --------------- | ------------------------------------------------------------------- |
+| `quality/baselines/anon-key-bearer-baseline`      | 78                    | 0               | SPA call sites still sending the public anon key as a bearer        |
+| `quality/baselines/auth-implementations-baseline` | 5                     | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)      |
+| `quality/baselines/auth-without-authz-baseline`   | 33                    | ~2              | Handlers that authenticate and discard the answer                   |
+| `quality/baselines/route-validation-baseline`     | 35                    | 0               | Body-reading mutating routes with no schema                         |
+| `quality/baselines/route-auth-baseline`           | 123                   | reviewed list   | Routes with no visible guard (includes public-by-design)            |
+| `quality/baselines/depcruise-baseline`            | 210                   | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin)  |
+| `.kv-direct-import-baseline`                      | 175                   | 0               | Files importing `kv_store` instead of a repository                  |
+| `quality/baselines/raw-fetch-baseline`            | 185                   | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)       |
+| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`)   | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                    |
+| `quality/baselines/contract-coverage-baseline`    | 2                     | grows           | Validated response call sites (floors a gain, fails on falls)       |
+| `quality/baselines/npm-audit-baseline`            | 0                     | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24 |
+| `quality/baselines/deno-check-baseline`           | 0                     | hold            | Done — keep at zero                                                 |
+| Backend coverage (floored)                        | ~13.7% stmts          | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                 |
+| SPA coverage (floored)                            | ~31% stmts            | 50%+            | Excludes backend; per-layer by design                               |
+| Files > 1,000 raw lines                           | 74 (40 counted)       | 0 at budget 600 | Readability ceiling; god files listed in §4                         |
+| `src/assets`                                      | 853 MB PNG/JPG        | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)           |
+| Edge function                                     | 1 × ~136K lines       | 4–6 functions   | Stage E bounded-context split not started                           |
+| E2E in CI                                         | 1 (non-required)      | 3 seeded        | Public-render journey runs per PR; the 5 seeded specs still skipped |
+| Metrics                                           | **`npm run metrics`** | hold            | DONE 2026-08-25 — queried from `function_edge_logs`, no middleware  |
 
 ### 1.3 Security remainder — still open at HEAD, re-verified today
 
@@ -564,13 +564,25 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
    imports at their routes. Measure cold-start before/after. Further splits
    (`integrations`, `ai`) only if deploy-blast-radius or cold-start data says
    so — six functions is the ceiling, not the goal.
-5. **Metrics (the deliberately-deferred half of Stage B).** Choose the sink
-   deliberately — Supabase log drains vs. the in-house quality-issues store vs.
-   an OTLP endpoint — then emit request/error counters and p50/p95 per route
-   family from the shared middleware. Correlation IDs already exist; this is
-   the other half of "can we answer what happened to request X, and how often".
-   _Gate:_ a dashboard (even a script) can answer error-rate and latency per
-   route family for the last 24h.
+5. **Metrics (the deliberately-deferred half of Stage B).** _(DONE 2026-08-25 —
+   and the sink question dissolved. Supabase already records
+   `request.pathname`, `response.status_code`, `execution_time_ms` and
+   `request_id` per request in `function_edge_logs`, so `npm run metrics`
+   queries what is already emitted instead of adding middleware that would
+   have cost latency on every request. First baseline: error rate 0.02%; the
+   static no-IO `/health` handler is 1,497ms p50 against 1,918ms for a real data
+   route, which locates the cost OUTSIDE application query work. It does not on
+   its own prove cold start — `execution_time_ms` does not distinguish warm from
+   cold isolates and n=20 for health — so measure with controlled warm/cold
+   probes before committing to §7.4 on this basis. See
+   `docs/runbooks/edge-function-metrics.md`.)_ ~~Choose the sink deliberately … emit
+   request/error counters from the shared middleware.~~ **Superseded — do not
+   implement this.** The sink question dissolved: Supabase already records
+   pathname, status and `execution_time_ms` per request, so there is nothing to
+   emit and nothing to choose. Adding middleware now would cost latency on every
+   request and duplicate data that already exists.
+   _Gate (met):_ `npm run metrics` answers error-rate and latency per route
+   family for the last 24h.
 
 - **Effort:** M/M/M/M/M — each slice independent and reversible.
 
@@ -601,7 +613,15 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
    every land. Target: 40% statements by the time Stage D's first entity cuts
    over.
    _Effort:_ ongoing, absorbed into WS2/WS3 PRs.
-3. **One real e2e journey in CI (A9).** Programmatically seed (bootstrap-UAT
+3. **One real e2e journey in CI (A9).** _(Started 2026-08-25: the `e2e-smoke`
+   workflow runs a credential-free public-render journey in real Chromium on
+   every PR — `/` and `/get-quote`, desktop + mobile, plus a click that proves
+   the quote wizard advances. It closes the gap that **nothing in CI verified
+   the app RUNS**: a crashed React tree still serves 200 with an empty
+   `#root`, so a dead lazy chunk shipped green. Not yet a required check —
+   promote after ~3 green runs. The seeded login / quote-submit / e-sign
+   round trip still needs the accounts §7 is blocked on, and must not submit
+   against production.)_ Programmatically seed (bootstrap-UAT
    scripts already exist for FNA), then run login + quote submit + the e-sign
    round trip against a preview deploy on PRs. Start with one journey required
    in CI; grow to three.
@@ -654,7 +674,7 @@ under the AGENTS.md finalization protocol (verify locally → PR → auto-merge)
 | **Then**     | §4.2 quote wizards · §4.4 raw-fetch convergence · §5.3 validation → 0 · §5.5 route-auth review · §5.1 auth 5→2      | Burns four ratchets hard; feeds P1.1                     |
 | **Then**     | §7.1 P1.1 → 0 · §7.2–7.3 public split + `verify_jwt=true`                                                           | The keystone's final flip; needs §5.5's inventory        |
 | **Parallel** | §4.1 boundaries → 0 · §4.3/§5.2 god-file splits · §4.6 contracts · §6 repositories → Postgres · §8.2 contract tests | Long-running strangler tracks; touch-it-you-fix-it       |
-| **Later**    | §7.4 esign function split · §7.5 metrics · §8.3 e2e growth · budget steps 800→600                                   | Need the earlier structure; do from data, not assumption |
+| **Later**    | §7.4 esign function split · ~~§7.5 metrics~~ · §8.3 e2e growth · budget steps 800→600                               | Need the earlier structure; do from data, not assumption |
 
 **New feature work continues throughout** — WS0 is the only stop-the-line
 block. Everything else rides touch-it-you-fix-it plus dedicated slices.
@@ -736,10 +756,10 @@ this roadmap is complete when:
       migrations; no unbounded `getByPrefix` on any request path.
 - [ ] Backend coverage ≥ 40% statements and floored there; every route family
       has a contract test; a blocking post-deploy smoke guards every edge deploy.
-- [ ] Three seeded e2e journeys required in CI.
+- [ ] Three seeded e2e journeys required in CI. _(1 of 3 landed 2026-08-25 — credential-free, reporting but not yet required.)_
 - [ ] `imageBytes` < 50 MB; entry gzip budget stepped down and held.
-- [ ] Metrics answer error-rate and latency per route family; request IDs
-      already thread through logs (done).
+- [x] Metrics answer error-rate and latency per route family; request IDs
+      already thread through logs. (`npm run metrics`, 2026-08-25.)
 - [ ] The ledger's Section 2 rubric has no unchecked boxes left that map to
       engineering work (operational items — backups, DR drills, POPIA/FAIS
       process — tracked separately by the operator).
