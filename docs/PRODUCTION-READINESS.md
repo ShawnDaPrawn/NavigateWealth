@@ -17,6 +17,51 @@ those proposed files exist on `main`.
 
 ---
 
+## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs are not running)
+
+**13 of the 15 active `pg_cron` jobs are not doing their work.** Only the two
+`publications` jobs are healthy. Found while reading production logs after the
+overnight architecture run; nothing was changed, because every fix is a
+production write and most involve the service-role secret.
+
+Full audit, the diagnostic queries, and the remediation options:
+[`docs/runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md).
+
+The one-line reason this went unnoticed for so long: **`pg_cron` records these
+jobs as `succeeded`.** `net.http_post` enqueues asynchronously and returns a row
+id, so the job is green whether the eventual response is 200, 401, 404, or never
+sent. `cron.job_run_details` alone cannot tell you a scheduled job is broken.
+
+Three root causes:
+
+| cause                                         | jobs                   | detail                                                                                                                                           |
+| --------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Malformed URL — request never leaves Postgres | 1, 3, 6                | literal `<YOUR_PROJECT_REF>` / `<YOUR_ANON_KEY>` placeholder text still in the command; 2,016 + 672 consecutive failures in 7 days, never worked |
+| HTTP 404 — no handler for the scheduled path  | 17, 18, 19, 20, 21, 22 | e.g. `resources/cron/zip-cleanup`, `reporting/cron/weekly-summary` — zero grep hits anywhere in the codebase                                     |
+| HTTP 401 — cron auth rejected                 | 7, 9, 10, 16           | the guard compares the bearer to `SUPABASE_SERVICE_ROLE_KEY`; the value the function sees is not the string the cron rows send                   |
+
+Business impact, in the operator's terms: e-sign envelopes are never expired,
+advisors get no daily calendar digest and no overdue-task digest, clients get no
+birthday email, submission aging alerts never fire, communication groups are
+never recalculated, generated resource ZIPs are never cleaned up, and scheduled
+article/auto-content publishing runs only through the `publications` pair.
+
+Two related findings in the same audit:
+
+- **The service-role key sits in plaintext in `cron.job.command` for eleven
+  jobs**, readable by anything that can read `cron.job`. The `publications` jobs
+  already demonstrate the right pattern (pull from `vault.decrypted_secrets` at
+  call time). Note that the obvious redaction regex — `Bearer\s+[A-Za-z0-9._-]+`
+  — does **not** catch a token wrapped in literal angle brackets, which is
+  exactly the shape three of these rows have.
+- **The drift runs both ways.** `/cron/reminder-sweep`, `/cron/stuck-alert-sweep`
+  and `/cron/synthetic-probe` are implemented and mounted but have no scheduled
+  job pointing at them.
+
+Nothing here blocks a user-facing request path; the app itself is healthy (0 5xx
+in 1,183 requests over the audit window). This is entirely background work that
+the business believes is running and is not.
+
 ## Section 0 - Current Addendum As Of 2026-08-22 (refactoring roadmap)
 
 The consolidated execution roadmap for the remaining technical-debt,
@@ -702,6 +747,29 @@ Test-Path <path>
 
 Append-only. Add entries for regressions, near misses, and confusing cleanup
 events that future agents could repeat.
+
+### 2026-08-25 - Scheduled Jobs Silently Not Running
+
+- **Symptom:** None visible. No errors, no alerts, no failed requests. Found by
+  reading `function_edge_logs` for 401/404 responses after unrelated work.
+- **Scope:** 13 of 15 active `pg_cron` jobs were not performing their work —
+  three never had, since creation.
+- **Root causes:** (1) unsubstituted `<YOUR_PROJECT_REF>` / `<YOUR_ANON_KEY>`
+  placeholder text in the job command, so `net.http_post` errored before sending;
+  (2) six jobs targeting paths with no handler in the codebase; (3) cron auth
+  comparing the bearer against `SUPABASE_SERVICE_ROLE_KEY`, which does not match
+  the token the cron rows send.
+- **Why it hid:** `cron.job_run_details.status` reports `succeeded` for all of
+  them. `net.http_post` is asynchronous — it enqueues and returns a row id, so
+  the job is green regardless of the HTTP outcome.
+- **Fix:** Not applied. Every fix is a production write and most touch the
+  service-role secret; the options are written up in
+  `docs/runbooks/scheduled-jobs.md` for an operator decision.
+- **Lesson:** A green scheduler is not a working scheduler. Any job that reaches
+  a service over HTTP needs its _response_ checked, not its dispatch. Check the
+  two planes separately (`cron.job_run_details` **and** `function_edge_logs`) —
+  and when adding a scheduled job, verify the target path resolves to a mounted
+  route before trusting the first green run.
 
 ### 2026-04-18 - CORS Allowlist Locked Production Out
 
