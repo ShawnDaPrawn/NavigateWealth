@@ -276,7 +276,17 @@ app.post(
   '/',
   asyncHandler(async (c) => {
     try {
-      const body = await c.req.json();
+      // A body that is not JSON at all is a CLIENT error, not a server fault.
+      // `c.req.json()` throws on malformed input, and the catch at the bottom of
+      // this handler turned that into a 500 — so a truncated request or a bad
+      // Content-Type was reported as "Failed to create task", recorded as an
+      // unexpected 500 in the runtime-issue pipeline, and counted against the
+      // backend error rate. Surfaced by tasks-routes.contract.test.ts.
+      const body = await c.req.json().catch(() => null);
+      if (body === null || typeof body !== 'object') {
+        return c.json({ error: 'Validation failed', message: 'Request body must be JSON' }, 400);
+      }
+
       const parsed = CreateTaskSchema.safeParse(body);
       if (!parsed.success) {
         return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);

@@ -78,11 +78,17 @@ export default defineConfig({
       // +0.16 / +0.11 / +0.20 / +0.15; the rest was slack the intervening PRs
       // gained and never claimed, which is exactly what this comment exists to
       // stop happening twice.
+      //
+      // Raised again 2026-08-25 (17.3 / 12.5 / 16.8 / 17.7) with the first two
+      // §8.2 route-family contract suites — resources-routes (the public
+      // legal-document read next to admin writes) and tasks-routes (247
+      // statements behind a single router-scope guard). Measured
+      // 17.70 / 12.92 / 17.23 / 18.18 across 949 tests.
       thresholds: {
-        statements: 17.3,
-        branches: 12.5,
-        functions: 16.8,
-        lines: 17.7,
+        statements: 17.6,
+        branches: 12.8,
+        functions: 17.1,
+        lines: 18.0,
       },
     },
   },
