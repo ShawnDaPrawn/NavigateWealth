@@ -48,7 +48,7 @@ setupApp.post('/database', async (c) => {
         NEW.updated_at = NOW();
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path = public;
 
       -- Create the applications table
       CREATE TABLE IF NOT EXISTS personal_client_applications (
@@ -111,7 +111,7 @@ setupApp.post('/database', async (c) => {
         END IF;
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql SET search_path = public;
 
       DROP TRIGGER IF EXISTS auto_set_application_timestamps ON personal_client_applications;
       CREATE TRIGGER auto_set_application_timestamps
@@ -327,7 +327,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Trigger to call the function before updates
 DROP TRIGGER IF EXISTS tasks_updated_at_trigger ON public.tasks;
@@ -347,7 +347,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Trigger to automatically set completed_at
 DROP TRIGGER IF EXISTS tasks_completed_at_trigger ON public.tasks;
