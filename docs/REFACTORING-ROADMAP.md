@@ -586,7 +586,14 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
    SHA, or revert the merge on main. Credentialed form-prefill smoke stays
    `continue-on-error`.
    _Effort:_ S.
-2. **Backend coverage ratchet, worked not watched.** Floors only prevent
+2. **Backend coverage ratchet, worked not watched.** _(Started 2026-08-25:
+   `resources-routes` and `tasks-routes` contract suites landed — chosen because
+   the first straddles the public/gated boundary in one file and the second puts
+   247 statements behind a single router-scope `use('*', requireAdmin)`. Writing
+   them surfaced a real defect: `POST /tasks` answered **500** to malformed JSON,
+   so a truncated request or a bad Content-Type was reported as a server fault
+   and recorded as an unexpected 500 in the runtime-issue pipeline. Now a 400.
+   Coverage 17.39% → 17.70%, floors raised.)_ Floors only prevent
    regression; the plan is contract tests. Every route family gets an
    `*-routes.contract.test.ts` (mount the real router, mock only IO, assert
    status/authz/validation) — required for new routes, added for existing ones
