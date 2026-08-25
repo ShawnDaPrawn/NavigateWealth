@@ -564,7 +564,14 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
    imports at their routes. Measure cold-start before/after. Further splits
    (`integrations`, `ai`) only if deploy-blast-radius or cold-start data says
    so — six functions is the ceiling, not the goal.
-5. **Metrics (the deliberately-deferred half of Stage B).** Choose the sink
+5. **Metrics (the deliberately-deferred half of Stage B).** _(DONE 2026-08-25 —
+   and the sink question dissolved. Supabase already records
+   `request.pathname`, `response.status_code`, `execution_time_ms` and
+   `request_id` per request in `function_edge_logs`, so `npm run metrics`
+   queries what is already emitted instead of adding middleware that would
+   have cost latency on every request. First baseline: error rate 0.02%;
+   latency dominated by a ~1.5s cold-start floor, measured off the static
+   `/health` handler. See `docs/runbooks/edge-function-metrics.md`.)_ Choose the sink
    deliberately — Supabase log drains vs. the in-house quality-issues store vs.
    an OTLP endpoint — then emit request/error counters and p50/p95 per route
    family from the shared middleware. Correlation IDs already exist; this is
@@ -601,7 +608,15 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
    every land. Target: 40% statements by the time Stage D's first entity cuts
    over.
    _Effort:_ ongoing, absorbed into WS2/WS3 PRs.
-3. **One real e2e journey in CI (A9).** Programmatically seed (bootstrap-UAT
+3. **One real e2e journey in CI (A9).** _(Started 2026-08-25: the `e2e-smoke`
+   workflow runs a credential-free public-render journey in real Chromium on
+   every PR — `/` and `/get-quote`, desktop + mobile, plus a click that proves
+   the quote wizard advances. It closes the gap that **nothing in CI verified
+   the app RUNS**: a crashed React tree still serves 200 with an empty
+   `#root`, so a dead lazy chunk shipped green. Not yet a required check —
+   promote after ~3 green runs. The seeded login / quote-submit / e-sign
+   round trip still needs the accounts §7 is blocked on, and must not submit
+   against production.)_ Programmatically seed (bootstrap-UAT
    scripts already exist for FNA), then run login + quote submit + the e-sign
    round trip against a preview deploy on PRs. Start with one journey required
    in CI; grow to three.
