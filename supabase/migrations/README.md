@@ -114,17 +114,25 @@ migration would make every shadow write fail against a non-existent table — an
 `shadowWrite()` logs and swallows those failures, so it would look like it was
 working. Apply the migration first, verify the tables, then flip the flag.
 
-### Nine functions have a mutable `search_path`
+### ~~Nine functions have a mutable `search_path`~~ — CLOSED 2026-08-25
 
-Supabase's linter flags every function in the baseline file
-(`0011_function_search_path_mutable`). Three of them —
-`get_events_today`, `get_reminders_due_today`, `get_upcoming_reminders` — are
-`SECURITY DEFINER` **and** callable by the `anon` role over `/rest/v1/rpc/`.
-They filter on `auth.uid()` so an anonymous call returns no rows; the exposure
-is the definer-rights + mutable-search_path pairing, not the data.
+Fixed in `20260825004011` (pinned `SET search_path = public` on all nine) and
+`20260825004035` (revoked the PUBLIC EXECUTE grant on the four definer helpers).
 
-`20260821210412` shows the correct shape: `set search_path = public`, `REVOKE
-EXECUTE` from `public, anon, authenticated`, `GRANT` to `service_role` only.
+**Security advisors went from 17 findings to 2**, verified against production.
+
+Worth reading for the mistake in the middle: the first migration revoked EXECUTE
+from `anon` and `authenticated` and changed nothing. Postgres grants EXECUTE to
+PUBLIC by default and both roles inherit it, so the ACL still read `=X/postgres`
+and the advisors still flagged all three functions. **Revoking from named roles
+while leaving the PUBLIC grant in place is a no-op that looks exactly like a
+fix** — it only surfaced because the advisors were re-run afterwards rather than
+the change being assumed to have worked.
+
+The two remaining findings are `rls_enabled_no_policy` on `kv_store_91ed8379`
+(INFO, and correct by design — RLS on with no policies denies everyone except
+the service role, which is the only thing that touches it) and
+leaked-password protection, an operator toggle.
 
 ### Two `FOR ALL USING (true)` policies on `personal_client_applications`
 
@@ -140,7 +148,9 @@ authenticated user — including a client — satisfies them over PostgREST.
 
 ### Leaked-password protection is disabled
 
-Supabase Auth can check credentials against HaveIBeenPwned. Operator toggle.
+Supabase Auth can check credentials against HaveIBeenPwned. **Operator toggle**
+— Authentication → Providers → Email → "Prevent use of leaked passwords". One
+click, and it is the last open security-advisor finding on the project.
 
 ---
 
