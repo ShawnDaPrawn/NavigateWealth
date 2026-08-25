@@ -282,15 +282,34 @@ describe('integrations.tsx route contracts', () => {
     });
   });
 
+  // SECURITY (2026-08-24): these three reads used to answer without any
+  // Authorization header at all, while POST /schemas beside them required
+  // admin — so integration field schemas and custom key definitions were
+  // world-readable. This suite pinned that as the contract, which is how it
+  // survived. requireAuth was added; these cases lock the new floor so it
+  // cannot be quietly removed again.
+  for (const path of [
+    '/schemas?categoryId=risk_planning',
+    '/schemas/batch?categoryIds=a',
+    '/custom-keys?categoryId=risk_planning',
+  ]) {
+    it(`GET ${path} returns 401 without an Authorization header`, async () => {
+      const res = await integrationsApp.request(path);
+      expect(res.status).toBe(401);
+    });
+  }
+
   describe('GET /schemas', () => {
     it('returns 400 when categoryId is missing', async () => {
-      const res = await integrationsApp.request('/schemas');
+      const res = await integrationsApp.request('/schemas', { headers: AUTH });
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ error: 'Missing categoryId' });
     });
 
     it('falls back to a default schema (with a fields array) when none is stored', async () => {
-      const res = await integrationsApp.request('/schemas?categoryId=risk_planning');
+      const res = await integrationsApp.request('/schemas?categoryId=risk_planning', {
+        headers: AUTH,
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { fields?: unknown };
       expect(Array.isArray(body.fields)).toBe(true);
@@ -300,7 +319,9 @@ describe('integrations.tsx route contracts', () => {
       kvStore.set('config:schema:risk_planning', {
         fields: [{ id: 'sumAssured', label: 'Sum Assured' }],
       });
-      const res = await integrationsApp.request('/schemas?categoryId=risk_planning');
+      const res = await integrationsApp.request('/schemas?categoryId=risk_planning', {
+        headers: AUTH,
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { fields: Array<{ id: string }> };
       expect(body.fields.map((f) => f.id)).toEqual(['sumAssured']);
@@ -309,14 +330,16 @@ describe('integrations.tsx route contracts', () => {
 
   describe('GET /custom-keys', () => {
     it('returns 400 when categoryId is missing', async () => {
-      const res = await integrationsApp.request('/custom-keys');
+      const res = await integrationsApp.request('/custom-keys', { headers: AUTH });
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ error: 'Missing categoryId' });
     });
 
     it('returns the stored custom keys under a customKeys envelope', async () => {
       kvStore.set('config:custom_keys:risk_planning', [{ keyId: 'k1', name: 'Custom 1' }]);
-      const res = await integrationsApp.request('/custom-keys?categoryId=risk_planning');
+      const res = await integrationsApp.request('/custom-keys?categoryId=risk_planning', {
+        headers: AUTH,
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { customKeys: Array<{ keyId: string }> };
       expect(body.customKeys.map((k) => k.keyId)).toEqual(['k1']);
@@ -650,7 +673,7 @@ describe('integrations.tsx route contracts', () => {
   // Shape-assertion before Slice C extraction.
   describe('GET /schemas/batch', () => {
     it('returns a schemas map keyed by categoryId', async () => {
-      const res = await integrationsApp.request('/schemas/batch');
+      const res = await integrationsApp.request('/schemas/batch', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { schemas: Record<string, unknown> };
       expect(body).toHaveProperty('schemas');
@@ -662,7 +685,7 @@ describe('integrations.tsx route contracts', () => {
         categoryId: 'risk',
         fields: [{ id: 'f1', name: 'Custom' }],
       });
-      const res = await integrationsApp.request('/schemas/batch');
+      const res = await integrationsApp.request('/schemas/batch', { headers: AUTH });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { schemas: Record<string, { fields: unknown[] }> };
       expect(body.schemas.risk).toMatchObject({ fields: [{ id: 'f1' }] });

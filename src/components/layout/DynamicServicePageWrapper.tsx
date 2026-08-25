@@ -19,12 +19,10 @@ import {
   type TableSection,
 } from './ServicePageLayout';
 import { PolicyDetailModal } from '../modals/PolicyDetailModal';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { api } from '../../utils/api';
 import { formatCurrency } from '../../utils/currencyFormatter';
 import { BrandPageLoader } from '../ui/brand-loader';
 import { DEFAULT_SCHEMAS } from '../admin/modules/product-management';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations`;
 
 /** Sub-category table definition for multi-table products */
 export interface SubCategoryConfig {
@@ -103,13 +101,17 @@ export function DynamicServicePageWrapper({
       const schemaPromises = allCategoryIds.map(async (catId) => {
         let fields: SchemaField[] = [];
         try {
-          const res = await fetch(`${API_BASE}/schemas?categoryId=${catId}`, {
-            headers: { Authorization: `Bearer ${publicAnonKey}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data?.fields) fields = data.fields;
-          }
+          // Goes through the shared API client so it carries the SESSION JWT.
+          // It used to raw-fetch with `Bearer ${publicAnonKey}`; the server does
+          // not accept the anon key as a user credential (the post-deploy smoke
+          // asserts exactly that), so once `/integrations/schemas` gained
+          // `requireAuth` this would have 401'd for signed-in users too — and
+          // the fallback below would have silently served bundled defaults on
+          // all seven service dashboards, with no error anywhere.
+          const data = await api.get<{ fields?: SchemaField[] }>(
+            `/integrations/schemas?categoryId=${catId}`,
+          );
+          if (data?.fields) fields = data.fields;
         } catch (e) {
           console.error(`Error fetching schema for ${catId}:`, e);
         }
@@ -131,14 +133,14 @@ export function DynamicServicePageWrapper({
 
       // 2. Fetch policies (single call — API already expands sub-categories)
       try {
-        const res = await fetch(
-          `${API_BASE}/policies?clientId=${user?.id}&categoryId=${categoryId}`,
-          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        // Same migration, and this one was already broken: `/integrations/policies`
+        // has always required auth, so sending the anon key returned 401, `res.ok`
+        // was false, and this dashboard rendered an empty policy list with the
+        // failure swallowed into a console.error nobody reads.
+        const data = await api.get<{ policies?: unknown[] }>(
+          `/integrations/policies?clientId=${user?.id}&categoryId=${categoryId}`,
         );
-        if (res.ok) {
-          const data = await res.json();
-          setPolicies(data.policies || []);
-        }
+        setPolicies((data?.policies || []) as typeof policies);
       } catch (e) {
         console.error('Error fetching policies:', e);
       }
