@@ -208,9 +208,35 @@ job pointing at them — work that was built to run on a timer and never wired u
 
 ### 3. Cron auth is rejected (plane 2 — HTTP 401)
 
-`esign-expiry-sweep`, `calendar-daily-digest` and `auto-content-process-due`
-send a genuine `service_role` JWT (confirmed by decoding the payload, query B)
-and are answered **401**. `client-profile-cleanup` uses the same guard.
+**Corrected 2026-08-25 after the repair.** The original audit filed all four
+401s under one cause. They are two.
+
+`esign-expiry-sweep`, `calendar-daily-digest` and `client-profile-cleanup` hit a
+guard comparing the bearer to `SUPABASE_SERVICE_ROLE_KEY`. `auto-content-process-due`
+hit something else entirely: `auto-content-routes.ts` carried
+`app.use('*', requireAdmin)`, so the whole module required an admin _user
+session_. A scheduled job has none and never could — that route was not
+cron-callable by design, and no amount of key-fixing would have helped.
+
+The stronger measurement on the other three: each cron row's bearer is
+**byte-identical to the Vault copy of the service-role key** — compared inside
+SQL so nothing was printed:
+
+```sql
+with v as (select decrypted_secret k from vault.decrypted_secrets
+           where name = 'navigatewealth_service_role_key' order by created_at desc limit 1)
+select j.jobid, j.jobname,
+       case when tok = v.k then 'MATCHES' else 'DIFFERENT' end
+from (select jobid, jobname,
+             (regexp_match(command, 'Bearer\s+<?([A-Za-z0-9._\-]+)>?'))[1] tok
+      from cron.job) j cross join v order by j.jobid;
+```
+
+Eleven rows returned `MATCHES` at 219 characters. So the jobs were not sending a
+wrong-role or truncated key — they were sending _a_ well-formed service-role key
+that the function rejects. The Vault copy and the cron rows agree with each
+other and disagree with the function, which points at a rotation that the
+function picked up automatically and neither of the other two did.
 
 The guard they hit is a plain equality check:
 
@@ -245,11 +271,22 @@ cannot be compared directly:
 - Therefore there is **no observed instance** of the service-role comparison
   succeeding in production.
 
-To settle it (operator, needs dashboard access): compare
-Edge Functions → Secrets → `SUPABASE_SERVICE_ROLE_KEY` against the token in the
-cron rows. The likely causes are a key rotation that the cron rows never picked
-up, or the project's move to the new API key format (this project has
-`sb_publishable_…` issued alongside still-enabled legacy JWTs).
+**RESOLVED by replacing the mechanism, not the value** (2026-08-25). Chasing the
+value was the wrong move: the mismatch cannot be confirmed from SQL, and it
+would recur on the next rotation. Cron auth now uses a dedicated token in Vault,
+verified through `public.verify_cron_auth_token` — a SECURITY DEFINER boolean
+oracle, so the secret is compared inside Postgres and never enters the function.
+See `src/supabase/functions/server/cron-auth.ts` and migrations
+`20260825085409` / `20260825085435`.
+
+That removes the dependency on an env var this side cannot read, takes the
+service-role key out of `cron.job.command`, and makes rotation one
+`vault.update_secret` with no job edits. The service-role env comparison is kept
+as a second branch so an operator's manual `curl` still works.
+
+If you still want to know what the function's `SUPABASE_SERVICE_ROLE_KEY` holds:
+Edge Functions → Secrets in the dashboard is the only place it is readable. It
+is no longer load-bearing for any scheduled job.
 
 ## Remediation shape (not yet applied — needs an operator decision)
 
