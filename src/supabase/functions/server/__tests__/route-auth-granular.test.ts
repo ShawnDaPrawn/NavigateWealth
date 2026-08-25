@@ -67,6 +67,11 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import {
+  ROUTE_AUTH_CLASSIFICATION,
+  ROUTE_AUTH_GROUPS,
+  PUBLIC_BY_DESIGN_ROUTES,
+} from './route-auth-classification.ts';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { announceRatchetSlack } from '../../../../test/ratchet-notice';
@@ -234,6 +239,60 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
 
     const leaked = unguarded.filter((entry) => entry.startsWith('documents.tsx '));
     expect(leaked, 'documents.tsx routes lost their guard, or guard resolution broke').toEqual([]);
+  });
+
+  // ── §5.5: the number is now an inventory, not a mystery ──────────────────
+  //
+  // A floor alone says "no worse than before" about a set nobody has read.
+  // These four assertions make the set explainable and keep it that way.
+
+  it('classifies every route the detector reports — no unclassified routes', () => {
+    const unclassified = unguarded.filter((r) => !ROUTE_AUTH_CLASSIFICATION.has(r));
+    expect(
+      unclassified,
+      `${unclassified.length} route(s) have no visible guard AND no entry in ` +
+        'route-auth-classification.ts. Either add a guard, or add the route to ' +
+        'the registry with a reason it is safe without one. Do NOT widen ' +
+        'AUTH_MARKERS to make this pass — that hides the route instead of ' +
+        'explaining it.',
+    ).toEqual([]);
+  });
+
+  it('carries no stale classifications — the registry cannot rot into fiction', () => {
+    // The counterpart direction. A route that gains a real guard drops out of
+    // the detector's output; if its entry lingered here, this file would be
+    // describing a world that no longer exists, and the next reader would trust
+    // it. That is exactly how the migrations folder went wrong.
+    const detected = new Set(unguarded);
+    const stale = [...ROUTE_AUTH_CLASSIFICATION.keys()].filter((r) => !detected.has(r));
+    expect(
+      stale,
+      `${stale.length} registry entr(ies) no longer match any unguarded route — ` +
+        'the route was renamed, deleted, or now carries a visible guard. Remove ' +
+        'the entr(ies) from route-auth-classification.ts.',
+    ).toEqual([]);
+  });
+
+  it('gives every classification group a non-trivial reason', () => {
+    // Guards against the registry degrading into "public: because". A reason
+    // that does not say WHY is worse than no reason, because it reads as review.
+    for (const group of ROUTE_AUTH_GROUPS) {
+      expect(group.routes.length, `group ${group.kind} is empty`).toBeGreaterThan(0);
+      expect(
+        group.reason.length,
+        `group ${group.kind} needs a real justification, not a label`,
+      ).toBeGreaterThan(60);
+    }
+  });
+
+  it('exposes a public surface for the Stage E split to consume', () => {
+    // Roadmap §7.2/§7.3 must flip verify_jwt against THIS list, not a
+    // hand-written one. If it is ever empty the split would silently take the
+    // whole public surface offline.
+    expect(PUBLIC_BY_DESIGN_ROUTES.length).toBeGreaterThan(50);
+    // Signup is the canonical trap: the SPA posts to it before any JWT exists.
+    expect(PUBLIC_BY_DESIGN_ROUTES).toContain('auth-signup.ts POST /signup');
+    expect(PUBLIC_BY_DESIGN_ROUTES).toContain('auth-routes.ts POST /login-validate');
   });
 
   it('does not add unguarded routes beyond the committed floor', () => {
