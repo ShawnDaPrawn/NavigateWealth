@@ -50,6 +50,19 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({ createClient: () => ({}) })
 
 const app = (await import('../calendar-digest-routes.ts')).default;
 
+/**
+ * Mirrors what `getAllClients` really returns. Two details matter and both were
+ * wrong in the first version of these tests, which is why review caught bugs
+ * the suite could not:
+ *
+ *   - `hasEmailOptIn` is HARD-CODED `true` by the loader for every client, so a
+ *     fixture that varies it tests a state production never produces. It is
+ *     pinned to `true` here on purpose, and consent is asserted through
+ *     `profile._applicationMeta` instead.
+ *   - `dateOfBirth` is only populated from the NESTED profile shape. Clients
+ *     approved through the application flow have a flat profile and arrive with
+ *     it undefined, carrying the date at `profile.dateOfBirth`.
+ */
 function client(over: Record<string, unknown>) {
   return {
     id: 'x',
@@ -61,12 +74,30 @@ function client(over: Record<string, unknown>) {
     products: [],
     status: 'active',
     category: '',
-    hasEmailOptIn: true,
+    hasEmailOptIn: true, // always true in production — never vary this
     hasWhatsAppOptIn: false,
     metadata: {},
     profile: {},
     ...over,
   };
+}
+
+/** Admin-entered shape: nested under personalInformation. */
+function nestedShape(dob: string, over: Record<string, unknown> = {}) {
+  return client({
+    dateOfBirth: dob, // what getAllClients maps from personalInformation
+    profile: { personalInformation: { dateOfBirth: dob } },
+    ...over,
+  });
+}
+
+/** Self-service shape from buildClientProfileFromApplication: flat root. */
+function flatShape(dob: string, consent = false, over: Record<string, unknown> = {}) {
+  return client({
+    dateOfBirth: undefined, // the loader cannot see it in this shape
+    profile: { dateOfBirth: dob, _applicationMeta: { communicationConsent: consent } },
+    ...over,
+  });
 }
 
 async function run() {
@@ -167,6 +198,51 @@ describe('who gets selected', () => {
   });
 });
 
+describe('both stored profile shapes', () => {
+  // Review of #232 found the route read only the nested shape. Every client
+  // approved through the self-service application flow has the flat shape, so
+  // the digest reported a quiet day for that entire population.
+  it('sees a birthday carried on the nested profile shape', async () => {
+    vi.setSystemTime(new Date('2026-06-15T08:00:00Z'));
+    getAllClients.mockResolvedValue([nestedShape('1990-06-15')]);
+
+    const { body } = await run();
+
+    expect(body.birthday_count).toBe(1);
+  });
+
+  it('sees a birthday carried at the flat profile root, where the loader cannot', async () => {
+    vi.setSystemTime(new Date('2026-06-15T08:00:00Z'));
+    getAllClients.mockResolvedValue([flatShape('1990-06-15')]);
+
+    const { body } = await run();
+
+    expect(body.birthday_count).toBe(1);
+  });
+
+  it('also accepts the snake_case root variant', async () => {
+    vi.setSystemTime(new Date('2026-06-15T08:00:00Z'));
+    getAllClients.mockResolvedValue([
+      client({ dateOfBirth: undefined, profile: { date_of_birth: '1990-06-15' } }),
+    ]);
+
+    const { body } = await run();
+
+    expect(body.birthday_count).toBe(1);
+  });
+
+  it('still reports no birthdays when neither shape carries a date', async () => {
+    vi.setSystemTime(new Date('2026-06-15T08:00:00Z'));
+    getAllClients.mockResolvedValue([
+      client({ dateOfBirth: undefined, profile: { personalInformation: {} } }),
+    ]);
+
+    const { body } = await run();
+
+    expect(body).toMatchObject({ sent: false, reason: 'no_birthdays' });
+  });
+});
+
 describe('the SAST boundary', () => {
   // The advisor is in Africa/Johannesburg. A run just before midnight UTC is
   // already the next day there, and must use the South African date.
@@ -223,17 +299,24 @@ describe('what the advisor is told', () => {
     expect(mail.text.indexOf('Adam')).toBeLessThan(mail.text.indexOf('Zara'));
   });
 
-  it('flags a client who has not opted in to email', async () => {
+  it('reports marketing consent from _applicationMeta, not the hard-coded opt-in flag', async () => {
+    // The bug this pins: the loader sets hasEmailOptIn: true for everyone, so
+    // rendering it told the advisor every client was contactable — including
+    // those who declined. Both fixtures below carry hasEmailOptIn: true.
     vi.setSystemTime(new Date('2026-06-15T08:00:00Z'));
     getAllClients.mockResolvedValue([
-      client({ firstName: 'NoMail', dateOfBirth: '1990-06-15', hasEmailOptIn: false }),
+      flatShape('1990-06-15', false, { firstName: 'Declined', lastName: '' }),
+      flatShape('1991-06-15', true, { firstName: 'Consented', lastName: '' }),
     ]);
 
     await run();
 
     const mail = sendEmail.mock.calls[0][0] as { html: string; text: string };
-    expect(mail.text).toContain('[no email opt-in]');
-    expect(mail.html).toContain('No email opt-in');
+    expect(mail.text).toContain('Declined');
+    expect(mail.text).toContain('[no marketing consent]');
+    expect(mail.html).toContain('No marketing consent');
+    // The consenting client must NOT be flagged.
+    expect(mail.text).toMatch(/Consented \(turning 35\) — x@example\.com$/m);
   });
 });
 

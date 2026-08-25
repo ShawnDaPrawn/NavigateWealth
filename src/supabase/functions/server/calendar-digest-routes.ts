@@ -320,6 +320,53 @@ This is an automated daily digest from Navigate Wealth.
   }),
 );
 
+/**
+ * Birth date, from either profile shape.
+ *
+ * There are two, and reading only one silently loses whole cohorts:
+ *   - Admin-entered profiles nest under `personalInformation`, which is what
+ *     `getAllClients` maps to `client.dateOfBirth`.
+ *   - Profiles built by `buildClientProfileFromApplication` (every self-service
+ *     client approved through the application flow) are FLAT — `dateOfBirth`
+ *     sits at the profile root and there is no `personalInformation` object at
+ *     all, so `client.dateOfBirth` is undefined for all of them.
+ *
+ * `advice-engine-service.ts` already reads `profile.dateOfBirth || profile.date_of_birth`
+ * for the same reason. Caught in review of #232; the first version of this route
+ * read only the nested value and would have reported a quiet day for an entire
+ * client population.
+ */
+function resolveDateOfBirth(client: CommunicationClient): string | undefined {
+  if (client.dateOfBirth) return client.dateOfBirth;
+
+  const profile = (client.profile || {}) as Record<string, unknown>;
+  const root = (profile.dateOfBirth ?? profile.date_of_birth) as unknown;
+  if (typeof root === 'string' && root) return root;
+
+  const nested = (profile.personalInformation as Record<string, unknown> | undefined)
+    ?.dateOfBirth as unknown;
+  return typeof nested === 'string' && nested ? nested : undefined;
+}
+
+/**
+ * Marketing consent, read from where it is actually stored.
+ *
+ * Deliberately does NOT use `client.hasEmailOptIn`: `getAllClients` hard-codes
+ * that field to `true` for every client, and nothing else in the codebase reads
+ * it. Reporting treats `_applicationMeta.communicationConsent === true` as the
+ * marketing-consent flag (reporting-service-audits.ts, reporting-service-clients.ts),
+ * so this matches that.
+ *
+ * This mattered: the first version of this route rendered the hard-coded flag,
+ * so every row read "Email OK" — telling the advisor they could mail clients who
+ * had declined consent.
+ */
+function resolveMarketingConsent(client: CommunicationClient): boolean {
+  const profile = (client.profile || {}) as Record<string, unknown>;
+  const meta = (profile._applicationMeta || {}) as Record<string, unknown>;
+  return meta.communicationConsent === true;
+}
+
 // ---------------------------------------------------------------------------
 // POST /calendar-digest/send-birthdays
 // ---------------------------------------------------------------------------
@@ -347,7 +394,7 @@ This is an automated daily digest from Navigate Wealth.
  *      `{ sent: false, reason: 'no_birthdays' }`. `send-daily` emails a "clear
  *      day" note, which is reasonable for a calendar you check every morning;
  *      a daily "no birthdays today" mail is just noise.
- *   2. It reports each client's email opt-in state rather than filtering on it.
+ *   2. It reports each client's MARKETING CONSENT rather than filtering on it.
  *      The recipient is the advisor, so opt-in does not gate delivery — but the
  *      advisor needs to know whether they may actually mail that client back.
  *
@@ -385,19 +432,20 @@ app.post(
 
     const birthdays = clients
       .filter((client) => {
-        if (!client.dateOfBirth) return false;
-        const dob = new Date(client.dateOfBirth);
+        const raw = resolveDateOfBirth(client);
+        if (!raw) return false;
+        const dob = new Date(raw);
         if (Number.isNaN(dob.getTime())) return false;
         return dob.getUTCMonth() + 1 === todayMonth && dob.getUTCDate() === todayDay;
       })
       .map((client) => {
-        const dob = new Date(client.dateOfBirth as string);
+        const dob = new Date(resolveDateOfBirth(client) as string);
         const name = [client.firstName, client.lastName].filter(Boolean).join(' ') || client.email;
         return {
           name,
           email: client.email,
           turning: todayYear - dob.getUTCFullYear(),
-          hasEmailOptIn: client.hasEmailOptIn,
+          marketingConsent: resolveMarketingConsent(client),
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -427,9 +475,9 @@ app.post(
                 border-radius: 999px;
                 font-size: 11px;
                 font-weight: 600;
-                background-color: ${b.hasEmailOptIn ? '#059669' : '#9ca3af'};
+                background-color: ${b.marketingConsent ? '#059669' : '#9ca3af'};
                 color: #ffffff;
-              ">${b.hasEmailOptIn ? 'Email OK' : 'No email opt-in'}</span>
+              ">${b.marketingConsent ? 'Marketing consent' : 'No marketing consent'}</span>
             </td>
           </tr>`,
       )
@@ -443,14 +491,14 @@ app.post(
            <tr>
              <th style="padding: 8px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Client</th>
              <th style="padding: 8px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Age</th>
-             <th style="padding: 8px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Contactable</th>
+             <th style="padding: 8px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; border-bottom: 2px solid #e5e7eb;">Consent</th>
            </tr>
          </thead>
          <tbody>${rows}</tbody>
        </table>
        <p style="font-size: 13px; color: #6b7280; margin-top: 14px;">
-         Clients marked <em>No email opt-in</em> have not consented to marketing
-         email — reach them by phone instead.
+         Clients marked <em>No marketing consent</em> have not consented to
+         marketing email — reach them by phone instead.
        </p>`,
       {
         title: 'Client Birthdays',
@@ -466,7 +514,7 @@ app.post(
     const plain = birthdays
       .map(
         (b) =>
-          `- ${b.name} (turning ${b.turning}) — ${b.email}${b.hasEmailOptIn ? '' : ' [no email opt-in]'}`,
+          `- ${b.name} (turning ${b.turning}) — ${b.email}${b.marketingConsent ? '' : ' [no marketing consent]'}`,
       )
       .join('\n');
 
