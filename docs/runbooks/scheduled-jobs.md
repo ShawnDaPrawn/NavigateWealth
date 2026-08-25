@@ -54,16 +54,40 @@ raw into a transcript, a file, or a PR. Redact first:
 
 ```sql
 select jobid, schedule, jobname, active,
-       regexp_replace(command, '(Bearer\s+)[A-Za-z0-9._\-]+', '\1<REDACTED>', 'g')
+       regexp_replace(command, '(Bearer\s+)<?[A-Za-z0-9._\-]*>?', '\1<REDACTED>', 'g')
          as command_redacted
 from cron.job
 order by jobid;
 ```
 
-**That regex is not sufficient on its own.** It anchors on `Bearer ` followed by
-token characters, so it does _not_ redact a token wrapped in literal angle
-brackets (`Bearer <eyJ...>`) — exactly the malformed rows this audit found.
-Check the output before trusting it.
+**The `<?` and `>?` are load-bearing — do not drop them.** The obvious version of
+this regex is `(Bearer\s+)[A-Za-z0-9._-]+`, which anchors on token characters and
+therefore skips a token wrapped in literal angle brackets (`Bearer <eyJ...>`).
+Three of the rows in this project have exactly that shape, so the obvious regex
+returns the full service-role token on the very first run — and "check the output
+before trusting it" is no protection, because by then the token is already in the
+terminal, the query history, and whatever transcript is recording the session.
+A redaction pattern has to be right before it is run, not after.
+
+Verified against all 15 rows in this project on 2026-08-25: the bracket-aware
+pattern leaks nothing, the obvious one leaks a JWT from 2 of the 15. Re-run this
+self-check — which returns counts, never text — before trusting any redaction
+pattern you have edited:
+
+```sql
+with redacted as (
+  select jobid,
+         regexp_replace(command, '(Bearer\s+)<?[A-Za-z0-9._\-]*>?', '\1<REDACTED>', 'g')
+           as candidate
+  from cron.job
+)
+select count(*) as jobs_checked,
+       count(*) filter (where position('eyJ'       in candidate) > 0) as jwt_leaks,
+       count(*) filter (where position('sb_secret' in candidate) > 0) as secret_key_leaks
+from redacted;
+```
+
+Both leak counts must be `0`.
 
 To ask _which role_ a job authenticates as without revealing the token, decode
 only the JWT payload (the payload is not the secret; the signature is):
@@ -127,7 +151,7 @@ guessing it.
 | 20    | `kv-data-consistency-audit`              | `0 21 * * 0`          | dead      | HTTP 404 (**inferred** — no handler in code; weekly, outside the log window) |
 | 21    | `weekly-business-summary`                | `0 14 * * 5`          | dead      | HTTP 404 (**inferred** — no handler in code; weekly, outside the log window) |
 
-Twelve of the thirteen failures are directly observed in `cron.job_run_details`
+Ten of the thirteen failures are directly observed in `cron.job_run_details`
 or `function_edge_logs`. The three marked _inferred_ are weekly jobs whose last
 fire predates the 24-hour log retention window; for jobs 20 and 21 the target
 path has no handler anywhere in the codebase, and for job 10 the handler exists
@@ -256,4 +280,8 @@ involve secrets, so they are listed rather than executed.
 
 ## Do this after any change to a scheduled job
 
-Run query A **and** query C. Query A alone will tell you it worked.
+Run query A **and** query C. **Query A alone cannot establish that a job works** —
+that is the trap this whole runbook is about. `net.http_post` is asynchronous, so
+query A stays green for a 401, a 404, or a 5xx. Only query C shows what the
+function actually answered. A change is verified when query C shows a 2xx for the
+job's target path, at a timestamp matching the schedule.
