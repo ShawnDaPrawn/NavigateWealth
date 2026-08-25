@@ -52,6 +52,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build
+        env:
+          # The Supabase articles endpoint uses a host allowlist that blocks CI
+          # runner IPs, and `requireArticles()` is strict whenever CI is set —
+          # so generate-seo-files / apply-static-seo hard-fail on the blocked
+          # fetch and this job never reaches Playwright. quality-check.yml sets
+          # the same override on the same build for the same reason. Without it
+          # this gate is one runner IP away from failing for a reason that has
+          # nothing to do with whether the app renders.
+          SEO_REQUIRE_ARTICLES: 'false'
         run: npm run build
 
       # Dependency-free readiness poll. `npx wait-on` would fetch a package at

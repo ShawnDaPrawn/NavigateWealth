@@ -45,21 +45,48 @@ for (const route of ROUTES) {
     page.on('console', (msg) => {
       if (msg.type() !== 'error') return;
       const text = msg.text();
-      // Ignore NETWORK-class noise. A blank or crashed page — the thing this
-      // spec exists to catch — surfaces as a `pageerror` or an empty body, never
-      // as a failed request. Two specific sources are expected here:
-      //
-      //   - the backend being unreachable (a preview build carries no session,
-      //     and a sandboxed runner may not egress to Supabase at all);
-      //   - `/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js`,
-      //     which are injected by Vercel's CDN at serve time and therefore 404
-      //     against any non-Vercel origin, including `vite preview`. Verified
-      //     2026-08-25: those two were the ONLY 4xx responses on the homepage.
-      //
-      // Anything else is treated as an application error.
-      if (/Failed to fetch|net::ERR|ERR_BLOCKED|\b(401|403)\b/i.test(text)) return;
-      if (/Failed to load resource/i.test(text)) return;
+
+      // A LAZY-CHUNK FAILURE IS THE HEADLINE CASE THIS SPEC EXISTS TO CATCH, and
+      // it reports as "Failed to fetch dynamically imported module". React's
+      // error boundary may absorb it, so it can arrive as a console error rather
+      // than a pageerror — and on `/` the surviving nav shell still contains
+      // "Navigate Wealth" and well over 200 characters, so the other assertions
+      // would not notice. Never filter these, whatever else they match.
+      if (
+        /dynamically imported module|ChunkLoadError|Loading chunk .* failed|Importing a module script failed/i.test(
+          text,
+        )
+      ) {
+        appErrors.push(`console: ${text}`);
+        return;
+      }
+
+      // Otherwise ignore only KNOWN-BENIGN sources, matched by origin rather
+      // than by error phrasing:
+      //   - Supabase: a preview build carries no session and a sandboxed runner
+      //     may not egress to it at all;
+      //   - `/_vercel/insights` + `/_vercel/speed-insights`, injected by Vercel's
+      //     CDN at serve time and therefore 404 against any other origin.
+      //     Verified 2026-08-25: those two were the ONLY 4xx on the homepage.
+      if (/supabase\.co|\/_vercel\//i.test(text)) return;
+
+      // A bare resource 404 with no URL attached is browser noise we cannot
+      // attribute; the response listener below is the authoritative check for
+      // first-party assets.
+      if (/^Failed to load resource/i.test(text) && !/localhost|127\.0\.0\.1/i.test(text)) return;
+
       appErrors.push(`console: ${text}`);
+    });
+
+    // First-party assets must all load. A 404 on our own JS chunk is the
+    // deploy-time failure this spec is for, and it is far more reliably seen
+    // here than in console text.
+    page.on('response', (res) => {
+      const url = res.url();
+      if (res.status() < 400) return;
+      if (!/localhost|127\.0\.0\.1/.test(url)) return;
+      if (/\/_vercel\//.test(url)) return;
+      appErrors.push(`asset ${res.status()}: ${url}`);
     });
 
     const response = await page.goto(route.path, { waitUntil: 'domcontentloaded' });
@@ -85,5 +112,18 @@ test('/get-quote presents an interactive wizard, not a static page', async ({ pa
   await page.goto('/get-quote', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('body')).toContainText('Choose your service', { timeout: 20_000 });
   await expect(page.locator('body')).toContainText('Your details');
-  await expect(page.getByRole('button').first()).toBeEnabled();
+
+  // Target a NAMED service card. `getByRole('button').first()` was the public
+  // navigation, which renders before the wizard — so it stayed green even if
+  // every ServiceCard were disabled or its selection broken, i.e. it asserted
+  // nothing about the funnel it claimed to cover.
+  const serviceCard = page.getByRole('button', { name: /Risk Management/i });
+  await expect(serviceCard).toBeVisible();
+  await expect(serviceCard).toBeEnabled();
+
+  // And prove the selection actually does something: step 2 collects details,
+  // so choosing a service must surface a form control. A card that renders but
+  // no longer advances the wizard is a broken funnel that still looks fine.
+  await serviceCard.click();
+  await expect(page.locator('input, select, textarea').first()).toBeVisible({ timeout: 20_000 });
 });
