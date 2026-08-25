@@ -137,7 +137,13 @@ export const PROBES = [
     method: 'POST',
     body: {},
     expectedStatus: 400,
-    json: { code: 'VALIDATION_ERROR' },
+    // The envelope is `{ error: 'Validation failed', message?, errors? }` —
+    // `validate.ts` `rejection()`. There is NO `code` field on it. An earlier
+    // draft asserted `code: 'VALIDATION_ERROR'`, which would have failed this
+    // BLOCKING gate on every healthy deploy, after the revision was already
+    // live. `validateBodyEnvelopeMatches` in the smoke's test suite pins the two
+    // together against the real server source so they cannot drift apart again.
+    json: { error: 'Validation failed' },
     auth: 'none',
   },
   {

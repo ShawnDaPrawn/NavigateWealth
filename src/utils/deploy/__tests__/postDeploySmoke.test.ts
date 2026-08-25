@@ -87,6 +87,31 @@ describe('post-deploy smoke probes', () => {
     }
   });
 
+  it("matches validateBody's real 400 envelope, read from the server source", () => {
+    // The signup probe asserts a body shape produced by `rejection()` in
+    // src/supabase/functions/server/validate.ts. Those two files have no import
+    // relationship, so nothing stopped them drifting — and they DID drift: the
+    // first version of this probe asserted `code: 'VALIDATION_ERROR'`, a field
+    // that envelope has never had. Because this smoke is the BLOCKING gate on
+    // every Edge Function deploy, that would have marked healthy deploys failed
+    // after the revision was already live.
+    //
+    // Reading the server source here is deliberate. Asserting the literal
+    // string in both places would agree with itself forever.
+    const validateSrc = readFileSync(
+      resolve(repoRoot, 'src/supabase/functions/server/validate.ts'),
+      'utf8',
+    );
+    const envelope = validateSrc.match(/return c\.json\(\{\s*error:\s*'([^']+)'/);
+    expect(envelope, 'could not find the validation rejection envelope').not.toBeNull();
+
+    const signup = probes.find((p) => p.path === '/auth-signup/signup');
+    expect(signup, 'signup probe missing').toBeDefined();
+    expect(signup!.json).toBeDefined();
+    expect(Object.keys(signup!.json!)).toEqual(['error']);
+    expect(signup!.json!.error).toBe(envelope![1]);
+  });
+
   it('covers the two public routes the verify_jwt flip would break first', () => {
     // Roadmap §7.2/§7.3. Signup is the canonical trap: the SPA posts to it
     // before any JWT exists, so a flip that forgets it breaks account creation
