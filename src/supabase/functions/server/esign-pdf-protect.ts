@@ -38,8 +38,14 @@ import { Buffer } from 'node:buffer';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const log = createModuleLogger('esign-pdf-protect');
+
+// Lazy Supabase client — must NOT be constructed at module top level, or the
+// function crashes on deploy (same constraint as security-shared.ts).
+const getSupabase = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 // ── Constants ─────────────────────────────────────────────────────────
 
@@ -167,12 +173,47 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
     return { p12Buffer: Buffer.from(envP12, 'base64'), passphrase: envPassphrase };
   }
 
+  // SECURITY-AUDIT S4, second branch (2026-08-25). Vault: encrypted at rest
+  // with a key held outside the database, and unreachable through the
+  // application's own KV endpoints. Added because the env-secret branch above
+  // needs an operator in the dashboard — there is no Management API tool for
+  // Edge Function secrets — and leaving the key in a plaintext table until
+  // someone got round to it was the worse trade.
+  //
+  // Be clear about what this is not: signing needs the private key in memory,
+  // so unlike the cron token this cannot be a boolean oracle. The getter really
+  // does hand the key to its caller. What improves is that the key stops
+  // sitting unencrypted in a general-purpose table, and reading it now needs
+  // service_role EXECUTE on one narrowly-granted function rather than a row
+  // read. The env branch above is still the better option and still runs first.
+  try {
+    const { data, error } = await getSupabase().rpc('get_esign_platform_cert');
+    if (error) {
+      log.warn('get_esign_platform_cert failed — falling back to KV', { error: error.message });
+    } else if (data) {
+      const vaulted = data as CachedPlatformCert;
+      if (vaulted.p12Base64 && vaulted.passphrase && new Date(vaulted.expiresAt) > new Date()) {
+        log.info(`Using platform signing certificate from Vault (expires: ${vaulted.expiresAt})`);
+        return {
+          p12Buffer: Buffer.from(vaulted.p12Base64, 'base64'),
+          passphrase: vaulted.passphrase,
+        };
+      }
+      log.warn('Vault holds a platform certificate but it is expired or incomplete');
+    }
+  } catch (err) {
+    log.warn('get_esign_platform_cert threw — falling back to KV', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   // SECURITY-AUDIT S4 — the KV fallback below keeps the signing private key and
   // its passphrase in application-readable storage. Reading it back out through
   // the generic KV API is now blocked outright (kv-routes.ts denies the
   // `esign_config:` namespace to every caller), but the material is still at
-  // rest in KV, and only the operator can finish the move by provisioning the
-  // two secrets above.
+  // rest in KV. It is retained until the Vault path above is observed working
+  // in production: deleting it first would break every envelope completion — an
+  // outage on a compliance path, caused by a security fix.
   //
   // Deleting this fallback in code would be the wrong way to force that: if the
   // secrets are not yet set in the deployed environment, every envelope
@@ -221,7 +262,6 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
     const passphrase = forge.util.bytesToHex(forge.random.getBytesSync(16));
     const { p12Buffer, expiresAt, serialNumber } = generateP12(passphrase);
 
-    // Cache in KV
     const certData: CachedPlatformCert = {
       p12Base64: p12Buffer.toString('base64'),
       passphrase,
@@ -230,7 +270,28 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
       expiresAt: expiresAt.toISOString(),
       serialNumber,
     };
-    await kv.set(PLATFORM_CERT_KV_KEY, certData);
+
+    // Persist to Vault, never to KV. A regenerated certificate is new private
+    // key material; writing it back to a plaintext table would undo the whole
+    // point of the branch above. If Vault is unreachable the run still returns
+    // a usable certificate — it is simply not cached, so the next call
+    // regenerates. That is slower, and correct.
+    try {
+      const { error } = await getSupabase().rpc('set_esign_platform_cert', {
+        cert: certData,
+      });
+      if (error) {
+        log.warn('Could not persist the new platform certificate to Vault', {
+          error: error.message,
+        });
+      } else {
+        log.info('New platform signing certificate stored in Vault');
+      }
+    } catch (err) {
+      log.warn('Could not persist the new platform certificate to Vault', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     log.success(
       `Platform signing certificate generated (serial: ${serialNumber}, expires: ${expiresAt.toISOString()})`,
