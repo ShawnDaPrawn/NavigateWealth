@@ -70,8 +70,16 @@ The spread between `health` (1,497 ms) and a real data route like `publications`
 (1,918 ms) is only ~400 ms, which says the application's own work is a minority
 of the time a client waits.
 
-So the highest-value latency work is **not** query optimisation. It is cold
-start:
+So the highest-value latency work is **not** query optimisation — the
+application's own work is a minority of the wait.
+
+**What this does NOT establish.** `execution_time_ms` is per-request and does
+not flag a cold isolate, and the `health` sample is n=20. So "the cost is
+outside application query work" is supported; "the cost is cold start" is a
+hypothesis, and the most likely one, but not measured. Test it before spending
+Stage E effort on it: hit `/health` twice in quick succession and compare the
+first request against the second, or drive a burst and look at the distribution
+rather than the median. The candidates, in order of likelihood:
 
 1. **Boot payload.** The entry point loads `hono`, `cors`, the request-context
    shim and three mount registrars before serving anything. The 77 route modules
@@ -81,10 +89,10 @@ start:
    means a large share of requests land on a cold isolate. Traffic shape, not
    code, decides this one.
 3. **Stage E (§7.4)** — carving out the heavy `esign` PDF/crypto paths and
-   converting them to dynamic imports at their routes — is the roadmap item that
-   targets this directly. Measure with this script before and after; the
-   `health` row is the honest before/after number because it is the only one
-   with no application work in it.
+   converting them to dynamic imports at their routes — targets (1) directly.
+   **Confirm the hypothesis first**, then measure with this script before and
+   after; the `health` row is the honest before/after number because it is the
+   only one with no application work in it.
 
 The 29–37 s `max_ms` values on `publications`, `quality-issues` and `clients`
 are worth a separate look: something in those families occasionally takes half a
