@@ -25,12 +25,21 @@ export interface TreasuryFinancialAccount {
   activeFeatures: string[];
 }
 
+export interface CurrencyBalance {
+  currency: string;
+  cash: number;
+  inboundPending: number;
+  outboundPending: number;
+}
+
 export interface TreasuryBalance {
   /** Present on the standalone balance endpoint; omitted inside the account DTO. */
   currency?: string;
   cash: number;
   inboundPending: number;
   outboundPending: number;
+  /** Per-currency subtotals for a multi-currency financial account (USD/EUR/GBP/…). */
+  perCurrency?: CurrencyBalance[];
 }
 
 export interface PlatformBalanceRow {

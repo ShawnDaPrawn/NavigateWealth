@@ -236,11 +236,25 @@ export interface BankDetailsDTO {
   supportedNetworks: string[];
 }
 
+/** A single currency's balance subtotals within a multi-currency financial account. */
+export interface CurrencyBalanceDTO {
+  currency: string;
+  cash: number;
+  inboundPending: number;
+  outboundPending: number;
+}
+
 export interface FinancialAccountDTO {
   id: string;
   status: string;
   currency: string;
-  balance: { cash: number; inboundPending: number; outboundPending: number };
+  balance: {
+    cash: number;
+    inboundPending: number;
+    outboundPending: number;
+    /** Every held currency's subtotals (storage FAs can hold USD/EUR/GBP/…). */
+    perCurrency: CurrencyBalanceDTO[];
+  };
   bankDetails: BankDetailsDTO[];
   accountHolderName: string | null;
   activeFeatures: string[];
@@ -251,6 +265,8 @@ export interface BalanceDTO {
   cash: number;
   inboundPending: number;
   outboundPending: number;
+  /** Every held currency's subtotals; primary fields above mirror perCurrency[0]. */
+  perCurrency: CurrencyBalanceDTO[];
 }
 
 export interface PlatformBalanceDTO {
@@ -308,14 +324,46 @@ function amountFor(bucket: V2AmountByCurrency | undefined | null, currency: stri
   return bucket?.[currency]?.value ?? 0;
 }
 
-function mapBalance(fa: V2FinancialAccount, currency = primaryCurrency(fa)): BalanceDTO {
+/**
+ * Every currency the account holds — the declared `holds_currencies` plus any
+ * currency that actually appears in a balance bucket — with USD first when held.
+ */
+function heldCurrencies(fa: V2FinancialAccount): string[] {
+  const set = new Set<string>(fa.storage?.holds_currencies ?? []);
+  for (const bucket of [
+    fa.balance?.available,
+    fa.balance?.inbound_pending,
+    fa.balance?.outbound_pending,
+  ]) {
+    if (bucket) for (const k of Object.keys(bucket)) set.add(k);
+  }
+  if (set.size === 0) set.add(DEFAULT_CURRENCY);
+  return [...set].sort((a, b) =>
+    a === DEFAULT_CURRENCY ? -1 : b === DEFAULT_CURRENCY ? 1 : a.localeCompare(b),
+  );
+}
+
+/** Map each held currency's subtotals. */
+function mapPerCurrency(fa: V2FinancialAccount): CurrencyBalanceDTO[] {
   const b = fa.balance;
-  return {
+  return heldCurrencies(fa).map((currency) => ({
     currency,
     cash: amountFor(b?.available, currency),
     inboundPending: amountFor(b?.inbound_pending, currency),
     outboundPending: amountFor(b?.outbound_pending, currency),
-  };
+  }));
+}
+
+function mapBalance(fa: V2FinancialAccount): BalanceDTO {
+  const perCurrency = mapPerCurrency(fa);
+  const primary = perCurrency.find((c) => c.currency === primaryCurrency(fa)) ??
+    perCurrency[0] ?? {
+      currency: DEFAULT_CURRENCY,
+      cash: 0,
+      inboundPending: 0,
+      outboundPending: 0,
+    };
+  return { ...primary, perCurrency };
 }
 
 function mapBankDetails(addresses: V2FinancialAddress[], reveal: boolean): BankDetailsDTO[] {
@@ -387,6 +435,7 @@ export const TreasuryService = {
         cash: balance.cash,
         inboundPending: balance.inboundPending,
         outboundPending: balance.outboundPending,
+        perCurrency: balance.perCurrency,
       },
       bankDetails,
       accountHolderName,
