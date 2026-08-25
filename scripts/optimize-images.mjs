@@ -40,17 +40,44 @@ const TARGETS = [
 // Responsive widths to generate. Should cover mobile → desktop cards/hero.
 const WIDTHS = [480, 768, 1024, 1440];
 
+/**
+ * Every source file that imports a figma asset, anywhere under src/.
+ *
+ * This used to scan only `src/components/pages/*Page.tsx`. Six of the seventeen
+ * files that import `figma:asset` are not named `*Page.tsx` and were therefore
+ * invisible to the optimiser -- including `homePageData.tsx`, which carries the
+ * home page's service cards. An asset it missed got no variants, so any
+ * `imageKey` referring to it would 404 and the component would fall back to the
+ * full-size PNG. Measured 2026-08-25: three unkeyed home page entries were
+ * serving 27 MB of a 29 MB page.
+ *
+ * Scanning all of src/ costs a directory walk at build time and removes the
+ * whole class of "the optimiser could not see it" failure.
+ */
+async function collectSourceFiles(dir) {
+  const out = [];
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
+      out.push(...(await collectSourceFiles(full)));
+    } else if (/\.(tsx?|jsx?)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+      out.push(full);
+    }
+  }
+
+  return out;
+}
+
 async function discoverFigmaAssetPngHashes() {
-  const pagesDir = path.join(PROJECT_ROOT, 'src', 'components', 'pages');
-  const entries = await fs.readdir(pagesDir, { withFileTypes: true });
-  const pageFiles = entries
-    .filter((e) => e.isFile() && e.name.endsWith('Page.tsx'))
-    .map((e) => path.join(pagesDir, e.name));
+  const files = await collectSourceFiles(path.join(PROJECT_ROOT, 'src'));
 
   const hashes = new Set();
   const re = /figma:asset\/([a-f0-9]{40})\.png/g;
 
-  for (const filePath of pageFiles) {
+  for (const filePath of files) {
     const content = await fs.readFile(filePath, 'utf8');
     let m;
 
