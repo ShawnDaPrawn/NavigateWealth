@@ -86,6 +86,13 @@ export function analyse(rows) {
     if (r.error_rate_pct > BUDGETS.errorRatePct) {
       breaches.push({ family: r.route_family, metric: 'error_rate_pct', value: r.error_rate_pct });
     }
+    // p50 is checked as well as p95. An earlier version declared BUDGETS.p50Ms
+    // and never read it, so `health` — 1,497ms p50 against a 1,000ms budget —
+    // reported no breach at all, and the script silently contradicted the budget
+    // its own runbook advertises.
+    if (r.p50_ms > BUDGETS.p50Ms) {
+      breaches.push({ family: r.route_family, metric: 'p50_ms', value: r.p50_ms });
+    }
     if (r.p95_ms > BUDGETS.p95Ms) {
       breaches.push({ family: r.route_family, metric: 'p95_ms', value: r.p95_ms });
     }
@@ -99,6 +106,13 @@ export function analyse(rows) {
       ? Number(((100 * totalErrors) / totalRequests).toFixed(2))
       : 0,
     breaches,
+    // ZERO ROWS IS NOT A HEALTHY WINDOW. A successful API response with a
+    // missing or empty `result` — a log-source rename, schema drift, an
+    // ingestion outage, a query that stopped matching — renders as 0 requests,
+    // 0 errors and 0 breaches, which reads exactly like a quiet, perfectly
+    // healthy service. That is the specific way monitoring tooling fails, and
+    // the reason this script exists, so it is surfaced rather than smoothed over.
+    noData: rows.length === 0 || totalRequests === 0,
   };
 }
 
@@ -175,6 +189,21 @@ async function main() {
 
   if (asJson) {
     console.log(JSON.stringify({ rows, summary, coldStartFloor: cold }, null, 2));
+    if (summary.noData) process.exitCode = 3;
+    return;
+  }
+
+  if (summary.noData) {
+    console.error(
+      `\nNO DATA for the last ${Math.min(hours, 24)}h.\n\n` +
+        'The query succeeded and returned nothing. That is NOT the same as a\n' +
+        'healthy window, and it is reported as a failure on purpose. Check, in\n' +
+        'order:\n' +
+        '  1. the function genuinely served no requests in the window;\n' +
+        '  2. `select distinct source from logs` still lists function_edge_logs;\n' +
+        '  3. log_attributes still carry request.pathname and execution_time_ms.\n',
+    );
+    process.exitCode = 3;
     return;
   }
 

@@ -107,14 +107,58 @@ describe('analyse', () => {
     const flagged = out.breaches.map((b) => `${b.family}:${b.metric}`);
     expect(flagged).toContain('publications:error_rate_pct');
     expect(flagged).toContain('publications:p95_ms');
-    // health is slow but within the p95 budget and has no errors.
-    expect(flagged.some((f) => f.startsWith('health:'))).toBe(false);
+    // health has no errors and is inside the p95 budget, but 1,497ms p50 breaks
+    // the 1,000ms p50 budget — which is the point. This assertion originally
+    // read `.toBe(false)`, and it passed only because p50 was never evaluated.
+    expect(flagged).toContain('health:p50_ms');
+    expect(flagged).not.toContain('health:error_rate_pct');
+    expect(flagged).not.toContain('health:p95_ms');
   });
 
-  it('returns a clean summary for a healthy window rather than throwing', () => {
+  it('does not throw on an empty window', () => {
     const out = call('m.analyse([])') as { totalRequests: number; overallErrorRatePct: number };
     expect(out.totalRequests).toBe(0);
     expect(out.overallErrorRatePct).toBe(0);
+  });
+
+  it('flags an empty window as NO DATA rather than as healthy', () => {
+    // The silent-zero failure this whole script exists to prevent. A successful
+    // API response with an empty `result` — log-source rename, schema drift, an
+    // ingestion outage — otherwise renders as 0 requests / 0 errors / 0
+    // breaches, which is indistinguishable from a quiet, healthy service.
+    expect((call('m.analyse([])') as { noData: boolean }).noData).toBe(true);
+    expect(
+      (
+        call(
+          `m.analyse([{route_family:'a',requests:0,errors_5xx:0,error_rate_pct:0,p50_ms:0,p95_ms:0}])`,
+        ) as {
+          noData: boolean;
+        }
+      ).noData,
+      'rows present but zero traffic is still no data',
+    ).toBe(true);
+    expect(
+      (
+        call(
+          `m.analyse([{route_family:'a',requests:5,errors_5xx:0,error_rate_pct:0,p50_ms:10,p95_ms:20}])`,
+        ) as {
+          noData: boolean;
+        }
+      ).noData,
+    ).toBe(false);
+  });
+
+  it('evaluates the p50 budget, not only p95', () => {
+    // BUDGETS.p50Ms was declared and never read, so the checked-in `health`
+    // baseline (1,497ms p50 against a 1,000ms budget, comfortably inside the
+    // 3,000ms p95 budget) reported no breach — the script contradicting the
+    // budget its own runbook advertises. Caught in review on PR #228.
+    const breaches = (
+      call(
+        `m.analyse([{route_family:'health',requests:20,errors_5xx:0,error_rate_pct:0,p50_ms:1497,p95_ms:2363,max_ms:2549}])`,
+      ) as { breaches: Array<{ family: string; metric: string }> }
+    ).breaches;
+    expect(breaches.map((b) => b.metric)).toContain('p50_ms');
   });
 });
 

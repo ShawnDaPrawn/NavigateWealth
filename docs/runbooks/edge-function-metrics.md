@@ -92,7 +92,16 @@ minute.
 
 ## Budgets
 
-`BUDGETS` in the script is p50 1,000 ms / p95 3,000 ms / error rate 1%.
+`BUDGETS` in the script is p50 1,000 ms / p95 3,000 ms / error rate 1%. All
+three are evaluated — an early version declared `p50Ms` and never read it, so
+`health` (1,497 ms p50, comfortably inside the p95 budget) reported no breach
+and the script quietly contradicted the budget documented here.
+
+**A window with no data exits 3 and says so.** A successful API response with an
+empty result — a log-source rename, schema drift, an ingestion outage — would
+otherwise render as 0 requests / 0 errors / 0 breaches, which is
+indistinguishable from a quiet, healthy service. That silent zero is the
+specific way monitoring tooling fails, so it is reported as a failure.
 
 Deliberately **not** a CI gate. The whole function currently breaches the
 latency budgets because of the cold-start floor above, so gating would block
