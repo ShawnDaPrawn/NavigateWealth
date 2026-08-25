@@ -71,6 +71,7 @@ export const services = [
       'Build wealth for retirement with strategies designed to maintain your lifestyle and financial independence.',
     icon: Target,
     image: retirementPlanningImage,
+    imageKey: 'retirement-planning',
     link: '/retirement-planning',
   },
   {
@@ -97,6 +98,7 @@ export const services = [
       'Minimize tax liabilities and ensure compliance with expert strategies that optimize your tax position.',
     icon: Calculator,
     image: taxPlanningImage,
+    imageKey: 'tax-planning',
     link: '/tax-planning',
   },
   {
@@ -114,6 +116,7 @@ export const services = [
       'Earn monthly cashback rewards on all policies and get rewarded for smart financial planning decisions.',
     icon: Gift,
     image: southAfricanCurrencyImage,
+    imageKey: 'financial-planning',
     link: '/services',
   },
   {
