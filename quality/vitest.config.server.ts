@@ -225,11 +225,20 @@ export default defineConfig({
       // who may open a client's Ask Vasco conversation, and they surfaced that
       // the `viewer` personnel role can DELETE one — pinned and flagged, not
       // changed. Measured 31.80 / 24.06 / 31.24 / 32.52 across 3,470 tests.
+      //
+      // Raised again 2026-08-26 (31.6 / 23.9 / 31.0 / 32.3) with the newsletter,
+      // will-chat and tax-agent suites: newsletter-service 0.6% -> 98.8%,
+      // will-chat-service 0% -> 92.0%, tax-agent-service -> 78.7%. The
+      // newsletter tests are mostly about POPIA — which operations may set
+      // `active: true` on someone who opted out, and which must refuse. Writing
+      // the will-chat tests found a colliding session id that silently destroyed
+      // an interview transcript, and the same defect in tax-agent-service.
+      // Measured 33.01 / 25.45 / 32.52 / 33.74 across 3,560 tests.
       thresholds: {
-        statements: 31.6,
-        branches: 23.9,
-        functions: 31.0,
-        lines: 32.3,
+        statements: 32.8,
+        branches: 25.2,
+        functions: 32.3,
+        lines: 33.5,
       },
     },
   },

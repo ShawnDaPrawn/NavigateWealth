@@ -73,7 +73,12 @@ export async function createSession(
   clientName: string,
   adviserId: string,
 ): Promise<TaxAgentSession> {
-  const sessionId = `${clientId}-ta-${Date.now()}`;
+  // Same defect and same fix as will-chat-service: a millisecond-resolution id
+  // collided for two sessions opened in the same millisecond and the second
+  // overwrote the first. The suffix stays all-digits because tax-agent-routes
+  // derives the client id back out with /-ta-\d+$/.
+  const randomSuffix = String(crypto.getRandomValues(new Uint32Array(1))[0]).padStart(10, '0');
+  const sessionId = `${clientId}-ta-${Date.now()}${randomSuffix}`;
   const now = new Date().toISOString();
 
   // Load client profile for context injection
