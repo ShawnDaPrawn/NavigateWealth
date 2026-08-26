@@ -84,11 +84,16 @@ export default defineConfig({
       // legal-document read next to admin writes) and tasks-routes (247
       // statements behind a single router-scope guard). Measured
       // 17.70 / 12.92 / 17.23 / 18.18 across 949 tests.
+      //
+      // Raised again 2026-08-26 (17.6 / 12.8 / 17.1 / 18.0) with the
+      // advice-engine-roa-routes contract suite — 286 statements that were
+      // entirely uncovered, behind a four-predicate authorization matrix.
+      // Measured 18.33 / 13.25 / 17.81 / 18.84 across 1,035 tests.
       thresholds: {
-        statements: 17.6,
-        branches: 12.8,
-        functions: 17.1,
-        lines: 18.0,
+        statements: 18.2,
+        branches: 13.1,
+        functions: 17.7,
+        lines: 18.7,
       },
     },
   },
