@@ -35,7 +35,10 @@ const { store } = vi.hoisted(() => {
       existing: new Set<string>(),
       listBucketsError: null as { message: string } | null,
       createBucketError: null as { message: string } | null,
-      createBucketThrows: false,
+      /** Bucket name whose creation should throw; null means none. */
+      throwOnBucket: null as string | null,
+      /** Every createBucket call, recorded BEFORE any throw. */
+      attempted: [] as string[],
       uploadError: null as { message: string } | null,
       uploadThrows: false,
       downloadError: null as { message: string } | null,
@@ -59,7 +62,10 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
           ? { data: null, error: store.listBucketsError }
           : { data: [...store.existing].map((name) => ({ name })), error: null },
       createBucket: async (name: string, options: Record<string, unknown>) => {
-        if (store.createBucketThrows) throw new Error('network down');
+        // Recorded first, so a test can tell "was creation attempted" apart
+        // from "did creation succeed".
+        store.attempted.push(name);
+        if (store.throwOnBucket === name) throw new Error('network down');
         store.created.push({ name, options });
         if (store.createBucketError) return { error: store.createBucketError };
         store.existing.add(name);
@@ -158,7 +164,8 @@ beforeEach(() => {
   store.existing.clear();
   store.listBucketsError = null;
   store.createBucketError = null;
-  store.createBucketThrows = false;
+  store.throwOnBucket = null;
+  store.attempted.length = 0;
   store.uploadError = null;
   store.uploadThrows = false;
   store.downloadError = null;
@@ -227,9 +234,16 @@ describe('initializeStorageBuckets', () => {
   });
 
   it('carries on to the remaining buckets when one throws', async () => {
-    store.createBucketThrows = true;
+    // Only the FIRST bucket throws. Asserting that the other three were still
+    // attempted is the whole point: a version of this that made every call
+    // throw would pass even if the loop bailed out after the first failure,
+    // leaving three buckets uninitialised. Caught by Codex review on #244.
+    store.throwOnBucket = DOCUMENTS;
 
     await expect(initializeStorageBuckets()).resolves.toBeUndefined();
+
+    expect(store.attempted).toEqual([DOCUMENTS, SIGNATURES, CERTIFICATES, ATTACHMENTS]);
+    expect(store.created.map((c) => c.name)).toEqual([SIGNATURES, CERTIFICATES, ATTACHMENTS]);
   });
 });
 
