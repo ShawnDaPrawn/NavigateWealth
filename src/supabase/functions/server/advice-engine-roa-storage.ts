@@ -105,6 +105,41 @@ export async function uploadRoABlob(
   }
 }
 
+/**
+ * Remove RoA objects from the documents bucket.
+ *
+ * THE GAP THIS CLOSES
+ * -------------------
+ * `blobStoragePath` was written at two sites (evidence upload and generated-
+ * document compilation) and read at exactly one (the download path). Nothing
+ * ever removed it, so deleting an RoA draft left every piece of client-uploaded
+ * evidence and every generated Record of Advice in the bucket indefinitely — a
+ * delete that did not delete. That is a POPIA data-minimisation problem before
+ * it is a storage-cost one.
+ *
+ * The easy misreading is that `deleteDraft` already handled this: it deletes
+ * `ev.storagePath`. It does — but `storagePath` is the KV key
+ * (`roa:evidence:{id}`), not the object path. The object path is the separate
+ * `blobStoragePath` field, and it lives on the KV RECORD rather than on the
+ * evidence item embedded in the draft, so a caller has to read the record back
+ * to find it.
+ *
+ * Takes the whole list so removal is one round trip rather than one per object.
+ * Throws on failure; whether a storage error should abort the caller is the
+ * caller's policy, not this module's.
+ */
+export async function deleteRoABlobs(objectPaths: readonly string[]): Promise<void> {
+  const paths = [...new Set(objectPaths.filter((p) => typeof p === 'string' && p.length > 0))];
+  if (paths.length === 0) return;
+
+  const supabase = getSupabase();
+  const { error } = await supabase.storage.from(ROA_DOCUMENTS_BUCKET).remove(paths);
+  if (error) {
+    throw new Error(`RoA storage delete failed: ${error.message}`);
+  }
+  log.info('RoA blobs removed', { count: paths.length });
+}
+
 export async function downloadRoABlob(objectPath: string): Promise<Uint8Array> {
   await ensureRoADocumentsBucket();
   const supabase = getSupabase();

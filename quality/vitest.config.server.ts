@@ -294,11 +294,21 @@ export default defineConfig({
       // denominator also fell slightly: `vasco-service` carried a second,
       // never-imported rate limiter, removed rather than covered. Measured
       // 38.61 / 29.30 / 37.66 / 39.32 across 4,052 tests.
+      //
+      // Raised again 2026-08-26 (39.8 / 30.4 / 39.2 / 40.4) with the
+      // publications site/phase-4 suite and the e-sign /v1 public API suite.
+      // Both run their collaborators for real — the publications suite drives
+      // TemplateService and VersionService against KV rather than stubbing
+      // them the way `publications-routes.contract.test.ts` has to, and the v1
+      // suite mints and resolves real API keys through `api-key-service`, so
+      // token parsing, the hash compare, the active flag and expiry all
+      // execute. Measured 40.03 / 30.64 / 39.46 / 40.67 across 4,240 tests —
+      // the first time this backend has been over 40%.
       thresholds: {
-        statements: 38.4,
-        branches: 29.1,
-        functions: 37.4,
-        lines: 39.1,
+        statements: 39.8,
+        branches: 30.4,
+        functions: 39.2,
+        lines: 40.4,
       },
     },
   },

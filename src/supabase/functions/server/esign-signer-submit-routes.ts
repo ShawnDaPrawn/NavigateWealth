@@ -205,7 +205,7 @@ app.post(
               await logAuditEvent({
                 envelopeId: signer.envelope_id,
                 actorType: 'system',
-                action: 'invite_sent',
+                action: emailSent ? 'invite_sent' : 'invite_send_failed',
                 email: nextSigner.email,
                 ip,
                 userAgent,

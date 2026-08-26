@@ -66,6 +66,25 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    explicitly with the error** — do not commit unverified code and "let CI catch
    it."
 
+   **`npm run test:coverage:server` is NOT a substitute for `npm test`, and
+   running only the suites you touched is not either.** Hit for real on
+   2026-08-26 (PR #247): a one-line `kv.mget` added to fix an RoA delete bug
+   pushed the tree-wide direct-KV count from 1772 to 1773 and failed the
+   `kv-direct-access` ratchet. Every suite that the commit touched passed. Two
+   things make this class of failure invisible to a partial run:
+   - The **global ratchets** — `kv-direct-access`, `auth-without-authz` — count
+     call sites across the WHOLE server tree, so any single added line can trip
+     one no matter which module it lands in. They live in the backend suite but
+     are not about the code under test.
+   - `vitest.config.ts` deliberately does **not** exclude
+     `src/supabase/functions/**`, so `npm test` runs the backend tests too. One
+     backend failure therefore surfaces as BOTH `test exit code: 1` and
+     `backend coverage floor: exit 1` in the CI summary. That is one root cause
+     reported twice — do not go hunting for a second, unrelated SPA failure.
+
+   When a ratchet legitimately has to rise, its own failure message names the
+   sanctioned path: re-baseline to the new number and **say why in the PR**.
+
    **`typecheck:deno` is the easiest one to skip and the easiest one to
    misread.** Two traps, both hit for real on 2026-08-26 (PR #237), where CI
    reported 4 new edge type errors against a floor of 0 after every other gate

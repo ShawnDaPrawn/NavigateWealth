@@ -334,6 +334,31 @@ siteRoutes.get('/press/articles', async (c) => {
   }
 });
 
+/**
+ * A required text field on a PUT, where the body is a partial merge.
+ *
+ * Absent (or explicitly null) keeps the stored value; PRESENT has to clear the
+ * same bar the matching POST sets. It did not: `body.name?.trim() ?? existing.name`
+ * falls back only on null and undefined, so `{ name: "" }` wrote an empty name
+ * that POST answers 400 for — and the public /team and /careers endpoints filter
+ * on `id` and `active` only, so the blank row rendered. A non-string was worse:
+ * `?.trim()` on a number throws, which asyncHandler turned into a 500 where POST
+ * answers 400.
+ *
+ * Returns `{ ok: true }` with no value for "leave it alone", `{ ok: true, value }`
+ * for a new value, and `{ ok: false }` for a value the POST would have rejected.
+ */
+function patchRequiredText(
+  value: unknown,
+  minLength: number,
+): { ok: true; value?: string } | { ok: false } {
+  if (value === undefined || value === null) return { ok: true };
+  if (typeof value !== 'string') return { ok: false };
+  const trimmed = value.trim();
+  if (trimmed.length < minLength) return { ok: false };
+  return { ok: true, value: trimmed };
+}
+
 // ============================================================================
 // TEAM MEMBER ENDPOINTS
 // ============================================================================
@@ -455,10 +480,20 @@ siteRoutes.put(
     }
 
     const body = await c.req.json();
+
+    const name = patchRequiredText(body.name, 2);
+    if (!name.ok) {
+      return c.json({ error: 'Name is required (min 2 characters)' }, 400);
+    }
+    const role = patchRequiredText(body.title, 1);
+    if (!role.ok) {
+      return c.json({ error: 'Title/role is required' }, 400);
+    }
+
     const updated: TeamMember = {
       ...existing,
-      name: body.name?.trim() ?? existing.name,
-      title: body.title?.trim() ?? existing.title,
+      name: name.value ?? existing.name,
+      title: role.value ?? existing.title,
       credentials: body.credentials?.trim() ?? existing.credentials,
       bio: body.bio?.trim() ?? existing.bio,
       specialties: Array.isArray(body.specialties) ? body.specialties : existing.specialties,
@@ -620,10 +655,20 @@ siteRoutes.put(
     if (!existing) return c.json({ error: 'Job listing not found' }, 404);
 
     const body = await c.req.json();
+
+    const title = patchRequiredText(body.title, 3);
+    if (!title.ok) {
+      return c.json({ error: 'Title is required (min 3 characters)' }, 400);
+    }
+    const category = patchRequiredText(body.category, 1);
+    if (!category.ok) {
+      return c.json({ error: 'Category is required' }, 400);
+    }
+
     const updated: JobListing = {
       ...existing,
-      title: body.title?.trim() ?? existing.title,
-      category: body.category?.trim() ?? existing.category,
+      title: title.value ?? existing.title,
+      category: category.value ?? existing.category,
       location: body.location?.trim() ?? existing.location,
       type: body.type?.trim() ?? existing.type,
       description: body.description?.trim() ?? existing.description,

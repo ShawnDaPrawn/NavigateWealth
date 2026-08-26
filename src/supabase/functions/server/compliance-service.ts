@@ -101,23 +101,40 @@ export class ComplianceService {
     const checkId = generateId();
     const timestamp = new Date().toISOString();
 
-    // TODO: Integrate with actual AML service provider
-    // For now, create a placeholder check
-
+    // NO AML PROVIDER IS WIRED UP. This function screens nobody.
+    //
+    // It used to write `status: 'clear'`, `risk_level: 'low'` and the note
+    // "Automated AML check completed" — three assertions about a screening that
+    // never ran, stored in a record that says nothing about being a
+    // placeholder. It is reachable from compliance-core-routes.ts, so an admin
+    // clicking "run AML check" produced something that reads, to anyone later,
+    // as a completed KYC screening against a real list. Under FICA that is the
+    // worst direction to be wrong in: a false clearance is evidence of a
+    // control that does not exist.
+    //
+    // So the record now says what actually happened. The client, the operator
+    // and the timestamp are still captured, because those are exactly the
+    // fields a real integration will screen on when one is chosen — this
+    // remains a usable "queued for screening" record, just not a false one.
     const check: AMLCheck = {
       id: checkId,
       client_id: clientId,
       check_type: 'kyc',
-      status: 'clear',
-      risk_level: 'low',
+      status: 'pending',
+      risk_level: 'unknown',
       checked_at: timestamp,
       checked_by: performedBy,
-      notes: 'Automated AML check completed',
+      notes:
+        'No AML screening has been performed. This record captures the client and ' +
+        'operator for a manual or automated check that still has to happen.',
     };
 
     await kv.set(`compliance_aml:${checkId}`, check);
 
-    log.success('AML check performed', { checkId, clientId });
+    log.warn('AML check RECORDED BUT NOT PERFORMED — no provider integrated', {
+      checkId,
+      clientId,
+    });
 
     return check;
   }
@@ -213,23 +230,36 @@ export class ComplianceService {
     const checkId = generateId();
     const timestamp = new Date().toISOString();
 
-    // TODO: Integrate with FSCA debarment list
-    // For now, create a placeholder check
-
+    // THE FSCA DEBARMENT REGISTER IS NOT CONSULTED. Nothing is sent anywhere.
+    //
+    // The note used to read "No match found on FSCA debarment list" for an
+    // adviser whose name and ID number were never submitted to it. Same class
+    // of problem as the AML check above, and arguably worse: a debarred adviser
+    // continuing to give advice is precisely what this register exists to
+    // prevent, and a false "no match" is the record that would be produced in
+    // the firm's defence.
+    //
+    // The identity is still recorded, deliberately — name and ID number are
+    // what a real integration will screen on.
     const check: DebarmentCheck = {
       id: checkId,
       adviser_id: adviserId,
       name,
       id_number: idNumber,
-      status: 'clear',
+      status: 'pending',
       checked_at: timestamp,
       checked_by: performedBy,
-      notes: 'No match found on FSCA debarment list',
+      notes:
+        'The FSCA debarment register has not been checked. This record captures ' +
+        'the identity to screen and who requested it; the check itself is outstanding.',
     };
 
     await kv.set(`compliance_debarment:${checkId}`, check);
 
-    log.success('Debarment check performed', { checkId, adviserId });
+    log.warn('Debarment check RECORDED BUT NOT PERFORMED — FSCA register not consulted', {
+      checkId,
+      adviserId,
+    });
 
     return check;
   }
