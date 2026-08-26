@@ -112,11 +112,24 @@ export default defineConfig({
       // `super-admin` spelling was absent from every role array, and
       // cross-owner denial was asserted on 2 of 18 ownership-gated routes.
       // Measured 20.15 / 14.21 / 19.25 / 20.66 across 1,488 tests.
+      //
+      // Raised again 2026-08-26 (20.0 / 14.1 / 19.1 / 20.5) with two suites:
+      // locked/refund-clusters-routes (25 routes behind one `app.use('*',
+      // requireSuperAdmin)` line, over stored tax numbers, eFiling passwords
+      // and bank credentials) and integrations-portal-jobs-routes (the robot
+      // that logs into provider portals as the firm). Measured
+      // 22.46 / 16.66 / 21.94 / 23.05 across 2,208 tests.
+      //
+      // The portal-jobs suite is the one to copy: it mocks ONLY the network
+      // boundary and runs the guards, flow resolution, credential lookup and
+      // sync engine for real against an in-memory KV. That single file moved
+      // the number roughly twice as far as an equivalent one built on stubbed
+      // collaborators, because the collaborators are where the logic lives.
       thresholds: {
-        statements: 20.0,
-        branches: 14.1,
-        functions: 19.1,
-        lines: 20.5,
+        statements: 22.3,
+        branches: 16.5,
+        functions: 21.8,
+        lines: 22.9,
       },
     },
   },
