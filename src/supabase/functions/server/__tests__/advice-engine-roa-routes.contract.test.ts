@@ -8,9 +8,10 @@
  * records tied to a named client, and the module carries a four-predicate
  * authorization matrix that decides who may read them.
  *
- *   canUseRoA              super_admin, admin, adviser, paraplanner, compliance
- *   canManageRoAContracts  super_admin only
- *   canReviewAllRoADrafts  super_admin, admin, compliance
+ *   canUseRoA              super_admin/super-admin, admin, adviser,
+ *                          paraplanner, compliance
+ *   canManageRoAContracts  super_admin/super-admin only
+ *   canReviewAllRoADrafts  super_admin/super-admin, admin, compliance
  *   canAccessRoADraft      a reviewer, or the draft's own adviser/creator/updater
  *
  * A mistake in any of those is one adviser reading another adviser's client
@@ -174,9 +175,18 @@ function req(
   });
 }
 
-const ADVICE_ROLES = ['super_admin', 'admin', 'adviser', 'paraplanner', 'compliance'];
+/**
+ * `super-admin` (hyphen) is a SUPPORTED legacy spelling, not a typo: all three
+ * predicates list it beside `super_admin`, as does `requireSuperAdmin` in
+ * auth-mw. Testing only the underscore form would let someone drop the alias
+ * from a predicate with every test still green, locking out exactly the users
+ * who hold the most privilege. Both spellings appear in every array below and
+ * in every super-admin success case.
+ */
+const SUPER_ADMIN_SPELLINGS = ['super_admin', 'super-admin'];
+const ADVICE_ROLES = [...SUPER_ADMIN_SPELLINGS, 'admin', 'adviser', 'paraplanner', 'compliance'];
 const NON_ADVICE_ROLES = ['client', 'worker', 'supplier', 'contractor', 'unknown-role'];
-const REVIEWER_ROLES = ['super_admin', 'admin', 'compliance'];
+const REVIEWER_ROLES = [...SUPER_ADMIN_SPELLINGS, 'admin', 'compliance'];
 
 /** clientId is validated as a UUID, so fixtures must be real ones. */
 const CLIENT_ID = '11111111-2222-4333-8444-555555555555';
@@ -301,12 +311,22 @@ describe('canManageRoAContracts — module contracts are super-admin only', () =
     svc.getSchemaFormat.mockReturnValue({ format: 'v1' });
   });
 
-  it('lets super_admin write a contract', async () => {
+  it.each(SUPER_ADMIN_SPELLINGS)('lets %s write a contract', async (role) => {
     const res = await req('/roa/module-contracts', {
-      as: 'super_admin',
+      as: role,
       method: 'POST',
       body: { moduleId: 'm1' },
     });
+    expect(res.status).toBe(200);
+  });
+
+  it.each(SUPER_ADMIN_SPELLINGS)('lets %s publish a contract', async (role) => {
+    const res = await req('/roa/module-contracts/m1/publish', { as: role, method: 'POST' });
+    expect(res.status).toBe(200);
+  });
+
+  it.each(SUPER_ADMIN_SPELLINGS)('lets %s archive a contract', async (role) => {
+    const res = await req('/roa/module-contracts/m1/archive', { as: role, method: 'POST' });
     expect(res.status).toBe(200);
   });
 
@@ -407,6 +427,252 @@ describe('draft lifecycle routes reach the service', () => {
       body: {},
     });
     expect(res.status).toBe(403);
+  });
+});
+
+// ============================================================================
+// OWNERSHIP, ON EVERY ROUTE THAT GATES ON IT
+// ============================================================================
+
+/**
+ * `canAccessRoADraft` is invoked INDEPENDENTLY by each of these handlers —
+ * eleven call it inline, seven reach it through `loadAccessibleDraft`. Proving
+ * the predicate works through two routes does not pin the other sixteen call
+ * sites: deleting `if (!canAccessRoADraft(...)) return forbidden...` from any
+ * one handler leaves the predicate perfectly correct and that route wide open.
+ *
+ * So the table below is the route list, not a sample. Every entry is exercised
+ * twice — once as the draft's own adviser, expecting the handler to run, and
+ * once as a different adviser, expecting 403 and the service never called.
+ *
+ * `/roa/documents/:documentId/download` is keyed by document rather than
+ * draft; it resolves the draft through the document and checks the same
+ * predicate, so it belongs here with a fixture that points the document at the
+ * other adviser's draft.
+ */
+const OWNERSHIP_GATED: Array<{
+  label: string;
+  method: string;
+  path: (draftId: string) => string;
+  body?: unknown;
+  /** Success status, where the handler does not answer 200. */
+  okStatus?: number;
+  /**
+   * The service call that must NOT happen when access is refused. Omitted for
+   * GET draft: its only service call IS the ownership lookup, so asserting it
+   * was not made would assert the check never ran. That route is covered by
+   * the body-leak assertion below instead.
+   */
+  guarded?: keyof typeof svc;
+}> = [
+  { label: 'GET draft', method: 'GET', path: (d) => `/roa/drafts/${d}` },
+  {
+    label: 'PUT draft',
+    method: 'PUT',
+    path: (d) => `/roa/drafts/${d}`,
+    body: { clientId: CLIENT_ID },
+    guarded: 'saveDraft',
+  },
+  {
+    label: 'DELETE draft',
+    method: 'DELETE',
+    path: (d) => `/roa/drafts/${d}`,
+    okStatus: 204,
+    guarded: 'deleteDraft',
+  },
+  {
+    label: 'clone-from-final',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/clone-from-final`,
+    body: {},
+    guarded: 'cloneDraftFromFinal',
+  },
+  {
+    label: 'submit',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/submit`,
+    body: {},
+    guarded: 'submitDraft',
+  },
+  {
+    label: 'validate',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/validate`,
+    body: {},
+    guarded: 'validateDraft',
+  },
+  {
+    label: 'evidence',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/evidence`,
+    body: { moduleId: 'm1', requirementId: 'r1' },
+    guarded: 'uploadEvidence',
+  },
+  {
+    label: 'compile',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/compile`,
+    body: {},
+    guarded: 'compileDraft',
+  },
+  {
+    label: 'generate',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/generate`,
+    body: {},
+    guarded: 'generateDocuments',
+  },
+  {
+    label: 'finalise',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/finalise`,
+    body: {},
+    guarded: 'finaliseDraft',
+  },
+  // Reached through loadAccessibleDraft rather than inline. Same predicate,
+  // separate call site — which is exactly why they are listed.
+  {
+    label: 'conversation/start',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/conversation/start`,
+    body: {},
+    guarded: 'startConversations',
+  },
+  {
+    label: 'conversation/progress',
+    method: 'GET',
+    path: (d) => `/roa/drafts/${d}/conversation/progress`,
+    guarded: 'getProgress',
+  },
+  {
+    label: 'module conversation',
+    method: 'GET',
+    path: (d) => `/roa/drafts/${d}/modules/m1/conversation`,
+    guarded: 'getConversation',
+  },
+  {
+    label: 'module chat',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/modules/m1/chat`,
+    body: { message: 'hello' },
+    guarded: 'sendMessage',
+  },
+  {
+    label: 'module complete',
+    method: 'POST',
+    path: (d) => `/roa/drafts/${d}/modules/m1/complete`,
+    body: {},
+    guarded: 'complete',
+  },
+  {
+    label: 'module narrative',
+    method: 'PUT',
+    path: (d) => `/roa/drafts/${d}/modules/m1/narrative`,
+    body: { narrative: 'text' },
+    guarded: 'saveNarrative',
+  },
+];
+
+describe('canAccessRoADraft is enforced at every call site, not just one', () => {
+  const OWNED = 'd-owned';
+  const OTHER = 'd-other-adviser';
+
+  beforeEach(() => {
+    drafts.set(OWNED, { id: OWNED, adviserId: 'adviser-1', clientId: CLIENT_ID });
+    drafts.set(OTHER, { id: OTHER, adviserId: 'adviser-9', clientId: CLIENT_ID });
+
+    svc.saveDraft.mockResolvedValue({ id: OWNED });
+    svc.deleteDraft.mockResolvedValue(undefined);
+    svc.cloneDraftFromFinal.mockResolvedValue({ id: OWNED });
+    svc.submitDraft.mockResolvedValue({ id: OWNED, status: 'submitted' });
+    svc.validateDraft.mockResolvedValue({ valid: true, issues: [] });
+    svc.uploadEvidence.mockResolvedValue({ id: OWNED, moduleEvidence: {} });
+    svc.compileDraft.mockResolvedValue({ compiled: true });
+    svc.generateDocuments.mockResolvedValue({ documents: [] });
+    svc.finaliseDraft.mockResolvedValue({ id: OWNED, status: 'final' });
+    svc.startConversations.mockResolvedValue({ started: [] });
+    svc.getProgress.mockResolvedValue([]);
+    svc.getConversation.mockResolvedValue(null);
+    svc.sendMessage.mockResolvedValue({ reply: 'ok' });
+    svc.complete.mockResolvedValue({ done: true });
+    svc.saveNarrative.mockResolvedValue({ saved: true });
+    svc.getGeneratedDocument.mockResolvedValue({ id: 'doc-1', draftId: OTHER });
+  });
+
+  it('covers every ownership-gated route the module registers', () => {
+    // A guard on the guard. 16 draft-scoped routes here plus the
+    // document-download route asserted separately = 17 call sites; the
+    // eighteenth, POST /roa/drafts, has no draft to own yet. If a route is
+    // added and not listed, this count drifts and the omission is visible.
+    expect(OWNERSHIP_GATED).toHaveLength(16);
+  });
+
+  it.each(OWNERSHIP_GATED)('$label runs for the draft’s own adviser', async (route) => {
+    const res = await req(route.path(OWNED), {
+      as: 'adviser',
+      user: 'adviser-1',
+      method: route.method,
+      body: route.body,
+    });
+    expect(res.status).toBe(route.okStatus ?? 200);
+  });
+
+  it.each(OWNERSHIP_GATED)('$label refuses a different adviser', async (route) => {
+    const res = await req(route.path(OTHER), {
+      as: 'adviser',
+      user: 'adviser-1',
+      method: route.method,
+      body: route.body,
+    });
+    expect(res.status).toBe(403);
+    const raw = await res.text();
+    expect(JSON.parse(raw).code).toBe('FORBIDDEN_ROA_DRAFT');
+    // The draft was read to find its owner. Its contents must not come back.
+    expect(raw).not.toContain(OTHER);
+    if (route.guarded) expect(svc[route.guarded]).not.toHaveBeenCalled();
+  });
+
+  it.each(OWNERSHIP_GATED)('$label admits a reviewer on another adviser’s draft', async (route) => {
+    // canAccessRoADraft short-circuits on canReviewAllRoADrafts, so compliance
+    // reaching another adviser's draft is the policy, not a leak. Pinned so a
+    // change to that short-circuit shows up as a failure rather than a quiet
+    // widening or narrowing.
+    const res = await req(route.path(OTHER), {
+      as: 'compliance',
+      user: 'compliance-1',
+      method: route.method,
+      body: route.body,
+    });
+    expect(res.status).toBe(route.okStatus ?? 200);
+  });
+
+  it('GET /roa/documents/:id/download refuses a document owned by another adviser', async () => {
+    const res = await req('/roa/documents/doc-1/download', { as: 'adviser', user: 'adviser-1' });
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe('FORBIDDEN_ROA_DRAFT');
+  });
+
+  it('GET /roa/documents/:id/download serves a document on the caller’s own draft', async () => {
+    svc.getGeneratedDocument.mockResolvedValue({ id: 'doc-2', draftId: OWNED });
+    const res = await req('/roa/documents/doc-2/download', { as: 'adviser', user: 'adviser-1' });
+    expect(res.status).toBe(200);
+  });
+
+  it('admits the creator and the last updater, not only the adviser', async () => {
+    // The predicate is adviserId OR createdBy OR updatedBy. A paraplanner who
+    // drafted for an adviser must keep access; narrowing to adviserId alone
+    // would lock them out of their own work.
+    drafts.set('d-created', { id: 'd-created', adviserId: 'adviser-9', createdBy: 'para-1' });
+    drafts.set('d-updated', { id: 'd-updated', adviserId: 'adviser-9', updatedBy: 'para-2' });
+
+    const created = await req('/roa/drafts/d-created', { as: 'paraplanner', user: 'para-1' });
+    expect(created.status).toBe(200);
+
+    const updated = await req('/roa/drafts/d-updated', { as: 'paraplanner', user: 'para-2' });
+    expect(updated.status).toBe(200);
+
+    const stranger = await req('/roa/drafts/d-created', { as: 'paraplanner', user: 'para-3' });
+    expect(stranger.status).toBe(403);
   });
 });
 

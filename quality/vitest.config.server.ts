@@ -106,11 +106,17 @@ export default defineConfig({
       // dashboard task-metric suite — the dashboard had been reading a table
       // that does not exist and reporting a confident zero. Measured
       // 19.79 / 13.98 / 18.94 / 20.30 across 1,428 tests.
+      //
+      // Raised again 2026-08-26 (19.7 / 13.9 / 18.8 / 20.2) after Codex review
+      // on #237 found two real holes in the RoA suite: the legacy
+      // `super-admin` spelling was absent from every role array, and
+      // cross-owner denial was asserted on 2 of 18 ownership-gated routes.
+      // Measured 20.15 / 14.21 / 19.25 / 20.66 across 1,488 tests.
       thresholds: {
-        statements: 19.7,
-        branches: 13.9,
-        functions: 18.8,
-        lines: 20.2,
+        statements: 20.0,
+        branches: 14.1,
+        functions: 19.1,
+        lines: 20.5,
       },
     },
   },
