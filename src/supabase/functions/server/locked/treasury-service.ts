@@ -1,9 +1,15 @@
 /**
  * Treasury Service
  *
- * Stripe Treasury integration for the Locked → Accounts → Manager panel.
- * Surfaces a financial account's real balance and bank (ABA) details, and
- * moves money in (InboundTransfer) and out (OutboundPayment).
+ * Stripe money-management integration for the Locked → Accounts → Manager panel.
+ * Surfaces a financial account's real balance and (when provisioned) its bank
+ * (ABA) details, lists transactions, and — in a later phase — moves money.
+ *
+ * API version: this account's financial account is a Stripe **v2 money
+ * management** "storage" financial account (`/v2/money_management/*`), NOT the
+ * legacy v1 Treasury API (`/v1/treasury/*`). v1 does not recognise a v2
+ * financial account in live mode (it fails with "Unrecognized request URL …
+ * only allowed in test mode"), so all financial-account reads go through v2.
  *
  * Talks to the Stripe REST API directly with `fetch` (no npm SDK) so it stays
  * Deno-native and free of Node type dependencies.
@@ -12,18 +18,18 @@
  *   - All access is super-admin only (enforced at the route layer).
  *   - The Stripe secret key is read from the environment and NEVER leaves the
  *     server. No Stripe key (secret or publishable) is ever sent to the client.
- *   - Treasury financial accounts can live on a connected account; when
- *     STRIPE_CONNECTED_ACCOUNT_ID is set every call is scoped to it via the
- *     Stripe-Account header.
- *   - The full ABA account number is only fetched on the explicit, audited
- *     financial-account read (expand financial_addresses.aba.account_number).
- *   - Money-moving calls always pass an Idempotency-Key so client retries
- *     cannot double-spend.
+ *   - The financial account lives on the PLATFORM account, so calls are NOT
+ *     scoped to STRIPE_CONNECTED_ACCOUNT_ID (that var is for Issuing on the
+ *     connected account — a separate concern).
+ *   - The full ABA account number is only returned on the explicit, audited
+ *     reveal read; otherwise only the last 4 are exposed.
  *
  * Env:
- *   STRIPE_SECRET_KEY            sk_… (Treasury-enabled)        [required]
- *   STRIPE_FINANCIAL_ACCOUNT_ID fba_… pinned financial account [required for money movement]
- *   STRIPE_CONNECTED_ACCOUNT_ID acct_… connected account owner [optional]
+ *   STRIPE_SECRET_KEY            sk_… platform secret key            [required]
+ *   STRIPE_FINANCIAL_ACCOUNT_ID fa_…  v2 money-management FA         [required]
+ *   STRIPE_MM_API_VERSION       v2 money-management API version override
+ *                               (default below; bump if Stripe requires a newer
+ *                               preview, no code change needed)
  *
  * @module server/locked/treasury-service
  */
@@ -32,10 +38,21 @@ import { createModuleLogger } from '../stderr-logger.ts';
 
 const log = createModuleLogger('treasury');
 
-/** Treasury operates in USD; expose as a constant so callers stay consistent. */
+/** Treasury operates in USD by default; expose so callers stay consistent. */
 export const DEFAULT_CURRENCY = 'usd';
 
-const STRIPE_BASE = 'https://api.stripe.com/v1';
+const STRIPE_BASE = 'https://api.stripe.com';
+
+/**
+ * API version for the v2 money-management endpoints. This is a preview surface;
+ * the value below is the version verified working against the live account.
+ * Overridable via env so ops can bump it without a deploy if Stripe rotates it.
+ */
+const DEFAULT_MM_API_VERSION = '2026-06-24.preview';
+
+function mmApiVersion(): string {
+  return Deno.env.get('STRIPE_MM_API_VERSION') || DEFAULT_MM_API_VERSION;
+}
 
 // ============================================================================
 // Errors
@@ -60,97 +77,155 @@ export function toClientError(error: unknown): { message: string; status: number
 }
 
 // ============================================================================
-// Stripe REST helper (fetch-based)
+// Stripe REST helpers (fetch-based)
 // ============================================================================
 
-/** Encode a (possibly nested) object into Stripe's bracketed form syntax. */
-function encodeForm(obj: Record<string, unknown>): string {
-  const params = new URLSearchParams();
-  const add = (key: string, val: unknown) => {
-    if (val === undefined || val === null) return;
-    if (Array.isArray(val)) {
-      val.forEach((item, i) => {
-        if (item !== null && typeof item === 'object') add(`${key}[${i}]`, item);
-        else add(`${key}[]`, item);
-      });
-    } else if (typeof val === 'object') {
-      for (const [k, v] of Object.entries(val as Record<string, unknown>)) add(`${key}[${k}]`, v);
-    } else {
-      params.append(key, String(val));
-    }
-  };
-  for (const [k, v] of Object.entries(obj)) add(k, v);
-  return params.toString();
-}
-
-interface StripeRequestOptions {
-  query?: Record<string, unknown>;
-  body?: Record<string, unknown>;
-  idempotencyKey?: string;
-  /** Skip the Stripe-Account header (e.g. when retrieving a connected account). */
-  skipAccountHeader?: boolean;
-}
-
-async function stripeRequest<T>(
-  method: 'GET' | 'POST',
-  path: string,
-  opts: StripeRequestOptions = {},
-): Promise<T> {
+function requireKey(): string {
   const key = Deno.env.get('STRIPE_SECRET_KEY');
   if (!key) {
     throw new TreasuryError('Stripe is not configured (STRIPE_SECRET_KEY missing)', 500);
   }
-  const headers: Record<string, string> = { Authorization: `Bearer ${key}` };
-  const connectedAccount = Deno.env.get('STRIPE_CONNECTED_ACCOUNT_ID');
-  if (connectedAccount && !opts.skipAccountHeader) headers['Stripe-Account'] = connectedAccount;
-  if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey;
+  return key;
+}
+
+/** Both v1 and v2 error bodies surface a human message; read either shape. */
+function errorMessage(json: unknown, status: number): string {
+  const j = json as { error?: { message?: string }; message?: string } | null;
+  return j?.error?.message ?? j?.message ?? `Stripe request failed (${status})`;
+}
+
+/**
+ * v1 GET helper for platform-level reads (`/v1/account`, `/v1/balance`).
+ * Deliberately never sends `Stripe-Account`: Treasury reads the platform, not
+ * the Issuing connected account.
+ */
+async function v1Get<T>(path: string): Promise<T> {
+  const res = await fetch(`${STRIPE_BASE}/v1${path}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${requireKey()}` },
+  });
+  const json = (await res.json().catch(() => ({}))) as unknown;
+  if (!res.ok) {
+    const status = res.status >= 400 && res.status < 500 ? res.status : 502;
+    throw new TreasuryError(errorMessage(json, res.status), status);
+  }
+  return json as T;
+}
+
+/** v2 money-management request helper (JSON bodies, versioned, platform-scoped). */
+async function mmRequest<T>(
+  method: 'GET' | 'POST',
+  path: string,
+  opts: {
+    query?: Record<string, string | number | string[] | undefined>;
+    body?: Record<string, unknown>;
+  } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${requireKey()}`,
+    'Stripe-Version': mmApiVersion(),
+  };
 
   let url = `${STRIPE_BASE}${path}`;
   if (opts.query) {
-    const qs = encodeForm(opts.query);
-    if (qs) url += `?${qs}`;
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(opts.query)) {
+      if (v === undefined || v === null || v === '') continue;
+      // v2 expects repeated params in indexed form (e.g. include[0], include[1]).
+      if (Array.isArray(v)) v.forEach((item, i) => qs.append(`${k}[${i}]`, String(item)));
+      else qs.append(k, String(v));
+    }
+    const s = qs.toString();
+    if (s) url += `?${s}`;
   }
+
   let body: string | undefined;
   if (opts.body) {
-    body = encodeForm(opts.body);
-    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    body = JSON.stringify(opts.body);
+    headers['Content-Type'] = 'application/json';
   }
 
   const res = await fetch(url, { method, headers, body });
-  const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+  const json = (await res.json().catch(() => ({}))) as unknown;
   if (!res.ok) {
-    const message = json?.error?.message ?? `Stripe request failed (${res.status})`;
     const status = res.status >= 400 && res.status < 500 ? res.status : 502;
-    throw new TreasuryError(message, status);
+    throw new TreasuryError(errorMessage(json, res.status), status);
   }
   return json as T;
 }
 
 // ============================================================================
-// Raw Stripe response shapes (only the fields we read)
+// Raw v2 response shapes (only the fields we read)
 // ============================================================================
 
-type Bucket = Record<string, number>;
-
-interface RawAba {
-  bank_name?: string | null;
-  routing_number?: string | null;
-  account_number?: string | null;
-  account_number_last4?: string | null;
+interface V2Amount {
+  value: number;
+  currency: string;
 }
+type V2AmountByCurrency = Record<string, V2Amount | undefined>;
 
-interface RawFinancialAddress {
-  type: string;
-  supported_networks?: string[] | null;
-  aba?: RawAba | null;
-}
-
-interface RawFinancialAccount {
+interface V2FinancialAccount {
   id: string;
   status: string;
-  balance?: { cash?: Bucket; inbound_pending?: Bucket; outbound_pending?: Bucket } | null;
-  financial_addresses?: RawFinancialAddress[] | null;
-  active_features?: string[] | null;
+  balance?: {
+    available?: V2AmountByCurrency;
+    inbound_pending?: V2AmountByCurrency;
+    outbound_pending?: V2AmountByCurrency;
+  } | null;
+  storage?: { holds_currencies?: string[] } | null;
+  display_name?: string | null;
+  country?: string | null;
+}
+
+/**
+ * v2 FinancialAddress credentials, discriminated by `type`. A storage financial
+ * account exposes one address per held currency, each with its own scheme:
+ * US ABA routing, UK sort code, or SEPA BIC/IBAN.
+ */
+interface V2BankCredential {
+  account_holder_name?: string | null;
+  bank_name?: string | null;
+  last4?: string | null;
+  account_number?: string | null;
+  /** us_bank_account only. */
+  routing_number?: string | null;
+  /** gb_bank_account only. */
+  sort_code?: string | null;
+  /** sepa_bank_account only. */
+  bic?: string | null;
+  iban?: string | null;
+}
+
+interface V2FinancialAddressCredentials {
+  type?: string | null;
+  us_bank_account?: V2BankCredential | null;
+  gb_bank_account?: V2BankCredential | null;
+  sepa_bank_account?: V2BankCredential | null;
+}
+
+interface V2FinancialAddress {
+  id: string;
+  currency?: string | null;
+  status?: string | null;
+  supported_networks?: string[] | null;
+  credentials?: V2FinancialAddressCredentials | null;
+}
+
+interface V2Transaction {
+  id: string;
+  amount?: V2Amount | null;
+  currency?: string | null;
+  status?: string | null;
+  category?: string | null;
+  flow?: { type?: string | null } | null;
+  description?: string | null;
+  created?: string | null;
+}
+
+interface V2List<T> {
+  data: T[];
+  next_page_url?: string | null;
+  previous_page_url?: string | null;
 }
 
 interface RawAccount {
@@ -167,45 +242,45 @@ interface RawBalance {
   pending?: RawBalanceRow[];
 }
 
-interface RawTransaction {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  flow_type?: string | null;
-  description?: string | null;
-  created: number;
-}
-
-interface RawList<T> {
-  data: T[];
-}
-
-interface RawMovement {
-  id: string;
-  status: string;
-  amount: number;
-}
-
 // ============================================================================
-// DTOs (only the fields the UI needs)
+// DTOs (only the fields the UI needs) — contract unchanged from v1
 // ============================================================================
 
 export interface BankDetailsDTO {
+  /** Credential scheme: us_bank_account | gb_bank_account | sepa_bank_account. */
   type: string;
+  /** Currency this address receives (one address per held currency). */
+  currency: string | null;
+  status: string | null;
   bankName: string | null;
+  accountHolderName: string | null;
+  /** Routing number (US), sort code (UK), or BIC (SEPA). */
   routingNumber: string | null;
-  /** Full account number — only populated on the audited reveal read. */
+  /** Full account number / IBAN — only populated on the audited reveal read. */
   accountNumber: string | null;
   accountNumberLast4: string | null;
   supportedNetworks: string[];
+}
+
+/** A single currency's balance subtotals within a multi-currency financial account. */
+export interface CurrencyBalanceDTO {
+  currency: string;
+  cash: number;
+  inboundPending: number;
+  outboundPending: number;
 }
 
 export interface FinancialAccountDTO {
   id: string;
   status: string;
   currency: string;
-  balance: { cash: number; inboundPending: number; outboundPending: number };
+  balance: {
+    cash: number;
+    inboundPending: number;
+    outboundPending: number;
+    /** Every held currency's subtotals (storage FAs can hold USD/EUR/GBP/…). */
+    perCurrency: CurrencyBalanceDTO[];
+  };
   bankDetails: BankDetailsDTO[];
   accountHolderName: string | null;
   activeFeatures: string[];
@@ -216,6 +291,8 @@ export interface BalanceDTO {
   cash: number;
   inboundPending: number;
   outboundPending: number;
+  /** Every held currency's subtotals; primary fields above mirror perCurrency[0]. */
+  perCurrency: CurrencyBalanceDTO[];
 }
 
 export interface PlatformBalanceDTO {
@@ -245,11 +322,6 @@ export interface SendInput {
   amount: number;
   currency?: string;
   destinationPaymentMethod: string;
-  /**
-   * The customer that owns the destination PaymentMethod. Stripe requires this
-   * when `destination_payment_method` is a reusable, customer-attached PM (the
-   * common case for a saved external bank account).
-   */
   customer?: string;
   description?: string;
   idempotencyKey: string;
@@ -259,44 +331,135 @@ export interface SendInput {
 // Mapping helpers
 // ============================================================================
 
-function bucketAmount(bucket: Bucket | undefined | null, currency: string): number {
-  if (!bucket) return 0;
-  return bucket[currency] ?? 0;
-}
-
-function faCurrency(fa: RawFinancialAccount): string {
-  const cash = fa.balance?.cash ?? {};
-  return Object.keys(cash)[0] ?? DEFAULT_CURRENCY;
-}
-
-function mapBankDetails(fa: RawFinancialAccount): BankDetailsDTO[] {
-  return (fa.financial_addresses ?? []).map((addr) => ({
-    type: addr.type,
-    bankName: addr.aba?.bank_name ?? null,
-    routingNumber: addr.aba?.routing_number ?? null,
-    accountNumber: addr.aba?.account_number ?? null,
-    accountNumberLast4: addr.aba?.account_number_last4 ?? null,
-    supportedNetworks: addr.supported_networks ?? [],
-  }));
-}
-
-function mapBalance(fa: RawFinancialAccount): BalanceDTO {
-  const currency = faCurrency(fa);
-  const b = fa.balance;
-  return {
-    currency,
-    cash: bucketAmount(b?.cash, currency),
-    inboundPending: bucketAmount(b?.inbound_pending, currency),
-    outboundPending: bucketAmount(b?.outbound_pending, currency),
-  };
-}
-
 function requireFinancialAccountId(): string {
   const id = Deno.env.get('STRIPE_FINANCIAL_ACCOUNT_ID');
   if (!id) {
     throw new TreasuryError('No financial account configured (STRIPE_FINANCIAL_ACCOUNT_ID)', 500);
   }
   return id;
+}
+
+/** Pick the primary display currency: prefer USD, else the first currency held. */
+function primaryCurrency(fa: V2FinancialAccount): string {
+  const held = fa.storage?.holds_currencies ?? [];
+  if (held.includes(DEFAULT_CURRENCY)) return DEFAULT_CURRENCY;
+  return held[0] ?? DEFAULT_CURRENCY;
+}
+
+function amountFor(bucket: V2AmountByCurrency | undefined | null, currency: string): number {
+  return bucket?.[currency]?.value ?? 0;
+}
+
+/**
+ * Every currency the account holds — the declared `holds_currencies` plus any
+ * currency that actually appears in a balance bucket — with USD first when held.
+ */
+function heldCurrencies(fa: V2FinancialAccount): string[] {
+  const set = new Set<string>(fa.storage?.holds_currencies ?? []);
+  for (const bucket of [
+    fa.balance?.available,
+    fa.balance?.inbound_pending,
+    fa.balance?.outbound_pending,
+  ]) {
+    if (bucket) for (const k of Object.keys(bucket)) set.add(k);
+  }
+  if (set.size === 0) set.add(DEFAULT_CURRENCY);
+  return [...set].sort((a, b) =>
+    a === DEFAULT_CURRENCY ? -1 : b === DEFAULT_CURRENCY ? 1 : a.localeCompare(b),
+  );
+}
+
+/** Map each held currency's subtotals. */
+function mapPerCurrency(fa: V2FinancialAccount): CurrencyBalanceDTO[] {
+  const b = fa.balance;
+  return heldCurrencies(fa).map((currency) => ({
+    currency,
+    cash: amountFor(b?.available, currency),
+    inboundPending: amountFor(b?.inbound_pending, currency),
+    outboundPending: amountFor(b?.outbound_pending, currency),
+  }));
+}
+
+function mapBalance(fa: V2FinancialAccount): BalanceDTO {
+  const perCurrency = mapPerCurrency(fa);
+  const primary = perCurrency.find((c) => c.currency === primaryCurrency(fa)) ??
+    perCurrency[0] ?? {
+      currency: DEFAULT_CURRENCY,
+      cash: 0,
+      inboundPending: 0,
+      outboundPending: 0,
+    };
+  return { ...primary, perCurrency };
+}
+
+/**
+ * Fields Stripe only returns when explicitly requested — the full account number
+ * (US/UK) and IBAN (SEPA). Sent only on the audited reveal read.
+ */
+const REVEAL_FIELDS = [
+  'credentials.us_bank_account.account_number',
+  'credentials.gb_bank_account.account_number',
+  'credentials.sepa_bank_account.iban',
+];
+
+function mapBankDetails(addresses: V2FinancialAddress[], reveal: boolean): BankDetailsDTO[] {
+  return addresses.map((addr) => {
+    const c = addr.credentials ?? {};
+    const us = c.us_bank_account ?? null;
+    const gb = c.gb_bank_account ?? null;
+    const sepa = c.sepa_bank_account ?? null;
+    const bank = us ?? gb ?? sepa;
+    // The routing identifier differs per scheme.
+    const routingNumber = us?.routing_number ?? gb?.sort_code ?? sepa?.bic ?? null;
+    // Full number is blank/absent unless revealed; SEPA carries it as the IBAN.
+    const fullNumber = us?.account_number ?? gb?.account_number ?? sepa?.iban ?? null;
+    return {
+      type: c.type ?? 'bank_account',
+      currency: addr.currency ?? null,
+      status: addr.status ?? null,
+      bankName: bank?.bank_name ?? null,
+      accountHolderName: bank?.account_holder_name ?? null,
+      routingNumber,
+      accountNumber: reveal && fullNumber ? fullNumber : null,
+      accountNumberLast4: bank?.last4 ?? null,
+      supportedNetworks: addr.supported_networks ?? [],
+    };
+  });
+}
+
+/**
+ * List the financial account's bank addresses (one per held currency). Best
+ * effort: any failure or empty result degrades to "no bank details" rather than
+ * breaking the panel.
+ */
+async function listBankDetails(faId: string, reveal: boolean): Promise<BankDetailsDTO[]> {
+  try {
+    const res = await mmRequest<V2List<V2FinancialAddress>>(
+      'GET',
+      '/v2/money_management/financial_addresses',
+      {
+        query: {
+          financial_account: faId,
+          limit: 10,
+          ...(reveal ? { include: REVEAL_FIELDS } : {}),
+        },
+      },
+    );
+    return mapBankDetails(res.data ?? [], reveal);
+  } catch (err) {
+    log.error('Failed to list financial addresses (non-fatal)', err);
+    return [];
+  }
+}
+
+async function resolveAccountHolderName(): Promise<string | null> {
+  try {
+    const acct = await v1Get<RawAccount>('/account');
+    return acct.business_profile?.name ?? acct.company?.name ?? null;
+  } catch (err) {
+    log.error('Failed to resolve account holder name (non-fatal)', err);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -306,24 +469,15 @@ function requireFinancialAccountId(): string {
 export const TreasuryService = {
   async getFinancialAccount(revealAccountNumber = false): Promise<FinancialAccountDTO> {
     const faId = requireFinancialAccountId();
-    const fa = await stripeRequest<RawFinancialAccount>(
+    const fa = await mmRequest<V2FinancialAccount>(
       'GET',
-      `/treasury/financial_accounts/${faId}`,
-      revealAccountNumber ? { query: { expand: ['financial_addresses.aba.account_number'] } } : {},
+      `/v2/money_management/financial_accounts/${faId}`,
     );
 
-    let accountHolderName: string | null = null;
-    try {
-      const connectedAccount = Deno.env.get('STRIPE_CONNECTED_ACCOUNT_ID');
-      const acct = connectedAccount
-        ? await stripeRequest<RawAccount>('GET', `/accounts/${connectedAccount}`, {
-            skipAccountHeader: true,
-          })
-        : await stripeRequest<RawAccount>('GET', '/account', { skipAccountHeader: true });
-      accountHolderName = acct.business_profile?.name ?? acct.company?.name ?? null;
-    } catch (err) {
-      log.error('Failed to resolve account holder name (non-fatal)', err);
-    }
+    const [accountHolderName, bankDetails] = await Promise.all([
+      resolveAccountHolderName(),
+      listBankDetails(faId, revealAccountNumber),
+    ]);
 
     const balance = mapBalance(fa);
     return {
@@ -334,79 +488,71 @@ export const TreasuryService = {
         cash: balance.cash,
         inboundPending: balance.inboundPending,
         outboundPending: balance.outboundPending,
+        perCurrency: balance.perCurrency,
       },
-      bankDetails: mapBankDetails(fa),
+      bankDetails,
       accountHolderName,
-      activeFeatures: fa.active_features ?? [],
+      activeFeatures: fa.storage?.holds_currencies ?? [],
     };
   },
 
   async getBalance(): Promise<BalanceDTO> {
     const faId = requireFinancialAccountId();
-    const fa = await stripeRequest<RawFinancialAccount>(
+    const fa = await mmRequest<V2FinancialAccount>(
       'GET',
-      `/treasury/financial_accounts/${faId}`,
+      `/v2/money_management/financial_accounts/${faId}`,
     );
     return mapBalance(fa);
   },
 
   async getPlatformBalance(): Promise<PlatformBalanceDTO> {
-    const balance = await stripeRequest<RawBalance>('GET', '/balance');
+    const balance = await v1Get<RawBalance>('/balance');
     const flatten = (rows: RawBalanceRow[] = []) =>
       rows.map((r) => ({ amount: r.amount, currency: r.currency }));
     return { available: flatten(balance.available), pending: flatten(balance.pending) };
   },
 
-  async listTransactions(
-    opts: { limit?: number; starting_after?: string } = {},
-  ): Promise<TreasuryTransactionDTO[]> {
+  async listTransactions(opts: { limit?: number } = {}): Promise<TreasuryTransactionDTO[]> {
     const faId = requireFinancialAccountId();
-    const res = await stripeRequest<RawList<RawTransaction>>('GET', '/treasury/transactions', {
+    const res = await mmRequest<V2List<V2Transaction>>('GET', '/v2/money_management/transactions', {
       query: {
         financial_account: faId,
         limit: Math.min(Math.max(opts.limit ?? 25, 1), 100),
-        ...(opts.starting_after ? { starting_after: opts.starting_after } : {}),
       },
     });
-    return res.data.map((t) => ({
+    return (res.data ?? []).map((t) => ({
       id: t.id,
-      amount: t.amount,
-      currency: t.currency,
-      status: t.status,
-      flowType: t.flow_type ?? null,
+      amount: t.amount?.value ?? 0,
+      currency: t.amount?.currency ?? DEFAULT_CURRENCY,
+      status: t.status ?? 'unknown',
+      flowType: t.flow?.type ?? t.category ?? null,
       description: t.description ?? null,
-      created: t.created,
+      created: t.created ? Math.floor(Date.parse(t.created) / 1000) : 0,
     }));
   },
 
-  async deposit(input: DepositInput): Promise<{ id: string; status: string; amount: number }> {
-    const faId = requireFinancialAccountId();
-    const transfer = await stripeRequest<RawMovement>('POST', '/treasury/inbound_transfers', {
-      idempotencyKey: input.idempotencyKey,
-      body: {
-        financial_account: faId,
-        amount: input.amount,
-        currency: input.currency ?? DEFAULT_CURRENCY,
-        origin_payment_method: input.originPaymentMethod,
-        ...(input.description ? { description: input.description } : {}),
-      },
-    });
-    return { id: transfer.id, status: transfer.status, amount: transfer.amount };
+  // --------------------------------------------------------------------------
+  // Money movement — Phase 2 (v2 outbound payments / received credits).
+  // The v1 Treasury flows do not work against a v2 financial account, so until
+  // the v2 write flows are implemented these surface a clear, actionable error
+  // instead of a confusing raw Stripe failure.
+  // --------------------------------------------------------------------------
+
+  deposit(_input: DepositInput): Promise<{ id: string; status: string; amount: number }> {
+    return Promise.reject(
+      new TreasuryError(
+        'Funding this financial account is not yet available from this panel — add funds from the Stripe Dashboard for now.',
+        400,
+      ),
+    );
   },
 
-  async send(input: SendInput): Promise<{ id: string; status: string; amount: number }> {
-    const faId = requireFinancialAccountId();
-    const payment = await stripeRequest<RawMovement>('POST', '/treasury/outbound_payments', {
-      idempotencyKey: input.idempotencyKey,
-      body: {
-        financial_account: faId,
-        amount: input.amount,
-        currency: input.currency ?? DEFAULT_CURRENCY,
-        destination_payment_method: input.destinationPaymentMethod,
-        ...(input.customer ? { customer: input.customer } : {}),
-        ...(input.description ? { description: input.description } : {}),
-      },
-    });
-    return { id: payment.id, status: payment.status, amount: payment.amount };
+  send(_input: SendInput): Promise<{ id: string; status: string; amount: number }> {
+    return Promise.reject(
+      new TreasuryError(
+        'Sending from this financial account is not yet available from this panel — use the Stripe Dashboard for now.',
+        400,
+      ),
+    );
   },
 };

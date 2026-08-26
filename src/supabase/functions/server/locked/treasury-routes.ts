@@ -168,10 +168,8 @@ app.get(
   asyncHandler(async (c) => {
     try {
       const limit = Number(c.req.query('limit') ?? '25');
-      const startingAfter = c.req.query('starting_after') ?? undefined;
       const transactions = await TreasuryService.listTransactions({
         limit: Number.isFinite(limit) ? limit : 25,
-        starting_after: startingAfter,
       });
       return c.json({ success: true, transactions });
     } catch (error) {
