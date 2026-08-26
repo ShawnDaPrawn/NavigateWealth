@@ -257,12 +257,12 @@ describe('GET /envelopes/:id/manifest', () => {
     expect(await json(res)).toEqual({ manifest: VALID_MANIFEST });
   });
 
-  it('returns null rather than 404 for an envelope that does not exist', async () => {
-    // Pinned as current behaviour: the read does not load the envelope at all,
-    // so a bad id is indistinguishable from an envelope with no manifest.
+  it('404s for an envelope that does not exist', async () => {
+    // The read loads the envelope to find an owner to authorize against, so a
+    // bad id is a 404. Before the ownership fix it went straight to the
+    // manifest key and answered `{ manifest: null }` for any id at all.
     const res = await req('/envelopes/no-such-envelope/manifest');
-    expect(res.status).toBe(200);
-    expect(await json(res)).toEqual({ manifest: null });
+    expect(res.status).toBe(404);
   });
 });
 
@@ -356,15 +356,20 @@ describe('DELETE /envelopes/:id/manifest', () => {
     expect(events.map((e) => e.action)).toContain('page_manifest_cleared');
   });
 
-  it('succeeds even when the envelope does not exist, and still audits', async () => {
-    // Pinned: the clear does not load the envelope, so it neither 404s nor
-    // checks the draft status the PUT enforces. A sent envelope's manifest can
-    // be cleared through this route.
+  it('clears a SENT envelope’s manifest, which the PUT would refuse', async () => {
+    // Pinned as it is: the clear checks ownership but not draft status, so a
+    // sent envelope's page manifest can still be cleared. Asymmetric with the
+    // PUT beside it, and left alone here because clearing a manifest on a sent
+    // envelope has no effect on the already-materialised document.
     seedEnvelope('sent');
     kvStore.set(EsignKeys.envelopeManifest(ENV_ID), VALID_MANIFEST);
     const res = await req(`/envelopes/${ENV_ID}/manifest`, { method: 'DELETE' });
     expect(res.status).toBe(200);
     expect(kvStore.has(EsignKeys.envelopeManifest(ENV_ID))).toBe(false);
+  });
+
+  it('404s when the envelope does not exist', async () => {
+    expect((await req('/envelopes/nope/manifest', { method: 'DELETE' })).status).toBe(404);
   });
 });
 
@@ -533,82 +538,122 @@ describe('PUT /envelopes/:id/documents/order', () => {
 });
 
 // ============================================================================
-// THE SCOPE GAP — pinned, flagged, not endorsed
+// FIRM SCOPE
 // ============================================================================
 
-describe('firm scope (ABSENT — pinned so the fix announces itself)', () => {
+describe('firm scope', () => {
   /**
-   * Every assertion in this block documents a hole. When firm scoping is added
-   * to this module these tests SHOULD fail, and the failure is the signal to
-   * rewrite them as denial assertions rather than to relax the fix.
+   * These tests were written the other way round first — asserting that any
+   * authenticated caller could read, overwrite and clear another firm's
+   * manifest, delete its documents and reorder its pages — because that is
+   * what the module did. Not one of its routes compared `envelope.firm_id` to
+   * the caller.
    *
-   * The caller here is authenticated and belongs to `firm-other`; the envelope
-   * belongs to `firm-owner`. Nothing in this module compares the two.
+   * The fix is not a new policy. `esign-route-helpers.ts` already carried
+   * `requireOwnedEnvelope` for exactly this, with a doc comment describing
+   * this bug class in eight other handlers and stating the position plainly:
+   * deny an envelope with no `firm_id`, log it distinctly, and backfill rather
+   * than relax the check, because "failing open instead would keep the leak."
+   * This module simply had not been reached. It now asserts ownership on all
+   * eight of its envelope loads.
+   *
+   * Two of those loads did not exist before: `GET` and `DELETE` of the
+   * manifest went straight to the manifest key, so there was no owner to check
+   * against. They now read the envelope first.
    */
-  it('lets any authenticated user read another firm’s manifest', async () => {
+  const OTHER_FIRM_ROUTES: Array<[string, string, unknown?]> = [
+    ['GET', `/envelopes/${ENV_ID}/manifest`],
+    ['PUT', `/envelopes/${ENV_ID}/manifest`, { manifest: VALID_MANIFEST }],
+    ['DELETE', `/envelopes/${ENV_ID}/manifest`],
+    ['GET', `/envelopes/${ENV_ID}/documents`],
+    ['DELETE', `/envelopes/${ENV_ID}/documents/doc-2`],
+    ['PUT', `/envelopes/${ENV_ID}/documents/order`, { order: ['doc-2', DOC_ID] }],
+  ];
+
+  it.each(OTHER_FIRM_ROUTES)(
+    '%s %s is forbidden for a caller in another firm',
+    async (method, path, body) => {
+      seedEnvelope();
+      seedSecondDocument();
+      kvStore.set(EsignKeys.envelopeManifest(ENV_ID), VALID_MANIFEST);
+
+      const res = await req(path, { as: 'other', method, body });
+      expect(res.status).toBe(403);
+    },
+  );
+
+  it('leaves the manifest untouched when a foreign caller tries to overwrite it', async () => {
     seedEnvelope();
     kvStore.set(EsignKeys.envelopeManifest(ENV_ID), VALID_MANIFEST);
 
-    const res = await req(`/envelopes/${ENV_ID}/manifest`, { as: 'other' });
-    expect(res.status).toBe(200);
-    expect(await json(res)).toEqual({ manifest: VALID_MANIFEST });
-  });
-
-  it('lets any authenticated user overwrite another firm’s manifest', async () => {
-    seedEnvelope();
-    const res = await req(`/envelopes/${ENV_ID}/manifest`, {
+    await req(`/envelopes/${ENV_ID}/manifest`, {
       as: 'other',
       method: 'PUT',
       body: { manifest: { version: 1, pages: [{ sourcePage: 2, rotation: 180 }] } },
     });
-    expect(res.status).toBe(200);
-    expect(kvStore.get(EsignKeys.envelopeManifest(ENV_ID))).toEqual({
-      version: 1,
-      pages: [{ sourcePage: 2, rotation: 180 }],
-    });
+
+    expect(kvStore.get(EsignKeys.envelopeManifest(ENV_ID))).toEqual(VALID_MANIFEST);
   });
 
-  it('lets any authenticated user clear another firm’s manifest', async () => {
+  it('leaves the manifest in place when a foreign caller tries to clear it', async () => {
     seedEnvelope();
     kvStore.set(EsignKeys.envelopeManifest(ENV_ID), VALID_MANIFEST);
-    const res = await req(`/envelopes/${ENV_ID}/manifest`, { as: 'other', method: 'DELETE' });
-    expect(res.status).toBe(200);
-    expect(kvStore.has(EsignKeys.envelopeManifest(ENV_ID))).toBe(false);
+
+    await req(`/envelopes/${ENV_ID}/manifest`, { as: 'other', method: 'DELETE' });
+    expect(kvStore.get(EsignKeys.envelopeManifest(ENV_ID))).toEqual(VALID_MANIFEST);
   });
 
-  it('lets any authenticated user delete a document from another firm’s envelope', async () => {
+  it('leaves the documents in place when a foreign caller tries to delete one', async () => {
     seedEnvelope();
     seedSecondDocument();
-    const res = await req(`/envelopes/${ENV_ID}/documents/doc-2`, {
-      as: 'other',
-      method: 'DELETE',
-    });
-    expect(res.status).toBe(200);
+
+    await req(`/envelopes/${ENV_ID}/documents/doc-2`, { as: 'other', method: 'DELETE' });
+
+    const docs = kvStore.get(EsignKeys.envelopeDocuments(ENV_ID)) as Array<{ document_id: string }>;
+    expect(docs.map((d) => d.document_id)).toEqual([DOC_ID, 'doc-2']);
   });
 
-  it('lets any authenticated user reorder another firm’s documents', async () => {
-    seedEnvelope();
-    seedSecondDocument();
-    const res = await req(`/envelopes/${ENV_ID}/documents/order`, {
-      as: 'other',
-      method: 'PUT',
-      body: { order: ['doc-2', DOC_ID] },
-    });
-    expect(res.status).toBe(200);
+  it('still admits the owning firm on every one of those routes', async () => {
+    // The other half of the same fix: tightening must not lock the owner out.
+    for (const [method, path, body] of OTHER_FIRM_ROUTES) {
+      kvStore.clear();
+      seedEnvelope();
+      seedSecondDocument();
+      kvStore.set(EsignKeys.envelopeManifest(ENV_ID), VALID_MANIFEST);
+
+      const res = await req(path, { as: 'owner', method, body });
+      expect([method, path, res.status]).toEqual([method, path, 200]);
+    }
   });
 
-  it('records the OTHER firm’s user as the actor, which is the one thing that works', async () => {
-    // The audit trail does capture who did it. That is the only reason any of
-    // the above would be traceable after the fact.
-    seedEnvelope();
-    await req(`/envelopes/${ENV_ID}/manifest`, {
-      as: 'other',
-      method: 'PUT',
-      body: { manifest: VALID_MANIFEST },
+  it('DENIES an envelope carrying no firm_id, to everyone', async () => {
+    // The repo's stated position, now applied here too. Legacy envelopes
+    // stored before firm scoping have no `firm_id`, and `belongsToFirm`
+    // requires an exact non-empty match, so they are denied rather than shared.
+    //
+    // This is a real consequence, not a theoretical one: 7 of 15 production
+    // envelopes carry no firm_id at the time of writing. The denial is logged
+    // distinctly ("Envelope carries no firm_id") precisely so an operator can
+    // find and backfill them. Backfilling is the remedy; relaxing the check
+    // would restore the leak.
+    seedEnvelope('draft', undefined as unknown as string);
+    kvStore.set(EsignKeys.envelope(ENV_ID), {
+      id: ENV_ID,
+      title: 'Legacy',
+      status: 'draft',
+      document_id: DOC_ID,
     });
 
-    const events = await getAuditTrail(ENV_ID);
-    const updated = events.find((e) => e.action === 'page_manifest_updated');
-    expect(updated).toMatchObject({ actor_id: OTHER });
+    for (const as of ['owner', 'other']) {
+      const res = await req(`/envelopes/${ENV_ID}/manifest`, { as });
+      expect([as, res.status]).toEqual([as, 403]);
+    }
+  });
+
+  it('404s an unknown envelope on the manifest read, rather than returning null', async () => {
+    // Behaviour change worth naming: the read now loads the envelope to find
+    // an owner, so a bad id is a 404 instead of `{ manifest: null }`.
+    const res = await req('/envelopes/no-such-envelope/manifest', { as: 'owner' });
+    expect(res.status).toBe(404);
   });
 });

@@ -21,6 +21,8 @@ import { requireIdempotency } from './idempotency.ts';
 import {
   getRequestMetadata,
   ensureStorageBuckets,
+  assertEnvelopeOwnership,
+  firmScopeResponse,
   SignerRecord,
   FieldRecord,
 } from './esign-route-helpers.ts';
@@ -64,11 +66,21 @@ const documentsRoutes = new Hono();
 
 documentsRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
   try {
-    await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+
+    // The envelope is loaded for its OWNER. This read did not exist before —
+    // the handler went straight to the manifest key — which is precisely why
+    // there was nothing to authorize against.
+    const envelope = await kv.get(EsignKeys.envelope(envelopeId));
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
+
     const manifest = await kv.get(EsignKeys.envelopeManifest(envelopeId));
     return c.json({ manifest: manifest ?? null });
   } catch (err) {
+    const scoped = firmScopeResponse(c, err);
+    if (scoped) return scoped;
     log.error('Get manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
     return new Response(
@@ -88,6 +100,7 @@ documentsRoutes.put(
       const envelopeId = c.req.param('envelopeId')!;
       const envelope = await kv.get(EsignKeys.envelope(envelopeId));
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+      assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
       if (envelope.status !== 'draft') {
         return c.json({ error: 'Page edits only allowed while envelope is a draft' }, 409);
       }
@@ -122,6 +135,8 @@ documentsRoutes.put(
 
       return c.json({ success: true, manifest });
     } catch (err) {
+      const scoped = firmScopeResponse(c, err);
+      if (scoped) return scoped;
       log.error('Save manifest error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
       return new Response(
@@ -136,6 +151,14 @@ documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+
+    // Same as the read above: the envelope is loaded so there is an owner to
+    // check. Clearing another firm's page manifest was previously a matter of
+    // knowing the id.
+    const envelope = await kv.get(EsignKeys.envelope(envelopeId));
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
+
     await kv.del(EsignKeys.envelopeManifest(envelopeId));
     const { ip, userAgent } = getRequestMetadata(c);
     await logAuditEvent({
@@ -150,6 +173,8 @@ documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
     });
     return c.json({ success: true });
   } catch (err) {
+    const scoped = firmScopeResponse(c, err);
+    if (scoped) return scoped;
     log.error('Clear manifest error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
     return new Response(
@@ -180,6 +205,7 @@ documentsRoutes.post(
       const envelopeId = c.req.param('envelopeId')!;
       const envelope = await kv.get(EsignKeys.envelope(envelopeId));
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+      assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
 
       const document = await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id);
       if (!document) return c.json({ error: 'Source document missing' }, 404);
@@ -219,6 +245,8 @@ documentsRoutes.post(
       });
       return c.json({ url, pageCount: result.pageCount, pageMap: result.pageMap });
     } catch (err) {
+      const scoped = firmScopeResponse(c, err);
+      if (scoped) return scoped;
       log.error('Materialize preview error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
       return new Response(
@@ -245,10 +273,11 @@ documentsRoutes.post(
  */
 documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
   try {
-    await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
     const documents = await getEnvelopeDocuments(envelope);
     // Hydrate each ref with a presigned URL so the studio can render
     // any of the documents without an extra round-trip.
@@ -260,6 +289,8 @@ documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
     );
     return c.json({ documents: hydrated });
   } catch (err) {
+    const scoped = firmScopeResponse(c, err);
+    if (scoped) return scoped;
     log.error('List envelope documents error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
     return new Response(
@@ -285,6 +316,7 @@ documentsRoutes.post(
       const envelopeId = c.req.param('envelopeId')!;
       const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
       if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+      assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
       if (envelope.status !== 'draft') {
         return c.json({ error: 'Documents can only be added to envelopes in draft status' }, 409);
       }
@@ -356,6 +388,8 @@ documentsRoutes.post(
         added: { document_id: documentId, page_count: pageCount },
       });
     } catch (err) {
+      const scoped = firmScopeResponse(c, err);
+      if (scoped) return scoped;
       log.error('Add envelope document error:', err);
       const status = err instanceof AuthError ? err.statusCode : 500;
       return new Response(
@@ -379,6 +413,7 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
     const documentId = c.req.param('documentId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
     if (envelope.status !== 'draft') {
       return c.json({ error: 'Documents can only be removed from envelopes in draft status' }, 409);
     }
@@ -396,6 +431,8 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
     });
     return c.json({ documents });
   } catch (err) {
+    const scoped = firmScopeResponse(c, err);
+    if (scoped) return scoped;
     log.error('Remove envelope document error:', err);
     const status =
       err instanceof AuthError
@@ -424,6 +461,7 @@ documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
     const envelopeId = c.req.param('envelopeId')!;
     const envelope = (await kv.get(EsignKeys.envelope(envelopeId))) as EsignEnvelope | null;
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
     if (envelope.status !== 'draft') {
       return c.json({ error: 'Document order can only be changed on draft envelopes' }, 409);
     }
@@ -443,6 +481,8 @@ documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
     });
     return c.json({ documents });
   } catch (err) {
+    const scoped = firmScopeResponse(c, err);
+    if (scoped) return scoped;
     log.error('Reorder envelope documents error:', err);
     const status = err instanceof AuthError ? err.statusCode : 500;
     return new Response(

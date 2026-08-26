@@ -160,6 +160,28 @@ export async function requireOwnedEnvelope(
   const envelope = await getEnvelopeDetails(envelopeId);
   if (!envelope) return null;
 
+  assertEnvelopeOwnership(user, envelopeId, envelope as { firm_id?: string | null });
+  return envelope;
+}
+
+/**
+ * The ownership half of `requireOwnedEnvelope`, for a handler that has ALREADY
+ * loaded the envelope.
+ *
+ * `requireOwnedEnvelope` goes through `getEnvelopeDetails`, which is four KV
+ * reads (envelope, document, signers, fields). A handler that only needs
+ * `status` and `document_id` has already paid one read for
+ * `kv.get(EsignKeys.envelope(id))`, and routing it through the fuller helper
+ * would add three more to every request — on a surface already sitting behind
+ * a ~1s platform floor. Same check, same distinct log, no extra crossings.
+ *
+ * Throws `FirmScopeError`; map it with `firmScopeResponse`.
+ */
+export function assertEnvelopeOwnership(
+  user: { id: string; app_metadata?: Record<string, unknown> },
+  envelopeId: string,
+  envelope: { firm_id?: string | null },
+): void {
   if (!envelope.firm_id) {
     log.warn(
       'Envelope carries no firm_id — denying by default. If this is a legacy ' +
@@ -168,8 +190,7 @@ export async function requireOwnedEnvelope(
     );
   }
 
-  assertFirmAccess(user, envelope as { firm_id?: string | null });
-  return envelope;
+  assertFirmAccess(user, envelope);
 }
 
 /** Map a firm-scope denial to 403; returns null when the error is something else. */

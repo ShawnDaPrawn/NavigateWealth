@@ -284,11 +284,15 @@ export default defineConfig({
       // mapping and campaign state machine under those routes are exercised
       // rather than mocked. Measured 37.69 / 28.40 / 36.73 / 38.40 across
       // 3,962 tests.
+      //
+      // Raised again 2026-08-26 (37.5 / 28.2 / 36.5 / 38.2) with the e-sign
+      // templates suite and the documents-routes firm-scope fix. Measured
+      // 37.95 / 28.58 / 36.89 / 38.65 across 4,006 tests.
       thresholds: {
-        statements: 37.5,
-        branches: 28.2,
-        functions: 36.5,
-        lines: 38.2,
+        statements: 37.8,
+        branches: 28.4,
+        functions: 36.7,
+        lines: 38.5,
       },
     },
   },
