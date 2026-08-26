@@ -56,16 +56,36 @@ those two.
 client pays one longer trip instead of N shorter ones, and N is greater than 1
 on every route that reads more than a single key.
 
-Status: the Edge Function **allows** the `x-region` header as of
-`create-app.ts`, but nothing sends it yet. Sending it is a separate change on
-purpose — the SPA and the function deploy through different pipelines from the
-same merge, so a client that sent the header before the function allowed it
-would fail every CORS preflight in between.
+Status: **both halves are now in.** `create-app.ts` allows the `x-region`
+header (shipped and deployed in #237), and the SPA sends it from a single fetch
+interceptor (`src/utils/api/functionRegion.ts`). The two were split across
+separate merges on purpose — the SPA and the function deploy through different
+pipelines, so a client that sent the header before the function allowed it
+would have failed every CORS preflight in between.
+
+**The pin target is `us-east-1`, not the database's `us-east-2`.** Supabase's
+supported `x-region` values for North America are `ca-central-1`, `us-east-1`,
+`us-west-1` and `us-west-2` — `us-east-2` is not among them, even though the
+database lives there. `us-east-1` is the nearest region it accepts, measured
+above at p50 1,657 ms against `us-east-2`'s 1,484 ms. So the expected recovery
+is roughly **1,200 ms of the ~1,376 ms**, not the whole of it. The module
+validates any configured region against the supported list and falls back
+loudly rather than putting an unaccepted value on the header.
 
 The trade-off, from Supabase's own documentation: _"When you explicitly specify
 a region via the `x-region` header, requests will NOT be automatically
 re-routed to another region."_ Pinning buys latency and gives up automatic
 failover. During a regional outage the pin has to be changed or removed.
+
+**How to drop the pin during an outage.** Set `VITE_NW_FUNCTION_REGION` to
+`auto`, or clear it to an empty value, in Vercel and redeploy the SPA. Either
+stops the header being sent and returns to nearest-caller routing.
+
+**Deleting the variable is not the off switch.** An absent variable means "not
+configured", which pins to the default — that is what makes the feature work on
+a fresh deploy with no configuration. Clear it, do not remove it. An earlier
+draft treated empty and absent alike, which made this whole procedure a no-op;
+caught in review on #240.
 
 ### 2. The app's own floor — about 1,000 ms, and geography does not explain it
 
