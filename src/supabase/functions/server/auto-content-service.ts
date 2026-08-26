@@ -244,7 +244,7 @@ export const AutoContentService = {
       completedAt: new Date().toISOString(),
     };
 
-    await kv.set(runKey(id, runLog.completedAt), runLog);
+    await kv.set(runKey(id, runLog.completedAt, runLog.id), runLog);
 
     // Update config stats
     const updatedConfig: PipelineConfig = {
@@ -691,7 +691,7 @@ export const AutoContentService = {
       startedAt: new Date(Date.now() - pipelineResult.durationMs).toISOString(),
       completedAt: new Date().toISOString(),
     };
-    await kv.set(runKey(pipelineId, runLog.completedAt), runLog);
+    await kv.set(runKey(pipelineId, runLog.completedAt, runLog.id), runLog);
 
     log.info(`Source trigger completed: ${source.name}`, {
       totalGenerated,

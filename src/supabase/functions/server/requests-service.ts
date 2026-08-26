@@ -889,7 +889,26 @@ export class RequestsService {
         newValue,
       };
 
-      await kv.set(`requests:audit:${requestId}:${now}`, entry);
+      /**
+       * The key carries `auditId` as well as the timestamp.
+       *
+       * It used to be `requests:audit:${requestId}:${now}`, and `now` is an ISO
+       * string with millisecond precision — so two entries written in the same
+       * millisecond overwrote each other. That is not a theoretical race: every
+       * workflow method here writes TWO entries microseconds apart, because it
+       * calls `updateRequest` (which audits UPDATED) and then audits its own
+       * specific action. `moveLifecycleStage`, `updateComplianceSignOff` and
+       * `finaliseRequest` all do it. Measured before the fix: five entries
+       * written in one tick left ONE row.
+       *
+       * On an append-only compliance log that is the exact failure the log
+       * exists to prevent. `auditId` was already generated two lines up and
+       * simply was not used. `getAuditLog` prefix-scans
+       * `requests:audit:${requestId}:` and sorts by `performedAt`, so the extra
+       * segment is backward compatible — rows written under the old key shape
+       * still match the prefix and still sort.
+       */
+      await kv.set(`requests:audit:${requestId}:${now}:${auditId}`, entry);
     } catch (error) {
       // Don't throw - audit logging should not break main operations
       log.warn('Failed to create audit log entry', { requestId, action, error });

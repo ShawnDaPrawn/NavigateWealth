@@ -64,13 +64,32 @@ export function makeKvMock() {
       });
       return out;
     }),
-    listByPrefix: vi.fn(async (prefix: string) => {
-      const out: { key: string; value: unknown }[] = [];
-      kvStore.forEach((v, k) => {
-        if (k.startsWith(prefix)) out.push({ key: k, value: clone(v) });
-      });
-      return out;
-    }),
+    /**
+     * Faithful to `kv_store.tsx`: rows come back sorted by key ascending,
+     * `startAfter` is exclusive, and `limit` defaults to 100. Callers page with
+     * `while (rows.length === PAGE_SIZE)`, so a mock that returned everything
+     * unsorted in one page silently skipped every pagination branch — and would
+     * spin forever against a store holding more than one page.
+     */
+    listByPrefix: vi.fn(
+      async (
+        prefix: string,
+        options?: { offset?: number; limit?: number; startAfter?: string },
+      ) => {
+        const limit = Math.max(1, options?.limit ?? 100);
+        const rows = [...kvStore.entries()]
+          .filter(([k]) => k.startsWith(prefix))
+          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          .map(([key, value]) => ({ key, value: clone(value) }));
+
+        if (options?.startAfter !== undefined) {
+          return rows.filter((row) => row.key > options.startAfter!).slice(0, limit);
+        }
+
+        const offset = Math.max(0, options?.offset ?? 0);
+        return rows.slice(offset, offset + limit);
+      },
+    ),
   };
 }
 

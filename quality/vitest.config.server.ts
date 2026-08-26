@@ -162,11 +162,56 @@ export default defineConfig({
       // 0.4% -> 92.5% by letting pdf-lib build the actual certificate, and
       // contact-pdf-generator went 0% -> 98.7% because it has no dependency but
       // the logger. Measured 25.92 / 18.51 / 24.81 / 26.64 across 2,895 tests.
+      //
+      // Raised again 2026-08-26 (25.8 / 18.4 / 24.7 / 26.5) with the
+      // requests-service suite — the self-healing workflow layer behind
+      // compliance requests, where the zod schema deliberately repairs instead
+      // of rejecting, so the tests pin what the healing silently rewrites.
+      // Writing it found the audit log overwriting itself. Measured
+      // 26.37 / 18.87 / 25.44 / 27.10 across 2,976 tests.
+      //
+      // Raised again 2026-08-26 (26.3 / 18.8 / 25.3 / 27.0) with the
+      // client-portal-service suite — the single read behind the client-facing
+      // dashboard, which fans out across eleven KV namespaces. Writing it found
+      // the calendar filter excluding only events that named a DIFFERENT
+      // client, so an event with no clientId would have shown on every client's
+      // portal. Measured 26.67 / 19.62 / 25.71 / 27.41 across 3,035 tests.
+      //
+      // Raised again 2026-08-26 (26.6 / 19.5 / 25.6 / 27.3) with the article
+      // notification suites — recipient collection, delivery and retry
+      // classification, the job lifecycle, the cron processor and the campaign
+      // rows the publications dashboard reads. 163 tests across five files,
+      // covering roughly 2,400 lines that had no test at all.
+      //
+      // The SAME change also fixed the denominator. Four server modules
+      // (esign-pdf-analysis, esign-pdf-protect, esign-synthetic-probe,
+      // form-template-routes) imported `npm:` specifiers with no alias in
+      // vitest.config.ts, so Vite could not transform them; the v8 provider
+      // then logged "Failed to parse … Excluding it from coverage" and dropped
+      // them from the report altogether instead of counting them as 0%. That
+      // hid 460 statements — including the e-signature signing path — and
+      // inflated every number above it. The aliases are added, the parse
+      // failures are gone, and the floors below are measured against the
+      // complete tree, so they are lower than they would have been under the
+      // old short denominator and still a ratchet up on it.
+      //
+      // Measured 28.52 / 21.75 / 28.13 / 29.24 across 3,198 tests.
+      //
+      // Raised again 2026-08-26 (28.3 / 21.6 / 27.9 / 29.0) with the
+      // auto-content suites — the four pipelines that write published-facing
+      // articles on a schedule with no human in the loop. 104 tests across
+      // three files took auto-content-service.ts from 0% to 99.6% and
+      // auto-content-pipelines.ts from 0% to most of its branches. The SSRF
+      // guard on `discoverFeeds` is exercised for real rather than stubbed,
+      // because that endpoint fetches an admin-supplied URL server-side.
+      // Writing them found the run-log key colliding on millisecond precision,
+      // the same defect as the compliance audit log. Measured
+      // 30.19 / 22.93 / 29.54 / 30.93 across 3,302 tests.
       thresholds: {
-        statements: 25.8,
-        branches: 18.4,
-        functions: 24.7,
-        lines: 26.5,
+        statements: 29.9,
+        branches: 22.7,
+        functions: 29.3,
+        lines: 30.7,
       },
     },
   },
