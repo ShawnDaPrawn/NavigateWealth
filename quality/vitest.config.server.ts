@@ -216,11 +216,20 @@ export default defineConfig({
       // (the version-bump rule, field by field, because an envelope records the
       // template version it was raised under and a wrong bump strands it).
       // Measured 30.90 / 23.48 / 30.29 / 31.63 across 3,388 tests.
+      //
+      // Raised again 2026-08-26 (30.7 / 23.3 / 30.0 / 31.4) with the ai-advisor
+      // route suites. ai-advisor.ts 0% -> 86.2%, and because the whole auth
+      // chain runs for real against the in-memory KV rather than being stubbed,
+      // ai-advisor-store 0 -> 45.9%, ai-advisor-shared 0 -> 100%, auth-mw
+      // -> 77.8% and constants -> 100% came with it. The tests are mostly about
+      // who may open a client's Ask Vasco conversation, and they surfaced that
+      // the `viewer` personnel role can DELETE one — pinned and flagged, not
+      // changed. Measured 31.80 / 24.06 / 31.24 / 32.52 across 3,470 tests.
       thresholds: {
-        statements: 30.7,
-        branches: 23.3,
-        functions: 30.0,
-        lines: 31.4,
+        statements: 31.6,
+        branches: 23.9,
+        functions: 31.0,
+        lines: 32.3,
       },
     },
   },
