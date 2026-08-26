@@ -89,11 +89,17 @@ export default defineConfig({
       // advice-engine-roa-routes contract suite — 286 statements that were
       // entirely uncovered, behind a four-predicate authorization matrix.
       // Measured 18.33 / 13.25 / 17.81 / 18.84 across 1,035 tests.
+      //
+      // Raised again 2026-08-26 (18.2 / 13.1 / 17.7 / 18.7) with the
+      // advice-engine-fna-routes contract suite — 27 routes across six FNA
+      // families sharing one client-access policy, table-driven so no family
+      // can quietly lose its check. Measured 19.02 / 13.46 / 18.37 / 19.50
+      // across 1,320 tests.
       thresholds: {
-        statements: 18.2,
-        branches: 13.1,
-        functions: 17.7,
-        lines: 18.7,
+        statements: 18.9,
+        branches: 13.3,
+        functions: 18.2,
+        lines: 19.3,
       },
     },
   },
