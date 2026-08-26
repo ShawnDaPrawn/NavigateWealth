@@ -304,12 +304,16 @@ describe('esign-routes.tsx route contracts', () => {
     });
   }
 
-  it('GET /envelopes/:id/manifest returns { manifest: null } for an unknown envelope', async () => {
+  it('GET /envelopes/:id/manifest returns 404 for an unknown envelope', async () => {
+    // Was `200 { manifest: null }`. The route now loads the envelope first,
+    // because it needs an owner to authorize against — before that it read the
+    // manifest key directly and answered for any id at all, including another
+    // firm's. A miss is now indistinguishable from a denial, which is the
+    // point.
     const res = await esignRoutes.request('/envelopes/env_missing/manifest', {
       headers: { Authorization: 'Bearer test-token' },
     });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ manifest: null });
+    expect(res.status).toBe(404);
   });
 
   it('GET /envelopes/:id/documents returns 404 for an unknown envelope when authenticated', async () => {

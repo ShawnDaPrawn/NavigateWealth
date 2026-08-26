@@ -43,12 +43,32 @@ export const fnaExistingBuckets = new Set<string>();
 /** Buckets `createBucket` was asked to create, in order. */
 export const fnaCreatedBuckets: string[] = [];
 
+/**
+ * Storage failures to inject, per operation.
+ *
+ * These live on the module rather than being spied onto a client instance
+ * because the routes call `createClient()` fresh on every request — a spy
+ * installed on a client the test built is a spy on an object the route never
+ * sees, and the test passes while asserting nothing. That mistake is easy to
+ * make and silent, which is why the switch is here instead.
+ */
+export const fnaStorageErrors: {
+  upload?: string | null;
+  remove?: string | null;
+  signedUrl?: string | null;
+  createBucket?: string | null;
+} = {};
+
 export function resetFnaHarness(): void {
   fnaAuthUsers.clear();
   fnaAssignments.clear();
   fnaStorageUploads.length = 0;
   fnaExistingBuckets.clear();
   fnaCreatedBuckets.length = 0;
+  fnaStorageErrors.upload = null;
+  fnaStorageErrors.remove = null;
+  fnaStorageErrors.signedUrl = null;
+  fnaStorageErrors.createBucket = null;
 }
 
 /**
@@ -88,21 +108,40 @@ export function makeFnaSupabaseMock() {
           error: null,
         }),
         createBucket: async (name: string) => {
+          // Recorded BEFORE the failure check, so a test can assert which
+          // buckets were ATTEMPTED and not only which succeeded. The reverse
+          // order made an earlier bucket-init test vacuous.
           fnaCreatedBuckets.push(name);
+          if (fnaStorageErrors.createBucket) {
+            return { error: { message: fnaStorageErrors.createBucket } };
+          }
           fnaExistingBuckets.add(name);
           return { error: null };
         },
         from: (bucket: string) => ({
           upload: async (path: string) => {
+            if (fnaStorageErrors.upload) {
+              return { error: { message: fnaStorageErrors.upload } };
+            }
             fnaStorageUploads.push({ bucket, path });
             return { error: null };
           },
           download: async () => ({ data: new Blob(['pdf']), error: null }),
-          remove: async () => ({ error: null }),
-          createSignedUrl: async (path: string) => ({
-            data: { signedUrl: `https://signed.test/${bucket}/${path}` },
-            error: null,
-          }),
+          remove: async () => {
+            if (fnaStorageErrors.remove) {
+              return { error: { message: fnaStorageErrors.remove } };
+            }
+            return { error: null };
+          },
+          createSignedUrl: async (path: string) => {
+            if (fnaStorageErrors.signedUrl) {
+              return { data: null, error: { message: fnaStorageErrors.signedUrl } };
+            }
+            return {
+              data: { signedUrl: `https://signed.test/${bucket}/${path}` },
+              error: null,
+            };
+          },
         }),
       },
     }),

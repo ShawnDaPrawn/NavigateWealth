@@ -253,11 +253,52 @@ export default defineConfig({
       // for the size of the change because most of it is source fixes across
       // ten modules rather than new test surface — floored anyway, because an
       // unclaimed gain is one the next PR can give back.
+      //
+      // Raised again 2026-08-26 (34.0 / 26.0 / 33.3 / 34.8) with three FNA
+      // route-family suites on one shared harness — tax planning 0% -> ~90%,
+      // risk planning 24% -> ~85%, retirement 19% -> ~80%. Writing them found
+      // four defects: a bucket created before the access check, an update route
+      // that merged the RAW request body into the record (so a client's
+      // adviser could hand their risk analysis to another client), an unpublish
+      // that left the published pointer serving the withdrawn FNA, and two
+      // version helpers reading a prefix that held no FNAs at all. Measured
+      // 35.75 / 26.95 / 34.66 / 36.56 across 3,830 tests.
+      //
+      // Raised again 2026-08-26 (35.5 / 26.7 / 34.4 / 36.3) with the e-sign
+      // packet suite: esign-packet-service 0.6% -> 84.9%. It runs
+      // `esign-services` and `esign-template-service` for real rather than
+      // stubbing them — both are pure KV apart from a fire-and-forget Postgres
+      // mirror — because the thing under test is a handoff BETWEEN modules, and
+      // a suite that fakes `createEnvelope` would assert that a mock was called
+      // rather than that a packet run spawns a signable envelope. Measured
+      // 36.29 / 27.34 / 35.25 / 37.07 across 3,852 tests.
+      //
+      // Raised again 2026-08-26 (36.1 / 27.1 / 35.0 / 36.9) with the e-sign
+      // documents-routes suite: the page-manifest and multi-document routes on
+      // an envelope. Measured 36.73 / 27.69 / 35.66 / 37.50 across 3,893 tests.
+      //
+      // Raised again 2026-08-26 (36.6 / 27.5 / 35.4 / 37.3) with the e-sign
+      // envelopes and campaigns route suites. Both run their services for real
+      // — `esign-services`, `esign-campaign-service`, `esign-packet-service`
+      // and `esign-template-service` are all pure KV — so the CSV parsing, row
+      // mapping and campaign state machine under those routes are exercised
+      // rather than mocked. Measured 37.69 / 28.40 / 36.73 / 38.40 across
+      // 3,962 tests.
+      //
+      // Raised again 2026-08-26 (37.5 / 28.2 / 36.5 / 38.2) with the e-sign
+      // templates suite and the documents-routes firm-scope fix. Measured
+      // 37.95 / 28.58 / 36.89 / 38.65 across 4,006 tests.
+      //
+      // Raised again 2026-08-26 (37.8 / 28.4 / 36.7 / 38.5) with the RoA draft
+      // service (4.1% -> 47.7%) and vasco-service (0% -> ~80%). The
+      // denominator also fell slightly: `vasco-service` carried a second,
+      // never-imported rate limiter, removed rather than covered. Measured
+      // 38.61 / 29.30 / 37.66 / 39.32 across 4,052 tests.
       thresholds: {
-        statements: 34.0,
-        branches: 26.0,
-        functions: 33.3,
-        lines: 34.8,
+        statements: 38.4,
+        branches: 29.1,
+        functions: 37.4,
+        lines: 39.1,
       },
     },
   },

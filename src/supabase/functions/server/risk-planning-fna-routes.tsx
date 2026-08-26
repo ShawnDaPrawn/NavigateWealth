@@ -105,13 +105,25 @@ function generateFnaId(): string {
  * Get next version number for a client
  */
 async function getNextVersionNumber(clientId: string): Promise<number> {
-  const fnas = await kv.getByPrefix(`risk_planning_fna:${clientId}:`);
-  // Highest stored version, not how many are stored. The id here is a uuid, so
-  // unlike the FNA families this number never reached a KV key and no record was
-  // ever at risk — but a count still regresses after a delete, which produced
-  // two sessions both labelled the same version. Cheap to make monotonic, and it
-  // lets the ratchet require that no version anywhere is derived from a count.
-  return nextVersion(fnas);
+  // Read the client's OWN records, via the id list.
+  //
+  // This used to prefix-scan `risk_planning_fna:${clientId}:`, which never
+  // contained a single FNA. Records are keyed `risk_planning_fna:${fnaId}` with
+  // `fnaId` a uuid, so that prefix only ever matched the two bookkeeping keys
+  // beside them — `:latest` and `:list`. The version was therefore derived from
+  // whether those two keys happened to exist: 1 before the first create, 2 for
+  // every create after it, and 3 for every create once anything was published.
+  // An adviser looking at a client's Risk Planning history saw version numbers
+  // that meant nothing.
+  //
+  // The id list is the only thing that knows which FNAs belong to this client,
+  // so it is what this reads. `mget` keeps it to two round trips rather than
+  // one per FNA.
+  const ids = ((await kv.get(`risk_planning_fna:${clientId}:list`)) as string[] | null) || [];
+  if (ids.length === 0) return 1;
+
+  const records = await kv.mget(ids.map((id) => `risk_planning_fna:${id}`));
+  return nextVersion(records.filter(Boolean));
 }
 
 /**
@@ -656,10 +668,10 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
-    const updates = await c.req.json();
+    const rawBody = await c.req.json();
 
     // Validate input data
-    const validationResult = UpdateRiskPlanningFnaSchema.safeParse(updates);
+    const validationResult = UpdateRiskPlanningFnaSchema.safeParse(rawBody);
     if (!validationResult.success) {
       return c.json(
         {
@@ -695,7 +707,16 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
       );
     }
 
-    // Apply updates
+    // Apply updates.
+    //
+    // `validationResult.data`, NOT the raw body. `UpdateRiskPlanningFnaSchema`
+    // is a plain object schema, so zod strips unknown keys from `.data` but
+    // does not reject the request — and spreading the raw body then wrote them
+    // anyway. `clientId` is the one that mattered: the access check above had
+    // already passed against the ORIGINAL owner, so client A's adviser could
+    // hand A's risk analysis to client B, out of A's list and into B's. `id`,
+    // `createdBy`, `version` and `publishedAt` were writable the same way.
+    const updates = validationResult.data;
     const updatedFna = {
       ...fna,
       ...updates,
@@ -704,7 +725,10 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
 
     // Recalculate if inputData changed
     if (updates.inputData) {
-      updatedFna.calculations = performCalculations(updates.inputData, user.id);
+      updatedFna.calculations = performCalculations(
+        updates.inputData as Parameters<typeof performCalculations>[0],
+        user.id,
+      );
     }
 
     // Save
@@ -833,6 +857,20 @@ riskPlanningFnaRoutes.post('/unpublish/:fnaId', async (c) => {
 
     // Save
     await kv.set(`risk_planning_fna:${fnaId}`, unpublishedFna);
+
+    // Stop `:latest` serving what was just withdrawn.
+    //
+    // Without this the pointer kept the pre-unpublish SNAPSHOT — still stamped
+    // `status: 'published'` — so `GET /client/:clientId/latest` went on
+    // returning an FNA the adviser had withdrawn, and nothing short of
+    // archiving it would ever clear it. Archive and hard-delete already do
+    // exactly this; unpublish was the one lifecycle transition that did not.
+    const latestKey = `risk_planning_fna:${fna.clientId}:latest`;
+    const currentLatest = await kv.get(latestKey);
+    if (currentLatest && currentLatest.id === fnaId) {
+      await kv.del(latestKey);
+      log.info('Cleared latest published pointer on unpublish:', { fnaId });
+    }
 
     log.info('âœ… Risk Planning FNA unpublished:', { fnaId });
 
