@@ -6,10 +6,16 @@
  */
 
 export interface BankDetails {
+  /** Credential scheme: us_bank_account | gb_bank_account | sepa_bank_account. */
   type: string;
+  /** Currency this address receives (one address per held currency). */
+  currency: string | null;
+  status: string | null;
   bankName: string | null;
+  accountHolderName: string | null;
+  /** Routing number (US), sort code (UK), or BIC (SEPA). */
   routingNumber: string | null;
-  /** Full account number — only present on the audited financial-account read. */
+  /** Full account number / IBAN — only present on the audited financial-account read. */
   accountNumber: string | null;
   accountNumberLast4: string | null;
   supportedNetworks: string[];

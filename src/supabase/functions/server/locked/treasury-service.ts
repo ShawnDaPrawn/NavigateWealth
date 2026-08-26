@@ -117,7 +117,7 @@ async function mmRequest<T>(
   method: 'GET' | 'POST',
   path: string,
   opts: {
-    query?: Record<string, string | number | undefined>;
+    query?: Record<string, string | number | string[] | undefined>;
     body?: Record<string, unknown>;
   } = {},
 ): Promise<T> {
@@ -130,7 +130,10 @@ async function mmRequest<T>(
   if (opts.query) {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(opts.query)) {
-      if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
+      if (v === undefined || v === null || v === '') continue;
+      // v2 expects repeated params in indexed form (e.g. include[0], include[1]).
+      if (Array.isArray(v)) v.forEach((item, i) => qs.append(`${k}[${i}]`, String(item)));
+      else qs.append(k, String(v));
     }
     const s = qs.toString();
     if (s) url += `?${s}`;
@@ -174,19 +177,36 @@ interface V2FinancialAccount {
   country?: string | null;
 }
 
+/**
+ * v2 FinancialAddress credentials, discriminated by `type`. A storage financial
+ * account exposes one address per held currency, each with its own scheme:
+ * US ABA routing, UK sort code, or SEPA BIC/IBAN.
+ */
+interface V2BankCredential {
+  account_holder_name?: string | null;
+  bank_name?: string | null;
+  last4?: string | null;
+  account_number?: string | null;
+  /** us_bank_account only. */
+  routing_number?: string | null;
+  /** gb_bank_account only. */
+  sort_code?: string | null;
+  /** sepa_bank_account only. */
+  bic?: string | null;
+  iban?: string | null;
+}
+
 interface V2FinancialAddressCredentials {
   type?: string | null;
-  aba?: {
-    bank_name?: string | null;
-    routing_number?: string | null;
-    account_number?: string | null;
-    account_number_last4?: string | null;
-  } | null;
+  us_bank_account?: V2BankCredential | null;
+  gb_bank_account?: V2BankCredential | null;
+  sepa_bank_account?: V2BankCredential | null;
 }
 
 interface V2FinancialAddress {
   id: string;
   currency?: string | null;
+  status?: string | null;
   supported_networks?: string[] | null;
   credentials?: V2FinancialAddressCredentials | null;
 }
@@ -227,10 +247,16 @@ interface RawBalance {
 // ============================================================================
 
 export interface BankDetailsDTO {
+  /** Credential scheme: us_bank_account | gb_bank_account | sepa_bank_account. */
   type: string;
+  /** Currency this address receives (one address per held currency). */
+  currency: string | null;
+  status: string | null;
   bankName: string | null;
+  accountHolderName: string | null;
+  /** Routing number (US), sort code (UK), or BIC (SEPA). */
   routingNumber: string | null;
-  /** Full account number — only populated on the audited reveal read. */
+  /** Full account number / IBAN — only populated on the audited reveal read. */
   accountNumber: string | null;
   accountNumberLast4: string | null;
   supportedNetworks: string[];
@@ -366,31 +392,58 @@ function mapBalance(fa: V2FinancialAccount): BalanceDTO {
   return { ...primary, perCurrency };
 }
 
+/**
+ * Fields Stripe only returns when explicitly requested — the full account number
+ * (US/UK) and IBAN (SEPA). Sent only on the audited reveal read.
+ */
+const REVEAL_FIELDS = [
+  'credentials.us_bank_account.account_number',
+  'credentials.gb_bank_account.account_number',
+  'credentials.sepa_bank_account.iban',
+];
+
 function mapBankDetails(addresses: V2FinancialAddress[], reveal: boolean): BankDetailsDTO[] {
   return addresses.map((addr) => {
-    const aba = addr.credentials?.aba ?? null;
+    const c = addr.credentials ?? {};
+    const us = c.us_bank_account ?? null;
+    const gb = c.gb_bank_account ?? null;
+    const sepa = c.sepa_bank_account ?? null;
+    const bank = us ?? gb ?? sepa;
+    // The routing identifier differs per scheme.
+    const routingNumber = us?.routing_number ?? gb?.sort_code ?? sepa?.bic ?? null;
+    // Full number is blank/absent unless revealed; SEPA carries it as the IBAN.
+    const fullNumber = us?.account_number ?? gb?.account_number ?? sepa?.iban ?? null;
     return {
-      type: addr.credentials?.type ?? 'aba',
-      bankName: aba?.bank_name ?? null,
-      routingNumber: aba?.routing_number ?? null,
-      accountNumber: reveal ? (aba?.account_number ?? null) : null,
-      accountNumberLast4: aba?.account_number_last4 ?? null,
+      type: c.type ?? 'bank_account',
+      currency: addr.currency ?? null,
+      status: addr.status ?? null,
+      bankName: bank?.bank_name ?? null,
+      accountHolderName: bank?.account_holder_name ?? null,
+      routingNumber,
+      accountNumber: reveal && fullNumber ? fullNumber : null,
+      accountNumberLast4: bank?.last4 ?? null,
       supportedNetworks: addr.supported_networks ?? [],
     };
   });
 }
 
 /**
- * List the financial account's bank (ABA) addresses. A storage FA has none until
- * a FinancialAddress is provisioned, so this is best-effort: any failure or empty
- * result degrades to "no bank details" rather than breaking the panel.
+ * List the financial account's bank addresses (one per held currency). Best
+ * effort: any failure or empty result degrades to "no bank details" rather than
+ * breaking the panel.
  */
 async function listBankDetails(faId: string, reveal: boolean): Promise<BankDetailsDTO[]> {
   try {
     const res = await mmRequest<V2List<V2FinancialAddress>>(
       'GET',
       '/v2/money_management/financial_addresses',
-      { query: { financial_account: faId, limit: 10 } },
+      {
+        query: {
+          financial_account: faId,
+          limit: 10,
+          ...(reveal ? { include: REVEAL_FIELDS } : {}),
+        },
+      },
     );
     return mapBankDetails(res.data ?? [], reveal);
   } catch (err) {
