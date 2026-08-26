@@ -95,14 +95,65 @@ work at all — took 1,016 ms. Boot is not the cause: the runtime reports
 `booted (time: 57ms)` … `booted (time: 111ms)`, so the lazy-mount work already
 did its job.
 
-That floor is the app's own per-request cost, and region pinning will not touch
-it. The likely shape is sequential `kv.get` calls where a batch would do —
-`kv_store_91ed8379` has `mget` and `getByPrefix`, and a route that awaits five
-keys in series pays five round trips whether they are 1 ms or 90 ms each.
+#### The preflight rules out per-request app code
 
-**Not investigated further here.** Naming it as unmeasured is the point: the
-number above is the total, not a diagnosis, and the next person should profile
-one route properly rather than assume.
+The `204` preflight is the measurement that matters, and re-reading it changes
+the diagnosis.
+
+An `OPTIONS` preflight never reaches a route handler. `createApp()` registers
+Hono's `cors()` middleware **first**, and for a preflight that middleware
+returns a `204` without calling `next()` — so the request-id middleware, the
+error handler, the lazy mounts and every route body are all skipped. On a warm
+isolate that path performs no I/O whatsoever. It cannot take 1,016 ms.
+
+So the floor is not per-request app cost, and the earlier guess above (sequential
+`kv.get` calls where a batch would do) cannot explain a request that reads
+nothing. What is left is **cold start**: bundle fetch, isolate creation and
+top-level module evaluation, none of which the `booted (time: 57ms)` line
+covers — that number is the isolate's own boot, measured after the payload has
+already been fetched and compiled.
+
+#### Which makes region pinning more valuable than #240 claimed
+
+If the floor is cold start, then what drives it is how often a request finds a
+cold isolate, and that is a function of **which regional pool the traffic lands
+in**:
+
+- Cron traffic runs `pg_net` from inside the database (Ohio), steady at roughly
+  180–240 requests/hour. That is frequent enough to keep its region's isolates
+  warm continuously.
+- South African client traffic was landing in `eu-west-3` and is **bursty** —
+  measured at 25/16/60/34 calls in one afternoon window and then zero for
+  twenty hours. Nothing else keeps `eu-west-3` warm, so a burst after a gap
+  pays a cold start on its first requests.
+
+Pinning function execution to `us-east-1` (#240) was justified on geography
+alone — the database is in `us-east-2` and the function was running in Paris.
+But it should also put client traffic onto the same regional pool the cron
+traffic keeps warm, which would remove cold starts rather than merely shortening
+the round trip. That is a **hypothesis, not a measurement**: it needs the
+`fn_region` × `colo` query below, run over a window that actually contains ZA
+traffic.
+
+#### What has been ruled out, and what has not
+
+Ruled out: per-request handler work as the explanation for the floor (the
+preflight does none and still hit it).
+
+**Not** ruled out, and still worth measuring once there is traffic:
+
+- Cold-start cost itself — the boot payload is already lazy-mounted, but the
+  bundle is large and `x.ts`-style dynamic imports still have to be resolved.
+- Sequential `kv.get` calls on the heavier routes. This no longer explains the
+  floor, but it is still real per-request cost on top of it: `kv_store_91ed8379`
+  has `mget` and `getByPrefix`, and a route that awaits five keys in series pays
+  five round trips.
+- One thing already fixed: 113 admin route registrations chained
+  `requireAuth, requireAdmin`, and `requireAdmin` is a strict superset — so each
+  of those requests made **two** Supabase Auth round trips and **two** database
+  reads for one answer. Removed in the same series of changes as this note, with
+  a source-scanning ratchet (`__tests__/auth-middleware-cost.test.ts`). That was
+  per-request cost, not floor, and it only affected admin routes.
 
 ---
 
@@ -126,6 +177,32 @@ group by path, sb_region
 having calls >= 4
 order by path, sb_region
 ```
+
+**Is client traffic sharing the cron traffic's warm pool?** — the query the
+cold-start hypothesis above needs. Run it over a window that actually contains
+South African traffic; a window of cron-only traffic tells you nothing.
+
+```sql
+select
+  log_attributes['response.headers.x_sb_edge_region'] as fn_region,
+  log_attributes['request.cf.colo'] as colo,
+  log_attributes['request.cf.country'] as country,
+  count() as calls,
+  round(quantile(0.5)(toFloat64OrNull(log_attributes['execution_time_ms']))) as p50_ms,
+  round(quantile(0.95)(toFloat64OrNull(log_attributes['execution_time_ms']))) as p95_ms,
+  round(min(toFloat64OrNull(log_attributes['execution_time_ms']))) as min_ms
+from logs
+where source = 'function_edge_logs'
+  and log_attributes['execution_time_ms'] != ''
+group by fn_region, colo, country
+order by calls desc
+```
+
+Read it like this: if `fn_region` is now `us-east-1` for both the ZA rows and
+the Ohio cron rows, the pools are shared. If the ZA `min_ms` drops close to the
+cron `min_ms` while the ZA `p95_ms` stays high, cold starts are still happening
+but less often. If ZA `min_ms` stays near 1,000 ms, the floor is not cold start
+and this note is wrong.
 
 **Where the callers are, and which region serves them:**
 
