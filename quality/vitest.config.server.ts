@@ -133,11 +133,18 @@ export default defineConfig({
       // indistinguishable response) plus rate limiting on two axes that fails
       // closed, so the tests assert uniformity and refusal rather than payload
       // shapes. Measured 23.32 / 17.35 / 22.66 / 23.92 across 2,354 tests.
+      //
+      // Raised again 2026-08-26 (23.2 / 17.2 / 22.5 / 23.8) with the
+      // applications-routes suite, which found two real bugs rather than just
+      // covering code: an admin-gated debug route that returned every value in
+      // the shared KV store (portal credentials included), and a literal route
+      // shadowed by a parameterised one. Measured 23.78 / 17.60 / 23.02 / 24.41
+      // across 2,446 tests.
       thresholds: {
-        statements: 23.2,
-        branches: 17.2,
-        functions: 22.5,
-        lines: 23.8,
+        statements: 23.7,
+        branches: 17.5,
+        functions: 22.9,
+        lines: 24.3,
       },
     },
   },
