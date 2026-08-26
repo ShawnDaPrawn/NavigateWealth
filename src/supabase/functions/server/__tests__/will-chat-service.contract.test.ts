@@ -358,7 +358,33 @@ describe('sendAndPersist', () => {
     });
     const stored = storedSession(session.id)!;
     expect(stored.messages.map((m) => m.role)).toEqual(['system', 'user', 'assistant']);
-    expect(stored.updatedAt).not.toBe(stored.createdAt);
+  });
+
+  it('re-stamps updatedAt on each turn while leaving createdAt alone', async () => {
+    // The clock is driven explicitly rather than compared against itself.
+    // Asserting `updatedAt !== createdAt` on the live clock was flaky: with a
+    // mocked fetch, creating and sending can both land in the same millisecond
+    // on a fast runner, and the two ISO strings come out identical. Caught by
+    // CI on #244 after passing locally.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-08-26T10:00:00.000Z'));
+      const session = await newSession();
+
+      vi.setSystemTime(new Date('2026-08-26T10:05:00.000Z'));
+      await sendAndPersist(CLIENT, session.id, 'My spouse is Sipho.', null);
+
+      const stored = storedSession(session.id)!;
+      expect(stored.createdAt).toBe('2026-08-26T10:00:00.000Z');
+      expect(stored.updatedAt).toBe('2026-08-26T10:05:00.000Z');
+      // Both new messages carry the turn's timestamp, not the session's.
+      expect(stored.messages.slice(1).map((m) => m.timestamp)).toEqual([
+        '2026-08-26T10:05:00.000Z',
+        '2026-08-26T10:05:00.000Z',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('includes the profile context on the first turn and drops it once chained', async () => {
