@@ -59,8 +59,41 @@ export class AdviceEngineService {
    */
   private async getNextVersionNumber(type: FNAType, clientId: string): Promise<number> {
     const prefix = this.getFNAPrefix(type);
-    const fnas = await kv.getByPrefix(`${prefix}:client:${clientId}:`);
-    return (fnas?.length || 0) + 1;
+
+    // Highest stored version, not how many are stored — see fna-versioning.ts.
+    // A count only counts what is still there, so a deleted FNA used to hand
+    // this number back out, and the next create's index row upserted over the
+    // previous one, orphaning an FNA that was still on file.
+    //
+    // Read from the index KEYS, which already carry `v{version}`, rather than
+    // fetching the record each id points at. One prefix listing instead of
+    // N+1 reads on a create path — and this runs behind a ~1s platform floor,
+    // so N+1 here is the difference a client feels.
+    //
+    // Parsed here rather than through `highestVersion` because this key has its
+    // own grammar: `{prefix}:client:{clientId}:v{n}` before the fix and
+    // `...:v{n}:{fnaId}` after it, colon-separated and with the version in the
+    // middle — not the `-v{n}` record-id shape that helper reads.
+    //
+    // Paged, because `listByPrefix` returns at most 100 rows per call and these
+    // keys sort as strings: `:v10:` comes before `:v9:`, so the first page is
+    // not the highest versions and a truncated read would hand back a number
+    // already in use. The loop runs once for any realistic client.
+    const indexPrefix = `${prefix}:client:${clientId}:`;
+    let highest = 0;
+    let startAfter: string | undefined;
+    while (true) {
+      const batch = await kv.listByPrefix(indexPrefix, { limit: 200, startAfter });
+      for (const row of batch) {
+        const matched = /:v(\d+)(?::|$)/.exec(row.key);
+        const found = matched ? Number(matched[1]) : NaN;
+        if (Number.isFinite(found) && found > highest) highest = found;
+      }
+      if (batch.length < 200) break;
+      startAfter = batch[batch.length - 1]?.key;
+      if (!startAfter) break;
+    }
+    return highest + 1;
   }
 
   /**
@@ -269,7 +302,15 @@ export class AdviceEngineService {
 
     const prefix = this.getFNAPrefix(type);
     await kv.set(`${prefix}:${fnaId}`, fna);
-    await kv.set(`${prefix}:client:${data.clientId}:v${version}`, fnaId);
+    // `:${fnaId}` closes a silent orphaning. This row is the client -> fnaId
+    // index that `getClientFNAs` prefix-scans, and its key used to end at
+    // `v${version}`. Two creates settling on the same version made the second
+    // upsert over the first index row: the earlier FNA survived at
+    // `${prefix}:${fnaId}` but became unreachable for that client — invisible
+    // in the UI, still held under FAIS retention. The reader scans the prefix
+    // and consumes VALUES, so the extra key segment is backward compatible
+    // with index rows already stored under the old shape.
+    await kv.set(`${prefix}:client:${data.clientId}:v${version}:${fnaId}`, fnaId);
 
     log.success('FNA created', { type, fnaId, version });
 

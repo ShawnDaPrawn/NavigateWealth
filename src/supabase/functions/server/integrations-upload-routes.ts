@@ -235,7 +235,11 @@ app.post('/upload', requireAdmin, async (c) => {
         publishedRows: finalRun.summary.publishedRows,
       };
 
-      const historyKey = `history:${providerId}:${categoryId}:${Date.now()}`;
+      // `historyEntry.id` is in the key because `Date.now()` is only
+      // millisecond-resolution and `kv.set` upserts. The reader below
+      // prefix-scans `history:{providerId}:{categoryId}` and sorts by
+      // `uploadedAt`, not by the key, so this is backward compatible.
+      const historyKey = `history:${providerId}:${categoryId}:${Date.now()}:${historyEntry.id}`;
       await kv.set(historyKey, historyEntry);
 
       return c.json({

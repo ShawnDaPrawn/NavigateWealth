@@ -11,6 +11,7 @@ import { assertClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { SaveInvestmentSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { versionSuffix } from './fna-versioning.ts';
 import {
   getNextVersionNumber,
   autoPopulateFromProfile,
@@ -92,7 +93,13 @@ investmentInaRoutes.post('/client/:clientId/save', async (c) => {
     const { inputs, results, status } = validationResult.data;
 
     const version = await getNextVersionNumber(clientId);
-    const sessionId = `${clientId}-v${version}`;
+    // `-${versionSuffix()}` is what makes this id unique. `v${version}` comes
+    // from a read-then-write, so two saves whose reads overlap agree on it and
+    // the second upserts over the first. Readers are unaffected: the whole id
+    // goes into the key verbatim and `sessionId.split('-v')[0]` still yields
+    // the client id, so the by-id lookup and the delete keep working — for ids
+    // already stored under the old two-part shape as well.
+    const sessionId = `${clientId}-v${version}-${versionSuffix()}`;
 
     const session = {
       id: sessionId,

@@ -12,6 +12,7 @@ import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { assertClientAccess, assertRecordClientAccess } from './client-access.ts';
 import { CreateSessionSchema, UpdateInputsSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { nextVersion } from './fna-versioning.ts';
 
 const retirementFnaRoutes = new Hono();
 const log = createModuleLogger('retirement-fna-routes');
@@ -45,7 +46,12 @@ function generateFnaId(): string {
  */
 async function getNextVersionNumber(clientId: string): Promise<number> {
   const fnas = await kv.getByPrefix(`retirement_fna:${clientId}:`);
-  return (fnas?.length || 0) + 1;
+  // Highest stored version, not how many are stored. The id here is a uuid, so
+  // unlike the FNA families this number never reached a KV key and no record was
+  // ever at risk — but a count still regresses after a delete, which produced
+  // two sessions both labelled the same version. Cheap to make monotonic, and it
+  // lets the ratchet require that no version anywhere is derived from a count.
+  return nextVersion(fnas);
 }
 
 /**

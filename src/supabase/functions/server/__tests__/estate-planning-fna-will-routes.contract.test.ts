@@ -168,7 +168,12 @@ function seedWill(
     id: willId,
     clientId,
     type,
-    version: 1,
+    // Read off the id rather than pinned to 1. The fixture used to stamp
+    // `version: 1` on a will whose id said `-v2`, and the old count-derived
+    // numbering answered correctly anyway because it never looked at the
+    // field. Once the version comes from the highest one stored, a fixture
+    // that contradicts itself is a fixture that tests the wrong thing.
+    version: Number(/-v(\d+)/.exec(willId)?.[1] ?? 1),
     status: 'draft',
     createdAt: '2026-01-01T00:00:00.000Z',
     ...extra,
@@ -356,7 +361,9 @@ describe('create', () => {
     });
     expect(res.status).toBe(200);
     const { data } = await res.json();
-    expect(data.id).toBe(`${CLIENT_A}-last_will-v1`);
+    // Shape, not an exact string: the id carries a random suffix so two drafts
+    // that settle on the same version cannot overwrite each other.
+    expect(data.id).toMatch(new RegExp(`^${CLIENT_A}-last_will-v1-[0-9a-f]{8}$`));
     expect(data.version).toBe(1);
     expect(data.status).toBe('draft');
     expect(data.clientName).toBe('A');

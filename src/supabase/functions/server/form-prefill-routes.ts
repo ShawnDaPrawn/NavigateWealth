@@ -101,8 +101,17 @@ routes.post('/apply-audit', async (c) => {
 
     await assertPrefillClientAccess(user, clientId);
 
-    const auditKey = `form_prefill_audit:${clientId}:${Date.now()}`;
+    // The audit id is part of the key because `Date.now()` is only
+    // millisecond-resolution and `kv.set` upserts: two prefills applied in the
+    // same millisecond used to collide and one audit row silently replaced the
+    // other. The reader (`GET /audit/:clientId`) prefix-scans and sorts by the
+    // record's own `timestamp`, never by the key, so the extra segment is
+    // backward compatible with rows already stored under the old two-segment
+    // shape.
+    const auditId = crypto.randomUUID();
+    const auditKey = `form_prefill_audit:${clientId}:${Date.now()}:${auditId}`;
     await kv.set(auditKey, {
+      id: auditId,
       clientId,
       formId,
       appliedFields: appliedFields ?? [],

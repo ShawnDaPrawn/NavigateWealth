@@ -5,6 +5,7 @@ import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { assertClientAccess } from './client-access.ts';
 import { SaveSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { nextVersion, versionSuffix } from './fna-versioning.ts';
 
 const app = new Hono();
 const log = createModuleLogger('estate-planning-fna-session-routes');
@@ -216,9 +217,16 @@ app.post('/save', async (c) => {
     await assertClientAccess(authUser, clientId, 'estate-planning-fna:save');
 
     const sessions = await kv.getByPrefix(`estate-planning-fna:client:${clientId}:`);
-    const version = (sessions?.length || 0) + 1;
+    // Highest stored version, not how many are stored — see fna-versioning.ts.
+    const version = nextVersion(sessions);
 
-    const sessionId = `${clientId}-v${version}`;
+    // `-${versionSuffix()}` is what makes this id unique. `v${version}` comes
+    // from a read-then-write, so two saves whose reads overlap agree on it and
+    // the second upserts over the first. Readers are unaffected: the whole id
+    // goes into the key verbatim and `sessionId.split('-v')[0]` still yields
+    // the client id, so the by-id lookup and the delete keep working — for ids
+    // already stored under the old two-part shape as well.
+    const sessionId = `${clientId}-v${version}-${versionSuffix()}`;
     const timestamp = new Date().toISOString();
 
     const session = {

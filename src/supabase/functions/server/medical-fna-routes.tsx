@@ -33,13 +33,30 @@ interface MedicalFNAInputs {
 }
 
 /**
- * Get next Medical FNA version number for a client
+ * Get next Medical FNA version number for a client.
+ *
+ * Taken from the highest version already stored, NOT from how many are stored.
+ * A count only counts what is still there, so after `DELETE /delete/:fnaId`
+ * removed an earlier FNA the count handed back a version number that was
+ * already in use — and because the version goes into the key and `kv.set`
+ * upserts, the next create silently replaced a surviving record. Three
+ * creates, one delete of the middle one, one more create, and the client's
+ * most recent medical FNA was gone with nothing reporting a failure.
+ *
+ * `max + 1` cannot regress. It is still not unique under a true race — two
+ * creates in flight both read the same maximum — which is why the id carries a
+ * random suffix as well: the version stays the human-facing label, and
+ * uniqueness is carried by a segment that does not depend on reading first.
  */
 async function getNextVersionNumber(clientId: string): Promise<number> {
   // Check for both legacy (colon) and new (underscore) formats
   const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];
   const newFnas = (await kv.getByPrefix(`medical-fna:client_${clientId}_`)) || [];
-  return legacyFnas.length + newFnas.length + 1;
+  const versions = [...legacyFnas, ...newFnas].map((fna) =>
+    Number((fna as { version?: unknown })?.version ?? 0),
+  );
+  const highest = versions.reduce((max, v) => (Number.isFinite(v) && v > max ? v : max), 0);
+  return highest + 1;
 }
 
 /**
@@ -315,8 +332,16 @@ medicalFnaRoutes.post('/create', async (c) => {
     // Get next version
     const version = await getNextVersionNumber(clientId);
 
-    // Create FNA session with URL-safe ID format (underscore instead of colon)
-    const fnaId = `client_${clientId}_v${version}`;
+    // Create FNA session with URL-safe ID format (underscore instead of colon).
+    //
+    // The trailing random segment is what makes the id unique. `v${version}`
+    // alone is derived from a read-then-write, so two creates in flight agree
+    // on it and the second upserts over the first. Readers address this record
+    // by its whole id (`GET /:fnaId` looks up `medical-fna:${fnaId}` verbatim)
+    // and every listing is a prefix scan of `medical-fna:client_${clientId}_`,
+    // so the extra segment is invisible to both and backward compatible with
+    // ids already stored under the old shape.
+    const fnaId = `client_${clientId}_v${version}_${crypto.randomUUID().slice(0, 8)}`;
     const fna = {
       id: fnaId,
       clientId,

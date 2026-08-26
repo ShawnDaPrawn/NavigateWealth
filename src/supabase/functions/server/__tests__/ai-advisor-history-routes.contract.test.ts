@@ -147,6 +147,72 @@ describe('POST /chat', () => {
     ]);
   });
 
+  it('orders the client message before the reply in KEY order, not just write order', async () => {
+    // Regression, caught by Codex on #245. Both rows share one `exchangeAt`
+    // and both `toISOString()` calls run back-to-back after the AI call
+    // returns, so the two stored `timestamp` values usually land in the same
+    // millisecond. `migrateLegacyAdvisorHistory` sorts by that timestamp with
+    // a stable sort over key-ascending input, so on a tie the transcript order
+    // IS the key order. When the keys differed only by a random uuid that made
+    // it a coin flip whether the migrated history showed the assistant
+    // answering a question the client had not asked yet.
+    //
+    // The ordinal segment between the timestamp and the uuid is what fixes it,
+    // so assert on the segment itself rather than on one lucky sort.
+    const ordinalOf = (key: string) => key.split(':')[4];
+
+    await call('/chat', {
+      method: 'POST',
+      auth: asUser(CLIENT, 'client'),
+      body: JSON.stringify({ message: 'first question' }),
+    });
+
+    const [userRow, assistantRow] = inserts;
+    expect((userRow.row.value as { role: string }).role).toBe('user');
+    expect((assistantRow.row.value as { role: string }).role).toBe('assistant');
+    expect(ordinalOf(String(userRow.row.key))).toBe('0');
+    expect(ordinalOf(String(assistantRow.row.key))).toBe('1');
+
+    // And the behavioural consequence, over enough exchanges that a coin flip
+    // could not survive: sorting every stored key ascending reproduces the
+    // whole conversation in the order it happened.
+    //
+    // The clock is driven forward between turns because that is what a real
+    // conversation does — each exchange waits on an OpenAI round trip, so two
+    // exchanges cannot share a millisecond. Left on the mocked clock all six
+    // turns share one `exchangeAt`, the ordinal then groups all six questions
+    // ahead of all six answers, and the test would be asserting against a
+    // scenario the product cannot produce. What the ordinal is responsible for
+    // is the order WITHIN an exchange; across exchanges the timestamp does it.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      let clock = Date.parse('2026-03-01T09:00:00.000Z');
+      for (const message of ['second', 'third', 'fourth', 'fifth', 'sixth']) {
+        clock += 4_000;
+        vi.setSystemTime(clock);
+        await call('/chat', {
+          method: 'POST',
+          auth: asUser(CLIENT, 'client'),
+          body: JSON.stringify({ message }),
+        });
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+
+    // Drop the first exchange: it ran on the real clock, whose epoch is far
+    // ahead of the fixed one above, so it does not sort alongside the rest.
+    const rolesInKeyOrder = inserts
+      .slice(2)
+      .sort((a, b) => String(a.row.key).localeCompare(String(b.row.key)))
+      .map((i) => (i.row.value as { role: string }).role);
+
+    expect(rolesInKeyOrder).toHaveLength(10);
+    for (let i = 0; i < rolesInKeyOrder.length; i += 2) {
+      expect(rolesInKeyOrder.slice(i, i + 2)).toEqual(['user', 'assistant']);
+    }
+  });
+
   it('builds the system prompt from the stored base plus the runtime context', async () => {
     await call('/chat', {
       method: 'POST',

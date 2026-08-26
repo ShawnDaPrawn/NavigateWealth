@@ -103,6 +103,22 @@ When a change is ready to ship, do **all** of the following **in the same turn**
      Read the result by line, not by file: an unchanged error moves line number
      when you add an import above it, and will otherwise look new.
 
+     A faster first pass, when the change is small, is to group by error CODE.
+     The local-only noise is entirely `TS7006`, so anything else is yours; a
+     clean run reads `34 TS7006` and nothing else.
+
+     ```bash
+     ./deno check --config src/supabase/functions/server/deno.json \
+       src/supabase/functions/server/index.tsx 2>&1 |
+       grep -oE 'TS[0-9]+' | sort | uniq -c
+     ```
+
+     This caught a real CI-failing `TS2559` on 2026-08-26 that every other local
+     gate passed. Worth knowing why they could not catch it:
+     `tsconfig.typecheck.json` EXCLUDES the edge-function tree, so
+     `npm run typecheck` returning 0 says nothing whatsoever about `server/`.
+     `deno check` is the only thing that type-checks that code.
+
 2. **Commit, push the branch, open/update the PR** (ready for review, not a
    draft).
 

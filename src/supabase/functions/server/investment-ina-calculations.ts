@@ -5,6 +5,7 @@
  */
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { nextVersion } from './fna-versioning.ts';
 
 const log = createModuleLogger('investment-ina-calculations');
 
@@ -97,7 +98,8 @@ export interface DiscretionaryInvestment {
 
 export async function getNextVersionNumber(clientId: string): Promise<number> {
   const inas = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
-  return (inas?.length || 0) + 1;
+  // Highest stored version, not how many are stored — see fna-versioning.ts.
+  return nextVersion(inas);
 }
 
 /**

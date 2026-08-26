@@ -234,11 +234,30 @@ export default defineConfig({
       // the will-chat tests found a colliding session id that silently destroyed
       // an interview transcript, and the same defect in tax-agent-service.
       // Measured 33.01 / 25.45 / 32.52 / 33.74 across 3,560 tests.
+      //
+      // Raised again 2026-08-26 (32.8 / 25.2 / 32.3 / 33.5) with the tasks and
+      // personnel-permissions suites: tasks-routes 21.3% -> 86.3%,
+      // client-management-personnel-routes 0% -> 46.0%, and because the two
+      // permission services run for real rather than being stubbed,
+      // personnel-permissions-service -> 77.5% and permission-audit-service
+      // -> 69.4% came with them. Writing them found three routes turning a
+      // malformed body into a 500, and an eighth timestamp-as-key collision —
+      // in the permission audit trail itself. Measured
+      // 33.96 / 26.11 / 33.35 / 34.70 across 3,653 tests.
+      //
+      // Raised again 2026-08-26 (33.7 / 25.9 / 33.1 / 34.5) with the
+      // count-derived version fix and its harness: one shared FNA/INA route
+      // harness, behavioural delete-then-create suites for medical, investment
+      // and estate, and a source ratchet. Measured
+      // 34.25 / 26.22 / 33.56 / 35.02 across 3,673 tests. The gain is modest
+      // for the size of the change because most of it is source fixes across
+      // ten modules rather than new test surface — floored anyway, because an
+      // unclaimed gain is one the next PR can give back.
       thresholds: {
-        statements: 32.8,
-        branches: 25.2,
-        functions: 32.3,
-        lines: 33.5,
+        statements: 34.0,
+        branches: 26.0,
+        functions: 33.3,
+        lines: 34.8,
       },
     },
   },

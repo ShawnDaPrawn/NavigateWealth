@@ -6,6 +6,7 @@ import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { FnaIntakeError } from './fna-intake-errors.ts';
 import { assertClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { nextVersion, versionSuffix } from './fna-versioning.ts';
 
 const app = new Hono();
 const log = createModuleLogger('estate-planning-fna-will-routes');
@@ -60,9 +61,19 @@ interface VersionedSession {
   [key: string]: unknown;
 }
 
+/**
+ * Split a will id back into the client and will type it was minted from.
+ *
+ * The trailing `(?:-[0-9a-f]{8})?` accepts the unique segment added by the
+ * version-collision fix while still resolving ids stored under the older
+ * `${clientId}-${type}-v${n}` shape. Every caller builds its KV key as
+ * `will:${clientId}:${type}:${willId}` from what this returns, so a caller can
+ * only ever reach the namespace it was just authorized for — a crafted id
+ * resolves to its own author, not to someone else's will.
+ */
 function parseWillId(willId: string): { clientId: string; type: string } {
-  const lastWillMatch = willId.match(/^(.+)-(last_will)-v\d+$/);
-  const livingWillMatch = willId.match(/^(.+)-(living_will)-v\d+$/);
+  const lastWillMatch = willId.match(/^(.+)-(last_will)-v\d+(?:-[0-9a-f]{8})?$/);
+  const livingWillMatch = willId.match(/^(.+)-(living_will)-v\d+(?:-[0-9a-f]{8})?$/);
   const match = lastWillMatch || livingWillMatch;
   if (!match) {
     // A malformed id is the caller's mistake, not the server's. Typed so
@@ -137,9 +148,17 @@ app.post('/wills/create', async (c) => {
     }
 
     const existingWills = await kv.getByPrefix(`will:${clientId}:${type}:`);
-    const version = (existingWills?.length || 0) + 1;
+    // Highest stored version, not how many are stored — see fna-versioning.ts.
+    // A will is the record where "the count dropped, so reuse that number"
+    // costs the most: deleting one draft used to let the next create silently
+    // replace a surviving one.
+    const version = nextVersion(existingWills);
 
-    const willId = `${clientId}-${type}-v${version}`;
+    // `-${versionSuffix()}` carries the uniqueness the version cannot: the
+    // version comes from a read-then-write, so two drafts created in the same
+    // window agree on it. `parseWillId` above accepts the segment, and every
+    // reader builds its key from the whole id, so nothing else changes.
+    const willId = `${clientId}-${type}-v${version}-${versionSuffix()}`;
     const timestamp = new Date().toISOString();
 
     const will = {
