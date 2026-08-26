@@ -207,11 +207,20 @@ export default defineConfig({
       // Writing them found the run-log key colliding on millisecond precision,
       // the same defect as the compliance audit log. Measured
       // 30.19 / 22.93 / 29.54 / 30.93 across 3,302 tests.
+      //
+      // Raised again 2026-08-26 (29.9 / 22.7 / 29.3 / 30.7) with the e-sign
+      // storage and template suites. esign-storage.ts 2.2% -> 88.2% (the object
+      // paths, upsert rules, MIME and size gating and filename sanitisation
+      // under the ECTA evidence chain, with a known-answer SHA-256 test rather
+      // than a self-consistent one); esign-template-service.ts 1.1% -> 43.3%
+      // (the version-bump rule, field by field, because an envelope records the
+      // template version it was raised under and a wrong bump strands it).
+      // Measured 30.90 / 23.48 / 30.29 / 31.63 across 3,388 tests.
       thresholds: {
-        statements: 29.9,
-        branches: 22.7,
-        functions: 29.3,
-        lines: 30.7,
+        statements: 30.7,
+        branches: 23.3,
+        functions: 30.0,
+        lines: 31.4,
       },
     },
   },

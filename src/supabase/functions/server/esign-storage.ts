@@ -199,13 +199,11 @@ export async function uploadSignedDocument(
     const supabase = getSupabase();
     const path = `${envelopeId}/signed_document.pdf`;
 
+    // Signed documents share the DOCUMENTS bucket with the originals, separated
+    // by a `completed/` prefix rather than a bucket of their own. The prefix
+    // follows the convention in esign-keys.
     const { error } = await supabase.storage
-      .from(BUCKETS.DOCUMENTS) // Storing in documents bucket, but maybe could be separate.
-      // Using BUCKETS.DOCUMENTS but path is different "completed/..."
-      // Wait, storage logic below uses BUCKETS.DOCUMENTS.
-      // Let's stick to the convention in esign-keys which suggested `completed/${id}/...`
-      // But the buckets definition only has DOCUMENTS, SIGNATURES, CERTIFICATES.
-      // I'll put it in DOCUMENTS bucket for now.
+      .from(BUCKETS.DOCUMENTS)
       .upload(`completed/${path}`, pdfBuffer, {
         contentType: 'application/pdf',
         upsert: true,
