@@ -105,7 +105,15 @@ export interface CustomReportConfig {
 // ---------------------------------------------------------------------------
 
 export interface KvReportTask {
-  due_date?: string;
+  /**
+   * `null` is a real stored value, not just an absent key: both copies of
+   * `normaliseTask` (tasks-routes.ts, tasks-digest-routes.ts) and
+   * `repositories/tasks-repository.ts` emit `due_date: null` for a task with
+   * no due date. Typing it `string | undefined` described a store that does
+   * not exist. Every read guards with `if (!t.due_date)` first, so both falsy
+   * forms behave identically.
+   */
+  due_date?: string | null;
   status?: string;
   [key: string]: unknown;
 }
