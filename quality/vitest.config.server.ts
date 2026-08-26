@@ -263,11 +263,20 @@ export default defineConfig({
       // that left the published pointer serving the withdrawn FNA, and two
       // version helpers reading a prefix that held no FNAs at all. Measured
       // 35.75 / 26.95 / 34.66 / 36.56 across 3,830 tests.
+      //
+      // Raised again 2026-08-26 (35.5 / 26.7 / 34.4 / 36.3) with the e-sign
+      // packet suite: esign-packet-service 0.6% -> 84.9%. It runs
+      // `esign-services` and `esign-template-service` for real rather than
+      // stubbing them — both are pure KV apart from a fire-and-forget Postgres
+      // mirror — because the thing under test is a handoff BETWEEN modules, and
+      // a suite that fakes `createEnvelope` would assert that a mock was called
+      // rather than that a packet run spawns a signable envelope. Measured
+      // 36.29 / 27.34 / 35.25 / 37.07 across 3,852 tests.
       thresholds: {
-        statements: 35.5,
-        branches: 26.7,
-        functions: 34.4,
-        lines: 36.3,
+        statements: 36.1,
+        branches: 27.1,
+        functions: 35.0,
+        lines: 36.9,
       },
     },
   },
