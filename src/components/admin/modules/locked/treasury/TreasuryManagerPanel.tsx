@@ -108,17 +108,36 @@ export function TreasuryManagerPanel() {
             {balanceQuery.isLoading ? (
               <Skeleton className="h-9 w-40" />
             ) : balanceQuery.data ? (
-              <>
-                <p className="text-3xl font-semibold">
-                  {formatMinor(balanceQuery.data.cash, currency)}
-                </p>
-                <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span>Pending in: {formatMinor(balanceQuery.data.inboundPending, currency)}</span>
-                  <span>
-                    Pending out: {formatMinor(balanceQuery.data.outboundPending, currency)}
-                  </span>
-                </div>
-              </>
+              (() => {
+                const rows =
+                  balanceQuery.data.perCurrency && balanceQuery.data.perCurrency.length
+                    ? balanceQuery.data.perCurrency
+                    : [
+                        {
+                          currency: balanceQuery.data.currency ?? currency,
+                          cash: balanceQuery.data.cash,
+                          inboundPending: balanceQuery.data.inboundPending,
+                          outboundPending: balanceQuery.data.outboundPending,
+                        },
+                      ];
+                return (
+                  <>
+                    <p className="text-3xl font-semibold">
+                      {rows.map((r) => formatMinor(r.cash, r.currency)).join(' · ')}
+                    </p>
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span>
+                        Pending in:{' '}
+                        {rows.map((r) => formatMinor(r.inboundPending, r.currency)).join(' · ')}
+                      </span>
+                      <span>
+                        Pending out:{' '}
+                        {rows.map((r) => formatMinor(r.outboundPending, r.currency)).join(' · ')}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()
             ) : (
               <p className="text-sm text-muted-foreground">Unavailable.</p>
             )}
@@ -256,6 +275,17 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** A UK sort code or SEPA BIC must not be labelled "Routing number". */
+const ROUTING_LABEL: Record<string, string> = {
+  us_bank_account: 'Routing number',
+  gb_bank_account: 'Sort code',
+  sepa_bank_account: 'BIC / SWIFT',
+};
+
+const ACCOUNT_LABEL: Record<string, string> = {
+  sepa_bank_account: 'IBAN',
+};
+
 function BankDetailsCard({
   isLoading,
   account,
@@ -280,32 +310,47 @@ function BankDetailsCard({
             No bank details available for this financial account yet.
           </p>
         ) : (
-          account.bankDetails.map((bank, idx) => (
-            <div key={`${bank.type}-${idx}`} className="space-y-2">
-              {idx > 0 ? <Separator /> : null}
-              {account.accountHolderName ? (
-                <CopyableField label="Account holder" value={account.accountHolderName} />
-              ) : null}
-              {bank.bankName ? <CopyableField label="Bank" value={bank.bankName} /> : null}
-              {bank.routingNumber ? (
-                <CopyableField label="Routing number" value={bank.routingNumber} />
-              ) : null}
-              {bank.accountNumber ? (
-                <CopyableField label="Account number" value={bank.accountNumber} />
-              ) : bank.accountNumberLast4 ? (
-                <CopyableField label="Account number" value={`•••• ${bank.accountNumberLast4}`} />
-              ) : null}
-              {bank.supportedNetworks.length ? (
-                <div className="flex items-center gap-2 flex-wrap pt-1">
-                  {bank.supportedNetworks.map((n) => (
-                    <Badge key={n} variant="outline" className="capitalize">
-                      {n.replace(/_/g, ' ')}
+          account.bankDetails.map((bank, idx) => {
+            const holder = bank.accountHolderName ?? account.accountHolderName;
+            const routingLabel = ROUTING_LABEL[bank.type] ?? 'Routing number';
+            const accountLabel = ACCOUNT_LABEL[bank.type] ?? 'Account number';
+            return (
+              <div key={`${bank.type}-${idx}`} className="space-y-2">
+                {idx > 0 ? <Separator /> : null}
+                {bank.currency ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="uppercase">
+                      {bank.currency}
                     </Badge>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ))
+                    {bank.status ? (
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {bank.status}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+                {holder ? <CopyableField label="Account holder" value={holder} /> : null}
+                {bank.bankName ? <CopyableField label="Bank" value={bank.bankName} /> : null}
+                {bank.routingNumber ? (
+                  <CopyableField label={routingLabel} value={bank.routingNumber} />
+                ) : null}
+                {bank.accountNumber ? (
+                  <CopyableField label={accountLabel} value={bank.accountNumber} />
+                ) : bank.accountNumberLast4 ? (
+                  <CopyableField label={accountLabel} value={`•••• ${bank.accountNumberLast4}`} />
+                ) : null}
+                {bank.supportedNetworks.length ? (
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    {bank.supportedNetworks.map((n) => (
+                      <Badge key={n} variant="outline" className="capitalize">
+                        {n.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
         )}
       </CardContent>
     </Card>
