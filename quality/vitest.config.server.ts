@@ -162,11 +162,18 @@ export default defineConfig({
       // 0.4% -> 92.5% by letting pdf-lib build the actual certificate, and
       // contact-pdf-generator went 0% -> 98.7% because it has no dependency but
       // the logger. Measured 25.92 / 18.51 / 24.81 / 26.64 across 2,895 tests.
+      //
+      // Raised again 2026-08-26 (25.8 / 18.4 / 24.7 / 26.5) with the
+      // requests-service suite — the self-healing workflow layer behind
+      // compliance requests, where the zod schema deliberately repairs instead
+      // of rejecting, so the tests pin what the healing silently rewrites.
+      // Writing it found the audit log overwriting itself. Measured
+      // 26.37 / 18.87 / 25.44 / 27.10 across 2,976 tests.
       thresholds: {
-        statements: 25.8,
-        branches: 18.4,
-        functions: 24.7,
-        lines: 26.5,
+        statements: 26.3,
+        branches: 18.8,
+        functions: 25.3,
+        lines: 27.0,
       },
     },
   },
