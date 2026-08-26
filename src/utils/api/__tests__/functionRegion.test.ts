@@ -101,9 +101,21 @@ describe('region resolution', () => {
     warn.mockRestore();
   });
 
-  it('treats an empty or whitespace value as unset rather than as "no region"', () => {
-    expect(resolveFunctionRegion('')).toBe(DEFAULT_FUNCTION_REGION);
-    expect(resolveFunctionRegion('   ')).toBe(DEFAULT_FUNCTION_REGION);
+  it('treats an explicitly emptied value as "do not pin", not as unset', () => {
+    // The documented outage procedure. An operator who clears the field must
+    // get nearest-caller routing back rather than staying pinned to a region
+    // that is down. An earlier draft returned the default here, which made the
+    // escape hatch this module documents a no-op — found in review on #240.
+    expect(resolveFunctionRegion('')).toBeNull();
+    expect(resolveFunctionRegion('   ')).toBeNull();
+  });
+
+  it('distinguishes an absent variable from an emptied one', () => {
+    // Vite reads an unset VITE_* as undefined and a blank one as ''. Collapsing
+    // the two is what caused the bug above, so the distinction is asserted
+    // rather than left to the reader.
+    expect(resolveFunctionRegion(undefined)).toBe(DEFAULT_FUNCTION_REGION);
+    expect(resolveFunctionRegion('')).toBeNull();
   });
 
   it.each(['auto', 'AUTO', 'Auto', ' auto '])('treats %j as "do not pin"', (value) => {

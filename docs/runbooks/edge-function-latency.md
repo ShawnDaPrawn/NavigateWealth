@@ -77,6 +77,16 @@ a region via the `x-region` header, requests will NOT be automatically
 re-routed to another region."_ Pinning buys latency and gives up automatic
 failover. During a regional outage the pin has to be changed or removed.
 
+**How to drop the pin during an outage.** Set `VITE_NW_FUNCTION_REGION` to
+`auto`, or clear it to an empty value, in Vercel and redeploy the SPA. Either
+stops the header being sent and returns to nearest-caller routing.
+
+**Deleting the variable is not the off switch.** An absent variable means "not
+configured", which pins to the default — that is what makes the feature work on
+a fresh deploy with no configuration. Clear it, do not remove it. An earlier
+draft treated empty and absent alike, which made this whole procedure a no-op;
+caught in review on #240.
+
 ### 2. The app's own floor — about 1,000 ms, and geography does not explain it
 
 Even co-located with the database, `/publications/articles` has a p50 of

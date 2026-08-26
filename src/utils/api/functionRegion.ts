@@ -40,8 +40,10 @@
  * is read from an environment variable rather than hard-coded: during a
  * regional outage it can be repointed, or the pin dropped entirely, by
  * changing `VITE_NW_FUNCTION_REGION` and redeploying the SPA — no code change,
- * no review cycle. Set it to `auto` (or empty) to stop sending the header and
- * fall back to Supabase's nearest-caller routing.
+ * no review cycle. Set it to `auto`, or clear it to an empty value, to stop
+ * sending the header and fall back to Supabase's nearest-caller routing.
+ * Removing the variable entirely is NOT the off switch — an absent variable
+ * means "not configured", which pins to the default.
  *
  * ── Why this is an interceptor and not a header spread at each call site ──
  *
@@ -117,8 +119,28 @@ export const DEFAULT_FUNCTION_REGION = 'us-east-1';
  * value. Pure and exported so it can be tested without reloading the module.
  */
 export function resolveFunctionRegion(configured: string | undefined | null): string | null {
-  const value = (configured ?? '').trim();
-  if (value === '') return DEFAULT_FUNCTION_REGION;
+  // NOT CONFIGURED vs EXPLICITLY EMPTY are different answers, and Vite lets us
+  // tell them apart: an unset `VITE_*` reads as `undefined`, one set to a blank
+  // value reads as `''`.
+  //
+  //   undefined / null  →  not configured  →  pin to the default
+  //   '' or whitespace  →  deliberately cleared  →  do not pin
+  //
+  // The first is required or the feature would not work on a fresh deploy with
+  // no configuration. The second is the documented outage procedure: an
+  // operator who clears the field must get nearest-caller routing back, not
+  // stay pinned to a region that is down. An earlier draft returned the
+  // default for both, so the escape hatch this file documents did not work —
+  // caught in review on #240.
+  //
+  // The residual risk is someone adding the variable and leaving it blank by
+  // accident, silently losing the pin. That costs latency and shows up in the
+  // logs; the opposite mistake costs availability during an incident. This
+  // fails in the cheaper direction on purpose.
+  if (configured === undefined || configured === null) return DEFAULT_FUNCTION_REGION;
+
+  const value = configured.trim();
+  if (value === '') return null;
   if (value.toLowerCase() === 'auto') return null;
   if (!SUPPORTED_FUNCTION_REGIONS.includes(value)) {
     // Fall back rather than throw: a bad environment variable must not brick
@@ -127,7 +149,8 @@ export function resolveFunctionRegion(configured: string | undefined | null): st
     console.warn(
       `[functionRegion] VITE_NW_FUNCTION_REGION="${value}" is not a region Supabase ` +
         `accepts in x-region. Falling back to ${DEFAULT_FUNCTION_REGION}. ` +
-        `Supported: ${SUPPORTED_FUNCTION_REGIONS.join(', ')}, or "auto" to disable pinning.`,
+        `Supported: ${SUPPORTED_FUNCTION_REGIONS.join(', ')}, or "auto" (or an ` +
+        `empty value) to disable pinning.`,
     );
     return DEFAULT_FUNCTION_REGION;
   }
