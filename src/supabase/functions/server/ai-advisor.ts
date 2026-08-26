@@ -34,6 +34,17 @@ import {
 const app = new Hono();
 const log = createModuleLogger('ai-advisor');
 
+/**
+ * Ordinals that fix the order of the two rows written for one legacy chat
+ * exchange. They sit in the key between the exchange timestamp and the uuid, so
+ * ascending key order — which is what `listAllKvRowsByPrefix` returns and what
+ * the stable timestamp sort in `migrateLegacyAdvisorHistory` therefore falls
+ * back to on a tie — always puts the client's message before the reply.
+ *
+ * Single digits on purpose: the segment is compared as a string.
+ */
+const TURN = { user: '0', assistant: '1' } as const;
+
 async function requireAuth(c: Context, next: Next) {
   try {
     const authHeader = c.req.header('Authorization');
@@ -454,15 +465,28 @@ app.post('/chat', requireAuth, async (c) => {
     // Call AI
     const reply = await callOpenAI([{ role: 'user', content: message }], systemPrompt);
 
-    // Save history. Both keys carry a uuid because `Date.now()` alone is
-    // millisecond-resolution: the reply used to be keyed `Date.now() + 1`
-    // purely to push it past the message, which left it able to collide with
-    // the NEXT turn's message key. Readers sort by the record's own
-    // `timestamp` field (migrateLegacyAdvisorHistory) or do not order at all
-    // (deleteLegacyAdvisorHistory), so the extra segment is backward
+    // Save history. Two segments after the timestamp, and both are load-bearing:
+    //
+    //   :${TURN.user|assistant}:  an ordinal fixing the order WITHIN one
+    //     exchange. The reply used to be keyed `Date.now() + 1` purely to push
+    //     it past the message; that made the order deterministic but left the
+    //     reply able to collide with the NEXT turn's message key. Both
+    //     `toISOString()` calls below run back-to-back after the AI call
+    //     returns, so they land in the same millisecond most of the time, and
+    //     `migrateLegacyAdvisorHistory` sorts by that timestamp with a stable
+    //     sort over key-ascending input. Without the ordinal the tie resolves
+    //     on the random uuid and a migrated transcript can show the assistant
+    //     answering before the client asked.
+    //
+    //   :${crypto.randomUUID()}:  uniqueness. `Date.now()` is only
+    //     millisecond-resolution and this table upserts on key.
+    //
+    // Readers sort by the record's own `timestamp` field
+    // (migrateLegacyAdvisorHistory) or do not order at all
+    // (deleteLegacyAdvisorHistory), so both extra segments are backward
     // compatible with rows already stored under the old shape.
     const exchangeAt = Date.now();
-    const conversationKey = `ai_advisor:${user.id}:chat:${exchangeAt}:${crypto.randomUUID()}`;
+    const conversationKey = `ai_advisor:${user.id}:chat:${exchangeAt}:${TURN.user}:${crypto.randomUUID()}`;
     await getSupabase()
       .from('kv_store_91ed8379')
       .insert({
@@ -475,7 +499,7 @@ app.post('/chat', requireAuth, async (c) => {
       });
 
     // Save reply
-    const replyKey = `ai_advisor:${user.id}:chat:${exchangeAt}:${crypto.randomUUID()}`;
+    const replyKey = `ai_advisor:${user.id}:chat:${exchangeAt}:${TURN.assistant}:${crypto.randomUUID()}`;
     await getSupabase()
       .from('kv_store_91ed8379')
       .insert({
