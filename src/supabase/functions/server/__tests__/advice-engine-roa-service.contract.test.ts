@@ -35,7 +35,11 @@ vi.mock('../stderr-logger.ts', async () =>
 );
 
 /** The blob boundary. `blobs` is the stand-in bucket, so the tests can see what survives. */
-const storage = vi.hoisted(() => ({ blobs: new Map<string, Uint8Array>() }));
+const storage = vi.hoisted(() => ({
+  blobs: new Map<string, Uint8Array>(),
+  removed: [] as string[],
+  removeFails: false,
+}));
 vi.mock('../advice-engine-roa-storage.ts', async () => {
   const real = await vi.importActual<typeof import('../advice-engine-roa-storage.ts')>(
     '../advice-engine-roa-storage.ts',
@@ -51,6 +55,11 @@ vi.mock('../advice-engine-roa-storage.ts', async () => {
       const found = storage.blobs.get(objectPath);
       if (!found) throw new Error(`no blob at ${objectPath}`);
       return found;
+    }),
+    deleteRoABlobs: vi.fn(async (objectPaths: readonly string[]) => {
+      if (storage.removeFails) throw new Error('bucket unavailable');
+      storage.removed.push(...objectPaths);
+      objectPaths.forEach((p) => storage.blobs.delete(p));
     }),
   };
 });
@@ -92,6 +101,8 @@ const draftRow = (id: string) => kvStore.get(DRAFT_KEY(id)) as Record<string, ne
 beforeEach(() => {
   kvStore.clear();
   storage.blobs.clear();
+  storage.removed.length = 0;
+  storage.removeFails = false;
 });
 
 // ============================================================================
@@ -434,35 +445,115 @@ describe('deleteDraft', () => {
     expect(draftRow(draft.id)).toBeTruthy();
   });
 
-  it('LEAVES the evidence blob in storage — deletion does not delete', async () => {
-    // Asserted as the defect it is.
-    //
-    // `deleteDraft` collects `ev.storagePath` into `keysToDelete` and passes
-    // the lot to `kv.mdel`. But `storagePath` addresses a Supabase Storage
-    // object, not a KV row — so that call deletes a KV key nothing ever wrote,
-    // and the blob is untouched. `advice-engine-roa-storage.ts` has no
-    // delete/remove export at all, and nothing anywhere in the RoA surface
-    // removes a blob.
-    //
-    // The code READS as though it cleans storage up, which is why it survived.
-    // Consequence: evidence a client uploaded to support advice, and the
-    // generated RoA documents, stay in the bucket after the draft is deleted —
-    // a deletion that does not delete, which is a POPIA problem before it is a
-    // storage-cost one.
+  /**
+   * A realistic evidence fixture. Production stores TWO different paths under
+   * confusingly similar names, and a test that conflates them proves nothing:
+   *
+   *   storagePath      `roa:evidence:{id}` — the KV key
+   *   blobStoragePath  the Supabase Storage object path, held on the KV RECORD
+   *                    (not on the item embedded in the draft)
+   */
+  const seedEvidence = (draftId: string, evidenceId: string, blobPath: string) => {
+    const kvKey = `roa:evidence:${evidenceId}`;
+    storage.blobs.set(blobPath, new Uint8Array([7, 7, 7]));
+    kvStore.set(kvKey, {
+      id: evidenceId,
+      draftId,
+      storagePath: kvKey,
+      blobStoragePath: blobPath,
+    });
+    return { kvKey, blobPath };
+  };
+
+  it('removes the evidence blob from storage, not just the KV row', async () => {
     seedClient();
     const draft = await service.saveDraft({ clientId: CLIENT }, ADVISER);
-
-    const blobPath = `roa/${CLIENT}/${draft.id}/evidence/ev-1.pdf`;
-    storage.blobs.set(blobPath, new Uint8Array([7, 7, 7]));
+    const { kvKey, blobPath } = seedEvidence(
+      draft.id,
+      'ev-1',
+      `roa/${CLIENT}/${draft.id}/evidence/ev-1.pdf`,
+    );
     kvStore.set(DRAFT_KEY(draft.id), {
       ...draft,
-      moduleEvidence: { risk: { 'ev-1': { id: 'ev-1', storagePath: blobPath } } },
+      moduleEvidence: { risk: { 'ev-1': { id: 'ev-1', storagePath: kvKey } } },
     });
 
     await service.deleteDraft(draft.id, ADVISER);
 
     expect(draftRow(draft.id)).toBeUndefined();
-    // The draft is gone; the client's document is not.
+    expect(kvStore.has(kvKey)).toBe(false);
+    expect(storage.blobs.has(blobPath)).toBe(false);
+    expect(storage.removed).toContain(blobPath);
+  });
+
+  it('removes generated RoA documents from storage too', async () => {
+    seedClient();
+    const draft = await service.saveDraft({ clientId: CLIENT }, ADVISER);
+    const blobPath = `roa/${CLIENT}/${draft.id}/generated/doc-1.pdf`;
+    storage.blobs.set(blobPath, new Uint8Array([9, 9, 9]));
+    kvStore.set('roa:generated:doc-1', {
+      id: 'doc-1',
+      draftId: draft.id,
+      blobStoragePath: blobPath,
+    });
+    kvStore.set(DRAFT_KEY(draft.id), {
+      ...draft,
+      generatedDocuments: [{ id: 'doc-1' }],
+    });
+
+    await service.deleteDraft(draft.id, ADVISER);
+
+    expect(storage.blobs.has(blobPath)).toBe(false);
+    expect(kvStore.has('roa:generated:doc-1')).toBe(false);
+  });
+
+  it('removes every blob in one call rather than one call per object', async () => {
+    seedClient();
+    const draft = await service.saveDraft({ clientId: CLIENT }, ADVISER);
+    const a = seedEvidence(draft.id, 'ev-a', `roa/${CLIENT}/${draft.id}/evidence/a.pdf`);
+    const b = seedEvidence(draft.id, 'ev-b', `roa/${CLIENT}/${draft.id}/evidence/b.pdf`);
+    kvStore.set(DRAFT_KEY(draft.id), {
+      ...draft,
+      moduleEvidence: {
+        risk: { 'ev-a': { id: 'ev-a', storagePath: a.kvKey } },
+        estate: { 'ev-b': { id: 'ev-b', storagePath: b.kvKey } },
+      },
+    });
+
+    await service.deleteDraft(draft.id, ADVISER);
+
+    expect(storage.removed.sort()).toEqual([a.blobPath, b.blobPath].sort());
+    expect(storage.blobs.size).toBe(0);
+  });
+
+  it('still deletes the draft when the bucket is unavailable', async () => {
+    // A bucket outage must not leave a draft that refuses to delete. The KV
+    // delete is what the caller asked for and what the UI reflects; the orphaned
+    // object is logged with its path so it can be swept later.
+    seedClient();
+    const draft = await service.saveDraft({ clientId: CLIENT }, ADVISER);
+    const { kvKey, blobPath } = seedEvidence(
+      draft.id,
+      'ev-1',
+      `roa/${CLIENT}/${draft.id}/evidence/ev-1.pdf`,
+    );
+    kvStore.set(DRAFT_KEY(draft.id), {
+      ...draft,
+      moduleEvidence: { risk: { 'ev-1': { id: 'ev-1', storagePath: kvKey } } },
+    });
+    storage.removeFails = true;
+
+    await service.deleteDraft(draft.id, ADVISER);
+
+    expect(draftRow(draft.id)).toBeUndefined();
+    expect(kvStore.has(kvKey)).toBe(false);
     expect(storage.blobs.has(blobPath)).toBe(true);
+  });
+
+  it('does not call storage at all for a draft with no blobs', async () => {
+    seedClient();
+    const draft = await service.saveDraft({ clientId: CLIENT }, ADVISER);
+    await service.deleteDraft(draft.id, ADVISER);
+    expect(storage.removed).toEqual([]);
   });
 });

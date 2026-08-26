@@ -11,6 +11,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { NotFoundError, ValidationError } from './error.middleware.ts';
 import type { RoAModuleContract } from './advice-engine-roa-contract-types.ts';
 import {
+  deleteRoABlobs,
   downloadRoABlob,
   roaEvidenceBlobPath,
   uploadRoABlob,
@@ -561,6 +562,44 @@ export class AdviceEngineRoAService {
     }
 
     const uniqueKeys = [...new Set(keysToDelete.filter(Boolean))];
+
+    // Purge the Storage objects BEFORE the KV rows that name them.
+    //
+    // `blobStoragePath` is the Supabase Storage object path, and it lives on
+    // the KV record — not on the RoAEvidenceItem embedded in the draft — so the
+    // records have to be read back to find it. Doing that after `mdel` would
+    // leave nothing to read, and every blob would be orphaned exactly as it was
+    // before: evidence a client uploaded to support advice, and the generated
+    // Records of Advice themselves, kept in the bucket forever after the draft
+    // that owned them was deleted.
+    //
+    // Storage failure is deliberately NOT fatal. The KV delete is what the
+    // caller asked for and what the UI reflects; a bucket outage must not leave
+    // a draft that refuses to delete. A failure here is logged with the paths
+    // so the objects can be swept later, which is the same trade the tax-docs
+    // delete makes.
+    const blobBearingKeys = uniqueKeys.filter(
+      (key) => key.startsWith(EVIDENCE_PREFIX) || key.startsWith(GENERATED_PREFIX),
+    );
+    if (blobBearingKeys.length > 0) {
+      const records = await kv.mget(blobBearingKeys);
+      const objectPaths = records
+        .map((record) => readString(asRecord(record).blobStoragePath))
+        .filter((path): path is string => Boolean(path));
+
+      if (objectPaths.length > 0) {
+        try {
+          await deleteRoABlobs(objectPaths);
+        } catch (error) {
+          log.warn('RoA blob purge failed — KV rows still deleted, objects left behind', {
+            draftId,
+            objectPaths,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+
     if (uniqueKeys.length > 0) {
       await kv.mdel(uniqueKeys);
     }
