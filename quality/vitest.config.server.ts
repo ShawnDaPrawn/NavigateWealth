@@ -276,11 +276,19 @@ export default defineConfig({
       // Raised again 2026-08-26 (36.1 / 27.1 / 35.0 / 36.9) with the e-sign
       // documents-routes suite: the page-manifest and multi-document routes on
       // an envelope. Measured 36.73 / 27.69 / 35.66 / 37.50 across 3,893 tests.
+      //
+      // Raised again 2026-08-26 (36.6 / 27.5 / 35.4 / 37.3) with the e-sign
+      // envelopes and campaigns route suites. Both run their services for real
+      // — `esign-services`, `esign-campaign-service`, `esign-packet-service`
+      // and `esign-template-service` are all pure KV — so the CSV parsing, row
+      // mapping and campaign state machine under those routes are exercised
+      // rather than mocked. Measured 37.69 / 28.40 / 36.73 / 38.40 across
+      // 3,962 tests.
       thresholds: {
-        statements: 36.6,
-        branches: 27.5,
-        functions: 35.4,
-        lines: 37.3,
+        statements: 37.5,
+        branches: 28.2,
+        functions: 36.5,
+        lines: 38.2,
       },
     },
   },
