@@ -3,8 +3,9 @@
  * Handles HTTP requests for admin application operations
  */
 
-import { Hono } from 'npm:hono';
+import { Hono, type Context, type Next } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 import { AdminApplicationsService } from './applications-service.ts';
 import type { ErrorResponse, SuccessResponse } from './types.ts';
 import { HTTP_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from './constants.ts';
@@ -48,6 +49,65 @@ const verifyAdmin = requireAdmin;
 
 // Apply admin middleware to all routes
 adminApp.use('*', verifyAdmin);
+
+/**
+ * Second gate for the destructive routes: `admin` is not enough.
+ *
+ * WHY THIS EXISTS. The routes below can delete every application in the store,
+ * delete an arbitrary KV row by key, or rewrite application records in bulk —
+ * and they were reachable by any user holding the `admin` role, with no audit
+ * entry. `admin` is the role most staff hold; the operations are irreversible
+ * and, in the case of the by-key delete, not even scoped to this module's data.
+ *
+ * The role is read off the context rather than re-resolved, because
+ * `requireAdmin` has already run and resolved it from trusted sources only
+ * (`resolveTrustedRole`: the super-admin allowlist and `app_metadata`, never
+ * the client-editable `user_metadata`). Re-checking would cost another
+ * `auth.getUser` round trip for the same answer. The error body matches
+ * auth-mw's `requireSuperAdmin` so the SPA renders it identically.
+ */
+const requireSuperAdminRole = async (c: Context, next: Next) => {
+  const role = c.get('userRole') as string | undefined;
+  if (role !== 'super_admin' && role !== 'super-admin') {
+    return c.json(
+      { error: 'Forbidden: Super Admin access required', code: 'FORBIDDEN_SUPER_ADMIN' },
+      403,
+    );
+  }
+  await next();
+};
+
+/**
+ * Records a destructive maintenance action. Awaited at every call site so the
+ * isolate cannot suspend before the entry is persisted; `record` never throws.
+ */
+function auditDestructive(
+  c: Context,
+  action: string,
+  summary: string,
+  metadata: Record<string, unknown>,
+) {
+  return AdminAuditService.record({
+    actorId: c.get('userId') as string,
+    actorRole: c.get('userRole') as string,
+    category: 'bulk_operation',
+    action,
+    summary,
+    severity: 'critical',
+    entityType: 'application',
+    metadata,
+  });
+}
+
+/**
+ * The only KV namespace this module owns.
+ *
+ * `deleteApplication` and `deleteKey` are both a bare `kv.del(key)`, so a route
+ * that forwards a caller-supplied key deletes ANY row in the shared store —
+ * a portal credential, a client profile, an e-signature record. The prefix
+ * check keeps a route named "delete application" to applications.
+ */
+const APPLICATION_KEY_PREFIX = 'application:';
 
 // ============================================================================
 // ROUTES
@@ -143,6 +203,31 @@ adminApp.get('/applications', async (c) => {
     return c.json(result);
   } catch (error) {
     log.error('GET /applications error', error);
+    return c.json(
+      {
+        error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
+        details: getErrMsg(error),
+      } as ErrorResponse,
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    );
+  }
+});
+
+// GET /applications/deprecated
+//
+// Registered BEFORE /applications/:applicationId (§14.2): Hono matches in
+// registration order, so with the parameterised route first the literal word
+// "deprecated" was captured as an applicationId and this handler never ran —
+// the request looked up an application whose id is "deprecated" and 404'd.
+adminApp.get('/applications/deprecated', async (c) => {
+  try {
+    const applications = await AdminApplicationsService.getDeprecatedApplications();
+    return c.json({
+      applications,
+      total: applications.length,
+    });
+  } catch (error) {
+    log.error('GET /applications/deprecated error', error);
     return c.json(
       {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
@@ -312,9 +397,12 @@ adminApp.get('/stats', async (c) => {
 });
 
 // DELETE /applications/clear
-adminApp.delete('/applications/clear', async (c) => {
+adminApp.delete('/applications/clear', requireSuperAdminRole, async (c) => {
   try {
     const deletedCount = await AdminApplicationsService.clearApplications();
+    await auditDestructive(c, 'applications_cleared', 'All client applications deleted', {
+      deleted: deletedCount,
+    });
     return c.json({
       success: true,
       message:
@@ -334,15 +422,27 @@ adminApp.delete('/applications/clear', async (c) => {
 });
 
 // DELETE /applications/delete
-adminApp.delete('/applications/delete', async (c) => {
+adminApp.delete('/applications/delete', requireSuperAdminRole, async (c) => {
   try {
     const { key } = await c.req.json();
 
-    if (!key) {
+    if (!key || typeof key !== 'string') {
       return c.json({ error: 'Key is required' } as ErrorResponse, HTTP_STATUS.BAD_REQUEST);
     }
 
+    // The key goes straight to `kv.del`, so without this check the route
+    // deletes any row in the shared store, not just an application.
+    if (!key.startsWith(APPLICATION_KEY_PREFIX)) {
+      return c.json(
+        {
+          error: `Key must start with "${APPLICATION_KEY_PREFIX}"`,
+        } as ErrorResponse,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     await AdminApplicationsService.deleteApplication(key);
+    await auditDestructive(c, 'application_deleted', 'Client application deleted by key', { key });
     return c.json({
       success: true,
       message: `Deleted application with key ${key}`,
@@ -360,9 +460,13 @@ adminApp.delete('/applications/delete', async (c) => {
 });
 
 // POST /applications/migrate
-adminApp.post('/applications/migrate', async (c) => {
+adminApp.post('/applications/migrate', requireSuperAdminRole, async (c) => {
   try {
     const result = await AdminApplicationsService.migrateApplications();
+    await auditDestructive(c, 'applications_migrated', 'Application records rewritten in bulk', {
+      migrated: result.migrated,
+      deleted: result.deleted,
+    });
     return c.json({
       success: true,
       message:
@@ -403,26 +507,6 @@ adminApp.post('/applications/deprecate', async (c) => {
     });
   } catch (error) {
     log.error('Deprecate applications error', error);
-    return c.json(
-      {
-        error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
-        details: getErrMsg(error),
-      } as ErrorResponse,
-      HTTP_STATUS.INTERNAL_SERVER_ERROR,
-    );
-  }
-});
-
-// GET /applications/deprecated
-adminApp.get('/applications/deprecated', async (c) => {
-  try {
-    const applications = await AdminApplicationsService.getDeprecatedApplications();
-    return c.json({
-      applications,
-      total: applications.length,
-    });
-  } catch (error) {
-    log.error('GET /applications/deprecated error', error);
     return c.json(
       {
         error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
@@ -491,52 +575,47 @@ adminApp.get('/debug/kv', async (c) => {
   }
 });
 
-adminApp.get('/debug/all-keys', async (c) => {
-  try {
-    const allKeys = await AdminApplicationsService.getAllKeys('');
+/**
+ * REMOVED: GET /debug/all-keys.
+ *
+ * It called `getAllKeys('')`, which is `kv.getByPrefix('')` — and
+ * `getByPrefix` selects `key, value` with `key >= '' AND key < '\uffff'` and
+ * returns `data.map(d => d.value)`. So the route returned EVERY VALUE in the
+ * shared `kv_store_91ed8379` table, in one unpaginated response, to any user
+ * holding the `admin` role.
+ *
+ * That table is not application data. It also holds `portal-credential:*`
+ * (provider portal usernames and passwords, stored in plaintext by
+ * `savePortalCredentialRecord`), `refund-clusters:entity:*` (tax numbers, bank
+ * account details, encrypted eFiling passwords), `user_profile:*` and
+ * `esign:*`. The refund-cluster routes are deliberately restricted to super
+ * admins precisely so that an admin cannot read those records — this route
+ * handed the same data to any admin from a different module, which made that
+ * gate decorative.
+ *
+ * It could not do what its name said either: `getByPrefix` returns values, not
+ * keys, so the handler string-matched the serialised VALUE to guess a prefix.
+ * Nothing in the SPA or the e2e suite called it. Deleted rather than narrowed:
+ * an operator who needs to inspect the store has direct database access, and a
+ * correct keys-only browser is a feature, not a fix.
+ */
 
-    const groupedKeys: Record<string, unknown[]> = {};
-    if (allKeys && allKeys.length > 0) {
-      for (const item of allKeys) {
-        const keyStr = JSON.stringify(item);
-        let prefix = 'unknown';
-        if (keyStr.includes('application')) prefix = 'application*';
-        else if (keyStr.includes('user')) prefix = 'user*';
-        else if (keyStr.includes('profile')) prefix = 'profile*';
-        else if (keyStr.includes('policy')) prefix = 'policy*';
+/**
+ * REMOVED: DELETE /debug/delete-key.
+ *
+ * A second arbitrary-key delete (`kv.del(key)` with no prefix check), with no
+ * caller anywhere in the SPA or the e2e suite. `DELETE /applications/delete`
+ * covers the same need, now super-admin gated, scoped to the `application:`
+ * namespace and audited. Two doors to the same irreversible operation is one
+ * door too many.
+ */
 
-        if (!groupedKeys[prefix]) groupedKeys[prefix] = [];
-        groupedKeys[prefix].push(item);
-      }
-    }
-
-    return c.json({
-      total: allKeys?.length || 0,
-      allKeys: allKeys || [],
-      groupedByPrefix: groupedKeys,
-    });
-  } catch (error) {
-    log.error('Debug all-keys error', error);
-    return c.json({ error: 'Debug error', details: String(error) }, 500);
-  }
-});
-
-adminApp.delete('/debug/delete-key', async (c) => {
-  try {
-    const { key } = await c.req.json();
-    if (!key) return c.json({ error: 'Key is required' }, HTTP_STATUS.BAD_REQUEST);
-
-    await AdminApplicationsService.deleteKey(key);
-    return c.json({ success: true, message: `Deleted key: ${key}` });
-  } catch (error) {
-    log.error('Debug delete-key error', error);
-    return c.json({ error: 'Debug error', details: String(error) }, 500);
-  }
-});
-
-adminApp.post('/debug/nuclear-clear', async (c) => {
+adminApp.post('/debug/nuclear-clear', requireSuperAdminRole, async (c) => {
   try {
     const count = await AdminApplicationsService.nuclearClear();
+    await auditDestructive(c, 'applications_nuclear_cleared', 'Nuclear clear of application keys', {
+      deleted: count,
+    });
     return c.json({
       success: true,
       message: `Nuclear clear complete: deleted ${count} keys`,

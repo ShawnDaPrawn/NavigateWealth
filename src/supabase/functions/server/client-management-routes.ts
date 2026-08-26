@@ -101,7 +101,6 @@ app.post(
  */
 app.post(
   '/maintenance/cleanup',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -145,7 +144,6 @@ app.post(
  */
 app.get(
   '/',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -176,7 +174,6 @@ app.get(
  */
 app.get(
   '/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
@@ -195,7 +192,6 @@ app.get(
  */
 app.put(
   '/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -224,7 +220,6 @@ app.put(
  */
 app.delete(
   '/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -261,7 +256,6 @@ app.delete(
  */
 app.get(
   '/:id/profile',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
@@ -278,7 +272,6 @@ app.get(
  */
 app.put(
   '/:id/profile',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -312,7 +305,6 @@ app.put(
  */
 app.get(
   '/:id/documents',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
@@ -333,7 +325,6 @@ app.get(
  */
 app.get(
   '/:id/communication',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
@@ -354,7 +345,6 @@ app.get(
  */
 app.get(
   '/:id/security',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { id: clientId } = ClientIdParamSchema.parse(c.req.param());
@@ -371,7 +361,6 @@ app.get(
  */
 app.post(
   '/:id/suspend',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -411,7 +400,6 @@ app.post(
  */
 app.post(
   '/:id/unsuspend',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -454,7 +442,6 @@ app.post(
  */
 app.post(
   '/:id/close',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -498,7 +485,6 @@ app.post(
  */
 app.post(
   '/:id/reinstate',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;

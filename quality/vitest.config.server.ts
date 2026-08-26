@@ -112,11 +112,45 @@ export default defineConfig({
       // `super-admin` spelling was absent from every role array, and
       // cross-owner denial was asserted on 2 of 18 ownership-gated routes.
       // Measured 20.15 / 14.21 / 19.25 / 20.66 across 1,488 tests.
+      //
+      // Raised again 2026-08-26 (20.0 / 14.1 / 19.1 / 20.5) with two suites:
+      // locked/refund-clusters-routes (25 routes behind one `app.use('*',
+      // requireSuperAdmin)` line, over stored tax numbers, eFiling passwords
+      // and bank credentials) and integrations-portal-jobs-routes (the robot
+      // that logs into provider portals as the firm). Measured
+      // 22.46 / 16.66 / 21.94 / 23.05 across 2,208 tests.
+      //
+      // The portal-jobs suite is the one to copy: it mocks ONLY the network
+      // boundary and runs the guards, flow resolution, credential lookup and
+      // sync engine for real against an in-memory KV. That single file moved
+      // the number roughly twice as far as an equivalent one built on stubbed
+      // collaborators, because the collaborators are where the logic lives.
+      //
+      // Raised again 2026-08-26 (22.3 / 16.5 / 21.8 / 22.9) with the auth-routes
+      // suites — 10 routes handling signup, login, password reset and the admin
+      // security dashboard, at 0% before. What they protect is the ABSENCE of
+      // information (anti-enumeration: five different failures, one
+      // indistinguishable response) plus rate limiting on two axes that fails
+      // closed, so the tests assert uniformity and refusal rather than payload
+      // shapes. Measured 23.32 / 17.35 / 22.66 / 23.92 across 2,354 tests.
+      //
+      // Raised again 2026-08-26 (23.2 / 17.2 / 22.5 / 23.8) with the
+      // applications-routes suite, which found two real bugs rather than just
+      // covering code: an admin-gated debug route that returned every value in
+      // the shared KV store (portal credentials included), and a literal route
+      // shadowed by a parameterised one. Measured 23.78 / 17.60 / 23.02 / 24.41
+      // across 2,446 tests.
+      //
+      // Raised again 2026-08-26 (23.7 / 17.5 / 22.9 / 24.3) with the
+      // auth-middleware-cost ratchet, which came out of noticing that 113 route
+      // registrations chained `requireAuth, requireAdmin` — two full auth
+      // resolutions (a Supabase Auth round trip plus a database read each) for
+      // one answer. Measured 23.81 / 17.64 / 23.06 / 24.43 across 2,455 tests.
       thresholds: {
-        statements: 20.0,
-        branches: 14.1,
-        functions: 19.1,
-        lines: 20.5,
+        statements: 23.8,
+        branches: 17.6,
+        functions: 23.0,
+        lines: 24.4,
       },
     },
   },

@@ -55,7 +55,6 @@ app.put(
 
 app.post(
   '/compliance/complaints/:id/resolve',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -67,7 +66,6 @@ app.post(
 
 app.post(
   '/compliance/complaints/:id/escalate',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -92,7 +90,6 @@ app.get(
 
 app.post(
   '/marketing',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -103,7 +100,6 @@ app.post(
 
 app.post(
   '/marketing/:id/approve',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -128,7 +124,6 @@ app.get(
 
 app.post(
   '/conflicts',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -139,7 +134,6 @@ app.post(
 
 app.put(
   '/conflicts/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -164,7 +158,6 @@ app.get(
 
 app.post(
   '/tcf',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -175,7 +168,6 @@ app.post(
 
 app.put(
   '/tcf/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -200,7 +192,6 @@ app.get(
 
 app.post(
   '/supervision',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -211,7 +202,6 @@ app.post(
 
 app.put(
   '/supervision/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -227,7 +217,6 @@ app.put(
 
 app.post(
   '/refresh',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Refreshing all compliance checks');

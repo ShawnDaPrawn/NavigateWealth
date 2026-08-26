@@ -83,7 +83,6 @@ app.get(
 
 app.post(
   '/logos/upload',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const formData = await c.req.formData();
@@ -220,7 +219,6 @@ app.post(
 
 app.delete(
   '/logos/:variant',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const variant = c.req.param('variant')!;
@@ -269,7 +267,6 @@ app.get(
 
 app.put(
   '/colours',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = (await c.req.json()) as ColourPalette;
@@ -304,7 +301,6 @@ app.get(
 
 app.put(
   '/typography',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = (await c.req.json()) as TypographyConfig;
@@ -345,7 +341,6 @@ app.get(
 
 app.post(
   '/collateral/upload',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const formData = await c.req.formData();
@@ -384,7 +379,6 @@ app.post(
 
 app.delete(
   '/collateral/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -413,7 +407,6 @@ app.get(
 
 app.put(
   '/guidelines/rules',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { rules, updatedBy } = (await c.req.json()) as { rules: BrandRule[]; updatedBy: string };
@@ -436,7 +429,6 @@ app.put(
 
 app.put(
   '/guidelines/voice',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { voice, updatedBy } = (await c.req.json()) as {
@@ -461,7 +453,6 @@ app.put(
 
 app.post(
   '/guidelines/pdf',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const formData = await c.req.formData();

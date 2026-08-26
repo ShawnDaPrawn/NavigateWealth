@@ -4,7 +4,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ReportingService } from './reporting-service.ts';
@@ -26,7 +26,6 @@ app.get('/', (c) => c.json({ service: 'reporting', status: 'active' }));
  */
 app.get(
   '/dashboard',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const stats = await service.getDashboardReport();
@@ -40,7 +39,6 @@ app.get(
  */
 app.get(
   '/clients',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const data = await service.getClientDemographicsReport();
@@ -54,7 +52,6 @@ app.get(
  */
 app.get(
   '/clients/personal-list',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Generating personal clients export');
@@ -69,7 +66,6 @@ app.get(
  */
 app.get(
   '/clients/applications-pipeline',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Generating applications pipeline export');
@@ -87,7 +83,6 @@ app.get(
  */
 app.get(
   '/clients/fna-completion',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Generating FNA completion export');
@@ -105,7 +100,6 @@ app.get(
  */
 app.get(
   '/clients/compliance-audit',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Generating POPIA/FAIS compliance audit export');
@@ -121,7 +115,6 @@ app.get(
  */
 app.get(
   '/clients/lifecycle-audit',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Generating client lifecycle audit export');
@@ -137,7 +130,6 @@ app.get(
  */
 app.post(
   '/client-overview-pdf',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Generating client overview PDF');

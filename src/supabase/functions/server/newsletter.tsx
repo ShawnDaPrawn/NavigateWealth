@@ -688,7 +688,6 @@ app.get(
 
 app.post(
   '/admin/backfill-group',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const result = await backfillLegacyNewsletterSubscribersToGroup();
@@ -713,7 +712,6 @@ app.post(
  */
 app.post(
   '/admin/reconcile-clients',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Admin: Starting client-to-subscriber reconciliation');

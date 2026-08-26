@@ -11,7 +11,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
@@ -35,7 +35,6 @@ app.get('/', (c) => c.json({ service: 'net-worth-snapshots', status: 'active' })
  */
 app.post(
   '/maintenance/batch-snapshot',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json().catch(() => ({}));
@@ -54,7 +53,6 @@ app.post(
  */
 app.post(
   '/maintenance/auto-snapshot/:clientId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
@@ -80,7 +78,6 @@ app.post(
  */
 app.get(
   '/:clientId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
@@ -100,7 +97,6 @@ app.get(
  */
 app.post(
   '/:clientId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
@@ -148,7 +144,6 @@ app.post(
  */
 app.delete(
   '/:clientId/:date',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
