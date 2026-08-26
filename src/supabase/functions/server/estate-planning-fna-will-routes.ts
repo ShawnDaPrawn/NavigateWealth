@@ -2,7 +2,8 @@ import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { authenticateUser } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { FnaIntakeError } from './fna-intake-errors.ts';
 import { assertClientAccess } from './client-access.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
@@ -64,7 +65,10 @@ function parseWillId(willId: string): { clientId: string; type: string } {
   const livingWillMatch = willId.match(/^(.+)-(living_will)-v\d+$/);
   const match = lastWillMatch || livingWillMatch;
   if (!match) {
-    throw new Error(`Invalid willId format: ${willId}`);
+    // A malformed id is the caller's mistake, not the server's. Typed so
+    // fnaErrorResponse renders 400 rather than the 500 a bare Error got,
+    // and without echoing the supplied id back in the response body.
+    throw new FnaIntakeError('Invalid willId format', 400);
   }
   return { clientId: match[1], type: match[2] };
 }
@@ -98,8 +102,7 @@ app.get('/wills/client/:clientId/profile-prefill', async (c) => {
     return c.json({ success: true, profile, clientKeys });
   } catch (error: unknown) {
     log.error('❌ Error fetching client profile for will pre-fill:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -165,8 +168,7 @@ app.post('/wills/create', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error creating will draft:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -231,8 +233,7 @@ app.put('/wills/:willId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error updating will draft:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -258,8 +259,7 @@ app.get('/wills/client/:clientId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error fetching wills:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -293,8 +293,7 @@ app.get('/wills/:willId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error fetching will:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -358,8 +357,7 @@ app.put('/wills/:willId/finalize', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error finalizing will:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -405,8 +403,7 @@ app.delete('/wills/:willId', async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Error deleting will:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -500,8 +497,7 @@ app.post('/wills/:willId/attach-signed', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error attaching signed document to will:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -542,8 +538,7 @@ app.get('/wills/:willId/signed-document', async (c) => {
     });
   } catch (error: unknown) {
     log.error('Error fetching signed document URL:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 
@@ -596,8 +591,7 @@ app.delete('/wills/:willId/signed-document', async (c) => {
     return c.json({ success: true, data: updatedWill });
   } catch (error: unknown) {
     log.error('Error removing signed document:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, message === 'Unauthorized' ? 401 : 500);
+    return fnaErrorResponse(c, error);
   }
 });
 

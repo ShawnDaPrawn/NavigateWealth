@@ -95,11 +95,17 @@ export default defineConfig({
       // families sharing one client-access policy, table-driven so no family
       // can quietly lose its check. Measured 19.02 / 13.46 / 18.37 / 19.50
       // across 1,320 tests.
+      //
+      // Raised again 2026-08-26 (18.9 / 13.3 / 18.2 / 19.3) with the
+      // estate-planning-fna-will-routes contract suite — 10 routes over a
+      // client's Last Will and Living Will, where the record owner is
+      // recovered by regex from a caller-supplied url segment. Measured
+      // 19.65 / 13.76 / 18.66 / 20.16 across 1,409 tests.
       thresholds: {
-        statements: 18.9,
-        branches: 13.3,
-        functions: 18.2,
-        lines: 19.3,
+        statements: 19.5,
+        branches: 13.7,
+        functions: 18.5,
+        lines: 20.0,
       },
     },
   },
