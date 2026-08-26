@@ -81,18 +81,13 @@ export interface VascoSessionData {
 // ============================================================================
 
 const FEATURE_FLAG_KEY = 'platform:feature_flags:vasco_public';
-const RATE_LIMIT_PREFIX = 'vasco:legacy_rate_limit';
-const SESSION_MESSAGE_LIMIT = VASCO_PUBLIC_LIMITS.visitorDaily;
-const DAILY_MESSAGE_LIMIT = VASCO_PUBLIC_LIMITS.ipDaily;
-const RATE_WINDOW_MS = VASCO_PUBLIC_LIMITS.burstWindowMs;
-const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-interface VascoRateLimitEntry {
-  count: number;
-  windowStart: number;
-  dailyCount: number;
-  dailyStart: number;
-}
+// Rate limiting for the public Vasco surface lives in `vasco-guardrails.ts`
+// (`evaluateVascoPublicGuardrails`), which is what `vasco-routes.ts` calls.
+// A second, older implementation used to sit here behind
+// `vasco:legacy_rate_limit` — exported, never imported by anything, and
+// carrying its own copies of the limits. Removed rather than covered: a
+// second rate limiter that no request reaches is not a safety net, it is a
+// thing that will one day be wired up by mistake and disagree with the real one.
 
 /** Max conversation history sent to OpenAI (last N messages) */
 const MAX_CONTEXT_MESSAGES = VASCO_PUBLIC_LIMITS.maxSubmittedMessages;
@@ -207,88 +202,6 @@ export async function updateVascoConfig(enabled: boolean, updatedBy: string): Pr
   await kv.set(FEATURE_FLAG_KEY, config);
   log.info('Vasco feature flag updated', { enabled, updatedBy });
   return config;
-}
-
-/**
- * Check rate limits for a given IP/session
- * Returns { allowed, remaining, reason? }
- */
-export async function checkVascoRateLimit(
-  identifier: string,
-): Promise<{ allowed: boolean; remaining: number; reason?: string }> {
-  const key = `${RATE_LIMIT_PREFIX}:${identifier}`;
-  const now = Date.now();
-
-  try {
-    const entry = (await kv.get(key)) as VascoRateLimitEntry | null;
-
-    if (!entry) {
-      // First message — initialise
-      await kv.set(key, {
-        count: 1,
-        windowStart: now,
-        dailyCount: 1,
-        dailyStart: now,
-      });
-      return { allowed: true, remaining: SESSION_MESSAGE_LIMIT - 1 };
-    }
-
-    // Reset daily counter if window expired
-    let dailyCount = entry.dailyCount;
-    let dailyStart = entry.dailyStart;
-    if (now - entry.dailyStart > DAILY_WINDOW_MS) {
-      dailyCount = 0;
-      dailyStart = now;
-    }
-
-    // Reset session counter if window expired
-    let count = entry.count;
-    let windowStart = entry.windowStart;
-    if (now - entry.windowStart > RATE_WINDOW_MS) {
-      count = 0;
-      windowStart = now;
-    }
-
-    // Check daily limit
-    if (dailyCount >= DAILY_MESSAGE_LIMIT) {
-      return {
-        allowed: false,
-        remaining: 0,
-        reason:
-          "You've reached the daily message limit. Sign up for unlimited access to Vasco and your own personalised financial dashboard.",
-      };
-    }
-
-    // Check session limit
-    if (count >= SESSION_MESSAGE_LIMIT) {
-      return {
-        allowed: false,
-        remaining: 0,
-        reason:
-          "You've had a great conversation! Sign up for unlimited access to Vasco and get personalised financial guidance.",
-      };
-    }
-
-    // Update counters
-    await kv.set(key, {
-      count: count + 1,
-      windowStart,
-      dailyCount: dailyCount + 1,
-      dailyStart,
-    });
-
-    return {
-      allowed: true,
-      remaining: Math.min(SESSION_MESSAGE_LIMIT - count - 1, DAILY_MESSAGE_LIMIT - dailyCount - 1),
-    };
-  } catch (error) {
-    log.error('Rate limit check failed (failing closed)', error);
-    return {
-      allowed: false,
-      remaining: 0,
-      reason: 'Vasco is temporarily unavailable. Please try again shortly.',
-    };
-  }
 }
 
 /**

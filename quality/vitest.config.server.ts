@@ -288,11 +288,17 @@ export default defineConfig({
       // Raised again 2026-08-26 (37.5 / 28.2 / 36.5 / 38.2) with the e-sign
       // templates suite and the documents-routes firm-scope fix. Measured
       // 37.95 / 28.58 / 36.89 / 38.65 across 4,006 tests.
+      //
+      // Raised again 2026-08-26 (37.8 / 28.4 / 36.7 / 38.5) with the RoA draft
+      // service (4.1% -> 47.7%) and vasco-service (0% -> ~80%). The
+      // denominator also fell slightly: `vasco-service` carried a second,
+      // never-imported rate limiter, removed rather than covered. Measured
+      // 38.61 / 29.30 / 37.66 / 39.32 across 4,052 tests.
       thresholds: {
-        statements: 37.8,
-        branches: 28.4,
-        functions: 36.7,
-        lines: 38.5,
+        statements: 38.4,
+        branches: 29.1,
+        functions: 37.4,
+        lines: 39.1,
       },
     },
   },
