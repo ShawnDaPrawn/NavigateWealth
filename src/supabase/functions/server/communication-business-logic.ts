@@ -11,6 +11,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { sendEmail, createEmailTemplate } from './email-service.ts';
 import * as repo from './communication-repo.ts';
 import { logger } from './stderr-logger.ts';
+import { listAllAuthUsers } from './auth-admin-list-users.ts';
 
 // --- Client Resolution ---
 
@@ -24,13 +25,20 @@ import { logger } from './stderr-logger.ts';
  *   2. security entry (deleted/suspended flags) — belt-and-suspenders for legacy records
  */
 export async function getAllClients(supabase: SupabaseAdminClient): Promise<CommunicationClient[]> {
-  const {
-    data: { users },
-    error,
-  } = await supabase.auth.admin.listUsers();
-
-  if (error) {
-    logger.error('Error fetching users', error);
+  // PAGINATE. A bare listUsers() returns only the first page (~50 users), so
+  // every client past it was silently invisible to group membership and to the
+  // birthday digest -- no error, just a short list. listAllAuthUsers loops
+  // pages at 1,000 each and throws on error. Caught in review of #232.
+  let users: Array<{
+    id: string;
+    email: string;
+    phone?: string;
+    user_metadata?: Record<string, unknown>;
+  }>;
+  try {
+    users = (await listAllAuthUsers(supabase)) as typeof users;
+  } catch (error) {
+    logger.error('Error fetching users', error as Error);
     throw error;
   }
 
@@ -53,10 +61,14 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
     allPoliciesArrays = policiesResult as unknown[];
     securityEntries = securityResult as Record<string, unknown>[];
   } catch (e) {
+    // DO NOT substitute empty arrays here. That used to be the behaviour, and it
+    // turned a KV outage into a confident wrong answer: every client came back
+    // with an empty profile, so group membership resolved to nobody and the
+    // birthday digest reported a quiet day. There is no caller for which
+    // "pretend every client has no data" is the right result -- failing loudly
+    // is. Callers surface this as a 5xx. Caught in review of #232.
     logger.error('Error fetching profiles, policies, or security entries', e as Error);
-    profiles = [];
-    allPoliciesArrays = [];
-    securityEntries = [];
+    throw e;
   }
 
   // Create Lookup Maps (because mget order is not guaranteed)
