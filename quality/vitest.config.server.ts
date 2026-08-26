@@ -125,11 +125,19 @@ export default defineConfig({
       // sync engine for real against an in-memory KV. That single file moved
       // the number roughly twice as far as an equivalent one built on stubbed
       // collaborators, because the collaborators are where the logic lives.
+      //
+      // Raised again 2026-08-26 (22.3 / 16.5 / 21.8 / 22.9) with the auth-routes
+      // suites — 10 routes handling signup, login, password reset and the admin
+      // security dashboard, at 0% before. What they protect is the ABSENCE of
+      // information (anti-enumeration: five different failures, one
+      // indistinguishable response) plus rate limiting on two axes that fails
+      // closed, so the tests assert uniformity and refusal rather than payload
+      // shapes. Measured 23.32 / 17.35 / 22.66 / 23.92 across 2,354 tests.
       thresholds: {
-        statements: 22.3,
-        branches: 16.5,
-        functions: 21.8,
-        lines: 22.9,
+        statements: 23.2,
+        branches: 17.2,
+        functions: 22.5,
+        lines: 23.8,
       },
     },
   },
