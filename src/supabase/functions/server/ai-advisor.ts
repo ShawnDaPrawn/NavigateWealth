@@ -454,8 +454,15 @@ app.post('/chat', requireAuth, async (c) => {
     // Call AI
     const reply = await callOpenAI([{ role: 'user', content: message }], systemPrompt);
 
-    // Save history
-    const conversationKey = `ai_advisor:${user.id}:chat:${Date.now()}`;
+    // Save history. Both keys carry a uuid because `Date.now()` alone is
+    // millisecond-resolution: the reply used to be keyed `Date.now() + 1`
+    // purely to push it past the message, which left it able to collide with
+    // the NEXT turn's message key. Readers sort by the record's own
+    // `timestamp` field (migrateLegacyAdvisorHistory) or do not order at all
+    // (deleteLegacyAdvisorHistory), so the extra segment is backward
+    // compatible with rows already stored under the old shape.
+    const exchangeAt = Date.now();
+    const conversationKey = `ai_advisor:${user.id}:chat:${exchangeAt}:${crypto.randomUUID()}`;
     await getSupabase()
       .from('kv_store_91ed8379')
       .insert({
@@ -468,7 +475,7 @@ app.post('/chat', requireAuth, async (c) => {
       });
 
     // Save reply
-    const replyKey = `ai_advisor:${user.id}:chat:${Date.now() + 1}`;
+    const replyKey = `ai_advisor:${user.id}:chat:${exchangeAt}:${crypto.randomUUID()}`;
     await getSupabase()
       .from('kv_store_91ed8379')
       .insert({

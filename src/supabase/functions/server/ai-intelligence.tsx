@@ -793,7 +793,11 @@ app.post('/chat', requireAdmin, async (c) => {
     const reply = await callOpenAIWorkflow(messages, systemPrompt);
 
     // Save to conversation history in kv_store
-    const conversationKey = `ai_intelligence:${user.id}:conversation:${Date.now()}`;
+    // The uuid tail makes the key unique; `Date.now()` alone is
+    // millisecond-resolution. It goes AFTER the timestamp deliberately — the
+    // history read orders by key descending, so the fixed-width millisecond
+    // value still decides the order and the uuid only breaks ties.
+    const conversationKey = `ai_intelligence:${user.id}:conversation:${Date.now()}:${crypto.randomUUID()}`;
     await getSupabase()
       .from('kv_store_91ed8379')
       .insert({

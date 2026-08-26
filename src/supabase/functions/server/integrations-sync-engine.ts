@@ -836,7 +836,14 @@ export async function stagePortalRows(
     runId: finalRun.id,
     publishedRows: finalRun.summary.publishedRows,
   };
-  await kv.set(`history:${job.providerId}:${job.categoryId}:${Date.now()}`, historyEntry);
+  // Same key shape and same reason as integrations-upload-routes: a
+  // millisecond timestamp is not unique and `kv.set` upserts. This path runs
+  // inside the sync loop, so two jobs completing in the same millisecond is
+  // likelier here than on the manual upload route.
+  await kv.set(
+    `history:${job.providerId}:${job.categoryId}:${Date.now()}:${historyEntry.id}`,
+    historyEntry,
+  );
 
   return { job: updatedJob, stagedRun: finalRun };
 }
