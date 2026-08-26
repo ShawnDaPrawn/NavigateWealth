@@ -84,11 +84,39 @@ export default defineConfig({
       // legal-document read next to admin writes) and tasks-routes (247
       // statements behind a single router-scope guard). Measured
       // 17.70 / 12.92 / 17.23 / 18.18 across 949 tests.
+      //
+      // Raised again 2026-08-26 (17.6 / 12.8 / 17.1 / 18.0) with the
+      // advice-engine-roa-routes contract suite — 286 statements that were
+      // entirely uncovered, behind a four-predicate authorization matrix.
+      // Measured 18.33 / 13.25 / 17.81 / 18.84 across 1,035 tests.
+      //
+      // Raised again 2026-08-26 (18.2 / 13.1 / 17.7 / 18.7) with the
+      // advice-engine-fna-routes contract suite — 27 routes across six FNA
+      // families sharing one client-access policy, table-driven so no family
+      // can quietly lose its check. Measured 19.02 / 13.46 / 18.37 / 19.50
+      // across 1,320 tests.
+      //
+      // Raised again 2026-08-26 (18.9 / 13.3 / 18.2 / 19.3) with the
+      // estate-planning-fna-will-routes contract suite — 10 routes over a
+      // client's Last Will and Living Will, where the record owner is
+      // recovered by regex from a caller-supplied url segment. Measured
+      // 19.65 / 13.76 / 18.66 / 20.16 across 1,409 tests.
+      //
+      // Raised again 2026-08-26 (19.5 / 13.7 / 18.5 / 20.0) with the reporting
+      // dashboard task-metric suite — the dashboard had been reading a table
+      // that does not exist and reporting a confident zero. Measured
+      // 19.79 / 13.98 / 18.94 / 20.30 across 1,428 tests.
+      //
+      // Raised again 2026-08-26 (19.7 / 13.9 / 18.8 / 20.2) after Codex review
+      // on #237 found two real holes in the RoA suite: the legacy
+      // `super-admin` spelling was absent from every role array, and
+      // cross-owner denial was asserted on 2 of 18 ownership-gated routes.
+      // Measured 20.15 / 14.21 / 19.25 / 20.66 across 1,488 tests.
       thresholds: {
-        statements: 17.6,
-        branches: 12.8,
-        functions: 17.1,
-        lines: 18.0,
+        statements: 20.0,
+        branches: 14.1,
+        functions: 19.1,
+        lines: 20.5,
       },
     },
   },

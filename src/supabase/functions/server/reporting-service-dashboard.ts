@@ -10,6 +10,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { listAllTasks } from './repositories/tasks-repository.ts';
 import type {
   DashboardReport,
   KeyStats,
@@ -22,8 +23,6 @@ import type {
   KvReportFna,
 } from './reporting-types.ts';
 
-import { getReportingSupabaseClient } from './reporting-service-helpers.ts';
-
 const log = createModuleLogger('reporting-service');
 
 /**
@@ -32,16 +31,29 @@ const log = createModuleLogger('reporting-service');
 export async function getDashboardReport(): Promise<DashboardReport> {
   log.info('Generating dashboard report');
 
-  // Get all data sources
-  const clients = await kv.getByPrefix('user_profile:');
-  const applications = await kv.getByPrefix('application:');
-  const fnas = await kv.getByPrefix('fna:');
-  const communications = await kv.getByPrefix('communication_history:');
-
-  // Get tasks from Supabase DB
-  const supabase = getReportingSupabaseClient();
-  const { data: tasksData } = await supabase.from('tasks_91ed8379').select('*');
-  const tasks = tasksData || [];
+  // Five independent reads, issued together rather than one after another.
+  // Nothing here depends on anything else here, and the function runs in
+  // whichever region is nearest the CALLER while Postgres sits in us-east-2 —
+  // so awaiting these in series cost four extra round trips, ~90 ms each for a
+  // South African request. See docs/runbooks/edge-function-latency.md.
+  //
+  // Tasks come from the KV store, not from a table. The previous line read
+  // `supabase.from('tasks_91ed8379')`, and no such table exists: the
+  // destructure discarded the error, `tasksData` came back null, and every
+  // task metric on this dashboard — due today, due last month, total,
+  // completed, and the growth figure derived from them — reported a confident
+  // zero. Tasks live under the `task:` prefix, which is what /tasks/stats
+  // reads — behind `repositories/tasks-repository.ts`, which owns the
+  // namespace, which rows count as tasks (matching GET /tasks/stats) and the
+  // legacy camelCase `dueDate` fallback, so this dashboard cannot become a
+  // fourth opinion on any of the three.
+  const [clients, applications, fnas, communications, tasks] = await Promise.all([
+    kv.getByPrefix('user_profile:'),
+    kv.getByPrefix('application:'),
+    kv.getByPrefix('fna:'),
+    kv.getByPrefix('communication_history:'),
+    listAllTasks('reporting dashboard task metrics'),
+  ]);
 
   // Calculate metrics
   const totalClients = clients?.length || 0;

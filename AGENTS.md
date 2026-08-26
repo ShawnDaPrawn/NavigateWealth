@@ -66,6 +66,43 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    explicitly with the error** — do not commit unverified code and "let CI catch
    it."
 
+   **`typecheck:deno` is the easiest one to skip and the easiest one to
+   misread.** Two traps, both hit for real on 2026-08-26 (PR #237), where CI
+   reported 4 new edge type errors against a floor of 0 after every other gate
+   had been run and passed locally:
+   - **Deno may not be installed in the sandbox**, so the script fails with
+     "deno: not found" rather than a type-error count. That is not a passing
+     gate. Install the version CI pins (`deno-version` in
+     `.github/workflows/quality-check.yml`, `v2.8.1` at the time of writing) —
+     the release zip downloads fine through the proxy:
+
+     ```bash
+     curl -fsSL https://github.com/denoland/deno/releases/download/v2.8.1/deno-x86_64-unknown-linux-gnu.zip -o deno.zip
+     unzip -q deno.zip && chmod +x deno
+     ```
+
+   - **The local count is inflated and will not match CI.** In a sandbox where
+     the Supabase types do not fully resolve, `deno check` reports ~34 extra
+     pre-existing `TS7006 Parameter implicitly has an 'any' type` errors that CI
+     never sees, so a raw "Found 38 errors" against a floor of 0 looks hopeless
+     and invites ignoring the gate. **Do not compare the local total to the
+     baseline.** Diff the error set against `origin/main` instead — that isolates
+     exactly what your branch added:
+
+     ```bash
+     git worktree add /tmp/main-wt origin/main
+     sig() { NO_COLOR=1 ./deno check --config src/supabase/functions/server/deno.json \
+       src/supabase/functions/server/index.tsx 2>&1 \
+       | grep -oE 'server/[a-zA-Z0-9._/-]+\.tsx?:[0-9]+:[0-9]+' | sed 's|.*/||' | sort; }
+     (cd /tmp/main-wt && sig) > /tmp/main.txt
+     sig > /tmp/head.txt
+     comm -13 /tmp/main.txt /tmp/head.txt   # errors your branch ADDS
+     git worktree remove /tmp/main-wt --force
+     ```
+
+     Read the result by line, not by file: an unchanged error moves line number
+     when you add an import above it, and will otherwise look new.
+
 2. **Commit, push the branch, open/update the PR** (ready for review, not a
    draft).
 

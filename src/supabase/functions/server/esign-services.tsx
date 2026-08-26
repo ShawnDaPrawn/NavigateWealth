@@ -234,18 +234,23 @@ export async function getEnvelopeDetails(envelopeId: string): Promise<EsignEnvel
       return null;
     }
 
-    // Fetch document
-    const document = await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id);
+    // Document, signer list and field list are independent of one another —
+    // only the envelope had to be read first, for its document_id and the
+    // early return above. Fetched together rather than in series; see
+    // docs/runbooks/edge-function-latency.md for why a round trip is worth
+    // saving here. Same reads, same guards, one crossing instead of three.
+    const [document, rawSignerIds, rawFieldListRaw] = await Promise.all([
+      kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id),
+      kv.get(EsignKeys.envelopeSigners(envelopeId)),
+      kv.get(EsignKeys.envelopeFields(envelopeId)),
+    ]);
 
-    // Fetch signers — guard against corrupt non-array KV values
-    const rawSignerIds = await kv.get(EsignKeys.envelopeSigners(envelopeId));
+    // Guard against corrupt non-array KV values
     const signerIds = Array.isArray(rawSignerIds) ? rawSignerIds : [];
     const signers = await Promise.all(
       signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
     );
 
-    // Fetch fields — guard against corrupt non-array KV values
-    const rawFieldListRaw = await kv.get(EsignKeys.envelopeFields(envelopeId));
     const rawFieldList = Array.isArray(rawFieldListRaw) ? rawFieldListRaw : [];
 
     // Handle legacy/corrupt data where fields might be stored directly in the list
@@ -313,38 +318,39 @@ export async function getClientEnvelopes(
         // P6.8 — hide soft-deleted envelopes from client-facing lists.
         if ((envelope as { deleted_at?: string }).deleted_at) return null;
 
-        // Get document details
-        const document = await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id);
+        // Document, signer list, field list and audit list are independent of
+        // one another; only the envelope had to be read first. Fetched
+        // together rather than in four serial steps — and this block runs once
+        // per envelope, so the saving multiplies by the size of the list.
+        const [document, rawSignerIds, rawFieldIds, rawAuditIds] = await Promise.all([
+          kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id),
+          kv.get(EsignKeys.envelopeSigners(envelopeId)),
+          kv.get(EsignKeys.envelopeFields(envelopeId)),
+          kv.get(EsignKeys.envelopeAudit(envelopeId)),
+        ]);
 
-        // Get signers — guard against corrupt KV values
-        const rawSignerIds = await kv.get(EsignKeys.envelopeSigners(envelopeId));
+        // Guard against corrupt KV values
         const signerIds = Array.isArray(rawSignerIds) ? rawSignerIds : [];
-        const signers = await Promise.all(
-          signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
-        );
-
-        // Get fields — guard against corrupt KV values
-        const rawFieldIds = await kv.get(EsignKeys.envelopeFields(envelopeId));
         const fieldIds = Array.isArray(rawFieldIds) ? rawFieldIds : [];
 
         const validFieldIds: string[] = fieldIds.filter(
           (item: unknown) => typeof item === 'string',
         ) as string[];
 
-        const fields = await Promise.all(
-          validFieldIds.map((id: string) => kv.get(EsignKeys.field(id))),
-        );
+        const auditIds = rawAuditIds || [];
+        const recentAuditIds = auditIds.slice(-5); // Last 5 events
+
+        // Second wave: every id list is known, so all three hydrations go out
+        // together too.
+        const [signers, fields, auditEvents] = await Promise.all([
+          Promise.all(signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id))),
+          Promise.all(validFieldIds.map((id: string) => kv.get(EsignKeys.field(id)))),
+          Promise.all(recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id))),
+        ]);
 
         // Calculate counts
         const totalSigners = signers.filter(Boolean).length;
         const signedCount = signers.filter((s: EsignSigner) => s && s.status === 'signed').length;
-
-        // Get recent audit events
-        const auditIds = (await kv.get(EsignKeys.envelopeAudit(envelopeId))) || [];
-        const recentAuditIds = auditIds.slice(-5); // Last 5 events
-        const auditEvents = await Promise.all(
-          recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id)),
-        );
 
         return {
           ...envelope,

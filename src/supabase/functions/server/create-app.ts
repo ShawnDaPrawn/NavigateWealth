@@ -177,6 +177,18 @@ export function createApp(options: CreateAppOptions = {}): Hono {
         'apikey',
         'x-request-id',
         'X-OpenClaw-Secret',
+        // Region pinning (see docs/runbooks/edge-function-latency.md). The
+        // Supabase gateway reads `x-region` to choose which region runs this
+        // function; the function itself never looks at it. It still has to be
+        // allowed here, because the browser's preflight asks THIS app whether
+        // the header may be sent, and a header that is not allowed is a
+        // blocked request rather than an ignored one.
+        //
+        // Allowed before anything sends it, deliberately. The SPA and the Edge
+        // Function deploy through different pipelines from the same merge, so
+        // a client that sends the header first would fail every preflight for
+        // as long as the two were out of step.
+        'x-region',
       ],
       exposeHeaders: ['x-request-id'],
       credentials: false,

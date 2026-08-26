@@ -451,6 +451,58 @@ describe('createApp: CORS allow-list (Guidelines §12.4)', () => {
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
+
+  // ── Preflight allow-list ─────────────────────────────────────────────────
+  // A header the browser is not told it may send is a BLOCKED request, not an
+  // ignored header. So every header the SPA sends has to appear here, and this
+  // list is asserted rather than eyeballed — dropping one entry breaks every
+  // call the SPA makes, from a two-word diff.
+  describe('preflight allows exactly the headers the SPA sends', () => {
+    const preflight = (origin = 'https://navigatewealth.co') => {
+      denoEnv.set('NW_ALLOWED_ORIGINS', origin);
+      return createApp({ mounts: [] }).request(`${PREFIX}/health`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: origin,
+          'Access-Control-Request-Method': 'GET',
+          'Access-Control-Request-Headers': 'authorization, x-region',
+        },
+      });
+    };
+
+    it.each([
+      'Content-Type',
+      'Authorization',
+      'x-client-info',
+      'apikey',
+      'x-request-id',
+      'X-OpenClaw-Secret',
+      'x-region',
+    ])('allows %s', async (header) => {
+      const res = await preflight();
+      const allowed = (res.headers.get('access-control-allow-headers') ?? '').toLowerCase();
+      expect(allowed).toContain(header.toLowerCase());
+    });
+
+    it('allows x-region so a region-pinned request survives its preflight', async () => {
+      // `x-region` is read by the Supabase gateway to choose which region runs
+      // the function; this app never looks at it. It is allowed here BEFORE
+      // anything sends it, on purpose: the SPA and the Edge Function deploy
+      // through different pipelines from one merge, so a client that sent it
+      // first would fail every preflight until the function caught up.
+      const res = await preflight();
+      expect(res.status).toBeLessThan(300);
+      expect((res.headers.get('access-control-allow-headers') ?? '').toLowerCase()).toContain(
+        'x-region',
+      );
+    });
+
+    it('does not allow an arbitrary header', async () => {
+      const res = await preflight();
+      const allowed = (res.headers.get('access-control-allow-headers') ?? '').toLowerCase();
+      expect(allowed).not.toContain('x-anything-goes');
+    });
+  });
 });
 
 describe('index.tsx stays a serve call and nothing else (A18)', () => {
