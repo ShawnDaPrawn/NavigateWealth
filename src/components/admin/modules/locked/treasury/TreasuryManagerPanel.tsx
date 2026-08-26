@@ -108,17 +108,36 @@ export function TreasuryManagerPanel() {
             {balanceQuery.isLoading ? (
               <Skeleton className="h-9 w-40" />
             ) : balanceQuery.data ? (
-              <>
-                <p className="text-3xl font-semibold">
-                  {formatMinor(balanceQuery.data.cash, currency)}
-                </p>
-                <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span>Pending in: {formatMinor(balanceQuery.data.inboundPending, currency)}</span>
-                  <span>
-                    Pending out: {formatMinor(balanceQuery.data.outboundPending, currency)}
-                  </span>
-                </div>
-              </>
+              (() => {
+                const rows =
+                  balanceQuery.data.perCurrency && balanceQuery.data.perCurrency.length
+                    ? balanceQuery.data.perCurrency
+                    : [
+                        {
+                          currency: balanceQuery.data.currency ?? currency,
+                          cash: balanceQuery.data.cash,
+                          inboundPending: balanceQuery.data.inboundPending,
+                          outboundPending: balanceQuery.data.outboundPending,
+                        },
+                      ];
+                return (
+                  <>
+                    <p className="text-3xl font-semibold">
+                      {rows.map((r) => formatMinor(r.cash, r.currency)).join(' · ')}
+                    </p>
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span>
+                        Pending in:{' '}
+                        {rows.map((r) => formatMinor(r.inboundPending, r.currency)).join(' · ')}
+                      </span>
+                      <span>
+                        Pending out:{' '}
+                        {rows.map((r) => formatMinor(r.outboundPending, r.currency)).join(' · ')}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()
             ) : (
               <p className="text-sm text-muted-foreground">Unavailable.</p>
             )}
