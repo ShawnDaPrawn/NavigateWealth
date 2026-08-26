@@ -253,11 +253,21 @@ export default defineConfig({
       // for the size of the change because most of it is source fixes across
       // ten modules rather than new test surface — floored anyway, because an
       // unclaimed gain is one the next PR can give back.
+      //
+      // Raised again 2026-08-26 (34.0 / 26.0 / 33.3 / 34.8) with three FNA
+      // route-family suites on one shared harness — tax planning 0% -> ~90%,
+      // risk planning 24% -> ~85%, retirement 19% -> ~80%. Writing them found
+      // four defects: a bucket created before the access check, an update route
+      // that merged the RAW request body into the record (so a client's
+      // adviser could hand their risk analysis to another client), an unpublish
+      // that left the published pointer serving the withdrawn FNA, and two
+      // version helpers reading a prefix that held no FNAs at all. Measured
+      // 35.75 / 26.95 / 34.66 / 36.56 across 3,830 tests.
       thresholds: {
-        statements: 34.0,
-        branches: 26.0,
-        functions: 33.3,
-        lines: 34.8,
+        statements: 35.5,
+        branches: 26.7,
+        functions: 34.4,
+        lines: 36.3,
       },
     },
   },

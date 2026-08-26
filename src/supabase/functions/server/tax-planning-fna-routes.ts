@@ -215,10 +215,15 @@ taxPlanningRoutes.post('/tax-docs/:clientId/upload', async (c) => {
   try {
     log.info('POST /tax-planning-fna/tax-docs/:clientId/upload');
     const user = await authenticateUser(c.req.header('Authorization'));
-    await ensureTaxDocsBucket();
 
     const clientId = c.req.param('clientId')!;
     await assertClientAccess(user, clientId, 'tax-planning-fna:doc-upload');
+
+    // After the access check, not before it. `ensureTaxDocsBucket` rethrows, so
+    // with the two the other way round a caller who should have received a
+    // plain 403 got a 500 from storage work done on their behalf instead — and
+    // the request reached the bucket at all, which a denied request should not.
+    await ensureTaxDocsBucket();
 
     const formData = await c.req.formData();
 

@@ -45,13 +45,25 @@ function generateFnaId(): string {
  * Get next version number for a client
  */
 async function getNextVersionNumber(clientId: string): Promise<number> {
-  const fnas = await kv.getByPrefix(`retirement_fna:${clientId}:`);
-  // Highest stored version, not how many are stored. The id here is a uuid, so
-  // unlike the FNA families this number never reached a KV key and no record was
-  // ever at risk — but a count still regresses after a delete, which produced
-  // two sessions both labelled the same version. Cheap to make monotonic, and it
-  // lets the ratchet require that no version anywhere is derived from a count.
-  return nextVersion(fnas);
+  // Read the client's OWN records, via the id list.
+  //
+  // This used to prefix-scan `retirement_fna:${clientId}:`, which never
+  // contained a single FNA. Records are keyed `retirement_fna:${fnaId}` with
+  // `fnaId` a uuid, so that prefix only ever matched the two bookkeeping keys
+  // beside them — `:latest` and `:list`. The version was therefore derived from
+  // whether those two keys happened to exist: 1 before the first create, 2 for
+  // every create after it, and 3 for every create once anything was published.
+  // An adviser looking at a client's Retirement history saw version numbers
+  // that meant nothing.
+  //
+  // The id list is the only thing that knows which FNAs belong to this client,
+  // so it is what this reads. `mget` keeps it to two round trips rather than
+  // one per FNA.
+  const ids = ((await kv.get(`retirement_fna:${clientId}:list`)) as string[] | null) || [];
+  if (ids.length === 0) return 1;
+
+  const records = await kv.mget(ids.map((id) => `retirement_fna:${id}`));
+  return nextVersion(records.filter(Boolean));
 }
 
 /**
