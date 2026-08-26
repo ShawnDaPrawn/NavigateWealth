@@ -35,8 +35,13 @@ const PREFIX = '/make-server-91ed8379';
  * The shape lazy-mounted modules actually export. Every one of them is a
  * `new Hono()` instance (verified across all 73 modules reachable from the
  * mount-*.ts registrars), but they are typed structurally so the mount files
- * can keep passing bare `() => import('./x.ts')` without their differing Hono
- * generic parameters having to line up.
+ * can keep passing a dynamic import loader (any route module) without their
+ * differing Hono generic parameters having to line up.
+ *
+ * Do not write a literal import() of a file that does not exist in this
+ * comment. The Supabase deploy bundler scans import() with a regex that
+ * ignores comment boundaries, then uploads the specifier; a missing x.ts
+ * here produced "WARN: failed to read file" and a 500 deploy.
  *
  * Deliberately UNCHANGED from before B1: the error-handling members live in
  * `HonoErrorSurface` below rather than being added here. Hono declares
