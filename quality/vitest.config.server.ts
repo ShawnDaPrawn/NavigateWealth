@@ -169,11 +169,18 @@ export default defineConfig({
       // of rejecting, so the tests pin what the healing silently rewrites.
       // Writing it found the audit log overwriting itself. Measured
       // 26.37 / 18.87 / 25.44 / 27.10 across 2,976 tests.
+      //
+      // Raised again 2026-08-26 (26.3 / 18.8 / 25.3 / 27.0) with the
+      // client-portal-service suite — the single read behind the client-facing
+      // dashboard, which fans out across eleven KV namespaces. Writing it found
+      // the calendar filter excluding only events that named a DIFFERENT
+      // client, so an event with no clientId would have shown on every client's
+      // portal. Measured 26.67 / 19.62 / 25.71 / 27.41 across 3,035 tests.
       thresholds: {
-        statements: 26.3,
-        branches: 18.8,
-        functions: 25.3,
-        lines: 27.0,
+        statements: 26.6,
+        branches: 19.5,
+        functions: 25.6,
+        lines: 27.3,
       },
     },
   },

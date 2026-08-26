@@ -834,8 +834,28 @@ export async function getPortfolioSummary(clientId: string): Promise<PortfolioSu
         typeof entry === 'object' && entry !== null ? ((entry as KvRecord).value ?? entry) : entry
       ) as KvRecord | null;
       if (!evt || typeof evt !== 'object') return null;
-      // Filter to this client's events
-      if (evt.clientId && evt.clientId !== clientId) return null;
+      /**
+       * Filter to this client's events — POSITIVELY.
+       *
+       * This used to read `if (evt.clientId && evt.clientId !== clientId)`,
+       * which only excluded an event that named a DIFFERENT client. An event
+       * with no `clientId`, an empty one, or a null one passed straight through
+       * and would appear on every client's portal.
+       *
+       * Latent rather than live today, because nothing writes a bare
+       * `calendar_event:` key: the only calendar in the store is the
+       * content-marketing one at `auto_content:calendar_event:` (see
+       * `CALENDAR_PREFIX` in auto-content-pipeline-helpers.ts), which this
+       * prefix does not match. So the list below is always empty.
+       *
+       * That makes the old filter a trap sitting next to dead code. The obvious
+       * "fix" for an empty events list is to point this read at
+       * `auto_content:calendar_event:` — and those events carry no `clientId`
+       * at all, so under the old condition every client would have been shown
+       * the firm's internal content calendar. Requiring a match closes that
+       * before anyone walks into it.
+       */
+      if (evt.clientId !== clientId) return null;
       return {
         id: String(evt.id || ''),
         type: String(evt.type || 'meeting'),
