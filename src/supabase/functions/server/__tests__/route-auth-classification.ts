@@ -115,8 +115,9 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'shared-secret',
     classification: 'guarded',
     reason:
-      'Machine endpoint authenticated by a shared secret compared inline in the handler (service-role key, super-admin password, or ingest token). No named middleware identifier exists for the detector to match.',
+      'Machine endpoint authenticated by a shared secret rather than a user session. Four of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move five routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
     routes: [
+      'calendar-digest-routes.ts POST /send-birthdays',
       'calendar-digest-routes.ts POST /send-daily',
       'client-management-routes.ts POST /cron/cleanup',
       'esign-ops-routes.ts POST /cron/expiry-sweep',

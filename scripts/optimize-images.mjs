@@ -40,22 +40,65 @@ const TARGETS = [
 // Responsive widths to generate. Should cover mobile → desktop cards/hero.
 const WIDTHS = [480, 768, 1024, 1440];
 
+/**
+ * Discover extra variants to build FROM THE `imageKey` REFERENCES in the app,
+ * not from figma imports.
+ *
+ * Three iterations, and the middle one is the instructive failure:
+ *
+ *  1. Originally this scanned only `src/components/pages/*Page.tsx`. Six of the
+ *     seventeen files importing `figma:asset` are not named `*Page.tsx` --
+ *     including `homePageData.tsx`, which carries the home page service cards.
+ *  2. So it was widened to walk all of `src/`. That over-corrected: the walk
+ *     finds every figma import, and 16 of them (the provider logos) are
+ *     rendered through the ordinary <img> path and never referenced by an
+ *     `imageKey`. Building them would have emitted 128 unreferenced files into
+ *     `public/` and the manifest -- inflating exactly the deployed weight this
+ *     work exists to reduce.
+ *  3. What actually determines whether a variant is ever fetched is an
+ *     `imageKey`, because `ResponsiveImage` is only reachable through one. So
+ *     that is what is scanned for.
+ *
+ * This pairs with `src/utils/__tests__/optimized-image-coverage.test.ts`: the
+ * test asserts every referenced key has its variants on disk, and this builds
+ * variants for exactly the referenced keys. Adding an `imageKey` is what asks
+ * for generation; nothing else does.
+ *
+ * Non-hash keys (`tax-planning`, `services-menu`) are curated in TARGETS above,
+ * which maps them to a source hash. Only 40-char hex keys are resolvable
+ * directly, so only those are discovered here.
+ */
+async function collectSourceFiles(dir) {
+  const out = [];
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
+      out.push(...(await collectSourceFiles(full)));
+    } else if (/\.(tsx?|jsx?)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+      out.push(full);
+    }
+  }
+
+  return out;
+}
+
 async function discoverFigmaAssetPngHashes() {
-  const pagesDir = path.join(PROJECT_ROOT, 'src', 'components', 'pages');
-  const entries = await fs.readdir(pagesDir, { withFileTypes: true });
-  const pageFiles = entries
-    .filter((e) => e.isFile() && e.name.endsWith('Page.tsx'))
-    .map((e) => path.join(pagesDir, e.name));
+  const files = await collectSourceFiles(path.join(PROJECT_ROOT, 'src'));
 
+  const curated = new Set(TARGETS.map((t) => t.key ?? t.label));
   const hashes = new Set();
-  const re = /figma:asset\/([a-f0-9]{40})\.png/g;
+  const re = /imageKey:\s*['"]([a-f0-9]{40})['"]/gi;
 
-  for (const filePath of pageFiles) {
+  for (const filePath of files) {
     const content = await fs.readFile(filePath, 'utf8');
     let m;
 
     while ((m = re.exec(content))) {
-      hashes.add(m[1]);
+      const key = m[1].toLowerCase();
+      if (!curated.has(key)) hashes.add(key);
     }
   }
 
