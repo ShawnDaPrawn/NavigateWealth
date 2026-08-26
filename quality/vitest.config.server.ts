@@ -155,11 +155,18 @@ export default defineConfig({
       // and FSCA-debarment records — including tests that pin the AML and
       // debarment "checks" as the placeholders they still are). Measured
       // 24.55 / 17.93 / 24.12 / 25.21 across 2,801 tests.
+      //
+      // Raised again 2026-08-26 (24.5 / 17.9 / 24.0 / 25.1) with two suites that
+      // both let the REAL renderer run rather than stubbing it, which is why
+      // they moved the number so far for their size: esign-certificates went
+      // 0.4% -> 92.5% by letting pdf-lib build the actual certificate, and
+      // contact-pdf-generator went 0% -> 98.7% because it has no dependency but
+      // the logger. Measured 25.92 / 18.51 / 24.81 / 26.64 across 2,895 tests.
       thresholds: {
-        statements: 24.5,
-        branches: 17.9,
-        functions: 24.0,
-        lines: 25.1,
+        statements: 25.8,
+        branches: 18.4,
+        functions: 24.7,
+        lines: 26.5,
       },
     },
   },

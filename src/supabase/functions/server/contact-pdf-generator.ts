@@ -222,9 +222,32 @@ export function generateContactPdf(data: ContactPdfData): string {
       stream += `${margin} ${y} m ${margin + 60} ${y} l S\n`;
       y -= 18;
 
-      // Word-wrap the message into lines
-      const lines = wordWrap(data.message.trim(), 80);
-      const msgHeight = lines.length * 16 + 20;
+      /**
+       * Word-wrap the message, then cap it to what actually fits.
+       *
+       * The field loop above guards with `if (y < margin + 140) break;`. This
+       * loop had no guard, so a long enquiry kept decrementing `y` past zero:
+       * the overflowing lines were still written into the content stream, at
+       * NEGATIVE coordinates, where no reader draws them. A 1,000-word message
+       * lost 29 lines that way and took the Action Required banner off-page
+       * with it, and nothing looked wrong — the PDF opened and appeared
+       * complete.
+       *
+       * The full text is always in the email body this PDF is attached to
+       * (see `sendContactFormAdminNotification`), so the truncation is not data
+       * loss. It was a document that stopped without saying so. The marker
+       * below says so.
+       *
+       * The floor leaves room for the banner (40pt + 20pt spacing) and the
+       * fixed footer, both of which are drawn from whatever `y` has become.
+       */
+      const MESSAGE_FLOOR = margin + 130;
+      const allLines = wordWrap(data.message.trim(), 80);
+      const maxLines = Math.max(1, Math.floor((y - MESSAGE_FLOOR) / 16));
+      const truncated = allLines.length > maxLines;
+      // One slot is kept for the marker when truncating.
+      const lines = truncated ? allLines.slice(0, Math.max(1, maxLines - 1)) : allLines;
+      const msgHeight = (lines.length + (truncated ? 1 : 0)) * 16 + 20;
 
       // Background
       stream += `0.976 0.98 0.984 rg\n`;
@@ -243,6 +266,21 @@ export function generateContactPdf(data: ContactPdfData): string {
         stream += `ET\n`;
         y -= 16;
       }
+
+      if (truncated) {
+        // Plain ASCII on purpose: `encode()` writes `charCodeAt(i) & 0xff`, so a
+        // typographic ellipsis (U+2026) would be truncated to a stray byte.
+        const omitted = allLines.length - lines.length;
+        const note = `... ${omitted} more line${omitted === 1 ? '' : 's'} - full message is in the email body`;
+        stream += `BT\n`;
+        stream += `0.42 0.45 0.50 rg\n`;
+        stream += `/F1 9 Tf\n`;
+        stream += `${margin + 12} ${y} Td\n`;
+        stream += `(${pdfEscape(note)}) Tj\n`;
+        stream += `ET\n`;
+        y -= 16;
+      }
+
       y -= 20;
     }
 
