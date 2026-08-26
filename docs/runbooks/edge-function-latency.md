@@ -5,8 +5,15 @@
 queries are at the bottom.
 
 The app's users are in South Africa. Their median request to the Edge Function
-takes **2.9 seconds**. This document is about where those seconds go, because
-the answer turned out to be almost entirely geometry, and only partly code.
+took **2.8 seconds** before the region pin and takes **2.2 seconds** after it.
+This document is about where those seconds go.
+
+The answer, now that all three hypotheses have been tested: roughly **1,010 ms
+is fixed Supabase platform overhead** that no code change touches, roughly
+**670 ms was geography** and has been recovered by pinning execution to the
+database's continent, and only **330–550 ms is this application's own work**.
+Cold start, which looked like the most likely culprit, turned out to contribute
+nothing.
 
 ---
 
@@ -87,6 +94,33 @@ a fresh deploy with no configuration. Clear it, do not remove it. An earlier
 draft treated empty and absent alike, which made this whole procedure a no-op;
 caught in review on #240.
 
+#### The pin took, and it is worth about 666 ms at p50
+
+**Measured 2026-08-26, 24-hour window, ZA traffic split by serving region.**
+Both sides are in the same window because the pin rolled out inside it, so this
+is the same traffic pattern before and after — not two different days.
+
+| ZA traffic served from | calls | min_ms | p50_ms | p95_ms |
+| ---------------------- | ----- | ------ | ------ | ------ |
+| `eu-west-3` (pre-pin)  | 78    | 1,113  | 2,820  | 4,963  |
+| `us-east-1` (pinned)   | 100   | 1,525  | 2,154  | 3,506  |
+
+- **p50: −666 ms. p95: −1,457 ms.** The pin works, and it helps the slow
+  requests most, which is the right shape — those are the chatty routes making
+  several database round trips each.
+- **The prediction was too optimistic.** This note expected "roughly 1,200 ms of
+  the ~1,376 ms". The realised p50 gain is 666 ms, about half of that. The
+  1,376 ms figure came from a 4-call `eu-west-3` sample; the 78-call sample here
+  is the more trustworthy number, and against it the theoretical maximum was
+  never 1,376 ms to begin with.
+- **`min_ms` went the other way: 1,113 → 1,525 ms.** The fastest ZA request got
+  ~400 ms _slower_. That is the documented trade-off arriving exactly as
+  described above — the client now pays one long leg to Virginia on every
+  request, so a route that reads a single key has nothing to win and the extra
+  client distance to lose. Only routes that make more than one database call come
+  out ahead. Nothing to fix; worth knowing before anyone reads `min_ms` as a
+  regression.
+
 ### 2. The app's own floor — about 1,000 ms, and geography does not explain it
 
 Even co-located with the database, `/publications/articles` has a p50 of
@@ -113,29 +147,58 @@ nothing.
 That is all the preflight establishes. It narrows the search; it does not name
 a culprit.
 
-#### What has been ruled out, and what has not
+#### Resolved: the floor is fixed platform invocation cost, not cold start
 
-**Ruled out:** per-request route-handler work as the explanation for the floor.
-The preflight does none of it and still hit 1,016 ms.
+**Measured 2026-08-26, 24-hour window, grouped by method, status and serving
+region.** The `204` preflight rows are the answer, because a preflight is the
+only request in the system that provably does no work:
 
-**Not ruled out — the preflight cannot distinguish between these:**
+| Request                     | region      | calls | min_ms | p05_ms | p50_ms |
+| --------------------------- | ----------- | ----- | ------ | ------ | ------ |
+| `OPTIONS` → `204` preflight | `us-east-1` | 7     | 1,010  | 1,015  | 1,057  |
+| `OPTIONS` → `204` preflight | `eu-west-3` | 26    | 1,113  | 1,129  | 1,344  |
+| `POST` → `200` (cron)       | `us-east-2` | 4,339 | 1,091  | 1,318  | 1,637  |
+| `GET` → `200`               | `us-east-2` | 52    | 1,126  | 1,258  | 1,424  |
 
-- **Cold start.** Bundle fetch, isolate creation and top-level module
-  evaluation. The `booted (time: 57ms)` line does not cover this: that number is
-  the isolate's own boot, measured after the payload has already been fetched
-  and compiled. But nothing in the measurement establishes that the sampled
-  request actually used a cold isolate.
-- **Gateway and platform overhead.** Request admission, scheduling, queuing and
-  TLS setup all happen before any app code runs, and all of it is inside
-  `execution_time_ms`.
-- Sequential `kv.get` calls on the heavier routes. This no longer explains the
-  floor, but it is still real per-request cost on top of it: `kv_store_91ed8379`
-  has `mget` and `getByPrefix`, and a route that awaits five keys in series pays
-  five round trips.
+Read the preflight row: **min 1,010, p05 1,015, p50 1,057.** A 47 ms spread from
+the floor to the median, on requests that perform no I/O at all.
 
-Separating these needs cold and warm requests correlated against each other —
-the same route, sampled after an idle gap and again under sustained traffic —
-not a single preflight.
+**That kills cold start.** A cold-start component would show up as variance —
+some requests paying a bundle fetch and isolate boot, most not — and the
+signature this note predicted was "a wide `min_ms`-to-`p95_ms` spread on bursty
+ZA traffic against a narrow one on steady cron traffic". The opposite happened.
+The preflights are nearly identical to each other, and the bursty ZA rows
+(1,525 → 3,506) actually have a _narrower_ spread than the steady 4,403-call
+cron rows (1,016 → 3,607). A cost that every request pays, in the same amount,
+is not a cold start.
+
+**It also is not the app.** 4,403 co-located `us-east-2` calls and not one beat
+1,016 ms. Saturated traffic against a warm isolate in the database's own region
+still hits the same floor as a preflight that runs no route code.
+
+So of the three candidates, two are now excluded and the remaining one is the
+answer: **~1,010 ms of fixed Supabase Edge Function invocation overhead —
+request admission, scheduling and TLS setup — sitting inside `execution_time_ms`
+before any of this application's code runs.** There is no app-side change that
+recovers it. Escalating it to Supabase, or moving the hot routes off Edge
+Functions, are the only levers.
+
+**What that leaves for the app.** Size it within one region, so distance cancels
+out. In `us-east-2`: a no-work request floors at ~1,016–1,091 ms, a real `GET`
+runs a p50 of 1,424 ms, a real `POST` 1,637 ms. **The app's own work plus its
+database round trips is therefore roughly 330–550 ms at p50** — and that is the
+entire budget route-level optimisation can address. Everything else in a ZA
+client's 2,154 ms p50 is the ~1,010 ms platform floor plus the client's own leg
+to Virginia, neither of which a code change reaches.
+
+**One earlier guess about that 330–550 ms, retracted.** An earlier draft named
+sequential `kv.get` calls as the likely culprit. A scan of the server tree does
+not support it: the batch and parallel primitives are already in wide use — 109
+files call `mget` or `getByPrefix`, and there are 142 `Promise.all` sites across
+72 files — and two passes of a serial-chain detector found no route awaiting
+three or more keys in series that was not a false positive from function-boundary
+bleed (the aggregation paths delegate their reads to resolvers that batch). It
+remains possible on a route not yet read; it is no longer a claim.
 
 #### A correction: cron traffic does NOT keep the pinned region warm
 
@@ -154,21 +217,26 @@ traffic is bursty — 25/16/60/34 calls in one afternoon window, then zero for
 twenty hours — and after the pin it lands in a region nothing else drives. If
 cold start does turn out to be a real component of the floor, pinning could make
 the first request of a burst _slower_ even while it makes the steady-state
-faster. #240 is justified on geography, which is measured (1,376 ms). It is not
-justified on warmth, which was an assumption and a wrong one.
+faster. #240 is justified on geography, which is measured. It is not justified on
+warmth, which was an assumption and a wrong one.
 
 Caught by Codex review on #242.
 
-- Sequential `kv.get` calls on the heavier routes. This no longer explains the
-  floor, but it is still real per-request cost on top of it: `kv_store_91ed8379`
-  has `mget` and `getByPrefix`, and a route that awaits five keys in series pays
-  five round trips.
-- One thing already fixed: 113 admin route registrations chained
-  `requireAuth, requireAdmin`, and `requireAdmin` is a strict superset — so each
-  of those requests made **two** Supabase Auth round trips and **two** database
-  reads for one answer. Removed in the same series of changes as this note, with
-  a source-scanning ratchet (`__tests__/auth-middleware-cost.test.ts`). That was
-  per-request cost, not floor, and it only affected admin routes.
+**The risk it flagged did not materialise**, and the measurement above says why:
+cold start is not a component of the floor at all, so landing in a region nothing
+else drives costs the first request of a burst nothing. The reasoning was still
+right — it just turned out not to matter here.
+
+#### Per-request cost that was found and removed
+
+Not the floor, but real, and it is gone: 113 admin route registrations chained
+`requireAuth, requireAdmin`, and `requireAdmin` is a strict superset of
+`requireAuth`. Every one of those requests made **two** Supabase Auth round trips
+and **two** database reads to answer one question. Removed in the same series of
+changes as this note, with a source-scanning ratchet
+(`__tests__/auth-middleware-cost.test.ts`) so the pattern cannot come back. It
+only ever affected admin routes, so it does not show up in the
+`/publications/articles` numbers above.
 
 ---
 
@@ -215,19 +283,48 @@ group by fn_region, colo, country
 order by calls desc
 ```
 
-Read it like this:
+Read it like this. All three questions were answered on 2026-08-26; re-run to
+confirm the answers still hold, not to discover them.
 
-- **Did the pin take?** ZA rows should now show `fn_region = us-east-1` instead
-  of `eu-west-3`. Binary, and it needs only a handful of calls.
-- **Is there a floor at all, and does it move?** `min_ms` is the number to
-  watch, not `p50_ms` — the minimum is the closest thing to a warm request in
-  the sample. If ZA `min_ms` lands near the `us-east-2` cron rows' `min_ms`,
-  the floor is regional overhead the pin cannot touch. If it stays near
-  1,000 ms in both, the floor is something common to every request.
+- **Did the pin take?** ZA rows should show `fn_region = us-east-1` instead of
+  `eu-west-3`. Binary, and it needs only a handful of calls. **Answered: yes.**
+- **Is there a floor at all, and does it move?** `min_ms` is the number to watch,
+  not `p50_ms`. **Answered: ~1,010–1,090 ms in every region, ZA and US alike, and
+  the pin does not move it.** It is platform invocation cost, not geography.
 - **Is cold start part of it?** A wide `min_ms`-to-`p95_ms` spread on bursty ZA
-  traffic, against a narrow one on steady cron traffic, is the signature. A
-  narrow spread on both says cold start is not the story and the hypothesis
-  above should be dropped.
+  traffic against a narrow one on steady cron traffic is the signature.
+  **Answered: no** — the spread came out narrower on the bursty traffic than on
+  the steady traffic, which is the opposite signature, and the preflight query
+  below settles it outright.
+
+**The decisive query — isolate requests that do no work.** An `OPTIONS`/`204`
+preflight is short-circuited by `cors()` before any handler, KV read or auth
+check, so whatever it costs is pure platform overhead. Group by method and
+status so those rows separate out:
+
+```sql
+select
+  log_attributes['request.method'] as method,
+  log_attributes['response.status_code'] as status,
+  log_attributes['response.headers.x_sb_edge_region'] as fn_region,
+  count() as calls,
+  round(min(toFloat64OrNull(log_attributes['execution_time_ms']))) as min_ms,
+  round(quantile(0.05)(toFloat64OrNull(log_attributes['execution_time_ms']))) as p05_ms,
+  round(quantile(0.5)(toFloat64OrNull(log_attributes['execution_time_ms']))) as p50_ms
+from logs
+where source = 'function_edge_logs'
+  and log_attributes['execution_time_ms'] != ''
+group by method, status, fn_region
+having calls >= 5
+order by calls desc
+```
+
+The `OPTIONS`/`204` row's `p05_ms` is the app's floor with the app removed. If it
+is still ~1,010 ms, nothing has changed. If `p50_ms` on that row runs far above
+its own `min_ms`, cold start has become real after all and the conclusion above
+needs revisiting. The gap between that row's `p50_ms` and a real request's
+`p50_ms` **in the same region** is the app's own work — the only part a code
+change can reduce.
 
 **Where the callers are, and which region serves them:**
 
@@ -261,10 +358,11 @@ The database's own region comes from the project record, not from a guess:
 
 ## What this does not say
 
-- It does not say the 1,376 ms will be recovered in full. Pinning moves the
-  long haul from N database round trips to one client round trip; the win
-  scales with how many queries a route makes, so a single-key route gains
-  little and a chatty one gains most.
+- It does not say the geographic penalty was recovered in full. Pinning moves the
+  long haul from N database round trips to one client round trip; the win scales
+  with how many queries a route makes, so a single-key route gains little and a
+  chatty one gains most. Measured: −666 ms at p50, against a prediction of
+  ~1,200 ms.
 - It does not measure what the client actually experiences. Every number here
   is `execution_time_ms`, measured at the edge. The browser additionally pays
   its own round trip to the PoP, which none of these queries can see.

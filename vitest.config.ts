@@ -26,6 +26,10 @@ export default defineConfig({
       // them; edge test files `vi.mock(...)` these so no real network calls run.
       { find: 'pdf-lib@1.17.1', replacement: 'pdf-lib' },
       { find: 'npm:pdf-lib@1.17.1', replacement: 'pdf-lib' },
+      // Keep the unversioned form AFTER the pinned one: Vite matches string
+      // aliases by prefix in array order, so 'npm:pdf-lib' listed first would
+      // swallow 'npm:pdf-lib@1.17.1' and rewrite it to 'pdf-lib@1.17.1'.
+      { find: 'npm:pdf-lib', replacement: 'pdf-lib' },
       { find: 'npm:docx', replacement: 'docx' },
       { find: 'npm:jspdf-autotable', replacement: 'jspdf-autotable' },
       { find: 'npm:jspdf', replacement: 'jspdf' },
@@ -36,6 +40,21 @@ export default defineConfig({
       { find: 'npm:@zip.js/zip.js', replacement: '@zip.js/zip.js' },
       { find: 'jsr:@std/encoding/base64', replacement: '@jsr/std__encoding/base64' },
       { find: 'node-forge@1.3.1', replacement: 'node-forge' },
+      { find: 'npm:node-forge@1.3.1', replacement: 'node-forge' },
+      // The e-signature signing stack. Without these the four modules that use
+      // them fail to transform, and Vitest's coverage provider then drops them
+      // from the report entirely rather than counting them as uncovered — which
+      // silently shrinks the denominator the backend ratchet floors against.
+      { find: 'npm:@signpdf/signpdf', replacement: '@signpdf/signpdf' },
+      { find: 'npm:@signpdf/signer-p12', replacement: '@signpdf/signer-p12' },
+      {
+        find: 'npm:@signpdf/placeholder-pdf-lib',
+        replacement: '@signpdf/placeholder-pdf-lib',
+      },
+      {
+        find: 'npm:pdfjs-dist@4.7.76/legacy/build/pdf.mjs',
+        replacement: 'pdfjs-dist/legacy/build/pdf.mjs',
+      },
       { find: '@jsr/supabase__supabase-js@2.49.8', replacement: '@jsr/supabase__supabase-js' },
       // Edge functions import via the Deno `jsr:` specifier; rewrite to the
       // npm package so Vitest can resolve it. The test files separately

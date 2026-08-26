@@ -176,11 +176,31 @@ export default defineConfig({
       // the calendar filter excluding only events that named a DIFFERENT
       // client, so an event with no clientId would have shown on every client's
       // portal. Measured 26.67 / 19.62 / 25.71 / 27.41 across 3,035 tests.
+      //
+      // Raised again 2026-08-26 (26.6 / 19.5 / 25.6 / 27.3) with the article
+      // notification suites — recipient collection, delivery and retry
+      // classification, the job lifecycle, the cron processor and the campaign
+      // rows the publications dashboard reads. 163 tests across five files,
+      // covering roughly 2,400 lines that had no test at all.
+      //
+      // The SAME change also fixed the denominator. Four server modules
+      // (esign-pdf-analysis, esign-pdf-protect, esign-synthetic-probe,
+      // form-template-routes) imported `npm:` specifiers with no alias in
+      // vitest.config.ts, so Vite could not transform them; the v8 provider
+      // then logged "Failed to parse … Excluding it from coverage" and dropped
+      // them from the report altogether instead of counting them as 0%. That
+      // hid 460 statements — including the e-signature signing path — and
+      // inflated every number above it. The aliases are added, the parse
+      // failures are gone, and the floors below are measured against the
+      // complete tree, so they are lower than they would have been under the
+      // old short denominator and still a ratchet up on it.
+      //
+      // Measured 28.52 / 21.75 / 28.13 / 29.24 across 3,198 tests.
       thresholds: {
-        statements: 26.6,
-        branches: 19.5,
-        functions: 25.6,
-        lines: 27.3,
+        statements: 28.3,
+        branches: 21.6,
+        functions: 27.9,
+        lines: 29.0,
       },
     },
   },
