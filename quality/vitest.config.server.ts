@@ -207,11 +207,38 @@ export default defineConfig({
       // Writing them found the run-log key colliding on millisecond precision,
       // the same defect as the compliance audit log. Measured
       // 30.19 / 22.93 / 29.54 / 30.93 across 3,302 tests.
+      //
+      // Raised again 2026-08-26 (29.9 / 22.7 / 29.3 / 30.7) with the e-sign
+      // storage and template suites. esign-storage.ts 2.2% -> 88.2% (the object
+      // paths, upsert rules, MIME and size gating and filename sanitisation
+      // under the ECTA evidence chain, with a known-answer SHA-256 test rather
+      // than a self-consistent one); esign-template-service.ts 1.1% -> 43.3%
+      // (the version-bump rule, field by field, because an envelope records the
+      // template version it was raised under and a wrong bump strands it).
+      // Measured 30.90 / 23.48 / 30.29 / 31.63 across 3,388 tests.
+      //
+      // Raised again 2026-08-26 (30.7 / 23.3 / 30.0 / 31.4) with the ai-advisor
+      // route suites. ai-advisor.ts 0% -> 86.2%, and because the whole auth
+      // chain runs for real against the in-memory KV rather than being stubbed,
+      // ai-advisor-store 0 -> 45.9%, ai-advisor-shared 0 -> 100%, auth-mw
+      // -> 77.8% and constants -> 100% came with it. The tests are mostly about
+      // who may open a client's Ask Vasco conversation, and they surfaced that
+      // the `viewer` personnel role can DELETE one — pinned and flagged, not
+      // changed. Measured 31.80 / 24.06 / 31.24 / 32.52 across 3,470 tests.
+      //
+      // Raised again 2026-08-26 (31.6 / 23.9 / 31.0 / 32.3) with the newsletter,
+      // will-chat and tax-agent suites: newsletter-service 0.6% -> 98.8%,
+      // will-chat-service 0% -> 92.0%, tax-agent-service -> 78.7%. The
+      // newsletter tests are mostly about POPIA — which operations may set
+      // `active: true` on someone who opted out, and which must refuse. Writing
+      // the will-chat tests found a colliding session id that silently destroyed
+      // an interview transcript, and the same defect in tax-agent-service.
+      // Measured 33.01 / 25.45 / 32.52 / 33.74 across 3,560 tests.
       thresholds: {
-        statements: 29.9,
-        branches: 22.7,
-        functions: 29.3,
-        lines: 30.7,
+        statements: 32.8,
+        branches: 25.2,
+        functions: 32.3,
+        lines: 33.5,
       },
     },
   },

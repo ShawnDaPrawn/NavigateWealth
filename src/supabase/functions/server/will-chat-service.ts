@@ -39,7 +39,14 @@ export async function createSession(
   clientName: string,
   adviserId: string,
 ): Promise<WillChatSession> {
-  const sessionId = `${clientId}-wc-${Date.now()}`;
+  // `Date.now()` alone is millisecond-resolution, so two sessions opened in the
+  // same millisecond produced the SAME id and the second silently overwrote the
+  // first — losing a whole will interview transcript. The random suffix stays
+  // all-digits on purpose: will-chat-routes derives the client id back out of
+  // the session id with /-wc-\d+$/, so a non-numeric suffix would break every
+  // route that takes a session id.
+  const randomSuffix = String(crypto.getRandomValues(new Uint32Array(1))[0]).padStart(10, '0');
+  const sessionId = `${clientId}-wc-${Date.now()}${randomSuffix}`;
   const now = new Date().toISOString();
 
   // Load client profile for context injection
