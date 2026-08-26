@@ -101,11 +101,16 @@ export default defineConfig({
       // client's Last Will and Living Will, where the record owner is
       // recovered by regex from a caller-supplied url segment. Measured
       // 19.65 / 13.76 / 18.66 / 20.16 across 1,409 tests.
+      //
+      // Raised again 2026-08-26 (19.5 / 13.7 / 18.5 / 20.0) with the reporting
+      // dashboard task-metric suite — the dashboard had been reading a table
+      // that does not exist and reporting a confident zero. Measured
+      // 19.79 / 13.98 / 18.94 / 20.30 across 1,428 tests.
       thresholds: {
-        statements: 19.5,
-        branches: 13.7,
-        functions: 18.5,
-        lines: 20.0,
+        statements: 19.7,
+        branches: 13.9,
+        functions: 18.8,
+        lines: 20.2,
       },
     },
   },

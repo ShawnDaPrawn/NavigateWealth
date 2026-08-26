@@ -28,7 +28,18 @@ articlesReadRoutes.get('/articles', async (c) => {
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '1000');
 
-    let articles = await kv.getByPrefix('article:');
+    // Three independent reads, issued together. All three ran unconditionally
+    // before — there is no early return between them — so this is the same
+    // work in one round trip instead of three. On the hottest public route in
+    // the app that is two saved crossings of whatever distance separates the
+    // executing region from Postgres; see docs/runbooks/edge-function-latency.md.
+    const [rawArticles, categories, types] = await Promise.all([
+      kv.getByPrefix('article:'),
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article_type:'),
+    ]);
+
+    let articles = rawArticles;
 
     // Apply filters
     if (status) {
@@ -64,10 +75,7 @@ articlesReadRoutes.get('/articles', async (c) => {
       return dateB - dateA;
     });
 
-    // Enrich articles with category and type names
-    const categories = await kv.getByPrefix('article_category:');
-    const types = await kv.getByPrefix('article_type:');
-
+    // Enrich articles with category and type names (both fetched above).
     const categoryMap = new Map(categories.map((cat: ArticleCategory) => [cat.id, cat]));
     const typeMap = new Map(types.map((type: ArticleType) => [type.id, type]));
 
@@ -138,9 +146,13 @@ articlesReadRoutes.get('/articles/by-slug/:slug', async (c) => {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 
-    // Enrich with category and type names
-    const categories = await kv.getByPrefix('article_category:');
-    const types = await kv.getByPrefix('article_type:');
+    // Enrich with category and type names. Paired rather than folded into the
+    // lookup above: these run only once the article is known to exist and to
+    // be published, and hoisting them would fetch two namespaces on every 404.
+    const [categories, types] = await Promise.all([
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article_type:'),
+    ]);
     const category = article.category_id
       ? categories.find((cat: ArticleCategory) => cat.id === article.category_id)
       : null;
@@ -177,9 +189,13 @@ articlesReadRoutes.get('/articles/slug/:slug', async (c) => {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 
-    // Enrich with category and type names
-    const categories = await kv.getByPrefix('article_category:');
-    const types = await kv.getByPrefix('article_type:');
+    // Enrich with category and type names. Paired rather than folded into the
+    // lookup above: these run only once the article is known to exist and to
+    // be published, and hoisting them would fetch two namespaces on every 404.
+    const [categories, types] = await Promise.all([
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article_type:'),
+    ]);
     const category = article.category_id
       ? categories.find((cat: ArticleCategory) => cat.id === article.category_id)
       : null;

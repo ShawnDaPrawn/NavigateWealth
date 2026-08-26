@@ -39,9 +39,11 @@ const getSupabase = () =>
 
 adminRoutes.get('/stats', requireAdmin, async (c) => {
   try {
-    const articles = await kv.getByPrefix('article:');
-    const categories = await kv.getByPrefix('article_category:');
-    const types = await kv.getByPrefix('article_type:');
+    const [articles, categories, types] = await Promise.all([
+      kv.getByPrefix('article:'),
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article_type:'),
+    ]);
 
     // Count articles by category
     const byCategory: Record<string, number> = {};
@@ -96,8 +98,10 @@ adminRoutes.post('/initialize', requireAdmin, async (c) => {
     const shouldCreateTypes = body?.create_default_types !== false;
 
     // Check current state and backfill anything missing.
-    const existingCategories = await kv.getByPrefix('article_category:');
-    const existingTypes = await kv.getByPrefix('article_type:');
+    const [existingCategories, existingTypes] = await Promise.all([
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article_type:'),
+    ]);
 
     const needsCategories = existingCategories.length === 0 && shouldCreateCategories;
     const needsTypes = existingTypes.length === 0 && shouldCreateTypes;
@@ -197,9 +201,11 @@ adminRoutes.post('/initialize', requireAdmin, async (c) => {
 // Export all articles (for backup/migration)
 adminRoutes.get('/export', requireAdmin, async (c) => {
   try {
-    const articles = await kv.getByPrefix('article:');
-    const categories = await kv.getByPrefix('article_category:');
-    const types = await kv.getByPrefix('article_type:');
+    const [articles, categories, types] = await Promise.all([
+      kv.getByPrefix('article:'),
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article_type:'),
+    ]);
 
     const exportData = {
       version: '1.0.0',

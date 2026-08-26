@@ -23,8 +23,10 @@ const taxonomyRoutes = new Hono();
 
 taxonomyRoutes.get('/categories', async (c) => {
   try {
-    const categories = await kv.getByPrefix('article_category:');
-    const articles = await kv.getByPrefix('article:');
+    const [categories, articles] = await Promise.all([
+      kv.getByPrefix('article_category:'),
+      kv.getByPrefix('article:'),
+    ]);
 
     // Filter only published articles for counts
     const publishedArticles = articles.filter((a: Article) => a.status === 'published');
