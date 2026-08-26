@@ -244,11 +244,20 @@ export default defineConfig({
       // malformed body into a 500, and an eighth timestamp-as-key collision —
       // in the permission audit trail itself. Measured
       // 33.96 / 26.11 / 33.35 / 34.70 across 3,653 tests.
+      //
+      // Raised again 2026-08-26 (33.7 / 25.9 / 33.1 / 34.5) with the
+      // count-derived version fix and its harness: one shared FNA/INA route
+      // harness, behavioural delete-then-create suites for medical, investment
+      // and estate, and a source ratchet. Measured
+      // 34.25 / 26.22 / 33.56 / 35.02 across 3,673 tests. The gain is modest
+      // for the size of the change because most of it is source fixes across
+      // ten modules rather than new test surface — floored anyway, because an
+      // unclaimed gain is one the next PR can give back.
       thresholds: {
-        statements: 33.7,
-        branches: 25.9,
-        functions: 33.1,
-        lines: 34.5,
+        statements: 34.0,
+        branches: 26.0,
+        functions: 33.3,
+        lines: 34.8,
       },
     },
   },

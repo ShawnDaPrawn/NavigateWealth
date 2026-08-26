@@ -96,12 +96,52 @@ function templateKey(id: string): string {
   return `${TEMPLATE_PREFIX}${id}`;
 }
 
-function versionKey(articleId: string, timestamp: string): string {
-  return `${VERSION_PREFIX}${articleId}:${timestamp}`;
+/**
+ * Key for one stored article version.
+ *
+ * `versionId` is in the key because `timestamp` is an ISO string at millisecond
+ * resolution and `kv.set` upserts: two saves of the same article in one
+ * millisecond used to collide and the second silently replaced the first. The
+ * id is a uuid the record already carried.
+ *
+ * Nothing rebuilds this key from a stored record any more — the delete paths
+ * below read real keys via `listByPrefix` — so rows written under the old
+ * two-part shape stay readable and deletable.
+ */
+function versionKey(articleId: string, timestamp: string, versionId: string): string {
+  return `${VERSION_PREFIX}${articleId}:${timestamp}:${versionId}`;
 }
 
 function versionPrefix(articleId: string): string {
   return `${VERSION_PREFIX}${articleId}:`;
+}
+
+/**
+ * Every stored version row for an article, as {key, value}, oldest key first.
+ *
+ * Pages, because `listByPrefix` returns at most 100 rows per call and both
+ * callers below delete: a prune that stops at 100 under-prunes, and a
+ * `deleteAllVersions` that stops at 100 leaves versions behind for an article
+ * that no longer exists. The prune caps live articles at 50, so the loop
+ * normally runs once — it exists for articles that predate the prune or whose
+ * prune has previously failed.
+ */
+async function listAllVersionRows(
+  articleId: string,
+): Promise<Array<{ key: string; value: unknown }>> {
+  const prefix = versionPrefix(articleId);
+  const rows: Array<{ key: string; value: unknown }> = [];
+  let startAfter: string | undefined;
+
+  while (true) {
+    const batch = await kv.listByPrefix(prefix, { limit: 200, startAfter });
+    rows.push(...batch);
+    if (batch.length < 200) break;
+    startAfter = batch[batch.length - 1]?.key;
+    if (!startAfter) break;
+  }
+
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
@@ -358,9 +398,20 @@ export const VersionService = {
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
 
-    // Get existing versions to determine version number
-    const existing = await kv.getByPrefix(versionPrefix(articleId));
-    const versionNumber = (existing as ArticleVersion[]).length + 1;
+    // One listing serves both the version number and the prune below.
+    //
+    // Highest stored version, not how many are stored: the prune deletes rows,
+    // so a count regresses and hands back a number already in use — and the
+    // prune then sorted BY that number to decide what to keep, so duplicates
+    // made it drop the wrong rows.
+    const storedRows = await listAllVersionRows(articleId);
+    const existing = storedRows.map((row) => row.value) as ArticleVersion[];
+    const versionNumber =
+      existing.reduce(
+        (max, v) =>
+          Number.isFinite(v?.version_number) && v.version_number > max ? v.version_number : max,
+        0,
+      ) + 1;
 
     const body = (articleData.body as string) || '';
     const plainText = body.replace(/<[^>]+>/g, '');
@@ -371,9 +422,7 @@ export const VersionService = {
     if (versionNumber === 1) {
       changeSummary = 'Initial version';
     } else {
-      const prevVersions = (existing as ArticleVersion[]).sort(
-        (a, b) => b.version_number - a.version_number,
-      );
+      const prevVersions = [...existing].sort((a, b) => b.version_number - a.version_number);
       const prev = prevVersions[0];
       if (prev) {
         const changes: string[] = [];
@@ -415,19 +464,30 @@ export const VersionService = {
       word_count: wordCount,
     };
 
-    await kv.set(versionKey(articleId, now), version);
+    await kv.set(versionKey(articleId, now, id), version);
     log.info('Version created', { articleId, versionNumber });
 
-    // Keep only last 50 versions to avoid KV bloat
-    if ((existing as ArticleVersion[]).length >= 50) {
-      const sorted = (existing as ArticleVersion[]).sort(
-        (a, b) => a.version_number - b.version_number,
-      );
-      const toDelete = sorted.slice(0, sorted.length - 49);
-      for (const old of toDelete) {
-        await kv.del(versionKey(articleId, old.created_at));
+    // Keep only last 50 versions to avoid KV bloat.
+    //
+    // Driven off real keys rather than keys rebuilt from `created_at`. Two
+    // reasons: a rebuilt key only ever matched one of the two key shapes now on
+    // file, and `created_at` was never unique either, so a reconstruction could
+    // name a row the caller did not mean. Ordered by `created_at` rather than
+    // `version_number` for the same reason the number is no longer a count —
+    // "oldest first" is what the prune actually means.
+    // `storedRows` was read before the write above, so keeping 49 of it leaves
+    // 50 on file — the same arithmetic the original had.
+    if (storedRows.length >= 50) {
+      const oldestFirst = [...storedRows].sort((a, b) => {
+        const aAt = String((a.value as ArticleVersion)?.created_at ?? '');
+        const bAt = String((b.value as ArticleVersion)?.created_at ?? '');
+        return aAt < bAt ? -1 : aAt > bAt ? 1 : a.key < b.key ? -1 : 1;
+      });
+      const toDelete = oldestFirst.slice(0, oldestFirst.length - 49).map((row) => row.key);
+      if (toDelete.length > 0) {
+        await kv.mdel(toDelete);
+        log.info(`Pruned ${toDelete.length} old versions for article ${articleId}`);
       }
-      log.info(`Pruned ${toDelete.length} old versions for article ${articleId}`);
     }
 
     return version;
@@ -454,8 +514,10 @@ export const VersionService = {
    * Delete all versions for an article (used when article is permanently deleted).
    */
   async deleteAllVersions(articleId: string): Promise<number> {
-    const versions = await kv.getByPrefix(versionPrefix(articleId));
-    const keys = (versions as ArticleVersion[]).map((v) => versionKey(articleId, v.created_at));
+    // Real keys, not keys rebuilt from `created_at`: a rebuild matches only one
+    // of the two shapes on file, so rows written under the other one would have
+    // survived a "delete all" and outlived the article they belong to.
+    const keys = (await listAllVersionRows(articleId)).map((row) => row.key);
     if (keys.length > 0) {
       await kv.mdel(keys);
     }

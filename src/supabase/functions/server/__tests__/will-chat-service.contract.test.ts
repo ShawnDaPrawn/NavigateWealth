@@ -515,7 +515,9 @@ describe('saveCompletedWill', () => {
 
     const { willId } = await saveCompletedWill(CLIENT, session.id, ADVISER);
 
-    expect(willId).toBe(`${CLIENT}-last_will-v1`);
+    // Shape, not an exact string: the id carries a random suffix so two wills
+    // that settle on the same version cannot overwrite each other.
+    expect(willId).toMatch(new RegExp(`^${CLIENT}-last_will-v1-[0-9a-f]{8}$`));
     const record = kvStore.get(`will:${CLIENT}:last_will:${willId}`) as Record<string, unknown>;
     expect(record).toMatchObject({
       id: willId,
@@ -546,7 +548,7 @@ describe('saveCompletedWill', () => {
 
     const { willId } = await saveCompletedWill(CLIENT, session.id, ADVISER);
 
-    expect(willId).toBe(`${CLIENT}-last_will-v3`);
+    expect(willId).toMatch(new RegExp(`^${CLIENT}-last_will-v3-[0-9a-f]{8}$`));
   });
 
   it('refuses a session that never produced a will', async () => {

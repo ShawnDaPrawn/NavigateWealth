@@ -19,6 +19,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { OPENAI_PRIMARY_MODEL, applyChatTokenLimit } from './ai-model-config.ts';
 import type { WillChatSession, WillChatSessionStatus, WillOutputPack } from './will-chat-types.ts';
+import { nextVersion, versionSuffix } from './fna-versioning.ts';
 
 const log = createModuleLogger('will-chat-service');
 
@@ -367,11 +368,18 @@ export async function saveCompletedWill(
     throw new Error('Session not found or will not yet completed');
   }
 
-  // Determine version from existing wills
+  // Determine version from existing wills. Highest stored version, not how
+  // many are stored — see fna-versioning.ts. This writes into the same
+  // `will:${clientId}:last_will:` key space as the manual will routes, so both
+  // have to agree on how the number is derived or an AI-generated will and a
+  // hand-authored one can land on each other.
   const existingWills = await kv.getByPrefix(`will:${clientId}:last_will:`);
-  const version = (existingWills?.length || 0) + 1;
+  const version = nextVersion(existingWills);
 
-  const willId = `${clientId}-last_will-v${version}`;
+  // `-${versionSuffix()}` carries the uniqueness the version cannot; accepted
+  // by `parseWillId` in estate-planning-fna-will-routes.ts, which is what reads
+  // these ids back.
+  const willId = `${clientId}-last_will-v${version}-${versionSuffix()}`;
   const timestamp = new Date().toISOString();
 
   const willRecord = {

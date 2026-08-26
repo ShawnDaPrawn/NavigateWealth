@@ -10,6 +10,7 @@ import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { assertClientAccess, assertRecordClientAccess } from './client-access.ts';
 import { SaveTaxPlanningSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { nextVersion, versionSuffix } from './fna-versioning.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const taxPlanningRoutes = new Hono();
@@ -106,11 +107,17 @@ taxPlanningRoutes.post('/save', async (c) => {
       );
     }
 
-    // Get existing sessions to determine version
+    // Get existing sessions to determine version. Highest stored version, not
+    // how many are stored — see fna-versioning.ts.
     const sessions = await kv.getByPrefix(`tax-planning-fna:client:${clientId}:`);
-    const version = (sessions?.length || 0) + 1;
+    const version = nextVersion(sessions);
 
-    const sessionId = `${clientId}-v${version}`;
+    // `-${versionSuffix()}` is what makes this id unique. `v${version}` comes
+    // from a read-then-write, so two saves whose reads overlap agree on it and
+    // the second upserts over the first. `GET /:fnaId` below scans this
+    // client's prefix and matches on the stored `id` rather than rebuilding an
+    // exact key, so it resolves both this shape and the old two-part one.
+    const sessionId = `${clientId}-v${version}-${versionSuffix()}`;
     const timestamp = new Date().toISOString();
 
     // Structure as FinalTaxPlan (mostly) but wrapped in session metadata
@@ -422,13 +429,17 @@ taxPlanningRoutes.get('/:fnaId', async (c) => {
 
     const fnaId = c.req.param('fnaId')!;
 
-    // fnaId format is "${clientId}-v${version}"
-    const match = fnaId.match(/^(.+)-v(\d+)$/);
+    // fnaId format is "${clientId}-v${version}" or, since the version-collision
+    // fix, "${clientId}-v${version}-${suffix}". Rather than rebuild an exact
+    // key — which only ever matched one of those two shapes — derive the client
+    // and scan that ONE client's prefix. Same cost order as the exact get,
+    // shape-agnostic, and it does not fall through to the global scan below
+    // (every tax session for every client) on the common path.
+    const derivedClientId = fnaId.split('-v')[0];
 
-    if (match) {
-      const clientId = match[1];
-      const key = `tax-planning-fna:client:${clientId}:${fnaId}`;
-      const fna = await kv.get(key);
+    if (derivedClientId && derivedClientId !== fnaId) {
+      const clientSessions = await kv.getByPrefix(`tax-planning-fna:client:${derivedClientId}:`);
+      const fna = ((clientSessions || []) as VersionedSession[]).find((s) => s.id === fnaId);
 
       if (fna) {
         // The owner comes from the stored record, not from the id the caller
@@ -457,6 +468,12 @@ taxPlanningRoutes.get('/:fnaId', async (c) => {
 export default taxPlanningRoutes;
 
 interface VersionedSession {
+  /** Present on every saved session; declared so `assertRecordClientAccess`
+   *  can be handed one of these directly. Its parameter type is a weak type,
+   *  and TypeScript's weak-type check needs a DECLARED overlap — an index
+   *  signature alone does not satisfy it. */
+  id: string;
+  clientId: string;
   version: number;
   status?: string;
   [key: string]: unknown;
