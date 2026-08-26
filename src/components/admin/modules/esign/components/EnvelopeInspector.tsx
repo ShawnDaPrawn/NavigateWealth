@@ -116,6 +116,18 @@ function getAuditDisplayInfo(action: string, metadata?: Record<string, unknown>)
         color: 'text-purple-600',
         bgColor: 'bg-purple-50 border-purple-200',
       };
+    // Rendered in red rather than falling through to the neutral default.
+    // This is the event that explains a stalled envelope: the recipient was
+    // never told, so nobody is waiting on a signature they know about. It has
+    // to be findable at a glance in the timeline.
+    case 'invite_send_failed':
+      return {
+        icon: <AlertTriangle className="h-4 w-4" />,
+        label: 'Invitation Not Delivered',
+        description: `Signing invitation to ${metadata?.signerName || 'recipient'} could not be sent`,
+        color: 'text-red-700',
+        bgColor: 'bg-red-50 border-red-200',
+      };
     case 'otp_sent':
       return {
         icon: <ShieldCheck className="h-4 w-4" />,

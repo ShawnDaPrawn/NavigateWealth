@@ -467,7 +467,7 @@ async function materialisePacketStep(
       await logAuditEvent({
         envelopeId,
         actorType: 'system',
-        action: 'invite_sent',
+        action: sent ? 'invite_sent' : 'invite_send_failed',
         email: first.email,
         metadata: {
           signerId: first.id,

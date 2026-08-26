@@ -20,8 +20,8 @@
  * The only stubs are the two real IO boundaries — SendGrid and Postgres — plus
  * the logger.
  *
- * One behaviour is asserted as a DEFECT and flagged at its test: the audit
- * trail records `invite_sent` whether or not the email was accepted.
+ * Includes the audit-trail honesty contract: a failed delivery is recorded as
+ * `invite_send_failed`, never as `invite_sent`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -554,26 +554,45 @@ describe('audit trail', () => {
     });
   });
 
-  it('records invite_sent even when the email was NOT accepted', async () => {
-    // Asserted as the defect it is. `sendEmail` returns false without throwing
-    // on three paths — no SendGrid key, a non-OK response, any caught error —
-    // and only the signer's `invite_sent_at` is guarded by that result. The
-    // audit write is unconditional, so the trail asserts an invite that never
-    // went out, while the signer record correctly shows none was.
+  it('records invite_send_failed — not invite_sent — when the email was not accepted', async () => {
+    // `sendEmail` returns false WITHOUT throwing on three paths: no SendGrid
+    // key, a non-OK response, and any caught error. Only the signer's
+    // `invite_sent_at` was ever guarded by that result; the audit write was
+    // unconditional, so the trail asserted an invite that never went out while
+    // the signer record correctly showed none was.
     //
-    // The trail is the ECTA evidence artefact for the signature, which makes
-    // this the wrong direction to be wrong in. Pinned here rather than fixed
-    // because the fix needs a decision about the action vocabulary the
-    // frontend timeline switches on — tracked separately.
+    // The trail is the ECTA evidence artefact for the signature, so an
+    // overstatement here is the wrong direction to be wrong in: it favours the
+    // firm's account of events over the recipient's.
     mail.ok = false;
     const { firstEnvelopeId } = await startTwoStepRun();
 
     const events = await auditFor(firstEnvelopeId!);
-    expect(events.some((e) => e.action === 'invite_sent')).toBe(true);
+    expect(events.some((e) => e.action === 'invite_sent')).toBe(false);
+
+    const failure = events.find((e) => e.action === 'invite_send_failed');
+    expect(failure).toMatchObject({
+      action: 'invite_send_failed',
+      email: 'thandi@example.com',
+    });
+    // The provenance survives the failure — this is the record an operator
+    // needs to work out which packet step stalled and why.
+    expect(failure!.metadata).toMatchObject({ via: 'packet_run', packetStepIndex: 0 });
     expect(mail.sent).toEqual([]);
 
     const signers = await getEnvelopeSigners(firstEnvelopeId!);
     expect(signers[0].invite_sent_at).toBeFalsy();
     expect(signers[0].status).not.toBe('sent');
+  });
+
+  it('leaves the signer and the trail agreeing on a successful send', async () => {
+    const { firstEnvelopeId } = await startTwoStepRun();
+
+    const events = await auditFor(firstEnvelopeId!);
+    expect(events.some((e) => e.action === 'invite_send_failed')).toBe(false);
+    expect(events.some((e) => e.action === 'invite_sent')).toBe(true);
+
+    const signers = await getEnvelopeSigners(firstEnvelopeId!);
+    expect(signers[0].invite_sent_at).toBeTruthy();
   });
 });

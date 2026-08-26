@@ -773,7 +773,7 @@ documentsRoutes.post(
         await logAuditEvent({
           envelopeId,
           actorType: 'system',
-          action: 'invite_sent',
+          action: emailSent ? 'invite_sent' : 'invite_send_failed',
           email: targetSigner.email,
           ip,
           userAgent,
