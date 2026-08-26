@@ -272,11 +272,15 @@ export default defineConfig({
       // a suite that fakes `createEnvelope` would assert that a mock was called
       // rather than that a packet run spawns a signable envelope. Measured
       // 36.29 / 27.34 / 35.25 / 37.07 across 3,852 tests.
+      //
+      // Raised again 2026-08-26 (36.1 / 27.1 / 35.0 / 36.9) with the e-sign
+      // documents-routes suite: the page-manifest and multi-document routes on
+      // an envelope. Measured 36.73 / 27.69 / 35.66 / 37.50 across 3,893 tests.
       thresholds: {
-        statements: 36.1,
-        branches: 27.1,
-        functions: 35.0,
-        lines: 36.9,
+        statements: 36.6,
+        branches: 27.5,
+        functions: 35.4,
+        lines: 37.3,
       },
     },
   },
