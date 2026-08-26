@@ -53,7 +53,6 @@ app.get(
  */
 app.post(
   '/run',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;

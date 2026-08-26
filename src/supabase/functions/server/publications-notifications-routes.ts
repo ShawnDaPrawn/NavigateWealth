@@ -12,7 +12,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { ArticleDeliveryRetrySchema } from './publications-validation.ts';
@@ -185,7 +185,6 @@ function buildCampaignFirstEmailEngagementSummary(
 
 notificationsRoutes.get(
   '/email-engagement/summary',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const includeDeleted = c.req.query('include_deleted') === 'true';
@@ -252,7 +251,6 @@ notificationsRoutes.get(
 
 notificationsRoutes.get(
   '/articles/:id/email-engagement',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -314,7 +312,6 @@ notificationsRoutes.get(
 
 notificationsRoutes.post(
   '/articles/:id/retry-undelivered',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -422,7 +419,6 @@ notificationsRoutes.post(
 
 notificationsRoutes.get(
   '/notification-jobs/:jobId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const jobId = c.req.param('jobId')!;
@@ -438,7 +434,6 @@ notificationsRoutes.get(
 
 notificationsRoutes.get(
   '/notification-campaigns/:campaignId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const campaignId = c.req.param('campaignId')!;
@@ -454,7 +449,6 @@ notificationsRoutes.get(
 
 notificationsRoutes.post(
   '/notification-jobs/process',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json().catch(() => ({}));
@@ -476,7 +470,6 @@ notificationsRoutes.post(
 
 notificationsRoutes.get(
   '/notification-jobs/processor-status',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const state = await getArticleNotificationProcessorState();

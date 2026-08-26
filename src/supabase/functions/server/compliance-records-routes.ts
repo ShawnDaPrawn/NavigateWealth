@@ -33,7 +33,6 @@ app.get(
 
 app.post(
   '/aml-fica/screen/:clientId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
@@ -63,7 +62,6 @@ app.get(
 
 app.post(
   '/aml-fica',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -74,7 +72,6 @@ app.post(
 
 app.put(
   '/aml-fica/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -111,7 +108,6 @@ app.get(
 
 app.post(
   '/statutory',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -122,7 +118,6 @@ app.post(
 
 app.put(
   '/statutory/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -134,7 +129,6 @@ app.put(
 
 app.post(
   '/statutory/:id/submit',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -245,7 +239,6 @@ app.get(
 
 app.post(
   '/record-keeping',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -256,7 +249,6 @@ app.post(
 
 app.post(
   '/record-keeping/:id/dispose',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
@@ -280,7 +272,6 @@ app.get(
 
 app.post(
   '/new-business',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
@@ -291,7 +282,6 @@ app.post(
 
 app.put(
   '/new-business/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;

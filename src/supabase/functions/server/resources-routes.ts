@@ -94,7 +94,6 @@ app.get(
  */
 app.post(
   '/legal/seed',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json().catch(() => ({}));
@@ -112,7 +111,6 @@ app.post(
  */
 app.get(
   '/admin/legal-documents',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const documents = await service.listLegalDocumentDefinitions();
@@ -126,7 +124,6 @@ app.get(
  */
 app.post(
   '/admin/legal-documents/migrate-priority',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const userId = (c.get('userId') as string) || 'admin';
@@ -149,7 +146,6 @@ app.post(
  */
 app.get(
   '/admin/legal-documents/:slug',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -169,7 +165,6 @@ app.get(
  */
 app.get(
   '/admin/legal-documents/:slug/versions',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -189,7 +184,6 @@ app.get(
  */
 app.get(
   '/admin/legal-documents/:slug/audit',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -216,7 +210,6 @@ app.get(
  */
 app.post(
   '/admin/legal-documents/:slug/migrate',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -243,7 +236,6 @@ app.post(
  */
 app.post(
   '/admin/legal-documents/:slug/drafts',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -275,7 +267,6 @@ app.post(
  */
 app.put(
   '/admin/legal-documents/:slug/versions/:versionId',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -308,7 +299,6 @@ app.put(
  */
 app.post(
   '/admin/legal-documents/:slug/versions/:versionId/publish',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -334,7 +324,6 @@ app.post(
  */
 app.post(
   '/admin/legal-documents/:slug/versions/:versionId/archive',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;
@@ -359,7 +348,6 @@ app.post(
  */
 app.post(
   '/admin/legal-documents/:slug/versions/:versionId/duplicate',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const slug = c.req.param('slug')!;

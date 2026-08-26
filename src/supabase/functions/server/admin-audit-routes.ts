@@ -8,7 +8,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 
 import { AdminAuditService } from './admin-audit-service.ts';
@@ -27,7 +27,6 @@ app.get('/', (c) => c.json({ service: 'admin-audit', status: 'active' }));
  */
 app.get(
   '/summary',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const daysParam = c.req.query('days');
@@ -52,7 +51,6 @@ app.get(
  */
 app.get(
   '/log',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const category = c.req.query('category') as AuditActionCategory | undefined;

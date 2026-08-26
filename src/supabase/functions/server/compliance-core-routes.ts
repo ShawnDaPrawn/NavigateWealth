@@ -111,7 +111,6 @@ app.get(
 
 app.get(
   '/fais',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getFAISRecords();
@@ -122,7 +121,6 @@ app.get(
 
 app.post(
   '/fais',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -148,7 +146,6 @@ app.post(
 
 app.get(
   '/aml',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const checks = await service.getAMLChecks();
@@ -159,7 +156,6 @@ app.get(
 
 app.post(
   '/aml/check',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -185,7 +181,6 @@ app.post(
 
 app.get(
   '/popia',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const consents = await service.getPOPIAConsents();
@@ -233,7 +228,6 @@ app.post(
 
 app.get(
   '/debarment',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const checks = await service.getDebarmentChecks();
@@ -244,7 +238,6 @@ app.get(
 
 app.post(
   '/debarment/check',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -287,7 +280,6 @@ app.get(
 
 app.post(
   '/documents-insurance',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -321,7 +313,6 @@ app.post(
 
 app.get(
   '/reports/summary',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const summary = await service.getComplianceSummary();
@@ -332,7 +323,6 @@ app.get(
 
 app.get(
   '/reports/audit',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const startDate = c.req.query('startDate');

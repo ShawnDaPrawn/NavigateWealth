@@ -140,11 +140,17 @@ export default defineConfig({
       // the shared KV store (portal credentials included), and a literal route
       // shadowed by a parameterised one. Measured 23.78 / 17.60 / 23.02 / 24.41
       // across 2,446 tests.
+      //
+      // Raised again 2026-08-26 (23.7 / 17.5 / 22.9 / 24.3) with the
+      // auth-middleware-cost ratchet, which came out of noticing that 113 route
+      // registrations chained `requireAuth, requireAdmin` — two full auth
+      // resolutions (a Supabase Auth round trip plus a database read each) for
+      // one answer. Measured 23.81 / 17.64 / 23.06 / 24.43 across 2,455 tests.
       thresholds: {
-        statements: 23.7,
-        branches: 17.5,
-        functions: 22.9,
-        lines: 24.3,
+        statements: 23.8,
+        branches: 17.6,
+        functions: 23.0,
+        lines: 24.4,
       },
     },
   },

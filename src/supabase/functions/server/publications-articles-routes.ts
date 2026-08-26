@@ -11,7 +11,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { ArticleReshareSchema } from './publications-validation.ts';
@@ -485,7 +485,6 @@ articlesRoutes.post('/articles/:id/publish', requireAdmin, async (c) => {
 
 articlesRoutes.post(
   '/articles/:id/reshare',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;

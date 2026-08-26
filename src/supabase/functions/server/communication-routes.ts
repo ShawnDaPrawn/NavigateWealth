@@ -48,7 +48,6 @@ const service = new CommunicationService();
  */
 app.post(
   '/send',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -86,7 +85,6 @@ app.post(
  */
 app.post(
   '/upload',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -111,7 +109,6 @@ app.post(
  */
 app.get(
   '/history',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const filters = {
@@ -196,7 +193,6 @@ app.delete(
  */
 app.get(
   '/clients',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     log.info('Fetching clients for communication');
@@ -213,7 +209,6 @@ app.get(
  */
 app.get(
   '/groups',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const page = parseInt(c.req.query('page') || '1');
@@ -231,7 +226,6 @@ app.get(
  */
 app.post(
   '/groups',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -268,7 +262,6 @@ app.post(
  */
 app.put(
   '/groups/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -304,7 +297,6 @@ app.put(
  */
 app.delete(
   '/groups/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -339,7 +331,6 @@ app.delete(
  */
 app.post(
   '/groups/recalculate',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -372,7 +363,6 @@ app.post(
  */
 app.get(
   '/groups/debug',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const { getAllGroups, fetchMatcherClients } = await import('./communication-repo.ts');
@@ -426,7 +416,6 @@ app.get(
  */
 app.get(
   '/templates',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const templates = await service.getAllTemplates();
@@ -441,7 +430,6 @@ app.get(
  */
 app.post(
   '/templates',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -478,7 +466,6 @@ app.post(
  */
 app.get(
   '/templates/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const templateId = c.req.param('id')!;
@@ -498,7 +485,6 @@ app.get(
  */
 app.put(
   '/templates/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -534,7 +520,6 @@ app.put(
  */
 app.delete(
   '/templates/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -569,7 +554,6 @@ app.delete(
  */
 app.get(
   '/email-footer',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const settings = await service.getFooterSettings();
@@ -584,7 +568,6 @@ app.get(
  */
 app.post(
   '/email-footer',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -625,7 +608,6 @@ app.post(
  */
 app.get(
   '/campaigns',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     if (c.req.query('all') === '1') {
@@ -664,7 +646,6 @@ app.get(
  */
 app.post(
   '/campaigns',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -701,7 +682,6 @@ app.post(
  */
 app.post(
   '/campaigns/:id/send',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
@@ -739,7 +719,6 @@ app.post(
  */
 app.delete(
   '/logs/:id',
-  requireAuth,
   requireAdmin,
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
