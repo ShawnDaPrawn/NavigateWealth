@@ -23,19 +23,22 @@ select version, name from supabase_migrations.schema_migrations order by version
 
 ## Current state — every file, verified
 
-| File                                            | Applied?             | Source of its SQL                   |
-| ----------------------------------------------- | -------------------- | ----------------------------------- |
-| `20260316213717_baseline_untracked_objects.sql` | pre-existing objects | **Reconstructed** from `pg_catalog` |
-| `20260316213718_create_kv_table_91ed8379.sql`   | ✅ `20260316213718`  | Verbatim from `schema_migrations`   |
-| `20260420000001_esign_core_tables.sql`          | ❌ **NOT APPLIED**   | Repo-authored, never run            |
-| `20260522225558_fna_intake_sessions.sql`        | ✅ `20260522225558`  | Verbatim from `schema_migrations`   |
-| `20260821210412_atomic_auth_rate_limit.sql`     | ✅ `20260821210412`  | Verbatim from `schema_migrations`   |
-| `20260824222932_fna_intake_rls_draft_only.sql`  | ✅ `20260824222932`  | Applied by this reconciliation      |
-| `20260824223052_dedupe_kv_key_indexes.sql`      | ✅ `20260824223052`  | Applied by this reconciliation      |
+| File                                                          | Applied?             | Source of its SQL                             |
+| ------------------------------------------------------------- | -------------------- | --------------------------------------------- |
+| `20260316213717_baseline_untracked_objects.sql`               | pre-existing objects | **Reconstructed** from `pg_catalog`           |
+| `20260316213718_create_kv_table_91ed8379.sql`                 | ✅ `20260316213718`  | Verbatim from `schema_migrations`             |
+| `20260420000001_esign_core_tables.sql`                        | ❌ **NOT APPLIED**   | Repo-authored, never run                      |
+| `20260522225558_fna_intake_sessions.sql`                      | ✅ `20260522225558`  | Verbatim from `schema_migrations`             |
+| `20260821210412_atomic_auth_rate_limit.sql`                   | ✅ `20260821210412`  | Verbatim from `schema_migrations`             |
+| `20260824222932_fna_intake_rls_draft_only.sql`                | ✅ `20260824222932`  | Applied by this reconciliation                |
+| `20260824223052_dedupe_kv_key_indexes.sql`                    | ✅ `20260824223052`  | Applied by this reconciliation                |
+| `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` | ✅ `20260826073401`  | Applied via `apply_migration`, verified after |
 
-Five of the six applied files carry SQL **copied verbatim** from what production
-actually executed, not inferred. Only the baseline is reconstructed, and it says
-so in its own header.
+Of the seven files that correspond to something production has run, five carry
+SQL **copied verbatim** from what production actually executed, not inferred.
+The baseline is reconstructed from introspection and says so in its own header.
+`20260826073401` is the one that was authored here and then applied, in that
+order, with the result verified afterwards.
 
 ## What was wrong, and what was done
 
@@ -101,7 +104,10 @@ the outage it is meant to avoid. Use `scripts/dedupe-kv-key-indexes.sql`.
 
 ---
 
-## Open remediation — not done here
+## Remediation log
+
+Struck-through entries are closed, with what was actually verified. Everything
+not struck through is still open.
 
 ### `esign_core_tables` is unapplied, and that is currently correct
 
@@ -134,17 +140,59 @@ The two remaining findings are `rls_enabled_no_policy` on `kv_store_91ed8379`
 the service role, which is the only thing that touches it) and
 leaked-password protection, an operator toggle.
 
-### Two `FOR ALL USING (true)` policies on `personal_client_applications`
+### ~~Two `FOR ALL USING (true)` policies on `personal_client_applications`~~ — CLOSED 2026-08-26
 
-Named "service role", but neither is restricted `TO` a role — both are granted
-to `public`, so `USING (true)` is satisfied by any caller RLS applies to. The
-service role bypasses RLS entirely and never needed them. They appear to make
-the four client-scoped policies on that table redundant.
+Both dropped in `20260826073401`. They were not restricted `TO` a role, so they
+applied to `public`; PERMISSIVE policies are OR'd, so the two of them subsumed
+the four client-scoped policies beside them and `anon` and `authenticated` could
+SELECT, INSERT, UPDATE and DELETE every row over PostgREST. The service role
+bypasses RLS and never needed either one.
 
-### Four `tasks` policies gate on "signed in", not on role
+The table holds 0 rows, so nothing was exposed. It is also the destination for
+the 192 `application:` records still in KV, which is why this was fixed before
+any of that data moved rather than after.
 
-They read `auth.uid() IS NOT NULL` while being named "Admin users can …". Any
-authenticated user — including a client — satisfies them over PostgREST.
+### ~~Four `tasks` policies gate on "signed in", not on role~~ — CLOSED 2026-08-26
+
+Replaced in `20260826073401` with the creator/assignee shape the sibling
+`reminders` table already uses — `tasks` has both `created_by` and
+`assignee_id`, so this is the existing pattern rather than a new one. The names
+now describe what the policies do.
+
+Writing a genuine _admin_ policy was considered and rejected: roles are resolved
+from trusted auth sources in application code (`resolveTrustedRole`), so an
+SQL-side admin test would be a second, divergent copy of the authorization
+policy — the exact failure `client-access.ts` documents as the cause of S12 and
+S14.
+
+### ~~Over-broad table grants, TRUNCATE included~~ — CLOSED 2026-08-26
+
+Seven tables granted the full privilege set to `anon` and `authenticated` from
+the project-wide `ALTER DEFAULT PRIVILEGES`. **TRUNCATE is the one table
+privilege RLS does not gate** — a perfect policy set does not stop it.
+
+Not reachable: both roles are NOLOGIN, entered only via PostgREST, which has no
+TRUNCATE verb. Removed in `20260826073401` as least privilege, and because the
+lesson from `20260825004035` on this same project is that a half-revoked grant
+looks exactly like a fixed one.
+
+`kv_store_91ed8379` had ALL revoked rather than a subset — it carries zero
+policies by design, so no grant to either role had a legitimate use. Verified
+after: `anon` and `authenticated` now get `42501 permission denied` where they
+previously got a successful SELECT returning 0 rows, and the service role still
+reads all 9,498 rows.
+
+One half of this is NOT closed, and pretending otherwise would repeat the
+mistake above: a second default-ACL entry owned by `supabase_admin` still grants
+the same set, and that role is platform-managed. A table created by
+`supabase_admin` will still arrive with TRUNCATE granted to `anon`. Check any
+new table with:
+
+```sql
+select grantee, privilege_type from information_schema.role_table_grants
+where table_schema='public' and table_name='<new table>'
+  and grantee in ('anon','authenticated');
+```
 
 ### Leaked-password protection is disabled
 
