@@ -146,11 +146,27 @@ export default defineConfig({
       // registrations chained `requireAuth, requireAdmin` — two full auth
       // resolutions (a Supabase Auth round trip plus a database read each) for
       // one answer. Measured 23.81 / 17.64 / 23.06 / 24.43 across 2,455 tests.
+      //
+      // Raised again 2026-08-26 (23.8 / 17.6 / 23.0 / 24.4) with two more
+      // suites: communication-routes (24 routes that send email and WhatsApp to
+      // the whole client base, split across two authorization tiers, where the
+      // three client-facing routes take ownership from the session and never
+      // from the request) and compliance-service (the firm's FAIS, AML, POPIA
+      // and FSCA-debarment records — including tests that pin the AML and
+      // debarment "checks" as the placeholders they still are). Measured
+      // 24.55 / 17.93 / 24.12 / 25.21 across 2,801 tests.
+      //
+      // Raised again 2026-08-26 (24.5 / 17.9 / 24.0 / 25.1) with two suites that
+      // both let the REAL renderer run rather than stubbing it, which is why
+      // they moved the number so far for their size: esign-certificates went
+      // 0.4% -> 92.5% by letting pdf-lib build the actual certificate, and
+      // contact-pdf-generator went 0% -> 98.7% because it has no dependency but
+      // the logger. Measured 25.92 / 18.51 / 24.81 / 26.64 across 2,895 tests.
       thresholds: {
-        statements: 23.8,
-        branches: 17.6,
-        functions: 23.0,
-        lines: 24.4,
+        statements: 25.8,
+        branches: 18.4,
+        functions: 24.7,
+        lines: 26.5,
       },
     },
   },

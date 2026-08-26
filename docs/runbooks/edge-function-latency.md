@@ -95,14 +95,80 @@ work at all — took 1,016 ms. Boot is not the cause: the runtime reports
 `booted (time: 57ms)` … `booted (time: 111ms)`, so the lazy-mount work already
 did its job.
 
-That floor is the app's own per-request cost, and region pinning will not touch
-it. The likely shape is sequential `kv.get` calls where a batch would do —
-`kv_store_91ed8379` has `mget` and `getByPrefix`, and a route that awaits five
-keys in series pays five round trips whether they are 1 ms or 90 ms each.
+#### The preflight rules out per-request app code
 
-**Not investigated further here.** Naming it as unmeasured is the point: the
-number above is the total, not a diagnosis, and the next person should profile
-one route properly rather than assume.
+The `204` preflight is the measurement that matters, and re-reading it changes
+the diagnosis.
+
+An `OPTIONS` preflight never reaches a route handler. `createApp()` registers
+Hono's `cors()` middleware **first**, and for a preflight that middleware
+returns a `204` without calling `next()` — so the request-id middleware, the
+error handler, the lazy mounts and every route body are all skipped. On a warm
+isolate that path performs no I/O whatsoever. It cannot take 1,016 ms.
+
+So the floor is not per-request app cost, and the earlier guess above (sequential
+`kv.get` calls where a batch would do) cannot explain a request that reads
+nothing.
+
+That is all the preflight establishes. It narrows the search; it does not name
+a culprit.
+
+#### What has been ruled out, and what has not
+
+**Ruled out:** per-request route-handler work as the explanation for the floor.
+The preflight does none of it and still hit 1,016 ms.
+
+**Not ruled out — the preflight cannot distinguish between these:**
+
+- **Cold start.** Bundle fetch, isolate creation and top-level module
+  evaluation. The `booted (time: 57ms)` line does not cover this: that number is
+  the isolate's own boot, measured after the payload has already been fetched
+  and compiled. But nothing in the measurement establishes that the sampled
+  request actually used a cold isolate.
+- **Gateway and platform overhead.** Request admission, scheduling, queuing and
+  TLS setup all happen before any app code runs, and all of it is inside
+  `execution_time_ms`.
+- Sequential `kv.get` calls on the heavier routes. This no longer explains the
+  floor, but it is still real per-request cost on top of it: `kv_store_91ed8379`
+  has `mget` and `getByPrefix`, and a route that awaits five keys in series pays
+  five round trips.
+
+Separating these needs cold and warm requests correlated against each other —
+the same route, sampled after an idle gap and again under sustained traffic —
+not a single preflight.
+
+#### A correction: cron traffic does NOT keep the pinned region warm
+
+An earlier draft of this note argued that pinning to `us-east-1` would put
+client traffic onto the same warm pool as the cron jobs. **That is wrong**, and
+it contradicts the "What this does not say" section at the foot of this file.
+
+The cron jobs are invoked by `pg_net` from inside the database, so they execute
+in **`us-east-2`**, and `supabase/cron/publications-jobs.sql` sends no
+`x-region` header. The pin targets **`us-east-1`**, because `us-east-2` is not a
+value Supabase accepts on `x-region`. Different regions mean different isolate
+pools: cron traffic cannot keep a pinned `us-east-1` instance warm.
+
+If anything the risk runs the other way, and is worth watching. ZA client
+traffic is bursty — 25/16/60/34 calls in one afternoon window, then zero for
+twenty hours — and after the pin it lands in a region nothing else drives. If
+cold start does turn out to be a real component of the floor, pinning could make
+the first request of a burst _slower_ even while it makes the steady-state
+faster. #240 is justified on geography, which is measured (1,376 ms). It is not
+justified on warmth, which was an assumption and a wrong one.
+
+Caught by Codex review on #242.
+
+- Sequential `kv.get` calls on the heavier routes. This no longer explains the
+  floor, but it is still real per-request cost on top of it: `kv_store_91ed8379`
+  has `mget` and `getByPrefix`, and a route that awaits five keys in series pays
+  five round trips.
+- One thing already fixed: 113 admin route registrations chained
+  `requireAuth, requireAdmin`, and `requireAdmin` is a strict superset — so each
+  of those requests made **two** Supabase Auth round trips and **two** database
+  reads for one answer. Removed in the same series of changes as this note, with
+  a source-scanning ratchet (`__tests__/auth-middleware-cost.test.ts`). That was
+  per-request cost, not floor, and it only affected admin routes.
 
 ---
 
@@ -126,6 +192,42 @@ group by path, sb_region
 having calls >= 4
 order by path, sb_region
 ```
+
+**Did the pin take, and what is the floor per region?** Run it over a window
+that actually contains South African traffic; a window of cron-only traffic
+tells you nothing. Note that the cron rows will read `us-east-2` and the pinned
+client rows `us-east-1` — that is expected, not a fault, and it is why cron
+volume says nothing about how warm the client pool is.
+
+```sql
+select
+  log_attributes['response.headers.x_sb_edge_region'] as fn_region,
+  log_attributes['request.cf.colo'] as colo,
+  log_attributes['request.cf.country'] as country,
+  count() as calls,
+  round(quantile(0.5)(toFloat64OrNull(log_attributes['execution_time_ms']))) as p50_ms,
+  round(quantile(0.95)(toFloat64OrNull(log_attributes['execution_time_ms']))) as p95_ms,
+  round(min(toFloat64OrNull(log_attributes['execution_time_ms']))) as min_ms
+from logs
+where source = 'function_edge_logs'
+  and log_attributes['execution_time_ms'] != ''
+group by fn_region, colo, country
+order by calls desc
+```
+
+Read it like this:
+
+- **Did the pin take?** ZA rows should now show `fn_region = us-east-1` instead
+  of `eu-west-3`. Binary, and it needs only a handful of calls.
+- **Is there a floor at all, and does it move?** `min_ms` is the number to
+  watch, not `p50_ms` — the minimum is the closest thing to a warm request in
+  the sample. If ZA `min_ms` lands near the `us-east-2` cron rows' `min_ms`,
+  the floor is regional overhead the pin cannot touch. If it stays near
+  1,000 ms in both, the floor is something common to every request.
+- **Is cold start part of it?** A wide `min_ms`-to-`p95_ms` spread on bursty ZA
+  traffic, against a narrow one on steady cron traffic, is the signature. A
+  narrow spread on both says cold start is not the story and the hypothesis
+  above should be dropped.
 
 **Where the callers are, and which region serves them:**
 
