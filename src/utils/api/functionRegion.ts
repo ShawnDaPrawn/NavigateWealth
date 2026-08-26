@@ -24,6 +24,12 @@
  * function in. The client then pays ONE long trip instead of N shorter ones,
  * and N is greater than 1 on every route that reads more than a single key.
  *
+ * The pin target is `us-east-1`, NOT the database's own `us-east-2`: Supabase
+ * does not accept `us-east-2` in `x-region` (see SUPPORTED_FUNCTION_REGIONS
+ * below). `us-east-1` is the nearest region it does accept, and the table
+ * above measures it at p50 1,657 ms — so this recovers roughly 1,200 ms of the
+ * ~1,376 ms, not all of it.
+ *
  * ── The trade-off, from Supabase's own documentation ──────────────────────
  *
  *   "When you explicitly specify a region via the `x-region` header, requests
@@ -64,6 +70,46 @@
 export const DATABASE_REGION = 'us-east-2';
 
 /**
+ * The regions Supabase accepts in `x-region`, verbatim from its documentation.
+ *
+ * **`us-east-2` is not in this list.** The database lives there, but Edge
+ * Functions cannot be pinned there — the nearest supported region is
+ * `us-east-1` (N. Virginia), a few hundred kilometres away. The first draft of
+ * this file defaulted to `DATABASE_REGION` on the assumption that the two sets
+ * were the same, which would have put an unsupported value on the header of
+ * every request in the app.
+ *
+ * A configured region is validated against this list precisely so that mistake
+ * cannot be made again by hand.
+ */
+export const SUPPORTED_FUNCTION_REGIONS = Object.freeze([
+  'ap-northeast-1',
+  'ap-northeast-2',
+  'ap-south-1',
+  'ap-southeast-1',
+  'ap-southeast-2',
+  'ca-central-1',
+  'us-east-1',
+  'us-west-1',
+  'us-west-2',
+  'eu-central-1',
+  'eu-west-1',
+  'eu-west-2',
+  'eu-west-3',
+  'sa-east-1',
+]);
+
+/**
+ * Nearest supported region to the database.
+ *
+ * The measurement in the header comment puts `us-east-1` at p50 1,657 ms
+ * against `us-east-2`'s 1,484 ms — so pinning here recovers most, not all, of
+ * the transatlantic cost. `us-east-1` also carries the largest sample in that
+ * table (93 calls), which makes it the better-evidenced of the two.
+ */
+export const DEFAULT_FUNCTION_REGION = 'us-east-1';
+
+/**
  * Resolve a configured value to a region, or `null` for "do not pin".
  *
  * `auto` and the empty string both mean "do not pin", so an operator reaching
@@ -72,8 +118,19 @@ export const DATABASE_REGION = 'us-east-2';
  */
 export function resolveFunctionRegion(configured: string | undefined | null): string | null {
   const value = (configured ?? '').trim();
-  if (value === '') return DATABASE_REGION;
+  if (value === '') return DEFAULT_FUNCTION_REGION;
   if (value.toLowerCase() === 'auto') return null;
+  if (!SUPPORTED_FUNCTION_REGIONS.includes(value)) {
+    // Fall back rather than throw: a bad environment variable must not brick
+    // the app. Loud, because a silently ignored pin is the failure that looks
+    // like success.
+    console.warn(
+      `[functionRegion] VITE_NW_FUNCTION_REGION="${value}" is not a region Supabase ` +
+        `accepts in x-region. Falling back to ${DEFAULT_FUNCTION_REGION}. ` +
+        `Supported: ${SUPPORTED_FUNCTION_REGIONS.join(', ')}, or "auto" to disable pinning.`,
+    );
+    return DEFAULT_FUNCTION_REGION;
+  }
   return value;
 }
 

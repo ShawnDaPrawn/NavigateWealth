@@ -20,11 +20,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import {
   DATABASE_REGION,
+  DEFAULT_FUNCTION_REGION,
   FUNCTION_REGION,
   FUNCTION_REGION_HEADERS,
   installFunctionRegionInterceptor,
   resetFunctionRegionInterceptorForTests,
   resolveFunctionRegion,
+  SUPPORTED_FUNCTION_REGIONS,
 } from '../functionRegion';
 
 const FUNCTION_URL =
@@ -70,14 +72,38 @@ afterEach(() => {
 // ============================================================================
 
 describe('region resolution', () => {
-  it('defaults to the database region when unset', () => {
-    expect(resolveFunctionRegion(undefined)).toBe(DATABASE_REGION);
-    expect(resolveFunctionRegion(null)).toBe(DATABASE_REGION);
+  it('defaults to the nearest SUPPORTED region, not the database region', () => {
+    // The distinction this test exists for: the database is in us-east-2, and
+    // Supabase does not accept us-east-2 in x-region. Defaulting to
+    // DATABASE_REGION would put an unsupported value on every request in the
+    // app — which is exactly what the first draft of this module did.
+    expect(resolveFunctionRegion(undefined)).toBe(DEFAULT_FUNCTION_REGION);
+    expect(resolveFunctionRegion(null)).toBe(DEFAULT_FUNCTION_REGION);
+    expect(DEFAULT_FUNCTION_REGION).not.toBe(DATABASE_REGION);
+  });
+
+  it('never resolves to a region Supabase does not accept', () => {
+    expect(SUPPORTED_FUNCTION_REGIONS).toContain(DEFAULT_FUNCTION_REGION);
+    expect(SUPPORTED_FUNCTION_REGIONS).not.toContain(DATABASE_REGION);
+  });
+
+  it('falls back loudly when handed an unsupported region', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(resolveFunctionRegion('us-east-2')).toBe(DEFAULT_FUNCTION_REGION);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('us-east-2'));
+    warn.mockRestore();
+  });
+
+  it('falls back loudly on a typo rather than shipping it', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(resolveFunctionRegion('eu-west-33')).toBe(DEFAULT_FUNCTION_REGION);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('treats an empty or whitespace value as unset rather than as "no region"', () => {
-    expect(resolveFunctionRegion('')).toBe(DATABASE_REGION);
-    expect(resolveFunctionRegion('   ')).toBe(DATABASE_REGION);
+    expect(resolveFunctionRegion('')).toBe(DEFAULT_FUNCTION_REGION);
+    expect(resolveFunctionRegion('   ')).toBe(DEFAULT_FUNCTION_REGION);
   });
 
   it.each(['auto', 'AUTO', 'Auto', ' auto '])('treats %j as "do not pin"', (value) => {
@@ -87,16 +113,17 @@ describe('region resolution', () => {
     expect(resolveFunctionRegion(value)).toBeNull();
   });
 
-  it('honours an explicit override, trimmed', () => {
+  it('honours an explicit supported override, trimmed', () => {
     expect(resolveFunctionRegion('eu-west-1')).toBe('eu-west-1');
     expect(resolveFunctionRegion('  eu-west-1  ')).toBe('eu-west-1');
   });
 
-  it('ships pinned to the database region by default', () => {
+  it('ships pinned to a supported region by default', () => {
     // The value the app actually runs with, as built. If someone sets
     // VITE_NW_FUNCTION_REGION in the test env this is the test that notices.
-    expect(FUNCTION_REGION).toBe(DATABASE_REGION);
-    expect(FUNCTION_REGION_HEADERS).toEqual({ 'x-region': 'us-east-2' });
+    expect(FUNCTION_REGION).toBe(DEFAULT_FUNCTION_REGION);
+    expect(SUPPORTED_FUNCTION_REGIONS).toContain(FUNCTION_REGION);
+    expect(FUNCTION_REGION_HEADERS).toEqual({ 'x-region': 'us-east-1' });
   });
 
   it('exposes frozen headers so a caller cannot mutate the shared object', () => {
@@ -113,7 +140,7 @@ describe('the interceptor pins Edge Function requests', () => {
     installFunctionRegionInterceptor();
     await fetch(FUNCTION_URL);
     expect(seen).toHaveLength(1);
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it.each([
@@ -160,41 +187,41 @@ describe('it preserves the caller’s headers in every shape fetch accepts', () 
     });
     expect(seen[0].headers.get('authorization')).toBe('Bearer tok');
     expect(seen[0].headers.get('content-type')).toBe('application/json');
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it('array of pairs', async () => {
     installFunctionRegionInterceptor();
     await fetch(FUNCTION_URL, { headers: [['Authorization', 'Bearer tok']] });
     expect(seen[0].headers.get('authorization')).toBe('Bearer tok');
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it('Headers instance', async () => {
     installFunctionRegionInterceptor();
     await fetch(FUNCTION_URL, { headers: new Headers({ Authorization: 'Bearer tok' }) });
     expect(seen[0].headers.get('authorization')).toBe('Bearer tok');
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it('headers carried on a Request object', async () => {
     installFunctionRegionInterceptor();
     await fetch(new Request(FUNCTION_URL, { headers: { Authorization: 'Bearer tok' } }));
     expect(seen[0].headers.get('authorization')).toBe('Bearer tok');
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it('no headers at all', async () => {
     installFunctionRegionInterceptor();
     await fetch(FUNCTION_URL);
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it('a URL object rather than a string', async () => {
     installFunctionRegionInterceptor();
     await fetch(new URL(FUNCTION_URL), { headers: { Authorization: 'Bearer tok' } });
     expect(seen[0].headers.get('authorization')).toBe('Bearer tok');
-    expect(seen[0].headers.get('x-region')).toBe('us-east-2');
+    expect(seen[0].headers.get('x-region')).toBe('us-east-1');
   });
 
   it('does not override an x-region the caller set deliberately', async () => {
