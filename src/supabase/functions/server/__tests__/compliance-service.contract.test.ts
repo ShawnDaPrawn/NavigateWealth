@@ -22,21 +22,22 @@
  *     latest check; a sort that silently reversed would show a stale "clear"
  *     next to a current record.
  *
- * ⚠️ ONE THING THIS FILE DELIBERATELY PINS AS BROKEN
- * --------------------------------------------------
- * `performAMLCheck` and `performDebarmentCheck` do not check anything. Both
- * carry a `// TODO: Integrate with actual AML service provider` /
- * `// TODO: Integrate with FSCA debarment list` and unconditionally write
- * `status: 'clear'` with a note reading "Automated AML check completed" and
- * "No match found on FSCA debarment list".
+ * ⚠️ TWO CHECKS THAT DO NOT CHECK ANYTHING
+ * ----------------------------------------
+ * `performAMLCheck` and `performDebarmentCheck` screen nobody — there is no
+ * AML provider wired up and the FSCA debarment register is never consulted.
+ * Both are reachable from `compliance-core-routes.ts`.
  *
- * Nothing about the stored record says it is a placeholder. Both are reachable
- * from `compliance-core-routes.ts`, so an admin clicking "run AML check"
- * produces a record that reads, to anyone later, as a completed KYC screening
- * against a real list. The tests below assert that behaviour EXPLICITLY and
- * name it, so it cannot be mistaken for a working integration by the next
- * person reading the suite. Changing what these records claim is a decision for
- * the business, not a refactor, so this file records rather than repairs it.
+ * What changed: they used to write `status: 'clear'` (plus `risk_level: 'low'`
+ * for AML) with notes reading "Automated AML check completed" and "No match
+ * found on FSCA debarment list" — assertions about screenings that never ran,
+ * in records that said nothing about being placeholders. They now record
+ * `pending` / `unknown` and say plainly that the check is outstanding.
+ *
+ * The tests below pin the honest shape, and pin that the identity fields are
+ * STILL captured — those are what a real integration will screen on, so the
+ * record stays useful as a queued check. Choosing and wiring a provider remains
+ * a business decision; not lying in the meantime is not.
  *
  * WHAT IS REAL: everything except KV and the logger.
  */
@@ -211,49 +212,44 @@ describe('POPIA consent', () => {
 // THE PLACEHOLDER CHECKS — pinned as placeholders, on purpose
 // ============================================================================
 
-describe('AML and debarment checks are placeholders', () => {
-  it('AML: returns clear without consulting anything', async () => {
-    // ⚠️ There is no AML provider wired up. This does not screen the client
-    // against any list — it writes a record that says it did. Pinned so the
-    // gap is visible in the suite rather than only in a TODO comment.
+describe('AML and debarment checks record that they have not run', () => {
+  it('AML: records pending/unknown, not a clearance', async () => {
+    // The whole point. Nothing was screened, so nothing is claimed — a reader
+    // can tell this record apart from a real screening.
     const check = await service.performAMLCheck(CLIENT, ADMIN);
     expect(check).toMatchObject({
       client_id: CLIENT,
       check_type: 'kyc',
-      status: 'clear',
-      risk_level: 'low',
+      status: 'pending',
+      risk_level: 'unknown',
       checked_by: ADMIN,
     });
-    expect(check.notes).toBe('Automated AML check completed');
+    expect(check.status).not.toBe('clear');
+    expect(check.risk_level).not.toBe('low');
   });
 
-  it('AML: says clear for every client, including one that should not be', async () => {
-    // Same input, same output, whoever the client is — which is the definition
-    // of not checking.
-    const a = await service.performAMLCheck('client-a', ADMIN);
-    const b = await service.performAMLCheck('client-b', ADMIN);
-    expect(a.status).toBe(b.status);
-    expect(a.risk_level).toBe(b.risk_level);
-    expect(a.notes).toBe(b.notes);
+  it('AML: the note says the screening still has to happen', async () => {
+    const check = await service.performAMLCheck(CLIENT, ADMIN);
+    expect(check.notes).toMatch(/No AML screening has been performed/);
+    // The old note is the thing that made the record misleading.
+    expect(check.notes).not.toMatch(/completed/i);
   });
 
-  it('debarment: returns clear without consulting the FSCA list', async () => {
-    // ⚠️ Same shape as AML. The stored note reads "No match found on FSCA
-    // debarment list" for an adviser whose name was never sent anywhere.
+  it('debarment: records pending, and never claims the register was consulted', async () => {
     const check = await service.performDebarmentCheck(
       ADVISER,
       'Thabo Mokoena',
       '9001015800088',
       ADMIN,
     );
-    expect(check).toMatchObject({ adviser_id: ADVISER, status: 'clear', checked_by: ADMIN });
-    expect(check.notes).toBe('No match found on FSCA debarment list');
+    expect(check).toMatchObject({ adviser_id: ADVISER, status: 'pending', checked_by: ADMIN });
+    expect(check.notes).toMatch(/has not been checked/);
+    expect(check.notes).not.toMatch(/no match/i);
   });
 
-  it('debarment: records the identity it was asked about even though it checked nothing', async () => {
-    // The one genuinely useful thing these records carry: WHO was supposedly
-    // checked and by whom. If a real integration lands, these fields are what
-    // it will screen on.
+  it('debarment: still records the identity to be screened', async () => {
+    // Deliberately kept. Name and ID number are what a real FSCA integration
+    // will screen on, so the record stays useful as a queued check.
     const check = await service.performDebarmentCheck(
       ADVISER,
       'Nomsa Dlamini',
@@ -261,6 +257,25 @@ describe('AML and debarment checks are placeholders', () => {
       ADMIN,
     );
     expect(check).toMatchObject({ name: 'Nomsa Dlamini', id_number: '8505055800083' });
+  });
+
+  it('AML: still records the client and operator for the check that has to happen', async () => {
+    const check = await service.performAMLCheck(CLIENT, ADMIN);
+    expect(check.client_id).toBe(CLIENT);
+    expect(check.checked_by).toBe(ADMIN);
+    expect(typeof check.checked_at).toBe('string');
+  });
+
+  it('neither invents a per-client outcome, because neither consults anything', async () => {
+    // Same output for any input is the definition of not checking. Asserted so
+    // that a future real integration — which MUST vary by client — fails this
+    // test and forces the suite to be updated deliberately rather than by
+    // accident.
+    const a = await service.performAMLCheck('client-a', ADMIN);
+    const b = await service.performAMLCheck('client-b', ADMIN);
+    expect(a.status).toBe(b.status);
+    expect(a.risk_level).toBe(b.risk_level);
+    expect(a.notes).toBe(b.notes);
   });
 
   it('both persist under their own namespace so a real check can replace them later', async () => {

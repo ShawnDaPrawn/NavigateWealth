@@ -22,7 +22,13 @@ export interface AMLCheck {
   client_id: string;
   check_type: 'kyc' | 'screening' | 'verification';
   status: 'clear' | 'flagged' | 'pending';
-  risk_level: 'low' | 'medium' | 'high';
+  /**
+   * `unknown` is the honest value when no screening has run. It exists because
+   * the placeholder check used to write `low`, which is a risk ASSESSMENT — a
+   * regulator reading the record cannot tell an assessed-low client from an
+   * unassessed one, and the two carry very different obligations.
+   */
+  risk_level: 'low' | 'medium' | 'high' | 'unknown';
   checked_at: string;
   checked_by: string;
   notes?: string;
@@ -47,7 +53,11 @@ export interface DebarmentCheck {
   adviser_id: string;
   name: string;
   id_number: string;
-  status: 'clear' | 'flagged';
+  /**
+   * `pending` means nobody has screened this adviser against the FSCA register
+   * yet. Without it the type forced a placeholder to claim `clear`.
+   */
+  status: 'clear' | 'flagged' | 'pending';
   checked_at: string;
   checked_by: string;
   notes?: string;
