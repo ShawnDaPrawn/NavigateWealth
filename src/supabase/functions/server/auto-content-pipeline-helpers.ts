@@ -18,8 +18,20 @@ export const SOURCE_PREFIX = 'auto_content:source:';
 export function configKey(id: PipelineId): string {
   return `${CONFIG_PREFIX}${id}`;
 }
-export function runKey(id: PipelineId, ts: string): string {
-  return `${RUN_PREFIX}${id}:${ts}`;
+/**
+ * Key for one pipeline run log.
+ *
+ * `runId` is part of the key because `ts` is an ISO string with millisecond
+ * precision: two runs of the same pipeline that finished in the same
+ * millisecond used to collide and one row silently replaced the other. Both
+ * skip paths return without an AI call, so two runs completing inside one
+ * millisecond is reachable — a double-clicked "Run now", or the poller firing
+ * twice. Appending the run's own id is backward compatible: `getRunHistory`
+ * prefix-scans `RUN_PREFIX + id + ':'` and sorts by `completedAt`, so rows
+ * already written under the old two-segment shape still match and still sort.
+ */
+export function runKey(id: PipelineId, ts: string, runId?: string): string {
+  return runId ? `${RUN_PREFIX}${id}:${ts}:${runId}` : `${RUN_PREFIX}${id}:${ts}`;
 }
 export function calendarKey(id: string): string {
   return `${CALENDAR_PREFIX}${id}`;

@@ -196,11 +196,22 @@ export default defineConfig({
       // old short denominator and still a ratchet up on it.
       //
       // Measured 28.52 / 21.75 / 28.13 / 29.24 across 3,198 tests.
+      //
+      // Raised again 2026-08-26 (28.3 / 21.6 / 27.9 / 29.0) with the
+      // auto-content suites — the four pipelines that write published-facing
+      // articles on a schedule with no human in the loop. 104 tests across
+      // three files took auto-content-service.ts from 0% to 99.6% and
+      // auto-content-pipelines.ts from 0% to most of its branches. The SSRF
+      // guard on `discoverFeeds` is exercised for real rather than stubbed,
+      // because that endpoint fetches an admin-supplied URL server-side.
+      // Writing them found the run-log key colliding on millisecond precision,
+      // the same defect as the compliance audit log. Measured
+      // 30.19 / 22.93 / 29.54 / 30.93 across 3,302 tests.
       thresholds: {
-        statements: 28.3,
-        branches: 21.6,
-        functions: 27.9,
-        lines: 29.0,
+        statements: 29.9,
+        branches: 22.7,
+        functions: 29.3,
+        lines: 30.7,
       },
     },
   },
