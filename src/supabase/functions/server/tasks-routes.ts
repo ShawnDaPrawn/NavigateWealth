@@ -363,7 +363,16 @@ app.patch(
         return c.json({ error: 'Task not found' }, 404);
       }
 
-      const body = await c.req.json();
+      // Same reason as POST / above: `c.req.json()` throws on a malformed body
+      // and the catch at the bottom turned that into a 500, so a truncated
+      // request or a bad Content-Type was reported as a server fault and
+      // counted against the backend error rate. A body that is not JSON is a
+      // CLIENT error.
+      const body = await c.req.json().catch(() => null);
+      if (body === null || typeof body !== 'object') {
+        return c.json({ error: 'Validation failed', message: 'Request body must be JSON' }, 400);
+      }
+
       const parsed = UpdateTaskSchema.safeParse(body);
       if (!parsed.success) {
         return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
@@ -435,7 +444,11 @@ app.post(
         return c.json({ error: 'Task not found' }, 404);
       }
 
-      const body = await c.req.json();
+      const body = await c.req.json().catch(() => null);
+      if (body === null || typeof body !== 'object') {
+        return c.json({ error: 'Validation failed', message: 'Request body must be JSON' }, 400);
+      }
+
       const parsed = MoveTaskSchema.safeParse(body);
       if (!parsed.success) {
         return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
@@ -475,8 +488,12 @@ app.post(
   '/reorder',
   asyncHandler(async (c) => {
     try {
-      const body = await c.req.json();
-      const parsed = ReorderTasksSchema.safeParse(body.updates ?? body);
+      const body = await c.req.json().catch(() => null);
+      if (body === null || typeof body !== 'object') {
+        return c.json({ error: 'Validation failed', message: 'Request body must be JSON' }, 400);
+      }
+
+      const parsed = ReorderTasksSchema.safeParse((body as { updates?: unknown }).updates ?? body);
       if (!parsed.success) {
         return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
       }

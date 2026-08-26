@@ -52,8 +52,16 @@ export interface PermissionChange {
 
 const AUDIT_PREFIX = 'audit:permissions:';
 
-function makeKey(timestamp: string, targetId: string): string {
-  return `${AUDIT_PREFIX}${timestamp}:${targetId}`;
+/**
+ * The entry's own id is the last segment because the first two are not unique:
+ * two permission changes to the SAME person within one millisecond produced an
+ * identical key, and `kv.set` upserts, so one audit record was silently lost.
+ * `getForPersonnel` and `getAll` prefix-scan `AUDIT_PREFIX` and sort by the
+ * record's `timestamp` field rather than by the key, so the extra segment is
+ * backward compatible with entries already stored under the old shape.
+ */
+function makeKey(timestamp: string, targetId: string, entryId: string): string {
+  return `${AUDIT_PREFIX}${timestamp}:${targetId}:${entryId}`;
 }
 
 // ============================================================================
@@ -68,14 +76,16 @@ export const PermissionAuditService = {
     entry: Omit<PermissionAuditEntry, 'id' | 'timestamp'>,
   ): Promise<PermissionAuditEntry> {
     const timestamp = new Date().toISOString();
-    const id = `${timestamp}:${entry.targetPersonnelId}`;
+    // A real unique id rather than `${timestamp}:${targetPersonnelId}`, which
+    // repeated for two changes to the same person in the same millisecond.
+    const id = crypto.randomUUID();
     const fullEntry: PermissionAuditEntry = {
       id,
       timestamp,
       ...entry,
     };
 
-    const key = makeKey(timestamp, entry.targetPersonnelId);
+    const key = makeKey(timestamp, entry.targetPersonnelId, id);
     await kv.set(key, JSON.stringify(fullEntry));
     log.info('Recorded permission audit entry', { id, target: entry.targetPersonnelId });
     return fullEntry;
