@@ -6,9 +6,22 @@ import path from 'path';
 
 /**
  * Resolves `figma:asset/<hash>.png` imports to files under `src/assets`,
- * preferring an optimized `.webp` when one exists. This replaces the previous
+ * preferring an optimized sibling when one exists. This replaces the previous
  * ~240 hand-maintained static aliases with a single dynamic resolver, so new
  * exported assets work without editing this config.
+ *
+ * THE CANDIDATE ORDER IS LOad-BEARING, and getting it wrong is silent.
+ * This looked only for `.webp`. There are no `.webp` files in src/assets and
+ * never have been — the optimized exports are `.jpg` — so the candidate never
+ * matched and every import fell through to the original. Those originals are
+ * raw Figma exports at up to 8256x5504: 62 of the 84 imported assets were
+ * being served at 25-31 MB each when a 2200x1467 sibling of ~300 KB sat next
+ * to them unused. The home page alone shipped ~125 MB of images.
+ *
+ * A miss here costs nothing visible in development, where everything is local
+ * and fast. It costs the user their data bundle. `figma-asset-weight.test.ts`
+ * now fails the build if any import resolves to something oversized, so this
+ * cannot silently come back.
  */
 function figmaAssetResolver(): Plugin {
   const assetDirectory = path.resolve(__dirname, './src/assets');
@@ -19,7 +32,15 @@ function figmaAssetResolver(): Plugin {
       if (!source.startsWith('figma:asset/')) return null;
       const filename = source.slice('figma:asset/'.length);
       const parsed = path.parse(filename);
-      const candidates = [`${parsed.name}.webp`, filename];
+      // Best format first, original last. `.webp` stays ahead of `.jpg` so that
+      // converting an asset later is a drop-in improvement with no code change.
+      const candidates = [
+        `${parsed.name}.webp`,
+        `${parsed.name}.avif`,
+        `${parsed.name}.jpg`,
+        `${parsed.name}.jpeg`,
+        filename,
+      ];
       const match = candidates.find((candidate) =>
         fs.existsSync(path.join(assetDirectory, candidate)),
       );
