@@ -109,12 +109,13 @@ Roadmap items from this file that are now **done and verified**:
   modules (client lifecycle, e-sign, FNA intake, brand/config, locked
   modules), alongside `permission-audit-service.ts` and the e-sign audit
   services. A Postgres audit table remains deferred.
-- **Super-admin allowlist (Section 4.6) — REPLACEMENT LANDED, fallback const
-  retained.** `constants.ts` now has a durable `SUPER_ADMIN_EMAILS` allowlist
-  with two recovery admins plus a deploy-free `SUPER_ADMIN_EMAILS` env-var
-  override, checked via `isSuperAdminEmail()`. The single
-  `SUPER_ADMIN_EMAIL` const is deprecated but retained for legacy call
-  sites; final removal is still pending per Section 4.6.
+- **Super-admin allowlist (Section 4.6) — REPLACEMENT LANDED, const RETAINED
+  BY DECISION (2026-08-27).** `constants.ts` has a durable `SUPER_ADMIN_EMAILS`
+  allowlist with two recovery admins plus a deploy-free `SUPER_ADMIN_EMAILS`
+  env-var override, checked via `isSuperAdminEmail()`, and every AUTHORIZATION
+  check goes through it. The single `SUPER_ADMIN_EMAIL` const is **not
+  deprecated and not pending removal** — removing it would make the app less
+  safe. See Section 4.6.
 
 Remaining architecture debt (tracked, non-blocking):
 
@@ -398,9 +399,17 @@ must be reviewed before they can count.
 - [x] Audit logging exists and is wired into privileged state-changing routes.
       _(KV append-only `admin-audit-service` + `permission-audit-service` +
       e-sign audit; Postgres audit table still deferred.)_
-- [ ] Super-admin fallback removal is done only after a tested replacement
-      allowlist exists. _(Allowlist + env-var override landed; the deprecated
-      `SUPER_ADMIN_EMAIL` const itself is not yet removed.)_
+- [x] Super-admin fallback removal is done only after a tested replacement
+      allowlist exists. _(Allowlist + `SUPER_ADMIN_EMAILS` env override landed
+      and every AUTHORIZATION check goes through `isSuperAdminEmail()`.
+      Reviewed 2026-08-27: the `SUPER_ADMIN_EMAIL` const is deliberately
+      RETAINED, not pending removal. Its two readers must stay narrow —
+      `auth-routes.ts` exempts that one address from login rate limiting
+      pre-authentication, so widening it to the allowlist plus an env override
+      would extend a brute-force bypass; and the owner-profile lookup in
+      `client-management-super-admin-routes.ts` is an identity resolution where
+      singular is the correct shape. Removing the const would have made the app
+      less safe, so the item is closed by decision. See SECURITY-AUDIT A10.)_
 - [ ] Backup, DR, POPIA, FAIS, Sentry, CSP, and environment-split work is
       operationally verified, not merely documented.
 
@@ -671,18 +680,35 @@ Privileged actions that should eventually be audited:
 - integration configuration writes
 - security events such as 2FA changes, account suspension, password reset
 
-### Section 4.6 P2 - Super Admin Fallback Removal
+### Section 4.6 P2 - Super Admin Fallback — CLOSED BY DECISION (2026-08-27)
 
-Do not remove `SUPER_ADMIN_EMAIL` until a replacement is tested.
+**Do not remove `SUPER_ADMIN_EMAIL`.** This section previously ended "then
+remove the fallback in a small, auditable change". Acting on that would now
+REDUCE security, so the instruction is withdrawn rather than left to be
+followed by the next reader.
 
-Prerequisites:
+The replacement landed as intended: a durable `SUPER_ADMIN_EMAILS` allowlist
+with two recovery admins, a deploy-free env-var override, and
+`isSuperAdminEmail()` as the single authorization entry point. Every
+authorization check uses it. What changed is the conclusion about the const.
 
-- durable allowlist exists in every environment
-- at least two recovery admins are seeded
-- login/role resolution is tested
-- rollback plan exists
+It has exactly two backend readers, and NEITHER should become
+`isSuperAdminEmail()`:
 
-Then remove the fallback in a small, auditable change.
+1. `auth-routes.ts` exempts that one address from LOGIN RATE LIMITING, on an
+   email taken from the request body, BEFORE authentication. That is a
+   brute-force bypass. Widening it to the allowlist would extend the bypass to
+   a second standing address and — through the `SUPER_ADMIN_EMAILS` env
+   override — to whatever that variable happens to contain at the time.
+   SECURITY-AUDIT A10 reached this conclusion independently and recorded it at
+   the call site; the `@deprecated` tag on the const contradicted it.
+2. `client-management-super-admin-routes.ts` resolves THE owner account to read
+   or seed its profile. That is identity resolution, not authorization, and
+   "the owner" is singular by definition — an allowlist would make it ambiguous.
+
+The rule to carry forward, now stated on the const itself: **authorization goes
+through `isSuperAdminEmail()`; a pre-auth exemption stays narrow; an owner
+lookup stays singular.**
 
 ---
 
