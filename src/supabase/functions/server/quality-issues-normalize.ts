@@ -25,10 +25,20 @@ import {
 export const LATEST_SNAPSHOT_KEY = 'quality_issues:latest_snapshot';
 export const RUNTIME_CLIENT_ISSUES_KEY = 'quality_issues:runtime_client';
 export const SECURITY_FEED_ISSUES_KEY = 'quality_issues:security_feed';
+/**
+ * CSP violations reported by visitors' browsers (csp-report-routes.ts).
+ *
+ * Its own key rather than a share of the security feed: the feed is fed by a
+ * trusted scheduled job, this one by an unauthenticated public endpoint, and a
+ * burst of violations must not be able to evict advisory findings. They are
+ * merged for display in loadQualityIssueState.
+ */
+export const CSP_VIOLATION_ISSUES_KEY = 'quality_issues:csp_violations';
 export const ISSUE_WORKFLOW_KEY = 'quality_issues:workflow';
 export const AUTOMATION_STATE_KEY = 'quality_issues:automation:last_run';
 export const MAX_RUNTIME_ISSUES = 100;
 export const MAX_SECURITY_FEED_ISSUES = 250;
+export const MAX_CSP_VIOLATION_ISSUES = 250;
 export const MAX_WORKFLOW_NOTE_LENGTH = 2000;
 export const MAX_RESOLUTION_EVIDENCE_LENGTH = 3000;
 

@@ -47,5 +47,5 @@ npm run bundle:check -- --write-baseline
 The rest are plain integers, e.g.:
 
 ```
-node -e "require('fs').writeFileSync('quality/baselines/route-auth-baseline', 122 + '\n')"
+node -e "require('fs').writeFileSync('quality/baselines/route-auth-baseline', 123 + '\n')"
 ```

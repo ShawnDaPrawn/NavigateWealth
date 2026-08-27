@@ -697,9 +697,16 @@ const STATIC_BODY_STYLE = `<style>
  * Hides the static snapshot when the SPA fallback shell (which carries the
  * homepage prerender) is served for a different URL — e.g. an app route or a
  * just-published article the middleware falls through for.
+ *
+ * The route is read from `data-seo-path` on the element rather than
+ * interpolated into the script. That is what makes the snippet BYTE-IDENTICAL
+ * across all 26 prerendered routes, which in turn is what lets
+ * `script-src` carry ONE sha256 hash instead of 26 — and what stops a renamed
+ * slug from silently invalidating a hash and taking `'unsafe-inline'` back.
+ * See docs/PRODUCTION-READINESS.md § CSP.
  */
-function staticBodyPathGuard(routePath) {
-  return `<script id="seo-static-body-guard">(function(){var p=location.pathname.replace(/\\/+$/,'')||'/';if(p!==${JSON.stringify(routePath)}){var el=document.getElementById('seo-static-body');if(el){el.style.display='none';}}})();</script>`;
+export function staticBodyPathGuard() {
+  return `<script id="seo-static-body-guard">(function(){var el=document.getElementById('seo-static-body');if(!el)return;var want=el.getAttribute('data-seo-path')||'/';var p=location.pathname.replace(/\\/+$/,'')||'/';if(p!==want){el.style.display='none';}})();</script>`;
 }
 
 function breadcrumbNavHtml(route, siteUrl) {
@@ -788,7 +795,7 @@ export function createStaticBodyHtml(route, siteUrl) {
   return `
       <!-- static-body:start -->
       ${STATIC_BODY_STYLE}
-      <main id="seo-static-body" data-seo-static-body="true" aria-label="${escapeHtml(pageName)}">
+      <main id="seo-static-body" data-seo-static-body="true" data-seo-path="${escapeHtml(route.path)}" aria-label="${escapeHtml(pageName)}">
         <article>
             ${breadcrumbNavHtml(route, siteUrl)}
             <header>
@@ -801,7 +808,7 @@ export function createStaticBodyHtml(route, siteUrl) {
             ${internalLinksHtml(route, siteUrl)}
         </article>
       </main>
-      ${staticBodyPathGuard(route.path)}
+      ${staticBodyPathGuard()}
       <!-- static-body:end -->`;
 }
 
@@ -828,7 +835,7 @@ export function createArticleStaticBodyHtml(route, siteUrl, sanitizedBodyHtml) {
   return `
       <!-- static-body:start -->
       ${STATIC_BODY_STYLE}
-      <main id="seo-static-body" data-seo-static-body="true" aria-label="${escapeHtml(pageName)}">
+      <main id="seo-static-body" data-seo-static-body="true" data-seo-path="${escapeHtml(route.path)}" aria-label="${escapeHtml(pageName)}">
         <article>
             ${breadcrumbNavHtml(route, siteUrl)}
             <header>
@@ -844,7 +851,7 @@ ${sanitizedBodyHtml}
             <p><a href="${escapeHtml(absoluteUrl(siteUrl, '/resources'))}">Browse more articles from Navigate Wealth</a></p>
         </article>
       </main>
-      ${staticBodyPathGuard(route.path)}
+      ${staticBodyPathGuard()}
       <!-- static-body:end -->`;
 }
 
