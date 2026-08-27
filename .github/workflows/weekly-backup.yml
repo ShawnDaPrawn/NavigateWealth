@@ -51,6 +51,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # A throwaway Postgres to restore the dump INTO. This is the disaster-
+    # recovery rehearsal, and it exists because a second Supabase project costs
+    # money this project does not have. It is a faithful test of the thing that
+    # actually matters — do these bytes load into a live schema, and is every
+    # row still there — without a second project, and it runs every week instead
+    # of once when somebody remembers.
+    #
+    # What it does NOT test: Supabase's own platform restore, Storage objects
+    # (the dump holds only their metadata), or auth users. See
+    # docs/PRODUCTION-READINESS.md § DR for the residual risk that leaves.
+    services:
+      scratch:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
     steps:
       - name: Check the database secret is configured
         id: guard
@@ -94,6 +117,31 @@ jobs:
           pg_dump --format=custom --no-owner --no-acl --verbose \
             --file="navigatewealth-$stamp.dump" "$DB_URL" 2> dump.log || {
               echo "::error::pg_dump failed"; tail -40 dump.log; exit 1; }
+
+      - name: Record the source row counts
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          PGSSLMODE: require
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          # Exact counts, not reltuples estimates — an estimate cannot prove a
+          # restore is complete. query_to_xml is the portable way to count every
+          # table in one statement, and it runs identically on the Supabase
+          # source and on vanilla Postgres, which is what makes the two sides
+          # comparable.
+          psql "$DB_URL" -At -F',' -v ON_ERROR_STOP=1 -c "
+            select table_name,
+                   (xpath('/row/c/text()',
+                          query_to_xml(format('select count(*) as c from %I.%I',
+                                              table_schema, table_name),
+                                       false, true, '')))[1]::text::bigint
+            from information_schema.tables
+            where table_schema = 'public' and table_type = 'BASE TABLE'
+            order by table_name;
+          " > source-counts.csv
+          echo "source tables and rows:"; cat source-counts.csv
+          test -s source-counts.csv || { echo "::error::No tables found at source."; exit 1; }
 
       - name: Verify the archive is readable
         if: steps.guard.outputs.configured == 'true'
@@ -143,6 +191,65 @@ jobs:
             tail -40 restore-check.log; exit 1; }
 
           echo "Backup verified: TOC complete AND every data block decoded."
+
+      - name: Restore into a scratch database and compare every row count
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          SCRATCH: postgresql://postgres:postgres@localhost:5432/postgres
+        run: |
+          set -euo pipefail
+
+          # Supabase's roles do not exist in a vanilla Postgres, and the dump
+          # references them in RLS policies and grants. Creating them first lets
+          # the policies restore too, so the rehearsal exercises the real schema
+          # rather than a stripped-down version of it. NOLOGIN: these are here to
+          # satisfy catalog references, not to be authenticated as.
+          # Plain CREATE ROLE, not a guarded DO block: dollar-quoting through
+          # YAML, then bash, then psql is three layers of escaping and exactly
+          # the kind of thing that breaks silently. "already exists" is harmless
+          # here, so swallow it.
+          for role in anon authenticated service_role supabase_admin \
+                      supabase_auth_admin supabase_storage_admin authenticator \
+                      dashboard_user pgbouncer; do
+            psql "$SCRATCH" -q -c "create role $role NOLOGIN" 2>/dev/null || true
+          done
+
+          # NO --exit-on-error, deliberately. A vanilla Postgres has no pg_net,
+          # pgsodium, supabase_vault, pg_graphql or pg_cron, so those CREATE
+          # EXTENSION statements MUST fail here and that is not a backup defect.
+          # Errors are counted and shown, but the gate is the row comparison
+          # below: a restore that loses data fails even with zero errors, and one
+          # that logs extension noise passes if every row arrived.
+          pg_restore --no-owner --no-acl --dbname="$SCRATCH" \
+            "$BACKUP_FILE" 2> restore.log || true
+          errors=$(grep -c "^pg_restore: error" restore.log || true)
+          echo "restore completed with ${errors:-0} non-fatal errors (extensions/roles expected)"
+          if [ "${errors:-0}" -gt 0 ]; then
+            echo "--- first 20 ---"; grep "^pg_restore: error" restore.log | head -20
+          fi
+
+          psql "$SCRATCH" -At -F',' -v ON_ERROR_STOP=1 -c "
+            select table_name,
+                   (xpath('/row/c/text()',
+                          query_to_xml(format('select count(*) as c from %I.%I',
+                                              table_schema, table_name),
+                                       false, true, '')))[1]::text::bigint
+            from information_schema.tables
+            where table_schema = 'public' and table_type = 'BASE TABLE'
+            order by table_name;
+          " > restored-counts.csv
+          echo "restored tables and rows:"; cat restored-counts.csv
+
+          # THE GATE. Every table present, every row accounted for. A dump that
+          # decodes but restores short is the failure mode the byte-level checks
+          # above cannot see, and it is the one that matters on the day you need
+          # the backup.
+          if ! diff -u source-counts.csv restored-counts.csv > counts.diff; then
+            echo "::error::Restored data does not match the source. Left is source, right is restored."
+            cat counts.diff
+            exit 1
+          fi
+          echo "DR rehearsal passed: $(wc -l < source-counts.csv) tables restored, every row count identical."
 
       - name: Upload
         if: steps.guard.outputs.configured == 'true'
