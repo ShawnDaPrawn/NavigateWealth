@@ -100,6 +100,23 @@ jobs:
           sudo apt-get install -y -qq postgresql-client-17
           pg_dump --version
 
+      - name: Snapshot the source shape before the dump
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          PGSSLMODE: require
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          # Bracketing the dump between two snapshots is what makes the
+          # comparison sound. pg_dump reads from a consistent snapshot taken
+          # when it STARTS, so a count taken only afterwards describes a newer
+          # database — and this one has cron jobs writing to it, so a single
+          # after-count would fail the job on a backup that is perfectly good.
+          # The restored count has to land inside the range the source held
+          # while the dump ran. See scripts/compare-restore.py.
+          bash scripts/capture-db-shape.sh "$DB_URL" source-before.csv
+          echo "before the dump:"; cat source-before.csv
+
       - name: Dump
         if: steps.guard.outputs.configured == 'true'
         env:
@@ -118,30 +135,15 @@ jobs:
             --file="navigatewealth-$stamp.dump" "$DB_URL" 2> dump.log || {
               echo "::error::pg_dump failed"; tail -40 dump.log; exit 1; }
 
-      - name: Record the source row counts
+      - name: Snapshot the source shape after the dump
         if: steps.guard.outputs.configured == 'true'
         env:
           PGSSLMODE: require
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          # Exact counts, not reltuples estimates — an estimate cannot prove a
-          # restore is complete. query_to_xml is the portable way to count every
-          # table in one statement, and it runs identically on the Supabase
-          # source and on vanilla Postgres, which is what makes the two sides
-          # comparable.
-          psql "$DB_URL" -At -F',' -v ON_ERROR_STOP=1 -c "
-            select table_name,
-                   (xpath('/row/c/text()',
-                          query_to_xml(format('select count(*) as c from %I.%I',
-                                              table_schema, table_name),
-                                       false, true, '')))[1]::text::bigint
-            from information_schema.tables
-            where table_schema = 'public' and table_type = 'BASE TABLE'
-            order by table_name;
-          " > source-counts.csv
-          echo "source tables and rows:"; cat source-counts.csv
-          test -s source-counts.csv || { echo "::error::No tables found at source."; exit 1; }
+          bash scripts/capture-db-shape.sh "$DB_URL" source-after.csv
+          echo "after the dump:"; cat source-after.csv
 
       - name: Verify the archive is readable
         if: steps.guard.outputs.configured == 'true'
@@ -192,64 +194,89 @@ jobs:
 
           echo "Backup verified: TOC complete AND every data block decoded."
 
-      - name: Restore into a scratch database and compare every row count
+      - name: Restore into a scratch database and compare it to the source
         if: steps.guard.outputs.configured == 'true'
         env:
+          PGSSLMODE: require
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SCRATCH: postgresql://postgres:postgres@localhost:5432/postgres
         run: |
           set -euo pipefail
 
-          # Supabase's roles do not exist in a vanilla Postgres, and the dump
-          # references them in RLS policies and grants. Creating them first lets
-          # the policies restore too, so the rehearsal exercises the real schema
-          # rather than a stripped-down version of it. NOLOGIN: these are here to
-          # satisfy catalog references, not to be authenticated as.
-          # Plain CREATE ROLE, not a guarded DO block: dollar-quoting through
-          # YAML, then bash, then psql is three layers of escaping and exactly
-          # the kind of thing that breaks silently. "already exists" is harmless
-          # here, so swallow it.
+          # Supabase's roles do not exist in a vanilla Postgres and the dump
+          # references them in grants. Plain CREATE ROLE with the error
+          # swallowed, not a guarded DO block: dollar-quoting through YAML, then
+          # bash, then psql is three layers of escaping and exactly the kind of
+          # thing that breaks silently.
           for role in anon authenticated service_role supabase_admin \
                       supabase_auth_admin supabase_storage_admin authenticator \
                       dashboard_user pgbouncer; do
             psql "$SCRATCH" -q -c "create role $role NOLOGIN" 2>/dev/null || true
           done
 
-          # NO --exit-on-error, deliberately. A vanilla Postgres has no pg_net,
-          # pgsodium, supabase_vault, pg_graphql or pg_cron, so those CREATE
-          # EXTENSION statements MUST fail here and that is not a backup defect.
-          # Errors are counted and shown, but the gate is the row comparison
-          # below: a restore that loses data fails even with zero errors, and one
-          # that logs extension noise passes if every row arrived.
-          pg_restore --no-owner --no-acl --dbname="$SCRATCH" \
-            "$BACKUP_FILE" 2> restore.log || true
-          errors=$(grep -c "^pg_restore: error" restore.log || true)
-          echo "restore completed with ${errors:-0} non-fatal errors (extensions/roles expected)"
-          if [ "${errors:-0}" -gt 0 ]; then
-            echo "--- first 20 ---"; grep "^pg_restore: error" restore.log | head -20
-          fi
+          # Install every source extension the scratch image actually has, so
+          # the restore is as faithful as this environment allows and the
+          # allowlist below stays as narrow as possible.
+          psql "$DB_URL" -At -c "select extname from pg_extension" > src-ext.txt
+          psql "$SCRATCH" -At -c "select name from pg_available_extensions" > avail-ext.txt
+          : > unavailable-ext.txt
+          while read -r ext; do
+            [ -z "$ext" ] && continue
+            if grep -qxF "$ext" avail-ext.txt; then
+              psql "$SCRATCH" -q -c "create extension if not exists \"$ext\" cascade" 2>/dev/null || true
+            else
+              echo "$ext" >> unavailable-ext.txt
+            fi
+          done < src-ext.txt
+          echo "extensions the scratch image cannot provide:"; cat unavailable-ext.txt
 
-          psql "$SCRATCH" -At -F',' -v ON_ERROR_STOP=1 -c "
-            select table_name,
-                   (xpath('/row/c/text()',
-                          query_to_xml(format('select count(*) as c from %I.%I',
-                                              table_schema, table_name),
-                                       false, true, '')))[1]::text::bigint
-            from information_schema.tables
-            where table_schema = 'public' and table_type = 'BASE TABLE'
-            order by table_name;
-          " > restored-counts.csv
-          echo "restored tables and rows:"; cat restored-counts.csv
+          # Schemas owned EXCLUSIVELY by an unavailable extension. Errors naming
+          # these are cascades of the missing extension, not restore defects.
+          # Derived rather than hard-coded, and deliberately not schemas like
+          # `extensions` that also host extensions which DO install — allowlisting
+          # those would hide real failures.
+          psql "$DB_URL" -At -c "
+            select n.nspname
+            from pg_extension e join pg_namespace n on n.oid = e.extnamespace
+            where n.nspname not in ('pg_catalog','public')
+            group by n.nspname
+            having bool_and(e.extname in ($(sed "s/.*/'&'/" unavailable-ext.txt | paste -sd, - | grep . || echo "''")))
+          " > exclusive-schemas.txt || : > exclusive-schemas.txt
+          echo "schemas exclusive to those extensions:"; cat exclusive-schemas.txt
 
-          # THE GATE. Every table present, every row accounted for. A dump that
-          # decodes but restores short is the failure mode the byte-level checks
-          # above cannot see, and it is the one that matters on the day you need
-          # the backup.
-          if ! diff -u source-counts.csv restored-counts.csv > counts.diff; then
-            echo "::error::Restored data does not match the source. Left is source, right is restored."
-            cat counts.diff
+          # NO --exit-on-error: the run must continue past the missing-extension
+          # failures so the rest of the schema still loads. Every error is then
+          # classified below.
+          pg_restore --no-owner --no-acl --dbname="$SCRATCH" "$BACKUP_FILE" 2> restore.log || true
+
+          grep "^pg_restore: error" restore.log > all-errors.txt || : > all-errors.txt
+          cp all-errors.txt unexpected-errors.txt
+          while read -r token; do
+            [ -z "$token" ] && continue
+            grep -v -- "$token" unexpected-errors.txt > tmp.txt || : > tmp.txt
+            mv tmp.txt unexpected-errors.txt
+          done < <(cat unavailable-ext.txt exclusive-schemas.txt)
+
+          expected=$(( $(wc -l < all-errors.txt) - $(wc -l < unexpected-errors.txt) ))
+          echo "restore errors: $(wc -l < all-errors.txt) total, $expected attributable to missing extensions"
+
+          # THE FIRST GATE, and the one the previous version was missing. A
+          # restore that loads every row but fails to recreate a constraint,
+          # index, view, function, trigger or policy is not a usable restore —
+          # it is a pile of data with no keys — and a row-count check alone
+          # passes it happily. Anything not attributable to an extension this
+          # image cannot install fails the rehearsal.
+          if [ -s unexpected-errors.txt ]; then
+            echo "::error::Restore produced errors unrelated to missing extensions."
+            head -40 unexpected-errors.txt
             exit 1
           fi
-          echo "DR rehearsal passed: $(wc -l < source-counts.csv) tables restored, every row count identical."
+
+          bash scripts/capture-db-shape.sh "$SCRATCH" restored.csv
+          echo "restored:"; cat restored.csv
+
+          # THE SECOND GATE: every row, index, constraint and row-security flag.
+          python3 scripts/compare-restore.py source-before.csv source-after.csv restored.csv
 
       - name: Upload
         if: steps.guard.outputs.configured == 'true'
