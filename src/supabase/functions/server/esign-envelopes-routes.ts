@@ -19,13 +19,7 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { DraftSignersSchema } from './esign-validation.ts';
-import {
-  getRequestMetadata,
-  resolveFirmId,
-  ensureStorageBuckets,
-  assertEnvelopeOwnership,
-  firmScopeResponse,
-} from './esign-route-helpers.ts';
+import { getRequestMetadata, resolveFirmId, ensureStorageBuckets } from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   createEnvelope,
@@ -174,8 +168,17 @@ envelopesRoutes.post('/verify-hash', async (c) => {
  */
 envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
   try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
+    // Read the user `requireAdmin` already put on the context — do NOT call
+    // `getAuthContext(c)` here.
+    //
+    // `requireAdmin` -> `resolveAuthUser` has already validated the bearer
+    // token against Supabase Auth, run the account-security lookup, and set
+    // `user` / `userId` / `userRole` / `userEmail`. Calling `getAuthContext`
+    // again repeats BOTH the network round trip and the security-store read on
+    // every successful request — the exact per-request auth cost
+    // `auth-middleware-cost.test.ts` exists to prevent, and which its regex
+    // misses because it only detects chained middleware names.
+    const user = c.get('user') as { id: string; app_metadata?: Record<string, unknown> };
 
     // Get query params
     const status = c.req.query('status');
@@ -190,7 +193,7 @@ envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
     // claimed it did, which is exactly backwards and would have talked the next
     // reader into loosening a boundary.
     const scoped = (envelopes as Array<Record<string, unknown>>).filter((e) =>
-      belongsToFirm(ctx.user, { firm_id: (e.firm_id as string | undefined) ?? null }),
+      belongsToFirm(user, { firm_id: (e.firm_id as string | undefined) ?? null }),
     );
 
     return c.json({ envelopes: scoped });
@@ -212,9 +215,14 @@ envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
  */
 envelopesRoutes.delete('/envelopes', requireSuperAdmin, async (c) => {
   try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
+    // `requireSuperAdmin` already resolved and validated this caller; re-reading
+    // the context costs nothing where `getAuthContext` would repeat the Supabase
+    // Auth round trip and the account-security read.
+    const user = c.get('user') as {
+      id: string;
+      email?: string;
+      app_metadata?: Record<string, unknown>;
+    };
 
     // Safety check - require a confirmation query param
     const confirm = c.req.query('confirm');
@@ -597,9 +605,21 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
       return c.json({ error: 'Envelope not found' }, 404);
     }
 
-    // 404 before 403: an unknown id must not be distinguishable from another
-    // firm's id, or the route becomes an envelope-id oracle.
-    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
+    // A cross-firm id must be INDISTINGUISHABLE from an unknown one, or this
+    // route is an envelope-id oracle: submit a guessed id with a valid body and
+    // the status code tells you whether someone else's envelope exists.
+    //
+    // `firmScopeResponse` maps the scope error to 403, which is exactly that
+    // tell — an earlier version of this comment claimed the opposite of what
+    // the code did. `GET /envelopes/:envelopeId` above already answers 404 on a
+    // firm mismatch for this reason; this matches it.
+    if (!belongsToFirm(ctx.user, { firm_id: (envelope.firm_id as string | undefined) ?? null })) {
+      log.warn('Draft-signers write denied by firm scope', {
+        envelopeId,
+        callerFirmId: resolveFirmId(ctx.user),
+      });
+      return c.json({ error: 'Envelope not found' }, 404);
+    }
 
     // Only allow updates to draft envelopes
     if (envelope.status !== 'draft') {
@@ -619,8 +639,6 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
 
     return c.json({ success: true, count: signers.length });
   } catch (error: unknown) {
-    const scoped = firmScopeResponse(c, error);
-    if (scoped) return scoped;
     log.error('Save draft signers error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(

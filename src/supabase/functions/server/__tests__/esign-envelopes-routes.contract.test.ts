@@ -504,7 +504,7 @@ describe('PUT /envelopes/:envelopeId/draft-signers', () => {
     ).toBe(401);
   });
 
-  it('403s another firm’s draft envelope, and writes nothing', async () => {
+  it('404s another firm’s draft envelope, and writes nothing', async () => {
     // This route used to call `getAuthContext(c)` WITHOUT capturing the result
     // — authenticate, then throw the answer away — so any authenticated caller
     // could replace the signer list on any draft envelope by supplying its id.
@@ -517,9 +517,31 @@ describe('PUT /envelopes/:envelopeId/draft-signers', () => {
       body: { signers: SIGNERS },
     });
 
-    expect(res.status).toBe(403);
+    // 404, not 403: a cross-firm id must be indistinguishable from an unknown
+    // one, or the status code tells a caller whether someone else's envelope
+    // exists. Matches `GET /envelopes/:envelopeId` above.
+    expect(res.status).toBe(404);
     const stored = kvStore.get(EsignKeys.envelope('e1')) as { draft_signers?: unknown[] };
     expect(stored.draft_signers).toBeUndefined();
+  });
+
+  it('gives a cross-firm id and an unknown id the SAME response', async () => {
+    // The oracle test proper: if these ever diverge, the route leaks existence.
+    seedEnvelope('e1', { firmId: FIRM_A });
+
+    const crossFirm = await req('/envelopes/e1/draft-signers', {
+      as: 'adminB',
+      method: 'PUT',
+      body: { signers: SIGNERS },
+    });
+    const unknown = await req('/envelopes/does-not-exist/draft-signers', {
+      as: 'adminB',
+      method: 'PUT',
+      body: { signers: SIGNERS },
+    });
+
+    expect(crossFirm.status).toBe(unknown.status);
+    expect(await crossFirm.text()).toBe(await unknown.text());
   });
 
   it('still lets the owning firm save draft signers', async () => {
