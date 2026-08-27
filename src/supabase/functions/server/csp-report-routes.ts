@@ -40,8 +40,8 @@
  * else's ad blocker — and left in, it buries the reports that are.
  */
 import { Hono } from 'npm:hono';
-import * as kv from './kv_store.tsx';
 import { requireAdmin } from './auth-mw.ts';
+import { createKvRepository } from './repositories/kv-repository.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
@@ -53,6 +53,18 @@ import { CSP_REPORT_IP_LIMIT_PER_HOUR, checkIpOnlyRateLimit } from './public-for
 
 const app = new Hono();
 const log = createModuleLogger('csp-report');
+
+/**
+ * One row per fingerprint, through the repository rather than raw `kv.*`.
+ *
+ * `kv-repository.ts` exists so new namespaces stop reaching the store directly,
+ * and its ratchet (quality/baselines/kv-direct-access-baseline) is what caught
+ * the first version of this file adding four more direct calls. Going through
+ * the repository also makes the unbounded read explicit: `listAll` demands a
+ * reason and logs it, so a full-namespace scan is an attributable act rather
+ * than the easy path.
+ */
+const violationsRepo = createKvRepository<QualityIssue>(CSP_VIOLATION_KEY_PREFIX);
 
 /** Schemes whose violations are someone else's software, not our policy. */
 const EXTENSION_SCHEMES = [
@@ -215,8 +227,7 @@ app.post(
         title: v.blockedUrl || 'inline',
         filePath: v.sourceFile,
       });
-      const key = `${CSP_VIOLATION_KEY_PREFIX}${fingerprint}`;
-      const existing = (await kv.get(key)) as QualityIssue | null;
+      const existing = await violationsRepo.get(fingerprint);
 
       // Strongest disposition wins, and it is sticky.
       //
@@ -257,7 +268,7 @@ app.post(
         occurrences: (existing?.occurrences ?? 0) + 1,
       };
 
-      await kv.set(key, next);
+      await violationsRepo.put(fingerprint, next);
     }
 
     await trimToCap();
@@ -281,21 +292,18 @@ app.post(
  * range scan.
  */
 async function trimToCap(): Promise<void> {
-  const rows = await kv.listByPrefix(CSP_VIOLATION_KEY_PREFIX, {
-    limit: MAX_CSP_VIOLATION_ISSUES * 2,
-  });
+  const rows = await violationsRepo.listAll('trim CSP violations to the stored cap');
   if (rows.length <= MAX_CSP_VIOLATION_ISSUES) return;
 
   const doomed = rows
-    .map((r) => ({ key: r.key, lastSeenAt: (r.value as QualityIssue)?.lastSeenAt ?? '' }))
-    .sort((a, b) => a.lastSeenAt.localeCompare(b.lastSeenAt))
-    .slice(0, rows.length - MAX_CSP_VIOLATION_ISSUES)
-    .map((r) => r.key);
+    .filter(Boolean)
+    .sort((a, b) => (a.lastSeenAt ?? '').localeCompare(b.lastSeenAt ?? ''))
+    .slice(0, rows.length - MAX_CSP_VIOLATION_ISSUES);
 
-  if (doomed.length > 0) {
-    await kv.mdel(doomed);
-    log.info('Trimmed CSP violations over cap', { removed: doomed.length });
+  for (const issue of doomed) {
+    await violationsRepo.remove(issue.fingerprint);
   }
+  log.info('Trimmed CSP violations over cap', { removed: doomed.length });
 }
 
 /** GET / — admin read-back. The same rows also reach the quality dashboard. */
@@ -303,10 +311,10 @@ app.get(
   '/',
   requireAdmin,
   asyncHandler(async (c) => {
-    const rows = (await kv.getByPrefix(CSP_VIOLATION_KEY_PREFIX)) as QualityIssue[];
+    const rows = await violationsRepo.listAll('admin read-back of CSP violations');
     const violations = rows
       .filter(Boolean)
-      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+      .sort((a, b) => (b.lastSeenAt ?? '').localeCompare(a.lastSeenAt ?? ''));
     return c.json({ success: true, violations });
   }),
 );
