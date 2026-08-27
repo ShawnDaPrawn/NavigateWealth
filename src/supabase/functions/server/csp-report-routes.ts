@@ -48,7 +48,8 @@ import {
   createQualityIssueFingerprint,
   type QualityIssue,
 } from '../../../shared/quality/qualityIssues.ts';
-import { CSP_VIOLATION_ISSUES_KEY, MAX_CSP_VIOLATION_ISSUES } from './quality-issues-normalize.ts';
+import { CSP_VIOLATION_KEY_PREFIX, MAX_CSP_VIOLATION_ISSUES } from './quality-issues-normalize.ts';
+import { CSP_REPORT_IP_LIMIT_PER_HOUR, checkIpOnlyRateLimit } from './public-form-rate-limit.ts';
 
 const app = new Hono();
 const log = createModuleLogger('csp-report');
@@ -172,13 +173,28 @@ function isExtensionNoise(v: NormalizedViolation): boolean {
 /**
  * POST / — the endpoint named by `Reporting-Endpoints` and `report-uri`.
  *
- * Always answers 204, whatever the body. A browser cannot act on an error here
+ * Always answers 204, whatever happens. A browser cannot act on an error here
  * and does not retry usefully; a non-2xx would only make a violation look like
- * an outage in the logs.
+ * an outage in the logs. That includes the rate-limited case: refusing loudly
+ * would tell a prober where the limit is, and the browser would not care.
  */
 app.post(
   '/',
   asyncHandler(async (c) => {
+    // Before parsing or persisting anything. The per-body and stored-list caps
+    // below bound how much is KEPT; they do nothing about how often an
+    // anonymous caller can arrive, and every request otherwise costs a KV read,
+    // a KV write and a log line. Unbounded, a bot burns Edge Function and
+    // database quota and churns the capped list until real evidence is gone.
+    const limit = await checkIpOnlyRateLimit(
+      'csp-report',
+      (name) => c.req.header(name),
+      CSP_REPORT_IP_LIMIT_PER_HOUR,
+    );
+    if (!limit.allowed) {
+      return c.body(null, 204);
+    }
+
     const payload = await c.req.json().catch(() => null);
     const violations = normalize(payload).filter((v) => !isExtensionNoise(v));
 
@@ -187,8 +203,6 @@ app.post(
     }
 
     const now = new Date().toISOString();
-    const stored = (await kv.get(CSP_VIOLATION_ISSUES_KEY)) as QualityIssue[] | null;
-    let issues = Array.isArray(stored) ? stored : [];
 
     for (const v of violations) {
       // Fingerprint on directive + what was blocked, NOT on the page. One
@@ -201,16 +215,29 @@ app.post(
         title: v.blockedUrl || 'inline',
         filePath: v.sourceFile,
       });
-      const existing = issues.findIndex((i) => i.fingerprint === fingerprint);
+      const key = `${CSP_VIOLATION_KEY_PREFIX}${fingerprint}`;
+      const existing = (await kv.get(key)) as QualityIssue | null;
+
+      // Strongest disposition wins, and it is sticky.
+      //
+      // The enforced and report-only headers both carry `object-src`,
+      // `base-uri`, `form-action` and `frame-ancestors`, and both report here.
+      // So ONE browser event can produce two reports for the same fingerprint —
+      // one `enforce`, one `report`. Taking the latest would let the report-only
+      // copy, arriving second, downgrade a resource that was actually BLOCKED
+      // from error to warning. Once seen enforced, it stays enforced.
+      const wasEnforced = existing?.severity === 'error';
+      const enforced = wasEnforced || v.disposition === 'enforce';
+
       const next: QualityIssue = {
         id: fingerprint,
         source: 'audit',
         category: 'security',
-        priority: v.disposition === 'enforce' ? 'high' : 'medium',
+        priority: enforced ? 'high' : 'medium',
         fingerprint,
         // 'warning' while the policy is report-only: nothing broke for the
         // visitor, the browser only told us it would have.
-        severity: v.disposition === 'enforce' ? 'error' : 'warning',
+        severity: enforced ? 'error' : 'warning',
         status: 'open',
         title: `CSP ${v.directive} blocked ${v.blockedUrl || 'an inline resource'}`,
         message: [
@@ -219,25 +246,22 @@ app.post(
           v.documentUrl ? `On page: ${v.documentUrl}` : '',
           v.sourceFile ? `Source: ${v.sourceFile}` : '',
           v.sample ? `Sample: ${v.sample}` : '',
-          `Disposition: ${v.disposition}`,
+          `Disposition: ${enforced ? 'enforce' : v.disposition}`,
         ]
           .filter(Boolean)
           .join('\n'),
         filePath: v.sourceFile || v.documentUrl || 'browser',
         ruleId: `csp:${v.directive}`,
-        firstSeenAt: existing >= 0 ? issues[existing].firstSeenAt : now,
+        firstSeenAt: existing?.firstSeenAt ?? now,
         lastSeenAt: now,
-        occurrences: existing >= 0 ? issues[existing].occurrences + 1 : 1,
+        occurrences: (existing?.occurrences ?? 0) + 1,
       };
-      issues =
-        existing >= 0 ? issues.map((i, idx) => (idx === existing ? next : i)) : [next, ...issues];
+
+      await kv.set(key, next);
     }
 
-    const trimmed = issues
-      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))
-      .slice(0, MAX_CSP_VIOLATION_ISSUES);
+    await trimToCap();
 
-    await kv.set(CSP_VIOLATION_ISSUES_KEY, trimmed);
     log.warn('CSP violation reported', {
       count: violations.length,
       directives: [...new Set(violations.map((v) => v.directive))],
@@ -247,13 +271,43 @@ app.post(
   }),
 );
 
+/**
+ * Keep the stored set bounded.
+ *
+ * Rate limiting makes an unbounded flood of DISTINCT fingerprints hard, not
+ * impossible — each report can name a different blocked URL. Oldest-last-seen
+ * rows go first, so a live violation is never evicted by a stale one. Only runs
+ * when the set is actually over the cap, so the usual path pays one cheap
+ * range scan.
+ */
+async function trimToCap(): Promise<void> {
+  const rows = await kv.listByPrefix(CSP_VIOLATION_KEY_PREFIX, {
+    limit: MAX_CSP_VIOLATION_ISSUES * 2,
+  });
+  if (rows.length <= MAX_CSP_VIOLATION_ISSUES) return;
+
+  const doomed = rows
+    .map((r) => ({ key: r.key, lastSeenAt: (r.value as QualityIssue)?.lastSeenAt ?? '' }))
+    .sort((a, b) => a.lastSeenAt.localeCompare(b.lastSeenAt))
+    .slice(0, rows.length - MAX_CSP_VIOLATION_ISSUES)
+    .map((r) => r.key);
+
+  if (doomed.length > 0) {
+    await kv.mdel(doomed);
+    log.info('Trimmed CSP violations over cap', { removed: doomed.length });
+  }
+}
+
 /** GET / — admin read-back. The same rows also reach the quality dashboard. */
 app.get(
   '/',
   requireAdmin,
   asyncHandler(async (c) => {
-    const stored = (await kv.get(CSP_VIOLATION_ISSUES_KEY)) as QualityIssue[] | null;
-    return c.json({ success: true, violations: Array.isArray(stored) ? stored : [] });
+    const rows = (await kv.getByPrefix(CSP_VIOLATION_KEY_PREFIX)) as QualityIssue[];
+    const violations = rows
+      .filter(Boolean)
+      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+    return c.json({ success: true, violations });
   }),
 );
 

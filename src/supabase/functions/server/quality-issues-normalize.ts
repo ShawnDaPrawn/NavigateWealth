@@ -28,12 +28,23 @@ export const SECURITY_FEED_ISSUES_KEY = 'quality_issues:security_feed';
 /**
  * CSP violations reported by visitors' browsers (csp-report-routes.ts).
  *
- * Its own key rather than a share of the security feed: the feed is fed by a
- * trusted scheduled job, this one by an unauthenticated public endpoint, and a
- * burst of violations must not be able to evict advisory findings. They are
- * merged for display in loadQualityIssueState.
+ * ONE ROW PER FINGERPRINT, not one array under one key. The first version kept
+ * a single array and did read-modify-write on it, which loses reports under
+ * exactly the traffic this endpoint sees: a policy change lands and every
+ * visitor's browser reports at once, two handlers read the same array, and the
+ * later `set` discards the other's violation entirely. Per-fingerprint rows
+ * narrow the contention to reports of the SAME violation, where the worst case
+ * is a missed increment on a counter rather than a lost finding.
+ *
+ * Separate from the security feed because the feed is written by a trusted
+ * scheduled job and this by an unauthenticated public endpoint; a burst here
+ * must not evict advisory findings. They are merged for display in
+ * loadQualityIssueState.
+ *
+ * `kv.getByPrefix` is an index range scan (`>= prefix`, `< upperBound`), not a
+ * LIKE, so the underscores in this prefix are literal.
  */
-export const CSP_VIOLATION_ISSUES_KEY = 'quality_issues:csp_violations';
+export const CSP_VIOLATION_KEY_PREFIX = 'quality_issues:csp_violation:';
 export const ISSUE_WORKFLOW_KEY = 'quality_issues:workflow';
 export const AUTOMATION_STATE_KEY = 'quality_issues:automation:last_run';
 export const MAX_RUNTIME_ISSUES = 100;

@@ -20,7 +20,21 @@
  *    fingerprint, a hard cap, per-field length limits, and a cap on how many
  *    reports one body can carry.
  *
- * 3. **Both wire formats.** `report-uri` sends a single hyphenated
+ * 3. **Concurrent reports must not overwrite each other.** The first version
+ *    kept one array under one key and did read-modify-write on it. CSP reports
+ *    arrive in BURSTS — a policy change lands and every visitor's browser
+ *    reports at once — so two handlers read the same array and the later `set`
+ *    discarded the other's violation outright. Storage is one row per
+ *    fingerprint now.
+ *
+ * 4. **The strongest disposition sticks.** Both the enforced and report-only
+ *    headers carry `object-src`, `base-uri`, `form-action` and
+ *    `frame-ancestors`, and both report here, so one browser event can produce
+ *    an `enforce` report and a `report` report for the same fingerprint. Taking
+ *    the latest let the report-only copy downgrade a resource that was actually
+ *    BLOCKED from error to warning.
+ *
+ * 5. **Both wire formats.** `report-uri` sends a single hyphenated
  *    `{"csp-report": {...}}`; the Reporting API sends an ARRAY of camelCase
  *    `{type, body}`. Safari and older Chrome use the first, current Chrome the
  *    second. Accepting one silently halves the evidence — which is the failure
@@ -44,11 +58,21 @@ vi.mock('../stderr-logger.ts', async () =>
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
 const app = (await import('../csp-report-routes.ts')).default;
-const { CSP_VIOLATION_ISSUES_KEY, MAX_CSP_VIOLATION_ISSUES } =
+const { CSP_VIOLATION_KEY_PREFIX, MAX_CSP_VIOLATION_ISSUES } =
   await import('../quality-issues-normalize.ts');
+const { CSP_REPORT_IP_LIMIT_PER_HOUR } = await import('../public-form-rate-limit.ts');
 
 /** The signer token shape, and a value distinctive enough to grep the store for. */
 const SIGNER_TOKEN = 'a1b2c3d4-dead-4beef-8000-feedfacecafe';
+
+/** Post one violation with a distinct blocked URL from a chosen client IP. */
+function postFromIp(blockedUri: string, ip: string) {
+  return app.request('/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/csp-report', 'CF-Connecting-IP': ip },
+    body: JSON.stringify(legacy({ 'blocked-uri': blockedUri })),
+  });
+}
 
 function post(body: unknown, contentType = 'application/csp-report') {
   return app.request('/', {
@@ -70,8 +94,11 @@ function legacy(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stored() {
-  return (kvStore.get(CSP_VIOLATION_ISSUES_KEY) as unknown[] | undefined) ?? [];
+/** Every per-fingerprint row currently in the store. */
+function stored(): Record<string, unknown>[] {
+  return [...kvStore.entries()]
+    .filter(([k]) => k.startsWith(CSP_VIOLATION_KEY_PREFIX))
+    .map(([, v]) => v as Record<string, unknown>);
 }
 
 beforeEach(() => {
@@ -174,27 +201,31 @@ describe('an anonymous caller cannot exhaust the store', () => {
     expect(issues[0].occurrences).toBe(4);
   });
 
-  it('caps stored violations', async () => {
-    const seed = Array.from({ length: MAX_CSP_VIOLATION_ISSUES }, (_, i) => ({
-      id: `seed-${i}`,
-      fingerprint: `seed-${i}`,
-      source: 'audit',
-      category: 'security',
-      priority: 'medium',
-      severity: 'warning',
-      status: 'open',
-      title: `seed ${i}`,
-      message: '',
-      filePath: 'browser',
-      firstSeenAt: '2020-01-01T00:00:00.000Z',
-      lastSeenAt: '2020-01-01T00:00:00.000Z',
-      occurrences: 1,
-    }));
-    kvStore.set(CSP_VIOLATION_ISSUES_KEY, seed);
+  it('caps stored violations, evicting the least recently seen', async () => {
+    for (let i = 0; i < MAX_CSP_VIOLATION_ISSUES; i++) {
+      kvStore.set(`${CSP_VIOLATION_KEY_PREFIX}seed-${i}`, {
+        id: `seed-${i}`,
+        fingerprint: `seed-${i}`,
+        source: 'audit',
+        category: 'security',
+        priority: 'medium',
+        severity: 'warning',
+        status: 'open',
+        title: `seed ${i}`,
+        message: '',
+        filePath: 'browser',
+        // seed-0 is the oldest, so it is the one that should go.
+        firstSeenAt: '2020-01-01T00:00:00.000Z',
+        lastSeenAt: `2020-01-01T00:00:${String(i % 60).padStart(2, '0')}.000Z`,
+        occurrences: 1,
+      });
+    }
 
     await post(legacy());
 
     expect(stored()).toHaveLength(MAX_CSP_VIOLATION_ISSUES);
+    // The new violation survived; an old one was evicted, not the new one.
+    expect(JSON.stringify(stored())).toContain('evil.example.com');
   });
 
   it('takes at most 20 reports from one body', async () => {
@@ -296,5 +327,121 @@ describe('severity tracks the policy that fired', () => {
     const issue = (stored() as { severity: string; priority: string }[])[0];
     expect(issue.severity).toBe('error');
     expect(issue.priority).toBe('high');
+  });
+});
+
+describe('concurrent reports do not overwrite each other', () => {
+  it('keeps every distinct violation from a simultaneous burst', async () => {
+    // The failure the shared-array version had: N handlers read the same array,
+    // each appends its own, and the last `set` wins — N-1 findings vanish. This
+    // is not a contrived race; a policy change lands and every visitor's browser
+    // reports within the same second.
+    const directives = ['script-src', 'img-src', 'connect-src', 'frame-src', 'font-src'];
+
+    await Promise.all(
+      directives.map((d) =>
+        post(legacy({ 'effective-directive': d, 'blocked-uri': `https://x.example/${d}` })),
+      ),
+    );
+
+    const titles = stored().map((i) => String(i.title));
+    expect(titles).toHaveLength(directives.length);
+    for (const d of directives) {
+      expect(
+        titles.some((t) => t.includes(d)),
+        `${d} was lost`,
+      ).toBe(true);
+    }
+  });
+
+  it('stores one row per fingerprint rather than one shared array', async () => {
+    await post(legacy({ 'effective-directive': 'script-src' }));
+    await post(legacy({ 'effective-directive': 'img-src' }));
+
+    const keys = [...kvStore.keys()].filter((k) => k.startsWith(CSP_VIOLATION_KEY_PREFIX));
+    expect(keys).toHaveLength(2);
+  });
+});
+
+describe('the strongest disposition sticks', () => {
+  // `object-src`, `base-uri`, `form-action` and `frame-ancestors` are in BOTH
+  // the enforced and the report-only header, and both report to this endpoint.
+  // So one browser event yields two reports sharing a fingerprint.
+  const bothPolicies = {
+    'effective-directive': 'form-action',
+    'blocked-uri': 'https://evil.example.com/post',
+  };
+
+  it('is not downgraded when the report-only copy arrives last', async () => {
+    await post(legacy({ ...bothPolicies, disposition: 'enforce' }));
+    await post(legacy({ ...bothPolicies, disposition: 'report' }));
+
+    const issue = stored()[0];
+    expect(issue.severity, 'a resource that was actually blocked must stay an error').toBe('error');
+    expect(issue.priority).toBe('high');
+  });
+
+  it('upgrades when the enforced copy arrives last', async () => {
+    await post(legacy({ ...bothPolicies, disposition: 'report' }));
+    await post(legacy({ ...bothPolicies, disposition: 'enforce' }));
+
+    expect(stored()[0].severity).toBe('error');
+  });
+
+  it('records the sticky disposition in the message, not the last one seen', async () => {
+    await post(legacy({ ...bothPolicies, disposition: 'enforce' }));
+    await post(legacy({ ...bothPolicies, disposition: 'report' }));
+
+    expect(String(stored()[0].message)).toContain('Disposition: enforce');
+  });
+
+  it('leaves a genuinely report-only violation as a warning', async () => {
+    await post(legacy({ 'effective-directive': 'img-src', disposition: 'report' }));
+
+    expect(stored()[0].severity).toBe('warning');
+  });
+
+  it('keeps firstSeenAt from the original record while counting both', async () => {
+    await post(legacy(bothPolicies));
+    await post(legacy(bothPolicies));
+
+    const issue = stored()[0];
+    expect(issue.occurrences).toBe(2);
+    expect(issue.firstSeenAt).toBeTruthy();
+  });
+});
+
+describe('an anonymous caller is rate limited', () => {
+  it('stops writing once the per-IP budget is spent', async () => {
+    // The caps bound what is KEPT; they say nothing about how often someone can
+    // arrive, and every request otherwise costs a KV read, a KV write and a log
+    // line. Each request here carries a distinct blocked URL, so without a
+    // frequency limit each would create a row.
+    const attempts = CSP_REPORT_IP_LIMIT_PER_HOUR + 25;
+    for (let i = 0; i < attempts; i++) {
+      await postFromIp(`https://flood.example/${i}.js`, '198.51.100.7');
+    }
+
+    expect(stored().length).toBeLessThanOrEqual(CSP_REPORT_IP_LIMIT_PER_HOUR);
+  });
+
+  it('still answers 204 when limited, so a prober learns nothing', async () => {
+    for (let i = 0; i < CSP_REPORT_IP_LIMIT_PER_HOUR + 5; i++) {
+      await postFromIp(`https://flood.example/${i}.js`, '198.51.100.8');
+    }
+    const res = await postFromIp('https://flood.example/final.js', '198.51.100.8');
+
+    expect(res.status).toBe(204);
+  });
+
+  it('limits per IP, so one abuser cannot silence everyone else', async () => {
+    for (let i = 0; i < CSP_REPORT_IP_LIMIT_PER_HOUR + 5; i++) {
+      await postFromIp(`https://flood.example/${i}.js`, '198.51.100.9');
+    }
+    const before = stored().length;
+
+    await postFromIp('https://real.example/legit.js', '203.0.113.42');
+
+    expect(stored().length).toBe(before + 1);
   });
 });

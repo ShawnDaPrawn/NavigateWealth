@@ -61,7 +61,7 @@ import {
 const log = createModuleLogger('public-form-rate-limit');
 
 /** Which public form is being limited. Also the KV namespace segment. */
-export type PublicFormScope = 'contact' | 'quote' | 'consultation';
+export type PublicFormScope = 'contact' | 'quote' | 'consultation' | 'csp-report';
 
 /** Submissions per email address per window. Matches the previous behaviour. */
 export const EMAIL_LIMIT_PER_HOUR = 5;
@@ -71,6 +71,18 @@ export const EMAIL_LIMIT_PER_HOUR = 5;
  * address can legitimately front many people — see the note above.
  */
 export const IP_LIMIT_PER_HOUR = 15;
+
+/**
+ * CSP violation reports per IP per window.
+ *
+ * Far above the form budgets because this is not a form: one page load on a
+ * misconfigured policy legitimately produces several reports, and a browsing
+ * session many. The purpose is not to capture every one — reports collapse by
+ * fingerprint, so the marginal value of the sixtieth from one address is nil —
+ * it is to stop an anonymous caller turning an unauthenticated endpoint into
+ * unbounded KV writes and log volume.
+ */
+export const CSP_REPORT_IP_LIMIT_PER_HOUR = 60;
 
 const WINDOW_MS = 60 * 60 * 1000;
 
@@ -154,5 +166,39 @@ export async function checkPublicFormRateLimit(
     return { allowed: false, limitedBy: 'ip' };
   }
 
+  return { allowed: true };
+}
+
+/**
+ * IP-only variant, for endpoints with no submitter identity to bucket on.
+ *
+ * `checkPublicFormRateLimit` needs an email because a form has one and an
+ * address is the more meaningful dimension. A CSP report has neither: the
+ * browser sends it, from a page a visitor may not be signed in to. Passing an
+ * empty email there would bucket every caller under one key and let a single
+ * bot exhaust the budget for everyone, so this takes the IP dimension alone.
+ *
+ * Fail-open, like `consume`: if the bucket store cannot be reached the request
+ * proceeds. A store that is down will fail the subsequent write anyway, and
+ * refusing all reports on a transient hiccup loses the evidence this endpoint
+ * exists to collect.
+ */
+export async function checkIpOnlyRateLimit(
+  scope: PublicFormScope,
+  getHeader: HeaderGetter,
+  limit: number,
+): Promise<PublicFormRateLimitResult> {
+  const clientIp = extractClientIp(getHeader);
+  if (!clientIp) {
+    // No resolvable IP (local dev, or a proxy that strips the headers). There
+    // is no other dimension to fall back to here.
+    return { allowed: true };
+  }
+
+  const allowed = await consume(`${scope}:ip:${clientIp}`, limit, Date.now());
+  if (allowed === false) {
+    log.warn('IP rate limit exceeded', { scope, clientIp, limit });
+    return { allowed: false, limitedBy: 'ip' };
+  }
   return { allowed: true };
 }
