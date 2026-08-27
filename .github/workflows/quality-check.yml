@@ -10,6 +10,11 @@ on:
 jobs:
   quality-check:
     runs-on: ubuntu-latest
+    # The only workflow here that had no timeout, so a hung step inherited
+    # GitHub's 6-hour default: the PR sits un-mergeable for a working day and
+    # the run burns runner minutes nobody is watching. 45 is generous against a
+    # typical 13-20 minute run, so a merely slow runner still passes.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
