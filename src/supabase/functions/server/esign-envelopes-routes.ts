@@ -13,13 +13,19 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError, requireSuperAdmin } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { DraftSignersSchema } from './esign-validation.ts';
-import { getRequestMetadata, resolveFirmId, ensureStorageBuckets } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  resolveFirmId,
+  ensureStorageBuckets,
+  assertEnvelopeOwnership,
+  firmScopeResponse,
+} from './esign-route-helpers.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import {
   createEnvelope,
@@ -143,10 +149,30 @@ envelopesRoutes.post('/verify-hash', async (c) => {
 // ==================== ENVELOPE ROUTES ====================
 
 /**
- * GET /envelopes
- * Get all envelopes (admin only)
+ * GET /envelopes — the aggregate envelope list. ADMIN ONLY, and now enforced.
+ *
+ * THE HOLE THIS CLOSES
+ * --------------------
+ * The docstring said "admin only" and nothing checked it. `getAuthContext`
+ * authenticates but does not authorise, so ANY authenticated user reached this
+ * route — and 188 of the 193 accounts on this deployment are clients.
+ *
+ * The only reason that was not a live cross-tenant leak is an accident:
+ * `belongsToFirm` requires an exact non-empty `firm_id` match, and no user
+ * carries `app_metadata.firm_id`, so `resolveFirmId` falls back to the caller's
+ * user id and the filter matched almost nothing. A leak held shut by a filter
+ * that was too strict to work is not a control — repairing the filter alone
+ * would have opened it.
+ *
+ * `requireAdmin` resolves the role through `resolveTrustedRole`, whose FIRST
+ * step is the super-admin email allowlist. That matters here: no account on
+ * this deployment has `app_metadata.role`, so a gate keyed on that alone would
+ * have locked out every user including the owner.
+ *
+ * Clients are not left without a path — they read their own envelopes through
+ * `GET /clients/:clientId/envelopes`, which checks ownership of the client id.
  */
-envelopesRoutes.get('/envelopes', async (c) => {
+envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
@@ -156,10 +182,13 @@ envelopesRoutes.get('/envelopes', async (c) => {
 
     const envelopes = await getAllEnvelopes(status);
 
-    // P6.9 — enforce firm scope on every read of the aggregate
-    // envelope list. `belongsToFirm` treats records without a
-    // `firm_id` (or with `firm_id === 'standalone'`) as accessible
-    // to everyone, which keeps the single-firm install working.
+    // P6.9 — firm scope on every read of the aggregate list.
+    //
+    // `belongsToFirm` denies a record whose `firm_id` is absent, empty, or
+    // different from the caller's. It does NOT treat a missing `firm_id` (or
+    // the literal 'standalone') as public — the comment that used to sit here
+    // claimed it did, which is exactly backwards and would have talked the next
+    // reader into loosening a boundary.
     const scoped = (envelopes as Array<Record<string, unknown>>).filter((e) =>
       belongsToFirm(ctx.user, { firm_id: (e.firm_id as string | undefined) ?? null }),
     );
@@ -545,7 +574,14 @@ envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
  */
 envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
   try {
-    await getAuthContext(c);
+    // `await getAuthContext(c);` — with the result discarded — is what stood
+    // here. That authenticates and then throws the answer away, which is the
+    // same shape esign-route-helpers.ts documents for the eight download
+    // handlers, except this one WRITES: any authenticated user could replace
+    // the signer list on any draft envelope by supplying its id, and 188 of
+    // the 193 accounts on this deployment are clients. Ownership is the
+    // control here, not authentication.
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
@@ -560,6 +596,10 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
     }
+
+    // 404 before 403: an unknown id must not be distinguishable from another
+    // firm's id, or the route becomes an envelope-id oracle.
+    assertEnvelopeOwnership(ctx.user, envelopeId, envelope);
 
     // Only allow updates to draft envelopes
     if (envelope.status !== 'draft') {
@@ -579,6 +619,8 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
 
     return c.json({ success: true, count: signers.length });
   } catch (error: unknown) {
+    const scoped = firmScopeResponse(c, error);
+    if (scoped) return scoped;
     log.error('Save draft signers error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(

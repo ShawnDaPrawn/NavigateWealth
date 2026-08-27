@@ -111,6 +111,34 @@ function isOnACommentLine(src: string, index: number): boolean {
   return line.startsWith('*') || line.startsWith('//') || line.startsWith('/*');
 }
 
+/**
+ * The same slice with whole comment lines removed.
+ *
+ * WHY: the guard test below runs `AUTH_MARKERS` over the source BETWEEN one
+ * route registration and the next. That span includes any doc comment written
+ * above the following route — so prose naming a guard silences the detector for
+ * the route above it. Found the honest way: documenting a newly added
+ * `requireAdmin` on `GET /envelopes` made the genuinely public
+ * `POST /verify-hash` above it read as guarded, and the ratchet reported the
+ * registry entry as stale rather than reporting a hole.
+ *
+ * That is the wrong direction for a security ratchet to fail in — a comment
+ * must never be able to mark a route as protected. Line-based for the same
+ * reason `isOnACommentLine` is: stripping `//` with a regex mangles every
+ * `https://` in the file. A trailing `// requireAuth` on a code line is still
+ * counted, which is the safe direction (it can only over-report a guard on the
+ * line that actually carries the code).
+ */
+function withoutCommentLines(slice: string): string {
+  return slice
+    .split('\n')
+    .filter((line) => {
+      const t = line.trimStart();
+      return !(t.startsWith('*') || t.startsWith('//') || t.startsWith('/*'));
+    })
+    .join('\n');
+}
+
 /** How far past a registration to look for an in-handler auth check. */
 const HANDLER_SCAN_CHARS = 3000;
 /** How far past `app.use(` to look for an auth marker in its middleware list. */
@@ -186,7 +214,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
       const end = i + 1 < routes.length ? routes[i + 1].index! : start + HANDLER_SCAN_CHARS;
       const routePath = routes[i][4];
       if (isCovered(routePath, patterns)) continue;
-      if (AUTH_MARKERS.test(src.slice(start, end))) continue;
+      if (AUTH_MARKERS.test(withoutCommentLines(src.slice(start, end)))) continue;
       unguarded.push(
         `${file.slice(SERVER_DIR.length + 1)} ${routes[i][2].toUpperCase()} ${routePath}`,
       );

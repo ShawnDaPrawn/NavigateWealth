@@ -92,7 +92,14 @@ campaignsRoutes.post('/campaigns', requireIdempotency(), rateLimit('SENDER_MUTAT
 
     if (rows.length === 0) return c.json({ error: 'No rows parsed from CSV' }, 400);
 
-    const firmId = (ctx as { firmId?: string }).firmId ?? 'standalone';
+    // `(ctx as { firmId?: string }).firmId` was a cast to a field the auth
+    // context does not have — `getAuthContext` returns { user, userId, role,
+    // token }. So it was always undefined and every campaign created here was
+    // filed under the literal string 'standalone', in one shared bucket, while
+    // the three other call sites in this same file already used
+    // `resolveFirmId(ctx.user)`. A campaign created here was therefore
+    // invisible to the routes that list by real firm id.
+    const firmId = resolveFirmId(ctx.user);
     const result = await createCampaign({
       firmId,
       templateId,

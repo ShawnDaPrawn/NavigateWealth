@@ -32,6 +32,20 @@
  * 113 and would have masked all three real gaps. The detector stays
  * deliberately narrow and over-reports; this file carries the judgement.
  *
+ * WHY THE FLOOR WENT 121 -> 122 ON 2026-08-27
+ * --------------------------------------------
+ * Not because a route lost its guard. The detector was letting COMMENTS count
+ * as guards: it tests `AUTH_MARKERS` over the span between one registration and
+ * the next, and that span includes the doc comment written above the following
+ * route. `auth-routes.ts GET /security-status` was invisible for exactly that
+ * reason — its own docblock says "rather than going through requireAdmin", and
+ * the phrase satisfied the regex.
+ *
+ * `withoutCommentLines` in the detector closes that, and the newly visible
+ * route is classified above as inline-guarded. The count rose because the
+ * detector got stricter, which is the direction this file wants: it
+ * over-reports on purpose and the judgement lives here.
+ *
  * HOW IT IS ENFORCED
  * ------------------
  * `route-auth-granular.test.ts` asserts this registry and the detector's output
@@ -162,6 +176,16 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     reason:
       'Resolved through getAuthContext / signer-token validation inside the handler body, past the detector’s scan window or under an identifier it does not know.',
     routes: [
+      // Verifies the bearer token itself via `supabase.auth.getUser(token)`,
+      // enforces the shared account-security policy, then requires an
+      // admin/super_admin role off the caller's KV profile. Guarded, but by
+      // hand rather than by a middleware the detector knows.
+      //
+      // It only became visible once the detector stopped letting comments count
+      // as guards: its own docblock reads "rather than going through
+      // requireAdmin", and that phrase was masking it. A route whose protection
+      // depends on the wording of a nearby comment is classified, not trusted.
+      'auth-routes.ts GET /security-status',
       'esign-consent-routes.ts GET /consent/active',
       'esign-envelopes-routes.ts POST /verify-hash',
       'esign-routes.tsx GET /',
