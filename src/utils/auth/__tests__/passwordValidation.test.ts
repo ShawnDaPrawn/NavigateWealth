@@ -40,7 +40,11 @@ describe('validatePassword', () => {
   });
 
   it('scores a 3-type valid password as strong (score 3)', () => {
-    const result = validatePassword('Abcdefghijk1'); // upper+lower+number, 12 chars
+    // Fixture changed from 'Abcdefghijk1': that is an alphabet run, which the
+    // server validator has always refused and the meter now refuses too. The
+    // property under test is the score, not the sequence rule, so the fixture
+    // moved to a 12-character 3-class password that trips neither.
+    const result = validatePassword('Khumbula7Zwe'); // upper+lower+number, 12 chars
     expect(result.isValid).toBe(true);
     expect(result.requirements.characterTypes).toBe(3);
     expect(result.score).toBe(3);
@@ -48,7 +52,8 @@ describe('validatePassword', () => {
   });
 
   it('caps the score at 4 and awards the length bonus', () => {
-    const result = validatePassword('Abcdefghij123456'); // 16 chars, 3 types
+    // Same fixture change, same reason — 'Abcdefghij123456' is two runs at once.
+    const result = validatePassword('Khumbula7Zwelith'); // 16 chars, 3 types
     expect(result.score).toBe(4);
     expect(result.requirements.minLength).toBe(true);
   });

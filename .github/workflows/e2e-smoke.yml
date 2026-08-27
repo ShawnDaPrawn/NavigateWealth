@@ -3,14 +3,30 @@
 # WHY THIS IS A SEPARATE WORKFLOW, AND NOT YET A REQUIRED CHECK
 # -------------------------------------------------------------
 # Branch protection requires `quality-check`; this workflow is not in that list,
-# so it REPORTS on every PR without being able to block a merge. That is
+# so it REPORTS on every PR without being able to block a merge. That was
 # deliberate for its first runs: a brand-new browser job that turns out to be
 # flaky would block every PR, and the first thing anyone does with a gate that
 # cries wolf is disable it — which is worse than never having added it.
 #
-# TO PROMOTE IT TO REQUIRED (do this after ~3 consecutive green runs):
+# THE PROBATION IS OVER; PROMOTION IS PENDING ONE OPERATOR CLICK.
+# As of 2026-08-27 this workflow has 26 consecutive green runs — 29 of its last
+# 30 succeeded, and the one that did not was `cancelled` by a superseded push,
+# not a failure. That clears the ~3-green bar this comment set for itself, so
+# the reporting-only posture is no longer buying any information.
+#
+# TO PROMOTE IT TO REQUIRED:
 #   Settings → Branches → main → Require status checks → add "e2e-smoke".
-# No change to this file is needed.
+# The string is `e2e-smoke` — the job's `name:` below, NOT the workflow's
+# `name: E2E Smoke` above. (`quality-check` is in that list under its job key,
+# because that job declares no `name:`.) No change to this file is needed.
+#
+# One failure mode to know about: a PR whose head has no `e2e-smoke` result on
+# its SHA parks at "Expected — waiting for status" and cannot merge. That needs
+# a head pushed before this workflow LANDED (2026-08-25), not before it became
+# required — it has reported on every PR since it landed, it just could not
+# block. No PR open at promotion time was affected. Push to the branch, or
+# dispatch this workflow against it — which is what `workflow_dispatch` is for.
+# Operator walkthrough: docs/PRODUCTION-READINESS.md § 3.7.
 #
 # WHAT IT COVERS
 # --------------
@@ -30,6 +46,12 @@ on:
   pull_request:
   push:
     branches: [main]
+  # A required check needs some way to report on a commit that predates the
+  # requirement. Without this, an already-open PR wedges at "Expected — waiting
+  # for status" and the only ways out are an empty commit or un-requiring the
+  # check. Dispatching against the PR's branch puts a check run on that
+  # branch's tip — which is the PR's head SHA — and the gate clears.
+  workflow_dispatch:
 
 jobs:
   e2e-smoke:
