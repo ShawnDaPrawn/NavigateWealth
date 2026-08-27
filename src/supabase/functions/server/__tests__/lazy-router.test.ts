@@ -33,8 +33,8 @@
  * Run: npx vitest run src/supabase/functions/server/__tests__/lazy-router.test.ts
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 
@@ -647,5 +647,47 @@ describe('lazy-router: the private-field sentinel', () => {
     expect((customised as unknown as { errorHandler?: unknown }).errorHandler).not.toBe(
       fresh.errorHandler,
     );
+  });
+});
+
+describe('deploy import graph has no dangling local specifiers', () => {
+  /**
+   * supabase functions deploy walks import() with a regex that does not honour
+   * comment boundaries. A JSDoc example pointing at a missing local module on
+   * this file was enough to upload a missing asset and fail the Edge Function
+   * deploy with HTTP 500. This walks the same server tree the CLI uploads
+   * (excluding tests) and fails if any relative import() target does not exist.
+   */
+  it('every relative import() under server/ resolves to a file', () => {
+    const serverRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+    const importRe = /import\(\s*['"](\.[^'"]+)['"]\s*\)/g;
+    const dangling: string[] = [];
+
+    const visit = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = resolve(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === '__tests__' || entry.name === 'node_modules') continue;
+          visit(full);
+          continue;
+        }
+        if (!['.ts', '.tsx', '.js', '.jsx'].includes(extname(entry.name))) continue;
+        const src = readFileSync(full, 'utf8');
+        for (const match of src.matchAll(importRe)) {
+          const spec = match[1];
+          const target = resolve(dir, spec);
+          const candidates = [target];
+          if (!extname(spec)) {
+            candidates.push(`${target}.ts`, `${target}.tsx`, `${target}.js`);
+          }
+          if (!candidates.some((candidate) => existsSync(candidate))) {
+            dangling.push(`${full.replace(serverRoot + '/', '')}: ${spec}`);
+          }
+        }
+      }
+    };
+
+    visit(serverRoot);
+    expect(dangling, `dangling import() specifiers:\n${dangling.join('\n')}`).toEqual([]);
   });
 });
