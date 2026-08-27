@@ -109,7 +109,12 @@ function getRSSImage(item: Record<string, unknown>): string {
   if (typeof item.thumbnail === 'string') {
     return item.thumbnail;
   }
-  return 'https://i-invdn-com.investing.com/news/news_headline_open_108x81.jpg';
+  // No remote fallback. Feed thumbnails are blocked by the CSP (an allowlist
+  // cannot express "whatever URL a feed supplies"), and a hard-coded remote
+  // fallback would be the ONE image that still loaded — so every card would
+  // show the same stock picture instead of an honest "no preview". MarketNewsTab
+  // renders a local placeholder when this is empty.
+  return '';
 }
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import {
@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Lightbulb,
   Rss,
+  ImageOff,
   ExternalLink,
   User,
   Clock,
@@ -47,20 +48,40 @@ interface MarketNewsTabProps {
 
 const NewsCard = memo(
   ({ news, formatDate }: { news: NewsItem; formatDate: (date: string) => string }) => {
+    const [imageFailed, setImageFailed] = useState(false);
+
     return (
       <Card className="group flex flex-col h-full border-gray-200 hover:border-purple-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
-        {/* Image */}
+        {/* Image.
+
+            Thumbnails come from whatever URL a third-party RSS feed supplies,
+            which no Content-Security-Policy allowlist can express. The decision
+            (docs/PRODUCTION-READINESS.md § CSP) is to let them be blocked rather
+            than widen `img-src` to all of `https:` for the whole site — this is
+            an internal admin widget and the cost is a missing picture.
+
+            So the fallback must not be another remote URL. The previous one
+            pointed at investing.com, which under the policy is blocked in turn,
+            and reassigning `src` to a URL that also fails invites an onError
+            loop. A local placeholder needs no network at all. */}
         <div className="relative aspect-video overflow-hidden bg-gray-100">
-          <img
-            src={news.image}
-            alt={news.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = 'https://i-invdn-com.investing.com/news/news_headline_open_108x81.jpg';
-            }}
-          />
+          {news.image && !imageFailed ? (
+            <img
+              src={news.image}
+              alt={news.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              loading="lazy"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400"
+              role="img"
+              aria-label="No preview image available"
+            >
+              <ImageOff className="h-8 w-8" aria-hidden="true" />
+            </div>
+          )}
           <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
             <Rss className="h-3 w-3" />
             <span>RSS</span>
