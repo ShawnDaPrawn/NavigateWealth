@@ -109,6 +109,18 @@ vi.mock('../auth-mw.ts', () => {
       c.set('userRole', 'super_admin');
       await next();
     },
+    // Registered as middleware at module load, so it has to be a real function
+    // or Hono throws while the route table is being built and the whole file
+    // fails to collect — which is how this surfaced.
+    requireAdmin: async (c: any, next: any) => {
+      if (!c.req.header('Authorization')) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+      c.set('user', { id: 'u1', email: 'admin@test.co' });
+      c.set('userId', 'u1');
+      c.set('userRole', 'admin');
+      await next();
+    },
   };
 });
 

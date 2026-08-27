@@ -208,23 +208,41 @@ describe('POST /campaigns', () => {
     expect(campaign.results).toHaveLength(1);
   });
 
-  it('stamps every campaign firm_id as "standalone"', async () => {
-    // Pinned, and it is a defect rather than a design choice. The route reads
-    // `(ctx as { firmId?: string }).firmId ?? 'standalone'`, but
+  it('files the campaign under the caller\'s resolved firm, not "standalone"', async () => {
+    // The route read `(ctx as { firmId?: string }).firmId ?? 'standalone'`, but
     // `getAuthContext` returns `{ user, userId, role, token }` — there is no
-    // `firmId` on it, so the `??` branch is the ONLY branch and every campaign
-    // in existence is filed under 'standalone'.
-    //
-    // The `as` cast is what hides it: without it TypeScript would reject the
-    // property access. And `belongsToFirm` returns false for 'standalone', so
-    // any future attempt to firm-scope campaigns would match nothing.
+    // `firmId` on it, so the `??` branch was the ONLY branch and every campaign
+    // ever created was filed under the literal string 'standalone'. The `as`
+    // cast is what hid it: without it TypeScript would have rejected the
+    // property access. Three other call sites in the same file already used
+    // `resolveFirmId(ctx.user)`, so campaigns created here were invisible to
+    // the routes that list by real firm id.
     seedTemplate();
     await createCampaign();
 
     const stored = [...kvStore.values()].find(
       (v) => (v as { results?: unknown })?.results !== undefined,
     ) as { firmId: string };
-    expect(stored.firmId).toBe('standalone');
+    // No app_metadata.firm_id on the test user, so resolveFirmId falls back to
+    // the user id — the documented standalone-install behaviour.
+    expect(stored.firmId).toBe('admin-1');
+    expect(stored.firmId).not.toBe('standalone');
+  });
+
+  it('honours an explicit app_metadata.firm_id over the user-id fallback', async () => {
+    supa.users.set('admin', {
+      id: 'admin-1',
+      email: 'admin@navigatewealth.co',
+      app_metadata: { role: 'admin', firm_id: 'firm_navigate_wealth' },
+      user_metadata: {},
+    });
+    seedTemplate();
+    await createCampaign();
+
+    const stored = [...kvStore.values()].find(
+      (v) => (v as { results?: unknown })?.results !== undefined,
+    ) as { firmId: string };
+    expect(stored.firmId).toBe('firm_navigate_wealth');
   });
 
   it('rejects a request with no templateId or no title', async () => {

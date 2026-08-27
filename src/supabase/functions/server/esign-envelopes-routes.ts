@@ -13,7 +13,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError, requireSuperAdmin } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
@@ -143,25 +143,57 @@ envelopesRoutes.post('/verify-hash', async (c) => {
 // ==================== ENVELOPE ROUTES ====================
 
 /**
- * GET /envelopes
- * Get all envelopes (admin only)
+ * GET /envelopes — the aggregate envelope list. ADMIN ONLY, and now enforced.
+ *
+ * THE HOLE THIS CLOSES
+ * --------------------
+ * The docstring said "admin only" and nothing checked it. `getAuthContext`
+ * authenticates but does not authorise, so ANY authenticated user reached this
+ * route — and 188 of the 193 accounts on this deployment are clients.
+ *
+ * The only reason that was not a live cross-tenant leak is an accident:
+ * `belongsToFirm` requires an exact non-empty `firm_id` match, and no user
+ * carries `app_metadata.firm_id`, so `resolveFirmId` falls back to the caller's
+ * user id and the filter matched almost nothing. A leak held shut by a filter
+ * that was too strict to work is not a control — repairing the filter alone
+ * would have opened it.
+ *
+ * `requireAdmin` resolves the role through `resolveTrustedRole`, whose FIRST
+ * step is the super-admin email allowlist. That matters here: no account on
+ * this deployment has `app_metadata.role`, so a gate keyed on that alone would
+ * have locked out every user including the owner.
+ *
+ * Clients are not left without a path — they read their own envelopes through
+ * `GET /clients/:clientId/envelopes`, which checks ownership of the client id.
  */
-envelopesRoutes.get('/envelopes', async (c) => {
+envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
   try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
+    // Read the user `requireAdmin` already put on the context — do NOT call
+    // `getAuthContext(c)` here.
+    //
+    // `requireAdmin` -> `resolveAuthUser` has already validated the bearer
+    // token against Supabase Auth, run the account-security lookup, and set
+    // `user` / `userId` / `userRole` / `userEmail`. Calling `getAuthContext`
+    // again repeats BOTH the network round trip and the security-store read on
+    // every successful request — the exact per-request auth cost
+    // `auth-middleware-cost.test.ts` exists to prevent, and which its regex
+    // misses because it only detects chained middleware names.
+    const user = c.get('user') as { id: string; app_metadata?: Record<string, unknown> };
 
     // Get query params
     const status = c.req.query('status');
 
     const envelopes = await getAllEnvelopes(status);
 
-    // P6.9 — enforce firm scope on every read of the aggregate
-    // envelope list. `belongsToFirm` treats records without a
-    // `firm_id` (or with `firm_id === 'standalone'`) as accessible
-    // to everyone, which keeps the single-firm install working.
+    // P6.9 — firm scope on every read of the aggregate list.
+    //
+    // `belongsToFirm` denies a record whose `firm_id` is absent, empty, or
+    // different from the caller's. It does NOT treat a missing `firm_id` (or
+    // the literal 'standalone') as public — the comment that used to sit here
+    // claimed it did, which is exactly backwards and would have talked the next
+    // reader into loosening a boundary.
     const scoped = (envelopes as Array<Record<string, unknown>>).filter((e) =>
-      belongsToFirm(ctx.user, { firm_id: (e.firm_id as string | undefined) ?? null }),
+      belongsToFirm(user, { firm_id: (e.firm_id as string | undefined) ?? null }),
     );
 
     return c.json({ envelopes: scoped });
@@ -183,9 +215,14 @@ envelopesRoutes.get('/envelopes', async (c) => {
  */
 envelopesRoutes.delete('/envelopes', requireSuperAdmin, async (c) => {
   try {
-    // Authenticate
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
+    // `requireSuperAdmin` already resolved and validated this caller; re-reading
+    // the context costs nothing where `getAuthContext` would repeat the Supabase
+    // Auth round trip and the account-security read.
+    const user = c.get('user') as {
+      id: string;
+      email?: string;
+      app_metadata?: Record<string, unknown>;
+    };
 
     // Safety check - require a confirmation query param
     const confirm = c.req.query('confirm');
@@ -545,7 +582,14 @@ envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
  */
 envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
   try {
-    await getAuthContext(c);
+    // `await getAuthContext(c);` — with the result discarded — is what stood
+    // here. That authenticates and then throws the answer away, which is the
+    // same shape esign-route-helpers.ts documents for the eight download
+    // handlers, except this one WRITES: any authenticated user could replace
+    // the signer list on any draft envelope by supplying its id, and 188 of
+    // the 193 accounts on this deployment are clients. Ownership is the
+    // control here, not authentication.
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
     const body = await c.req.json();
@@ -558,6 +602,22 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
     // Fetch the envelope
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
     if (!envelope) {
+      return c.json({ error: 'Envelope not found' }, 404);
+    }
+
+    // A cross-firm id must be INDISTINGUISHABLE from an unknown one, or this
+    // route is an envelope-id oracle: submit a guessed id with a valid body and
+    // the status code tells you whether someone else's envelope exists.
+    //
+    // `firmScopeResponse` maps the scope error to 403, which is exactly that
+    // tell — an earlier version of this comment claimed the opposite of what
+    // the code did. `GET /envelopes/:envelopeId` above already answers 404 on a
+    // firm mismatch for this reason; this matches it.
+    if (!belongsToFirm(ctx.user, { firm_id: (envelope.firm_id as string | undefined) ?? null })) {
+      log.warn('Draft-signers write denied by firm scope', {
+        envelopeId,
+        callerFirmId: resolveFirmId(ctx.user),
+      });
       return c.json({ error: 'Envelope not found' }, 404);
     }
 

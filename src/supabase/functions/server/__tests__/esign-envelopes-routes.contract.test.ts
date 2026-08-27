@@ -185,6 +185,9 @@ beforeEach(() => {
   seedUser('adminB', { id: 'admin-b', firmId: FIRM_B });
   seedUser('noFirm', { id: 'no-firm-user' });
   seedUser('super', { id: 'super-1', firmId: FIRM_A, role: 'super_admin' });
+  // A client in the SAME firm as adminA: the role gate, not the firm
+  // filter, has to be what stops them reaching the aggregate list.
+  seedUser('client', { id: 'client-1', firmId: FIRM_A, role: 'client' });
 });
 
 // ============================================================================
@@ -335,21 +338,37 @@ describe('GET /envelopes', () => {
     expect(envelopes.map((e) => e.id)).toEqual(['mine']);
   });
 
-  it('hides an envelope stored with NO firm_id from everyone', async () => {
-    // Pinned as the live defect it is, not endorsed.
+  it('is refused for a client, even one inside the caller firm', async () => {
+    // THE HOLE THIS CLOSES. The docstring said "admin only" and nothing checked
+    // it — `getAuthContext` authenticates but does not authorise. On the
+    // production deployment 188 of 193 accounts are clients.
     //
-    // The comment above this filter says `belongsToFirm` "treats records
-    // without a firm_id (or with firm_id === 'standalone') as accessible to
-    // everyone, which keeps the single-firm install working". It does the
-    // opposite — it requires an exact non-empty match — so an envelope with no
-    // firm_id is invisible to every caller including its creator.
-    //
-    // This is not hypothetical: at the time of writing 7 of 15 production
-    // envelopes carry no firm_id, and no user carries `app_metadata.firm_id`
-    // either, so `resolveFirmId` falls back to the user id for everyone.
+    // The firm filter alone is not the control: this client is seeded into
+    // FIRM_A, so a repaired filter would have handed them the whole firm's
+    // envelope list. Authorization has to be its own gate.
+    seedEnvelope('mine', { firmId: FIRM_A });
+
+    const res = await req('/envelopes', { as: 'client' });
+    expect(res.status).toBe(403);
+    expect(await res.text()).not.toContain('mine');
+  });
+
+  it('still admits an admin and a super-admin', async () => {
+    seedEnvelope('mine', { firmId: FIRM_A });
+    for (const as of ['adminA', 'super']) {
+      const res = await req('/envelopes', { as });
+      expect([as, res.status]).toEqual([as, 200]);
+    }
+  });
+
+  it('denies an envelope carrying no firm_id, to every caller', async () => {
+    // `belongsToFirm` requires an exact non-empty match, so a record with no
+    // `firm_id` belongs to nobody. That is the correct default for a security
+    // boundary — deny, then backfill the record — and it is the opposite of
+    // what the comment above this filter used to claim.
     seedEnvelope('orphan');
 
-    for (const as of ['adminA', 'adminB', 'noFirm', 'super']) {
+    for (const as of ['adminA', 'adminB', 'super']) {
       const res = await req('/envelopes', { as });
       const { envelopes } = (await json(res)) as unknown as { envelopes: Array<{ id: string }> };
       expect([as, envelopes.map((e) => e.id)]).toEqual([as, []]);
@@ -485,11 +504,11 @@ describe('PUT /envelopes/:envelopeId/draft-signers', () => {
     ).toBe(401);
   });
 
-  it('does NOT scope to the caller’s firm, unlike the detail route beside it', async () => {
-    // Pinned, not endorsed. `GET /envelopes/:id` 404s on a firm mismatch two
-    // handlers above; this one calls `getAuthContext(c)` without capturing the
-    // context and never compares. Scoping in this module went in route by
-    // route and this is one it did not reach.
+  it('404s another firm’s draft envelope, and writes nothing', async () => {
+    // This route used to call `getAuthContext(c)` WITHOUT capturing the result
+    // — authenticate, then throw the answer away — so any authenticated caller
+    // could replace the signer list on any draft envelope by supplying its id.
+    // It is a write, which makes it worse than the read leaks fixed alongside.
     seedEnvelope('e1', { firmId: FIRM_A });
 
     const res = await req('/envelopes/e1/draft-signers', {
@@ -498,9 +517,54 @@ describe('PUT /envelopes/:envelopeId/draft-signers', () => {
       body: { signers: SIGNERS },
     });
 
+    // 404, not 403: a cross-firm id must be indistinguishable from an unknown
+    // one, or the status code tells a caller whether someone else's envelope
+    // exists. Matches `GET /envelopes/:envelopeId` above.
+    expect(res.status).toBe(404);
+    const stored = kvStore.get(EsignKeys.envelope('e1')) as { draft_signers?: unknown[] };
+    expect(stored.draft_signers).toBeUndefined();
+  });
+
+  it('gives a cross-firm id and an unknown id the SAME response', async () => {
+    // The oracle test proper: if these ever diverge, the route leaks existence.
+    seedEnvelope('e1', { firmId: FIRM_A });
+
+    const crossFirm = await req('/envelopes/e1/draft-signers', {
+      as: 'adminB',
+      method: 'PUT',
+      body: { signers: SIGNERS },
+    });
+    const unknown = await req('/envelopes/does-not-exist/draft-signers', {
+      as: 'adminB',
+      method: 'PUT',
+      body: { signers: SIGNERS },
+    });
+
+    expect(crossFirm.status).toBe(unknown.status);
+    expect(await crossFirm.text()).toBe(await unknown.text());
+  });
+
+  it('still lets the owning firm save draft signers', async () => {
+    seedEnvelope('e1', { firmId: FIRM_A });
+
+    const res = await req('/envelopes/e1/draft-signers', {
+      as: 'adminA',
+      method: 'PUT',
+      body: { signers: SIGNERS },
+    });
+
     expect(res.status).toBe(200);
     const stored = kvStore.get(EsignKeys.envelope('e1')) as { draft_signers: unknown[] };
     expect(stored.draft_signers).toHaveLength(2);
+  });
+
+  it('404s an unknown envelope rather than leaking that it is another firm’s', async () => {
+    const res = await req('/envelopes/no-such-envelope/draft-signers', {
+      as: 'adminA',
+      method: 'PUT',
+      body: { signers: SIGNERS },
+    });
+    expect(res.status).toBe(404);
   });
 });
 

@@ -68,6 +68,120 @@ function scannableBody(source: string): string {
   return source.replace(IMPORT_STATEMENT, '');
 }
 
+/**
+ * A route registration that chains a role guard AND re-authenticates in the
+ * handler body.
+ *
+ * WHY THIS IS A SECOND PATTERN. `REDUNDANT_PAIR` only sees middleware NAMES
+ * chained in an argument list, so it cannot see the other shape of the same
+ * waste: `app.get('/x', requireAdmin, async (c) => { const ctx = await
+ * getAuthContext(c); ... })`. `requireAdmin` has already validated the token
+ * against Supabase Auth, run the account-security lookup and set `user` /
+ * `userId` / `userRole` on the context — calling `getAuthContext` after it
+ * repeats the network round trip and the store read on EVERY successful
+ * request.
+ *
+ * Not hypothetical: introduced on PR #248 while adding the missing role gate to
+ * `GET /envelopes`, reviewed out, and this check added so the next one fails
+ * here instead. Read the user with `c.get('user')`.
+ *
+ * Comment lines are stripped first, for the reason the route-auth detector
+ * learned the same night: prose explaining the rule mentions `getAuthContext`,
+ * and a detector that reads its own documentation as code is useless.
+ */
+const GUARDED_ROUTE =
+  /\.(?:get|post|put|patch|delete)\(\s*(?:'[^']*'|`[^`]*`)\s*,\s*require(?:Admin|SuperAdmin)\b/g;
+/** ANY route registration — used to stop a scan before it reaches the next one. */
+const ANY_ROUTE = /\.(?:get|post|put|patch|delete)\(\s*(?:'[^']*'|`[^`]*`)/g;
+const HANDLER_SCAN_CHARS = 2500;
+
+/**
+ * The handler body for the registration at `start`: up to the NEXT route
+ * registration, never past it.
+ *
+ * A fixed-width window overruns into the following handler and attributes its
+ * `getAuthContext` call to the wrong route — which is exactly what happened on
+ * the first run of this check: it named a route that had already been fixed,
+ * because the next handler down was the real offender.
+ */
+function handlerBody(src: string, start: number): string {
+  ANY_ROUTE.lastIndex = start + 1;
+  const next = ANY_ROUTE.exec(src);
+  const end = next ? Math.min(next.index, start + HANDLER_SCAN_CHARS) : start + HANDLER_SCAN_CHARS;
+  return withoutCommentLines(src.slice(start, end));
+}
+
+function withoutCommentLines(slice: string): string {
+  return slice
+    .split('\n')
+    .filter((line) => {
+      const t = line.trimStart();
+      return !(t.startsWith('*') || t.startsWith('//') || t.startsWith('/*'));
+    })
+    .join('\n');
+}
+
+describe('re-authentication inside a guarded handler', () => {
+  it('no route chains a role guard and then calls getAuthContext', () => {
+    const offenders: string[] = [];
+    for (const file of serverSources()) {
+      const src = scannableBody(readFileSync(file, 'utf8'));
+      for (const m of src.matchAll(GUARDED_ROUTE)) {
+        if (/\bgetAuthContext\s*\(/.test(handlerBody(src, m.index!))) {
+          const line = src.slice(0, m.index!).split('\n').length;
+          offenders.push(`${file.slice(SERVER_DIR.length + 1)}:${line}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      'These routes authenticate twice per request: a role guard already ran ' +
+        "`resolveAuthUser` and set the context. Read `c.get('user')` instead of " +
+        'calling `getAuthContext(c)` again. Offenders: ' +
+        offenders.join(', '),
+    ).toEqual([]);
+  });
+
+  it('flags the shape it exists to catch, and ignores the fixed one', () => {
+    // Without this the check could pass vacuously if the regex stopped matching.
+    const bad = [
+      "app.get('/envelopes', requireAdmin, async (c) => {",
+      '  const ctx = await getAuthContext(c);',
+      '  return c.json(ctx);',
+      '});',
+    ].join('\n');
+    const good = [
+      "app.get('/envelopes', requireAdmin, async (c) => {",
+      "  const user = c.get('user');",
+      '  return c.json(user);',
+      '});',
+    ].join('\n');
+    const probe = (src: string) =>
+      [...src.matchAll(GUARDED_ROUTE)].some((m) =>
+        /\bgetAuthContext\s*\(/.test(handlerBody(src, m.index!)),
+      );
+    expect(probe(bad)).toBe(true);
+    expect(probe(good)).toBe(false);
+
+    // A comment naming the function must not count as a call.
+    const commented = [
+      "app.get('/envelopes', requireAdmin, async (c) => {",
+      '  // Do NOT call getAuthContext(c) here — requireAdmin already did.',
+      "  const user = c.get('user');",
+      '});',
+    ].join('\n');
+    expect(probe(commented)).toBe(false);
+  });
+
+  it('finds the guarded routes at all, so the scan cannot be vacuous', () => {
+    let guarded = 0;
+    for (const file of serverSources()) {
+      guarded += [...scannableBody(readFileSync(file, 'utf8')).matchAll(GUARDED_ROUTE)].length;
+    }
+    expect(guarded).toBeGreaterThan(5);
+  });
+});
+
 describe('redundant auth middleware', () => {
   it('is not paired with a role guard on any route registration', () => {
     const offenders: string[] = [];
