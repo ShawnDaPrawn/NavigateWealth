@@ -101,11 +101,18 @@ jobs:
           set -euo pipefail
           size=$(stat -c%s "$BACKUP_FILE")
           echo "archive: $BACKUP_FILE ($size bytes)"
-          # A dump that is suspiciously small is a failed dump that exited 0.
+
+          # Three checks, cheapest first, each catching something the others
+          # cannot. Order matters only for the quality of the error message.
+
+          # 1. A dump that is suspiciously small is a failed dump that exited 0.
           if [ "$size" -lt 51200 ]; then
             echo "::error::Backup is only $size bytes — treating as a failed dump."; exit 1
           fi
-          # Parses the archive TOC. Fails on truncation or corruption.
+
+          # 2. TOC contents: is this the RIGHT database, and a whole one?
+          #    Catches a wrong connection string or an accidentally filtered
+          #    dump, which a byte-level check never would.
           pg_restore --list "$BACKUP_FILE" > toc.txt
           entries=$(wc -l < toc.txt)
           echo "restore TOC entries: $entries"
@@ -114,7 +121,28 @@ jobs:
           fi
           grep -q "kv_store_91ed8379" toc.txt || {
             echo "::error::kv_store_91ed8379 is absent from the dump — wrong database or a filtered dump."; exit 1; }
-          echo "Backup verified readable and complete."
+
+          # 3. THE ACTUAL INTEGRITY CHECK: stream and decompress every data
+          #    block.
+          #
+          #    The TOC sits at the FRONT of a custom-format archive, so
+          #    `--list` succeeds on a dump truncated after it — the two checks
+          #    above would then pass and this job would upload a corrupt file
+          #    labelled "verified readable", which is worse than no check at
+          #    all because it manufactures false confidence. Converting the
+          #    whole archive to a SQL script and discarding the output forces
+          #    every block to be read and decompressed; a truncated or
+          #    corrupted archive fails here.
+          #
+          #    Still not a restore — it proves the bytes are intact and
+          #    decodable, not that they load into a live schema. A scratch
+          #    restore remains the real bar and is tracked in
+          #    docs/PRODUCTION-READINESS.md under DR.
+          pg_restore --file=/dev/null "$BACKUP_FILE" 2> restore-check.log || {
+            echo "::error::Archive failed a full decode — truncated or corrupt beyond the TOC.";
+            tail -40 restore-check.log; exit 1; }
+
+          echo "Backup verified: TOC complete AND every data block decoded."
 
       - name: Upload
         if: steps.guard.outputs.configured == 'true'

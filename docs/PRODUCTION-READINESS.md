@@ -456,15 +456,22 @@ must be reviewed before they can count.
             `'unsafe-inline'` from `script-src` by hashing the inline SEO
             fallback in `index.html`.
       - [ ] **Backup** — `.github/workflows/weekly-backup.yml` added: pinned
-            PG17 client, custom-format dump, and a `pg_restore --list`
-            integrity check that fails on a truncated archive, a suspiciously
-            small file, or a dump missing `kv_store_91ed8379`. It SKIPS with a
-            warning until the `SUPABASE_DB_URL` secret exists, so it cannot
-            cry wolf every Sunday. NOT YET VERIFIED — it has never run against
-            the real database. Add the secret and dispatch it once.
-      - [ ] **DR** — no restore has ever been performed. The TOC parse above is
-            the cheap end of a restore test, not a restore. Restoring into a
-            throwaway project and diffing row counts is the real bar.
+            PG17 client, custom-format dump, and THREE integrity checks —
+            a minimum size, a TOC parse (is this the right database, and a
+            whole one?), and a full `pg_restore --file=/dev/null` decode of
+            every data block.
+            The decode is the one that matters: the TOC sits at the FRONT of a
+            custom-format archive, so `--list` alone succeeds on a dump
+            truncated after it, and the job would have uploaded a corrupt file
+            labelled "verified readable" — worse than no check, because it
+            manufactures confidence. Caught in review on PR #250.
+            It SKIPS with a warning until the `SUPABASE_DB_URL` secret exists,
+            so it cannot cry wolf every Sunday. NOT YET VERIFIED — it has never
+            run against the real database. Add the secret and dispatch it once.
+      - [ ] **DR** — no restore has ever been performed. The full decode above
+            proves the bytes are intact and decodable; it does NOT prove they
+            load into a live schema. Restoring into a throwaway project and
+            diffing row counts is the real bar.
       - [ ] **POPIA** — materially advanced, not finished. 96 rows of PII
             belonging to 45 deleted subjects were erased 2026-08-27
             (`erasure_log:orphaned_test_profiles:2026-08-27`). What remains is
