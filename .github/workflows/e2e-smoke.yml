@@ -20,10 +20,12 @@
 # `name: E2E Smoke` above. (`quality-check` is in that list under its job key,
 # because that job declares no `name:`.) No change to this file is needed.
 #
-# Expect one consequence: a PR whose head was pushed BEFORE the promotion has
-# no `e2e-smoke` result on that SHA, so it parks at "Expected — waiting for
-# status" and cannot merge. Push to the branch, or dispatch this workflow
-# against it — which is what `workflow_dispatch` below is for.
+# One failure mode to know about: a PR whose head has no `e2e-smoke` result on
+# its SHA parks at "Expected — waiting for status" and cannot merge. That needs
+# a head pushed before this workflow LANDED (2026-08-25), not before it became
+# required — it has reported on every PR since it landed, it just could not
+# block. No PR open at promotion time was affected. Push to the branch, or
+# dispatch this workflow against it — which is what `workflow_dispatch` is for.
 # Operator walkthrough: docs/PRODUCTION-READINESS.md § 3.7.
 #
 # WHAT IT COVERS
