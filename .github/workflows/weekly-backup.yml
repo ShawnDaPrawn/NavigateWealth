@@ -1,0 +1,130 @@
+# Weekly logical backup of the production Postgres, with an integrity check.
+#
+# WHY THIS EXISTS WHEN SUPABASE ALREADY BACKS UP
+# ----------------------------------------------
+# Supabase takes its own managed backups, and this does not replace them. What
+# it adds is the part the production-readiness rubric actually asks for —
+# "operationally verified, not merely documented":
+#
+#   • a backup that lives OUTSIDE the vendor, so a billing lapse, an account
+#     lockout or an accidental project deletion is survivable;
+#   • proof each week that the dump is READABLE, not merely produced. A backup
+#     nobody has ever restored is a hope, not a control. `pg_restore --list`
+#     parses the archive's table of contents and fails on a truncated or
+#     corrupt file — the cheap end of a restore test, run every time.
+#
+# WHAT IT DOES NOT DO YET
+# -----------------------
+# It does not restore into a scratch database and diff the result. That needs a
+# throwaway Postgres and a few minutes of runner time; the TOC parse is the
+# honest 80% until someone decides that is worth adding.
+#
+# SETUP (one secret, and the job no-ops safely without it)
+# -------------------------------------------------------
+#   Settings → Secrets and variables → Actions → New repository secret
+#     Name:  SUPABASE_DB_URL
+#     Value: the Session-pooler connection string from
+#            Supabase → Project Settings → Database → Connection string → URI
+#            (include the password; prefer a read-only role if one exists)
+#
+# Until that secret is set, every run SKIPS with a clear message rather than
+# failing — a red cross every Sunday teaches people to ignore the workflow.
+#
+# The client is pinned to major 17 to match the server (PostgreSQL 17.6);
+# pg_dump refuses to dump from a server newer than itself.
+
+name: Weekly Backup
+
+on:
+  schedule:
+    # 03:17 UTC on Sundays. Off the hour on purpose — :00 is when every
+    # scheduled workflow on GitHub contends for runners.
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: weekly-backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check the database secret is configured
+        id: guard
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SUPABASE_DB_URL is not set — skipping. See the header of this workflow for setup."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install PostgreSQL 17 client
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+
+      - name: Dump
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          # Never interpolated into the command line — a connection string on
+          # argv is visible to every other process on the runner.
+          PGSSLMODE: require
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          echo "BACKUP_FILE=navigatewealth-$stamp.dump" >> "$GITHUB_ENV"
+          # Custom format: compressed, and the only format pg_restore can list
+          # selectively. --no-owner/--no-acl so it restores into a fresh project
+          # whose roles differ.
+          pg_dump --format=custom --no-owner --no-acl --verbose \
+            --file="navigatewealth-$stamp.dump" "$DB_URL" 2> dump.log || {
+              echo "::error::pg_dump failed"; tail -40 dump.log; exit 1; }
+
+      - name: Verify the archive is readable
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          size=$(stat -c%s "$BACKUP_FILE")
+          echo "archive: $BACKUP_FILE ($size bytes)"
+          # A dump that is suspiciously small is a failed dump that exited 0.
+          if [ "$size" -lt 51200 ]; then
+            echo "::error::Backup is only $size bytes — treating as a failed dump."; exit 1
+          fi
+          # Parses the archive TOC. Fails on truncation or corruption.
+          pg_restore --list "$BACKUP_FILE" > toc.txt
+          entries=$(wc -l < toc.txt)
+          echo "restore TOC entries: $entries"
+          if [ "$entries" -lt 20 ]; then
+            echo "::error::Only $entries TOC entries — the dump is not a full database."; exit 1
+          fi
+          grep -q "kv_store_91ed8379" toc.txt || {
+            echo "::error::kv_store_91ed8379 is absent from the dump — wrong database or a filtered dump."; exit 1; }
+          echo "Backup verified readable and complete."
+
+      - name: Upload
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: ${{ env.BACKUP_FILE }}
+          # GitHub's maximum. The dump holds client PII, so it is deliberately
+          # NOT kept indefinitely here — this is a rolling off-vendor copy, and
+          # longer-term retention belongs in encrypted object storage with a
+          # documented lifecycle policy.
+          retention-days: 90
+          if-no-files-found: error
