@@ -458,14 +458,15 @@ export function ResetPasswordPage() {
                     At least 3 of: uppercase, lowercase, numbers, special characters
                   </li>
                   <li
-                    className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon ? 'text-green-600' : 'text-gray-500'}`}
+                    className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon && passwordStrength.requirements.notPredictable ? 'text-green-600' : 'text-gray-500'}`}
                   >
-                    {passwordStrength.requirements.notCommon ? (
+                    {passwordStrength.requirements.notCommon &&
+                    passwordStrength.requirements.notPredictable ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
                       <span className="h-3 w-3 rounded-full border border-gray-300" />
                     )}
-                    Not a commonly used password
+                    Not a common or predictable password
                   </li>
                 </ul>
               </div>

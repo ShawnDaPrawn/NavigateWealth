@@ -610,17 +610,23 @@ Do not merge the branch until `npm run build` passes and the current known test
 state is understood. If the broad update adds lint/typecheck scripts, those
 scripts must pass before hooks/CI enforce them.
 
-### Section 3.6 Enable Leaked-Password Protection
+### Section 3.6 Leaked-Password Protection — DONE (verified 2026-08-27)
 
-This is the last open Supabase security advisor: `auth_leaked_password_protection`
-(WARN). The only other one left is `rls_enabled_no_policy` on
-`kv_store_91ed8379`, which is correct by design — that table is reached only
-with the service-role key, never from a browser, so a policy would be theatre.
+**Current advisor state, read from the API on 2026-08-27: one lint.**
+`rls_enabled_no_policy` on `kv_store_91ed8379`, INFO, correct by design — that
+table is reached only with the service-role key, never from a browser, so a
+policy would be theatre. `auth_leaked_password_protection` is **gone**: the
+toggle was set and the advisor cleared.
 
-Prerequisite, already satisfied: the feature is Pro-plan-and-above, and the
-organisation (`cxmywgzojijcicjpqtds`) is on `pro` — verified 2026-08-27. On Free
-the control renders disabled, so if it looks greyed out, the plan is the reason,
-not the click-path.
+The walkthrough below is kept as the record of what was done and why, not as an
+outstanding instruction. The one part still worth acting on is the password
+**length and character** guidance further down, which is separate from the
+leaked-password toggle and cannot be read back over the API.
+
+Prerequisite, satisfied: the feature is Pro-plan-and-above, and the organisation
+(`cxmywgzojijcicjpqtds`) is on `pro` — verified 2026-08-27. On Free the control
+renders disabled, so if it ever looks greyed out, the plan is the reason, not the
+click-path.
 
 **Path.** Dashboard → the project → **Authentication** → **Sign In / Providers**
 → expand **Email** → the password settings block. Direct link:
@@ -645,24 +651,58 @@ Two things it does _not_ do, so nobody is surprised later:
 **While you are in that panel: set minimum password length to 12, and leave
 "required characters" alone.**
 
-Twelve matches what the app already enforces — `validatePassword` requires
-`>= 12` in both `src/utils/auth/passwordValidation.ts` (the live strength meter
-on the signup form) and `src/supabase/functions/server/passwordValidator.ts`,
-and the server calls it before creating a user in `auth-routes.ts` and
-`auth-admin-routes.ts`. So 12 is bringing the platform up to the app's existing
-floor, not tightening anything.
+Twelve matches what the app enforces — `validatePassword` requires `>= 12` in
+both `src/utils/auth/passwordValidation.ts` (the live strength meter on the
+signup form) and `src/supabase/functions/server/passwordValidator.ts`. So 12
+brings the platform up to the app's own floor rather than tightening anything.
 
-The required-characters setting is the trap. Our rule is "at least 3 of
-{uppercase, lowercase, digit, symbol}" — a disjunction. Every dashboard option
-names a fixed set of classes that must _all_ appear, which no 3-of-4 rule can be
-expressed as. Pick any of them and you create passwords the signup form's meter
-shows as valid and green, which Supabase Auth then rejects with a raw API error
-the form has no copy for. Leave it as it is; the character-class rule is already
-enforced on both the client and the server.
+**The first version of this section claimed the character rule was already
+enforced server-side, and it was not.** Two signup routes exist. `POST
+/auth/signup` in `auth-routes.ts` has validated password strength for a long
+time — and nothing calls it. The SPA posts to `/auth-signup/signup`, and there
+the password went straight into `admin.createUser`: `PublicSignupSchema` asked
+for `.min(1)`. `auth-validation.ts` says so in its own comment — "the gate was
+on the wrong door." So the 12-character, 3-of-4 rule the signup form displays,
+and disables its submit button on, was enforced by the browser alone. Anything
+posting directly could set a one-character password on a real client account.
+That is closed now: `auth-signup.ts` runs `validatePassword` before creating the
+user, and `auth-signup-password.contract.test.ts` asserts the account is not
+created when it refuses.
 
-**Verify.** Re-run the Supabase security advisors and confirm
-`auth_leaked_password_protection` is gone. Expected end state: one advisor left,
-the `kv_store_91ed8379` INFO.
+With that closed, the required-characters guidance stands, and here is the
+reason. Our rule is "at least 3 of {uppercase, lowercase, digit, symbol}" — a
+disjunction. Every dashboard option names a fixed set of classes that must _all_
+appear, which no 3-of-4 rule can be expressed as. Pick any of them and you create
+passwords the signup form's meter shows as valid and green, which Supabase Auth
+then rejects with a raw API error the form has no copy for. Leave it as it is;
+the character-class rule is now genuinely enforced on the client and on the route
+the client calls.
+
+Two related fixes went in alongside, both recorded here because they change what
+a password is allowed to be:
+
+- The common-password check matched every list entry as a bare substring, and the
+  list contains fragments as short as `pi`, `adm` and `pass`. `Olympic$Rain42`,
+  `Tropical#Sun88` and `Compass&Birch51` were all refused as "too common" — 3 of
+  a 30-password strong corpus, 10%. Long entries now match anywhere after
+  leetspeak is folded back (so `Str0ng!Passw0rd#2026` is still caught on
+  `password`), and short entries match only at letter boundaries (so `Admin!2026`
+  is caught and `Administer` is not).
+- The signup meter and the server had drifted: 4 of 14 realistic passwords were
+  shown "✓ Very strong password" and would have been refused. Both now run the
+  same rule set, and `passwordValidator.agreement.test.ts` fails the build if
+  they part again — they cannot import each other, because `no-spa-edge-source`
+  forbids SPA code from importing Edge Function source.
+
+**Verified.** The advisors were re-read after the toggle was set:
+`auth_leaked_password_protection` is gone, one lint remains, the
+`kv_store_91ed8379` INFO. Re-run `get_advisors` after any auth configuration
+change to confirm it stays that way.
+
+Not verifiable from here: whether minimum length and required characters were
+actually set to the values above. Supabase's auth configuration is not readable
+through the MCP tools, only its advisors are — so those two remain an operator
+assertion, unlike the toggle, which the advisor proves.
 
 ### Section 3.7 Promote `e2e-smoke` To A Required Check
 
@@ -1299,3 +1339,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-08-25 | Roadmap §8.3: first e2e journey running in CI (`e2e-smoke` workflow). Opens `/` and `/get-quote` in real Chromium (desktop + mobile), asserts each actually painted, and clicks a service card to prove the quote wizard advances. Credential-free, submits nothing. Reports on every PR but is NOT yet a required check — promote after ~3 green runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Agent           |
 | 2026-08-25 | Roadmap §7.5: `npm run metrics` answers error-rate and p50/p95 per route family from `function_edge_logs` — no request-path instrumentation, because Supabase already records every field the gate asks for. **Baseline: error rate 0.02% (1 5xx in 6,049). Latency poor — the static no-IO `/health` handler is 1,497 ms p50 (n=20), against 1,918 ms for a real data route.** That locates the cost outside application query work, but does NOT by itself establish cold start as the cause: `execution_time_ms` does not distinguish warm from cold isolates. Measure with controlled warm/cold probes before committing to Stage E on this basis.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Agent           |
 | 2026-08-27 | Wrote the two operator-only gates down as click-paths (§3.6, §3.7) instead of leaving them as advisor line items. Leaked-password protection: confirmed the org is on `pro` so the control is actually available, and established that minimum length should be set to 12 to match `validatePassword` while **required characters must be left alone** — our rule is 3-of-4 classes, every dashboard option is all-of-N, so any of them rejects passwords the signup meter just showed green. `e2e-smoke`: 26 consecutive green runs clears the ~3-green bar it set itself, so recorded the exact required-check string (`e2e-smoke`, from the job's `name:`, not the workflow's) and added `workflow_dispatch` so a required check has a manual way to report on a head carrying no result, the only other route being an empty commit. The three PRs open at promotion time turned out not to need it: `e2e-smoke` has reported on every PR since it landed on 2026-08-25, so all three already had a green result on their heads. Stranding needs a head older than the workflow, not older than the promotion — corrected in §3.7 and the workflow header, which had claimed otherwise. | Agent           |
+| 2026-08-27 | Closed a live signup hole a Codex review found while checking §3.6's claims. Two signup routes exist; `validatePassword` guarded `POST /auth/signup`, which nothing calls, while the SPA's `/auth-signup/signup` passed the password straight to `admin.createUser` behind a `.min(1)` schema — the 12-character, 3-of-4-class rule the form displays was enforced by the browser alone, so anything posting directly could set a one-character password on a client account. Wiring the validator in exposed two more: the meter and the server had drifted (4 of 14 realistic passwords read "✓ Very strong" and would have been refused), and the common-word check substring-matched fragments as short as `pi`, refusing `Olympic$Rain42`, `Tropical#Sun88` and `Compass&Birch51` — 10% of a strong corpus, each told it was "too common". Long entries now match after leetspeak folding (`Str0ng!Passw0rd#2026` still caught), short ones only at letter boundaries (`Admin!2026` caught, `Administer` not). 57 new tests, two of which fail the build if the two validator copies drift again — they cannot import each other under `no-spa-edge-source`.                           | Agent           |

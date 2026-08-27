@@ -444,14 +444,15 @@ export function SignupPage() {
                     <span>Mix of uppercase, lowercase, numbers & symbols</span>
                   </div>
                   <div
-                    className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon ? 'text-green-700' : 'text-gray-500'}`}
+                    className={`flex items-center gap-2 ${passwordStrength.requirements.notCommon && passwordStrength.requirements.notPredictable ? 'text-green-700' : 'text-gray-500'}`}
                   >
-                    {passwordStrength.requirements.notCommon ? (
+                    {passwordStrength.requirements.notCommon &&
+                    passwordStrength.requirements.notPredictable ? (
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                     ) : (
                       <span className="h-3.5 w-3.5 rounded-full border-2 border-gray-300 shrink-0" />
                     )}
-                    <span>Not a common password</span>
+                    <span>Not a common or predictable password</span>
                   </div>
                 </div>
               </div>

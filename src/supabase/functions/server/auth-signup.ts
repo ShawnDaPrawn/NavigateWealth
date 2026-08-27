@@ -8,6 +8,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { validateBody } from './validate.ts';
 import { PublicSignupSchema } from './auth-validation.ts';
+import { validatePassword } from './passwordValidator.ts';
 import { sendAdminSignupNotification } from './email-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { recalculateAllGroupMemberships } from './communication-repo.ts';
@@ -55,6 +56,43 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
     if (!email || !password || !firstName || !surname) {
       log.error('❌ Missing required fields');
       return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    // Password strength, on the route that is actually reachable.
+    //
+    // `POST /auth/signup` in auth-routes.ts has run `validatePassword` for a
+    // long time — but nothing calls it. The SPA posts here, and here the
+    // password went straight to `admin.createUser`: `PublicSignupSchema` asks
+    // only for `.min(1)`. So the 12-character, 3-of-4-character-class rule that
+    // SignupPage.tsx shows in its live strength meter, and blocks its own submit
+    // button on, was enforced by the browser alone. Anything speaking to this
+    // endpoint directly — curl, a stale build, a script — could set a
+    // one-character password on a real client account.
+    //
+    // SignupPage.tsx cannot import this module — `no-spa-edge-source` forbids
+    // SPA code from importing Edge Function source — so it keeps its own copy of
+    // the rules in src/utils/auth/passwordValidation.ts. When this check was
+    // added the two had already drifted: 4 of 14 realistic passwords were shown
+    // "✓ Very strong password" by the meter and refused here. Both were fixed to
+    // the same rule set, and passwordValidator.agreement.test.ts fails the build
+    // if they part again.
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      // Do not log the password or any part of it — only why it was refused.
+      log.warn('Signup rejected: password does not meet requirements', {
+        failures: passwordValidation.errors.length,
+      });
+      return c.json(
+        {
+          // Both callers (SignupPage.tsx, authService.ts) surface `error` as the
+          // message the person reads, so the specifics belong in it. `errors`
+          // stays separately available for anything wanting them structured.
+          error: `Password does not meet security requirements: ${passwordValidation.errors.join('; ')}`,
+          errors: passwordValidation.errors,
+          field: 'password',
+        },
+        400,
+      );
     }
 
     const supabase = getSupabaseClient();

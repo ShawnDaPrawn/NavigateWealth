@@ -45,6 +45,95 @@ const COMMON_PASSWORDS = [
   'abcdef123456',
 ];
 
+/**
+ * Common-password matching, in two passes.
+ *
+ * The list mixes real weak passwords ('password1234') with short service
+ * account names ('pi', 'adm', 'ftp', 'pass', 'test', 'user', 'root'). The
+ * original rule matched every entry as a bare substring, so a two-character
+ * fragment could condemn a strong password:
+ *
+ *   Olympic$Rain42   refused: "olym·pi·c"
+ *   Tropical#Sun88   refused: "tro·pi·cal"
+ *   Compass&Birch51  refused: "com·pass"
+ *
+ * On a 30-password corpus of the kind a careful person actually picks, 3 were
+ * refused — 10% — each told its password was "too common". A form that rejects
+ * one strong password in ten and blames the person for it teaches them to stop
+ * picking strong passwords.
+ *
+ * But the loose rule was catching something real by accident:
+ * `Str0ng!Passw0rd#2026` matched on 'pass'. Simply requiring longer entries
+ * would have let that through, so the substring pass now normalises leetspeak
+ * first and matches 'password' properly.
+ *
+ *   Pass A — entries of six characters or more, matched anywhere in the
+ *            password after digits and symbols are folded back to the letters
+ *            they stand in for. Containing 'password' or 'qwerty' at all is
+ *            disqualifying, however it is spelled.
+ *   Pass B — shorter entries, matched only at letter boundaries. 'admin' still
+ *            condemns 'Admin!2026' — the case it was added for — without
+ *            condemning 'Administer' or 'Compass'.
+ */
+/** Digits and symbols folded back to the letter they stand in for. */
+const LEET_FOLD: Record<string, string> = {
+  '0': 'o',
+  '1': 'i',
+  '3': 'e',
+  '4': 'a',
+  '5': 's',
+  '7': 't',
+  '8': 'b',
+  '9': 'g',
+  '@': 'a',
+  $: 's',
+};
+
+/** Minimum entry length for the substring pass; shorter entries use Pass B. */
+const COMMON_SUBSTRING_MIN_LENGTH = 6;
+
+function foldLeet(lower: string): string {
+  return lower.replace(/[013457890@$]/g, (ch) => LEET_FOLD[ch] ?? ch);
+}
+
+/** Regex-special characters, so a list entry cannot alter the pattern. */
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Entries long enough to match anywhere, after leetspeak is folded. */
+const COMMON_LONG = COMMON_PASSWORDS.filter((c) => c.length >= COMMON_SUBSTRING_MIN_LENGTH);
+
+const COMMON_SHORT = COMMON_PASSWORDS.filter((c) => c.length < COMMON_SUBSTRING_MIN_LENGTH);
+
+/**
+ * Shorter entries, as one alternation bounded by non-letters. Built once at
+ * module load: this runs on every keystroke in the signup form's strength meter.
+ *
+ * The empty-list branch is not hypothetical tidiness. An empty alternation makes
+ * `(?:^|[^a-z])(?:)(?:[^a-z]|$)` match almost any string, so deleting the last
+ * short entry from the list would turn this into "reject every password" with no
+ * test naming the list as the cause. `/$^/` can never match instead.
+ */
+const COMMON_SHORT_AS_WORD =
+  COMMON_SHORT.length > 0
+    ? new RegExp(`(?:^|[^a-z])(?:${COMMON_SHORT.map(escapeRegExp).join('|')})(?:[^a-z]|$)`)
+    : /$^/;
+
+/**
+ * Keep this byte-for-byte in step with the copy in
+ * `src/utils/auth/passwordValidation.ts`. They cannot import each other —
+ * `no-spa-edge-source` in quality/dependency-cruiser.cjs forbids SPA code from
+ * importing Edge Function source at runtime — and
+ * `passwordValidator.agreement.test.ts` fails the build if the two ever
+ * disagree, on this function, the word list, or any other rule.
+ */
+export function containsCommonPassword(lowerPassword: string): boolean {
+  const folded = foldLeet(lowerPassword);
+  if (COMMON_LONG.some((common) => folded.includes(common))) return true;
+  return COMMON_SHORT_AS_WORD.test(lowerPassword);
+}
+
 export interface PasswordValidationResult {
   isValid: boolean;
   errors: string[];
@@ -83,7 +172,7 @@ export function validatePassword(password: string): PasswordValidationResult {
 
   // Check for common passwords
   const lowerPassword = password.toLowerCase();
-  if (COMMON_PASSWORDS.some((common) => lowerPassword.includes(common))) {
+  if (containsCommonPassword(lowerPassword)) {
     errors.push(
       'Password is too common or contains common words. Please choose a more unique password',
     );
