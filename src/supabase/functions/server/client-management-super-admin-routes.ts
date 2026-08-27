@@ -181,10 +181,15 @@ app.post(
     const callerEmail = authUser?.email?.toLowerCase();
 
     // SECURITY-AUDIT A10: this re-check used to compare against the single
-    // deprecated SUPER_ADMIN_EMAIL const, so a recovery super-admin who had
-    // already satisfied `requireSuperAdmin` above (which honours the allowlist
-    // via resolveTrustedRole) was then refused by the very route built for
+    // SUPER_ADMIN_EMAIL const, so a recovery super-admin who had already
+    // satisfied `requireSuperAdmin` above (which honours the allowlist via
+    // resolveTrustedRole) was then refused by the very route built for
     // recovery. Two copies of one rule, and the narrower copy won.
+    //
+    // AUTHORIZATION therefore uses the allowlist. The identity LOOKUP further
+    // down still resolves the canonical owner via SUPER_ADMIN_EMAIL, and that
+    // is deliberate: "the owner account" is singular, and this route acts on
+    // that one account whichever super-admin authorised the call.
     if (!isSuperAdminEmail(callerEmail)) {
       return c.json(
         { error: 'Forbidden: only the super admin account can enable personal client testing' },

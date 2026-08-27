@@ -398,9 +398,17 @@ must be reviewed before they can count.
 - [x] Audit logging exists and is wired into privileged state-changing routes.
       _(KV append-only `admin-audit-service` + `permission-audit-service` +
       e-sign audit; Postgres audit table still deferred.)_
-- [ ] Super-admin fallback removal is done only after a tested replacement
-      allowlist exists. _(Allowlist + env-var override landed; the deprecated
-      `SUPER_ADMIN_EMAIL` const itself is not yet removed.)_
+- [x] Super-admin fallback removal is done only after a tested replacement
+      allowlist exists. _(Allowlist + `SUPER_ADMIN_EMAILS` env override landed
+      and every AUTHORIZATION check goes through `isSuperAdminEmail()`.
+      Reviewed 2026-08-27: the `SUPER_ADMIN_EMAIL` const is deliberately
+      RETAINED, not pending removal. Its two readers must stay narrow —
+      `auth-routes.ts` exempts that one address from login rate limiting
+      pre-authentication, so widening it to the allowlist plus an env override
+      would extend a brute-force bypass; and the owner-profile lookup in
+      `client-management-super-admin-routes.ts` is an identity resolution where
+      singular is the correct shape. Removing the const would have made the app
+      less safe, so the item is closed by decision. See SECURITY-AUDIT A10.)_
 - [ ] Backup, DR, POPIA, FAIS, Sentry, CSP, and environment-split work is
       operationally verified, not merely documented.
 

@@ -34,12 +34,31 @@ export const SUPER_ADMIN_EMAILS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Primary super-admin email — retained as the canonical owner identity and for
- * backward compatibility with call sites that still reference a single address.
- * New code should authorise via `isSuperAdminEmail()` so the full allowlist
- * (and the env-var override) is honoured.
+ * The canonical single owner identity.
  *
- * @deprecated Prefer `isSuperAdminEmail(email)` for authorization checks.
+ * NOT DEPRECATED, AND DELIBERATELY NOT REMOVED. It carried an `@deprecated`
+ * tag and a production-readiness item calling for its deletion; both were
+ * wrong, and acting on either would have made this app less safe.
+ *
+ * There are exactly two backend readers, and neither should become
+ * `isSuperAdminEmail()`:
+ *
+ *   1. `auth-routes.ts` — exempts this address from LOGIN RATE LIMITING, on an
+ *      email taken straight from the request body, BEFORE authentication. That
+ *      is a brute-force bypass. Widening it to the allowlist would extend the
+ *      bypass to a second standing address and — through the
+ *      `SUPER_ADMIN_EMAILS` env override — to whatever that variable happens to
+ *      contain at the time. See SECURITY-AUDIT A10, which already reached this
+ *      conclusion and wrote it down at the call site.
+ *   2. `client-management-super-admin-routes.ts` — resolves THE owner account to
+ *      read or seed its profile. That is an identity lookup, not an
+ *      authorization decision; "the owner" is singular by definition and an
+ *      allowlist would make it ambiguous.
+ *
+ * The rule to carry forward: AUTHORIZATION goes through `isSuperAdminEmail()`,
+ * which honours the full allowlist and the deploy-free env override. Narrowing
+ * is the safer direction for a pre-auth exemption, and singular is the correct
+ * shape for an owner lookup — so those two stay here, on purpose.
  */
 export const SUPER_ADMIN_EMAIL = 'shawn@navigatewealth.co';
 
