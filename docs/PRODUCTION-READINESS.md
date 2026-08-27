@@ -17,12 +17,19 @@ those proposed files exist on `main`.
 
 ---
 
-## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs are not running)
+## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs — RESOLVED)
 
-**13 of the 15 active `pg_cron` jobs are not doing their work.** Only the two
-`publications` jobs are healthy. Found while reading production logs after the
-overnight architecture run; nothing was changed, because every fix is a
-production write and most involve the service-role secret.
+> **RESOLVED 2026-08-26.** The audit below stands as the diagnosis, but its
+> headline no longer describes production. All of it was repaired and each job
+> verified returning 2xx in the logs: 7 dead/duplicate jobs retired, the cron
+> auth moved to a Vault-backed dedicated token, the malformed-URL job fixed, and
+> the missing client-birthday route built. Read what follows as the post-mortem
+> that explains HOW this went unnoticed — the `pg_cron` green-when-broken trap
+> in particular is worth keeping — not as an open incident.
+
+**13 of the 15 active `pg_cron` jobs were not doing their work.** Only the two
+`publications` jobs were healthy. Found while reading production logs after the
+overnight architecture run.
 
 Full audit, the diagnostic queries, and the remediation options:
 [`docs/runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md).
@@ -283,8 +290,14 @@ Landed since the 2026-04-20 CORS restore:
 
 Remaining production-readiness blockers are now mainly:
 
-- Continue architecture work, especially the incremental `integrations.tsx`
-  split.
+> **STALE — corrected 2026-08-27.** This list named the `integrations.tsx`
+> split, which Section 2's own rubric records as finished (a 37-line router
+> over seven route modules, verified 2026-08-21). Superseded by the split
+> checklist in Section 2; read that instead. The live blockers are: promote the
+> CSP from report-only, verify the backup and perform a restore, set a
+> retention policy for closed profiles and audit records, and create a staging
+> environment.
+
 - Review Claude's broad stash only on a separate branch, in slices.
 
 ---
@@ -410,8 +423,66 @@ must be reviewed before they can count.
       `client-management-super-admin-routes.ts` is an identity resolution where
       singular is the correct shape. Removing the const would have made the app
       less safe, so the item is closed by decision. See SECURITY-AUDIT A10.)_
-- [ ] Backup, DR, POPIA, FAIS, Sentry, CSP, and environment-split work is
-      operationally verified, not merely documented.
+- [ ] Backup, DR, POPIA, FAIS, error-monitoring, CSP, and environment-split
+      work is operationally verified, not merely documented.
+
+      One box hiding seven unrelated things could only ever be unchecked, which
+      told nobody what was left. Split 2026-08-27 so the remainder is nameable:
+
+      - [x] **Error monitoring** — an in-house pipeline, not Sentry, and it is
+            wired end to end: `ErrorBoundary` and the `window.onerror` /
+            `unhandledrejection` hooks in `App.tsx` both call
+            `reportRuntimeClientIssue`, which POSTs to
+            `/quality-issues/runtime-client` (debounced, truncated, auth'd,
+            never throws); backend 500s reach the same dashboard through
+            `scheduleRuntimeServerIssue`. Both halves have tests. An earlier
+            assessment in this session called this "None" — that was wrong, and
+            reached by grepping for `@sentry` rather than for monitoring.
+      - [ ] **CSP** — STAGE 1 OF 2 shipped. `object-src`, `base-uri`,
+            `form-action` and `frame-ancestors` are ENFORCED in `vercel.json`
+            (`frame-ancestors 'self'` mirrors the existing
+            `X-Frame-Options: SAMEORIGIN` exactly, so it changes nothing that
+            was working). The full resource policy — script/style/img/connect/
+            font/frame — ships as `Content-Security-Policy-Report-Only`
+            alongside it.
+            Verified by serving the real `dist/` build with the exact headers
+            from `vercel.json` and driving 8 public routes in Chromium: the
+            enforced policy breaks nothing (smoke 6/6) and the report-only
+            policy now logs ZERO violations, after adding the Google Tag
+            Manager origins the first probe caught.
+            TO PROMOTE: the admin surface behind auth is NOT yet probed
+            (TradingView widgets, PDF viewers). Probe it, then move the
+            report-only value into the enforced header and drop
+            `'unsafe-inline'` from `script-src` by hashing the inline SEO
+            fallback in `index.html`.
+      - [ ] **Backup** — `.github/workflows/weekly-backup.yml` added: pinned
+            PG17 client, custom-format dump, and THREE integrity checks —
+            a minimum size, a TOC parse (is this the right database, and a
+            whole one?), and a full `pg_restore --file=/dev/null` decode of
+            every data block.
+            The decode is the one that matters: the TOC sits at the FRONT of a
+            custom-format archive, so `--list` alone succeeds on a dump
+            truncated after it, and the job would have uploaded a corrupt file
+            labelled "verified readable" — worse than no check, because it
+            manufactures confidence. Caught in review on PR #250.
+            It SKIPS with a warning until the `SUPABASE_DB_URL` secret exists,
+            so it cannot cry wolf every Sunday. NOT YET VERIFIED — it has never
+            run against the real database. Add the secret and dispatch it once.
+      - [ ] **DR** — no restore has ever been performed. The full decode above
+            proves the bytes are intact and decodable; it does NOT prove they
+            load into a live schema. Restoring into a throwaway project and
+            diffing row counts is the real bar.
+      - [ ] **POPIA** — materially advanced, not finished. 96 rows of PII
+            belonging to 45 deleted subjects were erased 2026-08-27
+            (`erasure_log:orphaned_test_profiles:2026-08-27`). What remains is
+            a STANDING retention policy: nothing yet purges a closed profile
+            once its retention window expires, so this recurs.
+      - [ ] **FAIS** — audit, `auth_log` and activity records are retained
+            (correct), but retention is currently "forever" rather than the
+            5-year obligation, and no job enforces the boundary.
+      - [ ] **Environment split** — no staging project and no `staging`
+            reference in any workflow; migrations go straight to production.
+            Unchanged.
 
 If any box is unchecked, answer "not fully production grade yet" and explain
 which category is blocking: operational configuration, test/tooling hygiene,
