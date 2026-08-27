@@ -55,10 +55,11 @@ import { BottomActionBar } from './steps/BottomActionBar';
 
 // ── pdf.js bootstrap (canvas-based rendering — works on all browsers including mobile) ──
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-const STANDARD_FONT_DATA_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`;
+const STANDARD_FONT_DATA_URL = '/pdfjs/standard_fonts/';
 
 interface SigningWorkflowProps {
   token: string;

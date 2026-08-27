@@ -125,7 +125,8 @@
   "scripts": {
     "dev": "vite",
     "prepare": "husky",
-    "build": "node ./scripts/generate-seo-files.mjs && vite build && node ./scripts/apply-static-seo.mjs && node ./scripts/verify-seo-build.mjs",
+    "build": "node ./scripts/copy-pdfjs-assets.mjs && node ./scripts/generate-seo-files.mjs && vite build && node ./scripts/apply-static-seo.mjs && node ./scripts/verify-seo-build.mjs",
+    "pdfjs:assets": "node ./scripts/copy-pdfjs-assets.mjs",
     "seo:verify": "node ./scripts/generate-seo-files.mjs && node ./scripts/verify-seo-build.mjs",
     "bundle:check": "node ./scripts/check-bundle-size.mjs",
     "optimize:images": "node ./scripts/optimize-images.mjs",

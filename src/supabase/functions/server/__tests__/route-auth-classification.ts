@@ -144,6 +144,13 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     ],
   },
   {
+    kind: 'browser-telemetry',
+    classification: 'public',
+    reason:
+      "The endpoint named by `Reporting-Endpoints` / `report-uri` in vercel.json. It CANNOT be guarded: the browser sends these itself, on public marketing pages where the visitor has no session, and it will not attach an app token. Bounded instead by what an anonymous caller can actually do — reports are deduplicated by fingerprint and the list is hard-capped at MAX_CSP_VIOLATION_ISSUES, every field is length-limited, at most MAX_REPORTS_PER_REQUEST are taken from one body, and the response is always 204 so nothing is learned from it. Nothing sensitive is retained: every URL is reduced to origin+path before storage, because a violation on the signer page would otherwise carry `/sign?token=…` — the signer's live credential — into the KV store.",
+    routes: ['csp-report-routes.ts POST /'],
+  },
+  {
     kind: 'lead-gen',
     classification: 'public',
     reason:

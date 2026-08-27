@@ -112,16 +112,22 @@ export default function App() {
     // default behaviour copied it to Google on the first paint of the page the
     // signer landed on. `page_location` is therefore pinned to a scrubbed URL
     // rather than left to default.
-    const script2 = document.createElement('script');
-    script2.innerHTML = `
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-11PXRZJXB6', ${JSON.stringify({
-        page_location: scrubSensitiveUrl(window.location.href),
-      })});
-    `;
-    document.head.appendChild(script2);
+    //
+    // CSP: this used to build a `<script>` element and assign `innerHTML`. That
+    // made it an INLINE script whose text varied with the URL, so it could
+    // neither be hashed nor covered by anything short of `'unsafe-inline'` —
+    // one dynamic string holding the entire XSS mitigation open. The indirection
+    // bought nothing: this code is already JavaScript running in the page, so it
+    // can just call gtag directly. `window.gtag` stays a global because
+    // src/utils/analytics.ts calls it.
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function gtag(...args: unknown[]) {
+      window.dataLayer?.push(args as unknown as Record<string, unknown>);
+    };
+    window.gtag('js', new Date());
+    window.gtag('config', 'G-11PXRZJXB6', {
+      page_location: scrubSensitiveUrl(window.location.href),
+    });
 
     // JSZip is no longer loaded globally — the ZipEncryptTool uses @zip.js/zip.js
     // via npm import, so the CDN script was dead weight on every page load.
@@ -171,7 +177,8 @@ export default function App() {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
       window.removeEventListener('vite:preloadError', handleVitePreloadError);
       if (script1.parentNode) document.head.removeChild(script1);
-      if (script2.parentNode) document.head.removeChild(script2);
+      // script2 is gone — the gtag config is a direct call now, not an injected
+      // element, so there is nothing to detach.
     };
   }, []);
 

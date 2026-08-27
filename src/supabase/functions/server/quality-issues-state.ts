@@ -4,6 +4,7 @@
  * Moved verbatim from quality-issues-routes.ts.
  */
 import * as kv from './kv_store.tsx';
+import { createKvRepository } from './repositories/kv-repository.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   applyQualityIssueWorkflow,
@@ -21,6 +22,7 @@ import {
   ISSUE_WORKFLOW_KEY,
   LATEST_SNAPSHOT_KEY,
   RUNTIME_CLIENT_ISSUES_KEY,
+  CSP_VIOLATION_KEY_PREFIX,
   SECURITY_FEED_ISSUES_KEY,
   normalizeAutomationRun,
   normalizeIssue,
@@ -29,6 +31,9 @@ import {
 import { reopenRecurringWorkflows, runIssueAutomation } from './quality-issues-automation.ts';
 
 const log = createModuleLogger('quality-issues');
+
+/** See the note in csp-report-routes.ts: this namespace goes through the repository. */
+const cspViolationsRepo = createKvRepository<QualityIssue>(CSP_VIOLATION_KEY_PREFIX);
 
 export async function loadQualityIssueState(): Promise<{
   baseSnapshot: QualityIssueSnapshot;
@@ -40,6 +45,11 @@ export async function loadQualityIssueState(): Promise<{
   const snapshot = (await kv.get(LATEST_SNAPSHOT_KEY)) as QualityIssueSnapshot | null;
   const runtimeIssues = (await kv.get(RUNTIME_CLIENT_ISSUES_KEY)) as QualityIssue[] | null;
   const securityFeedIssues = (await kv.get(SECURITY_FEED_ISSUES_KEY)) as QualityIssue[] | null;
+  // CSP violations live one row per fingerprint (an unauthenticated endpoint
+  // feeds them, and a shared array loses reports when a burst arrives) but
+  // belong on the same dashboard — they are security findings about this
+  // deployment.
+  const cspViolations = await cspViolationsRepo.listAll('quality dashboard snapshot');
   // Server-side runtime errors (source: 'runtime-server') are recorded by the
   // error middleware via quality-issues-runtime-server.ts. Fold them into the
   // runtime bucket so they appear in the dashboard snapshot alongside client
@@ -52,7 +62,10 @@ export async function loadQualityIssueState(): Promise<{
       ...(Array.isArray(runtimeIssues) ? runtimeIssues : []),
       ...runtimeServerIssues,
     ],
-    baseSecurityFeedIssues: Array.isArray(securityFeedIssues) ? securityFeedIssues : [],
+    baseSecurityFeedIssues: [
+      ...(Array.isArray(securityFeedIssues) ? securityFeedIssues : []),
+      ...(Array.isArray(cspViolations) ? cspViolations : []),
+    ],
     workflowState: normalizeWorkflowMap(await kv.get(ISSUE_WORKFLOW_KEY)),
     automation: normalizeAutomationRun(await kv.get(AUTOMATION_STATE_KEY)),
   };

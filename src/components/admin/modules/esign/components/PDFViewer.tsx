@@ -28,15 +28,32 @@ import { SIGNER_COLORS } from '../constants';
 
 // ── pdf.js bootstrap (npm import — avoids CSP issues with CDN script injection) ──
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { logger } from '../../../../../utils/logger';
 
-// Configure the web worker source via CDN, dynamically matching the installed library version
-// jsdelivr mirrors npm exactly, so every published version is guaranteed to be available
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// pdf.js worker and font assets, served from THIS origin.
+//
+// These pointed at https://cdn.jsdelivr.net, in three components — and one of
+// them is src/components/esign-signer/SigningWorkflow.tsx, the flow a CLIENT
+// uses to read and sign a document. So the critical path of the e-sign product
+// ran through a third-party CDN: a jsdelivr outage stopped signing, and a
+// jsdelivr compromise would have run attacker code in the page holding the
+// document and the signature.
+//
+// It also made the Content-Security-Policy unenforceable. `worker-src 'self'
+// blob:` forbids a cross-origin worker, so promoting the report-only policy
+// would have broken signing — and the earlier CSP probe missed it, having
+// driven 8 public marketing routes with the signer flow not among them.
+//
+// `?url` makes Vite emit the worker as a hashed same-origin asset. The fonts
+// cannot go through Vite: pdf.js wants a DIRECTORY prefix it appends filenames
+// to at runtime, so scripts/copy-pdfjs-assets.mjs stages the folder into
+// public/pdfjs/ at build time, version-locked to the installed pdfjs-dist.
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-// Standard font data URL — required so pdf.js can resolve built-in PDF fonts
-// (e.g. ZapfDingbats, Symbol) that are not available as system fonts in the browser.
-const STANDARD_FONT_DATA_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`;
+// Required so pdf.js can resolve built-in PDF fonts (ZapfDingbats, Symbol) that
+// are not available as system fonts in the browser.
+const STANDARD_FONT_DATA_URL = '/pdfjs/standard_fonts/';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
