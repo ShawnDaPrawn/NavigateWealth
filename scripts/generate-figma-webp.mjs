@@ -31,7 +31,9 @@
  */
 
 import fs from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import os from 'node:os';
 import sharp from 'sharp';
@@ -123,12 +125,23 @@ async function readManifest() {
 
 /**
  * Cache key covers the source bytes and every setting that changes the output,
- * so bumping MAX_WIDTH or the quality invalidates prior results rather than
+ * so bumping the ladder or the ceiling invalidates prior results rather than
  * silently serving stale renders.
+ *
+ * Keyed on file *contents*, deliberately, not mtime: git does not preserve
+ * mtimes, so every CI and Vercel build starts from a fresh checkout where all
+ * timestamps are new. An mtime-based key would miss on all 68 assets on every
+ * deploy and regenerate them, which is exactly the cost the persistent cache
+ * exists to avoid. Hashing all 852 MB streams through in ~1.7 s, against ~27 s
+ * to re-encode, so contents are both the correct key and the cheaper one.
  */
-function cacheKey(stat) {
+async function cacheKey(source, stat) {
+  const hash = createHash('sha1');
+  await pipeline(createReadStream(source), hash);
   return createHash('sha1')
-    .update(`${stat.size}:${stat.mtimeMs}:${JSON.stringify(ENCODE_LADDER)}:${MAX_OUTPUT_BYTES}`)
+    .update(
+      `${hash.digest('hex')}:${stat.size}:${JSON.stringify(ENCODE_LADDER)}:${MAX_OUTPUT_BYTES}`,
+    )
     .digest('hex');
 }
 
@@ -145,7 +158,7 @@ async function processOne(name, manifest) {
   }
 
   const outPath = path.join(CACHE_DIR, `${path.parse(name).name}.webp`);
-  const key = cacheKey(stat);
+  const key = await cacheKey(source, stat);
 
   if (manifest[name]?.key === key) {
     try {

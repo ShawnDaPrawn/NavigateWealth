@@ -648,8 +648,11 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
   always been dead code because nothing generated a sibling, so every import
   fell through to a camera-resolution original (the largest 8256x5504, 31 MB).
   The cache location keeps generated binaries out of git and is one of the few
-  directories Vercel persists, so the resize is paid once (27 s cold, 1.2 s
-  warm) rather than per deploy.
+  directories Vercel persists, so the resize is paid once (27 s cold, 2.8 s
+  warm) rather than per deploy. The cache key is a hash of file _contents_, not
+  mtime: git does not preserve timestamps, so an mtime key would miss on all 68
+  assets on every fresh checkout and regenerate them — defeating the whole
+  point. Hashing 852 MB costs ~1.7 s against ~27 s to re-encode.
   **Measured:** 806.8 MB of originals → 9.0 MB of WebP (−98.9%);
   `imageBytes` 864 MB → 66.4 MB (−92.3%); `totalDistBytes` 882 MB → 86.5 MB
   (−90.2%). Largest emitted image 407 KB, held there by an encode ladder that
