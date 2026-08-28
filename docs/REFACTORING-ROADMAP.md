@@ -56,27 +56,27 @@ strict types, the API client, lazy-router, code splitting,
 
 ### 1.2 The measured debt that remains
 
-| Ratchet / measure                                 | Current               | Target          | Meaning                                                             |
-| ------------------------------------------------- | --------------------- | --------------- | ------------------------------------------------------------------- |
-| `quality/baselines/anon-key-bearer-baseline`      | 78                    | 0               | SPA call sites still sending the public anon key as a bearer        |
-| `quality/baselines/auth-implementations-baseline` | 5                     | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)      |
-| `quality/baselines/auth-without-authz-baseline`   | 33                    | ~2              | Handlers that authenticate and discard the answer                   |
-| `quality/baselines/route-validation-baseline`     | 35                    | 0               | Body-reading mutating routes with no schema                         |
-| `quality/baselines/route-auth-baseline`           | 123                   | reviewed list   | Routes with no visible guard (includes public-by-design)            |
-| `quality/baselines/depcruise-baseline`            | 210                   | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin)  |
-| `.kv-direct-import-baseline`                      | 175                   | 0               | Files importing `kv_store` instead of a repository                  |
-| `quality/baselines/raw-fetch-baseline`            | 185                   | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)       |
-| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`)   | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                    |
-| `quality/baselines/contract-coverage-baseline`    | 2                     | grows           | Validated response call sites (floors a gain, fails on falls)       |
-| `quality/baselines/npm-audit-baseline`            | 0                     | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24 |
-| `quality/baselines/deno-check-baseline`           | 0                     | hold            | Done — keep at zero                                                 |
-| Backend coverage (floored)                        | ~13.7% stmts          | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                 |
-| SPA coverage (floored)                            | ~31% stmts            | 50%+            | Excludes backend; per-layer by design                               |
-| Files > 1,000 raw lines                           | 74 (40 counted)       | 0 at budget 600 | Readability ceiling; god files listed in §4                         |
-| `src/assets`                                      | 853 MB PNG/JPG        | < 20 MB         | A7 — raw Figma exports shipped to `dist/` (906 MB images)           |
-| Edge function                                     | 1 × ~136K lines       | 4–6 functions   | Stage E bounded-context split not started                           |
-| E2E in CI                                         | 1 (non-required)      | 3 seeded        | Public-render journey runs per PR; the 5 seeded specs still skipped |
-| Metrics                                           | **`npm run metrics`** | hold            | DONE 2026-08-25 — queried from `function_edge_logs`, no middleware  |
+| Ratchet / measure                                 | Current               | Target          | Meaning                                                               |
+| ------------------------------------------------- | --------------------- | --------------- | --------------------------------------------------------------------- |
+| `quality/baselines/anon-key-bearer-baseline`      | 78                    | 0               | SPA call sites still sending the public anon key as a bearer          |
+| `quality/baselines/auth-implementations-baseline` | 5                     | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)        |
+| `quality/baselines/auth-without-authz-baseline`   | 33                    | ~2              | Handlers that authenticate and discard the answer                     |
+| `quality/baselines/route-validation-baseline`     | 35                    | 0               | Body-reading mutating routes with no schema                           |
+| `quality/baselines/route-auth-baseline`           | 123                   | reviewed list   | Routes with no visible guard (includes public-by-design)              |
+| `quality/baselines/depcruise-baseline`            | 210                   | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin)    |
+| `.kv-direct-import-baseline`                      | 175                   | 0               | Files importing `kv_store` instead of a repository                    |
+| `quality/baselines/raw-fetch-baseline`            | 185                   | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)         |
+| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`)   | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                      |
+| `quality/baselines/contract-coverage-baseline`    | 2                     | grows           | Validated response call sites (floors a gain, fails on falls)         |
+| `quality/baselines/npm-audit-baseline`            | 0                     | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24   |
+| `quality/baselines/deno-check-baseline`           | 0                     | hold            | Done — keep at zero                                                   |
+| Backend coverage (floored)                        | ~13.7% stmts          | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                   |
+| SPA coverage (floored)                            | ~31% stmts            | 50%+            | Excludes backend; per-layer by design                                 |
+| Files > 1,000 raw lines                           | 74 (40 counted)       | 0 at budget 600 | Readability ceiling; god files listed in §4                           |
+| `src/assets`                                      | 9 MB WebP emitted     | hold            | A7 — **DONE 2026-08-28**; 807 MB of originals no longer reach `dist/` |
+| Edge function                                     | 1 × ~136K lines       | 4–6 functions   | Stage E bounded-context split not started                             |
+| E2E in CI                                         | 1 (non-required)      | 3 seeded        | Public-render journey runs per PR; the 5 seeded specs still skipped   |
+| Metrics                                           | **`npm run metrics`** | hold            | DONE 2026-08-25 — queried from `function_edge_logs`, no middleware    |
 
 ### 1.3 Security remainder — still open at HEAD, re-verified today
 
@@ -640,22 +640,30 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
 
 ## 9. Assets & bundle hygiene (batch, high visual payoff)
 
-- **A7 — the 853 MB of raw Figma images** (`src/assets`, 154 files; 906 MB of
-  images in `dist/`). Generate hashed `.webp` **at build time**, into the
-  shape the resolver actually looks for. **Note the existing pieces do not
-  yet connect:** the `figmaAssetResolver` in `vite.config.ts` prefers exactly
-  `src/assets/<hash>.webp`, while `scripts/optimize-images.mjs` writes
-  `<hash>-<width>.webp` under `public/img/optimized/` — so merely wiring
-  `optimize:images` into `npm run build` changes nothing that
-  `figma:asset/<hash>.png` imports resolve to. The fix is a pre-build step
-  that emits `<hash>.webp` where the resolver expects it (or teaches the
-  resolver/optimizer one shared contract), preferably to a git-ignored
-  location rather than committing more binaries to an already-892 MB `.git`.
-  Then step `imageBytes` in `quality/baselines/bundle-size-baseline.json` down an order of
-  magnitude so it can never return. Consider `git filter-repo` on the worst
-  blobs only as a separate, explicitly-approved operation.
-  _Effort:_ M. _Gate:_ `imageBytes` < 50 MB; largest emitted image < 500 KB;
-  no 28 MB PNG reachable from any route.
+- **A7 — the 853 MB of raw Figma images** — **DONE 2026-08-28.**
+  `scripts/generate-figma-webp.mjs` runs as a pre-build step and emits
+  `<hash>.webp` into `node_modules/.cache/figma-webp/`, which
+  `figmaAssetResolver` now checks ahead of `src/assets`. That closed the
+  disconnect this entry described: the resolver's `.webp` preference had
+  always been dead code because nothing generated a sibling, so every import
+  fell through to a camera-resolution original (the largest 8256x5504, 31 MB).
+  The cache location keeps generated binaries out of git and is one of the few
+  directories Vercel persists, so the resize is paid once (27 s cold, 1.2 s
+  warm) rather than per deploy.
+  **Measured:** 806.8 MB of originals → 9.0 MB of WebP (−98.9%);
+  `imageBytes` 864 MB → 66.4 MB (−92.3%); `totalDistBytes` 882 MB → 86.5 MB
+  (−90.2%). Largest emitted image 407 KB, held there by an encode ladder that
+  re-compresses anything over a hard 500 KB ceiling, so the gate is a property
+  of the pipeline rather than of today's 68 files.
+  **Residual:** the 66.4 MB that remains is `public/`, copied verbatim —
+  17.5 MB of `img/optimized` variants plus ~24 MB of `brand-assets`. The
+  roadmap's `< 50 MB` target was written before that composition was known,
+  and closing the gap means decisions about material `public/brand-assets/README.md`
+  documents as deliberate download/reference content (the high-res PNG
+  fallbacks, `approved-source/`, and the `rollback-2026-03-24/` archive).
+  That is an owner call, not cleanup — track it separately if wanted.
+  _Gate:_ largest emitted image < 500 KB ✅; no 28 MB PNG reachable from any
+  route ✅; `imageBytes` floored at 66.4 MB so the regression cannot return.
 - **Bundle budget steps.** After A16's −24%, ratchet `entryGzipBytes`
   deliberately downward (e.g. 496 KB → 400 KB) as Quill CSS scoping (§4.7)
   and image work land, instead of only preventing growth.

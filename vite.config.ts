@@ -9,9 +9,18 @@ import path from 'path';
  * preferring an optimized `.webp` when one exists. This replaces the previous
  * ~240 hand-maintained static aliases with a single dynamic resolver, so new
  * exported assets work without editing this config.
+ *
+ * The `.webp` preference used to be dead code: nothing generated a sibling, so
+ * every import fell through to a raw Figma export and Vite emitted 811 MB of
+ * camera-resolution originals into `dist/` (A7). `scripts/generate-figma-webp.mjs`
+ * now produces those variants into `node_modules/.cache/figma-webp/`, which is
+ * checked first here. Generated binaries stay out of git, and a cold cache is
+ * only a size regression, never a broken build — the original remains the last
+ * candidate, so the app renders either way.
  */
 function figmaAssetResolver(): Plugin {
   const assetDirectory = path.resolve(__dirname, './src/assets');
+  const webpCacheDirectory = path.resolve(__dirname, './node_modules/.cache/figma-webp');
   return {
     name: 'figma-asset-resolver',
     enforce: 'pre',
@@ -19,11 +28,12 @@ function figmaAssetResolver(): Plugin {
       if (!source.startsWith('figma:asset/')) return null;
       const filename = source.slice('figma:asset/'.length);
       const parsed = path.parse(filename);
-      const candidates = [`${parsed.name}.webp`, filename];
-      const match = candidates.find((candidate) =>
-        fs.existsSync(path.join(assetDirectory, candidate)),
-      );
-      return path.join(assetDirectory, match ?? filename);
+      const candidates = [
+        path.join(webpCacheDirectory, `${parsed.name}.webp`),
+        path.join(assetDirectory, `${parsed.name}.webp`),
+        path.join(assetDirectory, filename),
+      ];
+      return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates.at(-1)!;
     },
   };
 }
