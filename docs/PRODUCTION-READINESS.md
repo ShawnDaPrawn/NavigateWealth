@@ -658,6 +658,50 @@ must be reviewed before they can count.
             "inactive" reads like a candidate for cleanup and is not. Whatever
             enforces this has to key on the deletion event and the
             relationship-end date, never on an activity timestamp.
+
+            **MECHANISM BUILT 2026-08-29, NOT YET RUN IN PRODUCTION.**
+            `client-retention-service.ts` plus `GET /clients/retention/assess`
+            (read-only) and `POST /clients/retention/purge` (irreversible,
+            admin-only, requires `{"confirm":"erase"}`). This box stays
+            unchecked for the same reason the DR box does: automation that has
+            never run is not operationally verified, and checking it here would
+            be the exact thing this document exists not to do.
+
+            Two traps were found in the data while building it, both of which
+            would have destroyed live client records:
+
+            - `deleteClient()` sets `security.suspended = true` AND
+              `security.deleted = true` together. So "suspended" is useless as
+              the protective filter — it would either skip everything or erase
+              live suspensions. The only safe discriminator is `deleted`.
+              Production carries **3 suspended-but-not-deleted** clients.
+            - `AccountStatus` has no `inactive` member. A dormant client is
+              still `active`, so any rule keyed on last-activity erases living
+              relationships that merely went quiet.
+
+            What HAS been verified, short of a production run: 15 unit tests,
+            of which the four safety properties were mutation-tested — flipping
+            the discriminator to `suspended`, removing the prefix-collision
+            guard (so erasing `abc` would also take `abcdef`), flipping the
+            dry-run default, and treating a missing closure date as an expired
+            one each fail the suite. The eligibility rule was also replayed as
+            SQL against the production store: **11 deleted, 11 retained, 0
+            eligible, 0 blocked**, with the 3 suspended never scanned.
+
+            It will erase nothing before **February 2033** — the oldest closure
+            is 2026-02-16. That is the correct result, not a misconfiguration.
+
+            TO CLOSE THIS BOX: call `GET /clients/retention/assess` once as an
+            admin and confirm it reports 11 scanned / 11 retained / 0 eligible.
+            It is read-only and safe to run at any time.
+
+            ONE DECISION DEFERRED, deliberately: the purge is admin-triggered
+            and NOT wired to cron. Unattended irreversible erasure is a bigger
+            risk than a late purge while nothing is eligible, and nothing is
+            eligible for another six years. But a purge nobody remembers to run
+            is how the obligation gets missed, so this needs revisiting before
+            2032 rather than being left to be discovered. Recorded in the route
+            docblock as well, next to the code that would have to change.
       - [ ] **FAIS** — audit, `auth_log` and activity records are retained
             (correct), but retention is currently "forever" rather than the
             5-year obligation, and no job enforces the boundary.

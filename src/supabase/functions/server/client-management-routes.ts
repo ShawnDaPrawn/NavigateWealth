@@ -18,6 +18,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { requireCronAuth } from './cron-auth.ts';
 import { ClientsService } from './client-management-service.ts';
 import { runClientCleanup, getLastClientCleanupRun } from './client-cleanup-service.ts';
+import { runClientRetentionSweep } from './client-retention-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
 import {
@@ -84,6 +85,83 @@ app.post(
       dryRun: false,
       ...result,
     });
+  }),
+);
+
+/**
+ * GET /clients/retention/assess
+ * POPIA/FAIS retention report. Reads only — never erases.
+ *
+ * Returns which closed relationships are past the 7-year boundary, which are
+ * still inside it, and which cannot be assessed because their closure date is
+ * missing or unreadable. Safe to call at any time and safe to schedule.
+ */
+app.get(
+  '/retention/assess',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const result = await runClientRetentionSweep();
+
+    if (result.eligible.length > 0 || result.blocked.length > 0) {
+      log.info('Retention sweep found records needing attention', {
+        eligible: result.eligible.length,
+        blocked: result.blocked.length,
+      });
+    }
+
+    return c.json({ success: true, ...result });
+  }),
+);
+
+/**
+ * POST /clients/retention/purge
+ * Erase closed relationships past their 7-year window. IRREVERSIBLE.
+ *
+ * Admin-triggered on purpose, and deliberately NOT wired to cron.
+ *
+ * The assess endpoint above is the one that is safe to schedule. This one
+ * destroys client records permanently and forecloses the reinstatement path
+ * that `deleteClient()` preserves via `security.previousAccountStatus`, so it
+ * runs when a person decides it should. That is a defensible position today —
+ * the oldest closure in production is 2026-02-16, so nothing is eligible until
+ * February 2033 and there is nothing yet to automate.
+ *
+ * It will stop being defensible as that date approaches: a purge nobody
+ * remembers to run is how the obligation gets missed, which is the failure this
+ * whole item exists to prevent. Revisit before 2032 and decide then whether an
+ * unattended erasure is acceptable, with the assess report as the early
+ * warning in the meantime.
+ *
+ * Requires `{ "confirm": "erase" }` in the body. A purge should not be one
+ * mistyped URL away.
+ */
+app.post(
+  '/retention/purge',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const body = await c.req.json().catch(() => ({}) as Record<string, unknown>);
+
+    if (body?.confirm !== 'erase') {
+      return c.json(
+        {
+          success: false,
+          error: 'Confirmation required',
+          detail: 'Send {"confirm":"erase"} to run an irreversible retention purge.',
+        },
+        400,
+      );
+    }
+
+    const result = await runClientRetentionSweep({ apply: true });
+
+    log.info('Retention purge executed', {
+      erased: result.erased.length,
+      keysRemoved: result.keysRemoved,
+      blocked: result.blocked.length,
+      cappedAtLimit: result.cappedAtLimit,
+    });
+
+    return c.json({ success: true, ...result });
   }),
 );
 
