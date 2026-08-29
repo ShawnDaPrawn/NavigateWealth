@@ -28,100 +28,186 @@ function figmaAssetResolver(): Plugin {
   };
 }
 
+/**
+ * Injects connection hints for the origins the app genuinely contacts on boot.
+ *
+ * These used to be created in a `useEffect` inside `<PerformanceOptimizer/>`,
+ * which is far too late to be worth anything: by the time React has mounted,
+ * the entry bundle has already downloaded and the auth bootstrap is issuing its
+ * first Supabase request, so the handshake the hint was meant to overlap has
+ * already started. In the static `<head>` the preconnect is visible to the
+ * browser's preload scanner while the bundle is still in flight, so DNS + TCP +
+ * TLS to Supabase resolve in parallel with it rather than after it.
+ *
+ * The Supabase origin is resolved at build time from the same env vars as
+ * `src/utils/supabase/info.tsx`, so a deployment pointed at a different project
+ * preconnects to that project rather than to a hardcoded one.
+ */
+function connectionHints(): Plugin {
+  let supabaseOrigin: string | undefined;
+
+  return {
+    name: 'connection-hints',
+    configResolved(config) {
+      const env = config.env as Record<string, string | undefined>;
+      const projectId =
+        env.VITE_SUPABASE_PROJECT_ID ||
+        projectIdFromUrl(env.VITE_SUPABASE_URL) ||
+        FALLBACK_PROJECT_ID;
+      supabaseOrigin = `https://${projectId}.supabase.co`;
+    },
+    transformIndexHtml() {
+      if (!supabaseOrigin) return [];
+      return [
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: supabaseOrigin, crossorigin: '' },
+          injectTo: 'head-prepend' as const,
+        },
+      ];
+    },
+  };
+}
+
+/**
+ * Mirrors `src/utils/supabase/info.tsx`. That module cannot be imported here —
+ * it reads `import.meta.env`, which only exists inside the bundle.
+ */
+const FALLBACK_PROJECT_ID = 'vpjmdsltwrnpefzcgdmz';
+
+function projectIdFromUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    return new URL(value).hostname.match(/^([a-z0-9-]+)\.supabase\.co$/i)?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Maps a module id to the npm package that owns it.
+ *
+ * Chunk assignment used to be a series of `id.includes('/react/')`-style
+ * substring tests, which is not the same question as "which package is this?".
+ * `/react/` matches `node_modules/@tiptap/react/…` and
+ * `node_modules/@vercel/analytics/dist/react/…`; `/react-dom/` matches
+ * `node_modules/@floating-ui/react-dom/…`. Pinning `@tiptap/react` into
+ * `vendor-react` pulled its exclusive dependency graph — prosemirror-view,
+ * prosemirror-model, @tiptap/core, the lot — into the one chunk that every
+ * visitor must download, because React lives there too. That put a 795 KB
+ * rich-text editor, used only by the admin publications module, on the
+ * critical path of the marketing homepage.
+ *
+ * Matching the package name instead makes each rule mean what it says.
+ */
+function packageNameFromId(id: string): string | undefined {
+  const match = /[\\/]node_modules[\\/](?!\.)((?:@[^\\/]+[\\/])?[^\\/]+)/.exec(id);
+  return match?.[1]?.replace(/\\/g, '/');
+}
+
+/** Exact package name -> chunk. */
+const PACKAGE_CHUNKS = new Map<string, string>([
+  ['react', 'vendor-react'],
+  ['react-dom', 'vendor-react'],
+  ['scheduler', 'vendor-react'],
+
+  ['react-router', 'vendor-router'],
+
+  ['@supabase/supabase-js', 'vendor-supabase'],
+  ['@jsr/supabase__supabase-js', 'vendor-supabase'],
+
+  ['react-hook-form', 'vendor-forms'],
+  ['@hookform/resolvers', 'vendor-forms'],
+  ['zod', 'vendor-forms'],
+
+  ['@tanstack/react-query', 'vendor-data'],
+  ['@tanstack/react-virtual', 'vendor-data'],
+
+  // sonner only. `motion` is deliberately NOT here — see vendor-motion below.
+  ['sonner', 'vendor-feedback'],
+
+  // Animation. Kept out of vendor-feedback because `sonner` renders the app-wide
+  // <Toaster/> in AppProviders and is therefore eager, whereas every `motion`
+  // import in this repo sits behind a lazy route (esign signer, admin modules,
+  // one product page). Grouped together, the eager toast dragged 383 KB of
+  // animation library onto first paint.
+  ['motion', 'vendor-motion'],
+  ['framer-motion', 'vendor-motion'],
+  ['motion-dom', 'vendor-motion'],
+  ['motion-utils', 'vendor-motion'],
+
+  ['@hello-pangea/dnd', 'vendor-dnd'],
+
+  ['react-quill-new', 'vendor-quill'],
+  ['quill', 'vendor-quill'],
+
+  ['pdf-lib', 'vendor-pdf-lib'],
+  ['node-forge', 'vendor-signpdf'],
+  ['pdfjs-dist', 'vendor-pdf-viewer'],
+
+  ['docx', 'vendor-docx'],
+  ['@zip.js/zip.js', 'vendor-docx'],
+
+  ['xlsx', 'vendor-xlsx'],
+  ['@e965/xlsx', 'vendor-xlsx'],
+
+  ['recharts', 'vendor-charts'],
+
+  ['vaul', 'vendor-ui'],
+  ['cmdk', 'vendor-ui'],
+  ['input-otp', 'vendor-ui'],
+  ['embla-carousel-react', 'vendor-ui'],
+  ['react-resizable-panels', 'vendor-ui'],
+
+  ['lucide-react', 'vendor-foundation'],
+  ['class-variance-authority', 'vendor-foundation'],
+  ['clsx', 'vendor-foundation'],
+  ['tailwind-merge', 'vendor-foundation'],
+
+  ['date-fns', 'vendor-date'],
+]);
+
+/** Scope/prefix -> chunk, for families published as many small packages. */
+const SCOPE_CHUNKS: ReadonlyArray<readonly [string, string]> = [
+  ['@signpdf/', 'vendor-signpdf'],
+  // Radix stays ONE chunk on purpose. Leaving these packages unassigned so
+  // Rollup could place each one by usage looks like the tidier answer — the
+  // entry would pull only the primitives it needs — but it measures far worse:
+  // the eager graph goes 369 KB -> 554 KB gzipped across 13 preloads instead of
+  // 9, because the automatic algorithm splits primitives shared between the
+  // eager shell and lazy routes into several chunks the entry must then preload
+  // in full. Measured 2026-08-29; do not "fix" this without re-measuring.
+  ['@radix-ui/', 'vendor-ui'],
+  // Radix's popper primitives are the main consumer, so floating-ui rides with
+  // the UI chunk rather than forming a third chunk both of them would pull in.
+  ['@floating-ui/', 'vendor-ui'],
+  // The rich-text editor: admin publications only, and lazily routed.
+  ['@tiptap/', 'vendor-editor'],
+  ['prosemirror-', 'vendor-editor'],
+];
+
 function getManualChunk(id: string): string | undefined {
-  if (!id.includes('node_modules')) {
+  const packageName = packageNameFromId(id);
+  if (!packageName) {
     return undefined;
   }
 
-  if (id.includes('/react/') || id.includes('/react-dom/')) {
-    return 'vendor-react';
+  const exact = PACKAGE_CHUNKS.get(packageName);
+  if (exact) {
+    return exact;
   }
 
-  if (id.includes('/react-router/')) {
-    return 'vendor-router';
-  }
-
-  if (id.includes('/@supabase/supabase-js/') || id.includes('/@jsr/supabase__supabase-js/')) {
-    return 'vendor-supabase';
-  }
-
-  if (
-    id.includes('/react-hook-form/') ||
-    id.includes('/@hookform/resolvers/') ||
-    id.includes('/zod/')
-  ) {
-    return 'vendor-forms';
-  }
-
-  if (id.includes('/@tanstack/react-query/') || id.includes('/@tanstack/react-virtual/')) {
-    return 'vendor-data';
-  }
-
-  if (id.includes('/motion/') || id.includes('/sonner/')) {
-    return 'vendor-feedback';
-  }
-
-  if (id.includes('/@hello-pangea/dnd/')) {
-    return 'vendor-dnd';
-  }
-
-  if (id.includes('/react-quill-new/') || id.includes('/quill/')) {
-    return 'vendor-quill';
-  }
-
-  if (id.includes('/pdf-lib/')) {
-    return 'vendor-pdf-lib';
-  }
-
-  if (id.includes('/node-forge/') || id.includes('/@signpdf/')) {
-    return 'vendor-signpdf';
-  }
-
-  if (id.includes('/pdfjs-dist/')) {
-    return 'vendor-pdf-viewer';
-  }
-
-  if (id.includes('/docx/') || id.includes('/@zip.js/zip.js/')) {
-    return 'vendor-docx';
-  }
-
-  if (id.includes('/xlsx/') || id.includes('/@e965/xlsx/')) {
-    return 'vendor-xlsx';
-  }
-
-  if (id.includes('/recharts/')) {
-    return 'vendor-charts';
-  }
-
-  if (
-    id.includes('/@radix-ui/') ||
-    id.includes('/vaul/') ||
-    id.includes('/cmdk/') ||
-    id.includes('/input-otp/') ||
-    id.includes('/embla-carousel-react/') ||
-    id.includes('/react-resizable-panels/')
-  ) {
-    return 'vendor-ui';
-  }
-
-  if (
-    id.includes('/lucide-react/') ||
-    id.includes('/class-variance-authority/') ||
-    id.includes('/clsx/') ||
-    id.includes('/tailwind-merge/')
-  ) {
-    return 'vendor-foundation';
-  }
-
-  if (id.includes('/date-fns/')) {
-    return 'vendor-date';
+  for (const [prefix, chunk] of SCOPE_CHUNKS) {
+    if (packageName.startsWith(prefix)) {
+      return chunk;
+    }
   }
 
   return undefined;
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), figmaAssetResolver()],
+  plugins: [react(), tailwindcss(), figmaAssetResolver(), connectionHints()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {

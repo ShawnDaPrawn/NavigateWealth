@@ -3,28 +3,17 @@ import { logger } from '../../utils/logger';
 
 export function PerformanceOptimizer() {
   useEffect(() => {
-    // Add critical resource hints to document head
-    const addResourceHint = (rel: string, href: string, as?: string, type?: string) => {
-      // Check if hint already exists
-      const existing = document.querySelector(`link[rel="${rel}"][href="${href}"]`);
-      if (existing) return;
-
-      const link = document.createElement('link');
-      link.rel = rel;
-      link.href = href;
-      if (as) link.setAttribute('as', as);
-      if (type) link.type = type;
-      document.head.appendChild(link);
-    };
-
-    // DNS prefetch for external resources
-    addResourceHint('dns-prefetch', '//images.unsplash.com');
-    addResourceHint('dns-prefetch', '//via.placeholder.com');
-
-    // Preconnect to critical domains (includes crossorigin for CORS resources)
-    addResourceHint('preconnect', 'https://images.unsplash.com');
-    addResourceHint('preconnect', 'https://fonts.googleapis.com');
-    addResourceHint('preconnect', 'https://fonts.gstatic.com');
+    // Connection hints are NOT set up here. They used to be — five dns-prefetch
+    // and preconnect tags built in this effect — and they were wrong twice over.
+    // A hint created after React has mounted has already missed the handshake it
+    // was meant to overlap; and three of the four origins did not belong on a
+    // general page load: via.placeholder.com is never contacted at all, and the
+    // two font origins only by the e-sign signer's SignatureCanvas, which is
+    // behind a lazy route and requests the stylesheet itself. Meanwhile the one
+    // origin every load does hit on boot — Supabase, for the auth session — was
+    // not hinted. They now live in the static <head>, where the preload scanner
+    // sees them while the bundle is still in flight; see the `connection-hints`
+    // plugin in vite.config.ts and index.html.
 
     // Add viewport meta if not present
     if (!document.querySelector('meta[name="viewport"]')) {

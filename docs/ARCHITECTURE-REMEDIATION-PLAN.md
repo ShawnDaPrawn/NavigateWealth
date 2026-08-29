@@ -561,6 +561,46 @@ Severity is about blast radius, not effort. IDs are used in the plan.
   eager graph by a few bytes of hoisted runtime. Check `dist/index.html`'s
   modulepreload list after changing chunking — F6 now does this automatically.
 
+  **A16b — the same editor came back through the back door — FIXED
+  2026-08-29.** Dropping the named `vendor-tiptap` chunk (above) did not get
+  TipTap out of the eager graph; it moved it. `getManualChunk` asked
+  `id.includes('/react/')`, which is a substring test, not a package test, and
+  `node_modules/@tiptap/react/…` contains `/react/`. So `@tiptap/react` was
+  pinned into `vendor-react` — the one chunk every visitor must download,
+  because React is in it — and Rollup followed with its exclusive dependency
+  graph. A build measured on 2026-08-29 found `vendor-react` was 936 KB of
+  rendered module bytes, of which React and React-DOM were 141 KB and
+  prosemirror-view, prosemirror-model, prosemirror-transform, prosemirror-state,
+  prosemirror-commands and `@tiptap/core` were 795 KB. `/react-dom/` caught
+  `@floating-ui/react-dom` the same way.
+
+  A second, independent instance of the same class: `vendor-feedback` grouped
+  `motion` with `sonner`. `sonner` is eager — `AppProviders` mounts the app-wide
+  `<Toaster/>` — while all 11 `motion` importers sit behind lazy routes, so the
+  toast dragged 383 KB of animation library onto first paint.
+
+  **Fix.** Chunk rules now match the package name parsed out of the module id
+  rather than a path substring, so a rule for `react` means the `react` package.
+  `motion` moved to its own `vendor-motion`; TipTap/ProseMirror to
+  `vendor-editor`. No application code changed and `totalJsBytes` moved +0.3%,
+  so nothing was deleted or duplicated — the weight moved off the critical path.
+
+  | Metric                     | Before   | After        | Change     |
+  | -------------------------- | -------- | ------------ | ---------- |
+  | Eager entry (uncompressed) | 1.82 MB  | **1.44 MB**  | **−20.8%** |
+  | Eager entry (gzipped)      | 489.7 KB | **369.2 KB** | **−24.6%** |
+
+  **Lesson worth keeping, sharper than the first one:** a substring test over a
+  module path is not a package test, and the failure is silent — the chunk still
+  builds, still works, and only a size measurement tells you a marketing visitor
+  is downloading an admin editor. Also: grouping an eagerly-mounted component
+  with a lazily-used library in one manual chunk makes the whole chunk eager.
+
+  Measured and rejected in the same pass: letting Rollup place `@radix-ui/*`
+  automatically instead of grouping it into `vendor-ui`. It is worse — 369 KB →
+  554 KB gzipped across 13 preloads instead of 9. The note is in
+  `vite.config.ts` so it does not get re-tried.
+
 - **A8 — Backend is 8.6% test-file-covered and 0% coverage-measured, and
   deploys with only a non-blocking, credential-gated smoke test.** Combined with
   A2, ~136K lines ship to production essentially unverified.
