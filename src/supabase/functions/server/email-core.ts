@@ -334,13 +334,27 @@ export async function getFooterSettings(): Promise<EmailFooterSettings> {
   return DEFAULT_FOOTER_SETTINGS;
 }
 
-interface EmailParams {
+export interface EmailParams {
   to: string;
   cc?: string[]; // Added CC support
   subject: string;
   html: string;
   text?: string;
   attachments?: SendGridAttachment[];
+  /** Override the default from identity (e.g. newsletters@ for campaign mail). */
+  from?: { email: string; name?: string };
+  /** Reply-To identity, when it should differ from the from address. */
+  replyTo?: { email: string; name?: string };
+  /** Custom SMTP headers (List-Unsubscribe, Message-ID, …) for deliverability. */
+  headers?: Record<string, string>;
+  /** SendGrid custom_args echoed back in webhooks/analytics. */
+  customArgs?: Record<string, string>;
+  /**
+   * Throw on failure (with the SendGrid response text) instead of returning
+   * false. Lets callers classify provider errors (bounce vs transient) the way
+   * the legacy positional signature always allowed.
+   */
+  throwOnError?: boolean;
 }
 
 interface SendGridAttachment {
@@ -374,9 +388,10 @@ export async function sendEmail(
   text?: string,
   attachments?: SendGridAttachment[],
 ): Promise<boolean | void> {
+  const objectParams = typeof paramsOrTo === 'object' ? paramsOrTo : undefined;
   const sendgridApiKey = getSendGridApiKey();
   if (!sendgridApiKey) {
-    if (typeof paramsOrTo === 'object') return false;
+    if (objectParams && !objectParams.throwOnError) return false;
     throw new Error('SENDGRID_API_KEY not configured');
   }
 
@@ -433,8 +448,8 @@ export async function sendEmail(
     const body: Record<string, unknown> = {
       personalizations: [personalizations],
       from: {
-        email: FROM_EMAIL,
-        name: FROM_NAME,
+        email: objectParams?.from?.email || FROM_EMAIL,
+        name: objectParams?.from?.name || FROM_NAME,
       },
       content: [
         {
@@ -453,6 +468,21 @@ export async function sendEmail(
       body.attachments = finalAttachments;
     }
 
+    // Optional envelope extensions (campaign mail: custom reply-to,
+    // List-Unsubscribe headers, analytics custom_args).
+    if (objectParams?.replyTo) {
+      body.reply_to = {
+        email: objectParams.replyTo.email,
+        ...(objectParams.replyTo.name ? { name: objectParams.replyTo.name } : {}),
+      };
+    }
+    if (objectParams?.headers && Object.keys(objectParams.headers).length > 0) {
+      body.headers = objectParams.headers;
+    }
+    if (objectParams?.customArgs && Object.keys(objectParams.customArgs).length > 0) {
+      body.custom_args = objectParams.customArgs;
+    }
+
     const response = await fetch(SENDGRID_API_URL, {
       method: 'POST',
       headers: {
@@ -465,7 +495,7 @@ export async function sendEmail(
     if (!response.ok) {
       const error = await response.text();
       log.error('SendGrid error:', error);
-      if (typeof paramsOrTo === 'object') return false;
+      if (objectParams && !objectParams.throwOnError) return false;
       throw new Error(`SendGrid error: ${error}`);
     }
 
@@ -476,7 +506,7 @@ export async function sendEmail(
     if (typeof paramsOrTo === 'object') return true;
   } catch (error: unknown) {
     log.error('Failed to send email:', error);
-    if (typeof paramsOrTo === 'object') return false;
+    if (objectParams && !objectParams.throwOnError) return false;
     throw error;
   }
 }

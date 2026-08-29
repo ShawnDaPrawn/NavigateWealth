@@ -21,6 +21,7 @@ const ALL_MODULES: AdminModule[] = [
   'applications',
   'submissions',
   'communication',
+  'newsletter',
   'marketing',
   'reporting',
   'calendar',
