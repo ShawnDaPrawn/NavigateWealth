@@ -40,6 +40,17 @@ const TARGETS = [
 // Responsive widths to generate. Should cover mobile → desktop cards/hero.
 const WIDTHS = [480, 768, 1024, 1440];
 
+/** `--force` re-encodes even when an output is newer than its source. */
+const FORCE = process.argv.includes('--force');
+
+/**
+ * Widths for images that never render large. Mirrors LOGO_WIDTHS in
+ * src/utils/optimizedImages.ts; optimized-image-coverage.test.ts fails if the
+ * two drift, because it checks the files this script writes against the widths
+ * that module tells the browser to ask for.
+ */
+const LOGO_WIDTHS = [200, 400];
+
 /**
  * Discover extra variants to build FROM THE `imageKey` REFERENCES in the app,
  * not from figma imports.
@@ -50,14 +61,21 @@ const WIDTHS = [480, 768, 1024, 1440];
  *     seventeen files importing `figma:asset` are not named `*Page.tsx` --
  *     including `homePageData.tsx`, which carries the home page service cards.
  *  2. So it was widened to walk all of `src/`. That over-corrected: the walk
- *     finds every figma import, and 16 of them (the provider logos) are
- *     rendered through the ordinary <img> path and never referenced by an
+ *     finds every figma import, and 16 of them (the provider logos) were at the
+ *     time rendered through the ordinary <img> path and never referenced by an
  *     `imageKey`. Building them would have emitted 128 unreferenced files into
  *     `public/` and the manifest -- inflating exactly the deployed weight this
  *     work exists to reduce.
- *  3. What actually determines whether a variant is ever fetched is an
- *     `imageKey`, because `ResponsiveImage` is only reachable through one. So
- *     that is what is scanned for.
+ *  3. What actually determines whether a variant is ever fetched is a key,
+ *     because `ResponsiveImage` is only reachable through one. So that is what
+ *     is scanned for.
+ *
+ * Those 16 logos now go through `ResponsiveImage` too, so they are built -- but
+ * under `logoKey` rather than `imageKey`, at LOGO_WIDTHS. The distinction is
+ * what stops (2) recurring in a new form: a logo renders in a ~200 CSS px slot,
+ * so its 1024 and 1440 variants would be about 2.5 MB of files that no `sizes`
+ * attribute can select. Deployed and never fetched is the same waste whether or
+ * not a key points at it.
  *
  * This pairs with `src/utils/__tests__/optimized-image-coverage.test.ts`: the
  * test asserts every referenced key has its variants on disk, and this builds
@@ -85,15 +103,16 @@ async function collectSourceFiles(dir) {
   return out;
 }
 
-async function discoverFigmaAssetPngHashes() {
+async function discoverHashesFor(marker) {
   const files = await collectSourceFiles(path.join(PROJECT_ROOT, 'src'));
 
   const curated = new Set(TARGETS.map((t) => t.key ?? t.label));
   const hashes = new Set();
-  const re = /imageKey:\s*['"]([a-f0-9]{40})['"]/gi;
 
   for (const filePath of files) {
     const content = await fs.readFile(filePath, 'utf8');
+    // Fresh regex per file: /g lastIndex carries between exec loops otherwise.
+    const re = new RegExp(`${marker}:\\s*['"]([a-f0-9]{40})['"]`, 'gi');
     let m;
 
     while ((m = re.exec(content))) {
@@ -127,7 +146,30 @@ async function fileExists(p) {
   }
 }
 
-async function buildOne({ hash, label, key }) {
+/**
+ * True when `out` already exists and is at least as new as `src`.
+ *
+ * Without this the script re-encodes all ~86 targets on every run, which costs
+ * upwards of half an hour (one source is a 20 MB PNG, and AVIF at effort 6 is
+ * not fast). Worse, it rewrites every output: libvips encodes are not
+ * byte-identical across builds, so a run to add ONE image produced ~700
+ * modified binary files, burying the actual change. Adding a key should cost
+ * the encodes that key needs and nothing else.
+ *
+ * Pass --force to rebuild regardless. That is what you want after changing a
+ * quality setting or a width list, since neither is visible in an mtime.
+ */
+async function isUpToDate(out, src) {
+  if (FORCE) return false;
+  try {
+    const [o, i] = await Promise.all([fs.stat(out), fs.stat(src)]);
+    return o.size > 0 && o.mtimeMs >= i.mtimeMs;
+  } catch {
+    return false;
+  }
+}
+
+async function buildOne({ hash, label, key, widths = WIDTHS }) {
   const input = srcPathForHash(hash);
   if (!(await fileExists(input))) {
     throw new Error(`Missing source image: ${path.relative(PROJECT_ROOT, input)}`);
@@ -141,24 +183,31 @@ async function buildOne({ hash, label, key }) {
   };
 
   const image = sharp(input, { failOn: 'none' }).rotate();
+  let built = 0;
 
-  for (const width of WIDTHS) {
+  for (const width of widths) {
     const avifOut = path.join(OUT_DIR, `${base}-${width}.avif`);
     const webpOut = path.join(OUT_DIR, `${base}-${width}.webp`);
 
-    // AVIF: visually-lossless-ish, still much smaller than PNG.
-    await image
-      .clone()
-      .resize({ width, withoutEnlargement: true })
-      .avif({ quality: 65, effort: 6 })
-      .toFile(avifOut);
+    if (!(await isUpToDate(avifOut, input))) {
+      // AVIF: visually-lossless-ish, still much smaller than PNG.
+      await image
+        .clone()
+        .resize({ width, withoutEnlargement: true })
+        .avif({ quality: 65, effort: 6 })
+        .toFile(avifOut);
+      built += 1;
+    }
 
-    // WebP fallback for browsers without AVIF.
-    await image
-      .clone()
-      .resize({ width, withoutEnlargement: true })
-      .webp({ quality: 82 })
-      .toFile(webpOut);
+    if (!(await isUpToDate(webpOut, input))) {
+      // WebP fallback for browsers without AVIF.
+      await image
+        .clone()
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toFile(webpOut);
+      built += 1;
+    }
 
     outManifest.outputs.push(
       { format: 'avif', width, path: path.relative(PROJECT_ROOT, avifOut).replaceAll('\\', '/') },
@@ -166,33 +215,60 @@ async function buildOne({ hash, label, key }) {
     );
   }
 
-  return outManifest;
+  return { manifest: outManifest, built };
 }
 
 async function main() {
   await ensureDir(OUT_DIR);
 
-  const discovered = await discoverFigmaAssetPngHashes();
+  const discovered = await discoverHashesFor('imageKey');
   const discoveredTargets = discovered.map((hash) => ({ hash, label: `figma-${hash}`, key: hash }));
 
-  // De-duplicate by output key.
-  const allTargets = [...TARGETS, ...discoveredTargets];
+  const logos = await discoverHashesFor('logoKey');
+  const logoTargets = logos.map((hash) => ({
+    hash,
+    label: `logo-${hash}`,
+    key: hash,
+    widths: LOGO_WIDTHS,
+  }));
+
+  // De-duplicate by output key. Logos come last: if a hash is referenced by both
+  // an imageKey and a logoKey it needs the wider page set, so the first (wider)
+  // entry must win.
+  const allTargets = [...TARGETS, ...discoveredTargets, ...logoTargets];
   const seenKeys = new Set();
   const manifests = [];
+  let totalBuilt = 0;
 
   for (const t of allTargets) {
     const outKey = outBase(t.key ?? t.label);
     if (seenKeys.has(outKey)) continue;
     seenKeys.add(outKey);
 
-    console.log(`Optimizing ${t.label} (${t.hash})...`);
-    manifests.push(await buildOne(t));
+    const { manifest, built } = await buildOne(t);
+    manifests.push(manifest);
+    totalBuilt += built;
+    if (built > 0) {
+      console.log(
+        `Optimized ${t.label} (${t.hash}) — ${built} file(s) at ${(t.widths ?? WIDTHS).join('/')}`,
+      );
+    }
   }
 
   const manifestPath = path.join(OUT_DIR, 'manifest.json');
-  await fs.writeFile(manifestPath, JSON.stringify({ widths: WIDTHS, images: manifests }, null, 2));
+  await fs.writeFile(
+    manifestPath,
+    // Two width sets now, so no single top-level `widths` is true of every
+    // entry; each image's own `outputs` remain the authority.
+    JSON.stringify({ widths: WIDTHS, logoWidths: LOGO_WIDTHS, images: manifests }, null, 2),
+  );
 
   console.log(`Wrote ${path.relative(PROJECT_ROOT, manifestPath)}`);
+  console.log(
+    totalBuilt === 0
+      ? `All ${manifests.length} images already up to date (pass --force to re-encode).`
+      : `Encoded ${totalBuilt} file(s) across ${manifests.length} images.`,
+  );
 }
 
 main().catch((err) => {

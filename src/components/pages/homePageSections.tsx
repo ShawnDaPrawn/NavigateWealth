@@ -8,6 +8,7 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { OptimizedImage } from '../shared/OptimizedImage';
+import { ProviderLogo } from '../shared/ProviderLogo';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 // WORKAROUND: consultationImage reused as retirementPlanningImage — same asset hash.
@@ -225,16 +226,14 @@ export function ProvidersCarouselSection({
                         key={`${provider.name}-${actualIndex}`}
                         className="flex items-center justify-center py-6 sm:py-8 px-2 group cursor-default"
                       >
-                        <OptimizedImage
+                        <ProviderLogo
                           src={provider.logo}
                           alt={`${provider.name} logo`}
                           width={200}
                           height={100}
                           className="h-12 sm:h-14 lg:h-20 xl:h-24 w-full max-w-full object-contain opacity-85 group-hover:opacity-100 transition-all duration-300 group-hover:scale-105 high-quality-image filter grayscale-0"
                           loading="lazy"
-                          fetchpriority="auto"
                           sizes="(max-width: 640px) 120px, (max-width: 768px) 150px, (max-width: 1024px) 180px, 200px"
-                          decoding="async"
                         />
                       </div>
                     );

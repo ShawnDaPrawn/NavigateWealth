@@ -1,4 +1,8 @@
-import { getOptimizedFallbackUrl, getOptimizedSrcSet } from '../../utils/optimizedImages';
+import {
+  getOptimizedFallbackUrl,
+  getOptimizedSrcSet,
+  type OptimizedImageWidth,
+} from '../../utils/optimizedImages';
 
 type ResponsiveImageProps = {
   imageKey: string;
@@ -12,6 +16,12 @@ type ResponsiveImageProps = {
   height?: number;
   /** Optional fallback if optimized assets are missing. */
   fallbackSrc?: string;
+  /**
+   * Which generated widths to offer. Defaults to the page widths; pass
+   * `getLogoWidths()` for images that never render above ~200 CSS px, so the
+   * srcset does not advertise variants that were never built.
+   */
+  widths?: readonly OptimizedImageWidth[];
   onLoad?: () => void;
   onError?: () => void;
 };
@@ -27,15 +37,24 @@ export function ResponsiveImage({
   width,
   height,
   fallbackSrc,
+  widths,
   onLoad,
   onError,
 }: ResponsiveImageProps) {
-  const fallback = fallbackSrc ?? getOptimizedFallbackUrl(imageKey);
+  const fallback = fallbackSrc ?? getOptimizedFallbackUrl(imageKey, widths);
 
   return (
     <picture>
-      <source type="image/avif" srcSet={getOptimizedSrcSet(imageKey, 'avif')} sizes={sizes} />
-      <source type="image/webp" srcSet={getOptimizedSrcSet(imageKey, 'webp')} sizes={sizes} />
+      <source
+        type="image/avif"
+        srcSet={getOptimizedSrcSet(imageKey, 'avif', widths)}
+        sizes={sizes}
+      />
+      <source
+        type="image/webp"
+        srcSet={getOptimizedSrcSet(imageKey, 'webp', widths)}
+        sizes={sizes}
+      />
       <img
         src={fallback}
         alt={alt}

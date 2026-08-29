@@ -3,7 +3,7 @@
  * Designed to build trust and entice the user to complete the quote form.
  */
 
-import { OptimizedImage } from '../../../shared/OptimizedImage';
+import { ProviderLogo } from '../../../shared/ProviderLogo';
 import type { QuoteProvider } from '../types';
 
 interface ProviderStripProps {
@@ -42,7 +42,7 @@ export function ProviderStrip({
             title={provider.name}
           >
             {provider.logo ? (
-              <OptimizedImage
+              <ProviderLogo
                 src={provider.logo}
                 alt={provider.name}
                 width={120}
