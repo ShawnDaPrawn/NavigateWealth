@@ -78,8 +78,19 @@ function getManualChunk(id: string): string | undefined {
     return 'vendor-data';
   }
 
-  if (id.includes('/motion/') || id.includes('/sonner/')) {
-    return 'vendor-feedback';
+  // Split, not grouped. `sonner`'s toast() is imported by Footer.tsx and
+  // DashboardNavigation.tsx — both eager dependencies of MainLayout — so
+  // whatever chunk holds it is modulepreloaded on every route. `motion` is
+  // reachable only from eleven leaf components (the e-sign signer, two admin
+  // dialogs, ConsultationModal, ProductsServicesPage), none of them on the
+  // first-paint path. Sharing one chunk pulled the larger of the two into the
+  // critical path of every page to serve the smaller.
+  if (id.includes('/sonner/')) {
+    return 'vendor-toast';
+  }
+
+  if (id.includes('/motion/')) {
+    return 'vendor-motion';
   }
 
   if (id.includes('/@hello-pangea/dnd/')) {

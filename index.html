@@ -21,6 +21,13 @@
         }
       }, 5000);
     </script>
+    <!-- Marketing pages render photography straight from Unsplash (see the
+         hardcoded images.unsplash.com URLs across components/pages/). Warming
+         the connection here rather than from a component effect: a preconnect
+         added after React mounts has already missed the request it exists to
+         speed up. Drop this once those images are served same-origin. -->
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg?v=20260627" />
     <link rel="shortcut icon" type="image/png" href="%BASE_URL%favicon-32x32.png?v=20260627" />
     <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png?v=20260627" />
