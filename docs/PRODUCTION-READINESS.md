@@ -512,10 +512,28 @@ must be reviewed before they can count.
 
             STILL OPEN, and the reason this stays unchecked:
             - The admin surface **behind authentication** is still unprobed —
-              `/admin` renders its unauthenticated state here. Static
-              enumeration of every external origin in the admin modules found
-              only the three gaps above, two now fixed and one below, so the
-              residual risk is narrow rather than unknown.
+              `/admin` renders its unauthenticated state here. The residual
+              risk is now bounded by a test rather than by a one-time count:
+              `src/__tests__/csp-origin-coverage.test.ts` (2026-08-29) requires
+              every external origin in client source to be either declared in
+              the CSP or listed as not-browser-fetched with a stated reason. An
+              unclassified origin fails the suite, so a new subresource in an
+              admin module cannot arrive without a policy entry behind it.
+
+              The obvious implementation was tried and discarded, which is
+              worth recording because it looked like it worked. Detecting URLs
+              in fetch-like positions (`fetch(`, `src=`) found four origins and
+              MISSED YouTube, TradingView's `support_host` and the RSS feed
+              URLs — all three assign the URL to a variable first. It would
+              have reported coverage it did not have. Hence the inverted
+              burden: classify everything, explain the exceptions.
+
+              Limit, stated so it is not mistaken for proof: it reads static
+              strings. An origin assembled at runtime from parts is invisible
+              to it, so it is a lower bound on what the browser may request.
+              Verified to fail in all three directions — a new unclassified
+              origin, an origin dropped from the policy, and a stale list entry
+              whose origin left the code.
             - **Report delivery: the browser half is now proven, the network
               half cannot be.** The claim above — that headless Chromium emitted
               no reports even over TLS — was wrong, and was probably watching
@@ -548,9 +566,30 @@ must be reviewed before they can count.
               needs either an image proxy or accepting broken thumbnails in an
               internal admin widget. Cosmetic, admin-only, and a decision
               rather than a bug.
-            - `va.vercel-scripts.com` / `vitals.vercel-insights.com` were not
-              exercised: those endpoints exist only on Vercel's platform and
-              404 against a local static server.
+            - `va.vercel-scripts.com` / `vitals.vercel-insights.com` are
+              allowed but, on inspection, **not contacted in production**.
+              Reading the bundled `@vercel/analytics` and
+              `@vercel/speed-insights` code: `va.vercel-scripts.com` is the
+              DEBUG script URL, taken only when the SDK detects development;
+              production resolves to `/_vercel/insights/script.js` on our own
+              origin. `vitals.vercel-insights.com` does not appear in the built
+              bundle at all — current Speed Insights posts same-origin too.
+
+              Both are therefore allowances for traffic that does not happen,
+              and both would be covered by `'self'` in production. Left in
+              place rather than removed: they are harmless, this was read from
+              minified code rather than observed on the platform, and removing
+              a header allowance to silently break telemetry is a poor trade
+              for tidiness. Revisit if the policy is audited for minimality.
+
+              Correcting an earlier claim made in this session: the two SDKs
+              ARE mounted, at `src/App.tsx:191` and `:193` — `<Analytics>` even
+              carries a `beforeSend` that scrubs the signer token out of URLs
+              before they leave the browser. An earlier assessment said they
+              were installed but never rendered. That was inferred from the
+              Web Analytics API returning 404 without checking `App.tsx`. The
+              404 means the product is not ENABLED on the Vercel project, which
+              is a dashboard toggle, not a missing component.
       - [ ] **Backup** — `.github/workflows/weekly-backup.yml` added: pinned
             PG17 client, custom-format dump, and THREE integrity checks —
             a minimum size, a TOC parse (is this the right database, and a
