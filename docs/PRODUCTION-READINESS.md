@@ -622,9 +622,34 @@ must be reviewed before they can count.
             (`erasure_log:orphaned_test_profiles:2026-08-27`). What remains is
             a STANDING retention policy: nothing yet purges a closed profile
             once its retention window expires, so this recurs.
+
+            **RETENTION POLICY DECIDED 2026-08-29** (owner decision — this was
+            the blocker, and it was a policy question, not an engineering one):
+
+            - A **deleted** client profile is retained **7 years**.
+            - The clock runs from **relationship end**, not record creation.
+            - **Nothing is exported** before deletion.
+            - **Only deleted clients** are in scope. **Suspended** and
+              **inactive** clients are retained indefinitely and must never be
+              swept — they are live relationships in a different state, not
+              ended ones.
+
+            The last point is the one a purge job gets wrong by default:
+            "inactive" reads like a candidate for cleanup and is not. Whatever
+            enforces this has to key on the deletion event and the
+            relationship-end date, never on an activity timestamp.
       - [ ] **FAIS** — audit, `auth_log` and activity records are retained
             (correct), but retention is currently "forever" rather than the
             5-year obligation, and no job enforces the boundary.
+
+            The 2026-08-29 decision above sets 7 years from relationship end,
+            which clears the FAIS 5-year floor with room to spare, so a single
+            7-year boundary can serve both rather than maintaining two clocks.
+            Recorded as an assumption rather than a second decision: the owner
+            answered the client-profile question explicitly and the audit-record
+            horizon by implication. If audit records are meant to expire at 5
+            years while profiles keep 7, this needs splitting before the job is
+            written — flagged, not assumed away.
       - [ ] **Environment split** — OPEN, and consciously accepted rather than
             merely unfinished. A second Supabase project is not affordable right
             now (2026-08-27 decision), so this box stays unchecked on purpose
