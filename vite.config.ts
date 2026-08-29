@@ -39,9 +39,10 @@ function figmaAssetResolver(): Plugin {
  * browser's preload scanner while the bundle is still in flight, so DNS + TCP +
  * TLS to Supabase resolve in parallel with it rather than after it.
  *
- * The Supabase origin is resolved at build time from the same env vars as
- * `src/utils/supabase/info.tsx`, so a deployment pointed at a different project
- * preconnects to that project rather than to a hardcoded one.
+ * The origin is resolved at build time by the same rule the browser client
+ * resolves it by (see `resolveSupabaseUrl`), so a deployment pointed at another
+ * project, a custom domain or a local stack preconnects to what it will
+ * actually call rather than to a hardcoded production host.
  */
 function connectionHints(): Plugin {
   let supabaseOrigin: string | undefined;
@@ -50,11 +51,7 @@ function connectionHints(): Plugin {
     name: 'connection-hints',
     configResolved(config) {
       const env = config.env as Record<string, string | undefined>;
-      const projectId =
-        env.VITE_SUPABASE_PROJECT_ID ||
-        projectIdFromUrl(env.VITE_SUPABASE_URL) ||
-        FALLBACK_PROJECT_ID;
-      supabaseOrigin = `https://${projectId}.supabase.co`;
+      supabaseOrigin = originOf(resolveSupabaseUrl(env));
     },
     transformIndexHtml() {
       if (!supabaseOrigin) return [];
@@ -70,10 +67,35 @@ function connectionHints(): Plugin {
 }
 
 /**
- * Mirrors `src/utils/supabase/info.tsx`. That module cannot be imported here —
- * it reads `import.meta.env`, which only exists inside the bundle.
+ * Mirrors the `supabaseUrl` export of `src/utils/supabase/info.tsx` — the exact
+ * value `createClient` is handed, and so the origin the browser really opens.
+ * That module cannot be imported here: it reads `import.meta.env`, which only
+ * exists inside the bundle.
+ *
+ * Deriving this from `projectId` instead would be subtly wrong, because
+ * `projectId` prefers `VITE_SUPABASE_PROJECT_ID` while the client prefers
+ * `VITE_SUPABASE_URL`. Wherever the two disagree — a custom domain or a
+ * `localhost` stack, neither of which `projectIdFromUrl` can parse, or the two
+ * vars simply set inconsistently — the hint would warm a connection to one
+ * origin while every request paid full handshake to another: the cost of a
+ * preconnect with none of the benefit.
  */
 const FALLBACK_PROJECT_ID = 'vpjmdsltwrnpefzcgdmz';
+
+function resolveSupabaseUrl(env: Record<string, string | undefined>): string {
+  const projectId =
+    env.VITE_SUPABASE_PROJECT_ID || projectIdFromUrl(env.VITE_SUPABASE_URL) || FALLBACK_PROJECT_ID;
+  return env.VITE_SUPABASE_URL || `https://${projectId}.supabase.co`;
+}
+
+/** The origin to preconnect to, or undefined if the URL will not parse. */
+function originOf(value: string): string | undefined {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+}
 
 function projectIdFromUrl(value?: string): string | undefined {
   if (!value) return undefined;
