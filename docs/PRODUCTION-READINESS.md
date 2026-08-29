@@ -516,11 +516,31 @@ must be reviewed before they can count.
               enumeration of every external origin in the admin modules found
               only the three gaps above, two now fixed and one below, so the
               residual risk is narrow rather than unknown.
-            - **Report delivery was not verified end to end.** Headless
-              Chromium emitted no reports to the collector even over TLS on a
-              same-origin endpoint, so this could not be proven in CI. The
-              collector itself is covered by 18 tests. Confirm in production by
-              loading any page and reading `GET /csp-report` as an admin.
+            - **Report delivery: the browser half is now proven, the network
+              half cannot be.** The claim above — that headless Chromium emitted
+              no reports even over TLS — was wrong, and was probably watching
+              for the wrong content type. Re-run 2026-08-29 against Chromium 141
+              serving this exact report-only policy over TLS, provoked with an
+              inline script whose hash is not in `script-src`: the browser
+              emitted, as `application/reports+json` via the Reporting API, not
+              the legacy `application/csp-report`. That real payload is now a
+              fixture in the collector's contract tests, which matters because
+              the hand-written one carried four body fields where Chromium sends
+              ten. The parser's camelCase branch maps all of them correctly.
+
+              What is still unproven is only the network path from a browser to
+              the production collector, and it cannot be exercised from CI or
+              from an agent session: the environment's egress policy rejects
+              CONNECT to `*.supabase.co` (verified 2026-08-29). Also checked
+              directly against the database: **zero** rows under
+              `quality_issues:csp_violation:` today, which is ambiguous on its
+              own — a clean policy and a broken delivery path look identical
+              from the collector's side.
+
+              So this still needs an operator: load any production page, provoke
+              a violation, then read `GET /csp-report` as an admin. That is now
+              the only step left in this sub-item, and the two things it used to
+              be confounded with are settled.
             - Arbitrary RSS thumbnails **will** be blocked once enforced.
               `MarketNewsTab.tsx` renders `<img src>` from whatever URL a feed
               supplies, which no allowlist can express. The known fallback
