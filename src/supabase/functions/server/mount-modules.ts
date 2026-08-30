@@ -28,6 +28,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/advice-engine', () => import('./advice-engine-routes.ts'));
   lazy(app, '/applications', () => import('./client-applications-routes.ts'));
   lazy(app, '/newsletter', () => import('./newsletter.ts'));
+  lazy(app, '/newsletter-studio', () => import('./newsletter-studio-routes.ts'));
   lazy(app, '/consultation', () => import('./consultation.ts'));
   lazy(app, '/documents', () => import('./documents.ts'));
   lazy(app, '/ai-advisor', () => import('./ai-advisor.ts'));

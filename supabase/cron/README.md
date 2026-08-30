@@ -36,3 +36,22 @@ Use `supabase/cron/publications-jobs.sql` to create the production cron jobs for
 ## Smoke Test
 
 - Follow `supabase/cron/publications-smoke-test.md` after deploy and cron setup
+
+## Newsletter Studio Cron Setup
+
+Use `supabase/cron/newsletter-studio-jobs.sql` to create the campaign delivery job for the
+Newsletter Studio admin module.
+
+- `newsletter-studio-process-campaigns`
+  - Runs every 30 seconds.
+  - Promotes due scheduled campaigns and advances queued campaign delivery
+    independently of the admin browser (which acts only as a best-effort accelerator).
+  - Processes up to 3 campaigns and up to 4 send batches of 20 per run.
+- Before you run it, replace `__SUPABASE_ANON_KEY__` with the project anon key. No new
+  secret is needed: the job authenticates with the shared `x-nw-cron-auth` token already
+  provisioned in Vault by migration `20260825085409_cron_auth_vault_token.sql` and verified
+  server-side through `public.verify_cron_auth_token`.
+- Verify the same way as the publications jobs: confirm the job exists under
+  `Integrations -> Cron` and shows recent runs in `cron.job_run_details`, then confirm the
+  Edge Function logs show `POST /newsletter-studio/cron/process` returning 200 (remember
+  `cron.job_run_details` stays green even when the HTTP call fails).

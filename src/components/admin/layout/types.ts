@@ -14,6 +14,7 @@ export type AdminModule =
   | 'applications'
   | 'submissions'
   | 'communication'
+  | 'newsletter'
   | 'marketing'
   | 'reporting'
   | 'calendar'

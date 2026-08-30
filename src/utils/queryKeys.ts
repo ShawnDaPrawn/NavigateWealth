@@ -281,6 +281,17 @@ export const newsletterKeys = {
   all: ['newsletter'] as const,
   subscribers: () => [...newsletterKeys.all, 'subscribers'] as const,
   stats: () => [...newsletterKeys.all, 'stats'] as const,
+  // Newsletter Studio (campaign engine)
+  studioDashboard: () => [...newsletterKeys.all, 'studio', 'dashboard'] as const,
+  campaigns: (filters?: Record<string, unknown>) =>
+    [...newsletterKeys.all, 'studio', 'campaigns', filters ?? {}] as const,
+  campaign: (id: string) => [...newsletterKeys.all, 'studio', 'campaign', id] as const,
+  campaignStats: (id: string) =>
+    [...newsletterKeys.all, 'studio', 'campaign', id, 'stats'] as const,
+  campaignRecipients: (id: string, filters?: Record<string, unknown>) =>
+    [...newsletterKeys.all, 'studio', 'campaign', id, 'recipients', filters ?? {}] as const,
+  lists: () => [...newsletterKeys.all, 'studio', 'lists'] as const,
+  templates: () => [...newsletterKeys.all, 'studio', 'templates'] as const,
 } as const;
 
 // ============================================================================

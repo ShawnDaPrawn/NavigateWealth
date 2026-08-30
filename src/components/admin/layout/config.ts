@@ -19,6 +19,7 @@ import {
   Bot,
   ShieldAlert,
   Lock,
+  Newspaper,
 } from 'lucide-react';
 import { AdminModule, ModuleConfigItem, ModuleGroup } from './types';
 
@@ -37,6 +38,7 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   applications: { label: 'Applications', icon: ClipboardList },
   submissions: { label: 'Submissions', icon: Inbox },
   communication: { label: 'Communication', icon: Mail },
+  newsletter: { label: 'Newsletter Studio', icon: Newspaper },
   marketing: { label: 'Social & Marketing', icon: Share2 },
   reporting: { label: 'Reporting', icon: BarChart3 },
   calendar: { label: 'Calendar & Reminders', icon: Calendar },
@@ -73,7 +75,7 @@ export const moduleGroups: ModuleGroup[] = [
   },
   {
     label: 'Growth',
-    modules: ['communication', 'marketing', 'locked'],
+    modules: ['communication', 'newsletter', 'marketing', 'locked'],
   },
 ];
 

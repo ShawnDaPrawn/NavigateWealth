@@ -221,6 +221,7 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
     'applications',
     'submissions',
     'communication',
+    'newsletter',
     'marketing',
     'reporting',
     'calendar',
