@@ -180,6 +180,28 @@ describe('deliverTrackedNotificationRecord', () => {
     });
   });
 
+  it('stops on the first attempt for a sender-side fault, without burning the address', async () => {
+    publishArticle();
+    const record = await newRecord('reader@example.com');
+    // SES sandbox: rejects every send until AWS grants production access.
+    sendEmail.mockRejectedValue(
+      new Error(
+        'SES error (400): {"message":"Email address is not verified. The following identities failed the check in region EU-WEST-1: newsletters@navigatewealth.co"}',
+      ),
+    );
+
+    await expect(deliverTrackedNotificationRecord(ARTICLE, record)).rejects.toThrow(/not verified/);
+
+    // One call, not MAX_SEND_ATTEMPTS: no retry can clear our own config.
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    // Retryable, never terminal — the address is fine and must survive to be
+    // sent once the identity is verified.
+    expect(await trackingFor('reader@example.com')).toMatchObject({
+      deliveryStatus: 'failed_retryable',
+      attemptCount: 1,
+    });
+  });
+
   it('retries a transient provider error up to the attempt ceiling', async () => {
     publishArticle();
     const record = await newRecord('flaky@example.com');

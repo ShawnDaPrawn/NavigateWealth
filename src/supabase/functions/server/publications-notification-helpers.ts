@@ -45,6 +45,8 @@ import {
   nowIso,
   activeNotificationJobKey,
   classifyDeliveryFailure,
+  isSenderConfigurationFailure,
+  normalizeSendError,
   getArticleNotificationCampaignRecord,
   persistArticleNotificationCampaign,
   isReadyToAttemptTrackingRecord,
@@ -121,6 +123,14 @@ export async function deliverTrackedNotificationRecord(
       await markArticleEmailDeliverySent(record.token);
       return;
     } catch (error) {
+      // Our identity, credentials, account standing or quota. Retrying cannot
+      // clear it and it will fail identically for every remaining recipient,
+      // so stop the ladder here. Stays retryable, never terminal: the address
+      // is fine and must survive to be sent once the cause is fixed.
+      if (isSenderConfigurationFailure(error)) {
+        lastFailure = { message: normalizeSendError(error), disposition: 'retryable' };
+        break;
+      }
       lastFailure = classifyDeliveryFailure(error);
       const hasRetryRemaining = attempt < MAX_SEND_ATTEMPTS;
 
