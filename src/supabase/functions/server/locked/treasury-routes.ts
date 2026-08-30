@@ -130,7 +130,9 @@ app.get(
       await audit(c, 'treasury_bank_details_viewed', 'Treasury bank details viewed', {
         severity: 'warning',
         entityId: account.id,
-        metadata: { status: account.status },
+        // bankDetailsCount lets ops spot a silently-degraded reveal read from
+        // the audit trail alone (0 while the FA is open = the list call failed).
+        metadata: { status: account.status, bankDetailsCount: account.bankDetails.length },
       });
       return c.json({ success: true, account });
     } catch (error) {
