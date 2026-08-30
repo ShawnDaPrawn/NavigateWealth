@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { EsignField, FieldType, SignerFormData } from '../types';
 import { SIGNER_COLORS } from '../constants';
+import { computeDropPosition, defaultDimensionsFor } from './placementMath';
 
 // ── pdf.js bootstrap (npm import — avoids CSP issues with CDN script injection) ──
 import * as pdfjsLib from 'pdfjs-dist';
@@ -400,32 +401,36 @@ export function PDFViewer({
 
       try {
         const data = JSON.parse(e.dataTransfer.getData('application/json'));
-        const { fieldType, signerId } = data;
+        const { fieldType, signerId, metadata, defaultValue, required } = data;
 
         const target = e.currentTarget as HTMLDivElement;
         const rect = target.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        const { width, height } = defaultDimensionsFor(fieldType as string);
 
-        const dimensions: Record<string, { width: number; height: number }> = {
-          signature: { width: 200, height: 60 },
-          initials: { width: 80, height: 40 },
-          text: { width: 200, height: 40 },
-          date: { width: 120, height: 40 },
-          checkbox: { width: 24, height: 24 },
-        };
-
-        const { width, height } = dimensions[fieldType as FieldType] || { width: 150, height: 40 };
+        const pageInfo = pages.find((p) => p.pageNumber === page);
+        const { x, y } = computeDropPosition({
+          clientX: e.clientX,
+          clientY: e.clientY,
+          rect,
+          pageWidthPts: pageInfo?.width ?? 595,
+          pageHeightPts: pageInfo?.height ?? 842,
+          fieldWidthPts: width,
+          fieldHeightPts: height,
+          snapToGrid: snapToGrid && !e.altKey,
+          gridSize,
+        });
 
         const newField: Partial<EsignField> = {
           type: fieldType as FieldType,
           signer_id: signerId || selectedSignerId,
           page,
-          x: Math.max(0, Math.min(95, x)),
-          y: Math.max(0, Math.min(95, y)),
+          x,
+          y,
           width,
           height,
-          required: true,
+          required: typeof required === 'boolean' ? required : true,
+          ...(metadata && typeof metadata === 'object' ? { metadata } : {}),
+          ...(typeof defaultValue === 'string' ? { value: defaultValue } : {}),
         };
 
         onFieldPlace(newField);
@@ -433,7 +438,7 @@ export function PDFViewer({
         console.error('Failed to parse drop data:', err);
       }
     },
-    [readOnly, onFieldPlace, selectedSignerId],
+    [readOnly, onFieldPlace, selectedSignerId, pages, snapToGrid, gridSize],
   );
 
   // ── Field drag & resize ───────────────────────────────────────────
@@ -559,10 +564,15 @@ export function PDFViewer({
         onFieldUpdate(field.id, { x: nextX, y: nextY });
 
         // Bulk-move every other selected field by the SAME delta as the
-        // primary so the relative arrangement is preserved.
+        // primary so the relative arrangement is preserved. Companions get
+        // the same size-aware clamp as the primary (previously a bare
+        // Math.min(95, …) that disagreed with it at the page edges).
         bulkStarts.forEach((b) => {
-          const bx = Math.max(0, Math.min(95, b.x + finalDeltaX));
-          const by = Math.max(0, Math.min(95, b.y + finalDeltaY));
+          const companion = fields.find((f) => f.id === b.id);
+          const cWPct = companion ? (companion.width / pageWidthPts) * 100 : 5;
+          const cHPct = companion ? (companion.height / pageHeightPts) * 100 : 5;
+          const bx = Math.max(0, Math.min(100 - cWPct, b.x + finalDeltaX));
+          const by = Math.max(0, Math.min(100 - cHPct, b.y + finalDeltaY));
           onFieldUpdate(b.id, { x: bx, y: by });
         });
 
@@ -799,9 +809,16 @@ export function PDFViewer({
             </div>
           )}
 
-          {/* Content placeholder */}
+          {/* Content placeholder — prefer the human label a palette preset
+              or accepted candidate stored (e.g. "First name") over the raw
+              type name. */}
           <div className="w-full h-full flex items-center justify-center text-xs font-medium opacity-50 pointer-events-none">
-            {field.type === 'checkbox' ? '☐' : field.type.toUpperCase()}
+            {field.type === 'checkbox'
+              ? '☐'
+              : (
+                  ((field.metadata as { label?: string } | undefined)?.label ??
+                    field.type.replace('_', ' ')) as string
+                ).toUpperCase()}
           </div>
         </div>
       );

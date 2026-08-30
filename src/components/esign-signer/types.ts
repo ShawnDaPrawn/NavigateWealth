@@ -66,6 +66,8 @@ export interface SignerField {
     | 'checkbox'
     | 'auto_date'
     | 'dropdown'
+    | 'radio'
+    | 'note'
     | 'attachment';
   page: number;
   x: number;
@@ -88,6 +90,8 @@ export interface SignatureData {
     | 'checkbox'
     | 'auto_date'
     | 'dropdown'
+    | 'radio'
+    | 'note'
     | 'attachment';
   value: string;
 }

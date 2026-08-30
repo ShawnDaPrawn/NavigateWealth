@@ -331,7 +331,17 @@ export class PDFService {
           const h = field.height; // already in PDF points
           const y = height - (field.y / 100) * height - h;
 
-          if (field.type === 'text' || field.type === 'date') {
+          // Every type whose value is a plain string burns in as text.
+          // auto_date/dropdown values used to be silently skipped here, so
+          // they showed in the app but never reached the sealed PDF.
+          const textLike =
+            field.type === 'text' ||
+            field.type === 'date' ||
+            field.type === 'auto_date' ||
+            field.type === 'dropdown' ||
+            field.type === 'radio' ||
+            field.type === 'note';
+          if (textLike) {
             // Clamp font size to fit the field height, min 8, max 14
             const fontSize = Math.max(8, Math.min(14, h * 0.6));
             page.drawText(field.value, {

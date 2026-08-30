@@ -27,6 +27,7 @@ on:
       - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase-function.yml'
       - 'scripts/post-deploy-smoke.mjs'
+      - 'scripts/strip-edge-function.mjs'
 
 jobs:
   deploy:
@@ -41,6 +42,41 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      # The deploy uploads every module in the entrypoint's import graph as
+      # source, and Supabase hard-rejects above 5 MB of measured payload. The
+      # graph crossed that line on 2026-08-30. Stripping types and comments —
+      # exactly what the Deno runtime discards anyway — takes it from 4.44 MB
+      # to ~3.2 MB. See scripts/strip-edge-function.mjs for the full rationale.
+      #
+      # This rewrites the checkout in place. That is safe here and nowhere
+      # else: this job only deploys, and the runner's checkout is discarded
+      # afterwards. It must run AFTER checkout and BEFORE the deploy.
+      - name: Setup Node.js for payload strip
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Shrink Edge Function payload (strip types and comments)
+        env:
+          # The script refuses to rewrite a tree in place unless it is told the
+          # checkout is disposable. It is here — this job only deploys, and the
+          # runner discards the checkout afterwards. Stated explicitly rather
+          # than leaning on the runner's implicit CI=true.
+          STRIP_EDGE_ALLOW_DIRTY: '1'
+        run: |
+          # A rollback (`-f revision=<sha>`) checks out that revision's tree,
+          # which for anything before this change has no strip script. Skip
+          # rather than die on MODULE_NOT_FOUND: the rollback lever must keep
+          # working, and a revision predating the strip is one that fit under
+          # the 5 MB limit unstripped — that is why it was green enough to roll
+          # back to.
+          if [ ! -f ./scripts/strip-edge-function.mjs ]; then
+            echo "No strip script in this revision — deploying its payload as-is."
+            exit 0
+          fi
+          npm install --no-save --no-audit --no-fund esbuild@0.25.12
+          node ./scripts/strip-edge-function.mjs
 
       - name: Deploy make-server-91ed8379
         env:

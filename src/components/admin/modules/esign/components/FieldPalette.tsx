@@ -13,7 +13,10 @@ import {
   FileSignature,
   Type,
   Calendar,
+  CalendarCheck,
   CheckSquare,
+  CircleDot,
+  List,
   GripVertical,
   Trash2,
   Eye,
@@ -21,6 +24,16 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  User,
+  Mail,
+  Phone,
+  Hash,
+  Fingerprint,
+  Building2,
+  Briefcase,
+  Paperclip,
+  StickyNote,
+  Sigma,
 } from 'lucide-react';
 import type { EsignField, FieldType, SignerFormData } from '../types';
 import { SIGNER_COLORS } from '../constants';
@@ -36,50 +49,251 @@ interface FieldPaletteProps {
 }
 
 interface FieldTemplate {
+  /** Unique palette key — several templates share a `type` (presets). */
+  key: string;
   type: FieldType;
   icon: React.ElementType;
   label: string;
   description: string;
   color: string;
+  /**
+   * Metadata stamped onto the created field: prefill binding
+   * (`{ prefill: { token } }`), validation format, dropdown/radio options,
+   * calculated-field config, and the human `label`.
+   */
+  metadata?: Record<string, unknown>;
+  /** Initial `value` for the created field (e.g. a Note's text). */
+  defaultValue?: string;
+  /** `required` default for the created field (true when omitted). */
+  required?: boolean;
 }
 
-const FIELD_TEMPLATES: FieldTemplate[] = [
+interface FieldTemplateGroup {
+  title: string;
+  templates: FieldTemplate[];
+}
+
+/**
+ * The palette, grouped the way DocuSign groups its field list: signing
+ * marks, client-identity fields (pre-filled from the CRM where a token
+ * exists), then generic inputs. Identity presets are `text` fields carrying
+ * a `metadata.prefill` binding, so the value fills itself from the selected
+ * client at send time — the sender never types the client's own details.
+ */
+const FIELD_TEMPLATE_GROUPS: FieldTemplateGroup[] = [
   {
-    type: 'signature',
-    icon: FileSignature,
-    label: 'Signature',
-    description: 'Full legal signature',
-    color: '#6d28d9', // purple
+    title: 'Signing',
+    templates: [
+      {
+        key: 'signature',
+        type: 'signature',
+        icon: FileSignature,
+        label: 'Signature',
+        description: 'Full legal signature',
+        color: '#6d28d9', // purple
+      },
+      {
+        key: 'initials',
+        type: 'initials',
+        icon: Type,
+        label: 'Initials',
+        description: 'Initial field',
+        color: '#0891b2', // cyan
+      },
+      {
+        key: 'auto_date',
+        type: 'auto_date',
+        icon: CalendarCheck,
+        label: 'Date signed',
+        description: 'Stamped automatically when signing',
+        color: '#ea580c', // orange
+      },
+      {
+        key: 'date',
+        type: 'date',
+        icon: Calendar,
+        label: 'Date',
+        description: 'Signer picks a date',
+        color: '#ea580c', // orange
+      },
+    ],
   },
   {
-    type: 'initials',
-    icon: Type,
-    label: 'Initials',
-    description: 'Initial field',
-    color: '#0891b2', // cyan
+    title: 'Client details (auto-filled)',
+    templates: [
+      {
+        key: 'full_name',
+        type: 'text',
+        icon: User,
+        label: 'Full name',
+        description: 'Pre-filled from the client record',
+        color: '#2563eb', // blue
+        metadata: { label: 'Full name', prefill: { token: 'client.name', locked: false } },
+      },
+      {
+        key: 'first_name',
+        type: 'text',
+        icon: User,
+        label: 'First name',
+        description: 'Pre-filled from the client record',
+        color: '#2563eb',
+        metadata: {
+          label: 'First name',
+          prefill: { token: 'key:profile_first_name', locked: false },
+        },
+      },
+      {
+        key: 'last_name',
+        type: 'text',
+        icon: User,
+        label: 'Last name',
+        description: 'Pre-filled from the client record',
+        color: '#2563eb',
+        metadata: {
+          label: 'Last name',
+          prefill: { token: 'key:profile_last_name', locked: false },
+        },
+      },
+      {
+        key: 'email',
+        type: 'text',
+        icon: Mail,
+        label: 'Email',
+        description: 'Pre-filled; validated as an email address',
+        color: '#2563eb',
+        metadata: {
+          label: 'Email',
+          prefill: { token: 'client.email', locked: false },
+          format: 'email',
+        },
+      },
+      {
+        key: 'phone',
+        type: 'text',
+        icon: Phone,
+        label: 'Phone',
+        description: 'Pre-filled; validated as a phone number',
+        color: '#2563eb',
+        metadata: {
+          label: 'Phone',
+          prefill: { token: 'client.phone', locked: false },
+          format: 'phone',
+        },
+      },
+      {
+        key: 'id_number',
+        type: 'text',
+        icon: Fingerprint,
+        label: 'ID number',
+        description: 'Pre-filled; SA-ID checksum validated',
+        color: '#2563eb',
+        metadata: {
+          label: 'ID number',
+          prefill: { token: 'client.id_number', locked: false },
+          format: 'sa_id',
+        },
+      },
+      {
+        key: 'company',
+        type: 'text',
+        icon: Building2,
+        label: 'Company',
+        description: 'Company / organisation',
+        color: '#2563eb',
+        metadata: { label: 'Company' },
+      },
+      {
+        key: 'job_title',
+        type: 'text',
+        icon: Briefcase,
+        label: 'Job title',
+        description: 'Signer’s role or designation',
+        color: '#2563eb',
+        metadata: { label: 'Job title' },
+      },
+    ],
   },
   {
-    type: 'text',
-    icon: Type,
-    label: 'Text',
-    description: 'Text input field',
-    color: '#059669', // emerald
-  },
-  {
-    type: 'date',
-    icon: Calendar,
-    label: 'Date',
-    description: 'Date picker',
-    color: '#ea580c', // orange
-  },
-  {
-    type: 'checkbox',
-    icon: CheckSquare,
-    label: 'Checkbox',
-    description: 'Yes/No checkbox',
-    color: '#dc2626', // red
+    title: 'Inputs',
+    templates: [
+      {
+        key: 'text',
+        type: 'text',
+        icon: Type,
+        label: 'Text',
+        description: 'Free-text input',
+        color: '#059669', // emerald
+      },
+      {
+        key: 'number',
+        type: 'text',
+        icon: Hash,
+        label: 'Number',
+        description: 'Digits only',
+        color: '#059669',
+        metadata: { label: 'Number', format: 'number' },
+      },
+      {
+        key: 'checkbox',
+        type: 'checkbox',
+        icon: CheckSquare,
+        label: 'Checkbox',
+        description: 'Yes/No checkbox',
+        color: '#dc2626', // red
+      },
+      {
+        key: 'radio',
+        type: 'radio',
+        icon: CircleDot,
+        label: 'Radio buttons',
+        description: 'Choose one option',
+        color: '#dc2626',
+        metadata: { label: 'Radio', options: ['Option 1', 'Option 2'] },
+      },
+      {
+        key: 'dropdown',
+        type: 'dropdown',
+        icon: List,
+        label: 'Dropdown',
+        description: 'Choose from a list',
+        color: '#dc2626',
+        metadata: { label: 'Dropdown', options: ['Option 1', 'Option 2'] },
+      },
+      {
+        key: 'attachment',
+        type: 'attachment',
+        icon: Paperclip,
+        label: 'Attachment',
+        description: 'Signer uploads a file',
+        color: '#7c3aed', // violet
+      },
+      {
+        key: 'note',
+        type: 'note',
+        icon: StickyNote,
+        label: 'Note',
+        description: 'Read-only instructions for the signer',
+        color: '#a16207', // amber-700
+        metadata: { label: 'Note' },
+        defaultValue: 'Note for the signer — edit this text in Properties.',
+        required: false,
+      },
+      {
+        key: 'formula',
+        type: 'text',
+        icon: Sigma,
+        label: 'Formula',
+        description: 'Calculated from other fields',
+        color: '#059669',
+        metadata: { label: 'Formula', calculated: { formula: '', precision: 2 } },
+        required: false,
+      },
+    ],
   },
 ];
+
+/** Flat list — used for icon lookups in the placed-fields list. */
+const FIELD_TEMPLATES: FieldTemplate[] = FIELD_TEMPLATE_GROUPS.flatMap((g) => g.templates);
 
 export function FieldPalette({
   signers,
@@ -115,6 +329,11 @@ export function FieldPalette({
       JSON.stringify({
         fieldType: template.type,
         signerId: selectedSignerId,
+        // Preset payload — prefill binding, format, options, label, note
+        // text — carried through PDFViewer.handleDrop onto the new field.
+        metadata: template.metadata,
+        defaultValue: template.defaultValue,
+        required: template.required,
       }),
     );
   };
@@ -186,46 +405,57 @@ export function FieldPalette({
               </div>
             )}
 
-            {/* Field Type Grid */}
-            <div className="grid grid-cols-1 gap-2">
-              {FIELD_TEMPLATES.map((template) => {
-                const Icon = template.icon;
-                return (
-                  <div
-                    key={template.type}
-                    draggable={!disabled && !!selectedSignerId}
-                    onDragStart={(e) => handleDragStart(e, template)}
-                    onClick={() => setSelectedFieldType(template.type)}
-                    className={`
-                      p-3 border-2 rounded-lg cursor-move transition-all
-                      ${
-                        disabled || !selectedSignerId
-                          ? 'opacity-50 cursor-not-allowed'
-                          : 'hover:border-purple-500 hover:bg-purple-50'
-                      }
-                      ${
-                        selectedFieldType === template.type
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="p-2 rounded"
-                        style={{ backgroundColor: `${template.color}20` }}
-                      >
-                        <Icon className="h-4 w-4" style={{ color: template.color }} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{template.label}</p>
-                        <p className="text-xs text-muted-foreground">{template.description}</p>
-                      </div>
-                      <GripVertical className="h-4 w-4 text-gray-400" />
-                    </div>
+            {/* Field Type Grid — grouped like DocuSign's field list */}
+            <div className="space-y-3">
+              {FIELD_TEMPLATE_GROUPS.map((group) => (
+                <div key={group.title} className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-0.5">
+                    {group.title}
+                  </p>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {group.templates.map((template) => {
+                      const Icon = template.icon;
+                      return (
+                        <div
+                          key={template.key}
+                          draggable={!disabled && !!selectedSignerId}
+                          onDragStart={(e) => handleDragStart(e, template)}
+                          onClick={() => setSelectedFieldType(template.type)}
+                          className={`
+                            p-2 border-2 rounded-lg cursor-move transition-all
+                            ${
+                              disabled || !selectedSignerId
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:border-purple-500 hover:bg-purple-50'
+                            }
+                            ${
+                              selectedFieldType === template.type
+                                ? 'border-purple-500 bg-purple-50'
+                                : 'border-gray-200'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="p-1.5 rounded"
+                              style={{ backgroundColor: `${template.color}20` }}
+                            >
+                              <Icon className="h-4 w-4" style={{ color: template.color }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{template.label}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {template.description}
+                              </p>
+                            </div>
+                            <GripVertical className="h-4 w-4 text-gray-400 shrink-0" />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             {/* Instructions */}
@@ -291,7 +521,13 @@ export function FieldPalette({
 
                       {/* Fields for this signer */}
                       {signerFields.map((field) => {
-                        const template = FIELD_TEMPLATES.find((t) => t.type === field.type);
+                        // Prefer the canonical template (key === type) —
+                        // several presets share type 'text', and a plain
+                        // Text field must not pick up the first preset's
+                        // "Full name" label/icon.
+                        const template =
+                          FIELD_TEMPLATES.find((t) => t.key === field.type) ??
+                          FIELD_TEMPLATES.find((t) => t.type === field.type);
                         const Icon = template?.icon || FileSignature;
 
                         return (
@@ -306,6 +542,7 @@ export function FieldPalette({
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
                                 {(field as { label?: string }).label ||
+                                  (field.metadata as { label?: string } | undefined)?.label ||
                                   template?.label ||
                                   field.type}
                               </p>

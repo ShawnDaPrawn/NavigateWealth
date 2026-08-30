@@ -32,7 +32,20 @@ export const DraftSignersSchema = z.object({
 
 export const EsignFieldSchema = z
   .object({
-    type: z.enum(['signature', 'initials', 'date', 'text', 'checkbox', 'radio', 'dropdown']),
+    type: z.enum([
+      'signature',
+      'initials',
+      'date',
+      'text',
+      'checkbox',
+      'radio',
+      'dropdown',
+      // Previously creatable in the studio but rejected here on save —
+      // the enum now matches the canonical EsignField union.
+      'attachment',
+      'auto_date',
+      'note',
+    ]),
     label: z.string().max(200).optional(),
     required: z.boolean().optional().default(true),
     page: z.number().int().nonnegative(),

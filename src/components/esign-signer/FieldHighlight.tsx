@@ -24,6 +24,7 @@ import {
   Check,
   CalendarCheck,
   ChevronDown as ChevronDownIcon,
+  CircleDot,
 } from 'lucide-react';
 
 interface FieldHighlightProps {
@@ -37,6 +38,8 @@ interface FieldHighlightProps {
       | 'checkbox'
       | 'auto_date'
       | 'dropdown'
+      | 'radio'
+      | 'note'
       | 'attachment';
     page: number;
     x: number;
@@ -48,6 +51,14 @@ interface FieldHighlightProps {
     metadata?: Record<string, unknown>;
   };
   zoom: number;
+  /**
+   * Real page size in PDF points. Field width/height are stored in points,
+   * so converting them to a percentage of the page needs the actual page
+   * size — the old hardcoded A4 (595×842) made fields render at the wrong
+   * size on any non-A4 page. Defaults keep A4 behaviour when unknown.
+   */
+  pageWidthPts?: number;
+  pageHeightPts?: number;
   isFilled: boolean;
   /** True only for the single next-required field for this signer.
    *  Drives the pulse animation so the signer always has exactly one
@@ -73,6 +84,8 @@ interface FieldHighlightProps {
 
 export function FieldHighlight({
   field,
+  pageWidthPts = 595,
+  pageHeightPts = 842,
   isFilled,
   isNextRequired = false,
   inactive = false,
@@ -142,6 +155,8 @@ export function FieldHighlight({
         return <CalendarCheck className="h-3 w-3" />;
       case 'dropdown':
         return <ChevronDownIcon className="h-3 w-3" />;
+      case 'radio':
+        return <CircleDot className="h-3 w-3" />;
       // P3.5 — attachment fields use a distinct paperclip-ish glyph
       // so signers immediately understand they need to upload a file
       // rather than type something. We reuse the lucide `Type` icon
@@ -192,6 +207,8 @@ export function FieldHighlight({
         return 'Auto';
       case 'dropdown':
         return 'Select';
+      case 'radio':
+        return 'Choose';
       case 'attachment':
         return 'Attach';
       default:
@@ -199,11 +216,12 @@ export function FieldHighlight({
     }
   };
 
-  // Convert field coordinates to percentage-based positioning
+  // Convert field coordinates to percentage-based positioning.
+  // x/y are already percent; width/height are PDF points of the real page.
   const leftPercent = field.x;
   const topPercent = field.y;
-  const widthPercent = (field.width / 595) * 100;
-  const heightPercent = (field.height / 842) * 100;
+  const widthPercent = (field.width / pageWidthPts) * 100;
+  const heightPercent = (field.height / pageHeightPts) * 100;
 
   // Determine what kind of preview to render in the filled state.
   const isImagePreview =
@@ -219,12 +237,36 @@ export function FieldHighlight({
     (field.type === 'text' ||
       field.type === 'date' ||
       field.type === 'auto_date' ||
-      field.type === 'dropdown');
+      field.type === 'dropdown' ||
+      field.type === 'radio');
 
   const isCheckboxFilled = isFilled && field.type === 'checkbox';
 
   // Only the single next-required field pulses, and only when interactive.
   const shouldPulse = !isFilled && !locked && !inactive && isNextRequired;
+
+  // ── Note render branch ──
+  // A note is sender-authored read-only text: never an input, never
+  // required, no click action. Rendered as quiet informational copy so it
+  // reads as part of the document rather than a thing to tap.
+  if (field.type === 'note') {
+    return (
+      <div
+        className="absolute rounded-md border border-amber-300/70 bg-amber-50/80 px-2 py-1 overflow-hidden pointer-events-none z-10"
+        style={{
+          left: `${leftPercent}%`,
+          top: `${topPercent}%`,
+          width: `${widthPercent}%`,
+          height: `${heightPercent}%`,
+          minHeight: '24px',
+        }}
+        role="note"
+        aria-label="Note from the sender"
+      >
+        <span className="text-xs text-amber-900 leading-snug">{filledValue ?? ''}</span>
+      </div>
+    );
+  }
 
   // ── Inline editor render branch (P2.5 1.9) ──
   // Render an in-place input instead of a button when:
@@ -232,8 +274,6 @@ export function FieldHighlight({
   //   • the signer has activated it (single tap), or
   //   • the field is empty and is the next-required field (auto-focus).
   if (inlineEligible && (isEditing || (!isFilled && isNextRequired))) {
-    const widthPercent = (field.width / 595) * 100;
-    const heightPercent = (field.height / 842) * 100;
     return (
       <div
         className={`absolute rounded-md border-2 ${field.required ? 'border-amber-500 bg-amber-50' : 'border-gray-400 bg-white'} shadow-sm pointer-events-auto z-20 flex items-center px-1`}
