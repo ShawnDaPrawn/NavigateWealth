@@ -105,6 +105,14 @@ function main() {
         minifySyntax: false,
         minifyWhitespace: false,
         legalComments: 'none',
+        // Leave JSX exactly as written. esbuild's default would rewrite it to
+        // `React.createElement(...)`, and there is no React in a Deno edge
+        // function — the module would import fine and only die when the JSX
+        // ran, so a boot smoke would not catch it. `preserve` keeps this
+        // transform to what it claims: types and comments out, semantics
+        // untouched. No edge-reachable file contains JSX today; this is here so
+        // that if one ever does, it stays as valid as it was before stripping.
+        jsx: 'preserve',
       });
       writeFileSync(file, code);
       after += Buffer.byteLength(code);
