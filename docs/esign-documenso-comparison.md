@@ -40,9 +40,9 @@ but for this product it would be a _sideways-to-backwards_ move:
    embedding raises AGPL-3.0 obligations that their commercial licence exists
    to relieve.
 4. **The real gaps in the in-house platform are ours to fix either way** and
-   are already tracked (dead expiry cron, P12 key material in KV, OTP
-   brute-force hardening, token-in-URL). Migrating wouldn't make them go away;
-   several would reappear as migration work.
+   are already tracked (P12 key material in KV, OTP brute-force hardening,
+   token-in-URL, half-wired dropdown/radio). Migrating wouldn't make them go
+   away; several would reappear as migration work.
 
 **Where Documenso is genuinely ahead**, treat as a backlog to borrow from, not
 a reason to switch — see [§7](#7-what-to-borrow-from-documenso).
@@ -71,17 +71,17 @@ Legend: ✅ has it · 🟡 partial/caveat · ❌ not offered.
 
 ### 2.1 Envelope lifecycle
 
-| Capability                            | In-house                                                                                                                                                           | Documenso                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| Draft → send → sign → complete flow   | ✅ 10-state machine incl. transient `completing` (`esign-types.ts`)                                                                                                | ✅                                          |
-| Sequential and parallel signing order | ✅ server-enforced (`esign-signer-guards.ts`), changeable post-send                                                                                                | ✅ signer ordering                          |
-| Reminders                             | ✅ fixed _and_ escalating tiers (default day 3/7/10/13) + pre-expiry urgent tier, per-envelope config, bulk remind (`esign-reminder-service.ts`)                   | 🟡 basic re-send/reminder                   |
-| Expiry                                | ✅ `expiryDays` (default 30) + sweeps — **but the external pg_cron job is dead (HTTP 401)**; only the in-process interval runs (`docs/PRODUCTION-READINESS.md:50`) | ✅ document expiry                          |
-| Recall / void                         | ✅ recall with token rotation + recall emails; guarded delete state machine; bulk void                                                                             | ✅ void/delete                              |
-| Recovery bin (soft delete)            | ✅ 90-day window, restore/hard-delete (`esign-recovery-bin.ts`)                                                                                                    | ❌                                          |
-| Multi-document envelopes              | ✅ ordered doc refs, page-level manifests (reorder/rotate/delete) (`esign-pdf-transform.ts`)                                                                       | 🟡 one PDF per document; combine beforehand |
-| Packet workflows (chained envelopes)  | ✅ template chains that auto-advance on completion (`esign-packet-service.ts`)                                                                                     | ❌                                          |
-| Completion pipeline                   | ✅ background queue with retries + dead-letter; seal → certificate → hash → distribute (`esign-completion-queue.ts`, `esign-workflow.ts`)                          | ✅ (internally handled)                     |
+| Capability                            | In-house                                                                                                                                                                                                 | Documenso                                   |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Draft → send → sign → complete flow   | ✅ 10-state machine incl. transient `completing` (`esign-types.ts`)                                                                                                                                      | ✅                                          |
+| Sequential and parallel signing order | ✅ server-enforced (`esign-signer-guards.ts`), changeable post-send                                                                                                                                      | ✅ signer ordering                          |
+| Reminders                             | ✅ fixed _and_ escalating tiers (default day 3/7/10/13) + pre-expiry urgent tier, per-envelope config, bulk remind (`esign-reminder-service.ts`)                                                         | 🟡 basic re-send/reminder                   |
+| Expiry                                | ✅ `expiryDays` (default 30) + 6-hourly sweeps — in-process interval plus the pg_cron backstop (repaired 2026-08-26 after the green-when-broken cron incident; `docs/PRODUCTION-READINESS.md` Section 0) | ✅ document expiry                          |
+| Recall / void                         | ✅ recall with token rotation + recall emails; guarded delete state machine; bulk void                                                                                                                   | ✅ void/delete                              |
+| Recovery bin (soft delete)            | ✅ 90-day window, restore/hard-delete (`esign-recovery-bin.ts`)                                                                                                                                          | ❌                                          |
+| Multi-document envelopes              | ✅ ordered doc refs, page-level manifests (reorder/rotate/delete) (`esign-pdf-transform.ts`)                                                                                                             | 🟡 one PDF per document; combine beforehand |
+| Packet workflows (chained envelopes)  | ✅ template chains that auto-advance on completion (`esign-packet-service.ts`)                                                                                                                           | ❌                                          |
+| Completion pipeline                   | ✅ background queue with retries + dead-letter; seal → certificate → hash → distribute (`esign-completion-queue.ts`, `esign-workflow.ts`)                                                                | ✅ (internally handled)                     |
 
 ### 2.2 Fields, templates, bulk
 
@@ -128,14 +128,14 @@ Legend: ✅ has it · 🟡 partial/caveat · ❌ not offered.
 
 ### 2.5 Compliance posture (South Africa)
 
-| Aspect                                             | In-house                                                                                                   | Documenso                                                                                              |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| ECTA framing                                       | ✅ explicit: consent registry wording, certificate integrity block, signer dialogs all cite Act 25 of 2002 | ❌ no ECTA-specific claims; SES-compliant under ESIGN/UETA/eIDAS                                       |
-| ECTA classification                                | Standard electronic signature (s13(3))                                                                     | Standard electronic signature                                                                          |
-| ECTA _advanced_ e-signature (s37, SAAA-accredited) | ❌                                                                                                         | ❌                                                                                                     |
-| POPIA                                              | ✅ SMS opt-in never inferred (s69 justification in code); data stays in the existing Supabase project      | 🟡 cloud = offshore processing (s72 cross-border transfer analysis needed); self-host keeps data local |
-| Retention policies                                 | ✅ per-firm, three windows + artifact deletion, daily sweep (`esign-retention-service.ts`)                 | ❌ (manual deletion)                                                                                   |
-| SA identity handling                               | ✅ SA-ID checksum validation + masking (`signingIdentity.ts`)                                              | ❌                                                                                                     |
+| Aspect                                             | In-house                                                                                                                                                                                                                             | Documenso                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| ECTA framing                                       | ✅ explicit: consent registry wording, certificate integrity block, signer dialogs all cite Act 25 of 2002                                                                                                                           | ❌ no ECTA-specific claims; SES-compliant under ESIGN/UETA/eIDAS                                          |
+| ECTA classification                                | Standard electronic signature (s13(3))                                                                                                                                                                                               | Standard electronic signature                                                                             |
+| ECTA _advanced_ e-signature (s37, SAAA-accredited) | ❌                                                                                                                                                                                                                                   | ❌                                                                                                        |
+| POPIA                                              | 🟡 SMS opt-in never inferred (s69 justification in code) — but the Supabase database lives in `us-east-2`, so signer data is already processed offshore and needs the same s72 transfer analysis (`src/utils/api/functionRegion.ts`) | 🟡 cloud adds a second offshore processor (fresh s72 analysis); self-host keeps data wherever you host it |
+| Retention policies                                 | ✅ per-firm, three windows + artifact deletion, daily sweep (`esign-retention-service.ts`)                                                                                                                                           | ❌ (manual deletion)                                                                                      |
+| SA identity handling                               | ✅ SA-ID checksum validation + masking (`signingIdentity.ts`)                                                                                                                                                                        | ❌                                                                                                        |
 
 Note for both systems: ECTA excludes certain documents from electronic signing
 entirely (wills, alienation of immovable property, long leases of land, bills
@@ -158,14 +158,14 @@ starting point.
 
 ### 2.7 Operations & observability
 
-| Capability            | In-house                                                                                                                                        | Documenso                                                    |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Metrics               | ✅ funnel (sent→opened→started→completed), time-to-sign by template, stuck list, 30-day throughput (`esign-metrics-service.ts`) — KV-scan based | 🟡 basic dashboard                                           |
-| Synthetic probes      | ✅ hourly hermetic probe with SLO + history ring (`esign-synthetic-probe.ts`)                                                                   | ❌ (self-host: bring your own)                               |
-| Stuck-envelope alerts | ✅ email + in-app + `envelope.stuck` webhook, cooldown (`esign-stuck-alert-service.ts`)                                                         | ❌                                                           |
-| Rate limiting         | ✅ six tuned buckets (OTP send/verify, signer access/submit, sender bulk/mutate) (`esign-rate-limit.ts`)                                        | 🟡 platform-level                                            |
-| Scheduled jobs        | ✅ 9 in-process interval jobs + `/maintenance/*` + `/cron/*` endpoints — fragile on Edge (runs only while warm; external cron currently dead)   | ✅ background-job provider (proper worker model)             |
-| Who fixes it at 2am   | Us                                                                                                                                              | Us (self-host) or Documenso (cloud, with SLAs on Enterprise) |
+| Capability            | In-house                                                                                                                                               | Documenso                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Metrics               | ✅ funnel (sent→opened→started→completed), time-to-sign by template, stuck list, 30-day throughput (`esign-metrics-service.ts`) — KV-scan based        | 🟡 basic dashboard                                           |
+| Synthetic probes      | ✅ hourly hermetic probe with SLO + history ring (`esign-synthetic-probe.ts`)                                                                          | ❌ (self-host: bring your own)                               |
+| Stuck-envelope alerts | ✅ email + in-app + `envelope.stuck` webhook, cooldown (`esign-stuck-alert-service.ts`)                                                                | ❌                                                           |
+| Rate limiting         | ✅ six tuned buckets (OTP send/verify, signer access/submit, sender bulk/mutate) (`esign-rate-limit.ts`)                                               | 🟡 platform-level                                            |
+| Scheduled jobs        | ✅ 9 in-process interval jobs + `/maintenance/*` + `/cron/*` endpoints — runs only while an instance is warm, backstopped by the repaired pg_cron jobs | ✅ background-job provider (proper worker model)             |
+| Who fixes it at 2am   | Us                                                                                                                                                     | Us (self-host) or Documenso (cloud, with SLAs on Enterprise) |
 
 ### 2.8 Branding, notifications, i18n
 
@@ -198,7 +198,8 @@ starting point.
 5. **Direct links.** Public reusable signing links — useful for mandate/consent
    forms; we have no equivalent.
 6. **Worker model.** Real background-job providers vs our `setInterval`-on-warm
-   -instance scheduler (whose external cron backup is currently dead).
+   -instance scheduler with pg_cron as backstop — workable, but the 2026-08
+   cron incident showed how quietly that path can rot while reporting green.
 7. **Many hands.** A funded team and community continuously ship fixes;
    our module only improves when we spend our own engineering time.
 
@@ -231,13 +232,15 @@ Not a build-vs-buy on features alone — the switching costs are structural:
 - **New infrastructure class.** Self-hosted Documenso = containerised Node +
   PostgreSQL + SMTP + storage + background workers. We currently operate zero
   containers; everything is Supabase Edge + Vercel. That's new deploy
-  pipelines, patching, monitoring, and a second database to back up (our
-  weekly verified-backup process covers the Supabase project only).
+  pipelines, patching, monitoring, and a second database to back up (the
+  weekly backup + DR-rehearsal workflow — itself still awaiting its first
+  successful live run — covers the Supabase project only).
 - **Licensing.** AGPL-3.0 is fine for internal use, but embedding the signing
   experience inside our commercial product is precisely the case their
   commercial Platform licence ($250/mo cloud, or paid self-host licence)
-  exists for. Cloud also means signer PII processed offshore → POPIA s72
-  transfer mechanics.
+  exists for. Cloud also adds a second offshore processor of signer PII →
+  fresh POPIA s72 transfer analysis (our own stack already processes data in
+  `us-east-2` — see §2.5).
 - **Rebuild the integration layer.** EsignTab, prefill, packet flows,
   campaign bulk-send against communication groups, firm-scoped metrics — all
   would be re-implemented over Documenso's API/webhooks/embeds.
@@ -274,9 +277,10 @@ Concrete, already-tracked-or-new backlog items, in rough priority order:
    Do this together with the outstanding S4/H-5 operator step (get the P12 and
    passphrase out of KV via `NW_ESIGN_REQUIRE_ENV_CERT=true`, rotate the
    KV-resident key).
-2. **Fix the dead expiry cron** (`docs/PRODUCTION-READINESS.md:50`) — their
-   worker model is a reminder that our scheduler only runs while an instance
-   is warm.
+2. **A real background-job runner for the sweeps.** Today they ride
+   `setInterval` on a warm Edge instance with pg_cron as backstop — repaired
+   2026-08-26 after running green-while-broken for months; Documenso's
+   swappable job-provider model is the direction to move toward.
 3. **Finish dropdown/radio** (and consider name/email/number field types) —
    closes the A19 remainder.
 4. **Envelope-create API from raw upload**, then an embedded/direct-link
