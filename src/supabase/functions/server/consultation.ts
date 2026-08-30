@@ -21,6 +21,7 @@ import * as kv from './kv_store.tsx';
 import {
   createPlainTextEmail,
   createEmailTemplate,
+  isEmailConfigured,
   sendEmail,
   getFooterSettings,
 } from './email-service.ts';
@@ -301,10 +302,8 @@ app.post(
     }
 
     // --- Send emails (fire-and-forget, do not block the response) ----------------
-    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-
-    if (!sendgridApiKey) {
-      log.error('SENDGRID_API_KEY not configured. Emails will not be sent.');
+    if (!isEmailConfigured()) {
+      log.error('Email provider not configured. Emails will not be sent.');
       return c.json(
         {
           error: 'Email service not configured',
@@ -513,58 +512,21 @@ app.post(
 
     // --- Send emails --------------------------------------------------------------
     const emailResults = await Promise.allSettled([
-      // Client confirmation email via direct SendGrid (custom from address)
-      fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sendgridApiKey}`,
-        },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [{ email }],
-              subject: 'Consultation Request Received — Navigate Wealth',
-            },
-          ],
-          from: {
-            email: 'noreply@navigatewealth.co',
-            name: 'Navigate Wealth',
-          },
-          reply_to: {
-            email: 'info@navigatewealth.co',
-            name: 'Navigate Wealth',
-          },
-          content: [
-            {
-              type: 'text/plain',
-              value: createPlainTextEmail(`Consultation Request Received\n\n${clientContent}`),
-            },
-            {
-              type: 'text/html',
-              value: createEmailTemplate(clientContent, {
-                title: 'Consultation Request Received',
-                buttonUrl: 'https://www.navigatewealth.co/resources',
-                buttonLabel: 'Browse Resources',
-                footerSettings,
-              }),
-            },
-          ],
-          custom_args: {
-            type: 'consultation_confirmation',
-            source: 'website_form',
-          },
+      // Client confirmation email — the custom from address rides
+      // email-core's EmailParams, so this follows the provider switch too.
+      sendEmail({
+        to: email,
+        subject: 'Consultation Request Received — Navigate Wealth',
+        text: createPlainTextEmail(`Consultation Request Received\n\n${clientContent}`),
+        html: createEmailTemplate(clientContent, {
+          title: 'Consultation Request Received',
+          buttonUrl: 'https://www.navigatewealth.co/resources',
+          buttonLabel: 'Browse Resources',
+          footerSettings,
         }),
-      }).then(async (res) => {
-        if (!res.ok) {
-          const errorText = await res.text();
-          log.error('Client consultation email SendGrid error', {
-            status: res.status,
-            error: errorText,
-          });
-          return false;
-        }
-        return true;
+        from: { email: 'noreply@navigatewealth.co', name: 'Navigate Wealth' },
+        replyTo: { email: 'info@navigatewealth.co', name: 'Navigate Wealth' },
+        customArgs: { type: 'consultation_confirmation', source: 'website_form' },
       }),
 
       // Admin notification email via shared sendEmail (no custom headers needed)

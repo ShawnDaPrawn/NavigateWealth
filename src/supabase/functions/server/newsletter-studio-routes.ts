@@ -9,11 +9,13 @@
  */
 
 import { Hono } from 'npm:hono';
+import type { Context, Next } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
 import { requireCronAuth } from './cron-auth.ts';
 import { asyncHandler } from './error.middleware.ts';
-import { body, validateBody, validateOptionalBody } from './validate.ts';
+import { body, query, validateBody, validateOptionalBody, validateQuery } from './validate.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { PermissionsService } from './personnel-permissions-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   cancelCampaign,
@@ -34,6 +36,7 @@ import {
   resumeCampaign,
   scheduleCampaign,
   sendCampaignNow,
+  unsubscribeByRecipientToken,
   updateCampaign,
   updateTemplate,
 } from './newsletter-studio-service.ts';
@@ -45,6 +48,7 @@ import {
   CreateNewsletterCampaignSchema,
   NewsletterTemplateSchema,
   NewsletterTrackClickSchema,
+  OneClickUnsubscribeQuerySchema,
   ProcessNewsletterCampaignsSchema,
   ScheduleNewsletterCampaignSchema,
   TestSendNewsletterCampaignSchema,
@@ -53,6 +57,31 @@ import {
 
 const app = new Hono();
 const log = createModuleLogger('newsletter-studio-routes');
+
+/**
+ * Server-side capability gate layered on requireAdmin, mirroring the
+ * requireCapability precedent in client-management-personnel-routes.ts —
+ * the client-side canDo() check is UX only (Guidelines §6.1) and must be
+ * enforced here too (review finding). Super admins always pass; other
+ * admins need the capability granted in their stored permission set (an
+ * empty capability list means full access within a granted module).
+ * Reads the context requireAdmin populated — no extra auth resolution.
+ */
+function requireNewsletterCapability(capability: 'create' | 'send' | 'delete') {
+  return async (c: Context, next: Next) => {
+    const user = c.get('user') as { email?: string } | undefined;
+    if (user?.email && PermissionsService.isSuperAdmin(user.email)) return next();
+
+    const userId = (c.get('userId') as string) || '';
+    if (userId && (await PermissionsService.hasCapability(userId, 'newsletter', capability))) {
+      return next();
+    }
+    return c.json(
+      { error: `Forbidden: missing '${capability}' capability on the newsletter module` },
+      403,
+    );
+  };
+}
 
 function audit(
   c: { get: (key: string) => unknown },
@@ -104,6 +133,7 @@ app.get(
 app.post(
   '/campaigns',
   requireAdmin,
+  requireNewsletterCapability('create'),
   validateBody(CreateNewsletterCampaignSchema),
   asyncHandler(async (c) => {
     const input = body(c, CreateNewsletterCampaignSchema);
@@ -126,6 +156,7 @@ app.get(
 app.put(
   '/campaigns/:id',
   requireAdmin,
+  requireNewsletterCapability('create'),
   validateBody(UpdateNewsletterCampaignSchema),
   asyncHandler(async (c) => {
     const patch = body(c, UpdateNewsletterCampaignSchema);
@@ -138,6 +169,7 @@ app.put(
 app.delete(
   '/campaigns/:id',
   requireAdmin,
+  requireNewsletterCapability('delete'),
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     await deleteCampaign(id);
@@ -149,6 +181,7 @@ app.delete(
 app.post(
   '/campaigns/:id/duplicate',
   requireAdmin,
+  requireNewsletterCapability('create'),
   asyncHandler(async (c) => {
     const adminUserId = (c.get('userId') as string) || 'unknown';
     const campaign = await duplicateCampaign(c.req.param('id')!, adminUserId);
@@ -160,6 +193,7 @@ app.post(
 app.post(
   '/campaigns/:id/test',
   requireAdmin,
+  requireNewsletterCapability('send'),
   validateBody(TestSendNewsletterCampaignSchema),
   asyncHandler(async (c) => {
     const { emails } = body(c, TestSendNewsletterCampaignSchema);
@@ -175,6 +209,7 @@ app.post(
 app.post(
   '/campaigns/:id/schedule',
   requireAdmin,
+  requireNewsletterCapability('send'),
   validateBody(ScheduleNewsletterCampaignSchema),
   asyncHandler(async (c) => {
     const { scheduledAt } = body(c, ScheduleNewsletterCampaignSchema);
@@ -189,6 +224,7 @@ app.post(
 app.post(
   '/campaigns/:id/send-now',
   requireAdmin,
+  requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await sendCampaignNow(c.req.param('id')!);
     audit(
@@ -212,6 +248,7 @@ app.post(
 app.post(
   '/campaigns/:id/pause',
   requireAdmin,
+  requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await pauseCampaign(c.req.param('id')!);
     audit(c, 'newsletter_campaign_paused', 'Newsletter campaign paused', campaign.id);
@@ -222,6 +259,7 @@ app.post(
 app.post(
   '/campaigns/:id/resume',
   requireAdmin,
+  requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await resumeCampaign(c.req.param('id')!);
     audit(c, 'newsletter_campaign_resumed', 'Newsletter campaign resumed', campaign.id);
@@ -235,6 +273,7 @@ app.post(
 app.post(
   '/campaigns/:id/cancel',
   requireAdmin,
+  requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await cancelCampaign(c.req.param('id')!);
     audit(c, 'newsletter_campaign_cancelled', 'Newsletter campaign cancelled', campaign.id);
@@ -289,6 +328,7 @@ app.get(
 app.post(
   '/templates',
   requireAdmin,
+  requireNewsletterCapability('create'),
   validateBody(NewsletterTemplateSchema),
   asyncHandler(async (c) => {
     const input = body(c, NewsletterTemplateSchema);
@@ -302,6 +342,7 @@ app.post(
 app.put(
   '/templates/:id',
   requireAdmin,
+  requireNewsletterCapability('create'),
   validateBody(NewsletterTemplateSchema),
   asyncHandler(async (c) => {
     const input = body(c, NewsletterTemplateSchema);
@@ -314,6 +355,7 @@ app.put(
 app.delete(
   '/templates/:id',
   requireAdmin,
+  requireNewsletterCapability('delete'),
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     await deleteTemplate(id);
@@ -328,6 +370,7 @@ app.delete(
 app.post(
   '/process',
   requireAdmin,
+  requireNewsletterCapability('send'),
   validateOptionalBody(ProcessNewsletterCampaignsSchema),
   asyncHandler(async (c) => {
     const options = body(c, ProcessNewsletterCampaignsSchema);
@@ -364,6 +407,26 @@ app.post(
     const outcome = await recordCampaignClick(campaignId, token, linkId);
     if (!outcome) return c.json({ error: 'Not found' }, 404);
     return c.json({ success: true, url: outcome.url });
+  }),
+);
+
+/**
+ * RFC 8058 one-click unsubscribe target — the URL carried in every campaign's
+ * List-Unsubscribe header. Mailbox providers POST here on the recipient's
+ * behalf with a form-encoded body and no session, so identification rides in
+ * query params and no body is read. Public by design (classified); the
+ * opaque per-recipient token is the capability; unknown ids 404 with no
+ * detail. The human-facing footer link stays on the SPA unsubscribe page.
+ */
+app.post(
+  '/unsubscribe-oneclick',
+  validateQuery(OneClickUnsubscribeQuerySchema),
+  asyncHandler(async (c) => {
+    const { c: campaignId, t: token } = query(c, OneClickUnsubscribeQuerySchema);
+    const outcome = await unsubscribeByRecipientToken(campaignId, token);
+    if (!outcome) return c.json({ error: 'Not found' }, 404);
+    log.info('One-click unsubscribe processed', { campaignId });
+    return c.json({ success: true });
   }),
 );
 

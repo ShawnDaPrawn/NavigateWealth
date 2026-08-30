@@ -23,10 +23,10 @@
 
 import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail } from './email-service.ts';
+import { listSubscribers } from './newsletter-service.ts';
 import { chunkArray, classifyDeliveryFailure, sleep } from './publications-notification-state.ts';
 import {
   buildCampaignEmailHeaders,
-  buildUnsubscribeUrl,
   NEWSLETTER_DEFAULT_FROM_NAME,
   NEWSLETTER_FROM_EMAIL,
   NEWSLETTER_REPLY_TO,
@@ -116,6 +116,68 @@ async function releaseCampaignLease(
   });
 }
 
+/**
+ * Release built on the LATEST stored record, never this tick's copy: an
+ * admin pause/cancel written while the processor held the lease must
+ * survive the write (review finding). An admin-written non-active status
+ * always wins over `fallbackStatus`.
+ */
+async function releaseCampaignSafely(
+  campaign: NewsletterCampaign,
+  fallbackStatus: NewsletterCampaign['status'],
+  updates: Partial<NewsletterCampaign> = {},
+): Promise<void> {
+  const latest = (await newsletterCampaigns.get(campaign.id)) ?? campaign;
+  const adminHalted = !ACTIVE_CAMPAIGN_STATUSES.includes(latest.status);
+  await releaseCampaignLease(latest, {
+    ...updates,
+    status: adminHalted ? latest.status : fallbackStatus,
+  });
+}
+
+/**
+ * Persist delivery counters onto the LATEST record for the same reason.
+ * Returns the merged record and whether the admin halted the campaign while
+ * the batch was in flight — the caller must stop delivering when it did.
+ */
+async function persistProgress(
+  campaign: NewsletterCampaign,
+  counters: Pick<
+    NewsletterCampaign,
+    'sentCount' | 'failedCount' | 'processedCount' | 'progressPercent'
+  >,
+): Promise<{ campaign: NewsletterCampaign; halted: boolean }> {
+  const latest = (await newsletterCampaigns.get(campaign.id)) ?? campaign;
+  const halted = !ACTIVE_CAMPAIGN_STATUSES.includes(latest.status);
+  const merged: NewsletterCampaign = {
+    ...latest,
+    ...counters,
+    lastProgressAt: nowIso(),
+    updatedAt: nowIso(),
+    lockId: halted ? null : campaign.lockId,
+    lockExpiresAt: halted ? null : new Date(Date.now() + CAMPAIGN_LOCK_TTL_MS).toISOString(),
+  };
+  await newsletterCampaigns.put(campaign.id, merged);
+  return { campaign: merged, halted };
+}
+
+/**
+ * Emails that have explicitly opted out, re-read once per tick so an
+ * unsubscribe landing after the audience was frozen still suppresses
+ * delivery on every later batch (POPIA — review finding).
+ */
+async function loadOptedOutEmails(): Promise<Set<string>> {
+  try {
+    const subscribers = await listSubscribers();
+    return new Set(subscribers.filter((s) => s.active === false).map((s) => s.email.toLowerCase()));
+  } catch (error) {
+    log.warn('Opt-out re-check scan failed — proceeding with queue-time exclusions only', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return new Set();
+  }
+}
+
 // ── Recipient readiness ──────────────────────────────────────────────────────
 
 type Readiness = 'ready' | 'wait' | 'done';
@@ -147,9 +209,31 @@ async function deliverToRecipient(
   campaign: NewsletterCampaign,
   item: NewsletterAudienceItem,
   existing: NewsletterCampaignRecipient | null,
+  optedOut: Set<string>,
 ): Promise<'sent' | 'retryable' | 'terminal'> {
   const recordId = recipientRecordId(campaign.id, item.token);
   const priorAttempts = existing?.attemptCount ?? 0;
+
+  // POPIA: an opt-out recorded after the audience was frozen still wins.
+  if (optedOut.has(item.email.toLowerCase())) {
+    await newsletterRecipients.put(recordId, {
+      ...(existing ?? {
+        campaignId: campaign.id,
+        token: item.token,
+        email: item.email,
+        name: item.name,
+        firstName: item.firstName,
+        attemptCount: 0,
+        lastAttemptedAt: null,
+        sentAt: null,
+        openedAt: null,
+        clicks: [],
+      }),
+      deliveryStatus: 'failed_terminal',
+      deliveryError: 'Recipient opted out after the campaign was queued — skipped (POPIA)',
+    });
+    return 'terminal';
+  }
 
   // Give-up cap: a retryable failure that has exhausted its budget goes
   // terminal without another provider call.
@@ -185,7 +269,6 @@ async function deliverToRecipient(
   };
   await newsletterRecipients.put(recordId, attemptStarted);
 
-  const unsubscribeUrl = buildUnsubscribeUrl(item.email);
   const { html, text } = await renderCampaignEmail({ campaign, recipient: item });
 
   let lastFailure: { message: string; disposition: 'retryable' | 'terminal' } | null = null;
@@ -201,7 +284,7 @@ async function deliverToRecipient(
           name: campaign.fromName || NEWSLETTER_DEFAULT_FROM_NAME,
         },
         replyTo: NEWSLETTER_REPLY_TO,
-        headers: buildCampaignEmailHeaders(campaign.id, item.token, unsubscribeUrl),
+        headers: buildCampaignEmailHeaders(campaign.id, item.token),
         customArgs: { type: 'newsletter_campaign', campaign_id: campaign.id },
         throwOnError: true,
       });
@@ -241,12 +324,12 @@ interface CampaignTickTally {
 async function processOneCampaign(
   leased: NewsletterCampaign,
   maxBatches: number,
+  optedOut: Set<string>,
 ): Promise<CampaignTickTally> {
   const tally: CampaignTickTally = { sent: 0, failed: 0, finished: false };
   const audience = await newsletterAudiences.get(leased.id);
   if (!audience || audience.items.length === 0) {
-    await releaseCampaignLease(leased, {
-      status: 'finished',
+    await releaseCampaignSafely(leased, 'finished', {
       completedAt: nowIso(),
       progressPercent: 100,
       lastError: 'Audience record missing — nothing to deliver',
@@ -295,14 +378,16 @@ async function processOneCampaign(
       } else {
         // Everything left is inside a retry-delay window — release and let
         // the next tick pick it up.
-        await releaseCampaignLease(campaign, { status: 'queued' });
+        await releaseCampaignSafely(campaign, 'queued');
       }
       return tally;
     }
 
     const batch = readyIndexes.slice(0, DELIVERY_BATCH_SIZE);
     const outcomes = await Promise.allSettled(
-      batch.map((index) => deliverToRecipient(campaign, audience.items[index], records[index])),
+      batch.map((index) =>
+        deliverToRecipient(campaign, audience.items[index], records[index], optedOut),
+      ),
     );
     for (const outcome of outcomes) {
       if (outcome.status === 'fulfilled') {
@@ -319,8 +404,7 @@ async function processOneCampaign(
     }
 
     const processed = sentCount + failedCount;
-    campaign = {
-      ...campaign,
+    const progress = await persistProgress(campaign, {
       sentCount,
       failedCount,
       processedCount: processed,
@@ -328,11 +412,11 @@ async function processOneCampaign(
         audience.items.length > 0
           ? Math.round((processed / audience.items.length) * 1000) / 10
           : 100,
-      lastProgressAt: nowIso(),
-      updatedAt: nowIso(),
-      lockExpiresAt: new Date(Date.now() + CAMPAIGN_LOCK_TTL_MS).toISOString(),
-    };
-    await newsletterCampaigns.put(campaign.id, campaign);
+    });
+    campaign = progress.campaign;
+    // An admin paused/cancelled while the batch was in flight — their status
+    // stands (persistProgress kept it) and delivery stops here.
+    if (progress.halted) return tally;
 
     if (processed >= audience.items.length) {
       await finalizeCampaign(campaign, audience.items.length, sentCount, failedCount);
@@ -342,7 +426,7 @@ async function processOneCampaign(
   }
 
   // Batch budget spent — hand back to the queue for the next tick.
-  await releaseCampaignLease(campaign, { status: 'queued' });
+  await releaseCampaignSafely(campaign, 'queued');
   return tally;
 }
 
@@ -353,8 +437,11 @@ async function finalizeCampaign(
   failedCount: number,
 ): Promise<void> {
   const timestamp = nowIso();
-  await releaseCampaignLease(campaign, {
-    status: 'finished',
+  // A cancel that landed during the final batch stands; everything else
+  // that reached this point is genuinely finished.
+  const latest = (await newsletterCampaigns.get(campaign.id)) ?? campaign;
+  await releaseCampaignLease(latest, {
+    status: latest.status === 'cancelled' ? 'cancelled' : 'finished',
     sentCount,
     failedCount,
     processedCount: sentCount + failedCount,
@@ -502,12 +589,15 @@ export async function processNewsletterCampaigns(
       .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
       .slice(0, maxCampaigns);
 
+    // One opt-out scan per tick — every batch this tick honours it.
+    const optedOut = active.length > 0 ? await loadOptedOutEmails() : new Set<string>();
+
     for (const campaign of active) {
       const leased = await acquireCampaignLease(campaign);
       if (!leased) continue;
       result.campaignsProcessed++;
       try {
-        const tally = await processOneCampaign(leased, maxBatches);
+        const tally = await processOneCampaign(leased, maxBatches, optedOut);
         result.sent += tally.sent;
         result.failed += tally.failed;
         if (tally.finished) result.finished.push(campaign.id);
@@ -515,9 +605,7 @@ export async function processNewsletterCampaigns(
         const message = error instanceof Error ? error.message : String(error);
         result.errors.push(`campaign ${campaign.id}: ${message}`);
         log.error('Campaign tick failed', { campaignId: campaign.id, message });
-        await releaseCampaignLease(leased, { status: 'queued', lastError: message }).catch(
-          () => {},
-        );
+        await releaseCampaignSafely(leased, 'queued', { lastError: message }).catch(() => {});
       }
     }
 

@@ -68,9 +68,11 @@ function Metric({
 }
 
 export function DashboardTab({
+  canCreate,
   onOpenCampaign,
   onNewCampaign,
 }: {
+  canCreate: boolean;
   onOpenCampaign: (campaign: NewsletterCampaign) => void;
   onNewCampaign: () => void;
 }) {
@@ -117,9 +119,11 @@ export function DashboardTab({
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Recent campaigns</CardTitle>
-            <Button size="sm" onClick={onNewCampaign}>
-              New campaign
-            </Button>
+            {canCreate ? (
+              <Button size="sm" onClick={onNewCampaign}>
+                New campaign
+              </Button>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-3">
             {recentCampaigns.length === 0 ? (

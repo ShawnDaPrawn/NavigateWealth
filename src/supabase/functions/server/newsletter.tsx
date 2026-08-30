@@ -3,8 +3,10 @@
  *
  * §4.2 — Route files are thin dispatchers: parse input, call service, return response.
  *
- * Public flows (subscribe/confirm/unsubscribe) retain inline email logic
- * due to tight SendGrid coupling — extraction deferred (documented below).
+ * Public flows (subscribe/confirm/unsubscribe) send through the shared
+ * email-core transport — the custom from address and deliverability headers
+ * ride EmailParams, so these emails follow the NW_EMAIL_PROVIDER switch
+ * (SendGrid/SES) like every other platform email.
  *
  * Admin flows delegate to newsletter-service.ts.
  */
@@ -62,11 +64,6 @@ app.get('', (c) => c.json({ service: 'newsletter', status: 'active' }));
 
 // ============================================================================
 // PUBLIC ENDPOINTS
-// ============================================================================
-// NOTE: These retain inline email-template logic because it's tightly coupled
-// to SendGrid headers, List-Unsubscribe, and custom from-addresses.
-// Extracting to the service requires an email-dispatch abstraction — deferred.
-// WORKAROUND: inline-email-logic — see above rationale.
 // ============================================================================
 
 // Newsletter subscription endpoint - Double Opt-In
@@ -127,10 +124,9 @@ app.post(
       userAgent,
     });
 
-    // Send confirmation email
-    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-
-    if (sendgridApiKey) {
+    // Send confirmation email (best-effort; sendEmail no-ops when no provider
+    // is configured, so subscription state is never blocked on email).
+    {
       const confirmUrl = `https://www.navigatewealth.co/newsletter/confirm?token=${confirmToken}&email=${encodeURIComponent(email)}`;
 
       // Fetch admin-configured footer settings for template consistency
@@ -155,64 +151,34 @@ app.post(
     `;
 
       try {
-        // Send confirmation email to subscriber
-        // Uses direct SendGrid call because it needs a custom from address (newsletters@)
-        // and custom headers for email deliverability
+        // Provider-agnostic since the SES cutover: the custom from address
+        // and deliverability headers ride email-core's extended EmailParams.
         const messageId = `<${crypto.randomUUID()}@navigatewealth.co>`;
-        const subscriberEmailResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${sendgridApiKey}`,
-          },
-          body: JSON.stringify({
-            personalizations: [
-              {
-                to: [{ email: email }],
-                subject: 'Please Confirm Your Navigate Wealth Newsletter Subscription',
-              },
-            ],
-            from: {
-              email: 'newsletters@navigatewealth.co',
-              name: 'Navigate Wealth',
-            },
-            reply_to: {
-              email: 'info@navigatewealth.co',
-              name: 'Navigate Wealth Support',
-            },
-            content: [
-              {
-                type: 'text/plain',
-                value: createPlainTextEmail(
-                  `Please Confirm Your Subscription\n\n${subscriberContent}\n\nConfirm here: ${confirmUrl}`,
-                ),
-              },
-              {
-                type: 'text/html',
-                value: createEmailTemplate(subscriberContent, {
-                  title: 'Please Confirm Your Subscription',
-                  buttonUrl: confirmUrl,
-                  buttonLabel: 'Confirm My Subscription',
-                  footerNote:
-                    'If you did not subscribe to this newsletter, you can safely ignore this email.',
-                  footerSettings,
-                }),
-              },
-            ],
-            headers: {
-              'Message-ID': messageId,
-              'X-Entity-Ref-ID': `newsletter-subscribe-${confirmToken}`,
-            },
-            custom_args: {
-              type: 'newsletter_confirmation',
-              source: 'footer_form',
-            },
+        const confirmationSent = await sendEmail({
+          to: email,
+          subject: 'Please Confirm Your Navigate Wealth Newsletter Subscription',
+          text: createPlainTextEmail(
+            `Please Confirm Your Subscription\n\n${subscriberContent}\n\nConfirm here: ${confirmUrl}`,
+          ),
+          html: createEmailTemplate(subscriberContent, {
+            title: 'Please Confirm Your Subscription',
+            buttonUrl: confirmUrl,
+            buttonLabel: 'Confirm My Subscription',
+            footerNote:
+              'If you did not subscribe to this newsletter, you can safely ignore this email.',
+            footerSettings,
           }),
+          from: { email: 'newsletters@navigatewealth.co', name: 'Navigate Wealth' },
+          replyTo: { email: 'info@navigatewealth.co', name: 'Navigate Wealth Support' },
+          headers: {
+            'Message-ID': messageId,
+            'X-Entity-Ref-ID': `newsletter-subscribe-${confirmToken}`,
+          },
+          customArgs: { type: 'newsletter_confirmation', source: 'footer_form' },
         });
 
-        if (!subscriberEmailResponse.ok) {
-          const errorText = await subscriberEmailResponse.text();
-          log.error('Error sending confirmation email:', errorText);
+        if (!confirmationSent) {
+          log.error('Error sending confirmation email');
         } else {
           log.info('Confirmation email sent successfully to:', { email });
         }
@@ -304,10 +270,8 @@ app.get('/confirm', async (c) => {
     // Add subscriber to newsletter group
     await addNewsletterSubscriber(email);
 
-    // Send welcome email and admin notification
-    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-
-    if (sendgridApiKey) {
+    // Send welcome email and admin notification (best-effort, provider-agnostic).
+    {
       try {
         const unsubscribeLink = `https://www.navigatewealth.co/newsletter/unsubscribe?email=${encodeURIComponent(email)}`;
 
@@ -328,64 +292,38 @@ app.get('/confirm', async (c) => {
           <p>Our team is committed to providing you with valuable information to help you make informed financial decisions.</p>
         `;
 
-        // Send welcome email to subscriber
-        // Uses direct SendGrid call because it needs a custom from address (newsletters@)
-        // and List-Unsubscribe headers for email deliverability compliance
+        // Provider-agnostic since the SES cutover — the newsletters@ from
+        // address and List-Unsubscribe compliance headers ride EmailParams.
         const welcomeMessageId = `<${crypto.randomUUID()}@navigatewealth.co>`;
-        await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${sendgridApiKey}`,
-          },
-          body: JSON.stringify({
-            personalizations: [
-              {
-                to: [{ email: email }],
-                subject: "You're in — Welcome to Navigate Wealth.",
-              },
-            ],
-            from: {
-              email: 'newsletters@navigatewealth.co',
-              name: 'Navigate Wealth',
-            },
-            reply_to: {
-              email: 'info@navigatewealth.co',
-              name: 'Navigate Wealth Support',
-            },
-            content: [
-              {
-                type: 'text/plain',
-                value: createPlainTextEmail(
-                  `You're in — Welcome to Navigate Wealth!\n\n${welcomeContent}`,
-                  unsubscribeLink,
-                ),
-              },
-              {
-                type: 'text/html',
-                value: createEmailTemplate(welcomeContent, {
-                  title: "You're in — Welcome to Navigate Wealth!",
-                  unsubscribeLink,
-                  buttonUrl: 'https://www.navigatewealth.co/resources',
-                  buttonLabel: 'Explore Our Resources',
-                  footerNote: `If you have any questions or need personalized advice, our team is here to help. Contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.`,
-                  footerSettings,
-                }),
-              },
-            ],
-            headers: {
-              'Message-ID': welcomeMessageId,
-              'List-Unsubscribe': `<mailto:unsubscribe@navigatewealth.co?subject=unsubscribe>, <${unsubscribeLink}>`,
-              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-              'List-Id': 'Navigate Wealth Newsletter <newsletter.navigatewealth.co>',
-              'X-Entity-Ref-ID': `newsletter-welcome-${token}`,
-            },
-            custom_args: {
-              type: 'newsletter_welcome',
-              source: 'footer_form',
-            },
+        const welcomeSent = await sendEmail({
+          to: email,
+          subject: "You're in — Welcome to Navigate Wealth.",
+          text: createPlainTextEmail(
+            `You're in — Welcome to Navigate Wealth!\n\n${welcomeContent}`,
+            unsubscribeLink,
+          ),
+          html: createEmailTemplate(welcomeContent, {
+            title: "You're in — Welcome to Navigate Wealth!",
+            unsubscribeLink,
+            buttonUrl: 'https://www.navigatewealth.co/resources',
+            buttonLabel: 'Explore Our Resources',
+            footerNote: `If you have any questions or need personalized advice, our team is here to help. Contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">(+27) 12-667-2505</a>.`,
+            footerSettings,
           }),
+          from: { email: 'newsletters@navigatewealth.co', name: 'Navigate Wealth' },
+          replyTo: { email: 'info@navigatewealth.co', name: 'Navigate Wealth Support' },
+          headers: {
+            'Message-ID': welcomeMessageId,
+            'List-Unsubscribe': `<mailto:unsubscribe@navigatewealth.co?subject=unsubscribe>, <${unsubscribeLink}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'List-Id': 'Navigate Wealth Newsletter <newsletter.navigatewealth.co>',
+            'X-Entity-Ref-ID': `newsletter-welcome-${token}`,
+          },
+          customArgs: { type: 'newsletter_welcome', source: 'footer_form' },
         });
+        if (!welcomeSent) {
+          log.error('Error sending welcome email');
+        }
 
         // Send confirmed admin notification via shared sendEmail (no custom headers needed)
         const adminConfirmContent = `

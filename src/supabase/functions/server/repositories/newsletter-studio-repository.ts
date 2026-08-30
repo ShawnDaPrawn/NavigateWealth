@@ -64,6 +64,29 @@ export interface LegacyBroadcastSummary {
 
 export const legacyBroadcasts = createKvRepository<LegacyBroadcastSummary>('broadcast:');
 
+/**
+ * Subscriber consent records (`newsletter:{email}`, id = lowercased email) —
+ * the same records newsletter-service.ts owns. The studio touches them for
+ * exactly one thing: RFC 8058 one-click unsubscribe, which must be able to
+ * upsert an `active: false` record even for group members who never had one.
+ */
+export interface NewsletterSubscriberRecord {
+  email: string;
+  name?: string;
+  firstName?: string;
+  surname?: string;
+  source?: string;
+  confirmed?: boolean;
+  active?: boolean;
+  subscribedAt?: string;
+  unsubscribedAt?: string;
+  removedBy?: string;
+  [key: string]: unknown;
+}
+
+export const newsletterSubscriberRecords =
+  createKvRepository<NewsletterSubscriberRecord>('newsletter:');
+
 /** Recipient record id for one campaign/token pair. */
 export function recipientRecordId(campaignId: string, token: string): string {
   return `${campaignId}:${token}`;

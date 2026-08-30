@@ -37,6 +37,7 @@ import {
   applyMergeFields,
   buildCampaignEmailHeaders,
   buildClickThroughUrl,
+  buildOneClickUnsubscribeUrl,
   buildUnsubscribeUrl,
   extractCampaignLinks,
   renderCampaignEmail,
@@ -157,15 +158,30 @@ describe('renderCampaignEmail', () => {
 });
 
 describe('buildCampaignEmailHeaders', () => {
-  it('carries the full deliverability envelope', () => {
-    const unsubscribeUrl = buildUnsubscribeUrl('a@b.co');
-    const headers = buildCampaignEmailHeaders('camp-1', 'tok-1', unsubscribeUrl);
+  it('points one-click unsubscribe at the server POST endpoint, never the SPA page', () => {
+    const headers = buildCampaignEmailHeaders('camp-1', 'tok-1');
     expect(headers['List-Unsubscribe']).toContain('mailto:unsubscribe@navigatewealth.co');
-    expect(headers['List-Unsubscribe']).toContain(unsubscribeUrl);
+    // RFC 8058: the https URL receives a provider POST with no JS running —
+    // it must be the edge route that actually flips the consent record.
+    expect(headers['List-Unsubscribe']).toContain(
+      '/newsletter-studio/unsubscribe-oneclick?c=camp-1&t=tok-1',
+    );
+    expect(headers['List-Unsubscribe']).not.toContain('/newsletter/unsubscribe?email=');
     expect(headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
     expect(headers['List-Id']).toContain('newsletter.navigatewealth.co');
     expect(headers['Message-ID']).toMatch(/^<[0-9a-f-]+@navigatewealth\.co>$/);
     expect(headers['X-Entity-Ref-ID']).toBe('nlstudio-camp-1-tok-1');
+  });
+});
+
+describe('buildOneClickUnsubscribeUrl', () => {
+  it('targets the edge function with campaign and token params', () => {
+    const url = new URL(buildOneClickUnsubscribeUrl('c1', 't1'));
+    expect(url.pathname).toBe(
+      '/functions/v1/make-server-91ed8379/newsletter-studio/unsubscribe-oneclick',
+    );
+    expect(url.searchParams.get('c')).toBe('c1');
+    expect(url.searchParams.get('t')).toBe('t1');
   });
 });
 

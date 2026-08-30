@@ -96,3 +96,15 @@ export const NewsletterTrackClickSchema = z
     linkId: z.string().trim().min(1).max(24),
   })
   .passthrough();
+
+/**
+ * RFC 8058 one-click unsubscribe. Providers POST a form-encoded body
+ * (`List-Unsubscribe=One-Click`), so identification rides in query params:
+ * `c` = campaign id, `t` = per-recipient token.
+ */
+export const OneClickUnsubscribeQuerySchema = z
+  .object({
+    c: z.string().trim().min(1).max(120),
+    t: z.string().trim().min(1).max(120),
+  })
+  .passthrough();

@@ -11,6 +11,7 @@
  */
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { getSesConfig, sendViaSes } from './email-transport-ses.ts';
 
 const log = createModuleLogger('email-core');
 
@@ -21,6 +22,23 @@ function getSendGridApiKey(): string | undefined {
     _sendgridApiKey = Deno.env.get('SENDGRID_API_KEY') || '';
   }
   return _sendgridApiKey || undefined;
+}
+
+/**
+ * Which provider actually delivers mail. Every email the platform sends goes
+ * through sendEmail() below, so flipping the NW_EMAIL_PROVIDER secret to
+ * `ses` moves the whole platform off SendGrid in one step — and flipping it
+ * back (or unsetting it) is the instant rollback. Read lazily per send, same
+ * deploy-crash constraint as the API key above.
+ */
+function getEmailProvider(): 'sendgrid' | 'ses' {
+  const value = (Deno.env.get('NW_EMAIL_PROVIDER') || 'sendgrid').trim().toLowerCase();
+  return value === 'ses' ? 'ses' : 'sendgrid';
+}
+
+/** True when the ACTIVE provider has the secrets it needs to deliver mail. */
+export function isEmailConfigured(): boolean {
+  return getEmailProvider() === 'ses' ? getSesConfig() !== null : Boolean(getSendGridApiKey());
 }
 
 const SENDGRID_API_URL = 'https://api.sendgrid.com/v3/mail/send';
@@ -389,8 +407,9 @@ export async function sendEmail(
   attachments?: SendGridAttachment[],
 ): Promise<boolean | void> {
   const objectParams = typeof paramsOrTo === 'object' ? paramsOrTo : undefined;
-  const sendgridApiKey = getSendGridApiKey();
-  if (!sendgridApiKey) {
+  const provider = getEmailProvider();
+  const sendgridApiKey = provider === 'sendgrid' ? getSendGridApiKey() : undefined;
+  if (provider === 'sendgrid' && !sendgridApiKey) {
     if (objectParams && !objectParams.throwOnError) return false;
     throw new Error('SENDGRID_API_KEY not configured');
   }
@@ -436,6 +455,34 @@ export async function sendEmail(
   }
 
   try {
+    if (provider === 'ses') {
+      const sesConfig = getSesConfig();
+      if (!sesConfig) {
+        throw new Error(
+          'NW_EMAIL_PROVIDER=ses but NW_SES_REGION / NW_SES_ACCESS_KEY_ID / ' +
+            'NW_SES_SECRET_ACCESS_KEY are not configured',
+        );
+      }
+      // customArgs are SendGrid-only webhook metadata — dropped on SES.
+      await sendViaSes(sesConfig, {
+        from: {
+          email: objectParams?.from?.email || FROM_EMAIL,
+          name: objectParams?.from?.name || FROM_NAME,
+        },
+        to,
+        cc,
+        replyTo: objectParams?.replyTo,
+        subject: finalSubject,
+        html: finalHtml,
+        text: finalText,
+        headers: objectParams?.headers,
+        attachments: finalAttachments,
+      });
+      log.info('✅ Email sent successfully via Amazon SES');
+      if (typeof paramsOrTo === 'object') return true;
+      return;
+    }
+
     const personalizations: Record<string, unknown> = {
       to: [{ email: to }],
       subject: finalSubject,

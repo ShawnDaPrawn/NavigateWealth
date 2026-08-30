@@ -47,6 +47,7 @@ const svc = vi.hoisted(() => {
     updateTemplate: vi.fn(async () => ({ id: 't1' })),
     deleteTemplate: vi.fn(async () => undefined),
     recordCampaignClick: vi.fn(async () => ({ url: 'https://a.example/one' })),
+    unsubscribeByRecipientToken: vi.fn(async () => ({ email: 'a@b.co' })),
   };
 });
 
@@ -57,8 +58,13 @@ const proc = vi.hoisted(() => ({
 
 const audit = vi.hoisted(() => ({ record: vi.fn(async () => ({})) }));
 const cron = vi.hoisted(() => ({ authorized: false }));
+const perms = vi.hoisted(() => ({
+  isSuperAdmin: vi.fn(() => false),
+  hasCapability: vi.fn(async () => true),
+}));
 
 vi.mock('../newsletter-studio-service.ts', () => svc);
+vi.mock('../personnel-permissions-service.ts', () => ({ PermissionsService: perms }));
 vi.mock('../newsletter-studio-processor.ts', () => proc);
 vi.mock('../admin-audit-service.ts', () => ({ AdminAuditService: audit }));
 vi.mock('../stderr-logger.ts', async () =>
@@ -143,6 +149,7 @@ const ROUTE_TABLE: {
     tier: 'public',
     body: { campaignId: 'c1', token: 'tok', linkId: 'l1' },
   },
+  { method: 'POST', path: '/unsubscribe-oneclick', tier: 'public' },
 ];
 
 describe('the route table is the router', () => {
@@ -208,6 +215,68 @@ describe('authorization tiers', () => {
     });
     expect(missing.status).toBe(404);
     expect(await missing.json()).toEqual({ error: 'Not found' });
+  });
+});
+
+describe('capability tiers within admin (review finding)', () => {
+  it('refuses a mutation when the stored permission set lacks the capability', async () => {
+    perms.hasCapability.mockResolvedValueOnce(false);
+    const res = await request(app, '/campaigns', {
+      method: 'POST',
+      as: 'admin',
+      body: { name: 'n', subject: 's', listIds: ['g1'], bodyHtml: '<p>b</p>' },
+    });
+    expect(res.status).toBe(403);
+    expect(perms.hasCapability).toHaveBeenCalledWith(expect.any(String), 'newsletter', 'create');
+    expect(svc.createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('maps send/delete mutations to their capabilities', async () => {
+    await request(app, '/campaigns/c1/send-now', { method: 'POST', as: 'admin' });
+    expect(perms.hasCapability).toHaveBeenCalledWith(expect.any(String), 'newsletter', 'send');
+
+    await request(app, '/campaigns/c1', { method: 'DELETE', as: 'admin' });
+    expect(perms.hasCapability).toHaveBeenCalledWith(expect.any(String), 'newsletter', 'delete');
+  });
+
+  it('super admins bypass the capability check entirely', async () => {
+    perms.isSuperAdmin.mockReturnValueOnce(true);
+    const res = await request(app, '/campaigns/c1/pause', { method: 'POST', as: 'admin' });
+    expect(res.status).toBe(200);
+    expect(perms.hasCapability).not.toHaveBeenCalled();
+  });
+
+  it('reads stay on plain requireAdmin — no capability round-trip', async () => {
+    await request(app, '/campaigns', { method: 'GET', as: 'admin' });
+    await request(app, '/dashboard', { method: 'GET', as: 'admin' });
+    expect(perms.hasCapability).not.toHaveBeenCalled();
+  });
+});
+
+describe('one-click unsubscribe (RFC 8058)', () => {
+  it('is public, identified by query params, and unsubscribes via the service', async () => {
+    const res = await request(app, '/unsubscribe-oneclick?c=c1&t=tok', {
+      method: 'POST',
+      auth: false,
+    });
+    expect(res.status).toBe(200);
+    expect(svc.unsubscribeByRecipientToken).toHaveBeenCalledWith('c1', 'tok');
+  });
+
+  it('404s unknown ids without detail', async () => {
+    svc.unsubscribeByRecipientToken.mockResolvedValueOnce(null as never);
+    const res = await request(app, '/unsubscribe-oneclick?c=nope&t=x', {
+      method: 'POST',
+      auth: false,
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: 'Not found' });
+  });
+
+  it('rejects requests missing the identifying params', async () => {
+    const res = await request(app, '/unsubscribe-oneclick', { method: 'POST', auth: false });
+    expect(res.status).toBe(400);
+    expect(svc.unsubscribeByRecipientToken).not.toHaveBeenCalled();
   });
 });
 

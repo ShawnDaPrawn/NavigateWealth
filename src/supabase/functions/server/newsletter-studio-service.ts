@@ -15,12 +15,14 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getGroupById, getGroups } from './communication-repo.ts';
 import { getAllClients } from './communication-messaging.ts';
 import { listSubscribers, getStats as getSubscriberStats } from './newsletter-service.ts';
+import { removeNewsletterSubscriber } from './newsletter-group-service.ts';
 import { extractCampaignLinks } from './newsletter-studio-render.ts';
 import {
   newsletterAudiences,
   newsletterCampaigns,
   newsletterProcessorState,
   newsletterRecipients,
+  newsletterSubscriberRecords,
   newsletterTemplates,
   recipientRecordId,
   NEWSLETTER_PROCESSOR_STATE_ID,
@@ -647,6 +649,41 @@ export async function recordCampaignClick(
   };
   await newsletterRecipients.put(recordId, updated);
   return { url: link.url };
+}
+
+/**
+ * RFC 8058 one-click unsubscribe: resolve the opaque per-recipient token to
+ * an email and record the opt-out. Upserts the consent record so even a
+ * group member who never had a `newsletter:{email}` row ends up excluded by
+ * every future audience resolution, then syncs the Newsletter Contacts
+ * group. Returns null when the ids don't resolve (the route 404s without
+ * leaking anything).
+ */
+export async function unsubscribeByRecipientToken(
+  campaignId: string,
+  token: string,
+): Promise<{ email: string } | null> {
+  const record = await newsletterRecipients.get(recipientRecordId(campaignId, token));
+  if (!record) return null;
+
+  const email = record.email.trim().toLowerCase();
+  const existing = await newsletterSubscriberRecords.get(email);
+  await newsletterSubscriberRecords.put(email, {
+    ...(existing ?? {
+      email,
+      name: record.name || undefined,
+      source: 'One-Click Unsubscribe',
+      subscribedAt: nowIso(),
+      confirmed: true,
+    }),
+    email,
+    active: false,
+    unsubscribedAt: nowIso(),
+    removedBy: 'one-click',
+  });
+  await removeNewsletterSubscriber(email);
+  log.info('One-click unsubscribe recorded', { campaignId });
+  return { email };
 }
 
 // ── Lists (audiences) ────────────────────────────────────────────────────────

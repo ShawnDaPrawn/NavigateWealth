@@ -47,12 +47,18 @@ function formatDate(value: string | null): string {
   }
 }
 
+export interface NewsletterCaps {
+  create: boolean;
+  send: boolean;
+  delete: boolean;
+}
+
 export function CampaignsTab({
-  canSend,
+  caps,
   view,
   onViewChange,
 }: {
-  canSend: boolean;
+  caps: NewsletterCaps;
   view: View;
   onViewChange: (view: View) => void;
 }) {
@@ -80,7 +86,7 @@ export function CampaignsTab({
     return (
       <CampaignDetail
         campaignId={view.campaignId}
-        canSend={canSend}
+        caps={caps}
         onBack={() => onViewChange({ kind: 'list' })}
         onEdit={(campaign) => onViewChange({ kind: 'editor', campaign })}
         onDeleted={() => onViewChange({ kind: 'list' })}
@@ -118,9 +124,11 @@ export function CampaignsTab({
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={() => onViewChange({ kind: 'editor', campaign: null })}>
-          <Plus className="mr-1 h-4 w-4" aria-hidden /> New campaign
-        </Button>
+        {caps.create ? (
+          <Button onClick={() => onViewChange({ kind: 'editor', campaign: null })}>
+            <Plus className="mr-1 h-4 w-4" aria-hidden /> New campaign
+          </Button>
+        ) : null}
       </div>
 
       <Card>

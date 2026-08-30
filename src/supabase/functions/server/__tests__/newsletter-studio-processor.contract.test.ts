@@ -254,6 +254,50 @@ describe('scheduling and admin controls', () => {
     expect(campaignRecord(draft.id).status).toBe('finished');
   });
 
+  it('a pause written while a batch is in flight survives the counter write and stops delivery', async () => {
+    // 25 recipients = two batches. The admin pauses during batch one; the
+    // post-batch counter write must not resurrect 'sending' (review finding).
+    const emails = Array.from({ length: 25 }, (_, i) => `r${i}@x.co`);
+    const campaign = await queuedCampaign(emails);
+    let sends = 0;
+    email.sendEmail.mockImplementation(async () => {
+      sends++;
+      if (sends === 5) {
+        kvStore.set(`nlstudio:campaign:${campaign.id}`, {
+          ...campaignRecord(campaign.id),
+          status: 'paused',
+        });
+      }
+      return true;
+    });
+
+    await processNewsletterCampaigns({ mode: 'cron' });
+
+    const after = campaignRecord(campaign.id);
+    expect(after.status).toBe('paused');
+    expect(after.lockId).toBeNull();
+    // Only the in-flight batch completed; the second batch never started.
+    expect(email.sendEmail).toHaveBeenCalledTimes(20);
+    expect(after.sentCount).toBe(20);
+  });
+
+  it('skips recipients who opted out after the audience was frozen (POPIA)', async () => {
+    const campaign = await queuedCampaign(['stays@x.co', 'leaves@x.co']);
+    deps.listSubscribers.mockResolvedValue([{ email: 'leaves@x.co', active: false }]);
+
+    const result = await processNewsletterCampaigns({ mode: 'cron' });
+    expect(result.sent).toBe(1);
+    expect(result.failed).toBe(1);
+    expect(
+      email.sendEmail.mock.calls.filter(([p]) => (p as { to: string }).to === 'leaves@x.co'),
+    ).toHaveLength(0);
+
+    const skipped = recipientRecords(campaign.id).find((r) => r.email === 'leaves@x.co')!;
+    expect(skipped.deliveryStatus).toBe('failed_terminal');
+    expect(skipped.deliveryError).toMatch(/opted out after the campaign was queued/);
+    expect(campaignRecord(campaign.id).status).toBe('finished');
+  });
+
   it('leaves paused campaigns untouched', async () => {
     const campaign = await queuedCampaign(['a@x.co']);
     kvStore.set(`nlstudio:campaign:${campaign.id}`, {

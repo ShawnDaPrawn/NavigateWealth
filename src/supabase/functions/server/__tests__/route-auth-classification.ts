@@ -155,12 +155,13 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'lead-gen',
     classification: 'public',
     reason:
-      'Anonymous lead-gen form: the public marketing site posts here with no session. Bounded by the shared public-form rate limiter; staff email render is escaped via escapeHtmlDeep (S10/S11).',
+      'Anonymous lead-gen form: the public marketing site posts here with no session. Bounded by the shared public-form rate limiter; staff email render is escaped via escapeHtmlDeep (S10/S11). The newsletter-studio one-click unsubscribe is the RFC 8058 target mailbox providers POST to on a recipient’s behalf — it can never require a session, is gated by the opaque per-recipient token, and 404s unknown ids with no detail.',
     routes: [
       'consultation.ts GET /',
       'consultation.ts POST /request',
       'contact-form-routes.ts GET /',
       'contact-form-routes.ts POST /submit',
+      'newsletter-studio-routes.ts POST /unsubscribe-oneclick',
       'newsletter.tsx GET /unsubscribe',
       'newsletter.tsx POST /subscribe',
       'quote-request-routes.ts GET /',

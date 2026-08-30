@@ -26,6 +26,7 @@ const deps = vi.hoisted(() => ({
   getGroups: vi.fn(async () => ({ data: [], total: 0, limit: 1000, offset: 0 })),
   getAllClients: vi.fn(async () => [] as unknown[]),
   listSubscribers: vi.fn(async () => [] as { email: string; active?: boolean }[]),
+  removeNewsletterSubscriber: vi.fn(async () => undefined),
   getStats: vi.fn(async () => ({
     totalSubscribers: 10,
     confirmedSubscribers: 8,
@@ -51,6 +52,9 @@ vi.mock('../communication-messaging.ts', () => ({ getAllClients: deps.getAllClie
 vi.mock('../newsletter-service.ts', () => ({
   listSubscribers: deps.listSubscribers,
   getStats: deps.getStats,
+}));
+vi.mock('../newsletter-group-service.ts', () => ({
+  removeNewsletterSubscriber: deps.removeNewsletterSubscriber,
 }));
 vi.mock('../email-service.ts', () => ({
   createEmailTemplate: (content: string) => `<w>${content}</w>`,
@@ -79,6 +83,7 @@ import {
   resumeCampaign,
   scheduleCampaign,
   sendCampaignNow,
+  unsubscribeByRecipientToken,
   updateCampaign,
   updateTemplate,
 } from '../newsletter-studio-service.ts';
@@ -329,6 +334,81 @@ describe('recipients, clicks and stats', () => {
     expect(stats.clickCount).toBe(1);
     expect(stats.links).toEqual([{ id: 'l1', url: 'https://a.example/one', clickCount: 1 }]);
     expect(queued.recipientCount).toBe(2);
+  });
+});
+
+describe('one-click unsubscribe (RFC 8058)', () => {
+  it('resolves the token, upserts an inactive consent record and syncs the group', async () => {
+    const campaign = await makeDraft();
+    await sendCampaignNow(campaign.id);
+    const page = await getCampaignRecipients(campaign.id);
+    const { token, email } = page.recipients[0];
+
+    // The recipient record exists once delivery has started.
+    kvStore.set(`nlstudio:recipient:${campaign.id}:${token}`, {
+      campaignId: campaign.id,
+      token,
+      email,
+      name: 'Ann A',
+      firstName: 'Ann',
+      deliveryStatus: 'sent',
+      deliveryError: null,
+      attemptCount: 1,
+      lastAttemptedAt: '2026-08-29T10:00:00.000Z',
+      sentAt: '2026-08-29T10:00:00.000Z',
+      openedAt: null,
+      clicks: [],
+    });
+
+    const outcome = await unsubscribeByRecipientToken(campaign.id, token);
+    expect(outcome).toEqual({ email });
+
+    // Even a member with no prior newsletter record ends up with an
+    // explicit opt-out — the thing audience resolution excludes on.
+    const consent = kvStore.get(`newsletter:${email}`) as { active: boolean; removedBy: string };
+    expect(consent.active).toBe(false);
+    expect(consent.removedBy).toBe('one-click');
+    expect(deps.removeNewsletterSubscriber).toHaveBeenCalledWith(email);
+  });
+
+  it('preserves an existing consent record while deactivating it', async () => {
+    const campaign = await makeDraft();
+    await sendCampaignNow(campaign.id);
+    const page = await getCampaignRecipients(campaign.id);
+    const { token, email } = page.recipients[0];
+    kvStore.set(`nlstudio:recipient:${campaign.id}:${token}`, {
+      campaignId: campaign.id,
+      token,
+      email,
+      name: 'Ann A',
+      firstName: 'Ann',
+      deliveryStatus: 'sent',
+      deliveryError: null,
+      attemptCount: 1,
+      lastAttemptedAt: null,
+      sentAt: null,
+      openedAt: null,
+      clicks: [],
+    });
+    kvStore.set(`newsletter:${email}`, {
+      email,
+      firstName: 'Ann',
+      source: 'Footer Newsletter',
+      confirmed: true,
+      active: true,
+      subscribedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    await unsubscribeByRecipientToken(campaign.id, token);
+    const consent = kvStore.get(`newsletter:${email}`) as Record<string, unknown>;
+    expect(consent.active).toBe(false);
+    expect(consent.firstName).toBe('Ann');
+    expect(consent.source).toBe('Footer Newsletter');
+  });
+
+  it('returns null for unknown ids without writing anything', async () => {
+    expect(await unsubscribeByRecipientToken('no-campaign', 'no-token')).toBeNull();
+    expect(deps.removeNewsletterSubscriber).not.toHaveBeenCalled();
   });
 });
 

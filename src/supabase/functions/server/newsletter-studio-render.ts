@@ -193,18 +193,37 @@ export async function renderCampaignEmail(
   return { html, text };
 }
 
+/** Edge Function origin fallback when SUPABASE_URL is not in the environment. */
+const EDGE_ORIGIN_FALLBACK = 'https://vpjmdsltwrnpefzcgdmz.supabase.co';
+
+/**
+ * RFC 8058 one-click unsubscribe target. Mailbox providers POST here (with a
+ * form-encoded body, no JS, no session), so it must be the server route that
+ * actually flips the consent record — never the SPA page, which only works
+ * when a human's browser runs it (review finding). The footer link humans
+ * click stays on the SPA unsubscribe page.
+ */
+export function buildOneClickUnsubscribeUrl(campaignId: string, token: string): string {
+  const origin =
+    (typeof Deno !== 'undefined' ? Deno.env.get('SUPABASE_URL') : undefined) ||
+    EDGE_ORIGIN_FALLBACK;
+  const params = new URLSearchParams({ c: campaignId, t: token });
+  return `${origin}/functions/v1/make-server-91ed8379/newsletter-studio/unsubscribe-oneclick?${params.toString()}`;
+}
+
 /**
  * Deliverability headers for one campaign send — the same envelope the
- * double-opt-in welcome email established (List-Unsubscribe + one-click).
+ * double-opt-in welcome email established, with the https entry pointing at
+ * the real one-click POST endpoint.
  */
 export function buildCampaignEmailHeaders(
   campaignId: string,
   token: string,
-  unsubscribeUrl: string,
 ): Record<string, string> {
+  const oneClickUrl = buildOneClickUnsubscribeUrl(campaignId, token);
   return {
     'Message-ID': `<${crypto.randomUUID()}@navigatewealth.co>`,
-    'List-Unsubscribe': `<mailto:unsubscribe@navigatewealth.co?subject=unsubscribe>, <${unsubscribeUrl}>`,
+    'List-Unsubscribe': `<mailto:unsubscribe@navigatewealth.co?subject=unsubscribe>, <${oneClickUrl}>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     'List-Id': 'Navigate Wealth Newsletter <newsletter.navigatewealth.co>',
     'X-Entity-Ref-ID': `nlstudio-${campaignId}-${token}`,

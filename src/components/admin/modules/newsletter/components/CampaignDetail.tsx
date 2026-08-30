@@ -72,6 +72,7 @@ import {
   useStudioRecipients,
 } from '../hooks/useNewsletterStudio';
 import { CampaignStatusBadge, DeliveryStatusBadge } from './StatusBadge';
+import type { NewsletterCaps } from './CampaignsTab';
 import type { NewsletterCampaign } from '../types';
 
 function formatDateTime(value: string | null): string {
@@ -91,7 +92,7 @@ function formatDateTime(value: string | null): string {
 
 interface CampaignDetailProps {
   campaignId: string;
-  canSend: boolean;
+  caps: NewsletterCaps;
   onBack: () => void;
   onEdit: (campaign: NewsletterCampaign) => void;
   onDeleted: () => void;
@@ -99,7 +100,7 @@ interface CampaignDetailProps {
 
 export function CampaignDetail({
   campaignId,
-  canSend,
+  caps,
   onBack,
   onEdit,
   onDeleted,
@@ -180,10 +181,12 @@ export function CampaignDetail({
         <div className="flex flex-wrap items-center gap-2">
           {editable ? (
             <>
-              <Button variant="outline" size="sm" onClick={() => onEdit(campaign)}>
-                <Pencil className="mr-1 h-4 w-4" aria-hidden /> Edit
-              </Button>
-              {canSend ? (
+              {caps.create ? (
+                <Button variant="outline" size="sm" onClick={() => onEdit(campaign)}>
+                  <Pencil className="mr-1 h-4 w-4" aria-hidden /> Edit
+                </Button>
+              ) : null}
+              {caps.send ? (
                 <>
                   <Button variant="outline" size="sm" onClick={() => setTestOpen(true)}>
                     <FlaskConical className="mr-1 h-4 w-4" aria-hidden /> Send test
@@ -224,7 +227,7 @@ export function CampaignDetail({
             </>
           ) : null}
 
-          {isActive && canSend ? (
+          {isActive && caps.send ? (
             <Button
               variant="outline"
               size="sm"
@@ -234,7 +237,7 @@ export function CampaignDetail({
               <Pause className="mr-1 h-4 w-4" aria-hidden /> Pause
             </Button>
           ) : null}
-          {campaign.status === 'paused' && canSend ? (
+          {campaign.status === 'paused' && caps.send ? (
             <Button
               variant="outline"
               size="sm"
@@ -244,7 +247,7 @@ export function CampaignDetail({
               <Play className="mr-1 h-4 w-4" aria-hidden /> Resume
             </Button>
           ) : null}
-          {['scheduled', 'queued', 'sending', 'paused'].includes(campaign.status) && canSend ? (
+          {['scheduled', 'queued', 'sending', 'paused'].includes(campaign.status) && caps.send ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -269,15 +272,17 @@ export function CampaignDetail({
             </AlertDialog>
           ) : null}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => duplicate.mutate(campaign.id)}
-            disabled={duplicate.isPending}
-          >
-            <Copy className="mr-1 h-4 w-4" aria-hidden /> Duplicate
-          </Button>
-          {deletable ? (
+          {caps.create ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => duplicate.mutate(campaign.id)}
+              disabled={duplicate.isPending}
+            >
+              <Copy className="mr-1 h-4 w-4" aria-hidden /> Duplicate
+            </Button>
+          ) : null}
+          {deletable && caps.delete ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm">

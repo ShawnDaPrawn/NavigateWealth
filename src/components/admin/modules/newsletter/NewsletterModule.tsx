@@ -19,7 +19,12 @@ export function NewsletterModule() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [campaignsView, setCampaignsView] = useState<CampaignsView>({ kind: 'list' });
   const { canDo } = useCurrentUserPermissions();
-  const canSend = canDo('newsletter', 'send');
+  // UX gating only — the server enforces the same capabilities independently.
+  const caps = {
+    create: canDo('newsletter', 'create'),
+    send: canDo('newsletter', 'send'),
+    delete: canDo('newsletter', 'delete'),
+  };
 
   const openCampaigns = (view: CampaignsView) => {
     setCampaignsView(view);
@@ -46,6 +51,7 @@ export function NewsletterModule() {
 
         <TabsContent value="dashboard">
           <DashboardTab
+            canCreate={caps.create}
             onOpenCampaign={(campaign) =>
               openCampaigns({ kind: 'detail', campaignId: campaign.id })
             }
@@ -53,7 +59,7 @@ export function NewsletterModule() {
           />
         </TabsContent>
         <TabsContent value="campaigns">
-          <CampaignsTab canSend={canSend} view={campaignsView} onViewChange={setCampaignsView} />
+          <CampaignsTab caps={caps} view={campaignsView} onViewChange={setCampaignsView} />
         </TabsContent>
         <TabsContent value="templates">
           <TemplatesTab />
