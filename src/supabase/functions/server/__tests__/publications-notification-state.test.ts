@@ -31,6 +31,7 @@ import {
   RETRYABLE_REQUEUE_DELAY_MS,
   STUCK_JOB_THRESHOLD_MS,
   withArticleNotificationJobDefaults,
+  isSenderConfigurationFailure,
 } from '../publications-notification-state.ts';
 import type {
   ArticleNotificationJob,
@@ -81,6 +82,40 @@ describe('normalizeSendError', () => {
   });
 });
 
+describe('isSenderConfigurationFailure', () => {
+  // Each of these fails identically for every recipient in the audience, so the
+  // caller must stop and surface it rather than burn addresses against it.
+  it.each([
+    // SES sandbox — where the account sits until AWS grants production access.
+    'SES error (400): {"message":"Email address is not verified. The following identities failed the check in region EU-WEST-1: c@d.co"}',
+    'Domain not verified',
+    // Credentials wrong, missing, or lacking ses:SendEmail.
+    'SES error (403): {"message":"User: arn:aws:iam::1:user/nw is not authorized to perform: ses:SendEmail"}',
+    'SES error (403): {"message":"AccessDenied"}',
+    'The security token included in the request is invalid',
+    'NW_SES_REGION, NW_SES_ACCESS_KEY_ID and NW_SES_SECRET_ACCESS_KEY must be set',
+    // Account standing and quota — no per-recipient retry can clear them.
+    'SES error (400): {"message":"Account-level sending has been disabled for your account."}',
+    'SES error (400): {"message":"Daily message quota exceeded."}',
+    'SES error (400): {"message":"Maximum sending rate exceeded."}',
+  ])("flags %j as our fault, not the recipient's", (message) => {
+    expect(isSenderConfigurationFailure(new Error(message))).toBe(true);
+  });
+
+  // Genuine per-recipient and transient failures must NOT be swallowed as
+  // sender faults, or a single bad address would pause the whole campaign.
+  it.each([
+    'Invalid email address supplied',
+    'The message bounced',
+    'Recipient is on the suppression list',
+    'socket hang up',
+    'ETIMEDOUT',
+    'SES error (500): {"message":"Internal Server Error"}',
+  ])('does not flag %j', (message) => {
+    expect(isSenderConfigurationFailure(new Error(message))).toBe(false);
+  });
+});
+
 describe('classifyDeliveryFailure', () => {
   it.each([
     'Invalid email address supplied',
@@ -89,10 +124,19 @@ describe('classifyDeliveryFailure', () => {
     'Forbidden',
     'Unauthorized',
     '400 Bad Request',
-    'Domain not verified',
     'From address does not match the verified sender',
   ])('treats %j as terminal', (message) => {
     expect(classifyDeliveryFailure(new Error(message)).disposition).toBe('terminal');
+  });
+
+  // "not verified" used to be listed as terminal above. It is a statement about
+  // OUR sending identity, never about the recipient, so condemning a recipient
+  // for it destroys a deliverable address. It must not be terminal.
+  it.each([
+    'Domain not verified',
+    'Email address is not verified. The following identities failed the check in region EU-WEST-1: a@b.co',
+  ])('does not blame the recipient for %j', (message) => {
+    expect(classifyDeliveryFailure(new Error(message)).disposition).not.toBe('terminal');
   });
 
   it.each(['socket hang up', 'ETIMEDOUT', 'Service temporarily unavailable', 'rate limited'])(

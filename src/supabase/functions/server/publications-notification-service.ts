@@ -37,6 +37,7 @@ import {
   getArticleNotificationJobRecord,
   getArticleNotificationProcessorStateRecord,
   hydrateArticleNotificationJob,
+  isSenderConfigurationFailure,
   listReadyJobTrackingRecords,
   normalizeSendError,
   nowIso,
@@ -633,6 +634,24 @@ export async function processArticleNotificationJobs(
           await persistArticleNotificationJob(workingJob);
           deliverySteps++;
           didAdvanceJob = true;
+
+          // Sender-side fault: our identity, credentials, account standing or
+          // quota. Every remaining recipient would fail the same way, so stop
+          // the job rather than walk the rest of the audience into it. Records
+          // stay retryable, so the job resumes intact once the cause is fixed.
+          const senderFault = batchResults.find(
+            (entry) => entry.status === 'rejected' && isSenderConfigurationFailure(entry.reason),
+          );
+          if (senderFault && senderFault.status === 'rejected') {
+            const message = `Paused — the email provider rejected the sender, not the recipients: ${normalizeSendError(senderFault.reason)}`;
+            log.error('Article notification job halted — provider rejected the sender', {
+              articleId: article.id,
+              error: message,
+            });
+            workingJob = { ...workingJob, lastError: message, updatedAt: nowIso() };
+            await persistArticleNotificationJob(workingJob);
+            break;
+          }
 
           const intermediateSnapshot = await hydrateArticleNotificationJob(workingJob);
           workingJob = {

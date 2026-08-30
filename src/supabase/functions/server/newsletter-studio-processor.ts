@@ -24,7 +24,13 @@
 import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail } from './email-service.ts';
 import { listSubscribers } from './newsletter-service.ts';
-import { chunkArray, classifyDeliveryFailure, sleep } from './publications-notification-state.ts';
+import {
+  chunkArray,
+  classifyDeliveryFailure,
+  isSenderConfigurationFailure,
+  normalizeSendError,
+  sleep,
+} from './publications-notification-state.ts';
 import {
   buildCampaignEmailHeaders,
   NEWSLETTER_DEFAULT_FROM_NAME,
@@ -253,12 +259,22 @@ function recipientReadiness(record: NewsletterCampaignRecipient | null): Readine
 
 // ── Delivery ─────────────────────────────────────────────────────────────────
 
+/**
+ * `sender_fault` means the send failed for a reason that is ours, not the
+ * recipient's, and carries the operator-facing message. Its recipient record is
+ * left exactly as it was found so the campaign can resume once the cause is
+ * fixed.
+ */
+type DeliveryOutcome =
+  | { kind: 'sent' | 'retryable' | 'terminal' }
+  | { kind: 'sender_fault'; message: string };
+
 async function deliverToRecipient(
   campaign: NewsletterCampaign,
   item: NewsletterAudienceItem,
   existing: NewsletterCampaignRecipient | null,
   optedOut: Set<string>,
-): Promise<'sent' | 'retryable' | 'terminal'> {
+): Promise<DeliveryOutcome> {
   const recordId = recipientRecordId(campaign.id, item.token);
   const priorAttempts = existing?.attemptCount ?? 0;
 
@@ -280,7 +296,7 @@ async function deliverToRecipient(
       deliveryStatus: 'failed_terminal',
       deliveryError: 'Recipient opted out after the campaign was queued — skipped (POPIA)',
     });
-    return 'terminal';
+    return { kind: 'terminal' };
   }
 
   // Give-up cap: a retryable failure that has exhausted its budget goes
@@ -291,7 +307,7 @@ async function deliverToRecipient(
       deliveryStatus: 'failed_terminal',
       deliveryError: `${existing.deliveryError || 'delivery failed'} (retry budget exhausted)`,
     });
-    return 'terminal';
+    return { kind: 'terminal' };
   }
 
   const base: NewsletterCampaignRecipient = existing ?? {
@@ -343,8 +359,17 @@ async function deliverToRecipient(
         deliveryError: null,
         sentAt: nowIso(),
       });
-      return 'sent';
+      return { kind: 'sent' };
     } catch (error) {
+      // Our configuration, not this recipient's address. Put the record back
+      // exactly as we found it — no attempt consumed, no failure recorded —
+      // and let the caller stop the campaign. Retrying cannot help, and
+      // recording it against recipients would burn the audience.
+      if (isSenderConfigurationFailure(error)) {
+        if (existing) await newsletterRecipients.put(recordId, existing);
+        else await newsletterRecipients.remove(recordId);
+        return { kind: 'sender_fault', message: normalizeSendError(error) };
+      }
       lastFailure = classifyDeliveryFailure(error);
       if (lastFailure.disposition === 'terminal') break;
       const delay = RETRY_DELAYS_MS[attempt - 1];
@@ -359,7 +384,7 @@ async function deliverToRecipient(
     deliveryStatus: terminal ? 'failed_terminal' : 'failed_retryable',
     deliveryError: lastFailure?.message || 'delivery failed',
   });
-  return terminal ? 'terminal' : 'retryable';
+  return { kind: terminal ? 'terminal' : 'retryable' };
 }
 
 // ── Per-campaign tick ────────────────────────────────────────────────────────
@@ -368,6 +393,8 @@ interface CampaignTickTally {
   sent: number;
   failed: number;
   finished: boolean;
+  /** Set when the run stopped because the provider rejected our sender. */
+  senderFault?: string;
 }
 
 async function processOneCampaign(
@@ -440,18 +467,47 @@ async function processOneCampaign(
         ),
       ),
     );
+    let senderFault: string | null = null;
     for (const outcome of outcomes) {
       if (outcome.status === 'fulfilled') {
-        if (outcome.value === 'sent') {
+        if (outcome.value.kind === 'sent') {
           sentCount++;
           tally.sent++;
-        } else if (outcome.value === 'terminal') {
+        } else if (outcome.value.kind === 'terminal') {
           failedCount++;
           tally.failed++;
+        } else if (outcome.value.kind === 'sender_fault') {
+          senderFault ??= outcome.value.message;
         }
       } else {
         log.error('Unexpected delivery rejection', { error: String(outcome.reason) });
       }
+    }
+
+    // Our identity, credentials, account standing or quota — every remaining
+    // recipient would fail identically. Pause with the provider's own words so
+    // an operator can fix the cause and resume, rather than grinding the
+    // audience down against a problem no retry can clear.
+    if (senderFault) {
+      log.error('Campaign paused — email provider rejected the sender', {
+        campaignId: campaign.id,
+        error: senderFault,
+      });
+      const halted = sentCount + failedCount;
+      await persistProgress(campaign, {
+        sentCount,
+        failedCount,
+        processedCount: halted,
+        progressPercent:
+          audience.items.length > 0
+            ? Math.round((halted / audience.items.length) * 1000) / 10
+            : 100,
+      });
+      await releaseCampaignSafely(campaign, 'paused', {
+        lastError: `Paused — the email provider rejected the sender, not the recipients: ${senderFault}`,
+      });
+      tally.senderFault = senderFault;
+      return tally;
     }
 
     const processed = sentCount + failedCount;
@@ -653,6 +709,15 @@ export async function processNewsletterCampaigns(
         result.sent += tally.sent;
         result.failed += tally.failed;
         if (tally.finished) result.finished.push(campaign.id);
+        // A sender fault stops delivery without throwing, so without this the
+        // run looks clean: result.errors stays empty, writeProcessorState
+        // clears lastError, and the dashboard reports the processor Healthy
+        // while nothing is going out.
+        if (tally.senderFault) {
+          result.errors.push(
+            `campaign ${campaign.id}: paused — the email provider rejected the sender: ${tally.senderFault}`,
+          );
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         result.errors.push(`campaign ${campaign.id}: ${message}`);
