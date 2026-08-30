@@ -65,6 +65,16 @@ jobs:
           # than leaning on the runner's implicit CI=true.
           STRIP_EDGE_ALLOW_DIRTY: '1'
         run: |
+          # A rollback (`-f revision=<sha>`) checks out that revision's tree,
+          # which for anything before this change has no strip script. Skip
+          # rather than die on MODULE_NOT_FOUND: the rollback lever must keep
+          # working, and a revision predating the strip is one that fit under
+          # the 5 MB limit unstripped — that is why it was green enough to roll
+          # back to.
+          if [ ! -f ./scripts/strip-edge-function.mjs ]; then
+            echo "No strip script in this revision — deploying its payload as-is."
+            exit 0
+          fi
           npm install --no-save --no-audit --no-fund esbuild@0.25.12
           node ./scripts/strip-edge-function.mjs
 
