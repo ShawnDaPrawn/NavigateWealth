@@ -294,8 +294,15 @@ is no longer load-bearing for any scheduled job.
 
 ## Remediation shape (applied 2026-08-25/26 — one item outstanding, see below)
 
-Nothing here was changed. Each fix is a production write and two of the three
-involve secrets, so they are listed rather than executed.
+These four were written as proposals, not executed — each is a production write
+and two of them involve secrets. **They were applied on 2026-08-25/26**, so read
+them below as the record of what was done and why, with one exception.
+
+Recommendation 2 was carried out by setting `active = false` on the seven dead
+jobs rather than by `cron.unschedule`. That stops them firing but leaves five of
+them holding the service-role key, which is the single outstanding production
+write — see
+[The retired jobs still hold the service-role key](#the-retired-jobs-still-hold-the-service-role-key-open-2026-08-30).
 
 1. **Stop storing the service-role key in `cron.job.command`.** Eleven jobs hold it
    in plaintext, readable by anything that can read `cron.job`. The publications
