@@ -194,7 +194,21 @@ export interface EsignField {
   // P3.5 — `attachment` requires the signer to upload a file (e.g. proof
   // of address, ID copy). Stored in the same storage bucket as the
   // envelope document, indexed by attachment id under the envelope.
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'attachment';
+  // Palette expansion — `auto_date` stamps the signing date without signer
+  // input, `dropdown`/`radio` are option pickers (options in metadata),
+  // `note` is sender-authored read-only text shown to the signer and burned
+  // into the final PDF (never a signer input, never required).
+  type:
+    | 'signature'
+    | 'initials'
+    | 'text'
+    | 'date'
+    | 'checkbox'
+    | 'attachment'
+    | 'auto_date'
+    | 'dropdown'
+    | 'radio'
+    | 'note';
   page: number;
   x: number;
   y: number;
