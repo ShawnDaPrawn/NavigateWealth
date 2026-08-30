@@ -54,13 +54,17 @@ jobs:
           fi
           export SUPABASE_ACCESS_TOKEN="$TOKEN"
           supabase --version
+          # Bundle locally with Docker. `--use-api` (server-side bundling) caps
+          # source at 5 MB and started 413-ing once Newsletter Studio (#259)
+          # landed; local CLI bundling allows 20 MB. See
+          # https://supabase.com/docs/guides/functions/limits
           status=0
           for attempt in 1 2 3; do
             echo "Deploy attempt $attempt of 3"
             if [ "$attempt" -eq 3 ]; then
-              supabase --debug functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . && exit 0
+              supabase --debug functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-docker --workdir . && exit 0
             else
-              supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . && exit 0
+              supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-docker --workdir . && exit 0
             fi
             status=$?
             if [ "$attempt" -lt 3 ]; then
