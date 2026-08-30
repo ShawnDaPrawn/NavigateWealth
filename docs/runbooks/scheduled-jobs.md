@@ -151,6 +151,10 @@ guessing it.
 | 20    | `kv-data-consistency-audit`              | `0 21 * * 0`          | dead      | HTTP 404 (**inferred** — no handler in code; weekly, outside the log window) |
 | 21    | `weekly-business-summary`                | `0 14 * * 5`          | dead      | HTTP 404 (**inferred** — no handler in code; weekly, outside the log window) |
 
+> **This table is the 2026-08-25 snapshot, not current state.** All six jobs
+> that were repaired rather than retired have since been observed returning 2xx
+> on their own schedules — see [Post-repair verification](#post-repair-verification-closed-2026-08-30).
+
 Ten of the thirteen failures are directly observed in `cron.job_run_details`
 or `function_edge_logs`. The three marked _inferred_ are weekly jobs whose last
 fire predates the 24-hour log retention window; for jobs 20 and 21 the target
@@ -288,7 +292,7 @@ If you still want to know what the function's `SUPABASE_SERVICE_ROLE_KEY` holds:
 Edge Functions → Secrets in the dashboard is the only place it is readable. It
 is no longer load-bearing for any scheduled job.
 
-## Remediation shape (not yet applied — needs an operator decision)
+## Remediation shape (applied 2026-08-25/26 — one item outstanding, see below)
 
 Nothing here was changed. Each fix is a production write and two of the three
 involve secrets, so they are listed rather than executed.
@@ -314,6 +318,126 @@ involve secrets, so they are listed rather than executed.
 4. **Re-point cron auth at a mechanism that is verifiable.** The KV/vault shared
    token used by publications is the only cron auth in this codebase with a
    proven success record.
+
+## The retired jobs still hold the service-role key (open, 2026-08-30)
+
+Recommendation 1 above was applied to every **active** job: all eight now pull
+the bearer from `vault.decrypted_secrets` at call time, and none carries a key
+inline. Recommendation 2 was applied by setting `active = false` on the seven
+dead jobs rather than by `cron.unschedule`.
+
+That leaves a gap the deactivation does not close. `active = false` stops a job
+firing; it does not touch `command`, so the row keeps whatever credential it was
+written with:
+
+| jobid | job                          | active | token                             |
+| ----- | ---------------------------- | ------ | --------------------------------- |
+| 18    | `submissions-aging-alert`    | false  | **live service-role key**, 219 ch |
+| 19    | `communication-group-recalc` | false  | **live service-role key**, 219 ch |
+| 20    | `kv-data-consistency-audit`  | false  | **live service-role key**, 219 ch |
+| 21    | `weekly-business-summary`    | false  | **live service-role key**, 219 ch |
+| 22    | `resource-zip-cleanup`       | false  | **live service-role key**, 219 ch |
+
+Measured the same way as the original audit — compared inside SQL so the secret
+is never printed, and cross-checked by decoding only the JWT payload's `role`
+claim:
+
+```sql
+with v as (select decrypted_secret k from vault.decrypted_secrets
+           where name = 'navigatewealth_service_role_key' order by created_at desc limit 1)
+select j.jobid, j.jobname, j.active,
+       case when j.tok = v.k then 'SERVICE ROLE KEY' else 'some other token' end
+from (select jobid, jobname, active,
+             (regexp_match(command, 'Bearer\s+<?([A-Za-z0-9._\-]+)>?'))[1] tok
+      from cron.job) j cross join v
+where j.active = false order by j.jobid;
+```
+
+All five return `SERVICE ROLE KEY` with `role: service_role`. The key is
+**current**, not a rotated-out copy: it is byte-identical to what the vault
+serves the active jobs today.
+
+Jobs 1 and 3 are also inactive but are not part of this: job 1's bearer is the
+literal 13-character `YOUR_ANON_KEY`, and job 3's is a 221-character string
+where the anon key was pasted _into the middle_ of `<YOUR_ANON_KEY>` — neither
+is a usable credential.
+
+**Why this still matters when reading `cron.job` already requires DB access.**
+Not because it grants an attacker something new inside the database — it does
+not. Because it defeats the specific property recommendation 1 was written to
+buy: _rotating the vault secret no longer rotates every copy._ Five plaintext
+copies now sit outside the vault, in a table that lands in every backup and
+snapshot, and a rotation would silently leave them valid.
+
+**The fix is `cron.unschedule`, not another `UPDATE`.** These jobs are retired;
+deleting the row removes the credential with it and leaves nothing to
+re-audit. This is a production write and has not been made — it needs an
+operator decision:
+
+```sql
+select cron.unschedule(jobname)
+from cron.job
+where jobid in (1, 3, 18, 19, 20, 21, 22);
+```
+
+Until then, treat the service-role key as exposed for rotation purposes: any
+rotation must also rewrite or drop these five rows.
+
+## Post-repair verification (closed 2026-08-30)
+
+Every repaired job has now been observed returning 2xx **on its natural
+schedule**, in query C (`function_edge_logs`), not by hand-firing it. That
+distinction is the point: a manual `curl` proves the handler works, it does not
+prove the scheduled row reaches it with credentials it accepts.
+
+| jobid | job                          | schedule              | verified (UTC)   | status | notes                                               |
+| ----- | ---------------------------- | --------------------- | ---------------- | ------ | --------------------------------------------------- |
+| 7     | `esign-expiry-sweep`         | `0 */6 * * *`         | 2026-08-25 12:00 | 200    | was 401 (observed)                                  |
+| 9     | `auto-content-process-due`   | `0 4,8,12,16 * * 1-5` | 2026-08-25 12:00 | 200    | was 401 via module-wide `requireAdmin`, not the key |
+| 6     | `overdue-tasks-daily-digest` | `0 4 * * 1-5`         | 2026-08-26 04:00 | 200    | was a malformed URL — never left the DB             |
+| 16    | `calendar-daily-digest`      | `0 4 * * 1-5`         | 2026-08-26 04:00 | 200    | was 401 (observed)                                  |
+| 17    | `client-birthday-digest`     | `0 5 * * 1-5`         | 2026-08-26 05:00 | 200    | was 404 — the handler did not exist and was written |
+| 10    | `client-profile-cleanup`     | `0 22 * * 0`          | 2026-08-30 22:00 | 200    | weekly; the last to come round. See below.          |
+
+### Job 10, the one that took five days to confirm
+
+It runs weekly (Sundays 22:00 UTC), so there was no way to see it on its own
+schedule sooner. Its 2026-08-30 run:
+
+```json
+{
+  "success": true,
+  "dryRun": false,
+  "totalProfilesScanned": 201,
+  "orphanedProfilesClosed": 0,
+  "deletedStatusBackfilled": 0,
+  "suspendedStatusBackfilled": 0,
+  "affectedRecords": [],
+  "durationMs": 4209
+}
+```
+
+`orphanedProfilesClosed: 0` is the **expected** result, not a sign the job did
+nothing useful. This job runs live (`dryRun: false`) and the earlier manual
+backfill already closed what needed closing; a clean weekly sweep finding
+nothing is what steady state looks like. What the run establishes is that the
+schedule reaches the handler and the handler is authorised — `totalProfilesScanned: 201`
+is the proof it actually did the scan rather than short-circuiting.
+
+**Its pre-repair 401 remains inferred, and now permanently so.** The run that
+would have shown it predates the 24-hour log retention window, and the guard the
+inference rested on no longer exists to be tested. What is observed is that it
+returns 200 now; what is not observed, and never will be, is that it returned
+401 before. The table above keeps that honest rather than quietly promoting an
+inference to a measurement once the outcome agreed with it.
+
+### What is still true
+
+Both planes must be checked, every time. `cron.job_run_details` reported
+`status: succeeded` for job 10 on **every** weekly run going back to 2026-08-02,
+including the runs the audit believed were 401ing. That plane records whether
+`net.http_post` was queued, not what came back. Query C is the only one that
+answers the question.
 
 ## Do this after any change to a scheduled job
 
