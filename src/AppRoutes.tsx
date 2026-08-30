@@ -158,6 +158,9 @@ const EmployeeBenefitsPage = React.lazy(() => import('./components/pages/Employe
 const SitemapPage = React.lazy(() => import('./components/pages/SitemapPage'));
 const RequestCompletionPage = React.lazy(() => import('./components/pages/RequestCompletionPage'));
 const NewsletterConfirmPage = React.lazy(() => import('./components/pages/NewsletterConfirmPage'));
+const NewsletterClickThroughPage = React.lazy(
+  () => import('./components/pages/NewsletterClickThroughPage'),
+);
 const NewsletterUnsubscribePage = React.lazy(
   () => import('./components/pages/NewsletterUnsubscribePage'),
 );
@@ -899,6 +902,16 @@ export function AppRoutes() {
             <FlexibleRoute>
               <ErrorBoundary fallbackTitle="Newsletter Unsubscribe Error">
                 <NewsletterUnsubscribePage />
+              </ErrorBoundary>
+            </FlexibleRoute>
+          }
+        />
+        <Route
+          path="/newsletter/click"
+          element={
+            <FlexibleRoute>
+              <ErrorBoundary fallbackTitle="Newsletter Link Error">
+                <NewsletterClickThroughPage />
               </ErrorBoundary>
             </FlexibleRoute>
           }
