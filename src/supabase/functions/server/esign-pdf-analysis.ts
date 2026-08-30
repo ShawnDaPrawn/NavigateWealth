@@ -248,8 +248,11 @@ function widgetToCandidate(
     page: widget.pageIndex + 1,
     x: clampPct((x1 / pageWidthPt) * 100),
     y: clampPct((yTopPt / pageHeightPt) * 100),
-    width: roundPt(Math.max(widthPt, min.width)),
-    height: roundPt(Math.max(heightPt, min.height)),
+    // Minimum-size expansion must never push the field past the page: cap
+    // width at the space right of the widget, height at the space below
+    // its top edge (never shrinking a widget's real size).
+    width: roundPt(Math.min(Math.max(widthPt, min.width), Math.max(pageWidthPt - x1 - 2, widthPt))),
+    height: roundPt(Math.min(Math.max(heightPt, min.height), Math.max(y2, heightPt))),
     required: true,
     source: 'acroform',
     label: widget.name || undefined,
@@ -520,22 +523,34 @@ export function rectForAnchor(
   const matchStartFrac = (match.index ?? 0) / Math.max(line.text.length, 1);
   const matchEndFrac = ((match.index ?? 0) + match[0].length) / Math.max(line.text.length, 1);
   // Anchor field sits to the *right* of the caption, occupying the trailing
-  // portion of the matched span.
-  const caption = match[0].split(/[_\-:]/)[0] ?? '';
+  // portion of the matched span. The caption is the match with its trailing
+  // separator (colon/dash) and underscore run stripped — splitting on the
+  // first '-' would wrongly cut hyphenated captions like "E-mail" down to
+  // "E" and start the field over the caption itself.
+  const caption = match[0].replace(/\s*[-:]?\s*_*\s*$/, '');
   const captionFrac = caption.length / Math.max(match[0].length, 1);
   const fieldStart = matchStartFrac + (matchEndFrac - matchStartFrac) * captionFrac;
   const startX = x1 + lineWidth * fieldStart;
   let endX = x1 + lineWidth * matchEndFrac;
   // A caption-only match ("Sign here", "First name:") has no underscore
   // tail to measure, which used to produce a zero-width field. Extend to
-  // the type's minimum width, clamped to the page edge.
+  // the type's minimum width, clamped to the page edge — the caller must
+  // take this rect's width verbatim (re-applying the minimum after the
+  // clamp would push the field off the page again).
   const min = MIN_FIELD_SIZE_PT[type];
   if (endX - startX < min.width) {
     endX = Math.min(startX + min.width, pageWidthPt - 4);
   }
   // Pad height slightly above and below the text baseline so signature
-  // strokes don't get clipped on burn-in.
-  return [startX, y1 - 2, endX, y2 + 4];
+  // strokes don't get clipped on burn-in, and grow short lines DOWNWARD to
+  // the type's minimum height. In PDF space (origin bottom-left) growing
+  // downward means lowering the bottom edge; clamp at the page bottom.
+  const top = y2 + 4;
+  let bottom = y1 - 2;
+  if (top - bottom < min.height) {
+    bottom = Math.max(top - min.height, 0);
+  }
+  return [startX, bottom, endX, top];
 }
 
 /**
@@ -576,17 +591,18 @@ export async function detectSmartAnchors(buffer: Uint8Array): Promise<AnalysisRe
           if (claimed.some(([s, e]) => start < e && end > s)) continue;
           claimed.push([start, end]);
           const [x1, y1, x2, y2] = rectForAnchor(line, match, type, pageWidthPt);
-          const min = MIN_FIELD_SIZE_PT[type];
           // Convert PDF-space (origin bottom-left) → x/y percentage with y
-          // from top; width/height stay in PDF points.
+          // from top; width/height stay in PDF points, taken verbatim from
+          // the rect — rectForAnchor already applied the type minimums with
+          // page-edge clamping.
           candidates.push({
             id: `cand-anchor-${pageNum}-${candidates.length}-${Date.now()}`,
             type,
             page: pageNum,
             x: clampPct((x1 / pageWidthPt) * 100),
             y: clampPct(((pageHeightPt - y2) / pageHeightPt) * 100),
-            width: roundPt(Math.max(x2 - x1, min.width)),
-            height: roundPt(Math.max(y2 - y1, min.height)),
+            width: roundPt(x2 - x1),
+            height: roundPt(y2 - y1),
             required: type === 'signature' || type === 'initials',
             source: 'anchor',
             label,

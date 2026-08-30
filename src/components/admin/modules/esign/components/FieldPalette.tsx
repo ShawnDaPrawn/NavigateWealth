@@ -521,7 +521,13 @@ export function FieldPalette({
 
                       {/* Fields for this signer */}
                       {signerFields.map((field) => {
-                        const template = FIELD_TEMPLATES.find((t) => t.type === field.type);
+                        // Prefer the canonical template (key === type) —
+                        // several presets share type 'text', and a plain
+                        // Text field must not pick up the first preset's
+                        // "Full name" label/icon.
+                        const template =
+                          FIELD_TEMPLATES.find((t) => t.key === field.type) ??
+                          FIELD_TEMPLATES.find((t) => t.type === field.type);
                         const Icon = template?.icon || FileSignature;
 
                         return (

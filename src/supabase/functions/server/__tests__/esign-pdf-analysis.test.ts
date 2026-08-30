@@ -108,7 +108,38 @@ describe('rectForAnchor — geometry', () => {
     const text = 'Sign here';
     const line = { text, rect: [520, 700, 580, 712] as [number, number, number, number] };
     const match = text.match(/\bsign\s+here\b/i)!;
-    const [, , x2] = rectForAnchor(line, match, 'signature', pageWidthPt);
+    const [x1, , x2] = rectForAnchor(line, match, 'signature', pageWidthPt);
     expect(x2).toBeLessThanOrEqual(pageWidthPt);
+    // The clamped width is final — consumers take it verbatim, so the
+    // candidate can never extend past the right page edge.
+    expect(x1 + (x2 - x1)).toBeLessThanOrEqual(pageWidthPt);
+  });
+
+  it('treats a hyphenated caption ("E-mail") as one caption, not "E"', () => {
+    const emailPattern = ANCHOR_PATTERNS.find((p) => p.label === 'Email')!.pattern;
+    const text = 'E-mail: __________';
+    const line = { text, rect: [50, 700, 350, 712] as [number, number, number, number] };
+    const match = text.match(emailPattern)!;
+    const [x1] = rectForAnchor(line, match, 'text', pageWidthPt);
+    // The field must start after the full "E-mail" caption. Splitting the
+    // match on the first '-' used to cut the caption to "E" and start the
+    // field over "-mail:". 6/18 chars of the match are caption, so the
+    // field starts at least that fraction into the matched span.
+    const lineWidth = 300;
+    const captionEndX = 50 + lineWidth * ('E-mail'.length / text.length);
+    expect(x1).toBeGreaterThanOrEqual(captionEndX - 1);
+  });
+
+  it('grows short lines downward to the minimum height, clamped at the page bottom', () => {
+    const text = 'Signature: ____________';
+    const match = text.match(/\bsign(ature)?\s*(of\s+\w+)?[:\-_]?\s*_{3,}/i)!;
+
+    const midPage = { text, rect: [50, 700, 350, 710] as [number, number, number, number] };
+    const [, b1, , t1] = rectForAnchor(midPage, match, 'signature', pageWidthPt);
+    expect(t1 - b1).toBeGreaterThanOrEqual(40); // signature min height
+
+    const nearBottom = { text, rect: [50, 5, 350, 15] as [number, number, number, number] };
+    const [, b2] = rectForAnchor(nearBottom, match, 'signature', pageWidthPt);
+    expect(b2).toBeGreaterThanOrEqual(0); // never extends past the page bottom
   });
 });
