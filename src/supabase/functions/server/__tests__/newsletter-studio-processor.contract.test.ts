@@ -237,6 +237,58 @@ describe('delivery', () => {
   });
 });
 
+describe('sender-side provider failures', () => {
+  // The SES sandbox — where the account sits until AWS grants production
+  // access — rejects EVERY send with "not verified". Attributing that to
+  // recipients would mark a whole audience failed_terminal, unretryable, and
+  // the campaign would have to be rebuilt. It is our configuration, so the
+  // campaign pauses and the audience is left intact.
+  it('pauses the campaign and leaves every recipient unburned when SES rejects the sender', async () => {
+    const campaign = await queuedCampaign(['a@x.co', 'b@x.co', 'c@x.co']);
+    email.sendEmail.mockRejectedValue(
+      new Error(
+        'SES error (400): {"message":"Email address is not verified. The following identities failed the check in region EU-WEST-1: newsletters@navigatewealth.co"}',
+      ),
+    );
+
+    const result = await processNewsletterCampaigns({ mode: 'cron' });
+    expect(result.sent).toBe(0);
+    expect(result.failed).toBe(0);
+
+    const paused = campaignRecord(campaign.id);
+    expect(paused.status).toBe('paused');
+    expect(paused.failedCount).toBe(0);
+    // The operator needs the provider's own words to fix the cause.
+    expect(paused.lastError).toMatch(/rejected the sender/i);
+    expect(paused.lastError).toMatch(/not verified/i);
+    // Lease released, so a resumed campaign is pickable.
+    expect(paused.lockId).toBeNull();
+
+    // No recipient may be left failed, and none may carry a spent attempt.
+    for (const record of recipientRecords(campaign.id)) {
+      expect(record.deliveryStatus).not.toBe('failed_terminal');
+      expect(record.deliveryStatus).not.toBe('failed_retryable');
+      expect(record.attemptCount).toBe(0);
+    }
+
+    // No retry ladder against a fault no retry can clear.
+    expect(email.sendEmail.mock.calls.length).toBeLessThanOrEqual(3);
+  });
+
+  it('still blames the recipient for a genuine per-address failure', async () => {
+    const campaign = await queuedCampaign(['ok@x.co', 'bad@x.co']);
+    email.sendEmail.mockImplementation(async (params: { to: string }) => {
+      if (params.to === 'bad@x.co') throw new Error('SES error (400): invalid address');
+      return true;
+    });
+
+    const result = await processNewsletterCampaigns({ mode: 'cron' });
+    expect(result.sent).toBe(1);
+    expect(result.failed).toBe(1);
+    expect(campaignRecord(campaign.id).status).toBe('finished');
+  });
+});
+
 describe('scheduling and admin controls', () => {
   it('promotes a due scheduled campaign and delivers it in the same tick', async () => {
     deps.getGroupById.mockImplementation(async (id: string) =>
