@@ -709,6 +709,15 @@ export async function processNewsletterCampaigns(
         result.sent += tally.sent;
         result.failed += tally.failed;
         if (tally.finished) result.finished.push(campaign.id);
+        // A sender fault stops delivery without throwing, so without this the
+        // run looks clean: result.errors stays empty, writeProcessorState
+        // clears lastError, and the dashboard reports the processor Healthy
+        // while nothing is going out.
+        if (tally.senderFault) {
+          result.errors.push(
+            `campaign ${campaign.id}: paused — the email provider rejected the sender: ${tally.senderFault}`,
+          );
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         result.errors.push(`campaign ${campaign.id}: ${message}`);

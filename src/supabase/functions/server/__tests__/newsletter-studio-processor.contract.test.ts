@@ -273,6 +273,12 @@ describe('sender-side provider failures', () => {
 
     // No retry ladder against a fault no retry can clear.
     expect(email.sendEmail.mock.calls.length).toBeLessThanOrEqual(3);
+
+    // The pause does not throw, so without explicit propagation the run would
+    // look clean and the dashboard would report the processor Healthy while
+    // nothing is going out. The operator health signal must carry it.
+    expect(result.errors.join(' ')).toMatch(/rejected the sender/i);
+    expect(result.errors.join(' ')).toMatch(/not verified/i);
   });
 
   it('still blames the recipient for a genuine per-address failure', async () => {
