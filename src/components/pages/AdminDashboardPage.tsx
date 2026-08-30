@@ -33,6 +33,7 @@ import { ResourcesSkeleton } from '../admin/modules/resources';
 import { PublicationsSkeleton } from '../admin/modules/publications';
 import { ComplianceSkeleton } from '../admin/modules/compliance';
 import { CommunicationSkeleton } from '../admin/modules/communication';
+import { NewsletterSkeleton, useNewsletterCampaignProcessor } from '../admin/modules/newsletter';
 import { SocialMediaSkeleton } from '../admin/modules/social-media';
 import { ReportingSkeleton } from '../admin/modules/reporting';
 import { CalendarSkeleton } from '../admin/modules/calendar';
@@ -76,6 +77,9 @@ const ComplianceModule = React.lazy(() =>
 );
 const CommunicationModule = React.lazy(() =>
   import('../admin/modules/communication').then((m) => ({ default: m.CommunicationModule })),
+);
+const NewsletterModule = React.lazy(() =>
+  import('../admin/modules/newsletter').then((m) => ({ default: m.NewsletterModule })),
 );
 const ProductManagementModule = React.lazy(() =>
   import('../admin/modules/product-management').then((m) => ({
@@ -187,6 +191,9 @@ export function AdminDashboardPage() {
 
   // Best-effort accelerator only. Cron is the authoritative delivery driver.
   useArticleNotificationProcessor();
+
+  // Same doctrine for newsletter campaign delivery.
+  useNewsletterCampaignProcessor();
 
   // Send overdue task digest every 24 hours
   useOverdueDigestProcessor({
@@ -319,6 +326,14 @@ export function AdminDashboardPage() {
           <Suspense fallback={<CommunicationSkeleton />}>
             <ErrorBoundary fallbackTitle="Communication Module Error">
               <CommunicationModule />
+            </ErrorBoundary>
+          </Suspense>
+        );
+      case 'newsletter':
+        return (
+          <Suspense fallback={<NewsletterSkeleton />}>
+            <ErrorBoundary fallbackTitle="Newsletter Studio Error">
+              <NewsletterModule />
             </ErrorBoundary>
           </Suspense>
         );

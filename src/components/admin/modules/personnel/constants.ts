@@ -134,6 +134,7 @@ export const PERMISSIONED_MODULES: AdminModule[] = [
   'applications',
   'submissions',
   'communication',
+  'newsletter',
   'marketing',
   'reporting',
   'calendar',
@@ -306,6 +307,11 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
     { key: 'edit', label: 'Edit', description: 'Edit templates and drafts' },
     { key: 'send', label: 'Send', description: 'Send communications to clients' },
     { key: 'delete', label: 'Delete', description: 'Delete templates or history' },
+  ],
+  newsletter: [
+    { key: 'create', label: 'Compose', description: 'Create and edit newsletter campaigns' },
+    { key: 'send', label: 'Send', description: 'Schedule, send, pause and cancel campaigns' },
+    { key: 'delete', label: 'Delete', description: 'Delete campaigns and templates' },
   ],
   marketing: [
     { key: 'create', label: 'Create', description: 'Create social media posts' },

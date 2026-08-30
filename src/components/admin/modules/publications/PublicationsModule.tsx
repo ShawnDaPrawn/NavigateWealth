@@ -31,7 +31,6 @@ import {
   Sparkles,
   Zap,
   Users,
-  Send,
   Contact,
   Briefcase,
 } from 'lucide-react';
@@ -58,9 +57,6 @@ import { AutoContentPanel } from './components/AutoContentPanel';
 // Lazy-loaded components
 const NewsletterSubscribers = React.lazy(() =>
   import('./components/NewsletterSubscribers').then((m) => ({ default: m.NewsletterSubscribers })),
-);
-const NewsletterBroadcast = React.lazy(() =>
-  import('./components/NewsletterBroadcast').then((m) => ({ default: m.NewsletterBroadcast })),
 );
 const TeamManager = React.lazy(() =>
   import('./components/TeamManager').then((m) => ({ default: m.TeamManager })),
@@ -344,10 +340,6 @@ export function PublicationsModule() {
               <Users className="h-4 w-4" />
               Subscribers
             </TabsTrigger>
-            <TabsTrigger value="broadcast" className="flex items-center gap-2">
-              <Send className="h-4 w-4" />
-              Broadcast
-            </TabsTrigger>
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Contact className="h-4 w-4" />
               Team
@@ -428,13 +420,6 @@ export function PublicationsModule() {
         <TabsContent value="subscribers" className="mt-6">
           <React.Suspense fallback={<LoadingPlaceholder message="Loading subscribers..." />}>
             <NewsletterSubscribers />
-          </React.Suspense>
-        </TabsContent>
-
-        {/* Broadcast Tab */}
-        <TabsContent value="broadcast" className="mt-6">
-          <React.Suspense fallback={<LoadingPlaceholder message="Loading broadcast..." />}>
-            <NewsletterBroadcast />
           </React.Suspense>
         </TabsContent>
 

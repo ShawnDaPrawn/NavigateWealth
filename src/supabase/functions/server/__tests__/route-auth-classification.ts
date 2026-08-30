@@ -129,7 +129,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'shared-secret',
     classification: 'guarded',
     reason:
-      'Machine endpoint authenticated by a shared secret rather than a user session. Four of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move five routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
+      'Machine endpoint authenticated by a shared secret rather than a user session. Five of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move six routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
     routes: [
       'calendar-digest-routes.ts POST /send-birthdays',
       'calendar-digest-routes.ts POST /send-daily',
@@ -137,6 +137,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'esign-ops-routes.ts POST /cron/expiry-sweep',
       'esign-ops-routes.ts POST /cron/reminder-sweep',
       'kv-cleanup-routes.ts POST /cron',
+      'newsletter-studio-routes.ts POST /cron/process',
       'openclaw-routes.ts POST /events',
       'quality-issues-routes.ts POST /ingest-ci-report',
       'quality-issues-routes.ts POST /ingest-security-report',
@@ -154,12 +155,13 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'lead-gen',
     classification: 'public',
     reason:
-      'Anonymous lead-gen form: the public marketing site posts here with no session. Bounded by the shared public-form rate limiter; staff email render is escaped via escapeHtmlDeep (S10/S11).',
+      'Anonymous lead-gen form: the public marketing site posts here with no session. Bounded by the shared public-form rate limiter; staff email render is escaped via escapeHtmlDeep (S10/S11). The newsletter-studio one-click unsubscribe is the RFC 8058 target mailbox providers POST to on a recipient’s behalf — it can never require a session, is gated by the opaque per-recipient token, and 404s unknown ids with no detail.',
     routes: [
       'consultation.ts GET /',
       'consultation.ts POST /request',
       'contact-form-routes.ts GET /',
       'contact-form-routes.ts POST /submit',
+      'newsletter-studio-routes.ts POST /unsubscribe-oneclick',
       'newsletter.tsx GET /unsubscribe',
       'newsletter.tsx POST /subscribe',
       'quote-request-routes.ts GET /',
@@ -275,8 +277,9 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'analytics-ping',
     classification: 'public',
     reason:
-      'Analytics ping from a public article page or an email tracking pixel; carries no session by construction. Append-only counter/event write.',
+      'Analytics ping from a public article page or an email tracking pixel; carries no session by construction. Append-only counter/event write. The newsletter-studio click ping additionally returns the destination URL for the redirect — but only a URL the campaign author stored server-side at queue time (never caller input, so no open redirect), gated by an opaque per-recipient token; unknown ids 404 with no detail.',
     routes: [
+      'newsletter-studio-routes.ts POST /track/click',
       'publications-lifecycle-routes.ts POST /articles/:id/increment-views',
       'publications-lifecycle-routes.ts POST /articles/:id/view',
       'publications-lifecycle-routes.ts POST /email-engagement/open',
