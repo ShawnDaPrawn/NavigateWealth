@@ -58,6 +58,12 @@ jobs:
           node-version: '20'
 
       - name: Shrink Edge Function payload (strip types and comments)
+        env:
+          # The script refuses to rewrite a tree in place unless it is told the
+          # checkout is disposable. It is here — this job only deploys, and the
+          # runner discards the checkout afterwards. Stated explicitly rather
+          # than leaning on the runner's implicit CI=true.
+          STRIP_EDGE_ALLOW_DIRTY: '1'
         run: |
           npm install --no-save --no-audit --no-fund esbuild@0.25.12
           node ./scripts/strip-edge-function.mjs

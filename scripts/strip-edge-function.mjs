@@ -38,8 +38,8 @@
  *
  * SAFETY
  * ------
- * - Destructive: it rewrites files in place, so it refuses to run unless
- *   STRIP_EDGE_ALLOW_DIRTY=1 or the tree is a disposable CI checkout.
+ * - Destructive: it rewrites files in place, so it refuses to run unless CI is
+ *   set (a disposable runner checkout) or STRIP_EDGE_ALLOW_DIRTY=1 is explicit.
  * - Any transform failure exits non-zero and fails the deploy.
  * - A size assertion fails the deploy BEFORE upload if the payload is back near
  *   the ceiling, so the next occurrence is a clear message here instead of an
@@ -80,7 +80,28 @@ function walk(dir, out = []) {
   return out;
 }
 
+/**
+ * This rewrites source files in place and cannot be undone except with git.
+ * That is fine on a CI runner, whose checkout is thrown away after the deploy,
+ * and destructive anywhere else — so require one or the other to be explicit.
+ */
+function assertDisposableCheckout() {
+  if (process.env.CI || process.env.STRIP_EDGE_ALLOW_DIRTY === '1') return;
+  console.error(
+    'strip-edge-function: refusing to run — this rewrites source files in place,\n' +
+      'stripping every type annotation and comment under:\n' +
+      ROOTS.map((root) => `  ${root}`).join('\n') +
+      '\n\nIt is meant to run on a disposable CI checkout immediately before\n' +
+      '`supabase functions deploy`, never on a working tree you care about.\n' +
+      'Set STRIP_EDGE_ALLOW_DIRTY=1 if you really do want to rewrite this tree\n' +
+      '(commit or stash your work first — `git checkout -- .` is the way back).',
+  );
+  process.exit(1);
+}
+
 function main() {
+  assertDisposableCheckout();
+
   const files = ROOTS.flatMap((root) => walk(root));
   if (files.length === 0) {
     console.error('strip-edge-function: no source files found — wrong working directory?');
