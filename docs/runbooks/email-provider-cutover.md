@@ -71,6 +71,46 @@ reads it today.
 8. **Watch for a day**, then cancel SendGrid. Keep the SendGrid DKIM records in DNS until
    the subscription is actually cancelled.
 
+## If a campaign pauses itself during the cutover
+
+Expect this while the SES identity is still unverified or the account is still
+in the sandbox — which is where you are until AWS grants production access.
+
+A campaign that hits a **sender-side** failure pauses instead of failing its
+recipients. In the Newsletter Studio the campaign shows `paused` and
+`lastError` carries the provider's own words, e.g.
+
+```
+Paused — the email provider rejected the sender, not the recipients:
+SES error (400): {"message":"Email address is not verified. ..."}
+```
+
+This is deliberate. Sender-side conditions — unverified identity, sandbox mode,
+missing or unauthorised credentials, an account-level sending pause, quota and
+rate limits — would fail identically for every address, so blaming recipients
+would burn the whole audience on a problem no retry can clear.
+
+**Nothing is lost.** Every recipient stays at `attemptCount: 0` with no failure
+recorded. Fix the cause, then resume the campaign — it picks up on an intact
+audience and no one is double-sent, because delivery state is per-recipient.
+
+What to check, in order:
+
+1. **Identity verified?** SES console → Verified identities. All three DKIM
+   CNAMEs must be live and the identity must read _Verified_.
+2. **Still in the sandbox?** In the sandbox SES only sends to verified
+   recipients. Until production access is granted, test with an address you
+   have verified.
+3. **Credentials?** `NW_SES_REGION`, `NW_SES_ACCESS_KEY_ID`,
+   `NW_SES_SECRET_ACCESS_KEY` set on the Edge Function, and the IAM user
+   holding `ses:SendEmail` and `ses:SendRawEmail`. The region must match the
+   region the identity was verified in.
+4. **Account standing?** SES console → Account dashboard. A reputation-driven
+   pause shows here.
+
+A campaign that fails for a genuine per-address reason still behaves as
+before: that recipient goes terminal and the campaign carries on.
+
 ## Rollback
 
 Unset `NW_EMAIL_PROVIDER` (or set it to `sendgrid`). Instant, no deploy. This is why the
