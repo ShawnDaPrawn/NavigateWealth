@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { OptimizedImage } from '../shared/OptimizedImage';
+import { ProviderLogo } from '../shared/ProviderLogo';
 import { Badge } from '../ui/badge';
 import { Shield, CheckCircle, Stethoscope, Users, FileText, TrendingUp } from 'lucide-react';
 
@@ -94,12 +94,12 @@ const estatePlanningProviders: ProviderEntry[] = [
 
 // ── Shared provider card ──────────────────────────────────────────────────────
 
-function ProviderLogo({ provider }: { provider: ProviderEntry }) {
+function ProviderLogoCard({ provider }: { provider: ProviderEntry }) {
   return (
     <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:shadow-md hover:bg-white border border-gray-100 transition-all duration-200 group">
       <div className="w-full h-16 flex items-center justify-center">
         {provider.logo ? (
-          <OptimizedImage
+          <ProviderLogo
             src={provider.logo}
             alt={provider.name}
             width={160}
@@ -145,7 +145,7 @@ function CategorySection({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {providers.map((provider) => (
-          <ProviderLogo key={provider.name} provider={provider} />
+          <ProviderLogoCard key={provider.name} provider={provider} />
         ))}
       </div>
     </div>

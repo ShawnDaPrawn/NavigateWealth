@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@ta
 import { AuthProvider } from '../auth/AuthContext';
 import { Toaster } from '../ui/sonner';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
-import { PerformanceOptimizer } from '../shared/PerformanceOptimizer';
 import { InactivityManager } from '../auth/InactivityManager';
 import { ScrollToTop } from '../shared/ScrollToTop';
 import { ImageOptimization } from '../shared/ImageOptimization';
@@ -72,7 +71,6 @@ const queryClient = new QueryClient({
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <PerformanceOptimizer />
       <ImageOptimization />
       <InactivityManager />
       <ScrollToTop />

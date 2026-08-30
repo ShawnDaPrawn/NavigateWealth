@@ -125,7 +125,7 @@
   "scripts": {
     "dev": "vite",
     "prepare": "husky",
-    "build": "node ./scripts/copy-pdfjs-assets.mjs && node ./scripts/generate-seo-files.mjs && vite build && node ./scripts/apply-static-seo.mjs && node ./scripts/verify-seo-build.mjs",
+    "build": "node ./scripts/copy-pdfjs-assets.mjs && node ./scripts/generate-figma-webp.mjs && node ./scripts/generate-seo-files.mjs && vite build && node ./scripts/apply-static-seo.mjs && node ./scripts/verify-seo-build.mjs",
     "pdfjs:assets": "node ./scripts/copy-pdfjs-assets.mjs",
     "seo:verify": "node ./scripts/generate-seo-files.mjs && node ./scripts/verify-seo-build.mjs",
     "bundle:check": "node ./scripts/check-bundle-size.mjs",
@@ -156,7 +156,8 @@
     "form-prefill:smoke": "node ./scripts/form-prefill-api-smoke.mjs",
     "form-prefill:e2e": "playwright test e2e/form-prefill-smoke.spec.ts --project=desktop-chromium",
     "form-prefill:migrate-templates": "node ./scripts/migrate-form-templates-to-storage.mjs",
-    "depcruise": "npx dependency-cruiser@16 \"src/**/*.{ts,tsx}\" --config quality/dependency-cruiser.cjs"
+    "depcruise": "npx dependency-cruiser@16 \"src/**/*.{ts,tsx}\" --config quality/dependency-cruiser.cjs",
+    "figma:webp": "node ./scripts/generate-figma-webp.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [

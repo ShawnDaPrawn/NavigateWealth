@@ -58,6 +58,7 @@ export interface KvRepository<T> {
   getMany(ids: string[]): Promise<(T | null)[]>;
   list(options?: { limit?: number; startAfter?: string }): Promise<Page<T>>;
   listAll(reason: string): Promise<T[]>;
+  listWithKeys(reason: string, idPrefix?: string): Promise<Array<{ key: string; value: T }>>;
   key(id: string): string;
 }
 
@@ -129,6 +130,40 @@ export function createKvRepository<T>(namespace: string): KvRepository<T> {
       const items = ((await kv.getByPrefix(namespace)) as T[]) ?? [];
       log.debug('Unbounded namespace scan', { namespace, reason, count: items.length });
       return items;
+    },
+
+    /**
+     * Like `listAll`, but keeps the keys.
+     *
+     * Some records only carry their subject in the key — `security:<userId>`
+     * holds no id field of its own — so a values-only read cannot say who a row
+     * belongs to. Without this, callers needing that reach past the repository
+     * into `kv_store` directly, which is what `esign-recovery-bin.ts` did and
+     * what the kv-direct-access ratchet exists to discourage. Better to have the
+     * abstraction cover the case than to have callers route around it.
+     *
+     * `idPrefix` narrows the scan to keys beneath `namespace + idPrefix`, so a
+     * caller after one subject's rows in a large namespace does not pay for the
+     * whole namespace.
+     */
+    async listWithKeys(
+      reason: string,
+      idPrefix?: string,
+    ): Promise<Array<{ key: string; value: T }>> {
+      if (!reason) {
+        throw new Error(
+          `listWithKeys(${namespace}) requires a reason — an unbounded namespace ` +
+            'scan must be attributable.',
+        );
+      }
+      const prefix = idPrefix ? `${namespace}${idPrefix}` : namespace;
+      const rows =
+        ((await kv.listByPrefix(prefix, { limit: MAX_PAGE_SIZE })) as Array<{
+          key: string;
+          value: T;
+        }>) ?? [];
+      log.debug('Keyed namespace scan', { prefix, reason, count: rows.length });
+      return rows;
     },
   };
 }

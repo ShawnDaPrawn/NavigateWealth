@@ -5,13 +5,43 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 /**
- * Resolves `figma:asset/<hash>.png` imports to files under `src/assets`,
- * preferring an optimized `.webp` when one exists. This replaces the previous
- * ~240 hand-maintained static aliases with a single dynamic resolver, so new
- * exported assets work without editing this config.
+ * Resolves `figma:asset/<hash>.png` imports to the smallest usable file,
+ * replacing the previous ~240 hand-maintained static aliases with one dynamic
+ * resolver so new exported assets work without editing this config.
+ *
+ * THE CANDIDATE ORDER IS LOAD-BEARING, and getting it wrong is silent.
+ * This once looked only for `<hash>.webp` in `src/assets`. There are no `.webp`
+ * files there and never have been — the optimized exports are `.jpg` — so the
+ * candidate never matched and every import fell through to the original. Those
+ * originals are raw Figma exports at up to 8256x5504: 62 of the 84 imported
+ * assets were being served at 25-31 MB each when a 2200x1467 sibling of ~300 KB
+ * sat next to them unused. The home page alone shipped ~125 MB of images.
+ *
+ * The ladder now has two halves, and each covers the other's weakness:
+ *
+ *   1. `node_modules/.cache/figma-webp/<hash>.webp` — built by
+ *      `scripts/generate-figma-webp.mjs` as a pre-build step, capped at 500 KB
+ *      per image. This is what production actually serves: 811 MB of originals
+ *      become 10 MB. It is generated, never committed, and Vercel persists the
+ *      directory so the resize is paid once rather than per deploy.
+ *
+ *   2. The committed siblings in `src/assets` — `.webp`, `.avif`, `.jpg`,
+ *      `.jpeg`, then the original. This is the answer to "what if the cache is
+ *      cold, or the generator failed, or someone runs `vite build` directly?"
+ *      Without it a cache miss silently reinstates the 31 MB PNGs; with it the
+ *      worst case for the 62 assets that have a sibling is a 300 KB JPEG.
+ *
+ * So the cache is the optimization and the siblings are the floor. Neither
+ * alone is safe: the cache can vanish, and the siblings do not cover all 84.
+ *
+ * A miss here costs nothing visible in development, where everything is local
+ * and fast. It costs the user their data bundle. `figma-asset-weight.test.ts`
+ * mirrors this list and fails on anything oversized — deliberately measuring
+ * the cold path, since that is the one no build step is watching.
  */
 function figmaAssetResolver(): Plugin {
   const assetDirectory = path.resolve(__dirname, './src/assets');
+  const webpCacheDirectory = path.resolve(__dirname, './node_modules/.cache/figma-webp');
   return {
     name: 'figma-asset-resolver',
     enforce: 'pre',
@@ -19,11 +49,18 @@ function figmaAssetResolver(): Plugin {
       if (!source.startsWith('figma:asset/')) return null;
       const filename = source.slice('figma:asset/'.length);
       const parsed = path.parse(filename);
-      const candidates = [`${parsed.name}.webp`, filename];
-      const match = candidates.find((candidate) =>
-        fs.existsSync(path.join(assetDirectory, candidate)),
-      );
-      return path.join(assetDirectory, match ?? filename);
+      // Generated best-effort first, committed fallbacks next, original last.
+      // `.webp` stays ahead of `.jpg` so converting an asset by hand later is a
+      // drop-in improvement with no code change.
+      const candidates = [
+        path.join(webpCacheDirectory, `${parsed.name}.webp`),
+        path.join(assetDirectory, `${parsed.name}.webp`),
+        path.join(assetDirectory, `${parsed.name}.avif`),
+        path.join(assetDirectory, `${parsed.name}.jpg`),
+        path.join(assetDirectory, `${parsed.name}.jpeg`),
+        path.join(assetDirectory, filename),
+      ];
+      return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates.at(-1)!;
     },
   };
 }

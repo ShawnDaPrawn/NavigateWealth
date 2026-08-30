@@ -19,12 +19,12 @@ Built-in production assets:
 
 Approved source files kept for download/reference:
 
-- `approved-source/Navigate_Wealth_Logo_With_Icon@2x.png`
-- `approved-source/Navigate_Wealth_Logo_With_Icon.svg`
-- `approved-source/Navigate_Wealth_Logo_With_Icon.pdf`
-- `approved-source/Navigate_Wealth_Icon_Only@2x.png`
-- `approved-source/Navigate_Wealth_Icon_Only.svg`
-- `approved-source/Navigate_Wealth_Logo_Only@2x.png`
+- `../../brand-source/approved-source/Navigate_Wealth_Logo_With_Icon@2x.png`
+- `../../brand-source/approved-source/Navigate_Wealth_Logo_With_Icon.svg`
+- `../../brand-source/approved-source/Navigate_Wealth_Logo_With_Icon.pdf`
+- `../../brand-source/approved-source/Navigate_Wealth_Icon_Only@2x.png`
+- `../../brand-source/approved-source/Navigate_Wealth_Icon_Only.svg`
+- `../../brand-source/approved-source/Navigate_Wealth_Logo_Only@2x.png`
 
 Notes:
 
@@ -32,4 +32,20 @@ Notes:
 - The active built-ins are path-based SVG traces of the approved supplied artwork, created to preserve the original logo look while improving sharpness and scalability.
 - The dark and brand variants keep the same traced artwork and dimensions, with only the `Navigate Wealth` wordmark changed to white for clearer contrast on darker surfaces.
 - High-resolution transparent PNG fallbacks are regenerated from the SVG masters for apps and downloads that prefer raster files.
-- Rollback copies of the previous built-ins are stored in `rollback-2026-03-24/`.
+- Rollback copies of the previous built-ins are stored in `../../brand-source/rollback-2026-03-24/`.
+
+## Where the source files went (2026-08-27)
+
+`approved-source/`, `extracted-source/` and `rollback-2026-03-24/` moved to
+`brand-source/` at the repository root. They are still in git; they are no
+longer deployed.
+
+They were here, and `public/` means "serve this to the internet" — so Vite
+copied all 12 MB into `dist/` on every build and Vercel published it. Nothing in
+the app referenced any of it. Six MB of that was `.zip` archives of the logo
+source, next to `.tiff` and `.pdf` files no browser can render, all publicly
+downloadable by anyone who guessed the path.
+
+The web-ready PNG and SVG logos the app actually uses stayed here. If something
+from `brand-source/` is ever needed at runtime, export a web format into this
+directory rather than moving the source back.

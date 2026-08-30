@@ -445,3 +445,81 @@ describe('an anonymous caller is rate limited', () => {
     expect(stored().length).toBe(before + 1);
   });
 });
+
+/**
+ * The wire format a real browser actually sends.
+ * =============================================
+ *
+ * The fixture above it is hand-written, and was never checked against a
+ * browser: it carries four body fields where Chromium sends ten, and omits
+ * `originalPolicy` entirely — which is the longest field in the payload and the
+ * one most likely to breach a length cap.
+ *
+ * This payload was captured on 2026-08-29 from Chromium 141 (headless), served
+ * the exact `Content-Security-Policy-Report-Only` value from `vercel.json` over
+ * TLS with the report targets pointed at a local collector, and provoked with
+ * an inline script whose hash is not in `script-src`. It is pasted verbatim,
+ * 127.0.0.1 origins and all, because the point is that it is not idealised.
+ *
+ * This settles half of what PRODUCTION-READINESS.md records as unproven. That
+ * note says "Headless Chromium emitted no reports to the collector even over
+ * TLS on a same-origin endpoint" — it does emit, as `application/reports+json`
+ * via the Reporting API rather than the legacy `application/csp-report`, which
+ * is likely what the earlier attempt was watching for. What remains unproven is
+ * only the network path to the production collector, which cannot be exercised
+ * from CI.
+ */
+describe('a payload captured from a real browser', () => {
+  const CHROMIUM_141_REPORT = {
+    age: 4,
+    body: {
+      blockedURL: 'inline',
+      disposition: 'report',
+      documentURL: 'https://127.0.0.1:8443/',
+      effectiveDirective: 'script-src-elem',
+      lineNumber: 3,
+      originalPolicy:
+        "default-src 'self'; script-src 'self' 'sha256-Jj3ObkLk3lDlnCnEMUyMIwHL7ENmhfvZh+4B1o/cD5k=' 'sha256-Mk1XlGRAuKNssIileLzg826paEfnzQPxho4GLQtkJwQ=' https://www.googletagmanager.com https://s3.tradingview.com https://www.tradingview.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com https://images.unsplash.com https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com https://va.vercel-scripts.com https://vitals.vercel-insights.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://s.tradingview.com https://www.tradingview.com; worker-src 'self' blob:; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri https://127.0.0.1:8443/csp-report; report-to csp-endpoint",
+      referrer: '',
+      sample: '',
+      sourceFile: 'https://127.0.0.1:8443/',
+      statusCode: 200,
+    },
+    type: 'csp-violation',
+    url: 'https://127.0.0.1:8443/',
+    user_agent:
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36',
+  };
+
+  it('accepts the exact shape Chromium sends, not an idealised one', async () => {
+    const res = await post([CHROMIUM_141_REPORT], 'application/reports+json');
+
+    expect(res.status).toBe(204);
+    expect(stored()).toHaveLength(1);
+
+    const raw = JSON.stringify(stored());
+    expect(raw).toContain('script-src-elem');
+    expect(raw).toContain('inline');
+  });
+
+  it('does not choke on the fields the hand-written fixture omits', () => {
+    // Guards the fixture itself: if a future edit trims this back down to the
+    // four convenient fields, the thing it exists to prove is gone.
+    const body = CHROMIUM_141_REPORT.body as Record<string, unknown>;
+    for (const field of [
+      'blockedURL',
+      'disposition',
+      'documentURL',
+      'effectiveDirective',
+      'lineNumber',
+      'originalPolicy',
+      'referrer',
+      'sample',
+      'sourceFile',
+      'statusCode',
+    ]) {
+      expect(body, `real Chromium sends ${field}`).toHaveProperty(field);
+    }
+    expect((body.originalPolicy as string).length).toBeGreaterThan(1000);
+  });
+});
