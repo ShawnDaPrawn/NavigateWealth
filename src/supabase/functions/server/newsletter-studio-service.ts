@@ -356,12 +356,29 @@ export async function resolveAudience(listIds: string[]): Promise<ResolvedAudien
 
 /** Freeze the audience and hand the campaign to the processor. */
 async function resolveAndQueue(campaign: NewsletterCampaign): Promise<NewsletterCampaignView> {
+  // Resolving the audience reads groups, every client and every subscriber —
+  // slow enough that an admin can cancel or edit the campaign while it runs.
+  // Writing our pre-resolve copy back would resurrect a cancelled campaign or
+  // send pre-edit content to a pre-edit audience (review finding), so the
+  // record is re-verified immediately before each write and the resolve is
+  // abandoned if anything moved underneath it.
   const resolved = await resolveAudience(campaign.listIds);
   const timestamp = nowIso();
 
+  const latest = await newsletterCampaigns.get(campaign.id);
+  if (!latest || latest.status !== campaign.status || latest.updatedAt !== campaign.updatedAt) {
+    log.info('Campaign changed while its audience was resolving — queue write abandoned', {
+      campaignId: campaign.id,
+      expectedStatus: campaign.status,
+      actualStatus: latest?.status ?? 'deleted',
+    });
+    if (!latest) throw new NotFoundError(`Campaign ${campaign.id} not found`);
+    return toCampaignView(latest);
+  }
+
   if (resolved.items.length === 0) {
     const finished: NewsletterCampaign = {
-      ...campaign,
+      ...latest,
       status: 'finished',
       recipientCount: 0,
       progressPercent: 100,
@@ -383,9 +400,9 @@ async function resolveAndQueue(campaign: NewsletterCampaign): Promise<Newsletter
   await newsletterAudiences.put(campaign.id, audience);
 
   const queued: NewsletterCampaign = {
-    ...campaign,
+    ...latest,
     status: 'queued',
-    links: extractCampaignLinks(campaign.bodyHtml),
+    links: extractCampaignLinks(latest.bodyHtml),
     recipientCount: resolved.items.length,
     sentCount: 0,
     failedCount: 0,

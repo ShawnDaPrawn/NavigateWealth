@@ -66,6 +66,16 @@ export const RETRYABLE_REQUEUE_DELAY_MS = 30_000;
 export const MAX_TOTAL_ATTEMPTS = 5;
 export const CAMPAIGN_LOCK_TTL_MS = 60_000;
 export const CAMPAIGN_LOCK_SETTLE_MS = 80;
+/**
+ * Deadline on a single provider call. Without one a hung SendGrid/SES request
+ * has no upper bound, so a batch could outlive its lease and be reclaimed by
+ * another tick — which `recipientReadiness` would then treat as retryable,
+ * duplicating the email (review finding). Three attempts plus the retry
+ * sleeps stay under CAMPAIGN_LOCK_TTL_MS at this value.
+ */
+export const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
+/** How often an in-flight batch renews the lease it holds. */
+export const LEASE_HEARTBEAT_MS = 20_000;
 export const DEFAULT_MANUAL_MAX_CAMPAIGNS = 2;
 export const DEFAULT_MANUAL_MAX_BATCHES = 3;
 export const DEFAULT_CRON_MAX_CAMPAIGNS = 3;
@@ -159,6 +169,44 @@ async function persistProgress(
   };
   await newsletterCampaigns.put(campaign.id, merged);
   return { campaign: merged, halted };
+}
+
+/**
+ * Run `work` while renewing the campaign's lease in the background, so a batch
+ * that runs long cannot have its lease expire underneath it and be reclaimed
+ * by a second worker (review finding). The heartbeat only ever extends
+ * `lockExpiresAt` for the lease we still hold: if another worker has taken it,
+ * or an admin halted the campaign, it stops renewing and leaves the record
+ * alone.
+ */
+async function withLeaseHeartbeat<T>(
+  campaign: NewsletterCampaign,
+  work: () => Promise<T>,
+): Promise<T> {
+  const timer = setInterval(() => {
+    void (async () => {
+      try {
+        const latest = await newsletterCampaigns.get(campaign.id);
+        if (!latest || latest.lockId !== campaign.lockId) return;
+        if (!ACTIVE_CAMPAIGN_STATUSES.includes(latest.status)) return;
+        await newsletterCampaigns.put(campaign.id, {
+          ...latest,
+          lockExpiresAt: new Date(Date.now() + CAMPAIGN_LOCK_TTL_MS).toISOString(),
+        });
+      } catch (error) {
+        log.warn('Lease heartbeat failed', {
+          campaignId: campaign.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })();
+  }, LEASE_HEARTBEAT_MS);
+
+  try {
+    return await work();
+  } finally {
+    clearInterval(timer);
+  }
 }
 
 /**
@@ -287,6 +335,7 @@ async function deliverToRecipient(
         headers: buildCampaignEmailHeaders(campaign.id, item.token),
         customArgs: { type: 'newsletter_campaign', campaign_id: campaign.id },
         throwOnError: true,
+        timeoutMs: PROVIDER_REQUEST_TIMEOUT_MS,
       });
       await newsletterRecipients.put(recordId, {
         ...attemptStarted,
@@ -384,9 +433,11 @@ async function processOneCampaign(
     }
 
     const batch = readyIndexes.slice(0, DELIVERY_BATCH_SIZE);
-    const outcomes = await Promise.allSettled(
-      batch.map((index) =>
-        deliverToRecipient(campaign, audience.items[index], records[index], optedOut),
+    const outcomes = await withLeaseHeartbeat(campaign, () =>
+      Promise.allSettled(
+        batch.map((index) =>
+          deliverToRecipient(campaign, audience.items[index], records[index], optedOut),
+        ),
       ),
     );
     for (const outcome of outcomes) {
@@ -517,6 +568,7 @@ export async function sendCampaignTestEmails(
         replyTo: NEWSLETTER_REPLY_TO,
         customArgs: { type: 'newsletter_campaign_test', campaign_id: campaign.id },
         throwOnError: true,
+        timeoutMs: PROVIDER_REQUEST_TIMEOUT_MS,
       });
       outcomes.push({ email, ok: true });
     } catch (error) {

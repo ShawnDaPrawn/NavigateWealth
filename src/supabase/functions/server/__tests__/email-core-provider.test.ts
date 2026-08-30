@@ -72,10 +72,16 @@ describe('provider = ses', () => {
           replyTo: { email: 'info@navigatewealth.co' },
           headers: { 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
         }),
+        undefined,
       );
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('passes a caller deadline through to the transport', async () => {
+    await sendEmail({ to: 'a@b.co', subject: 's', html: '<p>b</p>', timeoutMs: 15_000 });
+    expect(ses.sendViaSes).toHaveBeenCalledWith(SES_CONFIG, expect.any(Object), 15_000);
   });
 
   it('works without a SendGrid key at all', async () => {
@@ -105,10 +111,19 @@ describe('provider = sendgrid (default)', () => {
     const fetchSpy = vi.fn(async () => new Response('{}', { status: 202 }));
     vi.stubGlobal('fetch', fetchSpy);
     try {
-      const ok = await sendEmail({ to: 'a@b.co', subject: 's', html: '<p>b</p>' });
+      const ok = await sendEmail({
+        to: 'a@b.co',
+        subject: 's',
+        html: '<p>b</p>',
+        timeoutMs: 15_000,
+      });
       expect(ok).toBe(true);
       expect(ses.sendViaSes).not.toHaveBeenCalled();
       expect(fetchSpy.mock.calls[0][0]).toBe('https://api.sendgrid.com/v3/mail/send');
+      // The deadline reaches the provider call, so a hung request cannot run
+      // past a campaign's delivery lease.
+      const init = fetchSpy.mock.calls[0][1] as RequestInit;
+      expect(init.signal).toBeInstanceOf(AbortSignal);
     } finally {
       vi.unstubAllGlobals();
     }

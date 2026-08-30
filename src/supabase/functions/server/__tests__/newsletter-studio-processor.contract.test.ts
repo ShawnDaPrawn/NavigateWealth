@@ -62,7 +62,12 @@ vi.mock('../publications-notification-state.ts', async (importOriginal) => ({
 
 import { kvStore } from './helpers/contract-harness.ts';
 import {
+  CAMPAIGN_LOCK_SETTLE_MS,
+  CAMPAIGN_LOCK_TTL_MS,
+  LEASE_HEARTBEAT_MS,
+  MAX_SEND_ATTEMPTS_PER_DELIVERY,
   MAX_TOTAL_ATTEMPTS,
+  PROVIDER_REQUEST_TIMEOUT_MS,
   processNewsletterCampaigns,
   sendCampaignTestEmails,
 } from '../newsletter-studio-processor.ts';
@@ -347,6 +352,94 @@ describe('scheduling and admin controls', () => {
     // A later manual run preserves the cron mark rather than clearing it.
     await processNewsletterCampaigns({ mode: 'manual' });
     expect((kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt).toBe(cronStamp);
+  });
+});
+
+describe('lease safety during long batches (review finding)', () => {
+  it('bounds every provider call with a deadline so a batch cannot outlive its lease', async () => {
+    const campaign = await queuedCampaign(['a@x.co']);
+    await processNewsletterCampaigns({ mode: 'cron' });
+    const params = email.sendEmail.mock.calls[0][0] as { timeoutMs?: number };
+    expect(params.timeoutMs).toBe(PROVIDER_REQUEST_TIMEOUT_MS);
+    // Worst case (3 attempts + retry sleeps) stays inside the lease TTL, so a
+    // second worker cannot reclaim the campaign mid-batch and double-send.
+    const worstCase = MAX_SEND_ATTEMPTS_PER_DELIVERY * PROVIDER_REQUEST_TIMEOUT_MS;
+    expect(worstCase).toBeLessThan(CAMPAIGN_LOCK_TTL_MS);
+    expect(campaignRecord(campaign.id).status).toBe('finished');
+  });
+
+  it('renews the lease while a batch is in flight', async () => {
+    vi.useFakeTimers();
+    try {
+      const campaign = await queuedCampaign(['slow@x.co']);
+      const before = campaignRecord(campaign.id);
+
+      let release!: () => void;
+      email.sendEmail.mockImplementation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            release = () => resolve(true);
+          }),
+      );
+
+      const run = processNewsletterCampaigns({ mode: 'cron' });
+      // Let the lease be acquired, then advance past a heartbeat interval.
+      await vi.advanceTimersByTimeAsync(CAMPAIGN_LOCK_SETTLE_MS + 10);
+      const leased = campaignRecord(campaign.id);
+      expect(leased.lockId).toBeTruthy();
+
+      await vi.advanceTimersByTimeAsync(LEASE_HEARTBEAT_MS + 50);
+      const renewed = campaignRecord(campaign.id);
+      // Same lease, pushed further out — not expired, not stolen.
+      expect(renewed.lockId).toBe(leased.lockId);
+      expect(new Date(renewed.lockExpiresAt!).getTime()).toBeGreaterThan(
+        new Date(leased.lockExpiresAt!).getTime(),
+      );
+      expect(new Date(renewed.lockExpiresAt!).getTime()).toBeGreaterThan(Date.now());
+      expect(before.lockId).toBeNull();
+
+      release();
+      await vi.advanceTimersByTimeAsync(100);
+      await run;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops renewing once another worker holds the lease', async () => {
+    vi.useFakeTimers();
+    try {
+      const campaign = await queuedCampaign(['slow@x.co']);
+      let release!: () => void;
+      email.sendEmail.mockImplementation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            release = () => resolve(true);
+          }),
+      );
+
+      const run = processNewsletterCampaigns({ mode: 'cron' });
+      await vi.advanceTimersByTimeAsync(CAMPAIGN_LOCK_SETTLE_MS + 10);
+
+      // Simulate another worker taking over.
+      const stolenExpiry = new Date(Date.now() + 5_000).toISOString();
+      kvStore.set(`nlstudio:campaign:${campaign.id}`, {
+        ...campaignRecord(campaign.id),
+        lockId: 'other-worker',
+        lockExpiresAt: stolenExpiry,
+      });
+
+      await vi.advanceTimersByTimeAsync(LEASE_HEARTBEAT_MS + 50);
+      const after = campaignRecord(campaign.id);
+      expect(after.lockId).toBe('other-worker');
+      expect(after.lockExpiresAt).toBe(stolenExpiry);
+
+      release();
+      await vi.advanceTimersByTimeAsync(100);
+      await run;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -78,6 +78,7 @@ import {
   listCampaigns,
   listTemplates,
   pauseCampaign,
+  promoteDueScheduledCampaign,
   recordCampaignClick,
   resolveAudience,
   resumeCampaign,
@@ -284,6 +285,62 @@ describe('lifecycle transitions', () => {
     await cancelCampaign(campaign.id);
     await deleteCampaign(campaign.id);
     await expect(getCampaignView(campaign.id)).rejects.toThrow(/not found/);
+  });
+});
+
+describe('audience resolution races (review finding)', () => {
+  it('abandons the queue write when the campaign is cancelled mid-resolve', async () => {
+    const campaign = await makeDraft();
+    const scheduledAt = new Date(Date.now() + 3_600_000).toISOString();
+    await scheduleCampaign(campaign.id, scheduledAt);
+    const scheduled = kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>;
+
+    // Cancel lands while resolveAudience is awaiting its reads.
+    deps.listSubscribers.mockImplementation(async () => {
+      kvStore.set(`nlstudio:campaign:${campaign.id}`, {
+        ...(kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>),
+        status: 'cancelled',
+        updatedAt: new Date(Date.now() + 1000).toISOString(),
+      });
+      return [];
+    });
+
+    const result = await promoteDueScheduledCampaign(scheduled as never);
+
+    // The cancel stands — no resurrection to 'queued', no audience written.
+    expect(result.status).toBe('cancelled');
+    const stored = kvStore.get(`nlstudio:campaign:${campaign.id}`) as { status: string };
+    expect(stored.status).toBe('cancelled');
+    expect(kvStore.get(`nlstudio:audience:${campaign.id}`)).toBeUndefined();
+  });
+
+  it('abandons the queue write when the campaign is edited mid-resolve', async () => {
+    const campaign = await makeDraft();
+    const before = kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>;
+
+    deps.listSubscribers.mockImplementation(async () => {
+      kvStore.set(`nlstudio:campaign:${campaign.id}`, {
+        ...(kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>),
+        subject: 'Edited after send was clicked',
+        updatedAt: new Date(Date.now() + 1000).toISOString(),
+      });
+      return [];
+    });
+
+    const result = await sendCampaignNow(campaign.id);
+
+    // Pre-edit content is never queued against a pre-edit audience.
+    expect(result.status).toBe('draft');
+    expect(result.subject).toBe('Edited after send was clicked');
+    expect(kvStore.get(`nlstudio:audience:${campaign.id}`)).toBeUndefined();
+    expect(before.subject).toBe('August update');
+  });
+
+  it('still queues normally when nothing changes underneath it', async () => {
+    const campaign = await makeDraft();
+    const queued = await sendCampaignNow(campaign.id);
+    expect(queued.status).toBe('queued');
+    expect(queued.recipientCount).toBe(2);
   });
 });
 

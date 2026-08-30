@@ -246,10 +246,30 @@ describe('capability tiers within admin (review finding)', () => {
     expect(perms.hasCapability).not.toHaveBeenCalled();
   });
 
-  it('reads stay on plain requireAdmin — no capability round-trip', async () => {
+  it("gates reads on 'view' — recipient PII is not authorised by the admin role alone", async () => {
     await request(app, '/campaigns', { method: 'GET', as: 'admin' });
-    await request(app, '/dashboard', { method: 'GET', as: 'admin' });
-    expect(perms.hasCapability).not.toHaveBeenCalled();
+    expect(perms.hasCapability).toHaveBeenCalledWith(expect.any(String), 'newsletter', 'view');
+
+    // An admin whose permission set withholds the module cannot read
+    // recipient addresses, delivery errors or engagement history.
+    perms.hasCapability.mockResolvedValueOnce(false);
+    const denied = await request(app, '/campaigns/c1/recipients', { method: 'GET', as: 'admin' });
+    expect(denied.status).toBe(403);
+    expect(svc.getCampaignRecipients).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['/dashboard'],
+    ['/campaigns'],
+    ['/campaigns/c1'],
+    ['/campaigns/c1/recipients'],
+    ['/campaigns/c1/stats'],
+    ['/lists'],
+    ['/templates'],
+  ])('read route %s is denied without the view capability', async (path) => {
+    perms.hasCapability.mockResolvedValueOnce(false);
+    const res = await request(app, path, { method: 'GET', as: 'admin' });
+    expect(res.status).toBe(403);
   });
 });
 

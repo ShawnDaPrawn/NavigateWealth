@@ -66,8 +66,15 @@ const log = createModuleLogger('newsletter-studio-routes');
  * admins need the capability granted in their stored permission set (an
  * empty capability list means full access within a granted module).
  * Reads the context requireAdmin populated — no extra auth resolution.
+ *
+ * READS ARE GATED TOO, on 'view'. Campaign reads return recipient email
+ * addresses, delivery errors and engagement history — personal data whose
+ * exposure the admin ROLE alone must not authorise (second review finding).
+ * `hasCapability` grants 'view' whenever the module itself is accessible, so
+ * this denies exactly the admins whose permission set withholds the
+ * newsletter module — the same set the sidebar already hides it from.
  */
-function requireNewsletterCapability(capability: 'create' | 'send' | 'delete') {
+function requireNewsletterCapability(capability: 'view' | 'create' | 'send' | 'delete') {
   return async (c: Context, next: Next) => {
     const user = c.get('user') as { email?: string } | undefined;
     if (user?.email && PermissionsService.isSuperAdmin(user.email)) return next();
@@ -108,6 +115,7 @@ function audit(
 app.get(
   '/dashboard',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const data = await getDashboardSummary();
     return c.json({ success: true, data });
@@ -119,6 +127,7 @@ app.get(
 app.get(
   '/campaigns',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const result = await listCampaigns({
       page: Number(c.req.query('page')) || 1,
@@ -147,6 +156,7 @@ app.post(
 app.get(
   '/campaigns/:id',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const campaign = await getCampaignView(c.req.param('id')!);
     return c.json({ success: true, campaign });
@@ -284,6 +294,7 @@ app.post(
 app.get(
   '/campaigns/:id/recipients',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const result = await getCampaignRecipients(c.req.param('id')!, {
       page: Number(c.req.query('page')) || 1,
@@ -297,6 +308,7 @@ app.get(
 app.get(
   '/campaigns/:id/stats',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const stats = await getCampaignStats(c.req.param('id')!);
     return c.json({ success: true, stats });
@@ -308,6 +320,7 @@ app.get(
 app.get(
   '/lists',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const lists = await listAudienceLists();
     return c.json({ success: true, lists });
@@ -319,6 +332,7 @@ app.get(
 app.get(
   '/templates',
   requireAdmin,
+  requireNewsletterCapability('view'),
   asyncHandler(async (c) => {
     const templates = await listTemplates();
     return c.json({ success: true, templates });

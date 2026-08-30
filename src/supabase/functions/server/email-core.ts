@@ -373,6 +373,13 @@ export interface EmailParams {
    * the legacy positional signature always allowed.
    */
   throwOnError?: boolean;
+  /**
+   * Abort the provider request after this many milliseconds. Without a
+   * deadline a hung provider call has no upper bound, which lets a campaign
+   * delivery batch outlive its processor lease and be picked up twice
+   * (review finding). Aborting surfaces as a normal retryable failure.
+   */
+  timeoutMs?: number;
 }
 
 interface SendGridAttachment {
@@ -464,20 +471,24 @@ export async function sendEmail(
         );
       }
       // customArgs are SendGrid-only webhook metadata — dropped on SES.
-      await sendViaSes(sesConfig, {
-        from: {
-          email: objectParams?.from?.email || FROM_EMAIL,
-          name: objectParams?.from?.name || FROM_NAME,
+      await sendViaSes(
+        sesConfig,
+        {
+          from: {
+            email: objectParams?.from?.email || FROM_EMAIL,
+            name: objectParams?.from?.name || FROM_NAME,
+          },
+          to,
+          cc,
+          replyTo: objectParams?.replyTo,
+          subject: finalSubject,
+          html: finalHtml,
+          text: finalText,
+          headers: objectParams?.headers,
+          attachments: finalAttachments,
         },
-        to,
-        cc,
-        replyTo: objectParams?.replyTo,
-        subject: finalSubject,
-        html: finalHtml,
-        text: finalText,
-        headers: objectParams?.headers,
-        attachments: finalAttachments,
-      });
+        objectParams?.timeoutMs,
+      );
       log.info('✅ Email sent successfully via Amazon SES');
       if (typeof paramsOrTo === 'object') return true;
       return;
@@ -530,6 +541,8 @@ export async function sendEmail(
       body.custom_args = objectParams.customArgs;
     }
 
+    const timeoutMs = objectParams?.timeoutMs;
+    const abort = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
     const response = await fetch(SENDGRID_API_URL, {
       method: 'POST',
       headers: {
@@ -537,6 +550,7 @@ export async function sendEmail(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      ...(abort ? { signal: abort } : {}),
     });
 
     if (!response.ok) {

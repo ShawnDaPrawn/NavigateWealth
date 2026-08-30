@@ -229,7 +229,11 @@ export async function signSesRequest(
  * text on failure so email-core's classification (bounce vs transient)
  * works identically to the SendGrid path.
  */
-export async function sendViaSes(config: SesConfig, message: MimeMessageInput): Promise<void> {
+export async function sendViaSes(
+  config: SesConfig,
+  message: MimeMessageInput,
+  timeoutMs?: number,
+): Promise<void> {
   const mime = buildMimeMessage(message);
   const body = JSON.stringify({
     FromEmailAddress: message.from.email,
@@ -241,10 +245,12 @@ export async function sendViaSes(config: SesConfig, message: MimeMessageInput): 
   });
 
   const signed = await signSesRequest(config, '/v2/email/outbound-emails', body);
+  const abort = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
   const response = await fetch(signed.url, {
     method: 'POST',
     headers: signed.headers,
     body: signed.body,
+    ...(abort ? { signal: abort } : {}),
   });
 
   if (!response.ok) {
