@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, CircleDot } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,13 +29,20 @@ export function DropdownDialog({
   onSave,
   onCancel,
 }: DropdownDialogProps) {
+  // The same picker serves dropdown AND radio fields — identical
+  // metadata.options contract, radio just presents with radio indicators.
+  const isRadio = currentField?.type === 'radio';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ChevronDown className="h-5 w-5 text-indigo-600" />
-            Select an option
+            {isRadio ? (
+              <CircleDot className="h-5 w-5 text-indigo-600" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-indigo-600" />
+            )}
+            {isRadio ? 'Choose one option' : 'Select an option'}
           </DialogTitle>
           <DialogDescription>
             {currentField?.metadata?.placeholder
@@ -50,13 +57,27 @@ export function DropdownDialog({
               <button
                 key={idx}
                 type="button"
+                role={isRadio ? 'radio' : undefined}
+                aria-checked={isRadio ? dropdownValue === option : undefined}
                 onClick={() => onDropdownValueChange(option)}
-                className={`w-full text-left p-3 rounded-lg border text-sm transition-all min-h-[44px] ${
+                className={`w-full text-left p-3 rounded-lg border text-sm transition-all min-h-[44px] flex items-center gap-2.5 ${
                   dropdownValue === option
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-900 font-medium'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
+                {isRadio && (
+                  <span
+                    aria-hidden
+                    className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                      dropdownValue === option ? 'border-indigo-600' : 'border-gray-300'
+                    }`}
+                  >
+                    {dropdownValue === option && (
+                      <span className="h-2 w-2 rounded-full bg-indigo-600" />
+                    )}
+                  </span>
+                )}
                 {option}
               </button>
             ),

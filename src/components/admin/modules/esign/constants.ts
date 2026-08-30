@@ -193,6 +193,10 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   date: 'Date',
   checkbox: 'Checkbox',
   attachment: 'Attachment',
+  auto_date: 'Date signed',
+  dropdown: 'Dropdown',
+  radio: 'Radio buttons',
+  note: 'Note',
 };
 
 /**
@@ -205,6 +209,10 @@ export const FIELD_TYPE_ICONS: Record<FieldType, string> = {
   date: 'Calendar',
   checkbox: 'CheckSquare',
   attachment: 'Paperclip',
+  auto_date: 'CalendarCheck',
+  dropdown: 'List',
+  radio: 'CircleDot',
+  note: 'StickyNote',
 };
 
 /**
@@ -217,6 +225,10 @@ export const FIELD_TYPE_COLORS: Record<FieldType, string> = {
   date: 'bg-orange-100 text-orange-800 border-orange-200',
   checkbox: 'bg-cyan-100 text-cyan-800 border-cyan-200',
   attachment: 'bg-gray-100 text-gray-800 border-gray-200',
+  auto_date: 'bg-orange-100 text-orange-800 border-orange-200',
+  dropdown: 'bg-red-100 text-red-800 border-red-200',
+  radio: 'bg-red-100 text-red-800 border-red-200',
+  note: 'bg-amber-100 text-amber-800 border-amber-200',
 };
 
 // ============================================================================

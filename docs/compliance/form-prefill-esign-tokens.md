@@ -29,9 +29,33 @@ Derived canonical keys (e.g. `derived:full_name`) are resolved when referenced v
 3. **Platform-wide access:** Same as FNA prefill — any adviser may resolve tokens for any client packet they create.
 4. **Audit:** Resolver version is not stamped on e-sign fields in v1; rely on envelope audit trail + field `resolvedAt` metadata.
 
+## Binding entry points
+
+A prefill token can reach a field through three routes, all of which produce
+the same `metadata.prefill.token` shape and go through the same resolver:
+
+1. **Manual binding** — the adviser picks a token in the studio's field
+   properties panel (`FieldPropertiesPanel.tsx`). Original v1 path.
+2. **Palette presets** — the "Client details (auto-filled)" group in the
+   field palette (`FieldPalette.tsx`) drops a text field pre-bound to the
+   matching token (Full/First/Last name, Email, Phone, ID number).
+3. **Upload-time suggestions** — the smart-anchor analyzer
+   (`esign-pdf-analysis.ts`) recognises identity captions in the uploaded
+   PDF ("First name:", "Email:", "ID number:", …) and proposes candidates
+   already carrying the matching token. Candidates are suggestions only:
+   nothing is bound until the adviser accepts them, and the accepted field
+   shows its binding in the properties panel like any manual one.
+
+Routes 2 and 3 do not widen the token list — they select from the same
+closed `PrefillToken` set, and the **review-before-send** rule in Governance
+applies unchanged: resolution happens at send time and the adviser remains
+responsible for reviewing populated fields.
+
 ## Testing
 
 Unit coverage: `src/supabase/functions/server/__tests__/esign-prefill.test.ts`
+and `src/supabase/functions/server/__tests__/esign-pdf-analysis.test.ts`
+(anchor→token mapping).
 
 ## Change control
 

@@ -55,7 +55,22 @@ export type SignerStatus =
  * file is stored under the envelope's storage prefix and surfaced on
  * the completion certificate.
  */
-export type FieldType = 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'attachment';
+export type FieldType =
+  | 'signature'
+  | 'initials'
+  | 'text'
+  | 'date'
+  | 'checkbox'
+  | 'attachment'
+  // Palette expansion — `auto_date` stamps the signing date automatically,
+  // `dropdown`/`radio` are option pickers (options in `metadata.options`),
+  // `note` is sender-authored read-only text (its `value`) shown to the
+  // signer and burned into the final PDF. All four already render in the
+  // signer app; the studio can now place them.
+  | 'auto_date'
+  | 'dropdown'
+  | 'radio'
+  | 'note';
 
 /**
  * Actor type for audit trail
@@ -278,12 +293,20 @@ export interface FieldCandidate {
   /** Percentage coordinates (0–100). y measured from page top. */
   x: number;
   y: number;
+  /** PDF points — same unit as `EsignField.width`/`height`. */
   width: number;
   height: number;
   required: boolean;
   source: 'acroform' | 'anchor';
   label?: string;
   anchorText?: string;
+  /**
+   * CRM prefill token the analyzer suggested from the anchor label (e.g.
+   * "First name:" → `key:profile_first_name`). Also mirrored into
+   * `metadata.prefill.token`, which accepting the candidate carries onto
+   * the created field.
+   */
+  prefill_token?: string;
   metadata?: Record<string, unknown>;
 }
 

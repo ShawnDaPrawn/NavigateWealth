@@ -488,6 +488,8 @@ export function SigningWorkflow({
     () =>
       visibleSignerFields
         .filter((f) => {
+          // Notes are read-only sender text — never part of the required gate.
+          if (f.type === 'note') return false;
           const meta = (f.metadata ?? {}) as { calculated?: { formula?: string } };
           if (meta.calculated?.formula) return false;
           return ruleState[f.id]?.requiredEffective ?? f.required;
@@ -596,6 +598,8 @@ export function SigningWorkflow({
           });
           break;
         }
+        // Radio shares the option-picker dialog (same metadata.options).
+        case 'radio':
         case 'dropdown': {
           const existingDropdown = signatures.find((s) => s.field_id === field.id)?.value || '';
           setDropdownValue(existingDropdown);
@@ -788,7 +792,9 @@ export function SigningWorkflow({
           s.field_id === currentField.id ? { ...s, value: dropdownValue } : s,
         );
       }
-      return [...prev, { field_id: currentField.id, type: 'dropdown', value: dropdownValue }];
+      // Record the field's real type ('dropdown' or 'radio').
+      const type = currentField.type === 'radio' ? ('radio' as const) : ('dropdown' as const);
+      return [...prev, { field_id: currentField.id, type, value: dropdownValue }];
     });
 
     setShowDropdownDialog(false);
@@ -1117,6 +1123,8 @@ export function SigningWorkflow({
                             <FieldHighlight
                               field={field}
                               zoom={zoom}
+                              pageWidthPts={dim?.width}
+                              pageHeightPts={dim?.height}
                               isFilled={isFilledEffective}
                               isNextRequired={isNext}
                               inactive={isReading}

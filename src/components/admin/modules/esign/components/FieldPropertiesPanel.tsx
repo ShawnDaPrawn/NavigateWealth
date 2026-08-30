@@ -29,6 +29,8 @@ import {
   Calculator,
   Plus,
   X,
+  List,
+  StickyNote,
 } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import type {
@@ -437,6 +439,67 @@ export function FieldPropertiesPanel({
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* Options editor for dropdown / radio fields. Options persist on
+            `metadata.options`; the signer's picker dialog reads the same
+            key. Empty lines are dropped on blur so typing stays fluid. */}
+        {(field.type === 'dropdown' || field.type === 'radio') &&
+          (() => {
+            const options =
+              (((field.metadata ?? {}) as { options?: unknown }).options as string[] | undefined) ??
+              [];
+            const writeOptions = (lines: string[]) => {
+              const meta: Record<string, unknown> = { ...(field.metadata ?? {}) };
+              meta.options = lines;
+              onUpdate(field.id, { metadata: meta });
+            };
+            return (
+              <div className="space-y-2 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <List className="h-4 w-4 text-purple-600" />
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {field.type === 'dropdown' ? 'Dropdown options' : 'Radio options'}
+                  </h4>
+                </div>
+                <Label className="text-xs">One option per line</Label>
+                <Textarea
+                  value={options.join('\n')}
+                  onChange={(e) => writeOptions(e.target.value.split('\n'))}
+                  onBlur={() => writeOptions(options.map((o) => o.trim()).filter(Boolean))}
+                  placeholder={'Option 1\nOption 2'}
+                  className="min-h-[80px] text-sm font-mono"
+                />
+                {options.filter((o) => o.trim()).length < 2 && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Add at least two options for the signer to choose from.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+        {/* Note text editor — the note's `value` is what the signer reads
+            (read-only) and what is burned into the final document. */}
+        {field.type === 'note' && (
+          <div className="space-y-2 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-purple-600" />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Note text
+              </h4>
+            </div>
+            <Textarea
+              value={field.value ?? ''}
+              onChange={(e) => onUpdate(field.id, { value: e.target.value })}
+              placeholder="Instructions or information for the signer…"
+              className="min-h-[80px] text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown to the signer as read-only text and printed on the final document.
+            </p>
           </div>
         )}
 

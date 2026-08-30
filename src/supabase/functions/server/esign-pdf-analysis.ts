@@ -18,10 +18,13 @@
  * keep this module dependency-light (no KV, no HTTP) so it's trivially
  * unit-testable from Vitest.
  *
- * Coordinates: candidate fields use the **same percentage coordinate
- * system** the rest of the e-sign module uses (0–100 of page width / height,
- * y measured from the top of the page). This matches `EsignField` and the
- * frontend studio.
+ * Coordinates: candidate fields use the **same coordinate system as
+ * `EsignField`**: x/y are percentages (0–100 of page width / height, y
+ * measured from the top of the page); width/height are **PDF points** —
+ * that is what the burn-in path (`esign-pdf.service.ts`) and the signer
+ * renderer (`FieldHighlight.tsx`) expect. (Historical note: an earlier
+ * version emitted width/height as percentages too, which made accepted
+ * candidates render and burn in at roughly a fifth of their real size.)
  *
  * Acceptance bar from the roadmap:
  *   "uploading a real FNA PDF results in ~80% of expected fields auto-placed;
@@ -57,6 +60,7 @@ export interface FieldCandidate {
   /** Percentage coordinates (0–100). y measured from page top. */
   x: number;
   y: number;
+  /** PDF points — same unit as `EsignField.width`/`height`. */
   width: number;
   height: number;
   required: boolean;
@@ -69,6 +73,14 @@ export interface FieldCandidate {
   label?: string;
   /** Anchor text that produced this candidate (for `anchor` source). */
   anchorText?: string;
+  /**
+   * CRM prefill token suggested by the anchor label (e.g. a "First name:"
+   * label proposes `key:profile_first_name`). Mirrored into
+   * `metadata.prefill.token` so accepting the candidate yields a field the
+   * prefill resolver (`esign-prefill.ts`) fills from the client record —
+   * the sender never types the client's own details.
+   */
+  prefill_token?: string;
   /** Optional carry-over metadata (e.g. validation hints from a widget name). */
   metadata?: Record<string, unknown>;
 }
@@ -212,8 +224,9 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
 }
 
 /**
- * Convert PDF-space widget rects to the studio's percentage coordinate
- * system (0–100, y measured from the top of the page).
+ * Convert PDF-space widget rects to the field coordinate system:
+ * x/y as percentages (0–100, y from the top of the page), width/height in
+ * PDF points.
  */
 function widgetToCandidate(
   widget: AcroformWidget,
@@ -227,6 +240,7 @@ function widgetToCandidate(
 
   // PDF y is bottom-up; flip so 0 = top of page.
   const yTopPt = pageHeightPt - y2;
+  const min = MIN_FIELD_SIZE_PT[widget.type];
 
   return {
     id: `cand-acro-${widget.pageIndex}-${index}-${Date.now()}`,
@@ -234,13 +248,32 @@ function widgetToCandidate(
     page: widget.pageIndex + 1,
     x: clampPct((x1 / pageWidthPt) * 100),
     y: clampPct((yTopPt / pageHeightPt) * 100),
-    width: clampPct((widthPt / pageWidthPt) * 100),
-    height: clampPct((heightPt / pageHeightPt) * 100),
+    width: roundPt(Math.max(widthPt, min.width)),
+    height: roundPt(Math.max(heightPt, min.height)),
     required: true,
     source: 'acroform',
     label: widget.name || undefined,
     metadata: { acroformName: widget.name },
   };
+}
+
+/**
+ * Smallest usable size per field type, in PDF points. Anchors matched on a
+ * bare caption ("Sign here") have no underline run to measure, and some
+ * AcroForm widgets carry degenerate rects — without a floor those become
+ * zero-width fields the sender cannot even grab.
+ */
+const MIN_FIELD_SIZE_PT: Record<FieldCandidate['type'], { width: number; height: number }> = {
+  signature: { width: 150, height: 40 },
+  initials: { width: 60, height: 30 },
+  text: { width: 140, height: 24 },
+  date: { width: 90, height: 24 },
+  checkbox: { width: 18, height: 18 },
+};
+
+function roundPt(v: number): number {
+  if (!Number.isFinite(v) || v <= 0) return 0;
+  return Number(v.toFixed(2));
 }
 
 function clampPct(v: number): number {
@@ -294,10 +327,16 @@ export async function detectAcroformFields(buffer: Uint8Array): Promise<Analysis
  * suggestions individually. We err on the side of fewer, higher-confidence
  * hits and let the sender place anything we miss manually.
  */
-const ANCHOR_PATTERNS: Array<{
+export const ANCHOR_PATTERNS: Array<{
   pattern: RegExp;
   type: FieldCandidate['type'];
   label: string;
+  /**
+   * CRM prefill token to bind when this anchor matches — the accepted field
+   * arrives already wired to the client record (see `esign-prefill.ts`).
+   * Tokens must come from the closed `PrefillToken` list.
+   */
+  prefillToken?: string;
 }> = [
   // Signatures
   {
@@ -317,9 +356,74 @@ const ANCHOR_PATTERNS: Array<{
   { pattern: /\bdate\s*(signed)?[:\-_]?\s*_{3,}/i, type: 'date', label: 'Date' },
   { pattern: /\bdated[:\-_]?\s*_{3,}/i, type: 'date', label: 'Date' },
 
-  // Generic name / text fields with underline
-  { pattern: /\b(full\s+)?name[:\-_]?\s*_{5,}/i, type: 'text', label: 'Name' },
-  { pattern: /\bid\s+number[:\-_]?\s*_{5,}/i, type: 'text', label: 'ID number' },
+  // ── Identity labels → prefill-bound text fields ────────────────────────
+  // A caption like `First name:` proposes a text field placed after the
+  // caption AND bound to the matching client token, so the value fills
+  // itself at send-time. Ordering matters: more specific labels must sit
+  // above generic ones (`first name` before `name`) because the first
+  // matching pattern per line wins. Labels are accepted with a trailing
+  // colon/dash OR an underscore run — a bare word in prose never matches.
+  {
+    pattern: /\bfirst\s+names?\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'First name',
+    prefillToken: 'key:profile_first_name',
+  },
+  {
+    pattern: /\b(?:surname|last\s+name)\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Last name',
+    prefillToken: 'key:profile_last_name',
+  },
+  {
+    pattern: /\b(?:full\s+)?names?\s*(?:[:-]\s*_{0,}|_{5,})/i,
+    type: 'text',
+    label: 'Name',
+    prefillToken: 'client.name',
+  },
+  {
+    pattern: /\be-?mail(?:\s+address)?\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Email',
+    prefillToken: 'client.email',
+  },
+  {
+    pattern:
+      /\b(?:cell(?:phone)?|mobile|phone|contact)\s*(?:number|no\.?)?\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Phone',
+    prefillToken: 'client.phone',
+  },
+  {
+    pattern: /\b(?:id|identity)\s+(?:number|no\.?)\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'ID number',
+    prefillToken: 'client.id_number',
+  },
+  {
+    pattern: /\b(?:income\s+)?tax\s+(?:number|no\.?|reference)\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Tax number',
+    prefillToken: 'client.tax_number',
+  },
+  {
+    pattern: /\b(?:date\s+of\s+birth|d\.?o\.?b\.?)\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Date of birth',
+    prefillToken: 'client.date_of_birth',
+  },
+  {
+    pattern: /\b(?:residential|physical|postal|street)?\s*address\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Address',
+    prefillToken: 'client.address',
+  },
+  {
+    pattern: /\bmarital\s+status\s*(?:[:-]\s*_{0,}|_{3,})/i,
+    type: 'text',
+    label: 'Marital status',
+    prefillToken: 'client.marital_status',
+  },
 ];
 
 /**
@@ -402,24 +506,33 @@ function groupItemsIntoLines(
  * For an anchor match like `Signature: ____________`, place the candidate
  * field over the trailing underscore run rather than the whole line so the
  * sender doesn't get a field that overlaps the caption.
+ *
+ * Exported for unit tests.
  */
-function rectForAnchor(
+export function rectForAnchor(
   line: { text: string; rect: [number, number, number, number] },
   match: RegExpMatchArray,
+  type: FieldCandidate['type'],
+  pageWidthPt: number,
 ): [number, number, number, number] {
   const [x1, y1, x2, y2] = line.rect;
   const lineWidth = x2 - x1;
-  const _lineHeight = y2 - y1;
   const matchStartFrac = (match.index ?? 0) / Math.max(line.text.length, 1);
   const matchEndFrac = ((match.index ?? 0) + match[0].length) / Math.max(line.text.length, 1);
   // Anchor field sits to the *right* of the caption, occupying the trailing
-  // portion of the matched span. Clamp width to a sensible default if the
-  // match has no underscore tail (e.g. "sign here").
+  // portion of the matched span.
   const caption = match[0].split(/[_\-:]/)[0] ?? '';
   const captionFrac = caption.length / Math.max(match[0].length, 1);
   const fieldStart = matchStartFrac + (matchEndFrac - matchStartFrac) * captionFrac;
   const startX = x1 + lineWidth * fieldStart;
-  const endX = x1 + lineWidth * matchEndFrac;
+  let endX = x1 + lineWidth * matchEndFrac;
+  // A caption-only match ("Sign here", "First name:") has no underscore
+  // tail to measure, which used to produce a zero-width field. Extend to
+  // the type's minimum width, clamped to the page edge.
+  const min = MIN_FIELD_SIZE_PT[type];
+  if (endX - startX < min.width) {
+    endX = Math.min(startX + min.width, pageWidthPt - 4);
+  }
   // Pad height slightly above and below the text baseline so signature
   // strokes don't get clipped on burn-in.
   return [startX, y1 - 2, endX, y2 + 4];
@@ -449,23 +562,41 @@ export async function detectSmartAnchors(buffer: Uint8Array): Promise<AnalysisRe
       const lines = groupItemsIntoLines(content.items, pageHeightPt);
 
       for (const line of lines) {
-        for (const { pattern, type, label } of ANCHOR_PATTERNS) {
+        // A line can legitimately carry several anchors ("Signature: ___
+        // Date: ___"), but overlapping matches are the same anchor seen by
+        // two patterns ("First name:" also matches the generic "Name"
+        // pattern). Patterns are ordered specific-first; a later match is
+        // dropped when its span overlaps an already-claimed one.
+        const claimed: Array<[number, number]> = [];
+        for (const { pattern, type, label, prefillToken } of ANCHOR_PATTERNS) {
           const match = line.text.match(pattern);
           if (!match) continue;
-          const [x1, y1, x2, y2] = rectForAnchor(line, match);
-          // Convert PDF-space (origin bottom-left) → percentage with y from top.
+          const start = match.index ?? 0;
+          const end = start + match[0].length;
+          if (claimed.some(([s, e]) => start < e && end > s)) continue;
+          claimed.push([start, end]);
+          const [x1, y1, x2, y2] = rectForAnchor(line, match, type, pageWidthPt);
+          const min = MIN_FIELD_SIZE_PT[type];
+          // Convert PDF-space (origin bottom-left) → x/y percentage with y
+          // from top; width/height stay in PDF points.
           candidates.push({
             id: `cand-anchor-${pageNum}-${candidates.length}-${Date.now()}`,
             type,
             page: pageNum,
             x: clampPct((x1 / pageWidthPt) * 100),
             y: clampPct(((pageHeightPt - y2) / pageHeightPt) * 100),
-            width: clampPct(((x2 - x1) / pageWidthPt) * 100),
-            height: clampPct(((y2 - y1) / pageHeightPt) * 100),
+            width: roundPt(Math.max(x2 - x1, min.width)),
+            height: roundPt(Math.max(y2 - y1, min.height)),
             required: type === 'signature' || type === 'initials',
             source: 'anchor',
             label,
             anchorText: match[0],
+            ...(prefillToken
+              ? {
+                  prefill_token: prefillToken,
+                  metadata: { prefill: { token: prefillToken } },
+                }
+              : {}),
           });
         }
       }

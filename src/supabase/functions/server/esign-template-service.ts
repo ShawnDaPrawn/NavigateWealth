@@ -52,7 +52,7 @@ export interface TemplateDocument {
 }
 
 export interface TemplateField {
-  type: 'signature' | 'initials' | 'text' | 'date' | 'checkbox' | 'attachment';
+  type: EsignField['type'];
   page: number;
   x: number;
   y: number;

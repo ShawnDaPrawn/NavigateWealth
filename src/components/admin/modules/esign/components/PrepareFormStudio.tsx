@@ -282,16 +282,22 @@ export function PrepareFormStudio({
         // P3.4 — stamp the field with the active document so multi-doc
         // envelopes know which PDF the field belongs to.
         document_id: activeDocumentId,
-        type: newField.type || 'signature',
-        page: newField.page || 1,
-        x: newField.x || 50,
-        y: newField.y || 50,
-        width: newField.width || 150,
-        height: newField.height || 50,
-        required: true,
+        type: newField.type ?? 'signature',
+        page: newField.page ?? 1,
+        // ?? not || — a drop at exactly x=0 or y=0 used to be relocated to
+        // 50% (dead center) because 0 is falsy.
+        x: newField.x ?? 50,
+        y: newField.y ?? 50,
+        width: newField.width ?? 150,
+        height: newField.height ?? 50,
+        // Palette presets can place optional fields (e.g. a Note is never
+        // required); anything unstated stays required.
+        required: newField.required ?? true,
         signer_id: assignedSigner,
-        value: null,
-        metadata: {},
+        // Presets carry a default value (Note text) and metadata (prefill
+        // binding, format, options) that must survive placement.
+        value: newField.value ?? null,
+        metadata: newField.metadata ?? {},
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       } as EsignField;
@@ -752,6 +758,13 @@ export function PrepareFormStudio({
                         c.anchorText ||
                         (c.source === 'acroform' ? 'PDF form widget' : 'Text anchor')}
                     </span>
+                    {/* Candidates the analyzer bound to a CRM token fill
+                        themselves from the client record at send time. */}
+                    {c.prefill_token && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-800 rounded shrink-0">
+                        auto-fills
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => acceptCandidate(c.id)}
