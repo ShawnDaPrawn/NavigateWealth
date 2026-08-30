@@ -630,6 +630,9 @@ async function writeProcessorState(
   const state: NewsletterProcessorState = {
     mode,
     lastRunAt: timestamp,
+    // Only a real cron tick refreshes this, so a browser accelerator run
+    // cannot mask an uninstalled scheduled job.
+    lastCronRunAt: mode === 'cron' ? timestamp : (previous?.lastCronRunAt ?? null),
     // A fatal error preserves the previous success mark; a clean run stamps now.
     lastSuccessAt: fatalError ? (previous?.lastSuccessAt ?? null) : timestamp,
     lastError: fatalError ?? (result.errors.length > 0 ? result.errors[0] : null),

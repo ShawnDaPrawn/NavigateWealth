@@ -116,6 +116,8 @@ export interface NewsletterStudioTemplate {
 export interface NewsletterProcessorState {
   mode: 'manual' | 'cron';
   lastRunAt: string | null;
+  /** Null when the pg_cron job has never checked in — see the dashboard warning. */
+  lastCronRunAt: string | null;
   lastSuccessAt: string | null;
   lastError: string | null;
   lastHeartbeatAt: string | null;

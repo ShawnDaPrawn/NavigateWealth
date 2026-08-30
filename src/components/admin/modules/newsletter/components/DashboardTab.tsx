@@ -190,6 +190,17 @@ export function DashboardTab({
                   <span className="text-muted-foreground">Sent in last run</span>
                   <span className="font-medium tabular-nums">{processor.sentInLastRun}</span>
                 </div>
+                {!processor.lastCronRunAt ? (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>
+                      The scheduled delivery job has not checked in yet. Campaigns still send while
+                      an admin has this dashboard open, but scheduled sends will not fire unattended
+                      until an operator installs it (see
+                      <code className="mx-1">supabase/cron/newsletter-studio-jobs.sql</code>).
+                    </span>
+                  </div>
+                ) : null}
                 {processor.lastError ? (
                   <div className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />

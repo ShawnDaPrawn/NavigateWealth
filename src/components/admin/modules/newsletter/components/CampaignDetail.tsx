@@ -60,6 +60,7 @@ import {
 } from '../../../../ui/table';
 import {
   useCancelCampaign,
+  useStudioDashboard,
   useDeleteCampaign,
   useDuplicateCampaign,
   usePauseCampaign,
@@ -106,6 +107,10 @@ export function CampaignDetail({
   onDeleted,
 }: CampaignDetailProps) {
   const { data: campaign } = useStudioCampaign(campaignId);
+  const { data: dashboard } = useStudioDashboard();
+  // Null means the pg_cron job has never run: scheduling then only advances
+  // while an admin has the studio open. Say so before they rely on it.
+  const cronInstalled = Boolean(dashboard?.processor?.lastCronRunAt);
   const isActive = campaign?.status === 'queued' || campaign?.status === 'sending';
   const hasDelivery = Boolean(campaign && campaign.recipientCount > 0);
   const { data: stats } = useStudioCampaignStats(campaignId, hasDelivery);
@@ -538,6 +543,13 @@ export function CampaignDetail({
               respected.
             </DialogDescription>
           </DialogHeader>
+          {!cronInstalled ? (
+            <p className="rounded-md border border-amber-300/60 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+              The scheduled delivery job has not checked in yet, so a scheduled send will only start
+              while an admin has the Newsletter Studio open. Ask an operator to install it
+              (supabase/cron/newsletter-studio-jobs.sql) for unattended sending.
+            </p>
+          ) : null}
           <div className="space-y-1.5">
             <Label htmlFor="nl-schedule-at">Send at</Label>
             <Input

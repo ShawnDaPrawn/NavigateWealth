@@ -332,6 +332,22 @@ describe('scheduling and admin controls', () => {
     expect(state.mode).toBe('manual');
     expect(state.lastHeartbeatAt).toBeTruthy();
   });
+
+  it('only a real cron tick stamps lastCronRunAt, so an uninstalled job stays visible', async () => {
+    // Browser-accelerator runs must not mask a missing pg_cron job — the
+    // dashboard and schedule dialog warn off this exact field.
+    await processNewsletterCampaigns({ mode: 'manual' });
+    const key = 'nlstudio:processor:state';
+    expect((kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt).toBeNull();
+
+    await processNewsletterCampaigns({ mode: 'cron' });
+    const cronStamp = (kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt;
+    expect(cronStamp).toBeTruthy();
+
+    // A later manual run preserves the cron mark rather than clearing it.
+    await processNewsletterCampaigns({ mode: 'manual' });
+    expect((kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt).toBe(cronStamp);
+  });
 });
 
 describe('test sends', () => {

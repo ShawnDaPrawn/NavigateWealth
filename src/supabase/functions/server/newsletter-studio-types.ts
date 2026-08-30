@@ -173,6 +173,12 @@ export interface NewsletterStudioTemplate {
 export interface NewsletterProcessorState {
   mode: 'manual' | 'cron';
   lastRunAt: string | null;
+  /**
+   * Last run driven by pg_cron specifically. Null means the scheduled job has
+   * never checked in — scheduling then only advances while an admin has the
+   * dashboard open, which the UI surfaces as a warning.
+   */
+  lastCronRunAt: string | null;
   lastSuccessAt: string | null;
   lastError: string | null;
   lastHeartbeatAt: string | null;
