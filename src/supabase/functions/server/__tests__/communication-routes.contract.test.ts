@@ -39,6 +39,7 @@ vi.hoisted(() => {
 
 const svc = vi.hoisted(() => ({
   sendMessage: vi.fn(),
+  sendDirectMessage: vi.fn(),
   uploadFile: vi.fn(),
   getHistory: vi.fn(),
   getInbox: vi.fn(),
@@ -66,6 +67,7 @@ const svc = vi.hoisted(() => ({
 vi.mock('../communication-service.ts', () => ({
   CommunicationService: class {
     sendMessage = svc.sendMessage;
+    sendDirectMessage = svc.sendDirectMessage;
     uploadFile = svc.uploadFile;
     getHistory = svc.getHistory;
     getInbox = svc.getInbox;
@@ -162,6 +164,16 @@ const validMessage = () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   svc.sendMessage.mockResolvedValue({ sent: 2 });
+  // POST /send goes through sendDirectMessage — it sends AND files the history
+  // row that makes an individual message visible in the Communication Centre.
+  svc.sendDirectMessage.mockResolvedValue({
+    success: true,
+    messageId: 'msg-1',
+    status: 'completed',
+    stats: { sent: 2, failed: 0, total: 2 },
+    results: [],
+    cc: [],
+  });
   svc.uploadFile.mockResolvedValue({ url: 'https://storage/f.pdf' });
   svc.getHistory.mockResolvedValue([]);
   svc.getInbox.mockResolvedValue([]);
@@ -257,6 +269,7 @@ describe('authorization tiers', () => {
       const res = await call(r, { auth: false });
       expect(res.status).toBe(401);
       expect(svc.sendMessage).not.toHaveBeenCalled();
+      expect(svc.sendDirectMessage).not.toHaveBeenCalled();
       expect(svc.sendCampaign).not.toHaveBeenCalled();
     },
   );
@@ -267,6 +280,7 @@ describe('authorization tiers', () => {
       expect(res.status).toBe(403);
       // Nothing reaches a client: no send, no campaign, no group write.
       expect(svc.sendMessage).not.toHaveBeenCalled();
+      expect(svc.sendDirectMessage).not.toHaveBeenCalled();
       expect(svc.sendCampaign).not.toHaveBeenCalled();
       expect(svc.createGroup).not.toHaveBeenCalled();
       expect(svc.deleteGroup).not.toHaveBeenCalled();
@@ -352,7 +366,7 @@ describe('send validation', () => {
   it('sends a well-formed message', async () => {
     const res = await req('/send', { method: 'POST', body: validMessage() });
     expect(res.status).toBe(200);
-    expect(svc.sendMessage).toHaveBeenCalledWith(
+    expect(svc.sendDirectMessage).toHaveBeenCalledWith(
       'test-user',
       expect.objectContaining(validMessage()),
     );
@@ -377,7 +391,7 @@ describe('send validation', () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('Validation failed');
     // Nothing left the building.
-    expect(svc.sendMessage).not.toHaveBeenCalled();
+    expect(svc.sendDirectMessage).not.toHaveBeenCalled();
     expect(auditRecord).not.toHaveBeenCalled();
   });
 
@@ -392,7 +406,7 @@ describe('send validation', () => {
 
   it('defaults the channel to email and the priority to normal', async () => {
     await req('/send', { method: 'POST', body: validMessage() });
-    expect(svc.sendMessage.mock.calls[0][1]).toMatchObject({
+    expect(svc.sendDirectMessage.mock.calls[0][1]).toMatchObject({
       channel: 'email',
       priority: 'normal',
       sendEmail: false,
@@ -405,7 +419,7 @@ describe('send validation', () => {
       user: 'admin-7',
       body: { ...validMessage(), senderId: 'someone-else' },
     });
-    expect(svc.sendMessage.mock.calls[0][0]).toBe('admin-7');
+    expect(svc.sendDirectMessage.mock.calls[0][0]).toBe('admin-7');
   });
 });
 

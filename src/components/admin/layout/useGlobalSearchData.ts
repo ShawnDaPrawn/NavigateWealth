@@ -2,17 +2,26 @@
  * useGlobalSearchData - React Query hook for global account search.
  *
  * Fetches client and personnel lists for the GlobalSearch command palette.
- * Uses shared query keys so data is reused across modules.
+ *
+ * Cache discipline: this hook uses the SAME query keys and fetchers as the
+ * Clients module (useClientList) and Personnel module (usePersonnel), so each
+ * cache entry always holds the module's shape (`Client[]` / `Personnel[]`)
+ * regardless of which consumer fetched first. The palette's own view
+ * (`SearchableAccount`) is derived per-consumer via `select`, never stored.
+ *
+ * Storing a search-shaped array under the shared key is what previously broke
+ * search→profile navigation: after the Clients module cached `Client[]`, the
+ * palette read objects with no `type` field, so navigateToAccount received
+ * `undefined` and the module switch fell through to the dashboard.
  */
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { clientApi } from '../modules/client-management';
+import { fetchClientList } from '../modules/client-management';
 import { personnelApi } from '../modules/personnel';
+import type { Client } from '../modules/client-management';
+import type { Personnel } from '../modules/personnel';
 import { clientKeys, personnelKeys } from '../../../utils/queryKeys';
-import type { ApiUser } from '../modules/client-management';
-import { normalizeClientProfileKv } from '../modules/client-management';
-import { resolvePersonName } from '../../../utils/personName';
 
 // ============================================================================
 // TYPES
@@ -32,41 +41,46 @@ export interface SearchableAccount {
 // TRANSFORMERS
 // ============================================================================
 
-function transformApiUserToSearchable(user: ApiUser): SearchableAccount {
-  const normalized = normalizeClientProfileKv(user.profile);
-  const pi = normalized?.personalInformation;
-  const rawProfile = (user.profile ?? undefined) as Record<string, unknown> | undefined;
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
-  const { firstName, lastName } = resolvePersonName({
-    profileFirstName:
-      pi?.firstName ||
-      (rawProfile?.firstName as string | undefined) ||
-      (rawProfile?.first_name as string | undefined),
-    profileLastName:
-      pi?.lastName ||
-      (rawProfile?.lastName as string | undefined) ||
-      (rawProfile?.surname as string | undefined) ||
-      (rawProfile?.last_name as string | undefined),
-    metadataFirstName: user.user_metadata?.firstName,
-    metadataLastName: user.user_metadata?.surname,
-    fullName: user.name,
-    fallbackFirstName: 'Unknown',
-    fallbackLastName: 'User',
-  });
-
-  const accountStatus = user.account_status || 'active';
-  const displayStatus = user.deleted ? 'closed' : user.suspended ? 'suspended' : accountStatus;
-  const statusLabel = String(displayStatus ?? 'active');
+function clientToSearchable(client: Client): SearchableAccount {
+  const accountStatus = client.accountStatus || 'active';
+  const displayStatus = client.deleted ? 'closed' : client.suspended ? 'suspended' : accountStatus;
+  const statusLabel = String(displayStatus);
 
   return {
-    id: user.id,
-    firstName,
-    lastName,
-    email: user.email ?? '',
+    id: client.id,
+    firstName: client.firstName,
+    lastName: client.lastName,
+    email: client.email ?? '',
     type: 'client',
     status: statusLabel,
-    meta: statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1),
+    meta: capitalize(statusLabel),
   };
+}
+
+function personnelToSearchable(person: Personnel): SearchableAccount {
+  return {
+    id: person.id,
+    firstName: person.firstName ?? '',
+    lastName: person.lastName ?? '',
+    email: person.email ?? '',
+    type: 'personnel',
+    status: person.status ?? 'active',
+    meta: (person.role || 'staff').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+  };
+}
+
+// Module-scope select functions: stable identity, so React Query only re-runs
+// the mapping when the underlying cached data changes.
+function selectSearchableClients(clients: Client[]): SearchableAccount[] {
+  return clients.map(clientToSearchable);
+}
+
+function selectSearchablePersonnel(personnel: Personnel[]): SearchableAccount[] {
+  return personnel.map(personnelToSearchable);
 }
 
 function includesSearch(account: SearchableAccount, normalizedSearch: string): boolean {
@@ -91,38 +105,20 @@ export function useGlobalSearchData(enabled: boolean, search: string) {
   const hasSearchQuery = normalizedSearch.length >= 2;
   const shouldFetch = enabled && hasSearchQuery;
 
+  // Same key + queryFn as useClientList — the entry always caches Client[].
   const { data: allClients = [], isLoading: clientsLoading } = useQuery({
     queryKey: clientKeys.lists(),
-    queryFn: async () => {
-      const data = await clientApi.getClients();
-      const rawUsers = Array.isArray(data.users)
-        ? data.users
-        : Array.isArray(data.clients)
-          ? data.clients
-          : [];
-      return rawUsers.map(transformApiUserToSearchable);
-    },
+    queryFn: fetchClientList,
+    select: selectSearchableClients,
     staleTime: 5 * 60 * 1000,
     enabled: shouldFetch,
   });
 
+  // Same key + queryFn as usePersonnel() — the entry always caches Personnel[].
   const { data: allPersonnel = [], isLoading: personnelLoading } = useQuery({
-    queryKey: personnelKeys.lists(),
-    queryFn: async () => {
-      const list = await personnelApi.fetch();
-      return list.map((p): SearchableAccount => {
-        const personnelStatus = p.status ?? 'active';
-        return {
-          id: p.id,
-          firstName: p.firstName ?? '',
-          lastName: p.lastName ?? '',
-          email: p.email ?? '',
-          type: 'personnel',
-          status: personnelStatus,
-          meta: (p.role || 'staff').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        };
-      });
-    },
+    queryKey: personnelKeys.list(),
+    queryFn: () => personnelApi.fetch(),
+    select: selectSearchablePersonnel,
     staleTime: 5 * 60 * 1000,
     enabled: shouldFetch,
   });
