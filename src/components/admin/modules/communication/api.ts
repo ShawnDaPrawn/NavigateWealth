@@ -14,6 +14,7 @@ import {
   MessageCreate,
   CommunicationMessage,
   EmailFooterSettings,
+  UnsubscribedContact,
 } from './types';
 import { ProductProvider } from '../product-management';
 
@@ -432,5 +433,29 @@ export const communicationApi = {
         return [];
       }
     }
+  },
+
+  async getUnsubscribed(): Promise<UnsubscribedContact[]> {
+    const response = await api.get<{ contacts: UnsubscribedContact[] }>(ENDPOINTS.UNSUBSCRIBED);
+    return response.contacts || [];
+  },
+
+  async unsubscribeContact(input: {
+    email: string;
+    clientId?: string;
+    name?: string;
+  }): Promise<{ success: boolean; alreadyUnsubscribed: boolean; contact: UnsubscribedContact }> {
+    return api.post<{
+      success: boolean;
+      alreadyUnsubscribed: boolean;
+      contact: UnsubscribedContact;
+    }>(ENDPOINTS.UNSUBSCRIBE, input);
+  },
+
+  async resubscribeContact(input: {
+    email: string;
+    clientId?: string;
+  }): Promise<{ success: boolean; alreadySubscribed: boolean }> {
+    return api.post<{ success: boolean; alreadySubscribed: boolean }>(ENDPOINTS.RESUBSCRIBE, input);
   },
 };

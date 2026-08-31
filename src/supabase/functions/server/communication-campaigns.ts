@@ -289,6 +289,22 @@ export async function sendCampaign(
     }
   }
 
+  const { getUnsubscribeIndex, isUnsubscribed } = await import('./communication-unsubscribes.ts');
+  const unsubscribeIndex = await getUnsubscribeIndex();
+  recipientIds = recipientIds.filter((recipientId) => {
+    const email = recipientEmailMap.get(recipientId);
+    const info = recipientInfoMap.get(recipientId);
+    return !isUnsubscribed(unsubscribeIndex, {
+      clientId: recipientId,
+      email: email || info?.email,
+    });
+  });
+  externalEmails = externalEmails.filter((email) => !isUnsubscribed(unsubscribeIndex, { email }));
+
+  if (recipientIds.length === 0 && externalEmails.length === 0) {
+    throw new ValidationError('All recipients are unsubscribed from communication');
+  }
+
   let sent = 0;
 
   // Send to each client recipient (internal message + email)

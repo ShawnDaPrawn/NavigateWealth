@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from 'react';
-import { CheckCircle, Users, Mail, Send, History, Settings, Loader2 } from 'lucide-react';
+import { CheckCircle, Users, Mail, Send, History, Settings, Loader2, MailX } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { CommunicationDraft } from './types';
 import { Step1Recipients } from './components/steps/Step1Recipients';
@@ -18,6 +18,9 @@ const TransactionalEmailsManager = React.lazy(() =>
   import('./components/TransactionalEmailsManager').then((m) => ({
     default: m.TransactionalEmailsManager,
   })),
+);
+const UnsubscribeManager = React.lazy(() =>
+  import('./components/UnsubscribeManager').then((m) => ({ default: m.UnsubscribeManager })),
 );
 
 function ViewFallback() {
@@ -38,6 +41,7 @@ export function CommunicationModule() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showHistory, setShowHistory] = useState(false);
   const [showTransactional, setShowTransactional] = useState(false);
+  const [showUnsubscribed, setShowUnsubscribed] = useState(false);
   const { canDo } = useCurrentUserPermissions();
 
   const canSend = canDo('communication', 'send');
@@ -92,6 +96,14 @@ export function CommunicationModule() {
     );
   }
 
+  if (showUnsubscribed) {
+    return (
+      <Suspense fallback={<ViewFallback />}>
+        <UnsubscribeManager onClose={() => setShowUnsubscribed(false)} />
+      </Suspense>
+    );
+  }
+
   if (showTransactional) {
     return (
       <Suspense fallback={<ViewFallback />}>
@@ -112,6 +124,10 @@ export function CommunicationModule() {
           <Button variant="outline" onClick={() => setShowHistory(true)}>
             <History className="h-4 w-4 mr-2" />
             History
+          </Button>
+          <Button variant="outline" onClick={() => setShowUnsubscribed(true)}>
+            <MailX className="h-4 w-4 mr-2" />
+            Unsubscribed
           </Button>
           <Button variant="outline" onClick={() => setShowTransactional(true)}>
             <Settings className="h-4 w-4 mr-2" />

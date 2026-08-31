@@ -2,12 +2,12 @@
  * communication-routes.ts — Route Contract Tests
  * ==============================================
  *
- * 24 routes, ~192 statements, 0% coverage before this file. This is the module
+ * 27 routes, ~192 statements, 0% coverage before this file. This is the module
  * that sends email and WhatsApp to the firm's entire client base, so the thing
  * worth pinning is not a payload shape — it is the two-tier authorization split
  * and the one place ownership is decided.
  *
- *   1. **The tier split.** 21 routes are `requireAdmin`; exactly three —
+ *   1. **The tier split.** 24 routes are `requireAdmin`; exactly three —
  *      `GET /inbox`, `POST /read/:id`, `DELETE /inbox/:id` — are `requireAuth`,
  *      because a client must be able to read and clear their own messages. If a
  *      route ever slid from `requireAdmin` to `requireAuth`, any signed-in
@@ -61,6 +61,9 @@ const svc = vi.hoisted(() => ({
   createCampaign: vi.fn(),
   sendCampaign: vi.fn(),
   deleteCommunicationLog: vi.fn(),
+  listUnsubscribed: vi.fn(),
+  unsubscribeContact: vi.fn(),
+  resubscribeContact: vi.fn(),
 }));
 
 vi.mock('../communication-service.ts', () => ({
@@ -88,6 +91,9 @@ vi.mock('../communication-service.ts', () => ({
     createCampaign = svc.createCampaign;
     sendCampaign = svc.sendCampaign;
     deleteCommunicationLog = svc.deleteCommunicationLog;
+    listUnsubscribed = svc.listUnsubscribed;
+    unsubscribeContact = svc.unsubscribeContact;
+    resubscribeContact = svc.resubscribeContact;
   },
 }));
 
@@ -184,6 +190,12 @@ beforeEach(() => {
   svc.createCampaign.mockResolvedValue({ id: CAMPAIGN });
   svc.sendCampaign.mockResolvedValue({ sent: 5 });
   svc.deleteCommunicationLog.mockResolvedValue(undefined);
+  svc.listUnsubscribed.mockResolvedValue([]);
+  svc.unsubscribeContact.mockResolvedValue({
+    alreadyUnsubscribed: false,
+    contact: { email: 'alex@example.com', unsubscribedBy: 'admin' },
+  });
+  svc.resubscribeContact.mockResolvedValue({ alreadySubscribed: false });
   repo.fetchMatcherClients.mockResolvedValue([]);
   repo.recalculateAllGroupMemberships.mockResolvedValue(undefined);
   repo.getAllGroups.mockResolvedValue([]);
@@ -197,7 +209,7 @@ beforeEach(() => {
 
 type Route = { name: string; method: string; path: string; body?: unknown; form?: boolean };
 
-/** The 21 routes only an admin may reach. */
+/** The 24 routes only an admin may reach. */
 const ADMIN_ROUTES: Route[] = [
   { name: 'send message', method: 'POST', path: '/send', body: {} },
   { name: 'upload attachment', method: 'POST', path: '/upload', form: true },
@@ -220,6 +232,9 @@ const ADMIN_ROUTES: Route[] = [
   { name: 'create campaign', method: 'POST', path: '/campaigns', body: {} },
   { name: 'send campaign', method: 'POST', path: `/campaigns/${CAMPAIGN}/send`, body: {} },
   { name: 'delete log', method: 'DELETE', path: `/logs/${MESSAGE}` },
+  { name: 'list unsubscribed', method: 'GET', path: '/unsubscribed' },
+  { name: 'unsubscribe contact', method: 'POST', path: '/unsubscribe', body: {} },
+  { name: 'resubscribe contact', method: 'POST', path: '/resubscribe', body: {} },
 ];
 
 /** The three routes a client may reach — their own inbox, and nothing else. */
@@ -414,6 +429,8 @@ describe('group and template validation', () => {
     ['create group', 'POST', '/groups', { description: 'no name' }],
     ['create template', 'POST', '/templates', { subject: 'no name or body' }],
     ['create campaign', 'POST', '/campaigns', {}],
+    ['unsubscribe contact', 'POST', '/unsubscribe', {}],
+    ['resubscribe contact', 'POST', '/resubscribe', {}],
   ] as const)('refuses an invalid %s', async (_label, method, path, body) => {
     const res = await req(path, { method, body });
     expect(res.status).toBe(400);
@@ -634,6 +651,22 @@ const AUDITED: AuditCase[] = [
     path: `/logs/${MESSAGE}`,
     action: 'communication_log_deleted',
     severity: 'warning',
+  },
+  {
+    name: 'unsubscribe contact',
+    method: 'POST',
+    path: '/unsubscribe',
+    body: { email: 'alex@example.com', clientId: 'client-1' },
+    action: 'contact_unsubscribed',
+    severity: 'warning',
+  },
+  {
+    name: 'resubscribe contact',
+    method: 'POST',
+    path: '/resubscribe',
+    body: { email: 'alex@example.com', clientId: 'client-1' },
+    action: 'contact_resubscribed',
+    severity: 'info',
   },
 ];
 

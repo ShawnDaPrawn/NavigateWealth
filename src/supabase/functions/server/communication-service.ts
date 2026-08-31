@@ -43,6 +43,11 @@ import {
   listCampaignsFiltered,
   sendCampaign,
 } from './communication-campaigns.ts';
+import {
+  listUnsubscribed,
+  unsubscribeContact,
+  resubscribeContact,
+} from './communication-unsubscribes.ts';
 import { uploadFile } from './communication-attachments.ts';
 
 export type { CampaignSenderOption } from './communication-campaigns.ts';
@@ -82,6 +87,11 @@ export class CommunicationService {
   listCampaigns = listCampaigns;
   listCampaignsFiltered = listCampaignsFiltered;
   sendCampaign = sendCampaign;
+
+  // implementations in communication-unsubscribes.ts
+  listUnsubscribed = listUnsubscribed;
+  unsubscribeContact = unsubscribeContact;
+  resubscribeContact = resubscribeContact;
 
   // implementations in communication-attachments.ts
   uploadFile = uploadFile;
