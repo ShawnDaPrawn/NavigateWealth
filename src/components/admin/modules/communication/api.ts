@@ -95,7 +95,7 @@ function decodePlainHistoryText(text: string | undefined): string | undefined {
 
 function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEntry[] {
   return campaigns
-    .map((campaign) => {
+    .map((campaign): ActivityLogEntry => {
       const createdBy = campaign.createdBy || 'system';
       const userName =
         campaign.createdByName ||
@@ -120,8 +120,15 @@ function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEnt
         messagePreview: buildCampaignMessagePreview(campaign.bodyHtml, 120),
         messagePreviewFull: buildCampaignMessagePreview(campaign.bodyHtml, 8000),
         attachmentCount: campaign.attachments?.length || 0,
-        templateUsed: 'Custom Email',
+        // Individual messages are not template-driven; labelling them
+        // "Custom Email" alongside campaigns hides the distinction the
+        // adviser cares about.
+        templateUsed: campaign.origin === 'direct' ? 'Individual Message' : 'Custom Email',
         status: campaign.status,
+        origin: campaign.origin === 'direct' ? 'direct' : 'campaign',
+        stats: campaign.stats,
+        cc: campaign.cc,
+        failureReason: campaign.failureReason,
       };
     })
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -279,6 +286,8 @@ export const communicationApi = {
     channel?: string;
     recipientType?: string;
     createdBy?: string;
+    status?: string;
+    origin?: string;
   }): Promise<CampaignHistoryPageResult> {
     const page = params.page ?? 1;
     const limit = params.limit ?? 50;
@@ -291,6 +300,8 @@ export const communicationApi = {
       q.set('recipientType', params.recipientType);
     }
     if (params.createdBy && params.createdBy !== 'all') q.set('createdBy', params.createdBy);
+    if (params.status && params.status !== 'all') q.set('status', params.status);
+    if (params.origin && params.origin !== 'all') q.set('origin', params.origin);
     const response = await api.get<{
       campaigns: BackendCampaign[];
       total: number;

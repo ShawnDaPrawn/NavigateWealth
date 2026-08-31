@@ -153,7 +153,11 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
           ),
         );
 
-        await api.post(`/documents/${client.id}/email`, {
+        const encryptedResult = await api.post<{
+          success: boolean;
+          cc?: string[];
+          ccWarning?: string;
+        }>(`/documents/${client.id}/email`, {
           documentIds: docIds,
           email: client.email,
           idNumber: clientIdNumber,
@@ -165,7 +169,13 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
           source: 'communication_tab',
         });
 
-        return { success: true, messageId: 'encrypted-doc-send' } as SendMessageResponse;
+        return {
+          success: true,
+          messageId: 'encrypted-doc-send',
+          status: 'completed',
+          cc: encryptedResult?.cc,
+          ccWarning: encryptedResult?.ccWarning,
+        } as SendMessageResponse;
       }
 
       // Path 2: Standard Communication (Direct Message)
@@ -183,17 +193,42 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
         cc: ccList,
       });
     },
-    onSuccess: () => {
-      setSuccess('Communication sent successfully');
-      toast.success('Communication sent successfully');
+    onSuccess: (result: SendMessageResponse) => {
+      // The server now reports what actually happened rather than always
+      // answering "sent". A message the provider refused must not be announced
+      // as a success — that is precisely how a CC'd send could look fine here
+      // and never arrive.
+      const failed = result.status === 'failed' || result.status === 'rejected';
+      const partial = result.status === 'partial';
+
+      const ccNote = result.ccWarning ? ` Not copied to: ${result.ccWarning}.` : '';
+      const ccSent = result.cc && result.cc.length > 0 ? ` CC: ${result.cc.join(', ')}.` : '';
+
+      if (failed) {
+        const msg =
+          `Communication could not be delivered${result.status === 'rejected' ? ' (rejected by the email provider)' : ''}` +
+          `${result.failureReason ? `: ${result.failureReason}` : '.'}`;
+        setError(msg);
+        toast.error(msg);
+      } else if (partial) {
+        const msg = `Communication partially delivered — ${result.stats?.sent ?? 0} of ${result.stats?.total ?? 0} recipients.${ccNote}`;
+        setSuccess(msg);
+        toast.warning(msg);
+        setTimeout(() => setSuccess(null), 8000);
+      } else {
+        const msg = `Communication sent successfully.${ccSent}${ccNote}`;
+        setSuccess(msg);
+        if (result.ccWarning) toast.warning(msg);
+        else toast.success(msg);
+        setTimeout(() => setSuccess(null), ccNote ? 8000 : 5000);
+      }
 
       queryClient.invalidateQueries({ queryKey: clientKeys.communicationLogs(client.id) });
       refetch();
 
-      // Remount ComposeForm to reset its internal state
-      setComposeKey((prev) => prev + 1);
-
-      setTimeout(() => setSuccess(null), 5000);
+      // Remount ComposeForm to reset its internal state — but keep what the
+      // admin typed when the send failed, so it can be corrected and retried.
+      if (!failed) setComposeKey((prev) => prev + 1);
     },
     onError: (err: Error) => {
       const msg = `Failed to send: ${err.message}`;

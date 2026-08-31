@@ -15,8 +15,14 @@ import type {
   MessageCreate,
   HistoryFilters,
   CachedRecipient,
+  RecipientDeliveryResult,
+  SendMessageResult,
+  Campaign,
 } from './communication-types.ts';
 import { generateId } from './communication-service-helpers.ts';
+import { saveCampaign } from './communication-repo.ts';
+import { describeDroppedRecipients, normalizeEmailList } from './email-recipients.ts';
+import { classifyDeliveryFailure } from './email-delivery-classification.ts';
 import type {
   CommHistoryEntry,
   CommLogEntry,
@@ -30,7 +36,7 @@ const log = createModuleLogger('communication-service');
 export async function sendMessage(
   adminUserId: string,
   data: MessageCreate,
-): Promise<{ success: boolean; messageId: string }> {
+): Promise<SendMessageResult> {
   log.info('Sending message', { adminUserId });
 
   // Validate
@@ -40,6 +46,18 @@ export async function sendMessage(
 
   if (!data.recipients || data.recipients.length === 0) {
     throw new ValidationError('At least one recipient is required');
+  }
+
+  // CC HYGIENE — do this BEFORE anything is sent.
+  // The CC list arrives from a free-text "comma separated" field, and both
+  // providers reject the ENTIRE personalization (so the client gets nothing
+  // either) when it contains a blank entry, a malformed address, or a repeat of
+  // the To address. Dropping the bad entries and carrying on is the only
+  // behaviour where the client still receives their communication.
+  const ccNormalized = normalizeEmailList(data.cc, [data.recipientEmail]);
+  const ccWarning = describeDroppedRecipients(ccNormalized.dropped);
+  if (ccWarning) {
+    log.warn('Dropped unusable CC addresses', { dropped: ccWarning });
   }
 
   // STORAGE OPTIMIZATION:
@@ -88,9 +106,17 @@ export async function sendMessage(
 
   const messageId = generateId();
   const timestamp = new Date().toISOString();
+  const results: RecipientDeliveryResult[] = [];
 
   // Send to each recipient
   for (const recipientId of data.recipients) {
+    const outcome: RecipientDeliveryResult = {
+      recipientId,
+      recipientEmail: data.recipientEmail,
+      portalDelivered: false,
+      emailStatus: 'skipped',
+    };
+
     try {
       // Store message in recipient's inbox
       const messageKey = `communication_log:${recipientId}:${messageId}`;
@@ -139,26 +165,13 @@ export async function sendMessage(
         ? resolveMergeFields(data.content, mergeRecipient as unknown as CachedRecipient)
         : data.content;
 
-      await kv.set(messageKey, {
-        id: messageId,
-        sender_id: adminUserId,
-        sender_name: data.senderName || 'Navigate Wealth',
-        sender_role: 'Admin',
-        recipient_id: recipientId,
-        subject: resolvedSubject,
-        content: resolvedContent,
-        category: data.category || 'General',
-        priority: data.priority || 'normal',
-        created_at: timestamp,
-        read: false,
-        sent_via_email: data.sendEmail && !!data.recipientEmail,
-        attachments: storedAttachments, // Use the optimized attachments (with URLs)
-      });
-
       // Send email if requested and email address provided
       if (data.sendEmail && data.recipientEmail) {
         try {
-          log.info('Sending email notification', { recipientEmail: data.recipientEmail });
+          log.info('Sending email notification', {
+            recipientEmail: data.recipientEmail,
+            ccCount: ccNormalized.accepted.length,
+          });
 
           // Prepare attachments for SendGrid
           // For SendGrid, we need the CONTENT (base64)
@@ -171,50 +184,210 @@ export async function sendMessage(
             disposition: 'attachment',
           }));
 
+          // `throwOnError` is what makes this a real check. Without it sendEmail
+          // RETURNS FALSE on a provider rejection, and the previous code
+          // discarded that boolean — so a 400 from SendGrid was logged as
+          // "Email sent successfully" and stored as sent_via_email: true. That
+          // is the reason a communication could appear sent and never arrive.
           await sendEmail({
             to: data.recipientEmail,
+            cc: ccNormalized.accepted.length > 0 ? ccNormalized.accepted : undefined,
             subject: resolvedSubject,
             html: createEmailTemplate(resolvedContent, {
               title: resolvedSubject,
             }),
             text: resolvedContent.replace(/<[^>]*>/g, ''),
             attachments: emailAttachments,
+            throwOnError: true,
           });
 
+          outcome.emailStatus = 'sent';
           log.success('Email sent successfully', { recipientEmail: data.recipientEmail });
         } catch (emailError) {
+          // A terminal classification (bad address, malformed envelope, refused
+          // by the provider) is reported as `rejected` so the manager can show
+          // it as such — retrying the same payload cannot help. Everything else
+          // is `failed` and is worth another attempt.
+          const classified = classifyDeliveryFailure(emailError);
+          outcome.emailStatus = classified.disposition === 'terminal' ? 'rejected' : 'failed';
+          outcome.error = classified.message;
+
           log.error('Failed to send email, but message was saved to portal', emailError as Error, {
             recipientEmail: data.recipientEmail,
+            emailStatus: outcome.emailStatus,
           });
           // Don't throw - we still want to save to portal even if email fails
         }
       }
 
+      await kv.set(messageKey, {
+        id: messageId,
+        sender_id: adminUserId,
+        sender_name: data.senderName || 'Navigate Wealth',
+        sender_role: 'Admin',
+        recipient_id: recipientId,
+        subject: resolvedSubject,
+        content: resolvedContent,
+        category: data.category || 'General',
+        priority: data.priority || 'normal',
+        created_at: timestamp,
+        read: false,
+        // Only true when the provider actually accepted it — this drives the
+        // "Email" badge on the client profile's history, which used to claim an
+        // email had gone out whenever one had merely been attempted.
+        sent_via_email: outcome.emailStatus === 'sent',
+        email_status: outcome.emailStatus,
+        email_error: outcome.error,
+        cc: ccNormalized.accepted,
+        attachments: storedAttachments, // Use the optimized attachments (with URLs)
+      });
+
+      outcome.portalDelivered = true;
       log.success('Message delivered', { recipientId });
     } catch (error) {
+      outcome.error = outcome.error || (error instanceof Error ? error.message : String(error));
       log.error('Failed to deliver message', error as Error, { recipientId });
     }
+
+    results.push(outcome);
   }
+
+  const summary = summarizeDelivery(results);
 
   // Log to history
   await kv.set(`communication_history:${messageId}`, {
     id: messageId,
     sender_id: adminUserId,
+    sender_name: data.senderName || 'Navigate Wealth',
     subject: data.subject,
     content: data.content,
     recipients: data.recipients,
     category: data.category,
     sent_at: timestamp,
-    sent_via_email: data.sendEmail && !!data.recipientEmail,
+    sent_via_email: summary.stats.sent > 0,
+    cc: ccNormalized.accepted,
+    status: summary.status,
+    stats: summary.stats,
+    results,
+    campaign_id: data.campaignId,
     attachments: storedAttachments, // Use optimized attachments here too
   });
 
-  log.success('Message sent', { messageId, recipientCount: data.recipients.length });
+  log.success('Message sent', {
+    messageId,
+    recipientCount: data.recipients.length,
+    status: summary.status,
+  });
 
   return {
-    success: true,
+    success: summary.status !== 'failed' && summary.status !== 'rejected',
     messageId,
+    status: summary.status,
+    stats: summary.stats,
+    results,
+    cc: ccNormalized.accepted,
+    ccWarning: ccWarning || undefined,
+    failureReason: summary.failureReason,
   };
+}
+
+/**
+ * Collapse per-recipient outcomes into the single status the manager shows.
+ *
+ * A recipient counts as delivered when the portal copy was written AND email
+ * either succeeded or was never requested — the portal copy is the part that is
+ * always required (the compose form has "Publish to Portal" permanently
+ * checked), email is opt-in.
+ */
+export function summarizeDelivery(results: RecipientDeliveryResult[]): {
+  status: 'completed' | 'partial' | 'failed' | 'rejected';
+  stats: { sent: number; failed: number; total: number };
+  failureReason?: string;
+} {
+  const total = results.length;
+  const delivered = results.filter(
+    (r) => r.portalDelivered && r.emailStatus !== 'failed' && r.emailStatus !== 'rejected',
+  );
+  const sent = delivered.length;
+  const failed = total - sent;
+  const failureReason = results.find((r) => r.error)?.error;
+
+  if (total === 0 || failed === 0) {
+    return { status: 'completed', stats: { sent, failed, total } };
+  }
+  if (sent > 0) {
+    return { status: 'partial', stats: { sent, failed, total }, failureReason };
+  }
+  // Nothing got through. `rejected` only when every failure was terminal —
+  // otherwise it is a plain failure and worth retrying.
+  const allRejected = results.every((r) => r.emailStatus === 'rejected');
+  return {
+    status: allRejected ? 'rejected' : 'failed',
+    stats: { sent, failed, total },
+    failureReason,
+  };
+}
+
+/**
+ * Send one communication composed on a client profile's Communication tab, and
+ * RECORD IT WHERE THE MANAGER LOOKS.
+ *
+ * Why this wrapper exists: the Communication Centre's History view reads
+ * campaign rows (`communication:campaigns:*`). Direct sends only ever wrote
+ * `communication_history:*`, which nothing in that view reads — so every
+ * individual message an adviser sent from a client profile was invisible in the
+ * manager. This writes the same campaign-shaped row a wizard send produces,
+ * tagged `origin: 'direct'`, so both kinds of communication appear in one
+ * history with one status vocabulary.
+ *
+ * It deliberately wraps `sendMessage` rather than living inside it:
+ * `sendCampaign` fans out to `sendMessage` once PER RECIPIENT, so recording
+ * from inside would create one bogus row per campaign recipient.
+ */
+export async function sendDirectMessage(
+  adminUserId: string,
+  data: MessageCreate,
+): Promise<SendMessageResult> {
+  const result = await sendMessage(adminUserId, data);
+
+  try {
+    const now = new Date().toISOString();
+    const campaign: Campaign = {
+      id: result.messageId,
+      subject: data.subject,
+      bodyHtml: data.content,
+      channel: 'email',
+      recipientType: data.recipients.length > 1 ? 'multiple' : 'single',
+      selectedRecipients: data.recipients.map((id) => ({
+        id,
+        email: id === data.recipients[0] ? data.recipientEmail : undefined,
+        name:
+          `${data.recipientFirstName || ''} ${data.recipientLastName || ''}`.trim() || undefined,
+      })),
+      status: result.status,
+      attachments: [],
+      scheduling: { type: 'immediate' },
+      stats: result.stats,
+      origin: 'direct',
+      cc: result.cc,
+      failureReason: result.failureReason,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: adminUserId,
+    };
+
+    // Through the repository, not a raw kv.set — `communication:campaigns:*` is
+    // its namespace and it owns the key shape.
+    await saveCampaign(campaign);
+  } catch (error) {
+    // The message HAS been sent by this point. A failure to file the history
+    // row must not turn a delivered communication into an error for the admin.
+    log.error('Failed to record direct communication in history', error as Error, {
+      messageId: result.messageId,
+    });
+  }
+
+  return result;
 }
 
 export async function getHistory(filters?: Partial<HistoryFilters>): Promise<CommHistoryEntry[]> {

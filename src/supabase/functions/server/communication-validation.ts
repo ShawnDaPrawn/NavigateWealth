@@ -14,7 +14,12 @@ export const SendMessageSchema = z
     sendEmail: z.boolean().optional().default(false),
     recipientEmail: z.string().optional(),
     attachments: z.array(z.any()).optional().default([]),
-    cc: z.array(z.string()).optional(),
+    // Intentionally NOT `.email()`. The compose form's CC box is free text, and
+    // rejecting the whole request over one typo is the exact failure this change
+    // exists to remove — the service normalizes the list, drops what it cannot
+    // use, and tells the admin which entries were dropped. See
+    // email-recipients.ts.
+    cc: z.array(z.string()).max(50).optional(),
   })
   .passthrough();
 
@@ -170,7 +175,7 @@ export const CreateCampaignSchema = z
       .optional()
       .nullable(),
     status: z
-      .enum(['draft', 'scheduled', 'sending', 'completed', 'failed'])
+      .enum(['draft', 'scheduled', 'sending', 'completed', 'partial', 'failed', 'rejected'])
       .optional()
       .default('draft'),
     attachments: z.array(AttachmentSchema).optional().default([]),

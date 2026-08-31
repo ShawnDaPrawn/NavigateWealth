@@ -31,8 +31,20 @@ import type {
   Group,
   GroupCreate,
   CampaignCreate,
+  CampaignStatus,
   HistoryFilters,
 } from './communication-types.ts';
+
+/** Accepted values for the history view's `?status=` filter. */
+const CAMPAIGN_STATUSES: CampaignStatus[] = [
+  'draft',
+  'scheduled',
+  'sending',
+  'completed',
+  'partial',
+  'failed',
+  'rejected',
+];
 
 const app = new Hono();
 const log = createModuleLogger('communication');
@@ -59,9 +71,16 @@ app.post(
 
     log.info('Admin: Sending message', { adminUserId });
 
-    const result = await service.sendMessage(adminUserId, parsed.data as MessageCreate);
+    // sendDirectMessage, not sendMessage: it additionally files the campaign-
+    // shaped history row that makes this individual send visible in the
+    // Communication Centre's History view.
+    const result = await service.sendDirectMessage(adminUserId, parsed.data as MessageCreate);
 
-    log.success('Message sent', { adminUserId, recipients: parsed.data.recipients?.length });
+    log.success('Message send completed', {
+      adminUserId,
+      recipients: parsed.data.recipients?.length,
+      status: result.status,
+    });
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
@@ -69,10 +88,19 @@ app.post(
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'message_sent',
-      summary: `Message sent to ${parsed.data.recipients?.length || 0} recipient(s)`,
-      severity: 'info',
+      summary:
+        `Message sent to ${parsed.data.recipients?.length || 0} recipient(s) — ${result.status}` +
+        (result.cc.length > 0 ? ` (cc: ${result.cc.length})` : ''),
+      // A send nobody received is not an 'info' event in the audit trail.
+      severity: result.status === 'completed' ? 'info' : 'warning',
       entityType: 'communication',
-      metadata: { recipientCount: parsed.data.recipients?.length },
+      entityId: result.messageId,
+      metadata: {
+        recipientCount: parsed.data.recipients?.length,
+        status: result.status,
+        stats: result.stats,
+        ccCount: result.cc.length,
+      },
     }).catch(() => {});
 
     return c.json(result);
@@ -626,6 +654,12 @@ app.get(
     const recipientType =
       rtRaw === 'single' || rtRaw === 'multiple' || rtRaw === 'group' ? rtRaw : undefined;
     const createdBy = c.req.query('createdBy')?.trim() || undefined;
+    const statusRaw = c.req.query('status')?.trim();
+    const status = CAMPAIGN_STATUSES.includes(statusRaw as CampaignStatus)
+      ? (statusRaw as CampaignStatus)
+      : undefined;
+    const originRaw = c.req.query('origin')?.trim();
+    const origin = originRaw === 'direct' || originRaw === 'campaign' ? originRaw : undefined;
 
     const result = await service.listCampaignsFiltered({
       page,
@@ -634,6 +668,8 @@ app.get(
       channel,
       recipientType,
       createdBy,
+      status,
+      origin,
     });
 
     return c.json(result);

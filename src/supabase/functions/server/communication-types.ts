@@ -88,7 +88,25 @@ export interface GroupCreate {
 // CAMPAIGN TYPES
 // ============================================================================
 
-export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+/**
+ * `partial` and `rejected` were added when direct (per-client) sends started
+ * being recorded here: 'completed' used to be written unconditionally at the
+ * end of sendCampaign, so a run where every single email bounced still showed
+ * a green "Completed" badge in the manager.
+ *   - completed — every recipient was delivered.
+ *   - partial   — some delivered, some did not.
+ *   - rejected  — the provider refused it outright (bad address, malformed
+ *                 envelope). Terminal; retrying the same payload will not help.
+ *   - failed    — nothing was delivered for a non-terminal reason.
+ */
+export type CampaignStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'sending'
+  | 'completed'
+  | 'partial'
+  | 'failed'
+  | 'rejected';
 
 export interface Campaign {
   id: string;
@@ -116,6 +134,17 @@ export interface Campaign {
     failed: number;
     total: number;
   };
+  /**
+   * How this row came to exist. `campaign` is the Communication Centre wizard;
+   * `direct` is a one-off message composed on a client profile's Communication
+   * tab. Direct sends are recorded here so they show up in the manager's
+   * history alongside campaigns — they were previously invisible there.
+   */
+  origin?: 'campaign' | 'direct';
+  /** CC addresses actually accepted onto the envelope. */
+  cc?: string[];
+  /** Why a non-completed status happened, surfaced in the manager UI. */
+  failureReason?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -201,6 +230,47 @@ export interface MessageCreate {
     type?: string;
     [key: string]: unknown;
   }>;
+  /**
+   * Carbon-copy addresses. Normalized (trimmed, de-duplicated, stripped of the
+   * To address) before reaching the transport — see email-recipients.ts for why
+   * an unfiltered CC list can kill the send for the primary recipient too.
+   */
+  cc?: string[];
+  /**
+   * Set by sendCampaign for its per-recipient fan-out. Marks the resulting
+   * history entry as belonging to a campaign so it is not also recorded as a
+   * standalone communication in the manager's history.
+   */
+  campaignId?: string;
+}
+
+/** Per-recipient outcome of one send, used to derive the overall status. */
+export interface RecipientDeliveryResult {
+  recipientId: string;
+  recipientEmail?: string;
+  /** Whether the message landed in the client's portal inbox. */
+  portalDelivered: boolean;
+  /**
+   * `skipped` means no email was requested or no address was available — not a
+   * failure. `rejected` is a terminal provider refusal; `failed` is anything
+   * else (timeout, transient 5xx).
+   */
+  emailStatus: 'sent' | 'failed' | 'rejected' | 'skipped';
+  error?: string;
+}
+
+export interface SendMessageResult {
+  success: boolean;
+  messageId: string;
+  status: 'completed' | 'partial' | 'failed' | 'rejected';
+  stats: { sent: number; failed: number; total: number };
+  results: RecipientDeliveryResult[];
+  /** CC addresses that made it onto the envelope. */
+  cc: string[];
+  /** Human-readable note about CC addresses that were dropped, if any. */
+  ccWarning?: string;
+  /** First failure message, surfaced to the admin. */
+  failureReason?: string;
 }
 
 // ============================================================================

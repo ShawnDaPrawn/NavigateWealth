@@ -16,6 +16,7 @@ import {
   getFooterSettings,
   getEmailTemplate,
 } from './email-service.ts';
+import { describeDroppedRecipients, normalizeEmailList } from './email-recipients.ts';
 import { encodeBase64 } from 'jsr:@std/encoding/base64';
 import type { DocumentMetadata } from './documents.tsx';
 
@@ -48,7 +49,7 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
       source,
       cc: providedCc,
     } = await c.req.json();
-    let ccAdmin = ccAdminRaw;
+    const ccAdmin = ccAdminRaw;
 
     if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
       return c.json({ success: false, error: 'No documents selected' }, 400);
@@ -94,12 +95,6 @@ documentsEmailRoutes.post('/:userId/email', async (c) => {
     }
 
     log.info(`📧 Sending to: ${email} (CC Admin: ${ccAdmin})`);
-
-    // Safety: If admin is CC'd but admin email is same as client email, disable CC to avoid SendGrid error
-    if (ccAdmin && email === 'info@navigatewealth.co') {
-      log.warn('⚠️ Client email matches admin email. Disabling CC to prevent SendGrid error.');
-      ccAdmin = false;
-    }
 
     if (!idNumber) {
       return c.json(
@@ -313,13 +308,20 @@ ${template.footerNote || ''}
       footerSettings,
     });
 
-    // Prepare CC list
-    const finalCc: string[] = [];
-    if (ccAdmin) finalCc.push('info@navigatewealth.co');
-    if (providedCc && Array.isArray(providedCc)) {
-      // Filter out duplicates and the To address
-      const uniqueCc = providedCc.filter((c) => c && c !== email && !finalCc.includes(c));
-      finalCc.push(...uniqueCc);
+    // Prepare CC list.
+    // The old inline filter compared addresses case-sensitively and let blank
+    // or malformed entries straight through — either of which makes the
+    // provider reject the WHOLE message, so the client never got their
+    // documents. normalizeEmailList drops those instead of the send.
+    const { accepted: finalCc, dropped: droppedCc } = normalizeEmailList(
+      [
+        ...(ccAdmin ? ['info@navigatewealth.co'] : []),
+        ...(Array.isArray(providedCc) ? providedCc : []),
+      ],
+      [email],
+    );
+    if (droppedCc.length > 0) {
+      log.warn(`⚠️ Dropped unusable CC addresses: ${describeDroppedRecipients(droppedCc)}`);
     }
 
     const success = await sendEmail({
@@ -335,7 +337,12 @@ ${template.footerNote || ''}
       return c.json({ success: false, error: 'Failed to send email' }, 500);
     }
 
-    return c.json({ success: true, message: 'Documents sent successfully' });
+    return c.json({
+      success: true,
+      message: 'Documents sent successfully',
+      cc: finalCc,
+      ccWarning: describeDroppedRecipients(droppedCc) || undefined,
+    });
   } catch (error: unknown) {
     log.error('❌ Error sending documents email:', error);
     return c.json(
