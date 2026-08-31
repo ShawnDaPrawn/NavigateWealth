@@ -34,6 +34,40 @@ export interface HistoryDialogProps {
 
 const COMM_ROW_HEIGHT = 72;
 
+/**
+ * Email delivery badge for one communication.
+ *
+ * `sent_via_email` alone used to drive this, and it was set whenever an email
+ * was ATTEMPTED — so a message the provider rejected still showed a plain
+ * "Email" badge here and looked delivered. `email_status` is the real outcome;
+ * rows written before it existed fall back to the old flag.
+ */
+function EmailDeliveryBadge({ log }: { log: CommunicationLog }) {
+  const status = log.email_status;
+
+  if (status === 'rejected' || status === 'failed') {
+    return (
+      <Badge
+        variant="outline"
+        className="text-[10px] h-5 px-1.5 font-normal text-red-700 border-red-300"
+        title={log.email_error || undefined}
+      >
+        {status === 'rejected' ? 'Email rejected' : 'Email failed'}
+      </Badge>
+    );
+  }
+
+  if (status === 'sent' || (!status && log.sent_via_email)) {
+    return (
+      <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-gray-500">
+        Email
+      </Badge>
+    );
+  }
+
+  return null;
+}
+
 export function HistoryDialog({
   open,
   onOpenChange,
@@ -248,12 +282,14 @@ export function HistoryDialog({
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex gap-2">
-                            {log.sent_via_email && (
+                            <EmailDeliveryBadge log={log} />
+                            {log.cc && log.cc.length > 0 && (
                               <Badge
                                 variant="outline"
                                 className="text-[10px] h-5 px-1.5 font-normal text-gray-500"
+                                title={log.cc.join(', ')}
                               >
-                                Email
+                                CC {log.cc.length}
                               </Badge>
                             )}
                             <Badge

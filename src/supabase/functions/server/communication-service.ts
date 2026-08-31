@@ -14,6 +14,7 @@ import {
   getHistory,
   getInbox,
   markAsRead,
+  sendDirectMessage,
   sendMessage,
 } from './communication-messaging.ts';
 import {
@@ -55,6 +56,7 @@ export class CommunicationService {
   getHistory = getHistory;
   getInbox = getInbox;
   markAsRead = markAsRead;
+  sendDirectMessage = sendDirectMessage;
   sendMessage = sendMessage;
 
   // implementations in communication-groups.ts

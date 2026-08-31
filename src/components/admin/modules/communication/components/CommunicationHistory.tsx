@@ -39,11 +39,14 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Inbox,
 } from 'lucide-react';
 import {
   ActivityLogEntry,
   CampaignHistorySenderOption,
-  CommunicationChannel,
+  CommunicationStatus,
+  COMMUNICATION_STATUS_FILTERS,
+  HistoryChannel,
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
@@ -86,6 +89,8 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [recipientFilter, setRecipientFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [originFilter, setOriginFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshToken, setRefreshToken] = useState(0);
   const [detailLog, setDetailLog] = useState<ActivityLogEntry | null>(null);
@@ -115,6 +120,8 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
           channel: channelFilter,
           recipientType: recipientFilter,
           createdBy: userFilter,
+          status: statusFilter,
+          origin: originFilter,
         });
         if (cancelled) return;
         setLogs(result.entries);
@@ -133,7 +140,16 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, debouncedSearch, channelFilter, recipientFilter, userFilter, refreshToken]);
+  }, [
+    currentPage,
+    debouncedSearch,
+    channelFilter,
+    recipientFilter,
+    userFilter,
+    statusFilter,
+    originFilter,
+    refreshToken,
+  ]);
 
   const triggerRefresh = useCallback(() => setRefreshToken((n) => n + 1), []);
 
@@ -147,12 +163,17 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
     });
   };
 
-  const getChannelIcon = (channel: CommunicationChannel) => {
-    return channel === 'email' ? (
-      <Mail className="h-4 w-4 shrink-0" aria-hidden />
-    ) : (
-      <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
-    );
+  const getChannelIcon = (channel: HistoryChannel) => {
+    if (channel === 'email') return <Mail className="h-4 w-4 shrink-0" aria-hidden />;
+    if (channel === 'portal') return <Inbox className="h-4 w-4 shrink-0" aria-hidden />;
+    return <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />;
+  };
+
+  /** Portal-only rows are messages that reached the client's inbox, not an inbox. */
+  const CHANNEL_LABEL: Record<HistoryChannel, string> = {
+    email: 'Email',
+    whatsapp: 'WhatsApp',
+    portal: 'Portal only',
   };
 
   const getRecipientIcon = (type: RecipientType) => {
@@ -163,12 +184,25 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
     );
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: CommunicationStatus | string) => {
     switch (status) {
       case 'completed':
         return <Badge className="bg-green-600 text-white border-transparent">Completed</Badge>;
       case 'sent':
         return <Badge className="bg-green-600 text-white border-transparent">Sent</Badge>;
+      case 'partial':
+        return (
+          <Badge className="bg-amber-500 text-white border-transparent">Partially delivered</Badge>
+        );
+      case 'rejected':
+        // Distinct from Failed on purpose: rejected is terminal (the provider
+        // refused the address or the message), so re-sending the same payload
+        // will not help — the address has to be fixed first.
+        return (
+          <Badge variant="outline" className="text-red-700 border-red-600">
+            Rejected
+          </Badge>
+        );
       case 'scheduled':
         return (
           <Badge variant="outline" className="text-blue-600 border-blue-600">
@@ -186,6 +220,14 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  /** "12 delivered · 3 failed" — the numbers behind the badge. */
+  const formatDeliveryLine = (log: ActivityLogEntry): string | null => {
+    if (!log.stats || log.stats.total === 0) return null;
+    const { sent, failed } = log.stats;
+    if (failed === 0) return `${sent} delivered`;
+    return `${sent} delivered · ${failed} not delivered`;
   };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -260,6 +302,44 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
               <SelectItem value="all">All Channels</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="portal">Portal only</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[190px]" aria-label="Filter by status">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {COMMUNICATION_STATUS_FILTERS.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={originFilter}
+            onValueChange={(v) => {
+              setOriginFilter(v);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by source">
+              <SelectValue placeholder="All Sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sources</SelectItem>
+              <SelectItem value="campaign">Campaigns</SelectItem>
+              <SelectItem value="direct">Individual messages</SelectItem>
             </SelectContent>
           </Select>
 
@@ -309,7 +389,9 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
           {(searchTerm ||
             channelFilter !== 'all' ||
             recipientFilter !== 'all' ||
-            userFilter !== 'all') && (
+            userFilter !== 'all' ||
+            statusFilter !== 'all' ||
+            originFilter !== 'all') && (
             <Button
               variant="ghost"
               size="sm"
@@ -319,6 +401,8 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                 setChannelFilter('all');
                 setRecipientFilter('all');
                 setUserFilter('all');
+                setStatusFilter('all');
+                setOriginFilter('all');
                 setCurrentPage(1);
               }}
             >
@@ -376,14 +460,33 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                       </div>
                     </TableCell>
 
-                    <TableCell className="align-top">{getStatusBadge(log.status)}</TableCell>
+                    <TableCell className="align-top">
+                      <div className="flex flex-col gap-1">
+                        {getStatusBadge(log.status)}
+                        {formatDeliveryLine(log) && (
+                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                            {formatDeliveryLine(log)}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
 
                     <TableCell className="align-top">
-                      <div className="flex items-center gap-2">
-                        {getChannelIcon(log.channel)}
-                        <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
-                          {log.channel === 'email' ? 'Email' : 'WhatsApp'}
-                        </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <div className="flex items-center gap-2">
+                          {getChannelIcon(log.channel)}
+                          <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
+                            {CHANNEL_LABEL[log.channel] ?? log.channel}
+                          </Badge>
+                        </div>
+                        {log.origin === 'direct' && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 h-5 text-purple-700 border-purple-300"
+                          >
+                            Individual
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
 
@@ -506,8 +609,26 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
                     Status
                   </div>
-                  {getStatusBadge(detailLog.status)}
+                  <div className="flex flex-col gap-1.5 items-start">
+                    {getStatusBadge(detailLog.status)}
+                    {formatDeliveryLine(detailLog) && (
+                      <span className="text-sm text-muted-foreground">
+                        {formatDeliveryLine(detailLog)}
+                      </span>
+                    )}
+                    {detailLog.failureReason && (
+                      <p className="text-sm text-red-700 break-words">{detailLog.failureReason}</p>
+                    )}
+                  </div>
                 </div>
+                {detailLog.cc && detailLog.cc.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+                      CC
+                    </div>
+                    <p className="text-sm text-foreground break-words">{detailLog.cc.join(', ')}</p>
+                  </div>
+                )}
                 {detailLog.templateUsed && (
                   <div>
                     <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
