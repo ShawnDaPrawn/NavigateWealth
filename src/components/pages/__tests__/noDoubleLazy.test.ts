@@ -34,13 +34,23 @@ const SRC_ROOT = join(__dirname, '..', '..', '..');
 function lazyBarrelExports(): Map<string, Set<string>> {
   const result = new Map<string, Set<string>>();
   for (const dir of readdirSync(MODULES_DIR)) {
-    const barrel = join(MODULES_DIR, dir, 'index.ts');
-    let source: string;
-    try {
-      source = readFileSync(barrel, 'utf8');
-    } catch {
-      continue; // module without a barrel
+    // Barrels come in both flavours: index.ts AND index.tsx (the FNA
+    // modules use .tsx). Missing the .tsx ones would let this guard stay
+    // green while a consumer double-wraps e.g. the tax-planning-fna
+    // barrel's lazy export.
+    let source: string | null = null;
+    for (const barrel of [
+      join(MODULES_DIR, dir, 'index.ts'),
+      join(MODULES_DIR, dir, 'index.tsx'),
+    ]) {
+      try {
+        source = readFileSync(barrel, 'utf8');
+        break;
+      } catch {
+        /* try next extension */
+      }
     }
+    if (source === null) continue; // module without a barrel
     const names = new Set<string>();
     for (const match of source.matchAll(/export const (\w+)(?::\s*[\w<>,.\s]+)? = lazy\(/g)) {
       names.add(match[1]);
