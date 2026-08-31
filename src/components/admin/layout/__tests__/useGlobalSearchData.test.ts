@@ -1,7 +1,8 @@
 /**
  * Tests for useGlobalSearchData hook.
  * Strategy: mock useQuery, clientApi, personnelApi, and queryKeys.
- * The hook uses two useQuery calls + useMemo to filter results.
+ * The hook uses two useQuery calls (shared module cache keys + `select`
+ * mapping to SearchableAccount) + useMemo to filter results.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -13,6 +14,7 @@ const mockUseQuery = vi.fn();
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 
 const mockGetClients = vi.fn();
@@ -34,10 +36,12 @@ vi.mock('../../../../utils/queryKeys', () => ({
   clientKeys: {
     all: ['clients'],
     lists: () => ['clients', 'list'],
+    list: (filters?: unknown) => ['clients', 'list', filters],
   },
   personnelKeys: {
     all: ['personnel'],
     lists: () => ['personnel', 'list'],
+    list: (filters?: unknown) => ['personnel', 'list', filters],
   },
 }));
 
@@ -60,8 +64,11 @@ vi.mock('../../../../utils/personName', () => ({
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { useGlobalSearchData } from '../useGlobalSearchData';
+import type { SearchableAccount } from '../useGlobalSearchData';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+type SelectFn = (raw: unknown[]) => SearchableAccount[];
 
 function makeQueryReturn(data: unknown = [], isLoading = false) {
   return { data, isLoading, error: null };
@@ -87,7 +94,7 @@ describe('useGlobalSearchData — query config', () => {
     expect(mockUseQuery).toHaveBeenCalledTimes(2);
   });
 
-  it('uses clientKeys.lists() for client query key', () => {
+  it("uses the Clients module's list key (clientKeys.lists()) so the cache entry is shared", () => {
     const captured: unknown[] = [];
     mockUseQuery.mockImplementation((opts: { queryKey: unknown }) => {
       captured.push(opts.queryKey);
@@ -97,14 +104,14 @@ describe('useGlobalSearchData — query config', () => {
     expect(captured[0]).toEqual(['clients', 'list']);
   });
 
-  it('uses personnelKeys.lists() for personnel query key', () => {
+  it("uses the Personnel module's unfiltered list key (personnelKeys.list()) so the cache entry is shared", () => {
     const captured: unknown[] = [];
     mockUseQuery.mockImplementation((opts: { queryKey: unknown }) => {
       captured.push(opts.queryKey);
       return makeQueryReturn([]);
     });
     renderHook(() => useGlobalSearchData(true, 'alice'));
-    expect(captured[1]).toEqual(['personnel', 'list']);
+    expect(captured[1]).toEqual(['personnel', 'list', undefined]);
   });
 
   it('passes staleTime of 5 minutes', () => {
@@ -238,10 +245,10 @@ describe('useGlobalSearchData — returned state', () => {
   });
 });
 
-describe('useGlobalSearchData — queryFn', () => {
+describe('useGlobalSearchData — queryFn caches the module shape', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('client queryFn calls clientApi.getClients and maps users', async () => {
+  it('client queryFn calls clientApi.getClients and returns Client-shaped rows (no `type` stored)', async () => {
     mockGetClients.mockResolvedValue({
       users: [
         {
@@ -262,9 +269,13 @@ describe('useGlobalSearchData — queryFn', () => {
     });
 
     renderHook(() => useGlobalSearchData(true, 'al'));
-    const result = await clientQueryFn!();
+    const result = (await clientQueryFn!()) as Array<Record<string, unknown>>;
     expect(mockGetClients).toHaveBeenCalledOnce();
-    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('c1');
+    // The cached shape is the Clients module's Client, not SearchableAccount —
+    // the `type` discriminator is derived by `select`, never stored.
+    expect(result[0].type).toBeUndefined();
   });
 
   it('client queryFn handles clients array key', async () => {
@@ -282,8 +293,8 @@ describe('useGlobalSearchData — queryFn', () => {
     expect(result).toHaveLength(1);
   });
 
-  it('personnel queryFn calls personnelApi.fetch and maps results', async () => {
-    mockFetchPersonnel.mockResolvedValue([
+  it('personnel queryFn calls personnelApi.fetch and returns the raw personnel list', async () => {
+    const rawPersonnel = [
       {
         id: 'p1',
         firstName: 'Carol',
@@ -292,7 +303,8 @@ describe('useGlobalSearchData — queryFn', () => {
         status: 'active',
         role: 'adviser',
       },
-    ]);
+    ];
+    mockFetchPersonnel.mockResolvedValue(rawPersonnel);
     const queryFns: Array<() => Promise<unknown>> = [];
     mockUseQuery.mockImplementation((opts: { queryFn?: () => Promise<unknown> }) => {
       if (opts.queryFn) queryFns.push(opts.queryFn);
@@ -302,7 +314,80 @@ describe('useGlobalSearchData — queryFn', () => {
     renderHook(() => useGlobalSearchData(true, 'ca'));
     const result = (await queryFns[1]!()) as unknown[];
     expect(mockFetchPersonnel).toHaveBeenCalledOnce();
-    expect(result).toHaveLength(1);
-    expect((result[0] as { type: string }).type).toBe('personnel');
+    expect(result).toBe(rawPersonnel);
+  });
+});
+
+describe('useGlobalSearchData — select derives SearchableAccount', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function captureSelects(): SelectFn[] {
+    const selects: SelectFn[] = [];
+    mockUseQuery.mockImplementation((opts: { select?: SelectFn }) => {
+      if (opts.select) selects.push(opts.select);
+      return makeQueryReturn([]);
+    });
+    return selects;
+  }
+
+  it("client select stamps type 'client' — navigation depends on it even when the Clients module populated the cache", () => {
+    const selects = captureSelects();
+    renderHook(() => useGlobalSearchData(true, 'al'));
+
+    const mapped = selects[0]([
+      {
+        id: 'c1',
+        firstName: 'Alice',
+        lastName: 'Smith',
+        email: 'alice@test.com',
+        accountStatus: 'active',
+        deleted: false,
+        suspended: false,
+      },
+    ]);
+    expect(mapped).toHaveLength(1);
+    expect(mapped[0]).toMatchObject({
+      id: 'c1',
+      firstName: 'Alice',
+      lastName: 'Smith',
+      email: 'alice@test.com',
+      type: 'client',
+      status: 'active',
+    });
+  });
+
+  it('client select derives closed/suspended display status', () => {
+    const selects = captureSelects();
+    renderHook(() => useGlobalSearchData(true, 'al'));
+
+    const mapped = selects[0]([
+      { id: 'c1', firstName: 'A', lastName: 'B', email: 'a@b.co', deleted: true, suspended: false },
+      { id: 'c2', firstName: 'C', lastName: 'D', email: 'c@d.co', deleted: false, suspended: true },
+    ]);
+    expect(mapped[0].status).toBe('closed');
+    expect(mapped[1].status).toBe('suspended');
+  });
+
+  it("personnel select stamps type 'personnel' and a humanized role meta", () => {
+    const selects = captureSelects();
+    renderHook(() => useGlobalSearchData(true, 'ca'));
+
+    const mapped = selects[1]([
+      {
+        id: 'p1',
+        firstName: 'Carol',
+        lastName: 'Davis',
+        email: 'carol@firm.com',
+        status: 'active',
+        role: 'super_admin',
+      },
+    ]);
+    expect(mapped).toHaveLength(1);
+    expect(mapped[0]).toMatchObject({
+      id: 'p1',
+      type: 'personnel',
+      status: 'active',
+      meta: 'Super Admin',
+    });
   });
 });
