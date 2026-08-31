@@ -1,7 +1,50 @@
 // Domain Types
 import type { BaseClient } from '../../../../shared/types';
 
+/** What the compose wizard can send through. */
 export type CommunicationChannel = 'email' | 'whatsapp';
+
+/**
+ * What a HISTORY row can be. Adds `portal`, which the wizard cannot produce:
+ * it is what an individual message becomes when the adviser leaves "Send
+ * Email" unchecked on a client profile. The portal copy is always written, so
+ * the message is real — no provider was involved. Kept separate from
+ * `CommunicationChannel` so the wizard's own types stay honest about the two
+ * channels it can actually send on.
+ */
+export type HistoryChannel = CommunicationChannel | 'portal';
+
+/**
+ * Delivery status shown in the Communication Centre.
+ *
+ * `sent` is a legacy value still present on older stored rows; new sends write
+ * one of the others. `partial` and `rejected` exist because the send pipeline
+ * used to report 'completed' unconditionally — a run where the provider refused
+ * every address was indistinguishable from one that landed.
+ */
+export type CommunicationStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'sending'
+  | 'sent'
+  | 'completed'
+  | 'partial'
+  | 'failed'
+  | 'rejected';
+
+/** Status values offered in the history filter, in reporting order. */
+export const COMMUNICATION_STATUS_FILTERS: ReadonlyArray<{
+  value: CommunicationStatus;
+  label: string;
+}> = [
+  { value: 'completed', label: 'Completed' },
+  { value: 'partial', label: 'Partially delivered' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'sending', label: 'Sending' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'draft', label: 'Draft' },
+];
 export type RecipientType = 'single' | 'multiple' | 'group';
 export type GroupType = 'system' | 'custom';
 export type SchedulingType = 'immediate' | 'scheduled';
@@ -186,7 +229,7 @@ export interface BackendCampaign {
   id: string;
   subject: string;
   bodyHtml: string;
-  channel: CommunicationChannel;
+  channel: HistoryChannel;
   recipientType: RecipientType;
   selectedRecipients: Array<{ id: string; email?: string; name?: string; [key: string]: unknown }>;
   selectedGroup?: {
@@ -196,9 +239,13 @@ export interface BackendCampaign {
     clientCount?: number;
     [key: string]: unknown;
   };
-  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  status: CommunicationStatus;
   attachments?: Array<{ id: string; name: string; path: string; type: string; size: number }>;
   stats?: { sent: number; failed: number; total: number };
+  /** `direct` rows are individual messages sent from a client profile. */
+  origin?: 'campaign' | 'direct';
+  cc?: string[];
+  failureReason?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -215,7 +262,13 @@ export interface CommunicationLog {
   sender_name?: string;
   body?: string;
   content?: string;
+  /** True only when the email provider ACCEPTED the message. */
   sent_via_email: boolean;
+  /** Per-message email outcome; absent on rows written before it was tracked. */
+  email_status?: 'sent' | 'failed' | 'rejected' | 'skipped';
+  email_error?: string;
+  /** Addresses copied on the email. */
+  cc?: string[];
   attachments?: AttachmentFile[];
 }
 
@@ -238,7 +291,7 @@ export interface ActivityLogEntry {
   timestamp: Date;
   userId: string;
   userName: string;
-  channel: CommunicationChannel;
+  channel: HistoryChannel;
   recipientType: RecipientType;
   recipientCount: number;
   /** Group name when recipientType is `group` (from campaign.selectedGroup). */
@@ -249,7 +302,15 @@ export interface ActivityLogEntry {
   messagePreviewFull?: string;
   attachmentCount: number;
   templateUsed?: string;
-  status: 'sent' | 'scheduled' | 'draft' | 'failed' | 'completed' | 'sending';
+  status: CommunicationStatus;
+  /** Individual client message vs Communication Centre campaign. */
+  origin: 'campaign' | 'direct';
+  /** Delivery counts, when the send has actually run. */
+  stats?: { sent: number; failed: number; total: number };
+  /** CC'd addresses on the envelope. */
+  cc?: string[];
+  /** Why the send did not fully complete. */
+  failureReason?: string;
 }
 
 export interface CommunicationMessage {
@@ -278,11 +339,19 @@ export interface MessageCreate {
 export interface SendMessageResponse {
   success: boolean;
   messageId: string;
+  status?: 'completed' | 'partial' | 'failed' | 'rejected';
+  stats?: { sent: number; failed: number; total: number };
+  /** CC addresses that made it onto the envelope. */
+  cc?: string[];
+  /** Set when some CC entries were unusable and were dropped from the send. */
+  ccWarning?: string;
+  failureReason?: string;
 }
 
 export interface SendCampaignResponse {
   success: boolean;
   sent: number;
+  status?: CommunicationStatus;
 }
 
 export interface ValidationResult {

@@ -453,6 +453,7 @@ export async function processScheduledCampaigns() {
         supabase as unknown as SupabaseAdminClient,
       );
       let sentCount = 0;
+      let firstFailure: string | undefined;
 
       for (const recipient of recipients) {
         if (!recipient.email) continue;
@@ -487,14 +488,19 @@ export async function processScheduledCampaigns() {
 
           sentCount++;
         } catch (e) {
+          firstFailure = firstFailure || (e instanceof Error ? e.message : String(e));
           logger.error(`Failed to send email to ${recipient.email}`, e as Error);
         }
       }
 
-      campaign.status = 'completed';
+      const failedCount = recipients.length - sentCount;
+      // Same fix as sendCampaign: 'completed' used to be written unconditionally,
+      // so a scheduled campaign that reached nobody still reported success.
+      campaign.status = failedCount === 0 ? 'completed' : sentCount > 0 ? 'partial' : 'failed';
+      campaign.failureReason = failedCount > 0 ? firstFailure : undefined;
       campaign.stats = {
         sent: sentCount,
-        failed: recipients.length - sentCount,
+        failed: failedCount,
         total: recipients.length,
       };
       campaign.updatedAt = new Date().toISOString();
