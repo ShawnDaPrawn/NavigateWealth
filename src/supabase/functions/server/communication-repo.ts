@@ -344,6 +344,10 @@ export async function saveCampaign(campaign: Campaign): Promise<void> {
   await kv.set(`communication:campaigns:${campaign.id}`, campaign);
 }
 
+export async function deleteCampaign(id: string): Promise<void> {
+  await kv.del(`communication:campaigns:${id}`);
+}
+
 export async function getAllCampaigns(): Promise<Campaign[]> {
   const result = await getCampaigns();
   return result.data;

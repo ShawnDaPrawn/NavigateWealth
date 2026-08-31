@@ -25,6 +25,22 @@
  */
 const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/;
 
+/**
+ * Why an entry did not make it onto the envelope as its own CC.
+ *
+ * The split that matters to a caller is whether the PERSON still receives the
+ * message. `duplicate` and `excluded` mean they do — once, or as the To address
+ * — so reporting either as "not copied to" is simply wrong. Only `invalid` and
+ * `limit` mean nothing reached them. `describeUndeliveredRecipients` draws that
+ * line; `describeDroppedRecipients` reports everything and is for logs.
+ */
+export type DroppedRecipientReason = 'invalid' | 'duplicate' | 'excluded' | 'limit';
+
+export interface DroppedRecipient {
+  value: string;
+  reason: DroppedRecipientReason;
+}
+
 export interface NormalizedRecipients {
   /** Clean, de-duplicated, provider-safe addresses, in first-seen order. */
   accepted: string[];
@@ -32,7 +48,7 @@ export interface NormalizedRecipients {
    * Entries that were thrown away, with the reason, so callers can tell the
    * admin "we sent it, but we could not CC <x>" instead of silently losing it.
    */
-  dropped: Array<{ value: string; reason: 'invalid' | 'duplicate' | 'excluded' }>;
+  dropped: DroppedRecipient[];
 }
 
 /** `Navigate Wealth <info@navigatewealth.co>` → `info@navigatewealth.co`. */
@@ -76,7 +92,7 @@ export function normalizeEmailList(
 
   const seen = new Set<string>();
   const accepted: string[] = [];
-  const dropped: NormalizedRecipients['dropped'] = [];
+  const dropped: DroppedRecipient[] = [];
 
   for (const entry of raw) {
     const trimmed = entry.trim();
@@ -98,7 +114,7 @@ export function normalizeEmailList(
       continue;
     }
     if (accepted.length >= limit) {
-      dropped.push({ value: address, reason: 'invalid' });
+      dropped.push({ value: address, reason: 'limit' });
       continue;
     }
 
@@ -109,13 +125,31 @@ export function normalizeEmailList(
   return { accepted, dropped };
 }
 
-/** Human-readable summary of dropped addresses, for toasts and logs. */
-export function describeDroppedRecipients(dropped: NormalizedRecipients['dropped']): string {
+const REASON_LABEL: Record<DroppedRecipientReason, string> = {
+  invalid: 'not a valid email address',
+  duplicate: 'listed more than once',
+  excluded: 'already the primary recipient',
+  limit: 'over the CC limit for one message',
+};
+
+/** Every dropped address and why. For server logs — see the type doc above. */
+export function describeDroppedRecipients(dropped: DroppedRecipient[]): string {
   if (dropped.length === 0) return '';
-  const reasonLabel: Record<NormalizedRecipients['dropped'][number]['reason'], string> = {
-    invalid: 'not a valid email address',
-    duplicate: 'listed more than once',
-    excluded: 'already the primary recipient',
-  };
-  return dropped.map((d) => `${d.value} (${reasonLabel[d.reason]})`).join(', ');
+  return dropped.map((d) => `${d.value} (${REASON_LABEL[d.reason]})`).join(', ');
+}
+
+/**
+ * Only the addresses that genuinely received nothing — the right thing to put
+ * in front of an adviser as "we could not copy this in".
+ *
+ * A `duplicate` was copied (once) and an `excluded` address is the recipient
+ * themselves, so both DID get the message. Reporting them made the compose
+ * form claim `Not copied to: info@navigatewealth.co` on every encrypted send
+ * with "CC Admin" ticked — that path passes the admin address both in the cc
+ * list and via the ccAdmin flag, so it is always a duplicate.
+ */
+export function describeUndeliveredRecipients(dropped: DroppedRecipient[]): string {
+  return describeDroppedRecipients(
+    dropped.filter((d) => d.reason === 'invalid' || d.reason === 'limit'),
+  );
 }

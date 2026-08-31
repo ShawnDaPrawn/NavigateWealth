@@ -53,7 +53,7 @@ vi.mock('../stderr-logger.ts', async () =>
 );
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
-const { sendDirectMessage, sendMessage, summarizeDelivery } =
+const { deleteCommunicationLog, sendDirectMessage, sendMessage, summarizeDelivery } =
   await import('../communication-messaging.ts');
 
 type EmailParams = {
@@ -102,7 +102,9 @@ describe('sendMessage — CC', () => {
 
     expect(lastEmail().cc).toEqual(['colleague@example.com']);
     expect(result.status).toBe('completed');
-    expect(result.ccWarning).toContain('client@example.com');
+    // …and it is NOT reported as uncopied: that address is the recipient, who
+    // received the message as the To.
+    expect(result.ccWarning).toBeUndefined();
   });
 
   it('drops a malformed CC and still delivers, reporting what was dropped', async () => {
@@ -121,6 +123,18 @@ describe('sendMessage — CC', () => {
     // to hand the provider a malformed personalization.
     await sendMessage('admin-1', { ...baseMessage, cc: ['nonsense'] });
     expect(lastEmail().cc).toBeUndefined();
+  });
+
+  it('does not claim an address was missed when it was merely listed twice', async () => {
+    // The encrypted-documents path passes the admin address in `cc` AND via the
+    // `ccAdmin` flag, so a de-duplicated copy is the norm, not an error.
+    const result = await sendMessage('admin-1', {
+      ...baseMessage,
+      cc: ['info@navigatewealth.co', 'info@navigatewealth.co'],
+    });
+
+    expect(lastEmail().cc).toEqual(['info@navigatewealth.co']);
+    expect(result.ccWarning).toBeUndefined();
   });
 
   it('records the accepted CC list on the client-facing log entry', async () => {
@@ -299,6 +313,23 @@ describe('sendDirectMessage — visibility in the Communication Centre', () => {
     expect(row.failureReason).toContain('invalid address');
   });
 
+  it('files a portal-only send as the portal channel, not email', async () => {
+    // "Send Email" is optional on the compose form. Recording every direct row
+    // as `email` made the manager show an Email badge for a message no provider
+    // ever saw.
+    const result = await sendDirectMessage('admin-1', { ...baseMessage, sendEmail: false });
+    const row = kvStore.get(`communication:campaigns:${result.messageId}`) as { channel: string };
+
+    expect(sendEmailMock).not.toHaveBeenCalled();
+    expect(row.channel).toBe('portal');
+  });
+
+  it('files an emailed send as the email channel', async () => {
+    const result = await sendDirectMessage('admin-1', baseMessage);
+    const row = kvStore.get(`communication:campaigns:${result.messageId}`) as { channel: string };
+    expect(row.channel).toBe('email');
+  });
+
   it('marks a multi-recipient send as `multiple`', async () => {
     const result = await sendDirectMessage('admin-1', {
       ...baseMessage,
@@ -325,5 +356,42 @@ describe('sendDirectMessage — visibility in the Communication Centre', () => {
     expect(result.status).toBe('completed');
     expect(kvStore.has(`communication_log:client-1:${result.messageId}`)).toBe(true);
     setSpy.mockRestore();
+  });
+});
+
+describe('deleteCommunicationLog', () => {
+  it('removes the manager-visible row along with the message', async () => {
+    // Without this the admin deletes the communication from the client profile,
+    // is told it worked, and the Communication Centre keeps listing it forever.
+    const result = await sendDirectMessage('admin-1', baseMessage);
+    expect(kvStore.has(`communication:campaigns:${result.messageId}`)).toBe(true);
+
+    await deleteCommunicationLog(result.messageId);
+
+    expect(kvStore.has(`communication:campaigns:${result.messageId}`)).toBe(false);
+    expect(kvStore.has(`communication_log:client-1:${result.messageId}`)).toBe(false);
+    expect(kvStore.has(`communication_history:${result.messageId}`)).toBe(false);
+  });
+
+  it('leaves a real campaign alone even if its id is passed', async () => {
+    // The guard is on `origin`: deleting a message must never be able to wipe a
+    // Communication Centre campaign that happens to share an id.
+    kvStore.set('communication:campaigns:camp-1', { id: 'camp-1', origin: 'campaign' });
+
+    await deleteCommunicationLog('camp-1');
+
+    expect(kvStore.has('communication:campaigns:camp-1')).toBe(true);
+  });
+
+  it('deletes every recipient copy of a multi-recipient message', async () => {
+    const result = await sendDirectMessage('admin-1', {
+      ...baseMessage,
+      recipients: ['client-1', 'client-2'],
+    });
+
+    await deleteCommunicationLog(result.messageId);
+
+    expect(kvStore.has(`communication_log:client-1:${result.messageId}`)).toBe(false);
+    expect(kvStore.has(`communication_log:client-2:${result.messageId}`)).toBe(false);
   });
 });

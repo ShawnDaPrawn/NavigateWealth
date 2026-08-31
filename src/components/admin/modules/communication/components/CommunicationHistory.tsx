@@ -39,13 +39,14 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Inbox,
 } from 'lucide-react';
 import {
   ActivityLogEntry,
   CampaignHistorySenderOption,
-  CommunicationChannel,
   CommunicationStatus,
   COMMUNICATION_STATUS_FILTERS,
+  HistoryChannel,
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
@@ -162,12 +163,17 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
     });
   };
 
-  const getChannelIcon = (channel: CommunicationChannel) => {
-    return channel === 'email' ? (
-      <Mail className="h-4 w-4 shrink-0" aria-hidden />
-    ) : (
-      <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
-    );
+  const getChannelIcon = (channel: HistoryChannel) => {
+    if (channel === 'email') return <Mail className="h-4 w-4 shrink-0" aria-hidden />;
+    if (channel === 'portal') return <Inbox className="h-4 w-4 shrink-0" aria-hidden />;
+    return <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />;
+  };
+
+  /** Portal-only rows are messages that reached the client's inbox, not an inbox. */
+  const CHANNEL_LABEL: Record<HistoryChannel, string> = {
+    email: 'Email',
+    whatsapp: 'WhatsApp',
+    portal: 'Portal only',
   };
 
   const getRecipientIcon = (type: RecipientType) => {
@@ -296,6 +302,7 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
               <SelectItem value="all">All Channels</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="portal">Portal only</SelectItem>
             </SelectContent>
           </Select>
 
@@ -469,7 +476,7 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
                         <div className="flex items-center gap-2">
                           {getChannelIcon(log.channel)}
                           <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
-                            {log.channel === 'email' ? 'Email' : 'WhatsApp'}
+                            {CHANNEL_LABEL[log.channel] ?? log.channel}
                           </Badge>
                         </div>
                         {log.origin === 'direct' && (

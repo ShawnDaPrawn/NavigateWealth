@@ -16,7 +16,11 @@ import {
   getFooterSettings,
   getEmailTemplate,
 } from './email-service.ts';
-import { describeDroppedRecipients, normalizeEmailList } from './email-recipients.ts';
+import {
+  describeDroppedRecipients,
+  describeUndeliveredRecipients,
+  normalizeEmailList,
+} from './email-recipients.ts';
 import { encodeBase64 } from 'jsr:@std/encoding/base64';
 import type { DocumentMetadata } from './documents.tsx';
 
@@ -341,7 +345,12 @@ ${template.footerNote || ''}
       success: true,
       message: 'Documents sent successfully',
       cc: finalCc,
-      ccWarning: describeDroppedRecipients(droppedCc) || undefined,
+      // Only addresses that received NOTHING. This route is handed the admin
+      // address twice when "CC Admin" is ticked — once in `cc`, once via the
+      // `ccAdmin` flag — so the de-duplicated copy is always a `duplicate`, and
+      // reporting it made the compose form claim the admin had not been copied
+      // on every encrypted send.
+      ccWarning: describeUndeliveredRecipients(droppedCc) || undefined,
     });
   } catch (error: unknown) {
     log.error('❌ Error sending documents email:', error);

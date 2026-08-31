@@ -16,6 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   describeDroppedRecipients,
+  describeUndeliveredRecipients,
   isValidEmailAddress,
   normalizeEmailList,
 } from '../email-recipients.ts';
@@ -86,6 +87,7 @@ describe('normalizeEmailList', () => {
     const result = normalizeEmailList(many, [], 3);
     expect(result.accepted).toHaveLength(3);
     expect(result.dropped).toHaveLength(2);
+    expect(result.dropped.every((d) => d.reason === 'limit')).toBe(true);
   });
 
   it('returns nothing for absent or non-list input', () => {
@@ -112,6 +114,35 @@ describe('describeDroppedRecipients', () => {
     const text = describeDroppedRecipients(dropped);
     expect(text).toContain('nope (not a valid email address)');
     expect(text).toContain('client@example.com (already the primary recipient)');
+  });
+});
+
+describe('describeUndeliveredRecipients', () => {
+  // The distinction is not cosmetic: a `duplicate` was copied once and an
+  // `excluded` address IS the recipient, so both people received the message.
+  // Telling the adviser "not copied to <them>" is simply false — and the
+  // encrypted-documents path hands the admin address in twice, so it tripped on
+  // every send with "CC Admin" ticked.
+  it('says nothing about an address that was copied once anyway', () => {
+    const { dropped } = normalizeEmailList(['a@example.com', 'A@example.com']);
+    expect(describeUndeliveredRecipients(dropped)).toBe('');
+  });
+
+  it('says nothing about the recipient being CC-d on their own message', () => {
+    const { dropped } = normalizeEmailList(['client@example.com'], ['client@example.com']);
+    expect(describeUndeliveredRecipients(dropped)).toBe('');
+  });
+
+  it('reports addresses that genuinely received nothing', () => {
+    const { dropped } = normalizeEmailList(['nope', 'dup@example.com', 'dup@example.com']);
+    const text = describeUndeliveredRecipients(dropped);
+    expect(text).toContain('nope');
+    expect(text).not.toContain('dup@example.com');
+  });
+
+  it('reports addresses cut by the limit', () => {
+    const { dropped } = normalizeEmailList(['a@example.com', 'b@example.com'], [], 1);
+    expect(describeUndeliveredRecipients(dropped)).toContain('b@example.com');
   });
 });
 

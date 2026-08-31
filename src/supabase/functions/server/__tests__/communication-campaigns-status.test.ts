@@ -21,6 +21,12 @@ vi.hoisted(() => {
 
 const sendMessageMock = vi.hoisted(() => vi.fn());
 const getAllClientsMock = vi.hoisted(() => vi.fn(async () => []));
+const sendEmailMock = vi.hoisted(() => vi.fn(async () => true));
+
+vi.mock('../email-service.ts', () => ({
+  sendEmail: sendEmailMock,
+  createEmailTemplate: vi.fn((content: string) => `<html>${content}`),
+}));
 
 vi.mock('../communication-messaging.ts', () => ({
   sendMessage: sendMessageMock,
@@ -84,6 +90,8 @@ beforeEach(() => {
   kvStore.clear();
   sendMessageMock.mockReset();
   sendMessageMock.mockResolvedValue(ok);
+  sendEmailMock.mockReset();
+  sendEmailMock.mockResolvedValue(true);
 });
 
 describe('sendCampaign — status reflects what actually happened', () => {
@@ -144,6 +152,60 @@ describe('sendCampaign — status reflects what actually happened', () => {
     const id = seedCampaign({ id: 'direct-1', origin: 'direct', status: 'completed' });
     await expect(sendCampaign(id, 'admin-1')).rejects.toThrow(/already been sent/i);
     expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendCampaign — external contacts', () => {
+  function seedExternalGroupCampaign(): string {
+    kvStore.set('communication:groups:g1', {
+      id: 'g1',
+      name: 'Newsletter',
+      clientIds: [],
+      externalContacts: [
+        { email: 'one@example.com', source: 'newsletter', subscribedAt: '' },
+        { email: 'two@example.com', source: 'newsletter', subscribedAt: '' },
+      ],
+      filterConfig: {},
+    });
+    return seedCampaign({
+      id: 'ext-1',
+      recipientType: 'group',
+      selectedRecipients: [],
+      selectedGroup: { id: 'g1', name: 'Newsletter' },
+    });
+  }
+
+  it('asks the transport to throw so an external rejection can be classified', async () => {
+    await sendCampaign(seedExternalGroupCampaign(), 'admin-1');
+    expect(sendEmailMock.mock.calls[0][0]).toMatchObject({ throwOnError: true });
+  });
+
+  it('is rejected when every external address was refused terminally', async () => {
+    // Without classification `rejected` never incremented for external
+    // contacts, so an external-only campaign could never reach this status —
+    // an invalid address was filed as a retryable `failed`.
+    sendEmailMock.mockRejectedValue(new Error('SendGrid error: invalid address'));
+
+    const result = await sendCampaign(seedExternalGroupCampaign(), 'admin-1');
+
+    expect(result.status).toBe('rejected');
+    expect(result.sent).toBe(0);
+  });
+
+  it('is failed, not rejected, when the refusal was transient', async () => {
+    sendEmailMock.mockRejectedValue(new Error('network timeout'));
+    expect((await sendCampaign(seedExternalGroupCampaign(), 'admin-1')).status).toBe('failed');
+  });
+
+  it('is partial when one external address landed and one did not', async () => {
+    sendEmailMock
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new Error('SendGrid error: invalid address'));
+
+    const result = await sendCampaign(seedExternalGroupCampaign(), 'admin-1');
+
+    expect(result.status).toBe('partial');
+    expect(result.sent).toBe(1);
   });
 });
 

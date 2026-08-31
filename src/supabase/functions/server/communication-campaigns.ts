@@ -8,9 +8,15 @@
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
 import * as repo from './communication-repo.ts';
-import type { Campaign, CampaignCreate, CampaignStatus } from './communication-types.ts';
+import type {
+  Campaign,
+  CampaignCreate,
+  CampaignStatus,
+  CommunicationChannel,
+} from './communication-types.ts';
 import { resolveAdminDisplayNames, stripHtmlForSearch } from './communication-service-helpers.ts';
 import { getAllClients, sendMessage } from './communication-messaging.ts';
+import { classifyDeliveryFailure } from './email-delivery-classification.ts';
 
 const log = createModuleLogger('communication-service');
 
@@ -47,7 +53,7 @@ export async function listCampaignsFiltered(options: {
   page: number;
   limit: number;
   search?: string;
-  channel?: 'email' | 'whatsapp';
+  channel?: CommunicationChannel;
   recipientType?: 'single' | 'multiple' | 'group';
   createdBy?: string;
   status?: CampaignStatus;
@@ -69,7 +75,7 @@ export async function listCampaignsFiltered(options: {
 
   const senderOptions = buildSenderOptions(rows);
 
-  if (options.channel === 'email' || options.channel === 'whatsapp') {
+  if (options.channel) {
     rows = rows.filter((c) => c.channel === options.channel);
   }
 
@@ -372,21 +378,26 @@ export async function sendCampaign(
           unsubscribeLink,
         });
 
-        const result = await sendEmailFn({
+        // `throwOnError` for the same reason sendMessage sets it: without it a
+        // provider rejection comes back as a bare `false` with no message, so an
+        // invalid external address could never be classified terminal and an
+        // external-only campaign could never reach the `rejected` status.
+        await sendEmailFn({
           to: extEmail,
           subject: campaign.subject,
           html,
+          throwOnError: true,
         });
 
-        if (result) {
-          sent++;
-        } else {
-          firstFailure = firstFailure || `The email provider rejected ${extEmail}`;
-          log.warn('External contact did not receive campaign', { email: extEmail });
-        }
+        sent++;
       } catch (error) {
-        firstFailure = firstFailure || (error instanceof Error ? error.message : String(error));
-        log.error('Failed to send to external contact', error as Error, { email: extEmail });
+        const classified = classifyDeliveryFailure(error);
+        if (classified.disposition === 'terminal') rejected++;
+        firstFailure = firstFailure || classified.message;
+        log.error('Failed to send to external contact', error as Error, {
+          email: extEmail,
+          disposition: classified.disposition,
+        });
       }
     }
   }

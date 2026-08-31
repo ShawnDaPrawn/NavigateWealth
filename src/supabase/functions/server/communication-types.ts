@@ -108,11 +108,19 @@ export type CampaignStatus =
   | 'failed'
   | 'rejected';
 
+/**
+ * `portal` is not something the campaign wizard can create — it is what a
+ * direct message becomes when the adviser leaves "Send Email" unchecked. The
+ * portal copy is always written, so the message is real; no provider was
+ * involved.
+ */
+export type CommunicationChannel = 'email' | 'whatsapp' | 'portal';
+
 export interface Campaign {
   id: string;
   subject: string;
   bodyHtml: string;
-  channel: 'email' | 'whatsapp';
+  channel: CommunicationChannel;
   recipientType: 'single' | 'multiple' | 'group';
   selectedRecipients: { id: string; email?: string; [key: string]: unknown }[];
   selectedGroup?: { id: string; type: string; [key: string]: unknown };

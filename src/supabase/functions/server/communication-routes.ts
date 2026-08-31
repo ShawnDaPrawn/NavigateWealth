@@ -32,8 +32,12 @@ import type {
   GroupCreate,
   CampaignCreate,
   CampaignStatus,
+  CommunicationChannel,
   HistoryFilters,
 } from './communication-types.ts';
+
+/** Accepted values for the history view's `?channel=` filter. */
+const CAMPAIGN_CHANNELS: CommunicationChannel[] = ['email', 'whatsapp', 'portal'];
 
 /** Accepted values for the history view's `?status=` filter. */
 const CAMPAIGN_STATUSES: CampaignStatus[] = [
@@ -649,7 +653,9 @@ app.get(
 
     const search = c.req.query('search')?.trim() || undefined;
     const channelRaw = c.req.query('channel')?.trim();
-    const channel = channelRaw === 'email' || channelRaw === 'whatsapp' ? channelRaw : undefined;
+    const channel = CAMPAIGN_CHANNELS.includes(channelRaw as CommunicationChannel)
+      ? (channelRaw as CommunicationChannel)
+      : undefined;
     const rtRaw = c.req.query('recipientType')?.trim();
     const recipientType =
       rtRaw === 'single' || rtRaw === 'multiple' || rtRaw === 'group' ? rtRaw : undefined;

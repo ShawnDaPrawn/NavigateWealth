@@ -1,7 +1,18 @@
 // Domain Types
 import type { BaseClient } from '../../../../shared/types';
 
+/** What the compose wizard can send through. */
 export type CommunicationChannel = 'email' | 'whatsapp';
+
+/**
+ * What a HISTORY row can be. Adds `portal`, which the wizard cannot produce:
+ * it is what an individual message becomes when the adviser leaves "Send
+ * Email" unchecked on a client profile. The portal copy is always written, so
+ * the message is real — no provider was involved. Kept separate from
+ * `CommunicationChannel` so the wizard's own types stay honest about the two
+ * channels it can actually send on.
+ */
+export type HistoryChannel = CommunicationChannel | 'portal';
 
 /**
  * Delivery status shown in the Communication Centre.
@@ -218,7 +229,7 @@ export interface BackendCampaign {
   id: string;
   subject: string;
   bodyHtml: string;
-  channel: CommunicationChannel;
+  channel: HistoryChannel;
   recipientType: RecipientType;
   selectedRecipients: Array<{ id: string; email?: string; name?: string; [key: string]: unknown }>;
   selectedGroup?: {
@@ -280,7 +291,7 @@ export interface ActivityLogEntry {
   timestamp: Date;
   userId: string;
   userName: string;
-  channel: CommunicationChannel;
+  channel: HistoryChannel;
   recipientType: RecipientType;
   recipientCount: number;
   /** Group name when recipientType is `group` (from campaign.selectedGroup). */

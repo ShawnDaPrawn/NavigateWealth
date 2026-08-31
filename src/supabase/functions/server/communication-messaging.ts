@@ -20,8 +20,12 @@ import type {
   Campaign,
 } from './communication-types.ts';
 import { generateId } from './communication-service-helpers.ts';
-import { saveCampaign } from './communication-repo.ts';
-import { describeDroppedRecipients, normalizeEmailList } from './email-recipients.ts';
+import { deleteCampaign, getCampaign, saveCampaign } from './communication-repo.ts';
+import {
+  describeDroppedRecipients,
+  describeUndeliveredRecipients,
+  normalizeEmailList,
+} from './email-recipients.ts';
 import { classifyDeliveryFailure } from './email-delivery-classification.ts';
 import type {
   CommHistoryEntry,
@@ -55,10 +59,15 @@ export async function sendMessage(
   // the To address. Dropping the bad entries and carrying on is the only
   // behaviour where the client still receives their communication.
   const ccNormalized = normalizeEmailList(data.cc, [data.recipientEmail]);
-  const ccWarning = describeDroppedRecipients(ccNormalized.dropped);
-  if (ccWarning) {
-    log.warn('Dropped unusable CC addresses', { dropped: ccWarning });
+  // The log gets everything that was dropped; the admin only hears about the
+  // addresses that actually received nothing. A duplicate was still copied
+  // once, and CC'ing the recipient themselves still reaches them as the To.
+  if (ccNormalized.dropped.length > 0) {
+    log.warn('Dropped unusable CC addresses', {
+      dropped: describeDroppedRecipients(ccNormalized.dropped),
+    });
   }
+  const ccWarning = describeUndeliveredRecipients(ccNormalized.dropped);
 
   // STORAGE OPTIMIZATION:
   // Process attachments: If they are base64, upload them to storage once and reuse the URL.
@@ -356,7 +365,10 @@ export async function sendDirectMessage(
       id: result.messageId,
       subject: data.subject,
       bodyHtml: data.content,
-      channel: 'email',
+      // "Send Email" is optional on the compose form; the portal copy is not.
+      // Filing a portal-only message as `email` made the manager show it with
+      // an Email badge for a message no provider ever saw.
+      channel: data.sendEmail && data.recipientEmail ? 'email' : 'portal',
       recipientType: data.recipients.length > 1 ? 'multiple' : 'single',
       selectedRecipients: data.recipients.map((id) => ({
         id,
@@ -502,15 +514,23 @@ export async function deleteCommunicationLog(messageId: string): Promise<void> {
   // Filter to find all instances of this message
   const logsToDelete = allLogs.filter((log: CommLogEntry) => log.id === messageId);
 
-  // Delete each instance
-  for (const logEntry of logsToDelete) {
-    const key = `communication_log:${logEntry.recipient_id}:${messageId}`;
-    await kv.del(key);
-    log.info('Deleted log entry', { recipientId: logEntry.recipient_id, messageId });
-  }
+  // One round trip, not one per recipient plus one for the history entry — a
+  // message sent to 200 clients used to cost 201 sequential deletes.
+  await kv.mdel([
+    ...logsToDelete.map((logEntry) => `communication_log:${logEntry.recipient_id}:${messageId}`),
+    `communication_history:${messageId}`,
+  ]);
 
-  // Also delete from history
-  await kv.del(`communication_history:${messageId}`);
+  // A direct send also has a campaign-shaped row so the Communication Centre
+  // can list it (see sendDirectMessage). Without this the admin deletes the
+  // message from the client profile, is told it worked, and the manager keeps
+  // showing it forever. Guarded on `origin` so passing a real campaign's id
+  // here can never delete that campaign.
+  const directRow = await getCampaign(messageId);
+  if (directRow?.origin === 'direct') {
+    await deleteCampaign(messageId);
+    log.info('Deleted direct communication history row', { messageId });
+  }
 
   log.success('Communication log deleted', { messageId, deletedCount: logsToDelete.length });
 }
