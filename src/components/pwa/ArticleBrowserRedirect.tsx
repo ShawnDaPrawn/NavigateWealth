@@ -3,15 +3,22 @@ import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { getAuthenticatedRedirectPath } from '../auth/RouteGuards';
 import { useIsArticleBrowserEscape } from '../../hooks/useIsArticleBrowserEscape';
-import { SITE_ORIGIN } from '../../utils/siteOrigin';
+import { SITE_ORIGIN_APEX } from '../../utils/siteOrigin';
 
 /**
- * Builds the canonical public-website URL for the current article so the link
- * always opens on the website host, even if the PWA happens to be running on a
- * different origin (e.g. an apex vs. www variant).
+ * Builds the article URL on the APEX origin — never the canonical www host.
+ *
+ * The www origin is INSIDE the installed PWA's scope, so opening a www URL
+ * from here gets captured straight back into the app on Android, which renders
+ * this interstitial again: the client loops and never reaches the article.
+ * The apex origin is outside the app's scope, so it always opens in a real
+ * browser surface; the apex→www 301 then resolves to the canonical page as an
+ * in-browser navigation, which does not re-trigger link capture (see
+ * SITE_ORIGIN_APEX). The query string is preserved so the `nt` engagement
+ * token still reaches the website article page.
  */
 function buildWebsiteArticleUrl(pathname: string, search: string): string {
-  return `${SITE_ORIGIN}${pathname}${search}`;
+  return `${SITE_ORIGIN_APEX}${pathname}${search}`;
 }
 
 /**

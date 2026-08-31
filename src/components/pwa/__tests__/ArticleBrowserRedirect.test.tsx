@@ -76,7 +76,10 @@ describe('ArticleBrowserRedirect', () => {
     standalone = true;
     renderAt('/resources/article/some-insight?utm=email');
 
-    const expectedUrl = 'https://www.navigatewealth.co/resources/article/some-insight?utm=email';
+    // MUST be the apex origin: the www host is inside the installed PWA's
+    // scope, so a www escape URL gets captured straight back into the app and
+    // the client loops on this interstitial without ever seeing the article.
+    const expectedUrl = 'https://navigatewealth.co/resources/article/some-insight?utm=email';
 
     expect(window.open).toHaveBeenCalledWith(expectedUrl, '_blank', 'noopener,noreferrer');
 
