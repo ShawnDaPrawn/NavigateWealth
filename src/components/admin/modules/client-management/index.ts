@@ -12,5 +12,6 @@ export { clientApi } from './api';
 export { ClientManagementSkeleton } from './components/ClientManagementSkeleton';
 export { ClientOverviewTab } from './components/ClientOverviewTab';
 export { useMaintenanceCronProcessor } from './hooks/useMaintenanceCronProcessor';
+export { fetchClientList } from './hooks/useClientList';
 export { normalizeClientProfileKv } from './normalizeClientProfileKv';
 export type { ApiUser, Client } from './types';

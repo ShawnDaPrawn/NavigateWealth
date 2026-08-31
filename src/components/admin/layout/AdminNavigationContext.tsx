@@ -12,6 +12,7 @@
 
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { AdminModule } from './types';
+import { logger } from '../../../utils/logger';
 
 // ============================================================================
 // TYPES
@@ -66,8 +67,16 @@ export function AdminNavigationProvider({
 
   const navigateToAccount = useCallback(
     (type: AccountType, id: string) => {
+      const targetModule = ACCOUNT_TYPE_TO_MODULE[type];
+      // Defensive: `type` comes from search data. If it is ever missing or
+      // unknown, switching to module `undefined` would silently land on the
+      // dashboard — refuse loudly instead.
+      if (!targetModule || !id) {
+        logger.error('navigateToAccount: unknown account type or missing id', { type, id });
+        return;
+      }
       setPendingSelection({ type, id });
-      onModuleChange(ACCOUNT_TYPE_TO_MODULE[type]);
+      onModuleChange(targetModule);
     },
     [onModuleChange],
   );
