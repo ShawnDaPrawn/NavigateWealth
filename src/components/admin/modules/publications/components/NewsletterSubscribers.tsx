@@ -77,11 +77,12 @@ export function NewsletterSubscribers() {
   const [statusFilter, setStatusFilter] = useState<SubscriberStatusFilter>('all');
   const [unsubTimeRange, setUnsubTimeRange] = useState<UnsubTimeRange>('all');
 
-  const { subscribers, filtered, stats, isLoading, refetch } = useNewsletterSubscribers({
-    statusFilter,
-    search,
-    unsubTimeRange,
-  });
+  const { subscribers, filtered, statusTotal, hiddenByTimeRange, stats, isLoading, refetch } =
+    useNewsletterSubscribers({
+      statusFilter,
+      search,
+      unsubTimeRange,
+    });
 
   const addMutation = useAddSubscriber();
   const bulkMutation = useBulkUpload();
@@ -479,7 +480,25 @@ export function NewsletterSubscribers() {
             </table>
           </div>
           <div className="border-t px-4 py-2.5 text-xs text-muted-foreground bg-muted/20">
-            Showing {filtered.length} of {subscribers.length} subscribers
+            Showing {filtered.length} of{' '}
+            {statusFilter === 'all'
+              ? `${subscribers.length} subscribers`
+              : `${statusTotal} ${statusFilter}`}
+            {hiddenByTimeRange > 0 && (
+              <>
+                {' — '}
+                <span className="text-amber-700 font-medium">
+                  {hiddenByTimeRange} older {hiddenByTimeRange === 1 ? 'record is' : 'records are'}{' '}
+                  hidden by the date filter
+                </span>
+                <button
+                  onClick={() => setUnsubTimeRange('all')}
+                  className="ml-1.5 underline underline-offset-2 hover:text-foreground"
+                >
+                  Show all time
+                </button>
+              </>
+            )}
           </div>
         </Card>
       )}

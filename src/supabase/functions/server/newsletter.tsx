@@ -58,6 +58,22 @@ import {
 const app = new Hono();
 const log = createModuleLogger('newsletter');
 
+/**
+ * The one canonical form of a subscriber address.
+ *
+ * Every admin and service path already keys off `email.trim().toLowerCase()`;
+ * the three public routes used to key off the raw string, which split the
+ * store in two the moment anyone typed a capital letter. Kept here rather than
+ * imported so the public routes cannot drift from it again.
+ */
+function normalizeSubscriberEmail(email: string | undefined | null): string {
+  return (email || '').trim().toLowerCase();
+}
+
+function subscriberKey(normalizedEmail: string): string {
+  return `newsletter:${normalizedEmail}`;
+}
+
 // Root handlers
 app.get('/', (c) => c.json({ service: 'newsletter', status: 'active' }));
 app.get('', (c) => c.json({ service: 'newsletter', status: 'active' }));
@@ -91,10 +107,18 @@ app.post(
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const { email } = parsed.data;
+    // Lowercase at the door. Every admin and service path — removeSubscriberByEmail,
+    // resubscribeByEmail, the group sync, one-click unsubscribe — looks the record
+    // up as `newsletter:{email.trim().toLowerCase()}`. A record filed here under
+    // `newsletter:John.Smith@x.com` is therefore invisible to all of them: the
+    // admin cannot unsubscribe them, and their own unsubscribe link (built from
+    // the lowercased address) misses and silently does nothing. Email local-parts
+    // are technically case-sensitive; no mail provider anyone here uses treats
+    // them that way, and one canonical key is what makes an opt-out honourable.
+    const email = normalizeSubscriberEmail(parsed.data.email);
 
     const timestamp = new Date().toISOString();
-    const subscriptionKey = `newsletter:${email}`;
+    const subscriptionKey = subscriberKey(email);
 
     // Check if already confirmed
     const existingSubscription = await kv.get(subscriptionKey);
@@ -223,13 +247,13 @@ app.post(
 app.get('/confirm', async (c) => {
   try {
     const token = c.req.query('token');
-    const email = c.req.query('email');
+    const email = normalizeSubscriberEmail(c.req.query('email'));
 
     if (!token || !email) {
       return c.json({ error: 'Missing confirmation parameters' }, 400);
     }
 
-    const subscriptionKey = `newsletter:${email}`;
+    const subscriptionKey = subscriberKey(email);
     const subscription = await kv.get(subscriptionKey);
 
     if (!subscription) {
@@ -383,34 +407,42 @@ app.get('/confirm', async (c) => {
 // Newsletter unsubscribe endpoint
 app.get('/unsubscribe', async (c) => {
   try {
-    const email = c.req.query('email');
+    const email = normalizeSubscriberEmail(c.req.query('email'));
 
     if (!email) {
       return c.json({ error: 'Email is required' }, 400);
     }
 
-    const subscriptionKey = `newsletter:${email}`;
+    const subscriptionKey = subscriberKey(email);
     const subscription = await kv.get(subscriptionKey);
+    const now = new Date().toISOString();
 
-    if (!subscription) {
-      return c.json(
-        {
-          message: 'Subscription not found',
-          notFound: true,
-        },
-        200,
-      );
-    }
-
-    // Update subscription to inactive
+    // An opt-out is never a no-op. This used to answer 200 `notFound` and write
+    // NOTHING when there was no matching record — so the person saw a success
+    // page, kept receiving mail, and no trace of the request survived. Anyone
+    // reaching this route asked to stop being emailed; record that, whether or
+    // not a subscription row happened to exist (it may have been a group-only
+    // contact, or a legacy record under a differently-cased key).
     await kv.set(subscriptionKey, {
-      ...subscription,
+      ...(subscription ?? {
+        email,
+        source: 'Unsubscribe Link',
+        subscribedAt: now,
+        confirmed: true,
+      }),
+      email,
       active: false,
-      unsubscribedAt: new Date().toISOString(),
+      unsubscribedAt: now,
     });
 
     // Remove subscriber from newsletter group
     await removeNewsletterSubscriber(email);
+
+    if (!subscription) {
+      log.warn('Unsubscribe recorded for an address with no prior subscription record', {
+        hadSubscription: false,
+      });
+    }
 
     return c.json(
       {
