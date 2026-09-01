@@ -26,7 +26,7 @@ import { ClientManagementSkeleton } from '../admin/modules/client-management';
 import { ApplicationsSkeleton } from '../admin/modules/applications';
 import { TasksSkeleton } from '../admin/modules/tasks';
 import { PersonnelSkeleton } from '../admin/modules/personnel';
-import { EsignSkeleton } from '../admin/modules/esign';
+import { EsignSkeleton, EsignModule } from '../admin/modules/esign';
 import { AdviceEngineSkeleton } from '../admin/modules/advice-engine';
 import { ProductManagementSkeleton } from '../admin/modules/product-management';
 import { ResourcesSkeleton } from '../admin/modules/resources';
@@ -92,9 +92,12 @@ const ResourcesModule = React.lazy(() =>
 const PublicationsModule = React.lazy(() =>
   import('../admin/modules/publications').then((m) => ({ default: m.PublicationsModule })),
 );
-const EsignModule = React.lazy(() =>
-  import('../admin/modules/esign').then((m) => ({ default: m.EsignModule })),
-);
+// EsignModule intentionally has NO React.lazy wrapper here: the esign barrel
+// already exports it as a lazy component (its chunk splits at the barrel).
+// Wrapping it again made the outer lazy resolve to the inner lazy OBJECT,
+// which is React error #306 ("Lazy element type must resolve to a class or
+// function") — the standalone E-Signature route crashed on load. Same
+// pattern as SocialMediaModule/IssuesModule above.
 const SubmissionsModule = React.lazy(() =>
   import('../admin/modules/submissions').then((m) => ({ default: m.SubmissionsModule })),
 );

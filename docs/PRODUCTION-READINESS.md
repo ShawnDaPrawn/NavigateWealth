@@ -17,7 +17,7 @@ those proposed files exist on `main`.
 
 ---
 
-## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs — RESOLVED)
+## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs — RESOLVED, one cleanup open)
 
 > **RESOLVED 2026-08-26.** The audit below stands as the diagnosis, but its
 > headline no longer describes production. All of it was repaired and each job
@@ -26,6 +26,33 @@ those proposed files exist on `main`.
 > the missing client-birthday route built. Read what follows as the post-mortem
 > that explains HOW this went unnoticed — the `pg_cron` green-when-broken trap
 > in particular is worth keeping — not as an open incident.
+>
+> **Verification closed 2026-08-30.** All six repaired jobs have now been seen
+> returning 2xx on their own schedules, not from hand-fired requests. The last
+> was `client-profile-cleanup` (jobid 10, weekly, Sundays 22:00 UTC), which ran
+> on 2026-08-30 at 22:00: HTTP 200, 201 profiles scanned, nothing to close —
+> the expected steady state now the backfill has run.
+>
+> **ONE OPERATIONAL ITEM IS STILL OPEN**, and it is a production write awaiting
+> an owner decision. The seven dead jobs were retired by setting `active = false`
+> rather than `cron.unschedule`. That stops them firing but does not touch
+> `command`, so **five rows (jobids 18, 19, 20, 21, 22) still hold the live
+> service-role key in plaintext** — byte-identical to what the vault serves the
+> active jobs today, verified by comparing inside SQL without printing it. This
+> grants nothing new inside a database someone would already need access to
+> read; what it costs is the property the vault migration was for: rotating the
+> secret no longer rotates every copy, and five of them ride along in every
+> backup. The fix removes the credential with the row:
+>
+> ```sql
+> select cron.unschedule(jobname)
+> from cron.job
+> where jobid in (1, 3, 18, 19, 20, 21, 22);
+> ```
+>
+> Until that runs, any rotation of the service-role key must also drop or
+> rewrite those five rows. Detail:
+> [`docs/runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md#the-retired-jobs-still-hold-the-service-role-key-open-2026-08-30).
 
 **13 of the 15 active `pg_cron` jobs were not doing their work.** Only the two
 `publications` jobs were healthy. Found while reading production logs after the
