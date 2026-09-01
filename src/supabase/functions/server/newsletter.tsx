@@ -34,6 +34,12 @@ import {
   AdminUpdateSubscriberSchema,
 } from './newsletter-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { isValidEmailAddress } from './email-recipients.ts';
+import { newsletterSubscriberRecords } from './repositories/newsletter-studio-repository.ts';
+import {
+  NEWSLETTER_UNSUBSCRIBE_IP_LIMIT_PER_HOUR,
+  checkIpOnlyRateLimit,
+} from './public-form-rate-limit.ts';
 import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
@@ -120,9 +126,17 @@ app.post(
     const timestamp = new Date().toISOString();
     const subscriptionKey = subscriberKey(email);
 
-    // Check if already confirmed
+    // Only a CURRENTLY SUBSCRIBED address is "already subscribed". A confirmed
+    // record that is no longer active is someone who opted out — including the
+    // tombstone the unsubscribe route now writes for an address it had never
+    // seen. Treating that as "already subscribed" would answer their genuine
+    // signup with a no-op: no confirmation email, no reactivation, and an
+    // address anyone could pre-emptively "unsubscribe" to block from ever
+    // subscribing. They get the double opt-in below instead, which is exactly
+    // the re-consent this flow exists to capture — nothing is reactivated until
+    // they confirm.
     const existingSubscription = await kv.get(subscriptionKey);
-    if (existingSubscription && existingSubscription.confirmed) {
+    if (existingSubscription?.confirmed && existingSubscription.active !== false) {
       return c.json(
         {
           message: 'Already subscribed',
@@ -137,12 +151,16 @@ app.post(
 
     // Get user agent and IP for logging
     const userAgent = c.req.header('User-Agent') || 'Unknown';
-    // Store pending subscription in KV store
+    // Store pending subscription in KV store. Written whole rather than spread
+    // over the previous record: a re-signup after an opt-out must start
+    // unconfirmed and inactive, carrying none of the old `unsubscribedAt` /
+    // `removedBy` state, and must not become active until /confirm runs.
     await kv.set(subscriptionKey, {
       email,
       subscribedAt: timestamp,
       source: 'Footer Newsletter',
       confirmed: false,
+      active: false,
       confirmToken,
       ip,
       userAgent,
@@ -254,7 +272,27 @@ app.get('/confirm', async (c) => {
     }
 
     const subscriptionKey = subscriberKey(email);
-    const subscription = await kv.get(subscriptionKey);
+    let subscription = await kv.get(subscriptionKey);
+
+    // A pending signup created BEFORE canonicalisation is filed under the
+    // address as it was typed, and its emailed link — valid for 48 hours —
+    // carries that same casing. Looking only at the canonical key would 404
+    // every one of those still-live links. Fall back to the raw key, and
+    // migrate the record on the way through so the duplicate does not outlive
+    // the confirmation.
+    // Through the repository that owns `newsletter:` rather than a raw kv call —
+    // this is the studio's consent-record store, the same rows this file writes.
+    let legacyId: string | null = null;
+    if (!subscription) {
+      const raw = (c.req.query('email') || '').trim();
+      if (raw && raw !== email) {
+        const found = await newsletterSubscriberRecords.get(raw);
+        if (found) {
+          subscription = found;
+          legacyId = raw;
+        }
+      }
+    }
 
     if (!subscription) {
       return c.json({ error: 'Subscription not found' }, 404);
@@ -283,13 +321,21 @@ app.get('/confirm', async (c) => {
       return c.json({ error: 'Confirmation link expired' }, 400);
     }
 
-    // Update subscription to confirmed
+    // Update subscription to confirmed — always at the canonical key.
     await kv.set(subscriptionKey, {
       ...subscription,
+      email,
       confirmed: true,
       confirmedAt: new Date().toISOString(),
       active: true,
     });
+
+    // Migration complete: drop the pre-canonicalisation duplicate so the admin
+    // list does not show the same person twice.
+    if (legacyId) {
+      await newsletterSubscriberRecords.remove(legacyId);
+      log.info('Migrated a pre-canonicalisation subscriber record to its lowercase key');
+    }
 
     // Add subscriber to newsletter group
     await addNewsletterSubscriber(email);
@@ -411,6 +457,32 @@ app.get('/unsubscribe', async (c) => {
 
     if (!email) {
       return c.json({ error: 'Email is required' }, 400);
+    }
+
+    // Everything below this point WRITES on an unauthenticated GET — a consent
+    // tombstone, plus removeNewsletterSubscriber, which scans every
+    // `user_profile:` row and rewrites the Newsletter Contacts group. Before
+    // that behaviour existed a miss returned without touching anything, so
+    // these three guards are what keep "record every opt-out" from doubling as
+    // an anonymous KV-growth and CPU amplifier.
+    if (!isValidEmailAddress(email)) {
+      return c.json({ error: 'A valid email address is required' }, 400);
+    }
+
+    const ip = extractClientIp((headerName) => c.req.header(headerName)) || 'Unknown';
+    const blockedIpAddress = getBlockedIpAddress(ip);
+    if (blockedIpAddress) {
+      log.warn('Blocked newsletter unsubscribe from abusive IP address', { blockedIpAddress });
+      return c.json({ error: getBlockedIpAddressWarning(blockedIpAddress), warning: true }, 403);
+    }
+
+    const limit = await checkIpOnlyRateLimit(
+      'newsletter-unsubscribe',
+      (headerName) => c.req.header(headerName),
+      NEWSLETTER_UNSUBSCRIBE_IP_LIMIT_PER_HOUR,
+    );
+    if (!limit.allowed) {
+      return c.json({ error: 'Too many unsubscribe requests. Please try again later.' }, 429);
     }
 
     const subscriptionKey = subscriberKey(email);

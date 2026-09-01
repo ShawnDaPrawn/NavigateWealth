@@ -6,7 +6,8 @@
  *
  * Handles five categories of ephemeral/transient KV data:
  *
- * 1. **Rate-limit entries** (`rate_limit:contact:*`, `rate_limit:quote:*`, `rate_limit:submission:*`, `rate_limit:consultation:*`, `rate_limit:csp-report:*`)
+ * 1. **Rate-limit entries** (`rate_limit:contact:*`, `rate_limit:quote:*`, `rate_limit:submission:*`, `rate_limit:consultation:*`, `rate_limit:csp-report:*`,
+ *    `rate_limit:newsletter-unsubscribe:*`)
  *    — timestamps older than 1 hour are stale by definition.
  *
  * 2. **Expired newsletter tokens** (`newsletter:*`)
@@ -132,6 +133,7 @@ async function cleanRateLimits(dryRun: boolean): Promise<CategoryResult> {
     // written and never swept, which is the leak the prefix contract in
     // public-form-rate-limit.ts warns about.
     ...(await fetchKeyValuesByPrefix('rate_limit:csp-report:')),
+    ...(await fetchKeyValuesByPrefix('rate_limit:newsletter-unsubscribe:')),
   ];
 
   const now = Date.now();

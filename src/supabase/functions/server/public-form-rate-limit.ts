@@ -61,7 +61,12 @@ import {
 const log = createModuleLogger('public-form-rate-limit');
 
 /** Which public form is being limited. Also the KV namespace segment. */
-export type PublicFormScope = 'contact' | 'quote' | 'consultation' | 'csp-report';
+export type PublicFormScope =
+  | 'contact'
+  | 'quote'
+  | 'consultation'
+  | 'csp-report'
+  | 'newsletter-unsubscribe';
 
 /** Submissions per email address per window. Matches the previous behaviour. */
 export const EMAIL_LIMIT_PER_HOUR = 5;
@@ -83,6 +88,18 @@ export const IP_LIMIT_PER_HOUR = 15;
  * unbounded KV writes and log volume.
  */
 export const CSP_REPORT_IP_LIMIT_PER_HOUR = 60;
+
+/**
+ * Unsubscribe requests per IP per window.
+ *
+ * Generous for a human — nobody unsubscribes from twenty newsletters an hour
+ * from one address — and low enough that the endpoint cannot be used as an
+ * amplifier. Each miss now writes a consent tombstone and calls
+ * `removeNewsletterSubscriber`, which scans every `user_profile:` row and
+ * rewrites the Newsletter Contacts group; unbounded, that is a KV-growth and
+ * CPU vector on an unauthenticated GET.
+ */
+export const NEWSLETTER_UNSUBSCRIBE_IP_LIMIT_PER_HOUR = 20;
 
 const WINDOW_MS = 60 * 60 * 1000;
 

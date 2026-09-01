@@ -59,6 +59,14 @@ vi.mock('../auth-mw.ts', () => ({
   requireAdmin: async (_c: unknown, next: () => Promise<void>) => next(),
 }));
 
+const limiter = vi.hoisted(() => ({
+  checkIpOnlyRateLimit: vi.fn(async () => ({ allowed: true })),
+}));
+vi.mock('../public-form-rate-limit.ts', () => ({
+  ...limiter,
+  NEWSLETTER_UNSUBSCRIBE_IP_LIMIT_PER_HOUR: 20,
+}));
+
 const { kvStore } = await import('./helpers/contract-harness.ts');
 const app = (await import('../newsletter.tsx')).default;
 
@@ -80,6 +88,7 @@ beforeEach(() => {
   kvStore.clear();
   vi.clearAllMocks();
   email.sendEmail.mockResolvedValue(true);
+  limiter.checkIpOnlyRateLimit.mockResolvedValue({ allowed: true });
 });
 
 describe('GET /unsubscribe — an opt-out is never a no-op', () => {
@@ -202,5 +211,133 @@ describe('GET /confirm — one canonical key', () => {
     expect(entry.confirmed).toBe(true);
     expect(entry.active).toBe(true);
     expect(group.addNewsletterSubscriber).toHaveBeenCalledWith('john.smith@example.com');
+  });
+});
+
+describe('GET /unsubscribe — the tombstone cannot be an amplifier', () => {
+  /**
+   * Recording every opt-out means an unauthenticated GET now writes a KV row
+   * and calls removeNewsletterSubscriber, which scans every `user_profile:`
+   * row and rewrites the Newsletter Contacts group. Before that, a miss
+   * returned having touched nothing. These are the guards that keep the fix
+   * from becoming an anonymous KV-growth and CPU vector.
+   */
+  it('refuses input that is not an email address, without writing', async () => {
+    const res = await app.request('/unsubscribe?email=not-an-address');
+
+    expect(res.status).toBe(400);
+    expect(kvStore.size).toBe(0);
+    expect(group.removeNewsletterSubscriber).not.toHaveBeenCalled();
+  });
+
+  it.each(['a@b', 'a@.co', '@b.co', 'a b@c.co', '../../etc/passwd'])(
+    'refuses %s',
+    async (value) => {
+      const res = await app.request(`/unsubscribe?email=${encodeURIComponent(value)}`);
+      expect(res.status).toBe(400);
+      expect(kvStore.size).toBe(0);
+    },
+  );
+
+  it('refuses once the per-IP budget is spent, without writing', async () => {
+    limiter.checkIpOnlyRateLimit.mockResolvedValue({ allowed: false, limitedBy: 'ip' });
+
+    const res = await app.request('/unsubscribe?email=ghost@example.com');
+
+    expect(res.status).toBe(429);
+    expect(kvStore.size).toBe(0);
+    expect(group.removeNewsletterSubscriber).not.toHaveBeenCalled();
+  });
+
+  it('checks the budget before doing any work', async () => {
+    await app.request('/unsubscribe?email=ghost@example.com');
+    expect(limiter.checkIpOnlyRateLimit).toHaveBeenCalledWith(
+      'newsletter-unsubscribe',
+      expect.any(Function),
+      20,
+    );
+  });
+});
+
+describe('POST /subscribe — an opt-out must not block a later signup', () => {
+  const subscribe = (addr: string) =>
+    app.request('/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: addr }),
+    });
+
+  it('re-opens double opt-in for someone who previously unsubscribed', async () => {
+    // The unsubscribe tombstone is written `confirmed: true, active: false`.
+    // Reading only `confirmed` answered a genuine signup with "already
+    // subscribed": no confirmation email, no reactivation — and an address
+    // anyone could pre-emptively unsubscribe to block from ever subscribing.
+    seed('thandi@example.com', { confirmed: true, active: false, unsubscribedAt: '2026-05-01' });
+
+    const res = await subscribe('thandi@example.com');
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.alreadySubscribed).toBeUndefined();
+    expect(email.sendEmail).toHaveBeenCalled();
+    const entry = stored('thandi@example.com')!;
+    expect(entry.confirmed).toBe(false);
+    expect(entry.confirmToken).toEqual(expect.any(String));
+  });
+
+  it('does not carry the old opt-out state into the new pending record', async () => {
+    seed('thandi@example.com', {
+      confirmed: true,
+      active: false,
+      unsubscribedAt: '2026-05-01',
+      removedBy: 'admin',
+    });
+
+    await subscribe('thandi@example.com');
+
+    const entry = stored('thandi@example.com')!;
+    // Not subscribed again until they confirm — the opt-out still stands.
+    expect(entry.active).toBe(false);
+    expect(entry.unsubscribedAt).toBeUndefined();
+    expect(entry.removedBy).toBeUndefined();
+    expect(group.addNewsletterSubscriber).not.toHaveBeenCalled();
+  });
+
+  it('still short-circuits a genuinely active subscriber', async () => {
+    seed('thandi@example.com', { confirmed: true, active: true });
+
+    const res = await subscribe('thandi@example.com');
+
+    expect(await res.json()).toMatchObject({ alreadySubscribed: true });
+    expect(email.sendEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /confirm — links issued before canonicalisation', () => {
+  it('confirms against a legacy mixed-case record and migrates it', async () => {
+    // A pending signup created before this change is filed under the address as
+    // typed, and its 48-hour link carries that casing. Looking only at the
+    // canonical key would 404 every still-live one.
+    seed('John.Smith@Example.com', {
+      confirmed: false,
+      active: false,
+      confirmToken: 'tok-legacy',
+      subscribedAt: new Date().toISOString(),
+    });
+
+    const res = await app.request('/confirm?token=tok-legacy&email=John.Smith%40Example.com');
+
+    expect(res.status).toBe(200);
+    const migrated = stored('john.smith@example.com')!;
+    expect(migrated.confirmed).toBe(true);
+    expect(migrated.active).toBe(true);
+    expect(migrated.email).toBe('john.smith@example.com');
+    // The duplicate is gone, so the admin list cannot show the person twice.
+    expect(stored('John.Smith@Example.com')).toBeUndefined();
+    expect(kvStore.size).toBe(1);
+  });
+
+  it('still 404s when neither key holds a record', async () => {
+    const res = await app.request('/confirm?token=tok-1&email=nobody@example.com');
+    expect(res.status).toBe(404);
   });
 });
