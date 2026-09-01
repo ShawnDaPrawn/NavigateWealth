@@ -393,13 +393,18 @@ function mapBalance(fa: V2FinancialAccount): BalanceDTO {
 }
 
 /**
- * Fields Stripe only returns when explicitly requested — the full account number
- * (US/UK) and IBAN (SEPA). Sent only on the audited reveal read.
+ * Fields Stripe only returns when explicitly requested — the full account
+ * number (US/UK). Sent only on the audited reveal read.
+ *
+ * These two are the ONLY values this API version's `include` enum accepts for
+ * financial addresses; `credentials.sepa_bank_account.iban` is not a member,
+ * and an unrecognised value fails the WHOLE request with `invalid_fields`
+ * (verified against the live account). The SEPA address therefore stays
+ * masked — Stripe returns its IBAN as an empty string and we surface last4.
  */
 const REVEAL_FIELDS = [
   'credentials.us_bank_account.account_number',
   'credentials.gb_bank_account.account_number',
-  'credentials.sepa_bank_account.iban',
 ];
 
 function mapBankDetails(addresses: V2FinancialAddress[], reveal: boolean): BankDetailsDTO[] {
@@ -430,25 +435,37 @@ function mapBankDetails(addresses: V2FinancialAddress[], reveal: boolean): BankD
 /**
  * List the financial account's bank addresses (one per held currency). Best
  * effort: any failure or empty result degrades to "no bank details" rather than
- * breaking the panel.
+ * breaking the panel — but a failing REVEAL read first retries without the
+ * `include` list, so a rejected include enum costs only the full numbers
+ * (masked last4 still shows) instead of blanking the whole card.
  */
 async function listBankDetails(faId: string, reveal: boolean): Promise<BankDetailsDTO[]> {
-  try {
-    const res = await mmRequest<V2List<V2FinancialAddress>>(
-      'GET',
-      '/v2/money_management/financial_addresses',
-      {
-        query: {
-          financial_account: faId,
-          limit: 10,
-          ...(reveal ? { include: REVEAL_FIELDS } : {}),
-        },
+  const list = (withReveal: boolean) =>
+    mmRequest<V2List<V2FinancialAddress>>('GET', '/v2/money_management/financial_addresses', {
+      query: {
+        financial_account: faId,
+        limit: 10,
+        ...(withReveal ? { include: REVEAL_FIELDS } : {}),
       },
-    );
+    });
+  try {
+    const res = await list(reveal);
     return mapBankDetails(res.data ?? [], reveal);
   } catch (err) {
-    log.error('Failed to list financial addresses (non-fatal)', err);
-    return [];
+    log.error(
+      reveal
+        ? 'Reveal read of financial addresses failed — retrying masked'
+        : 'Failed to list financial addresses (non-fatal)',
+      err,
+    );
+    if (!reveal) return [];
+    try {
+      const res = await list(false);
+      return mapBankDetails(res.data ?? [], false);
+    } catch (err2) {
+      log.error('Failed to list financial addresses (non-fatal)', err2);
+      return [];
+    }
   }
 }
 

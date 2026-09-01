@@ -130,7 +130,16 @@ app.get(
       await audit(c, 'treasury_bank_details_viewed', 'Treasury bank details viewed', {
         severity: 'warning',
         entityId: account.id,
-        metadata: { status: account.status },
+        // Counts only — never the numbers themselves. bankDetailsCount = 0 on
+        // an open account means the address list call failed outright;
+        // revealedNumberCount = 0 while bankDetailsCount > 0 means the reveal
+        // degraded to the masked fallback (SEPA never reveals, so a healthy
+        // read shows fewer revealed numbers than addresses, not zero).
+        metadata: {
+          status: account.status,
+          bankDetailsCount: account.bankDetails.length,
+          revealedNumberCount: account.bankDetails.filter((b) => b.accountNumber !== null).length,
+        },
       });
       return c.json({ success: true, account });
     } catch (error) {
