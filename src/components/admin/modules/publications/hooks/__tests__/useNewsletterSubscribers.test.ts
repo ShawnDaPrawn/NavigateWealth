@@ -314,3 +314,91 @@ describe('useNewsletterSubscribers — filtering', () => {
     expect(mockFilterByTimeRange).toHaveBeenCalledWith(expect.any(Array), '30d');
   });
 });
+
+describe('useNewsletterSubscribers — the denominators the footer reports', () => {
+  /**
+   * THE BUG THIS PINS. There were 12 unsubscribed subscribers, 11 of them older
+   * than 30 days. On the Unsubscribed tab with a "Last 30 Days" range the table
+   * showed ONE row and the footer read "Showing 1 of 218 subscribers" — a
+   * denominator that says nothing about the 11 records the date filter is
+   * hiding. It read exactly like the unsubscribe history had been lost. It had
+   * not: `statusTotal` and `hiddenByTimeRange` are what make the difference
+   * visible instead of alarming.
+   */
+  beforeEach(() => vi.clearAllMocks());
+
+  const unsubs = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...makeSub(`u-${i}`),
+      unsubscribedAt: `2026-0${(i % 9) + 1}-01`,
+    }));
+
+  it('reports the status population, not the whole list, as the denominator', () => {
+    const subs = [...unsubs(12), makeSub('active-1'), makeSub('active-2')];
+    mockQueryWith(subs);
+    mockDeriveSubscriberStatus.mockImplementation((s: unknown) =>
+      (s as MinimalSubscriber).id.startsWith('u-') ? 'unsubscribed' : 'active',
+    );
+    mockFilterByTimeRange.mockImplementation((s: unknown[]) => s);
+
+    const { result } = renderHook(() =>
+      useNewsletterSubscribers({ statusFilter: 'unsubscribed', unsubTimeRange: 'all' }),
+    );
+
+    expect(result.current.statusTotal).toBe(12);
+    expect(result.current.filtered).toHaveLength(12);
+    expect(result.current.hiddenByTimeRange).toBe(0);
+  });
+
+  it('counts the records a date range hides', () => {
+    const subs = unsubs(12);
+    mockQueryWith(subs);
+    mockDeriveSubscriberStatus.mockReturnValue('unsubscribed');
+    // Stand in for "only the most recent one falls inside the last 30 days".
+    mockFilterByTimeRange.mockImplementation((s: unknown[]) => s.slice(0, 1));
+
+    const { result } = renderHook(() =>
+      useNewsletterSubscribers({ statusFilter: 'unsubscribed', unsubTimeRange: '30d' }),
+    );
+
+    expect(result.current.filtered).toHaveLength(1);
+    expect(result.current.statusTotal).toBe(12);
+    expect(result.current.hiddenByTimeRange).toBe(11);
+  });
+
+  it('does not attribute search narrowing to the date filter', () => {
+    // Only the range may claim `hiddenByTimeRange`; otherwise the footer would
+    // offer "show all time" as the fix for a search that is doing the hiding.
+    const subs = [
+      { ...makeSub('u-1', 'alice@example.com'), unsubscribedAt: '2026-01-01' },
+      { ...makeSub('u-2', 'bob@example.com'), unsubscribedAt: '2026-01-02' },
+    ];
+    mockQueryWith(subs);
+    mockDeriveSubscriberStatus.mockReturnValue('unsubscribed');
+    mockFilterByTimeRange.mockImplementation((s: unknown[]) => s);
+
+    const { result } = renderHook(() =>
+      useNewsletterSubscribers({
+        statusFilter: 'unsubscribed',
+        search: 'alice',
+        unsubTimeRange: 'all',
+      }),
+    );
+
+    expect(result.current.filtered).toHaveLength(1);
+    expect(result.current.statusTotal).toBe(2);
+    expect(result.current.hiddenByTimeRange).toBe(0);
+  });
+
+  it('leaves hiddenByTimeRange at zero for non-unsubscribed tabs', () => {
+    const subs = [makeSub('s-1'), makeSub('s-2')];
+    mockQueryWith(subs);
+    mockDeriveSubscriberStatus.mockReturnValue('active');
+    mockFilterByTimeRange.mockImplementation((s: unknown[]) => s);
+
+    const { result } = renderHook(() => useNewsletterSubscribers({ statusFilter: 'active' }));
+
+    expect(result.current.hiddenByTimeRange).toBe(0);
+    expect(result.current.statusTotal).toBe(2);
+  });
+});

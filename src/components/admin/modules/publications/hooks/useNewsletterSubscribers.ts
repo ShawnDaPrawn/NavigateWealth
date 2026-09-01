@@ -34,6 +34,20 @@ interface UseNewsletterSubscribersReturn {
   subscribers: Subscriber[];
   /** Filtered subscriber list */
   filtered: Subscriber[];
+  /**
+   * How many rows the ACTIVE STATUS matches before the search box and the
+   * unsubscribed date range are applied.
+   *
+   * The footer used to compare `filtered.length` against every subscriber
+   * ("Showing 1 of 218"), which says nothing about how many unsubscribes a
+   * date filter is hiding. With 12 unsubscribes — 11 of them older than 30
+   * days — the Unsubscribed tab on its "Last 30 Days" range showed a single
+   * row and read exactly like the history had been lost. It had not: this is
+   * the denominator that makes the difference visible.
+   */
+  statusTotal: number;
+  /** Rows hidden by the unsubscribed date range (0 when showing All Time). */
+  hiddenByTimeRange: number;
   /** Aggregate counts */
   stats: SubscriberStats;
   isLoading: boolean;
@@ -74,13 +88,17 @@ export function useNewsletterSubscribers(
   );
 
   // ── Filtering ───────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
+  const { filtered, statusTotal, hiddenByTimeRange } = useMemo(() => {
     let result = subscribers;
 
     // Status filter
     if (statusFilter !== 'all') {
       result = result.filter((s) => deriveSubscriberStatus(s) === statusFilter);
     }
+
+    // Everything matching the status, before search and date narrowing. This is
+    // the honest denominator for "showing X of Y".
+    const withinStatus = result.length;
 
     // Search
     const q = search.trim().toLowerCase();
@@ -95,8 +113,11 @@ export function useNewsletterSubscribers(
     }
 
     // Unsubscribed-specific: time-range + date sort
+    let hidden = 0;
     if (statusFilter === 'unsubscribed') {
+      const beforeRange = result.length;
       result = filterByTimeRange(result, unsubTimeRange);
+      hidden = beforeRange - result.length;
       result = [...result].sort((a, b) => {
         const dateA = a.unsubscribedAt ? new Date(a.unsubscribedAt).getTime() : 0;
         const dateB = b.unsubscribedAt ? new Date(b.unsubscribedAt).getTime() : 0;
@@ -104,7 +125,7 @@ export function useNewsletterSubscribers(
       });
     }
 
-    return result;
+    return { filtered: result, statusTotal: withinStatus, hiddenByTimeRange: hidden };
   }, [subscribers, statusFilter, search, unsubTimeRange]);
 
   // ── Refetch wrapper ─────────────────────────────────────────────────
@@ -115,6 +136,8 @@ export function useNewsletterSubscribers(
   return {
     subscribers,
     filtered,
+    statusTotal,
+    hiddenByTimeRange,
     stats,
     isLoading,
     error: error
