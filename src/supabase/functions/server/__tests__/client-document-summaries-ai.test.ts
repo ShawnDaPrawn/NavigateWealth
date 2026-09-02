@@ -18,8 +18,16 @@
  */
 import { describe, expect, it, beforeEach, vi, beforeAll } from 'vitest';
 
+/**
+ * Env the module sees. Deliberately returns undefined for anything a test has
+ * not set: a catch-all default made "the operator has not configured a model"
+ * indistinguishable from "the operator set it to the string 'test'", and the
+ * unset case is the one that has to keep behaving like the old code.
+ */
+let envValues: Record<string, string | undefined> = {};
+
 beforeAll(() => {
-  vi.stubGlobal('Deno', { env: { get: () => 'test' } });
+  vi.stubGlobal('Deno', { env: { get: (name: string) => envValues[name] } });
 });
 
 /** Bytes returned for any storage path the test does not fail. */
@@ -40,8 +48,14 @@ vi.mock('../ai-model-config.ts', async () => {
   };
 });
 
-const { buildSummaryInput, generateSummaryDraft, isReadableByModel, mimeFromFileName } =
-  await import('../client-document-summaries-ai.ts');
+const {
+  buildSummaryInput,
+  generateSummaryDraft,
+  isReadableByModel,
+  mimeFromFileName,
+  SUMMARY_MODEL_ENV,
+} = await import('../client-document-summaries-ai.ts');
+const { OPENAI_PRIMARY_MODEL } = await import('../ai-model-config.ts');
 
 function pdfBlob(sizeBytes = 16) {
   return { data: { arrayBuffer: async () => new ArrayBuffer(sizeBytes) }, error: null };
@@ -61,10 +75,25 @@ function doc(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  envValues = {};
   download.mockReset();
   download.mockResolvedValue(pdfBlob());
   callResponses.mockReset();
 });
+
+/** A well-formed model reply, so a test can assert on the REQUEST instead. */
+function respondOk() {
+  callResponses.mockResolvedValue({
+    text: JSON.stringify({
+      headline: 'Filed',
+      summary: 'Routine filing.',
+      highlights: [],
+      followUps: [],
+    }),
+    model: 'whatever-answered',
+    raw: {},
+  });
+}
 
 describe('file type recognition', () => {
   it('knows what the model can and cannot read', () => {
@@ -202,5 +231,52 @@ describe('parsing the model response', () => {
 
     expect(draft.highlights).toEqual(['kept']);
     expect(draft.followUps).toEqual([]);
+  });
+});
+
+describe('which model it asks for', () => {
+  it('uses OPENAI_SUMMARY_MODEL when the operator has set it', async () => {
+    // The summariser can be moved to a newer model on its own, without
+    // dragging policy extraction and the other nine callers of the global
+    // OPENAI_MODEL along with it.
+    envValues[SUMMARY_MODEL_ENV] = 'some-newer-model';
+    respondOk();
+
+    await generateSummaryDraft([doc()]);
+
+    expect(callResponses).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'some-newer-model' }),
+    );
+  });
+
+  it('asks for the shared default when the var is unset', async () => {
+    respondOk();
+
+    await generateSummaryDraft([doc()]);
+
+    const { model } = callResponses.mock.calls[0][0] as { model: string };
+    expect(model).toBe(OPENAI_PRIMARY_MODEL);
+  });
+
+  it('records the model that ANSWERED, not the one requested', async () => {
+    // callResponses falls back to Chat Completions on OPENAI_FALLBACK_MODEL
+    // when the primary call fails, so the two can differ. The stored record
+    // has to carry the truth — otherwise a silently-degraded run looks like a
+    // successful adoption of the new model.
+    envValues[SUMMARY_MODEL_ENV] = 'a-model-this-account-cannot-serve';
+    callResponses.mockResolvedValue({
+      text: JSON.stringify({
+        headline: 'Filed',
+        summary: 'Routine filing.',
+        highlights: [],
+        followUps: [],
+      }),
+      model: 'gpt-4o',
+      raw: {},
+    });
+
+    const draft = await generateSummaryDraft([doc()]);
+
+    expect(draft.model).toBe('gpt-4o');
   });
 });

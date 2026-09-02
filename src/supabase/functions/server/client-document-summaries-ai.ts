@@ -19,7 +19,7 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { callResponses, parseJsonResponse } from './ai-model-config.ts';
+import { callResponses, parseJsonResponse, resolveFeatureModel } from './ai-model-config.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { AiContentBlock } from './ai-model-config.ts';
@@ -28,6 +28,22 @@ import type { SummarisedDocument } from './client-document-summaries-types.ts';
 const log = createModuleLogger('client-doc-summaries-ai');
 
 const BUCKET_NAME = 'make-91ed8379-documents';
+
+/**
+ * Env var that points the summariser at its own model.
+ *
+ * Unset, it falls back to `OPENAI_MODEL` and then to the global default, so
+ * the summariser behaves like every other AI service until someone
+ * deliberately moves it. Set, ONLY this feature moves — see
+ * `resolveFeatureModel` for why that is the safe unit of change.
+ *
+ * This caller can carry the override because `callResponses` retries on
+ * `OPENAI_FALLBACK_MODEL` through Chat Completions: an id this account cannot
+ * serve costs one failed request and still produces a summary, and the model
+ * that actually answered is recorded on the stored record. Which means a bad
+ * value shows up on the timeline as the old model, not as a broken feature.
+ */
+export const SUMMARY_MODEL_ENV = 'OPENAI_SUMMARY_MODEL';
 
 /** Most files sent to the model in one summary. */
 export const MAX_ATTACHMENTS = 6;
@@ -269,6 +285,9 @@ export async function generateSummaryDraft(documents: DocumentForSummary[]): Pro
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: blocks },
     ],
+    // Read per call, not at module load: an operator changing the secret gets
+    // the new model on the next request rather than the next cold start.
+    model: resolveFeatureModel(SUMMARY_MODEL_ENV),
     maxOutputTokens: 1200,
     temperature: 0.2,
     jsonSchema: { name: 'client_document_summary', schema: SUMMARY_SCHEMA, strict: true },
