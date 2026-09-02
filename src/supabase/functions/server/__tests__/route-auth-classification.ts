@@ -130,10 +130,11 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'shared-secret',
     classification: 'guarded',
     reason:
-      'Machine endpoint authenticated by a shared secret rather than a user session. Six of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move seven routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
+      'Machine endpoint authenticated by a shared secret rather than a user session. Seven of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move eight routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
     routes: [
       'calendar-digest-routes.ts POST /send-birthdays',
       'calendar-digest-routes.ts POST /send-daily',
+      'client-birthday-routes.ts POST /send-greetings',
       'client-document-summaries-routes.ts POST /maintenance/weekly-scan',
       'client-management-routes.ts POST /cron/cleanup',
       'esign-ops-routes.ts POST /cron/expiry-sweep',
