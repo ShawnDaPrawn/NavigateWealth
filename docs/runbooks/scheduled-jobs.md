@@ -292,17 +292,20 @@ If you still want to know what the function's `SUPABASE_SERVICE_ROLE_KEY` holds:
 Edge Functions → Secrets in the dashboard is the only place it is readable. It
 is no longer load-bearing for any scheduled job.
 
-## Remediation shape (applied 2026-08-25/26 — one item outstanding, see below)
+## Remediation shape (applied 2026-08-25/26, completed 2026-09-01)
 
 These four were written as proposals, not executed — each is a production write
-and two of them involve secrets. **They were applied on 2026-08-25/26**, so read
-them below as the record of what was done and why, with one exception.
+and two of them involve secrets. **All four were applied on 2026-08-25/26**, so
+read them below as the record of what was done and why.
 
 Recommendation 2 was carried out by setting `active = false` on the seven dead
-jobs rather than by `cron.unschedule`. That stops them firing but leaves five of
-them holding the service-role key, which is the single outstanding production
-write — see
-[The retired jobs still hold the service-role key](#the-retired-jobs-held-the-service-role-key-closed-2026-09-01).
+jobs rather than by `cron.unschedule`. That stopped them firing but left five of
+them still holding the service-role key, because deactivating a job does not
+touch its `command`. **That gap was closed on 2026-09-01** — all seven were
+unscheduled, which removes each credential with its row. Nothing here is
+outstanding; see
+[The retired jobs held the service-role key](#the-retired-jobs-held-the-service-role-key-closed-2026-09-01)
+for the statements run and the verification.
 
 1. **Stop storing the service-role key in `cron.job.command`.** Eleven jobs hold it
    in plaintext, readable by anything that can read `cron.job`. The publications
