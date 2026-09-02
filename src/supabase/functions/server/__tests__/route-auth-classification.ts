@@ -133,6 +133,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     routes: [
       'calendar-digest-routes.ts POST /send-birthdays',
       'calendar-digest-routes.ts POST /send-daily',
+      'client-birthday-routes.ts POST /send-greetings',
       'client-management-routes.ts POST /cron/cleanup',
       'esign-ops-routes.ts POST /cron/expiry-sweep',
       'esign-ops-routes.ts POST /cron/reminder-sweep',

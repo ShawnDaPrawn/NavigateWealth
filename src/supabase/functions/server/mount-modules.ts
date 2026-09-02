@@ -49,6 +49,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/transcription', () => import('./transcription-routes.ts'));
   lazy(app, '/tasks-digest', () => import('./tasks-digest-routes.ts'));
   lazy(app, '/calendar-digest', () => import('./calendar-digest-routes.ts'));
+  lazy(app, '/client-birthdays', () => import('./client-birthday-routes.ts'));
   lazy(app, '/kv-cleanup', () => import('./kv-cleanup-routes.ts'));
   lazy(app, '/admin-audit', () => import('./admin-audit-routes.ts'));
   lazy(app, '/quality-issues', () => import('./quality-issues-routes.ts'));
