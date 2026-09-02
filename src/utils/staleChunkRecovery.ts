@@ -10,10 +10,16 @@
  * The app's own `.then((m) => ({ default: m.SomeComponent }))` lazy-loading
  * idiom (used throughout, not just for the outer `default`) throws the same
  * TypeError but naming the re-exported component instead: `reading
- * 'ResourcesModule'`, `reading 'NotesModule'`, etc. That property is always
- * the PascalCase export being lazy-loaded, never a lowercase business-data
- * field, so matching case distinguishes a stale deploy from a genuine bug
- * reading undefined application data (e.g. `reading 'name'`).
+ * 'ResourcesModule'`, `reading 'NotesModule'`, etc. Every top-level lazy
+ * export in this codebase (AdminDashboardPage.tsx, AppRoutes.tsx, and every
+ * module barrel) follows the same `*Module` / `*Page` naming convention —
+ * confirmed by grepping every `.SomeName` access matching that shape in the
+ * whole source tree, which is exclusively these lazy-loaded components —
+ * so matching on that suffix (not just any capitalised identifier) catches
+ * the stale-deploy case without swallowing an unrelated genuine crash that
+ * happens to read an undefined PascalCase property, e.g. a third-party
+ * `somePdfLib.GlobalWorkerOptions.workerSrc = ...` failing for a real
+ * reason.
  */
 
 const RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
@@ -23,7 +29,7 @@ const STALE_CHUNK_PATTERNS = [
   /failed to fetch dynamically imported module/i,
   /importing a module script failed/i,
   /chunkloaderror/i,
-  /[Cc]annot read propert(?:y|ies) of undefined \(reading ["'](?:default|[A-Z][A-Za-z0-9]*)["']\)/,
+  /[Cc]annot read propert(?:y|ies) of undefined \(reading ["'](?:default|[A-Z][A-Za-z0-9]*(?:Module|Page))["']\)/,
 ];
 
 function errorText(value: unknown): string {

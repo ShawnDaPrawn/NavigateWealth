@@ -41,11 +41,21 @@ describe('isStaleChunkLoadFailure', () => {
 
   it('does not swallow unrelated runtime errors', () => {
     // A lowercase business-data field read on undefined is a real bug, not
-    // a stale-chunk failure — only PascalCase component/module exports (or
-    // `default`) are ever the right-hand side of the lazy-loading idiom.
+    // a stale-chunk failure — only `*Module` / `*Page` component exports
+    // (or `default`) are ever the right-hand side of the lazy-loading idiom.
     expect(
       isStaleChunkLoadFailure(
         new TypeError("Cannot read properties of undefined (reading 'name')"),
+      ),
+    ).toBe(false);
+    // A PascalCase property alone isn't enough either: a genuine third-party
+    // failure (e.g. pdf.js's `pdfjsLib.GlobalWorkerOptions.workerSrc = ...`
+    // running against an undefined namespace) throws this same TypeError
+    // shape without being a stale lazy-loaded chunk. Only the `Module`/`Page`
+    // suffix this codebase's own lazy exports always use should match.
+    expect(
+      isStaleChunkLoadFailure(
+        new TypeError("Cannot read properties of undefined (reading 'GlobalWorkerOptions')"),
       ),
     ).toBe(false);
     expect(isStaleChunkLoadFailure(new Error('RoA draft not found'))).toBe(false);
