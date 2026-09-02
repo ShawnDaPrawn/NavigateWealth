@@ -222,6 +222,21 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     buttonUrl: '{{ .MeetingLink }}',
     footerNote: 'We look forward to seeing you there.',
   },
+  client_birthday: {
+    id: 'client_birthday',
+    name: 'Client Birthday Greeting',
+    enabled: true,
+    subject: 'Happy Birthday, {{ .FirstName }}!',
+    title: 'Happy Birthday',
+    subtitle: 'From all of us at Navigate Wealth',
+    greeting: 'Dear {{ .FirstName }},',
+    bodyHtml:
+      '<p>Wishing you a very happy birthday.</p><p>Thank you for the trust you place in us with your financial journey. We hope the year ahead brings you good health, happiness and continued success.</p><p>Enjoy your day.</p><p>Warm regards,<br />The Navigate Wealth Team</p>',
+    buttonLabel: '',
+    buttonUrl: '',
+    footerNote:
+      'Navigate Wealth is an authorised financial services provider. You are receiving this because you consented to receive communications from us.',
+  },
   admin_daily_report: {
     id: 'admin_daily_report',
     name: 'Admin Daily Report',
