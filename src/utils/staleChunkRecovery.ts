@@ -6,6 +6,14 @@
  * and production React throws `Cannot read properties of undefined (reading
  * 'default')`. That is the same class of failure as `ChunkLoadError` — not a
  * product bug — and should reload once instead of filling Issue Manager.
+ *
+ * The app's own `.then((m) => ({ default: m.SomeComponent }))` lazy-loading
+ * idiom (used throughout, not just for the outer `default`) throws the same
+ * TypeError but naming the re-exported component instead: `reading
+ * 'ResourcesModule'`, `reading 'NotesModule'`, etc. That property is always
+ * the PascalCase export being lazy-loaded, never a lowercase business-data
+ * field, so matching case distinguishes a stale deploy from a genuine bug
+ * reading undefined application data (e.g. `reading 'name'`).
  */
 
 const RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
@@ -15,7 +23,7 @@ const STALE_CHUNK_PATTERNS = [
   /failed to fetch dynamically imported module/i,
   /importing a module script failed/i,
   /chunkloaderror/i,
-  /cannot read propert(?:y|ies) of undefined \(reading ['"]default['"]\)/i,
+  /[Cc]annot read propert(?:y|ies) of undefined \(reading ["'](?:default|[A-Z][A-Za-z0-9]*)["']\)/,
 ];
 
 function errorText(value: unknown): string {

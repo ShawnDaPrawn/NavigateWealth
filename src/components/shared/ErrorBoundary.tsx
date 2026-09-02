@@ -49,7 +49,13 @@ export class ErrorBoundary extends Component<Props, State> {
     // Stale-deploy chunk failures: reload once instead of recording a
     // runtime issue. The same fingerprint was filling Issue Manager after
     // every Vercel publish while an old tab still held the previous shell.
-    if (isStaleChunkLoadFailure(error) && reloadOnceForStaleChunk()) {
+    // Always skip reporting for this error class, even when a sibling
+    // boundary already used up this tab's one reload in the last 60s —
+    // otherwise the second of two simultaneous stale-chunk crashes (e.g.
+    // two lazy boundaries failing on the same stale deploy) still gets
+    // logged as a "real" issue.
+    if (isStaleChunkLoadFailure(error)) {
+      reloadOnceForStaleChunk();
       return;
     }
 

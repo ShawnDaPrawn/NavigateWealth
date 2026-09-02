@@ -21,10 +21,31 @@ describe('isStaleChunkLoadFailure', () => {
     );
   });
 
-  it('does not swallow unrelated runtime errors', () => {
+  it('matches the same missing-default throw for named lazy-loaded exports', () => {
+    // The app's `.then((m) => ({ default: m.SomeComponent }))` lazy-loading
+    // idiom throws this same TypeError naming the re-exported component
+    // (e.g. AdminDashboardPage.tsx's `m.ResourcesModule`) instead of
+    // `default` when the dynamically imported module resolves to
+    // `undefined` after a stale deploy.
+    expect(
+      isStaleChunkLoadFailure(
+        new TypeError("Cannot read properties of undefined (reading 'ResourcesModule')"),
+      ),
+    ).toBe(true);
     expect(
       isStaleChunkLoadFailure(
         new TypeError("Cannot read properties of undefined (reading 'NotesModule')"),
+      ),
+    ).toBe(true);
+  });
+
+  it('does not swallow unrelated runtime errors', () => {
+    // A lowercase business-data field read on undefined is a real bug, not
+    // a stale-chunk failure — only PascalCase component/module exports (or
+    // `default`) are ever the right-hand side of the lazy-loading idiom.
+    expect(
+      isStaleChunkLoadFailure(
+        new TypeError("Cannot read properties of undefined (reading 'name')"),
       ),
     ).toBe(false);
     expect(isStaleChunkLoadFailure(new Error('RoA draft not found'))).toBe(false);
