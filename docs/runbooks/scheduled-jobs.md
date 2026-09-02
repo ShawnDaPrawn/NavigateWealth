@@ -461,13 +461,23 @@ seven days that has none yet. Authenticated with the Vault-backed
 `x-nw-cron-auth` token, so it is on the mechanism recommendation 4 above
 settled on rather than the service-role key.
 
-Two properties matter when reading its logs:
+Four properties matter when reading its logs:
 
 - The endpoint defaults to `dryRun: true`. A run that reports
   `"generated": 0` with a list of `"dry-run"` results means the job body lost
   its `"dryRun": false` — not that there was nothing to do.
-- It never overwrites an existing summary, so `alreadySummarised` counting up
+- It never overwrites a summary that worked, so `alreadySummarised` counting up
   week over week is the healthy steady state, not a stall.
+- `resumedFromCursor: true` means the previous run hit its `maxGroups` cap and
+  this one is draining the backlog: the window started at the carried cursor
+  rather than seven days back. Persistently true, with `skipped` staying high,
+  means the cap is too low for the upload volume — raise `maxGroups` rather than
+  assuming the job is stuck. `nextCursor` is what the following run will use;
+  it is `null` on a dry run, which writes no state.
+- `retried` counts batches that had failed on an earlier run and were attempted
+  again. A batch that is retried every week and keeps failing is a real problem
+  with that batch (a corrupt file, an oversized PDF), not a flapping job — its
+  stored record carries the error.
 
 ## Do this after any change to a scheduled job
 

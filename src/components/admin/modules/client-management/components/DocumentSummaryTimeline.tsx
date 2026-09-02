@@ -254,11 +254,16 @@ export function DocumentSummaryTimeline({ clientId, refreshToken }: DocumentSumm
                       key={summary.id}
                       summary={summary}
                       canEdit={canEdit}
-                      canRegenerate={canEdit}
+                      canGenerate={canGenerate}
                       busy={busyKeys.includes(summary.id)}
                       onSave={handleSave}
                       onDelete={setPendingDelete}
-                      onRegenerate={(entry) => generate(entry.id, entry.title, true)}
+                      onRegenerate={(entry) =>
+                        // `force` only when overwriting a summary that worked —
+                        // retrying a failed one needs no privilege beyond the
+                        // one that generated it.
+                        generate(entry.id, entry.title, entry.status !== 'failed')
+                      }
                     />
                   ))}
                 </div>

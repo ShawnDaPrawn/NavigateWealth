@@ -27,7 +27,8 @@ interface DocumentSummaryEntryProps {
   summary: DocumentSummary;
   /** Server's answer — super admin only. Never derived in the browser. */
   canEdit: boolean;
-  canRegenerate: boolean;
+  /** Whether this caller may spend AI budget (staff). */
+  canGenerate: boolean;
   busy: boolean;
   onSave: (summaryId: string, edit: SummaryEditDraft) => Promise<void>;
   onDelete: (summary: DocumentSummary) => void;
@@ -44,7 +45,7 @@ interface DocumentSummaryEntryProps {
 export function DocumentSummaryEntry({
   summary,
   canEdit,
-  canRegenerate,
+  canGenerate,
   busy,
   onSave,
   onDelete,
@@ -56,6 +57,15 @@ export function DocumentSummaryEntry({
 
   const failed = summary.status === 'failed';
   const coverage = analysedCoverage(summary);
+
+  /**
+   * Retrying a FAILED summary is not the same act as overwriting a good one.
+   * The first is finishing work that did not complete — any staff member who
+   * could have generated it may retry, and the server does not ask for `force`.
+   * The second discards wording that may have been corrected by hand, so it
+   * stays super admin only.
+   */
+  const canRetry = failed ? canGenerate : canEdit;
 
   const startEditing = () => {
     setDraft(toEditDraft(summary));
@@ -141,14 +151,14 @@ export function DocumentSummaryEntry({
 
           {!editing && (
             <div className="flex flex-shrink-0 items-center gap-1">
-              {canRegenerate && (
+              {canRetry && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
                   disabled={busy}
                   onClick={() => onRegenerate(summary)}
-                  title="Regenerate this summary"
+                  title={failed ? 'Retry this summary' : 'Regenerate this summary'}
                 >
                   <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
                 </Button>

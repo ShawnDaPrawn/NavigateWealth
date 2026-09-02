@@ -13,7 +13,14 @@
  *      thing in this feature a human did deliberately; a scheduled job silently
  *      replacing it is the worst failure available here.
  *   3. A model failure disappears. A failed run that stores nothing is
- *      indistinguishable from a run that never happened.
+ *      indistinguishable from a run that never happened — and a failure that IS
+ *      stored must not become permanent, which is what treating it as a
+ *      completed summary did.
+ *   4. Work the spend cap defers ages out of the next run's window and is never
+ *      done at all. The cursor exists for that and nothing else.
+ *   5. A pack straddling the window boundary is summarised from the recent half
+ *      only, then stored under the whole pack's key — so the older file is
+ *      never analysed and the count on the entry is a lie.
  *
  * Run: npx vitest run src/supabase/functions/server/__tests__/client-document-summaries-service.test.ts
  */
@@ -229,6 +236,55 @@ describe('generating one batch', () => {
     expect(store.get('client-doc-summary:client-1:doc_doc_1')).toBeTruthy();
   });
 
+  it('retries a FAILED record without needing force', async () => {
+    // The failure that made failures permanent: a failed record is an existing
+    // record, and `force` is super-admin only, so the adviser who hit a
+    // momentary 429 had no way back — while the stored record told them to
+    // "retry from the timeline".
+    seedDoc();
+    generateSummaryDraft.mockRejectedValueOnce(new Error('OpenAI request failed (429)'));
+    const first = await generateSummaryForGroup({
+      clientId: 'client-1',
+      documentId: 'doc_1',
+      source: 'manual',
+      actorId: 'admin-1',
+    });
+    expect(first.summary.status).toBe('failed');
+
+    const retry = await generateSummaryForGroup({
+      clientId: 'client-1',
+      documentId: 'doc_1',
+      source: 'manual',
+      actorId: 'admin-1',
+    });
+
+    expect(retry.created).toBe(true);
+    expect(retry.summary.status).toBe('generated');
+  });
+
+  it('still refuses to re-do a summary that worked', async () => {
+    // The counterpart direction: retrying failures must not become "retry
+    // everything", or the weekly scan pays for the whole timeline again.
+    seedDoc();
+    await generateSummaryForGroup({
+      clientId: 'client-1',
+      documentId: 'doc_1',
+      source: 'manual',
+      actorId: 'admin-1',
+    });
+    generateSummaryDraft.mockClear();
+
+    const again = await generateSummaryForGroup({
+      clientId: 'client-1',
+      documentId: 'doc_1',
+      source: 'manual',
+      actorId: 'admin-1',
+    });
+
+    expect(again.created).toBe(false);
+    expect(generateSummaryDraft).not.toHaveBeenCalled();
+  });
+
   it('rejects a batch that does not exist', async () => {
     await expect(
       generateSummaryForGroup({
@@ -366,7 +422,7 @@ describe('weekly scan', () => {
     );
   });
 
-  it('stops at maxGroups and says how many it skipped', async () => {
+  it('stops at maxGroups and says how many it deferred', async () => {
     seedDoc({ id: 'doc_1' });
     seedDoc({ id: 'doc_2' });
     seedDoc({ id: 'doc_3' });
@@ -375,6 +431,95 @@ describe('weekly scan', () => {
 
     expect(report.generated).toBe(2);
     expect(report.skipped).toBe(1);
+  });
+
+  it('carries capped work into the NEXT run instead of losing it', async () => {
+    // The defect this cursor exists for. Three batches, a cap of two: without
+    // the carried cursor the third ages out of next week's seven-day window and
+    // is never summarised at all, while the runbook claims it gets picked up.
+    seedDoc({ id: 'doc_a', uploadDate: '2026-09-01T08:00:00.000Z' });
+    seedDoc({ id: 'doc_b', uploadDate: '2026-09-02T08:00:00.000Z' });
+    seedDoc({ id: 'doc_c', uploadDate: '2026-09-03T08:00:00.000Z' });
+
+    const first = await runWeeklySummaryScan({ ...scanOptions, dryRun: false, maxGroups: 2 });
+    expect(first.generated).toBe(2);
+    expect(first.skipped).toBe(1);
+    // Oldest first, so the two done are the oldest and the newest is deferred.
+    expect(first.nextCursor).toBe('2026-09-03T08:00:00.000Z');
+
+    // A week later. now - 7 days is 2026-09-05, well past every upload above;
+    // without the cursor the window would be empty.
+    const nextWeek = new Date('2026-09-12T09:00:00.000Z');
+    const second = await runWeeklySummaryScan({
+      ...scanOptions,
+      dryRun: false,
+      now: nextWeek,
+    });
+
+    expect(second.resumedFromCursor).toBe(true);
+    expect(second.generated).toBe(1);
+    expect(second.results.some((r) => r.groupKey === 'doc_doc_c')).toBe(true);
+    // Backlog cleared, so the cursor returns to ordinary lookback behaviour.
+    expect(second.nextCursor).toBe(nextWeek.toISOString());
+  });
+
+  it('does not move the cursor on a dry run', async () => {
+    // A rehearsal must not shift the window the real run then uses.
+    seedDoc();
+
+    const report = await runWeeklySummaryScan({ ...scanOptions, dryRun: true });
+
+    expect(report.nextCursor).toBeNull();
+    expect(store.get('client-doc-summary-scan:state')).toBeUndefined();
+  });
+
+  it('retries a failed batch on the next run and counts it as a retry', async () => {
+    seedDoc();
+    generateSummaryDraft.mockRejectedValueOnce(new Error('OpenAI request failed (429)'));
+    const first = await runWeeklySummaryScan({ ...scanOptions, dryRun: false });
+    expect(first.failed).toBe(1);
+
+    const second = await runWeeklySummaryScan({
+      ...scanOptions,
+      dryRun: false,
+      now: new Date('2026-09-06T09:00:00.000Z'),
+    });
+
+    expect(second.alreadySummarised).toBe(0);
+    expect(second.generated).toBe(1);
+    expect(second.retried).toBe(1);
+  });
+
+  it('summarises a WHOLE pack when only part of it is inside the window', async () => {
+    // Filtering documents before grouping produced a summary of the recent half
+    // stored under the full pack's key — so the older file was never analysed,
+    // behind a key that from then on looked done.
+    seedDoc({ id: 'doc_old', packId: 'pack_1', uploadDate: '2026-06-01T08:00:00.000Z' });
+    seedDoc({ id: 'doc_new', packId: 'pack_1', uploadDate: THIS_WEEK });
+
+    const report = await runWeeklySummaryScan({ ...scanOptions, dryRun: false });
+
+    expect(report.candidateGroups).toBe(1);
+    expect(generateSummaryDraft).toHaveBeenCalledTimes(1);
+    const documentsSent = generateSummaryDraft.mock.calls[0][0] as Array<{ id: string }>;
+    expect(documentsSent.map((d) => d.id).sort()).toEqual(['doc_new', 'doc_old']);
+
+    const [stored] = await listSummaries('client-1');
+    expect(stored.documentCount).toBe(2);
+    // Still anchored on the pack's earliest upload, so the timeline entry sits
+    // where the batch actually began.
+    expect(stored.documentDate).toBe('2026-06-01T08:00:00.000Z');
+  });
+
+  it('leaves a wholly-old pack alone', async () => {
+    // The other half of the same rule: complete grouping must not drag in packs
+    // with no recent activity at all.
+    seedDoc({ id: 'doc_x', packId: 'pack_2', uploadDate: '2026-06-01T08:00:00.000Z' });
+    seedDoc({ id: 'doc_y', packId: 'pack_2', uploadDate: '2026-06-02T08:00:00.000Z' });
+
+    const report = await runWeeklySummaryScan({ ...scanOptions, dryRun: true });
+
+    expect(report.candidateGroups).toBe(0);
   });
 
   it('counts a failed batch without abandoning the rest of the run', async () => {

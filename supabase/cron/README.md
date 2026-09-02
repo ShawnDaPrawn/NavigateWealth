@@ -63,11 +63,19 @@ the client Documents tab's AI activity timeline up to date.
 
 - `client-document-summaries-weekly-scan`
   - Runs every Saturday at 04:00 UTC (06:00 SAST).
-  - Summarises every document batch uploaded in the last 7 days that has no summary yet,
-    up to 40 batches per run. Batches beyond that cap are reported as skipped and picked
-    up by the following week's run.
-  - It never overwrites an existing summary — including one a super admin has edited.
-    The endpoint's `force` flag exists for a manual re-run and must not be set in the job.
+  - Summarises every document batch with activity in the last 7 days that has no usable
+    summary yet, oldest first, up to 40 batches per run.
+  - Work beyond that cap is genuinely carried, not dropped: the scan keeps a cursor
+    (`client-doc-summary-scan:state`) at the oldest deferred batch, and the next run starts
+    its window there rather than seven days back. A report with `resumedFromCursor: true`
+    means it is draining a backlog. A dry run never moves the cursor.
+  - A batch is a candidate when ANY of its documents landed in the window, and its summary
+    then covers the whole pack — a pack that gains a file this week is re-summarised in
+    full rather than as the recent fragment.
+  - It never overwrites a summary that worked, including one a super admin has edited. The
+    endpoint's `force` flag exists for a manual re-run and must not be set in the job. A
+    `failed` record is the exception: it is retried on the next run, and shows in the
+    report's `retried` count.
 - Before you run it, replace `__SUPABASE_ANON_KEY__` with the project anon key. No new
   secret is needed: the job authenticates with the shared `x-nw-cron-auth` token already
   provisioned in Vault by migration `20260825085409_cron_auth_vault_token.sql` and verified

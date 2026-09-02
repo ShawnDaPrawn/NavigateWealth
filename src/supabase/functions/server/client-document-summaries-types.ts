@@ -84,8 +84,36 @@ export interface DocumentGroup {
   scope: 'pack' | 'document';
   packId?: string;
   title: string;
+  /** EARLIEST upload in the batch — what the timeline is ordered by. */
   documentDate: string;
+  /**
+   * LATEST upload in the batch. Distinct from `documentDate` because a pack can
+   * gain a file weeks after it was created, and the two dates answer different
+   * questions: where the entry sits in the history, versus whether the scan
+   * should look at it again.
+   */
+  latestDocumentDate: string;
   documents: Array<Record<string, unknown>>;
+}
+
+/**
+ * Persisted state for the weekly scan.
+ *
+ * One timestamp, and it exists for one reason: `maxGroups` caps a run's spend,
+ * and without this the capped remainder would fall out of the next run's
+ * lookback window and never be summarised at all. The cursor holds the window
+ * open over deferred work until it has actually been done.
+ */
+export interface SummaryScanState {
+  /**
+   * The scan will not start its window later than this. Set to `now` when a run
+   * cleared its whole candidate set, or to the oldest deferred batch's latest
+   * upload date when the cap bit.
+   */
+  cursor: string;
+  lastRunAt: string;
+  /** How many batches the last run had to defer. */
+  deferred: number;
 }
 
 /** Outcome of one weekly-scan run. */
@@ -94,17 +122,30 @@ export interface SummaryScanReport {
   candidateGroups: number;
   alreadySummarised: number;
   generated: number;
+  /** Failed records re-attempted this run (a subset of generated + failed). */
+  retried: number;
   failed: number;
   skipped: number;
   dryRun: boolean;
   lookbackDays: number;
+  /** Start of the window actually used — the cursor when a backlog is open. */
   since: string;
+  /** Whether `since` came from the carried cursor rather than lookbackDays. */
+  resumedFromCursor: boolean;
+  /** The cursor stored for the next run. Null on a dry run (nothing written). */
+  nextCursor: string | null;
   /** Per-group outcome, capped so a large run cannot bloat the response. */
   results: Array<{
     clientId: string;
     groupKey: string;
     title: string;
-    outcome: 'generated' | 'failed' | 'already-summarised' | 'skipped-limit' | 'dry-run';
+    outcome:
+      | 'generated'
+      | 'retried'
+      | 'failed'
+      | 'already-summarised'
+      | 'deferred-to-next-run'
+      | 'dry-run';
     error?: string;
   }>;
 }

@@ -198,6 +198,71 @@ describe('DocumentSummaryTimeline', () => {
     expect(screen.queryByRole('button', { name: /summarise/i })).toBeNull();
   });
 
+  it('lets ordinary staff retry a FAILED summary, without force', async () => {
+    // Retrying a failure is finishing work that did not complete, not
+    // overwriting a human's wording — so it must not need super admin, and the
+    // request must not carry `force` (which the server rejects for non-super
+    // admins, making the failure permanent).
+    respondWith({
+      canEdit: false,
+      canGenerate: true,
+      summaries: [makeSummary({ status: 'failed', error: 'OpenAI request failed (429)' })],
+    });
+    vi.mocked(api.post).mockResolvedValue({
+      success: true,
+      created: true,
+      summary: makeSummary(),
+    });
+
+    render(<DocumentSummaryTimeline clientId="client-1" />);
+    await waitFor(() => expect(screen.getByTitle('Retry this summary')).toBeTruthy());
+    // Editing stays super admin only even on a failed entry.
+    expect(screen.queryByTitle('Edit summary')).toBeNull();
+
+    fireEvent.click(screen.getByTitle('Retry this summary'));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/client-document-summaries/client-1/generate', {
+        packId: 'pack_1',
+        force: false,
+      });
+    });
+  });
+
+  it('does not offer a retry on a failed summary to someone who cannot generate', async () => {
+    respondWith({
+      canEdit: false,
+      canGenerate: false,
+      summaries: [makeSummary({ status: 'failed' })],
+    });
+
+    render(<DocumentSummaryTimeline clientId="client-1" />);
+    await waitFor(() => expect(screen.getByText('Failed')).toBeTruthy());
+
+    expect(screen.queryByTitle('Retry this summary')).toBeNull();
+  });
+
+  it('regenerating a summary that WORKED still forces, and stays super admin only', async () => {
+    respondWith({ canEdit: true, canGenerate: true, summaries: [makeSummary()] });
+    vi.mocked(api.post).mockResolvedValue({
+      success: true,
+      created: true,
+      summary: makeSummary(),
+    });
+
+    render(<DocumentSummaryTimeline clientId="client-1" />);
+    await waitFor(() => expect(screen.getByTitle('Regenerate this summary')).toBeTruthy());
+
+    fireEvent.click(screen.getByTitle('Regenerate this summary'));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/client-document-summaries/client-1/generate', {
+        packId: 'pack_1',
+        force: true,
+      });
+    });
+  });
+
   it('shows a failed summary as failed rather than as fact', async () => {
     respondWith({
       summaries: [
