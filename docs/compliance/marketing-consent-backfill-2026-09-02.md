@@ -45,11 +45,18 @@ of their existing advisory agreements, and authorised the backfill.
    closed/suspended.
 
 2. **182 application records** (`application:{id}.application_data`) — set
-   `communicationConsent = true`. Needed for durability: these sit in
-   `submitted` status, where `mergeProfileOnApproval`
-   (`profile-application-sync.ts:437`) copies `_applicationMeta` from the
-   application over the profile. Without this, approving a client would silently
-   revert their consent to `false`.
+   `communicationConsent = true`, plus the same two provenance fields. Needed
+   for durability: these sit in `submitted` status, where
+   `mergeProfileOnApproval` (`profile-application-sync.ts:437`) assigns
+   `_applicationMeta` from the application over the profile _wholesale_ rather
+   than merging into it, and that object is rebuilt by
+   `buildClientProfileFromApplication` from a fixed field list. Without the
+   consent value here, approving a client would silently revert them to
+   `false`; without the provenance here — and without the builder carrying it,
+   added in the same change — approval would silently strip the
+   `admin_backfill` marker, making a backfilled `true` indistinguishable from a
+   client's own tick and putting the profile beyond the reach of the rollback
+   below. Both halves are pinned by `__tests__/consent-provenance.test.ts`.
 
 3. **2 self-service profiles** — propagated their genuine `true` onto the
    profile, tagged `communicationConsentSource: 'client_optin'`. These clients
@@ -84,8 +91,18 @@ where key like 'user_profile:%:personal_info'
   and value->'_applicationMeta'->>'communicationConsentSource' = 'admin_backfill';
 ```
 
-The application-record half (step 2) is not distinguishable after the fact and
-would need restoring from a backup taken before 2026-09-02.
+The application records written by step 2 are recoverable the same way, keyed
+on the same marker:
+
+```sql
+update kv_store_91ed8379
+set value = jsonb_set(value, '{application_data,communicationConsent}', 'false'::jsonb, true)
+where key like 'application:%'
+  and value->'application_data'->>'communicationConsentSource' = 'admin_backfill';
+```
+
+Neither query touches the two genuine self-service opt-ins, which carry no
+provenance marker by design.
 
 ## Follow-up worth doing
 
