@@ -446,6 +446,29 @@ including the runs the audit believed were 401ing. That plane records whether
 `net.http_post` was queued, not what came back. Query C is the only one that
 answers the question.
 
+## Jobs added since the 2026-08-25 audit
+
+The tables above are a point-in-time audit. Jobs created afterwards are listed
+here so the next audit starts from a complete set.
+
+| job                                     | schedule (UTC) | target path                                          | setup SQL                                          |
+| --------------------------------------- | -------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| `client-document-summaries-weekly-scan` | `0 4 * * 6`    | `/client-document-summaries/maintenance/weekly-scan` | `supabase/cron/client-document-summaries-jobs.sql` |
+
+Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
+renders as its activity timeline, for every document batch uploaded in the last
+seven days that has none yet. Authenticated with the Vault-backed
+`x-nw-cron-auth` token, so it is on the mechanism recommendation 4 above
+settled on rather than the service-role key.
+
+Two properties matter when reading its logs:
+
+- The endpoint defaults to `dryRun: true`. A run that reports
+  `"generated": 0` with a list of `"dry-run"` results means the job body lost
+  its `"dryRun": false` — not that there was nothing to do.
+- It never overwrites an existing summary, so `alreadySummarised` counting up
+  week over week is the healthy steady state, not a stall.
+
 ## Do this after any change to a scheduled job
 
 Run query A **and** query C. **Query A alone cannot establish that a job works** —

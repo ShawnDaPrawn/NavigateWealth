@@ -55,3 +55,36 @@ Newsletter Studio admin module.
   `Integrations -> Cron` and shows recent runs in `cron.job_run_details`, then confirm the
   Edge Function logs show `POST /newsletter-studio/cron/process` returning 200 (remember
   `cron.job_run_details` stays green even when the HTTP call fails).
+
+## Client Document Summaries Cron Setup
+
+Use `supabase/cron/client-document-summaries-jobs.sql` to create the weekly job that keeps
+the client Documents tab's AI activity timeline up to date.
+
+- `client-document-summaries-weekly-scan`
+  - Runs every Saturday at 04:00 UTC (06:00 SAST).
+  - Summarises every document batch uploaded in the last 7 days that has no summary yet,
+    up to 40 batches per run. Batches beyond that cap are reported as skipped and picked
+    up by the following week's run.
+  - It never overwrites an existing summary — including one a super admin has edited.
+    The endpoint's `force` flag exists for a manual re-run and must not be set in the job.
+- Before you run it, replace `__SUPABASE_ANON_KEY__` with the project anon key. No new
+  secret is needed: the job authenticates with the shared `x-nw-cron-auth` token already
+  provisioned in Vault by migration `20260825085409_cron_auth_vault_token.sql` and verified
+  server-side through `public.verify_cron_auth_token`.
+- The endpoint defaults to `dryRun: true`, so a hand-run `curl` that forgets the flag
+  reports what it WOULD do rather than spending an OpenAI call per batch. The job body sets
+  `"dryRun": false` explicitly. To rehearse before scheduling:
+
+  ```bash
+  curl -sS -X POST \
+    "$FUNCTION_URL/client-document-summaries/maintenance/weekly-scan" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+    -d '{"lookbackDays": 7}'
+  ```
+
+- Verify the same way as the other jobs: confirm the job exists under `Integrations -> Cron`
+  and shows recent runs in `cron.job_run_details`, then confirm the Edge Function logs show
+  `POST /client-document-summaries/maintenance/weekly-scan` returning 200. `cron.job_run_details`
+  stays green even when the HTTP call fails — see `docs/runbooks/scheduled-jobs.md`.
