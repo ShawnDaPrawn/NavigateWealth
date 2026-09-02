@@ -4,6 +4,7 @@ import { DocumentStatsCards } from './DocumentStatsCards';
 import { DocumentFiltersBar } from './DocumentFiltersBar';
 import { DocumentList } from './DocumentList';
 import { UploadDocumentDialog } from './UploadDocumentDialog';
+import { DocumentSummaryTimeline } from './DocumentSummaryTimeline';
 import {
   DeleteDocumentDialog,
   DeletePackDialog,
@@ -49,6 +50,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   const [resendMessage, setResendMessage] = useState('');
   const [uploadEmailMessage, setUploadEmailMessage] = useState('');
   const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
+
+  /**
+   * Bumped whenever the document set changes, so the AI timeline re-groups.
+   * A batch that was just uploaded or deleted must not linger in its
+   * "pending summary" list.
+   */
+  const [summaryRefreshToken, setSummaryRefreshToken] = useState(0);
+  const bumpSummaries = useCallback(() => setSummaryRefreshToken((token) => token + 1), []);
 
   const [sendingEmail, setSendingEmail] = useState(false);
   const [uploadedDocIds, setUploadedDocIds] = useState<string[]>([]);
@@ -196,6 +205,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
       toast.success('Document deleted successfully');
       setDocuments((prev) => prev.filter((d) => d.id !== documentToDelete.id));
+      bumpSummaries();
       setDeleteDialogOpen(false);
       setDocumentToDelete(null);
     } catch (error) {
@@ -234,6 +244,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       // Remove all deleted documents from state
       const deletedIds = new Set(docsToDelete.map((d) => d.id));
       setDocuments((prev) => prev.filter((d) => !deletedIds.has(d.id)));
+      bumpSummaries();
 
       setPackDeleteDialogOpen(false);
       setPackToDelete(null);
@@ -388,6 +399,9 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         onUploadClick={() => setUploadDialogOpen(true)}
       />
 
+      {/* AI summary timeline — what each batch of documents was */}
+      <DocumentSummaryTimeline clientId={selectedClient.id} refreshToken={summaryRefreshToken} />
+
       {/* Upload Dialog */}
       <UploadDocumentDialog
         open={uploadDialogOpen}
@@ -395,12 +409,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         selectedClient={selectedClient}
         onUploaded={(newDocs, newDocIds) => {
           setDocuments((prev) => [...newDocs, ...prev]);
+          bumpSummaries();
           setUploadedDocIds(newDocIds);
           setUploadEmailMessage('');
           setUploadSuccessDialogOpen(true);
         }}
         onLinkAdded={(doc) => {
           setDocuments((prev) => [doc, ...prev]);
+          bumpSummaries();
           setUploadEmailMessage('');
         }}
       />
