@@ -302,7 +302,7 @@ Recommendation 2 was carried out by setting `active = false` on the seven dead
 jobs rather than by `cron.unschedule`. That stops them firing but leaves five of
 them holding the service-role key, which is the single outstanding production
 write — see
-[The retired jobs still hold the service-role key](#the-retired-jobs-still-hold-the-service-role-key-open-2026-08-30).
+[The retired jobs still hold the service-role key](#the-retired-jobs-held-the-service-role-key-closed-2026-09-01).
 
 1. **Stop storing the service-role key in `cron.job.command`.** Eleven jobs hold it
    in plaintext, readable by anything that can read `cron.job`. The publications
@@ -326,16 +326,16 @@ write — see
    token used by publications is the only cron auth in this codebase with a
    proven success record.
 
-## The retired jobs still hold the service-role key (open, 2026-08-30)
+## The retired jobs held the service-role key (closed 2026-09-01)
 
 Recommendation 1 above was applied to every **active** job: all eight now pull
 the bearer from `vault.decrypted_secrets` at call time, and none carries a key
 inline. Recommendation 2 was applied by setting `active = false` on the seven
 dead jobs rather than by `cron.unschedule`.
 
-That leaves a gap the deactivation does not close. `active = false` stops a job
-firing; it does not touch `command`, so the row keeps whatever credential it was
-written with:
+That left a gap the deactivation did not close. `active = false` stops a job
+firing; it does not touch `command`, so the row kept whatever credential it was
+written with — this was the state until 2026-09-01:
 
 | jobid | job                          | active | token                             |
 | ----- | ---------------------------- | ------ | --------------------------------- |
@@ -376,19 +376,60 @@ buy: _rotating the vault secret no longer rotates every copy._ Five plaintext
 copies now sit outside the vault, in a table that lands in every backup and
 snapshot, and a rotation would silently leave them valid.
 
-**The fix is `cron.unschedule`, not another `UPDATE`.** These jobs are retired;
-deleting the row removes the credential with it and leaves nothing to
-re-audit. This is a production write and has not been made — it needs an
-operator decision:
+**The fix was `cron.unschedule`, not another `UPDATE`.** These jobs were
+retired; deleting the row removes the credential with it and leaves nothing to
+re-audit. **Executed by the owner on 2026-09-01**, one named call per job rather
+than the set-based form this section first suggested:
 
 ```sql
-select cron.unschedule(jobname)
-from cron.job
-where jobid in (1, 3, 18, 19, 20, 21, 22);
+select cron.unschedule('process-auto-content-pipelines');  -- jobid 1
+select cron.unschedule('process-scheduled-articles');      -- jobid 3
+select cron.unschedule('submissions-aging-alert');         -- jobid 18
+select cron.unschedule('communication-group-recalc');      -- jobid 19
+select cron.unschedule('kv-data-consistency-audit');       -- jobid 20
+select cron.unschedule('weekly-business-summary');         -- jobid 21
+select cron.unschedule('resource-zip-cleanup');            -- jobid 22
 ```
 
-Until then, treat the service-role key as exposed for rotation purposes: any
-rotation must also rewrite or drop these five rows.
+Name the jobs; do not write `select cron.unschedule(jobname) from cron.job where
+jobid in (…)`. That deletes rows from the table it is scanning, and a mistyped
+`where` can match a live job. Seven named calls cannot over-match, and a reader
+can see what each one does.
+
+### Verified after
+
+15 jobs down to **8 — all active, all pulling auth from
+`vault.decrypted_secrets`, none holding the service-role key**:
+
+```sql
+with v as (select decrypted_secret k from vault.decrypted_secrets
+           where name = 'navigatewealth_service_role_key' order by created_at desc limit 1)
+select j.jobid, j.jobname, j.active,
+       case when j.command like '%decrypted_secrets%' then 'vault' else 'INLINE' end as auth_source,
+       exists (select 1 from regexp_matches(j.command, '(eyJ[A-Za-z0-9._\-]+)', 'g') m
+               where m[1] = (select k from v)) as holds_service_role_key
+from cron.job j order by j.jobid;
+```
+
+**Use that query, not the `Bearer\s+<?(…)>?` form above it.** The earlier regex
+captures one token per command and silently missed job 3's, where the key had
+been pasted _inside_ the `<YOUR_ANON_KEY>` placeholder so the match started at
+`<`. This version scans every `eyJ…` token in the command and compares each
+against the vault secret, so a second credential hiding later in the same
+command cannot slip past.
+
+Two surviving jobs (8 and 24) do still carry an inline JWT. It is the **anon**
+key — public by design, already in the browser bundle — and both also pull their
+real authorisation from the vault, so neither is an exposure. Distinguishing
+that from the service-role case is exactly what the query above is for.
+
+The surviving eight: 6 `overdue-tasks-daily-digest`, 7 `esign-expiry-sweep`,
+8 `publications-process-scheduled`, 9 `auto-content-process-due`,
+10 `client-profile-cleanup`, 16 `calendar-daily-digest`,
+17 `client-birthday-digest`, 24 `publications-process-notification-jobs`.
+
+Rotating the service-role key now rotates every copy of it, which is the
+property the vault migration was for and did not have until this ran.
 
 ## Post-repair verification (closed 2026-08-30)
 

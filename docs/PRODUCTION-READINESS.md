@@ -17,7 +17,7 @@ those proposed files exist on `main`.
 
 ---
 
-## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs — RESOLVED, one cleanup open)
+## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs — CLOSED)
 
 > **RESOLVED 2026-08-26.** The audit below stands as the diagnosis, but its
 > headline no longer describes production. All of it was repaired and each job
@@ -33,26 +33,32 @@ those proposed files exist on `main`.
 > on 2026-08-30 at 22:00: HTTP 200, 201 profiles scanned, nothing to close —
 > the expected steady state now the backfill has run.
 >
-> **ONE OPERATIONAL ITEM IS STILL OPEN**, and it is a production write awaiting
-> an owner decision. The seven dead jobs were retired by setting `active = false`
-> rather than `cron.unschedule`. That stops them firing but does not touch
-> `command`, so **five rows (jobids 18, 19, 20, 21, 22) still hold the live
-> service-role key in plaintext** — byte-identical to what the vault serves the
-> active jobs today, verified by comparing inside SQL without printing it. This
-> grants nothing new inside a database someone would already need access to
-> read; what it costs is the property the vault migration was for: rotating the
-> secret no longer rotates every copy, and five of them ride along in every
-> backup. The fix removes the credential with the row:
+> **Credential cleanup done 2026-09-01, and this incident is now closed.** The
+> seven dead jobs had been retired by setting `active = false` rather than
+> `cron.unschedule`. That stops a job firing but does not touch `command`, so
+> five rows (jobids 18-22) went on holding the live service-role key in
+> plaintext — byte-identical to what the vault serves the active jobs. It
+> granted nothing new inside a database someone would already need access to
+> read; what it cost was the property the vault migration was bought for:
+> **rotating the secret did not rotate every copy**, and five of them rode along
+> in every backup. The owner unscheduled all seven, which removes each
+> credential with its row.
 >
-> ```sql
-> select cron.unschedule(jobname)
-> from cron.job
-> where jobid in (1, 3, 18, 19, 20, 21, 22);
-> ```
+> Verified against production afterwards — 15 jobs down to **8, all active, all
+> pulling auth from `vault.decrypted_secrets`, and none holding the service-role
+> key.** That last check matches every `eyJ…` token in every command against the
+> live vault secret rather than pattern-matching the shape, because the first
+> attempt at this used a regex that silently missed a token wrapped in
+> `<YOUR_ANON_KEY>` brackets. Two active jobs (8 and 24) do still carry an inline
+> JWT: it is the **anon** key, which is public by design and already ships in the
+> browser bundle, and both also pull their real authorisation from the vault.
 >
-> Until that runs, any rotation of the service-role key must also drop or
-> rewrite those five rows. Detail:
-> [`docs/runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md#the-retired-jobs-still-hold-the-service-role-key-open-2026-08-30).
+> The surviving eight: 6 `overdue-tasks-daily-digest`, 7 `esign-expiry-sweep`,
+> 8 `publications-process-scheduled`, 9 `auto-content-process-due`,
+> 10 `client-profile-cleanup`, 16 `calendar-daily-digest`,
+> 17 `client-birthday-digest`, 24 `publications-process-notification-jobs`.
+> Detail:
+> [`docs/runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md#the-retired-jobs-held-the-service-role-key-closed-2026-09-01).
 
 **13 of the 15 active `pg_cron` jobs were not doing their work.** Only the two
 `publications` jobs were healthy. Found while reading production logs after the
@@ -1756,3 +1762,4 @@ Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`
 | 2026-08-29 | Client load speed: took a rich-text editor and an animation library off the critical path. `vite.config.ts` decided chunk membership with `id.includes('/react/')`, a substring test that matches `node_modules/@tiptap/react/…`, so `@tiptap/react` was pinned into `vendor-react` — the chunk every visitor downloads because React lives there — and Rollup followed with prosemirror-view/model/transform/state/commands and `@tiptap/core`. React and React-DOM were 141 KB of that chunk's 936 KB rendered bytes; the admin-only editor was 795 KB. `/react-dom/` caught `@floating-ui/react-dom` the same way. Independently, `vendor-feedback` grouped `motion` with `sonner`, and since `AppProviders` mounts the app-wide `<Toaster/>` while all 11 `motion` importers are behind lazy routes, the toast dragged 383 KB of animation onto first paint. Chunk rules now match the package name parsed from the module id. **Eager entry 1.82 MB → 1.44 MB, 489.7 KB → 369.2 KB gzipped (−24.6%)**, re-baselined into F6; `totalJsBytes` +0.3%, so nothing was deleted or duplicated — the weight moved off the critical path. No application code changed. Also moved connection hints out of a `PerformanceOptimizer` `useEffect`, where they were created after React had mounted and so after the handshake they were meant to overlap: the Supabase origin the auth bootstrap calls on every load was never hinted at all, while two of the four that were (`fonts.googleapis.com`, `via.placeholder.com`) are origins this app never contacts. Measured and rejected in the same pass: unassigning `@radix-ui/*` so Rollup places it automatically — worse, 369 KB → 554 KB gzipped.                                                                                                                                                                                                       | Agent           |
 | 2026-08-29 | Provider logos were served at 24x their display size: sixteen 2000x1000 PNG exports totalling 4,902,054 bytes filled slots no wider than 200 CSS px. Every step of the pipeline worked as designed — `optimize-images.mjs` builds variants for hashes behind an `imageKey`, the logos had none, so `ResponsiveImage` was unreachable and `OptimizedImage` (which only builds a srcSet for `unsplash.com` URLs) emitted a bare `<img>` with the full-size file. Adding a key is what asks for generation, and nothing had. They now carry a `logoKey`, built at 200/400 rather than the four page widths: at 1024 and 1440 these sources come to about 2.5 MB of variants no `sizes` attribute can select, which is half the weight being removed. Measured fetching all sixteen: 4.67 MB to 44.2 KB at 200w AVIF; confirmed in a browser against `dist` as 14,413 bytes for the four visible, no PNG fallback requested. Also fixes cropping the call sites never asked for — their `object-contain` sat on a wrapper div while the inner `<img>` was hardcoded `object-cover`. `optimize-images.mjs` now skips outputs newer than their source (`--force` to override); it had re-encoded all 86 targets every run, rewriting ~700 binary files and burying the real change.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Claude          |
 | 2026-08-30 | The image work above had a second half that was never built, and a floor underneath it that never existed. `figmaAssetResolver` now resolves through a generated cache first: `scripts/generate-figma-webp.mjs` runs before `vite build` and emits a WebP per imported asset into `node_modules/.cache/figma-webp/` — **811.5 MB of originals -> 10.0 MB**, largest **408 KB**, held there by an encode ladder that re-compresses anything over a hard 500 KB ceiling and exits non-zero if a source defeats it. `imageBytes` **906 MB -> 55.6 MB**, `totalDistBytes` **927 MB -> 70.9 MB**; every one of the 82 emitted images is WebP and none exceeds 500 KB. The JS floors were deliberately NOT re-baselined: they had drifted +0.2% from an unrelated merge, and raising a budget is not something an image change should do. The cache is keyed on file _contents_, not mtime — git does not preserve timestamps, so an mtime key would miss on every asset on every fresh checkout. **The committed `.jpg`/`.avif` siblings stay in the ladder underneath it**, so a cold or failed cache degrades to a ~300 KB JPEG instead of silently reinstating the 31 MB PNGs; `figma-asset-weight.test.ts` measures that cold path deliberately, since it is the half no build step watches, and now checks its own candidate list against `vite.config.ts` so the mirror cannot drift. Two bugs found while folding this in: the generator skipped every directory _named_ `assets`, which swallowed `src/components/shared/assets/provider-logos.ts` and left all sixteen provider logos unconverted while reporting a healthy run; and transparency was unverified — now checked with `stats().isOpaque`, which distinguishes a logo with real alpha from one carrying a redundant fully-opaque channel that libwebp is right to drop. Both guards were mutation-tested.                               | Claude          |
+| 2026-09-01 | The scheduled-jobs incident is now closed end to end. The retirement of the seven dead `pg_cron` jobs had been done with `active = false`, which stops a job firing but does not touch `command` — so five rows (18-22) went on holding the **live service-role key in plaintext**, byte-identical to what the vault serves the active jobs. It granted nothing new inside a database someone would already need access to read; what it cost was the property the vault migration was bought for: **rotating the secret did not rotate every copy**, and five rode along in every backup. All seven were unscheduled (one named `cron.unschedule` call each — not the set-based form, which deletes rows from the table it scans and can over-match a live job). Verified after: **15 jobs down to 8**, all active, all pulling auth from `vault.decrypted_secrets`, none holding the service-role key. That check now matches every `eyJ…` token in every command against the live vault secret, because the first version used a regex that captured one token per command and silently missed job 3's, where the key had been pasted _inside_ the `<YOUR_ANON_KEY>` placeholder so the match began at `<`. Jobs 8 and 24 do still carry an inline JWT — the **anon** key, public by design and already in the browser bundle — and both also pull real authorisation from the vault, so neither is an exposure; telling that apart from the service-role case is what the corrected query exists for. Also deleted the leftover `diag-treasury-tmp` edge function (a 410 stub, `verify_jwt` true, zero repo references) left over from diagnosing the Treasury panel.                                                                                                                                                                                                                                | Claude          |
