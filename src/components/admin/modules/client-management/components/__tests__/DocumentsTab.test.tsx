@@ -15,6 +15,11 @@
  *   • The centralized `api` client is mocked (Phase 6a routed the component's
  *     raw, anon-key fetches through it); we assert it fetches the client's
  *     documents on mount.
+ *   • The tab now renders TWO api.get consumers — the document list and the AI
+ *     summary timeline — and child effects run before parent effects, so a
+ *     `mockResolvedValueOnce` would be consumed by whichever fires first. The
+ *     mock is therefore routed BY ENDPOINT (`mockDocuments` below) rather than
+ *     by call order; order-based stubbing here is a trap, not a shortcut.
  *   • The category filter is a Radix Select (unreliable under jsdom pointer
  *     events), so filtering is exercised via the plain search input instead.
  */
@@ -68,8 +73,24 @@ function makeDoc(over: Partial<DocumentItem> = {}): DocumentItem {
   };
 }
 
+/**
+ * Route the mocked api.get by path: documents to the list, everything else
+ * (the summary timeline) to an empty timeline.
+ */
+function mockDocuments(documents: DocumentItem[]) {
+  vi.mocked(api.get).mockImplementation(async (endpoint: string) => {
+    if (endpoint.includes('client-document-summaries')) {
+      return { success: true, summaries: [], batches: [], canEdit: false, canGenerate: false };
+    }
+    return { documents };
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks drops implementations too, so re-establish the default:
+  // an empty document list and an empty timeline.
+  mockDocuments([]);
 });
 
 describe('DocumentsTab', () => {
@@ -97,18 +118,16 @@ describe('DocumentsTab', () => {
   });
 
   it('renders fetched documents in the list', async () => {
-    vi.mocked(api.get).mockResolvedValueOnce({
-      documents: [
-        makeDoc({ id: 'a', title: 'Policy Schedule' }),
-        makeDoc({
-          id: 'b',
-          title: 'ID Copy',
-          productCategory: 'General',
-          policyNumber: 'GEN-2',
-          fileName: 'id.pdf',
-        }),
-      ],
-    });
+    mockDocuments([
+      makeDoc({ id: 'a', title: 'Policy Schedule' }),
+      makeDoc({
+        id: 'b',
+        title: 'ID Copy',
+        productCategory: 'General',
+        policyNumber: 'GEN-2',
+        fileName: 'id.pdf',
+      }),
+    ]);
 
     render(<DocumentsTab selectedClient={selectedClient} />);
 
@@ -119,12 +138,10 @@ describe('DocumentsTab', () => {
   });
 
   it('filters the rendered list by the search query', async () => {
-    vi.mocked(api.get).mockResolvedValueOnce({
-      documents: [
-        makeDoc({ id: 'a', title: 'Policy Schedule', fileName: 'policy.pdf' }),
-        makeDoc({ id: 'b', title: 'ID Copy', fileName: 'id.pdf', policyNumber: 'GEN-2' }),
-      ],
-    });
+    mockDocuments([
+      makeDoc({ id: 'a', title: 'Policy Schedule', fileName: 'policy.pdf' }),
+      makeDoc({ id: 'b', title: 'ID Copy', fileName: 'id.pdf', policyNumber: 'GEN-2' }),
+    ]);
 
     render(<DocumentsTab selectedClient={selectedClient} />);
     await waitFor(() => expect(screen.getByText('ID Copy')).toBeTruthy());
@@ -146,7 +163,9 @@ describe('DocumentsTab', () => {
     await waitFor(() => expect(api.get).toHaveBeenCalled());
 
     const before = vi.mocked(api.get).mock.calls.length;
-    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    // The timeline card has its own "Refresh timeline" button; this must be
+    // the document list's.
+    fireEvent.click(screen.getByRole('button', { name: /^refresh$/i }));
 
     await waitFor(() => {
       expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(before);
