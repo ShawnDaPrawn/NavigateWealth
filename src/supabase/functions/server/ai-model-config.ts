@@ -96,49 +96,89 @@ export function resolveFeatureModel(envVar: string): string {
  * "no information" and fall back, never as "nothing is available".
  */
 let availableModelIds: Set<string> | null = null;
-let availableModelsFetchedAt = 0;
 
-/** Re-probe at most this often per instance. Model lists change rarely. */
+/**
+ * Earliest time another probe may run. Set after EVERY attempt, successful or
+ * not — a failed probe is cached too.
+ *
+ * Without this the weekly scan re-probes per batch during an outage: it calls
+ * `generateSummaryDraft` sequentially for up to 40 groups, so one 429 becomes
+ * 40 doomed requests and 40 lots of latency ahead of work that was always going
+ * to fall back anyway. "Probed once per instance" has to hold when things are
+ * going badly, which is the only time it costs anything.
+ */
+let nextProbeAt = 0;
+
+/** Re-probe at most this often after a good answer. Model lists change rarely. */
 const MODEL_LIST_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * How long a FAILED probe is remembered. Much shorter than the success TTL:
+ * long enough to stop a scan hammering a rate-limited endpoint, short enough
+ * that a transient outage does not pin the feature to the fallback model for
+ * half an hour after it clears.
+ */
+const MODEL_LIST_FAILURE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Hard ceiling on the probe.
+ *
+ * This is the difference between failing open and hanging. A `fetch` with no
+ * abort signal that connects and then stalls never reaches the catch below, so
+ * the fail-open path never runs and the summary is blocked behind an OPTIONAL
+ * discovery call until the whole invocation is killed. Model selection is a
+ * nicety; it gets a few seconds and then it is skipped.
+ */
+const MODEL_LIST_TIMEOUT_MS = 5000;
 
 /** Reset the cache. Tests only — production has no reason to call this. */
 export function resetAvailableModelsCache(): void {
   availableModelIds = null;
-  availableModelsFetchedAt = 0;
+  nextProbeAt = 0;
 }
 
 /**
  * Fetch the model ids this account can serve.
  *
- * Fails OPEN: any error returns null and the caller keeps its current model. A
- * model-selection nicety must never be the reason a summary does not get
- * written.
+ * Fails OPEN, and that is load-bearing: every failure mode — non-2xx, an empty
+ * list, a thrown error, or a stall past `MODEL_LIST_TIMEOUT_MS` — returns null,
+ * the caller keeps its current model, and the outcome is cached so the next
+ * batch does not repeat it.
  */
 export async function listAvailableModels(): Promise<Set<string> | null> {
   const now = Date.now();
-  if (availableModelIds && now - availableModelsFetchedAt < MODEL_LIST_TTL_MS) {
-    return availableModelIds;
-  }
+  // Covers both cached outcomes: a good list, and a remembered failure (null).
+  if (now < nextProbeAt) return availableModelIds;
 
+  /** Remember this attempt so the next caller does not repeat it. */
+  const settle = (ids: Set<string> | null, ttl: number) => {
+    availableModelIds = ids;
+    nextProbeAt = now + ttl;
+    return ids;
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MODEL_LIST_TIMEOUT_MS);
   try {
     const res = await fetch('https://api.openai.com/v1/models', {
       headers: { Authorization: `Bearer ${getOpenAIKey()}` },
+      signal: controller.signal,
     });
     if (!res.ok) {
       log.warn('Could not list account models — keeping the configured model', {
         status: res.status,
       });
-      return null;
+      return settle(null, MODEL_LIST_FAILURE_TTL_MS);
     }
 
     const json = (await res.json()) as { data?: Array<{ id?: unknown }> };
     const ids = (json.data ?? [])
       .map((entry) => entry?.id)
       .filter((id): id is string => typeof id === 'string');
-    if (ids.length === 0) return null;
-
-    availableModelIds = new Set(ids);
-    availableModelsFetchedAt = now;
+    if (ids.length === 0) {
+      log.warn('Account model list came back empty — keeping the configured model');
+      return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+    }
 
     // Logged once per instance, filtered to the text-generation families, so an
     // operator can read the real list out of the function logs and refine a
@@ -148,12 +188,14 @@ export async function listAvailableModels(): Promise<Set<string> | null> {
       textModels: ids.filter((id) => /^(gpt-|o\d)/i.test(id)).sort(),
     });
 
-    return availableModelIds;
+    return settle(new Set(ids), MODEL_LIST_TTL_MS);
   } catch (error) {
     log.warn('Model list probe failed — keeping the configured model', {
       error: getErrMsg(error),
     });
-    return null;
+    return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
