@@ -389,6 +389,19 @@ export function buildClientProfileFromApplication(
       faisAcknowledged: appData.faisAcknowledged || false,
       electronicCommunicationConsent: appData.electronicCommunicationConsent || false,
       communicationConsent: appData.communicationConsent || false,
+      // Provenance for administratively backfilled consent. Carried through
+      // because approval REPLACES the profile's whole _applicationMeta with
+      // this object (mergeProfileOnApproval, profile-application-sync.ts) --
+      // without these two fields a backfilled `true` becomes indistinguishable
+      // from a client-supplied tick the moment the client is approved, and the
+      // documented rollback stops finding them. Spread conditionally so a
+      // genuine self-service application carries no provenance at all.
+      ...(appData.communicationConsentSource
+        ? { communicationConsentSource: appData.communicationConsentSource }
+        : {}),
+      ...(appData.communicationConsentBackfilledAt
+        ? { communicationConsentBackfilledAt: appData.communicationConsentBackfilledAt }
+        : {}),
     },
   };
 }
