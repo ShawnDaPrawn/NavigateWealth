@@ -41,6 +41,38 @@ export const OPENAI_PRIMARY_MODEL = readEnv('OPENAI_MODEL') || 'gpt-4o';
 export const OPENAI_FALLBACK_MODEL = readEnv('OPENAI_FALLBACK_MODEL') || 'gpt-4o';
 
 /**
+ * Resolve the model for ONE feature, from a feature-specific env var.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * `OPENAI_MODEL` is global: eleven services read `OPENAI_PRIMARY_MODEL`
+ * (policy extraction, Vasco, will-chat, tax-agent, the RoA conversation,
+ * social-media text, ai-advisor, ai-intelligence, ai-management, the
+ * integrations extraction routes and the document summariser). Moving it is
+ * therefore an all-or-nothing act across the whole product, and most of those
+ * callers reach OpenAI through Chat Completions with NO model fallback — which
+ * is precisely how the `gpt-5.4` default in this file's history took every AI
+ * feature down at once.
+ *
+ * A per-feature override makes adopting a new model an experiment on one
+ * surface instead of a bet on all of them. Roll it forward one feature at a
+ * time, watch that feature, and roll back by clearing one secret.
+ *
+ * SAFE ONLY WHERE THERE IS A FALLBACK. Use this for callers that go through
+ * `callResponses`, which retries on `OPENAI_FALLBACK_MODEL` via Chat
+ * Completions when the primary call fails: there a wrong or unavailable id
+ * degrades (an extra failed request, then a gpt-4o answer) rather than
+ * breaking the feature. Do NOT wire it into a bare Chat Completions caller,
+ * where a bad id is simply a 400 and the feature is dead.
+ *
+ * Returns `OPENAI_PRIMARY_MODEL` when the feature's var is unset, so an
+ * unconfigured feature behaves exactly as it did before this existed.
+ */
+export function resolveFeatureModel(envVar: string): string {
+  return readEnv(envVar) || OPENAI_PRIMARY_MODEL;
+}
+
+/**
  * GPT-5 family (and the o-series reasoning models) are served through the
  * Responses API and reject a custom `temperature`, using `max_output_tokens`
  * instead of `max_tokens`.
