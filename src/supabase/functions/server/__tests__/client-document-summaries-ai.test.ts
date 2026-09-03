@@ -40,6 +40,9 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
 }));
 
 const callResponses = vi.fn();
+/** Model ids the fake OpenAI account serves; drives the preference probe. */
+let servedModels: string[] = [];
+
 vi.mock('../ai-model-config.ts', async () => {
   const actual = await vi.importActual<Record<string, unknown>>('../ai-model-config.ts');
   return {
@@ -54,8 +57,9 @@ const {
   isReadableByModel,
   mimeFromFileName,
   SUMMARY_MODEL_ENV,
+  SUMMARY_MODEL_PREFERENCES,
 } = await import('../client-document-summaries-ai.ts');
-const { OPENAI_PRIMARY_MODEL } = await import('../ai-model-config.ts');
+const { OPENAI_PRIMARY_MODEL, resetAvailableModelsCache } = await import('../ai-model-config.ts');
 
 function pdfBlob(sizeBytes = 16) {
   return { data: { arrayBuffer: async () => new ArrayBuffer(sizeBytes) }, error: null };
@@ -75,10 +79,16 @@ function doc(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  envValues = {};
+  envValues = { OPENAI_API_KEY: 'k' };
+  servedModels = [];
+  resetAvailableModelsCache();
   download.mockReset();
   download.mockResolvedValue(pdfBlob());
   callResponses.mockReset();
+  vi.stubGlobal('fetch', async () => ({
+    ok: true,
+    json: async () => ({ data: servedModels.map((id) => ({ id })) }),
+  }));
 });
 
 /** A well-formed model reply, so a test can assert on the REQUEST instead. */
@@ -235,21 +245,35 @@ describe('parsing the model response', () => {
 });
 
 describe('which model it asks for', () => {
-  it('uses OPENAI_SUMMARY_MODEL when the operator has set it', async () => {
-    // The summariser can be moved to a newer model on its own, without
-    // dragging policy extraction and the other nine callers of the global
-    // OPENAI_MODEL along with it.
-    envValues[SUMMARY_MODEL_ENV] = 'some-newer-model';
+  it('uses OPENAI_SUMMARY_MODEL verbatim when the operator has pinned one', async () => {
+    // An explicit setting is a decision; it must not be second-guessed against
+    // the preference ranking.
+    envValues[SUMMARY_MODEL_ENV] = 'operator-choice';
+    servedModels = SUMMARY_MODEL_PREFERENCES.slice();
     respondOk();
 
     await generateSummaryDraft([doc()]);
 
     expect(callResponses).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'some-newer-model' }),
+      expect.objectContaining({ model: 'operator-choice' }),
     );
   });
 
-  it('asks for the shared default when the var is unset', async () => {
+  it('picks the highest-ranked preference the account serves', async () => {
+    // Only the LAST preference is available, so a resolver that just took the
+    // first entry would ask for a model this account cannot serve.
+    const last = SUMMARY_MODEL_PREFERENCES[SUMMARY_MODEL_PREFERENCES.length - 1];
+    servedModels = ['gpt-4o', last];
+    respondOk();
+
+    await generateSummaryDraft([doc()]);
+
+    expect(callResponses).toHaveBeenCalledWith(expect.objectContaining({ model: last }));
+  });
+
+  it('stays on the shared default when the account serves none of them', async () => {
+    // The worst case of a stale preference list is a no-op, not a regression.
+    servedModels = ['whisper-1', 'text-embedding-3-small'];
     respondOk();
 
     await generateSummaryDraft([doc()]);
@@ -260,8 +284,8 @@ describe('which model it asks for', () => {
 
   it('records the model that ANSWERED, not the one requested', async () => {
     // callResponses falls back to Chat Completions on OPENAI_FALLBACK_MODEL
-    // when the primary call fails, so the two can differ. The stored record
-    // has to carry the truth — otherwise a silently-degraded run looks like a
+    // when the primary call fails, so the two can differ. The stored record has
+    // to carry the truth — otherwise a silently-degraded run looks like a
     // successful adoption of the new model.
     envValues[SUMMARY_MODEL_ENV] = 'a-model-this-account-cannot-serve';
     callResponses.mockResolvedValue({
