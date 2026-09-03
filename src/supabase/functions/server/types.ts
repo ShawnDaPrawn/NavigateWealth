@@ -151,6 +151,13 @@ export interface ApplicationData {
   faisAcknowledged?: boolean;
   electronicCommunicationConsent?: boolean;
   communicationConsent?: boolean;
+  /**
+   * Provenance for consent that was recorded administratively rather than
+   * ticked by the client (see docs/compliance/marketing-consent-backfill-2026-09-02.md).
+   * Absent on anything a client filled in themselves.
+   */
+  communicationConsentSource?: string;
+  communicationConsentBackfilledAt?: string;
   signatureFullName?: string;
 
   // Allow additional fields for backward compatibility
