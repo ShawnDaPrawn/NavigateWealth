@@ -72,6 +72,163 @@ export function resolveFeatureModel(envVar: string): string {
   return readEnv(envVar) || OPENAI_PRIMARY_MODEL;
 }
 
+// ---------------------------------------------------------------------------
+// Account-verified model preferences
+// ---------------------------------------------------------------------------
+
+/**
+ * The account's own list of servable model ids, cached per function instance.
+ *
+ * WHY ASK THE ACCOUNT INSTEAD OF HARDCODING A NAME
+ * ------------------------------------------------
+ * Every previous attempt to move off gpt-4o in this repository has come down to
+ * someone naming a model from memory. `gpt-5.4` was named that way, did not
+ * exist, and took every AI feature down. Model line-ups also change faster than
+ * a codebase gets revisited, so a name that is right today is a latent outage
+ * later — and nothing in the code notices, because a bad id is just a 400 at
+ * request time.
+ *
+ * The account already knows the answer. Asking it turns "which model exists"
+ * from a guess into a fact, and turns a wrong name in a preference list from an
+ * outage into a skipped entry.
+ *
+ * `null` means the probe has not run or could not answer; callers treat that as
+ * "no information" and fall back, never as "nothing is available".
+ */
+let availableModelIds: Set<string> | null = null;
+
+/**
+ * Earliest time another probe may run. Set after EVERY attempt, successful or
+ * not — a failed probe is cached too.
+ *
+ * Without this the weekly scan re-probes per batch during an outage: it calls
+ * `generateSummaryDraft` sequentially for up to 40 groups, so one 429 becomes
+ * 40 doomed requests and 40 lots of latency ahead of work that was always going
+ * to fall back anyway. "Probed once per instance" has to hold when things are
+ * going badly, which is the only time it costs anything.
+ */
+let nextProbeAt = 0;
+
+/** Re-probe at most this often after a good answer. Model lists change rarely. */
+const MODEL_LIST_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * How long a FAILED probe is remembered. Much shorter than the success TTL:
+ * long enough to stop a scan hammering a rate-limited endpoint, short enough
+ * that a transient outage does not pin the feature to the fallback model for
+ * half an hour after it clears.
+ */
+const MODEL_LIST_FAILURE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Hard ceiling on the probe.
+ *
+ * This is the difference between failing open and hanging. A `fetch` with no
+ * abort signal that connects and then stalls never reaches the catch below, so
+ * the fail-open path never runs and the summary is blocked behind an OPTIONAL
+ * discovery call until the whole invocation is killed. Model selection is a
+ * nicety; it gets a few seconds and then it is skipped.
+ */
+const MODEL_LIST_TIMEOUT_MS = 5000;
+
+/** Reset the cache. Tests only — production has no reason to call this. */
+export function resetAvailableModelsCache(): void {
+  availableModelIds = null;
+  nextProbeAt = 0;
+}
+
+/**
+ * Fetch the model ids this account can serve.
+ *
+ * Fails OPEN, and that is load-bearing: every failure mode — non-2xx, an empty
+ * list, a thrown error, or a stall past `MODEL_LIST_TIMEOUT_MS` — returns null,
+ * the caller keeps its current model, and the outcome is cached so the next
+ * batch does not repeat it.
+ */
+export async function listAvailableModels(): Promise<Set<string> | null> {
+  const now = Date.now();
+  // Covers both cached outcomes: a good list, and a remembered failure (null).
+  if (now < nextProbeAt) return availableModelIds;
+
+  /** Remember this attempt so the next caller does not repeat it. */
+  const settle = (ids: Set<string> | null, ttl: number) => {
+    availableModelIds = ids;
+    nextProbeAt = now + ttl;
+    return ids;
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MODEL_LIST_TIMEOUT_MS);
+  try {
+    const res = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${getOpenAIKey()}` },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      log.warn('Could not list account models — keeping the configured model', {
+        status: res.status,
+      });
+      return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+    }
+
+    const json = (await res.json()) as { data?: Array<{ id?: unknown }> };
+    const ids = (json.data ?? [])
+      .map((entry) => entry?.id)
+      .filter((id): id is string => typeof id === 'string');
+    if (ids.length === 0) {
+      log.warn('Account model list came back empty — keeping the configured model');
+      return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+    }
+
+    // Logged once per instance, filtered to the text-generation families, so an
+    // operator can read the real list out of the function logs and refine a
+    // preference list without needing the API key in hand.
+    log.info('OpenAI models available to this account', {
+      count: ids.length,
+      textModels: ids.filter((id) => /^(gpt-|o\d)/i.test(id)).sort(),
+    });
+
+    return settle(new Set(ids), MODEL_LIST_TTL_MS);
+  } catch (error) {
+    log.warn('Model list probe failed — keeping the configured model', {
+      error: getErrMsg(error),
+    });
+    return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Pick the first model in `preferences` this account actually serves.
+ *
+ * An explicit `envVar` wins outright and skips the probe: an operator who names
+ * a model has made a decision, and second-guessing it would make the setting
+ * untrustworthy.
+ *
+ * Otherwise the preference list is a RANKING, not an assertion. Entries the
+ * account does not serve — including ones that never existed — are skipped, so
+ * the list can be edited optimistically without risking anything. When nothing
+ * matches, or the probe could not answer, the answer is `OPENAI_PRIMARY_MODEL`,
+ * which is exactly what the caller would have used anyway.
+ */
+export async function resolvePreferredModel(
+  preferences: readonly string[],
+  envVar: string,
+): Promise<string> {
+  const explicit = readEnv(envVar);
+  if (explicit) return explicit;
+  if (preferences.length === 0) return OPENAI_PRIMARY_MODEL;
+
+  const available = await listAvailableModels();
+  if (!available) return OPENAI_PRIMARY_MODEL;
+
+  for (const candidate of preferences) {
+    if (available.has(candidate)) return candidate;
+  }
+  return OPENAI_PRIMARY_MODEL;
+}
+
 /**
  * GPT-5 family (and the o-series reasoning models) are served through the
  * Responses API and reject a custom `temperature`, using `max_output_tokens`
