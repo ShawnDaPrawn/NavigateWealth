@@ -17,6 +17,9 @@ import {
   readSharedEmailLink,
   type SharedEmailLink,
 } from './client-email-identity.ts';
+import { isSuperAdminEmail } from './constants.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { isPersonnelAuthUser } from './client-management-visibility.ts';
 
 const log = createModuleLogger('admin-onboarding');
 
@@ -115,7 +118,7 @@ export interface AddClientResult {
    * shared household mailbox" — the two cases are indistinguishable from the
    * error alone, and guessing wrong either duplicates a client or blocks one.
    */
-  conflictingClient?: { id: string; name: string; email: string };
+  conflictingClient?: { id: string; name: string; email: string; isClient: boolean };
 }
 
 /** Outcome of re-keying an existing client onto a derived sign-in alias. */
@@ -222,7 +225,7 @@ function isDuplicateEmailError(err: unknown): boolean {
 async function findAuthUserByEmail(
   supabase: ReturnType<typeof createServiceClient>,
   email: string,
-): Promise<{ id: string; name: string; email: string } | null> {
+): Promise<{ id: string; name: string; email: string; isClient: boolean } | null> {
   try {
     const users = (await listAllAuthUsers(supabase)) as Array<{
       id?: string;
@@ -243,11 +246,46 @@ async function findAuthUserByEmail(
       match.email ||
       'an existing client';
 
-    return { id: match.id, name, email: normalizeEmail(match.email) };
+    return {
+      id: match.id,
+      name,
+      email: normalizeEmail(match.email),
+      // Whether the caller may offer to re-key this holder. Staff and the super
+      // admin hold their addresses for authorization reasons, so the UI must not
+      // present "free this address" against them.
+      isClient: await isRekeyableClient({ id: match.id, email: match.email, user_metadata: meta }),
+    };
   } catch (err) {
     log.error('Failed to resolve the holder of a duplicate email', err as Error);
     return null;
   }
+}
+
+/**
+ * May this account be moved onto a derived sign-in alias?
+ *
+ * Only clients. Re-keying an adviser or admin would change the login of a staff
+ * member the admin never meant to touch, and the super admin's address is the
+ * allowlist that `isSuperAdminEmail` checks — moving it would revoke their own
+ * access. Personnel are identified the same way Client Management identifies
+ * them, from the `personnel:profile:` rows rather than from client-editable
+ * `user_metadata` alone.
+ */
+async function isRekeyableClient(user: {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+}): Promise<boolean> {
+  if (isSuperAdminEmail(user.email)) return false;
+
+  const personnelProfiles = (await kv.getByPrefix('personnel:profile:')) as Array<
+    Record<string, unknown>
+  >;
+  const personnelIds = new Set<string>(
+    personnelProfiles.map((p) => p?.id as string).filter(Boolean),
+  );
+
+  return !isPersonnelAuthUser(user, personnelIds);
 }
 
 /**
@@ -707,20 +745,39 @@ export class AdminClientOnboardingService {
     }
 
     const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+
+    // Clients only. Re-keying an adviser or admin would silently change a staff
+    // member's login, and the super admin's address IS the authorization
+    // allowlist — moving it would revoke their own access. The route takes a
+    // raw user id, so this gate is the only thing standing between a mistyped
+    // id and either outcome.
+    if (!(await isRekeyableClient({ id: userId, email: user.email, user_metadata: meta }))) {
+      return {
+        success: false,
+        error: 'That address belongs to a staff account and cannot be re-keyed',
+        errorCode: 'NOT_A_CLIENT',
+      };
+    }
+
     const profileKey = `user_profile:${userId}:personal_info`;
     const profile = (await kv.get(profileKey)) as Record<string, unknown> | null;
-
-    // Already linked — the mailbox is free and re-keying again would only push
-    // the client onto a second alias for no gain.
     const existingLink = readSharedEmailLink(profile);
-    if (existingLink) {
+
+    // The mailbox to preserve. When an earlier attempt re-keyed Auth but failed
+    // before finishing, `currentEmail` is already the alias and the real address
+    // survives only on the link — reading it back is what stops a retry from
+    // recording the alias as the contact address and losing the mailbox for good.
+    const contactEmail = existingLink?.contactEmail || currentEmail;
+
+    // Fully linked: Auth agrees with the link and the mailbox is already free.
+    if (existingLink && normalizeEmail(existingLink.signInEmail) === currentEmail) {
       return {
         success: true,
         alreadyLinked: true,
         userId,
-        contactEmail: existingLink.contactEmail,
-        signInEmail: normalizeEmail(existingLink.signInEmail) || currentEmail,
-        freedEmail: existingLink.contactEmail,
+        contactEmail,
+        signInEmail: currentEmail,
+        freedEmail: contactEmail,
       };
     }
 
@@ -734,19 +791,52 @@ export class AdminClientOnboardingService {
       (typeof pi.lastName === 'string' && pi.lastName) ||
       '';
 
+    const writeProfile = (link: SharedEmailLink | null) =>
+      kv.set(profileKey, {
+        ...(profile ?? { userId, role: 'client' }),
+        personalInformation: { ...pi, email: contactEmail },
+        ...(link ? { sharedEmail: link } : {}),
+      });
+
+    const baseLink: SharedEmailLink = {
+      contactEmail,
+      signInEmail: '',
+      ownerUserId: options?.ownerUserId || undefined,
+      relationship: options?.relationship?.trim() || undefined,
+      linkedAt: new Date().toISOString(),
+      linkedBy: adminUserId,
+    };
+
+    // Record the mailbox BEFORE touching Auth. Two writes cannot be made atomic
+    // here, so the order is chosen for what survives a failure between them: a
+    // link written but never used is harmless (its contact address equals the
+    // unchanged sign-in address, so nothing resolves differently), whereas an
+    // Auth email changed but never recorded loses the only copy of the real
+    // inbox.
+    try {
+      await writeProfile(baseLink);
+    } catch (err) {
+      log.error('Failed to record the shared-mailbox link', err as Error);
+      return {
+        success: false,
+        error: 'Could not record the mailbox link; the sign-in email was left unchanged',
+        errorCode: 'PROFILE_WRITE_FAILED',
+      };
+    }
+
     // Try successive candidates: the obvious alias may itself be taken if a
     // sibling was linked first.
     let signInEmail = '';
     let lastError: (Error & { status?: number; code?: string }) | null = null;
 
     for (let attempt = 0; attempt < MAX_ALIAS_ATTEMPTS; attempt++) {
-      const candidate = buildSignInAlias(currentEmail, firstName, lastName, attempt);
+      const candidate = buildSignInAlias(contactEmail, firstName, lastName, attempt);
       if (!candidate) {
-        return {
-          success: false,
-          error: `Could not derive a sign-in address from ${currentEmail}`,
-          errorCode: 'ALIAS_ERROR',
-        };
+        lastError = Object.assign(
+          new Error(`Could not derive a sign-in address from ${contactEmail}`),
+          { code: 'alias_error' },
+        );
+        break;
       }
 
       const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
@@ -754,7 +844,7 @@ export class AdminClientOnboardingService {
         email_confirm: true,
         user_metadata: {
           ...meta,
-          contactEmail: currentEmail,
+          contactEmail,
           emailIsShared: true,
           ...(options?.ownerUserId ? { sharedEmailOwnerUserId: options.ownerUserId } : {}),
         },
@@ -770,38 +860,41 @@ export class AdminClientOnboardingService {
     }
 
     if (!signInEmail) {
+      // Auth is unchanged, so undo the marker rather than leaving a link that
+      // describes a re-key that never happened.
+      try {
+        await writeProfile(null);
+      } catch (err) {
+        // Harmless if it fails: the link's contact address still equals the
+        // unchanged sign-in address, so resolution is unaffected either way.
+        log.warn(`Could not roll back the shared-mailbox marker: ${getErrMsg(err)}`);
+      }
+
+      const aliasFailure = (lastError as { code?: string })?.code === 'alias_error';
       return {
         success: false,
         error: lastError?.message || 'Failed to update the sign-in email',
-        errorCode: isDuplicateEmailError(lastError) ? 'EMAIL_EXISTS' : 'AUTH_ERROR',
+        errorCode: aliasFailure
+          ? 'ALIAS_ERROR'
+          : isDuplicateEmailError(lastError)
+            ? 'EMAIL_EXISTS'
+            : 'AUTH_ERROR',
       };
     }
 
-    const link: SharedEmailLink = {
-      contactEmail: currentEmail,
-      signInEmail,
-      ownerUserId: options?.ownerUserId || undefined,
-      relationship: options?.relationship?.trim() || undefined,
-      linkedAt: new Date().toISOString(),
-      linkedBy: adminUserId,
-    };
-
-    if (profile) {
-      await kv.set(profileKey, {
-        ...profile,
-        sharedEmail: link,
-        personalInformation: { ...pi, email: currentEmail },
-      });
-    }
+    // Finalise: the link now names the address the client actually signs in
+    // with. A failure here leaves the marker in place, and the next call picks
+    // the mailbox back up from it rather than from the alias.
+    await writeProfile({ ...baseLink, signInEmail });
 
     log.info('Client re-keyed onto a shared-mailbox alias', { userId });
 
     return {
       success: true,
       userId,
-      contactEmail: currentEmail,
+      contactEmail,
       signInEmail,
-      freedEmail: currentEmail,
+      freedEmail: contactEmail,
     };
   }
 

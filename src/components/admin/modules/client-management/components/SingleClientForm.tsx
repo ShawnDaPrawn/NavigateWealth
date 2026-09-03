@@ -68,7 +68,9 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
   const [emailConflict, setEmailConflict] = useState<{
     email: string;
     holderName?: string;
+    /** Only set when the holder is a client the server will let us re-key. */
     holderId?: string;
+    holderIsStaff?: boolean;
   } | null>(null);
   const [relationshipToOwner, setRelationshipToOwner] = useState('');
 
@@ -295,15 +297,21 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         error instanceof APIError && error.statusCode === 409
           ? (error.details as {
               errorCode?: string;
-              conflictingClient?: { id: string; name: string };
+              conflictingClient?: { id: string; name: string; isClient?: boolean };
             } | null)
           : null;
 
       if (conflict?.errorCode === 'EMAIL_EXISTS' && !shareMailbox) {
+        const holder = conflict.conflictingClient;
+        // A staff account holds its address for authorization reasons — the
+        // super admin's IS the allowlist — so never offer to re-key one. The
+        // server refuses it too; this keeps the button off the screen.
+        const holderIsStaff = Boolean(holder) && holder?.isClient === false;
         setEmailConflict({
           email: formData.emailAddress.trim(),
-          holderName: conflict.conflictingClient?.name,
-          holderId: conflict.conflictingClient?.id,
+          holderName: holder?.name,
+          holderId: holderIsStaff ? undefined : holder?.id,
+          holderIsStaff,
         });
         return;
       }
@@ -909,8 +917,10 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
                   If this is the same person, cancel — they are already onboarded. If a household
                   shares one inbox (a minor on a parent&apos;s address, a spouse without their own),
                   keep both records: one of them signs in with a unique alias, and mail for both
-                  still goes to {emailConflict.email}. Choose whichever of them actually owns the
-                  mailbox — that person keeps the plain address.
+                  still goes to {emailConflict.email}.{' '}
+                  {emailConflict.holderIsStaff
+                    ? 'It is held by a staff account, which cannot be moved — the new client takes the alias.'
+                    : 'Choose whichever of them actually owns the mailbox — that person keeps the plain address.'}
                 </p>
               </div>
 

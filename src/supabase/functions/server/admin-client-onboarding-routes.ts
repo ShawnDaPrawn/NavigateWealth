@@ -153,7 +153,11 @@ onboardingApp.post('/link-shared-mailbox', async (c) => {
 
     if (!result.success) {
       const status =
-        result.errorCode === 'NOT_FOUND' ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.BAD_REQUEST;
+        result.errorCode === 'NOT_FOUND'
+          ? HTTP_STATUS.NOT_FOUND
+          : result.errorCode === 'NOT_A_CLIENT'
+            ? HTTP_STATUS.FORBIDDEN
+            : HTTP_STATUS.BAD_REQUEST;
       return c.json(result, status);
     }
 

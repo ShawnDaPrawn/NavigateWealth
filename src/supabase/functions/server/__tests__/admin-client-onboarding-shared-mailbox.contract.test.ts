@@ -20,15 +20,24 @@ beforeAll(() => {
 const kvStore = new Map<string, unknown>();
 const clone = <T>(v: T): T => (v == null ? v : JSON.parse(JSON.stringify(v)));
 
+const defaultKvSet = async (key: string, value: unknown) => {
+  kvStore.set(key, clone(value));
+};
+const kvSet = vi.fn(defaultKvSet);
+
 vi.mock('../kv_store.tsx', () => ({
   get: vi.fn(async (key: string) => clone(kvStore.get(key) ?? null)),
-  set: vi.fn(async (key: string, value: unknown) => {
-    kvStore.set(key, clone(value));
-  }),
+  set: kvSet,
   del: vi.fn(async (key: string) => {
     kvStore.delete(key);
   }),
-  getByPrefix: vi.fn(async () => []),
+  getByPrefix: vi.fn(async (prefix: string) => {
+    const out: unknown[] = [];
+    kvStore.forEach((v, k) => {
+      if (k.startsWith(prefix)) out.push(clone(v));
+    });
+    return out;
+  }),
 }));
 
 vi.mock('../stderr-logger.ts', () => ({
@@ -134,6 +143,9 @@ beforeEach(() => {
   authUsers.clear();
   nextUserId = 1;
   vi.clearAllMocks();
+  // clearAllMocks resets call history, not implementations — a test that swaps
+  // one in would otherwise leak it into every test that follows.
+  kvSet.mockImplementation(defaultKvSet);
 });
 
 describe('addClient — a client that owns its mailbox', () => {
@@ -371,5 +383,170 @@ describe('bulkAddClients — a household book', () => {
 
     const linked = profileOf(result.results[1].userId!);
     expect(linked?.sharedEmail?.ownerUserId).toBe(result.results[0].userId);
+  });
+});
+
+describe('linkExistingClientToSharedMailbox — who may be re-keyed', () => {
+  it('refuses a personnel account, whose login is not ours to change', async () => {
+    const adviser = await AdminClientOnboardingService.addClient(
+      { ...michael, emailAddress: 'adviser@navigatewealth.co' },
+      ADMIN_ID,
+    );
+    kvStore.set(`personnel:profile:${adviser.userId}`, { id: adviser.userId, role: 'adviser' });
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      adviser.userId!,
+      ADMIN_ID,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('NOT_A_CLIENT');
+    expect(authUsers.get(adviser.userId!)?.email).toBe('adviser@navigatewealth.co');
+  });
+
+  it('refuses the super admin, whose address is the authorization allowlist', async () => {
+    const superAdmin = await AdminClientOnboardingService.addClient(
+      { ...michael, emailAddress: 'shawn@navigatewealth.co' },
+      ADMIN_ID,
+    );
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      superAdmin.userId!,
+      ADMIN_ID,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('NOT_A_CLIENT');
+    // Re-keying this address would have revoked their own access.
+    expect(authUsers.get(superAdmin.userId!)?.email).toBe('shawn@navigatewealth.co');
+  });
+
+  it('tells the caller when a duplicate is held by staff, so no re-key is offered', async () => {
+    const adviser = await AdminClientOnboardingService.addClient(
+      { ...michael, emailAddress: 'adviser@navigatewealth.co' },
+      ADMIN_ID,
+    );
+    kvStore.set(`personnel:profile:${adviser.userId}`, { id: adviser.userId, role: 'adviser' });
+
+    const blocked = await AdminClientOnboardingService.addClient(
+      { ...charlotte, emailAddress: 'adviser@navigatewealth.co' },
+      ADMIN_ID,
+    );
+
+    expect(blocked.conflictingClient?.isClient).toBe(false);
+  });
+
+  it('marks an ordinary client holder as re-keyable', async () => {
+    await AdminClientOnboardingService.addClient(michael, ADMIN_ID);
+    const blocked = await AdminClientOnboardingService.addClient(charlotte, ADMIN_ID);
+
+    expect(blocked.conflictingClient?.isClient).toBe(true);
+  });
+});
+
+describe('linkExistingClientToSharedMailbox — a failure between the two writes', () => {
+  it('leaves the sign-in email alone when the link cannot be recorded', async () => {
+    const created = await AdminClientOnboardingService.addClient(charlotte, ADMIN_ID);
+    kvSet.mockRejectedValueOnce(new Error('kv unavailable'));
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      created.userId!,
+      ADMIN_ID,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('PROFILE_WRITE_FAILED');
+    // Nothing was half-done: the client still signs in with the address they had.
+    expect(authUsers.get(created.userId!)?.email).toBe(MICHAEL_EMAIL);
+  });
+
+  it('recovers the real mailbox on retry when Auth changed but the link never finalised', async () => {
+    const created = await AdminClientOnboardingService.addClient(charlotte, ADMIN_ID);
+
+    // The window the write order leaves open: the marker is down, Auth is
+    // re-keyed, and the finalising write never landed.
+    authUsers.get(created.userId!)!.email = 'michael.wood+charlotte-page-wood@gmail.com';
+    kvStore.set(`user_profile:${created.userId}:personal_info`, {
+      personalInformation: { firstName: 'Charlotte', lastName: 'Page Wood' },
+      sharedEmail: {
+        contactEmail: MICHAEL_EMAIL,
+        signInEmail: '',
+        linkedAt: '2026-09-03T00:00:00.000Z',
+        linkedBy: ADMIN_ID,
+      },
+    });
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      created.userId!,
+      ADMIN_ID,
+    );
+
+    expect(result.success).toBe(true);
+    // Reading the mailbox back off the marker is the whole point: deriving it
+    // from the CURRENT address would record the alias as the contact address
+    // and lose the father's inbox for good.
+    expect(result.contactEmail).toBe(MICHAEL_EMAIL);
+    expect(result.signInEmail).toBe('michael.wood+charlotte-page-wood@gmail.com');
+    expect(profileOf(created.userId!)?.sharedEmail).toMatchObject({
+      contactEmail: MICHAEL_EMAIL,
+      signInEmail: 'michael.wood+charlotte-page-wood@gmail.com',
+    });
+  });
+
+  it('writes the mailbox marker before touching Auth, never after', async () => {
+    const created = await AdminClientOnboardingService.addClient(charlotte, ADMIN_ID);
+
+    const order: string[] = [];
+    kvSet.mockImplementation(async (key: string, value: unknown) => {
+      if (key.endsWith(':personal_info')) order.push('profile');
+      kvStore.set(key, clone(value));
+    });
+    admin.updateUserById.mockImplementationOnce(async (id: string, updates: { email?: string }) => {
+      order.push('auth');
+      const u = authUsers.get(id)!;
+      if (updates.email) u.email = updates.email;
+      return { data: { user: u }, error: null };
+    });
+
+    await AdminClientOnboardingService.linkExistingClientToSharedMailbox(created.userId!, ADMIN_ID);
+
+    // An Auth email changed but never recorded loses the only copy of the real
+    // inbox; a marker written but never used resolves to the same address it
+    // already had. The order is chosen for which failure is survivable.
+    expect(order).toEqual(['profile', 'auth', 'profile']);
+  });
+
+  it('rolls the marker back when the Auth update fails outright', async () => {
+    const created = await AdminClientOnboardingService.addClient(charlotte, ADMIN_ID);
+    admin.updateUserById.mockImplementationOnce(async () => ({
+      data: null,
+      error: Object.assign(new Error('Auth service unavailable'), { status: 503 }),
+    }));
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      created.userId!,
+      ADMIN_ID,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('AUTH_ERROR');
+    // No link describing a re-key that never happened.
+    expect(profileOf(created.userId!)?.sharedEmail).toBeUndefined();
+    expect(authUsers.get(created.userId!)?.email).toBe(MICHAEL_EMAIL);
+  });
+
+  it('records the link even when the client had no profile row at all', async () => {
+    const created = await AdminClientOnboardingService.addClient(charlotte, ADMIN_ID);
+    kvStore.delete(`user_profile:${created.userId}:personal_info`);
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      created.userId!,
+      ADMIN_ID,
+    );
+
+    expect(result.success).toBe(true);
+    // Without somewhere to record it, contact resolution would fall back to the
+    // alias forever — so a minimal profile is created to hold the mapping.
+    expect(profileOf(created.userId!)?.sharedEmail?.contactEmail).toBe(MICHAEL_EMAIL);
   });
 });

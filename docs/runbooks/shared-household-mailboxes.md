@@ -54,6 +54,21 @@ It moves that client onto an alias and returns `freedEmail` — the address now
 available for its owner. It is idempotent: running it on an already-linked
 client reports `alreadyLinked: true` and changes nothing.
 
+**Clients only.** The route refuses a personnel account or the super admin with
+`403 NOT_A_CLIENT`, and the Add Client prompt hides the option when the address
+is held by staff. Re-keying an adviser would silently change their login, and
+the super admin's address _is_ the allowlist `isSuperAdminEmail` checks — moving
+it would revoke their own access.
+
+**If it fails part-way.** The mailbox is recorded on the profile _before_ Auth is
+touched. The two writes cannot be made atomic, and their failure modes are not
+symmetric: a marker written but never used resolves to the address the client
+already had, while an Auth email changed but never recorded loses the only copy
+of the real inbox. So if the Auth update fails the marker is rolled back; if it
+succeeds but the finalising write does not, re-running the endpoint reads the
+mailbox back off the marker and completes. A client with no profile row at all
+gets a minimal one created to hold the mapping.
+
 Deliberately **not** the dual-verification flow in
 `security-email-change-routes.ts`. That flow mails a code to the old address and
 to the new one; here both resolve to the same inbox, so the codes would prove
@@ -69,11 +84,12 @@ derived alias in the results table.
 
 ## Checks
 
-| Question                                   | Where to look                                                               |
-| ------------------------------------------ | --------------------------------------------------------------------------- |
-| Is this client linked?                     | Client drawer → Security → Sign-In Email (the caption names the real inbox) |
-| Which household members share an inbox?    | Client Management search on the shared address — it matches both fields     |
-| Where will this client's mail actually go? | `client.email`; the alias only ever appears as `client.signInEmail`         |
+| Question                                     | Where to look                                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Is this client linked?                       | Client drawer → Security → Sign-In Email (the caption names the real inbox)         |
+| Which household members share an inbox?      | Client Management search on the shared address — it matches both fields             |
+| Where will this client's mail actually go?   | `client.email`; the alias only ever appears as `client.signInEmail`                 |
+| Where do 2FA codes and reset credentials go? | `resolveDeliveryEmail` in `security-shared.ts` — the contact inbox, never the alias |
 
 ## Limits
 
@@ -84,6 +100,15 @@ derived alias in the results table.
 - A mailbox whose local part is already at or near the 64-character RFC 5321
   limit cannot take an alias; the request fails with `ALIAS_ERROR` rather than
   truncating the mailbox into a different address.
+- A client who later changes their sign-in email through the verified
+  email-change flow has their link dropped automatically — they now hold an
+  address of their own, and keeping it would carry on routing their mail to the
+  guardian they just moved off.
+- The **public forgot-password** flow hands the typed address straight to
+  Supabase, which mails that Auth address. A linked client who starts it from
+  the alias therefore depends on their provider honouring sub-addressing. Every
+  flow the server controls — 2FA codes, admin-initiated resets, welcome,
+  approval and decline mail — is routed to the contact inbox instead.
 - Two clients sharing an inbox will each match a campaign audience. The
   newsletter service de-duplicates by address, but a campaign targeting both
   household members sends to the same inbox twice — expected, and the same as
@@ -97,7 +122,8 @@ derived alias in the results table.
 | Creation and repair                  | `src/supabase/functions/server/admin-client-onboarding-service.ts`               |
 | The seam every message reads         | `src/supabase/functions/server/client-management-service.ts` (`getAllClients`)   |
 | Admin flow                           | `src/components/admin/modules/client-management/components/SingleClientForm.tsx` |
+| Security-mail delivery               | `src/supabase/functions/server/security-shared.ts` (`resolveDeliveryEmail`)      |
 
 ```bash
-npm test -- client-email-identity shared-mailbox shared-email
+npm test -- client-email-identity shared-mailbox shared-email delivery-email
 ```
