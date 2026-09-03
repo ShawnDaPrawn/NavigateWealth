@@ -19,7 +19,7 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { callResponses, parseJsonResponse, resolveFeatureModel } from './ai-model-config.ts';
+import { callResponses, parseJsonResponse, resolvePreferredModel } from './ai-model-config.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { AiContentBlock } from './ai-model-config.ts';
@@ -30,20 +30,57 @@ const log = createModuleLogger('client-doc-summaries-ai');
 const BUCKET_NAME = 'make-91ed8379-documents';
 
 /**
- * Env var that points the summariser at its own model.
+ * Env var that pins the summariser to one model, overriding the ranking below.
  *
- * Unset, it falls back to `OPENAI_MODEL` and then to the global default, so
- * the summariser behaves like every other AI service until someone
- * deliberately moves it. Set, ONLY this feature moves — see
- * `resolveFeatureModel` for why that is the safe unit of change.
+ * Set, it wins outright and no probe runs — naming a model is a decision, and a
+ * setting that gets second-guessed is not worth having. Clear it to go back to
+ * the ranked preferences.
  *
- * This caller can carry the override because `callResponses` retries on
+ * This caller can carry an override at all because `callResponses` retries on
  * `OPENAI_FALLBACK_MODEL` through Chat Completions: an id this account cannot
  * serve costs one failed request and still produces a summary, and the model
- * that actually answered is recorded on the stored record. Which means a bad
- * value shows up on the timeline as the old model, not as a broken feature.
+ * that actually answered is recorded on the stored record — so a bad value
+ * shows on the timeline as the old model, not as a broken feature.
  */
 export const SUMMARY_MODEL_ENV = 'OPENAI_SUMMARY_MODEL';
+
+/**
+ * Models to prefer for this feature, best first, CHECKED AGAINST THE ACCOUNT.
+ *
+ * READ THIS BEFORE EDITING. These names are a ranking, not a claim that any of
+ * them exist. `resolvePreferredModel` asks the account which models it can
+ * serve and skips every entry that is not on that list, so a name that is
+ * wrong, retired, or invented is simply passed over — it cannot 400 a request
+ * or take the feature down. That is deliberate: it is what makes it safe to
+ * list newer models optimistically instead of pinning gpt-4o forever out of
+ * caution, and it is the guard the `gpt-5.4` outage did not have.
+ *
+ * When none of these are available the answer is `OPENAI_PRIMARY_MODEL`, i.e.
+ * exactly today's behaviour. So the worst case of a completely stale list is a
+ * no-op, not a regression.
+ *
+ * WHAT BELONGS HERE. The summariser needs three things, so only add a model
+ * that has all of them:
+ *   1. it reads PDF and image input (documents are sent as file/image blocks);
+ *   2. it supports Structured Outputs (`json_schema`, strict) — the summary
+ *      shape is enforced, not parsed hopefully;
+ *   3. it is cheap enough to run over every client every week.
+ * The cost-tier ("mini"-class) models are ranked above their full-size siblings
+ * for that third reason: this is short, schema-constrained output over a handful
+ * of documents, which is where the cheap tier is strongest.
+ *
+ * TO REFINE THIS FOR THIS ACCOUNT: the first probe per function instance logs
+ * `OpenAI models available to this account` with the real text-model list. Read
+ * it out of the Edge Function logs and reorder these accordingly — no API key
+ * needed in hand.
+ */
+export const SUMMARY_MODEL_PREFERENCES: readonly string[] = [
+  'gpt-5-mini',
+  'gpt-5',
+  'gpt-4.1-mini',
+  'gpt-4.1',
+  'gpt-4o-mini',
+];
 
 /** Most files sent to the model in one summary. */
 export const MAX_ATTACHMENTS = 6;
@@ -285,9 +322,11 @@ export async function generateSummaryDraft(documents: DocumentForSummary[]): Pro
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: blocks },
     ],
-    // Read per call, not at module load: an operator changing the secret gets
-    // the new model on the next request rather than the next cold start.
-    model: resolveFeatureModel(SUMMARY_MODEL_ENV),
+    // Resolved per call, not at module load: an operator changing the secret
+    // gets the new model on the next request rather than the next cold start.
+    // The account probe behind this is cached per instance, so the weekly scan
+    // pays for it once across its whole run.
+    model: await resolvePreferredModel(SUMMARY_MODEL_PREFERENCES, SUMMARY_MODEL_ENV),
     maxOutputTokens: 1200,
     temperature: 0.2,
     jsonSchema: { name: 'client_document_summary', schema: SUMMARY_SCHEMA, strict: true },
