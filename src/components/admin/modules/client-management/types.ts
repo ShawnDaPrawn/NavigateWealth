@@ -23,6 +23,16 @@ export type KYCStatus = 'Verified' | 'Pending' | 'Rejected' | 'Expired' | string
 export interface Client extends BaseClient {
   preferredName: string;
   createdAt: string;
+  /**
+   * The Supabase Auth login identity. `BaseClient.email` is the CONTACT
+   * address, which differs from this one for a client enrolled on somebody
+   * else's mailbox (a minor on a parent's address). Show this wherever the
+   * question is "what does this person sign in with"; show `email` wherever it
+   * is "where does their mail go".
+   */
+  signInEmail?: string;
+  /** True when `email` and `signInEmail` differ — a linked household record. */
+  emailIsShared?: boolean;
   applicationNumber?: string;
   applicationStatus: string;
   accountType?: string;

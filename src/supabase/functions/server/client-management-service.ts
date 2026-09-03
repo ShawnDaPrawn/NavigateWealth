@@ -22,6 +22,11 @@ import {
   shouldLoadClientManagementProfile,
 } from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
+import {
+  normalizeEmail,
+  readSharedEmailLink,
+  resolveContactEmail,
+} from './client-email-identity.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
 
 const log = createModuleLogger('clients-service');
@@ -170,9 +175,21 @@ export class ClientsService {
           // Get security status
           const security = await kv.get(`security:${user.id}`);
 
+          const signInEmail = normalizeEmail(user.email);
+          const contactEmail = resolveContactEmail(user.email, profile);
+
           return {
             id: user.id,
-            email: user.email ?? '',
+            // The address to WRITE to, which is the auth email for every client
+            // that owns its mailbox and the guardian's address for one that does
+            // not. Everything downstream — campaigns, the newsletter audience,
+            // birthday greetings — reads `client.email`, so resolving it here is
+            // what keeps a linked minor's mail going to a real inbox instead of
+            // to her derived sign-in alias.
+            email: contactEmail,
+            /** The login identity. Differs from `email` only for linked clients. */
+            signInEmail,
+            emailIsShared: contactEmail !== signInEmail,
             firstName:
               user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
             lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
@@ -191,7 +208,9 @@ export class ClientsService {
           log.error('Error fetching client data', err as Error, { userId: user.id });
           return {
             id: user.id,
-            email: user.email ?? '',
+            email: normalizeEmail(user.email),
+            signInEmail: normalizeEmail(user.email),
+            emailIsShared: false,
             firstName: '',
             lastName: '',
             createdAt: user.created_at,
@@ -211,7 +230,10 @@ export class ClientsService {
       shouldIncludeInClientManagement({
         user: {
           id: client.id,
-          email: client.email ?? undefined,
+          // The sign-in email, not the contact one: this gate asks whether the
+          // AUTH IDENTITY is the super admin's, and a linked client's contact
+          // address belongs to somebody else by construction.
+          email: client.signInEmail || undefined,
           user_metadata: {
             role: client.role,
             accountStatus: client.accountStatus,
@@ -237,6 +259,9 @@ export class ClientsService {
       filteredClients = filteredClients.filter(
         (c) =>
           (c.email ?? '').toLowerCase().includes(search) ||
+          // Also match the login identity, so searching a shared mailbox finds
+          // both the owner and the household members linked off it.
+          (c.signInEmail ?? '').toLowerCase().includes(search) ||
           c.firstName?.toLowerCase().includes(search) ||
           c.lastName?.toLowerCase().includes(search),
       );
@@ -296,9 +321,16 @@ export class ClientsService {
     // Get security status
     const security = await kv.get(`security:${clientId}`);
 
+    // Same split as getAllClients — a single fetch must not disagree with the
+    // list about where a client's mail goes.
+    const signInEmail = normalizeEmail(user.email);
+    const contactEmail = resolveContactEmail(user.email, profile);
+
     return {
       id: user.id,
-      email: user.email ?? '',
+      email: contactEmail,
+      signInEmail,
+      emailIsShared: contactEmail !== signInEmail,
       firstName: user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
       lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
       createdAt: user.created_at,
@@ -330,9 +362,24 @@ export class ClientsService {
       });
     }
 
-    // Update profile in KV if provided
+    // Update profile in KV if provided.
+    //
+    // This is a wholesale replacement, so `sharedEmail` has to be carried over
+    // explicitly: it is what routes a linked client's mail to their guardian's
+    // real inbox, and losing it would silently redirect every future message to
+    // a derived alias — a failure nobody notices until a client says they never
+    // received something.
     if (updates.profile) {
-      await kv.set(`user_profile:${clientId}:personal_info`, updates.profile);
+      const profileKey = `user_profile:${clientId}:personal_info`;
+      const existing = await kv.get(profileKey);
+      const link = readSharedEmailLink(existing);
+
+      await kv.set(profileKey, {
+        ...updates.profile,
+        ...(link && !readSharedEmailLink(updates.profile as Record<string, unknown>)
+          ? { sharedEmail: link }
+          : {}),
+      });
     }
 
     log.success('Client updated', { clientId });

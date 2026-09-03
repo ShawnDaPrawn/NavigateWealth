@@ -103,11 +103,63 @@ onboardingApp.post('/bulk-add', async (c) => {
       );
     }
 
-    const result = await AdminClientOnboardingService.bulkAddClients(body.clients, adminUserId);
+    const result = await AdminClientOnboardingService.bulkAddClients(body.clients, adminUserId, {
+      linkDuplicateEmails: body.linkDuplicateEmails === true,
+    });
 
     return c.json({ success: true, ...result });
   } catch (error) {
     log.error('POST /bulk-add error', error as Error);
+    return c.json(
+      {
+        success: false,
+        error: ERROR_MESSAGES.GENERIC.INTERNAL_ERROR,
+        details: getErrMsg(error),
+      },
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /link-shared-mailbox — free an address held by a household member
+// ---------------------------------------------------------------------------
+
+/**
+ * Move an existing client onto a derived sign-in alias so the mailbox they were
+ * enrolled on is released for the person who owns it.
+ *
+ * The repair path for records predating the sign-in/contact split: a minor
+ * enrolled on a parent's address holds that address in Supabase Auth, and until
+ * it is released the parent cannot be onboarded at all.
+ */
+onboardingApp.post('/link-shared-mailbox', async (c) => {
+  try {
+    const body = await c.req.json();
+    const adminUserId = c.get('userId') as string;
+
+    if (!body.userId || typeof body.userId !== 'string') {
+      return c.json({ success: false, error: 'userId is required' }, HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const result = await AdminClientOnboardingService.linkExistingClientToSharedMailbox(
+      body.userId,
+      adminUserId,
+      {
+        relationship: typeof body.relationship === 'string' ? body.relationship : undefined,
+        ownerUserId: typeof body.ownerUserId === 'string' ? body.ownerUserId : undefined,
+      },
+    );
+
+    if (!result.success) {
+      const status =
+        result.errorCode === 'NOT_FOUND' ? HTTP_STATUS.NOT_FOUND : HTTP_STATUS.BAD_REQUEST;
+      return c.json(result, status);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    log.error('POST /link-shared-mailbox error', error as Error);
     return c.json(
       {
         success: false,
