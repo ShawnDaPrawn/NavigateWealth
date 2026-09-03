@@ -94,29 +94,39 @@ the client Documents tab's AI activity timeline up to date.
 
 ### Choosing the model
 
-The summariser reads `OPENAI_SUMMARY_MODEL` (Supabase → Edge Functions → Secrets). Unset, it
-uses the global `OPENAI_MODEL`, and unset again, `gpt-4o`.
+The summariser no longer sits on `gpt-4o` by default. It asks the account which models it can
+serve and takes the highest-ranked entry from `SUMMARY_MODEL_PREFERENCES` in
+`client-document-summaries-ai.ts` — cost-tier models first, since this is short,
+schema-constrained output over a handful of documents.
 
-Set the per-feature one, not the global one. `OPENAI_MODEL` is read by eleven services, most
-of which call OpenAI through Chat Completions with no model fallback — an id the account
-cannot serve is a 400 and the feature is simply dead. That is the `gpt-5.4` incident recorded
-in `ai-model-config.ts`. The summariser goes through `callResponses`, which retries on
-`gpt-4o` via Chat Completions, so a wrong value there costs one failed request and still
-produces a summary.
+That ranking is a preference, not a claim any of those models exist. Entries the account does
+not serve are skipped, so a name that is wrong, retired, or invented cannot 400 a request. If
+none match, or the probe fails, it uses `OPENAI_PRIMARY_MODEL` — today's behaviour. The worst
+case of a stale list is a no-op.
 
-List what the account can actually serve before setting anything:
+To see what this account actually serves, read the Edge Function logs for
+`OpenAI models available to this account` — the first summary after each cold start logs the
+real text-model list, so no API key is needed in hand. Reorder the preference list against it.
+Equivalently, from a shell:
 
 ```bash
 curl -s https://api.openai.com/v1/models \
   -H "Authorization: Bearer $OPENAI_API_KEY" | jq -r '.data[].id' | sort
 ```
 
-After changing it, confirm the switch took: open any client's Documents tab, click
-**Summarise** on a pending batch, and read the model name on the new timeline entry. That
-field records the model that ANSWERED, so if the id was rejected you will see `gpt-4o` there
-rather than the model you set — a silent fallback, visible.
+To pin one model and skip the ranking entirely, set `OPENAI_SUMMARY_MODEL` (Supabase → Edge
+Functions → Secrets). An explicit setting wins outright and runs no probe. Clear it to return
+to the ranking.
 
-To roll back, clear the secret. No deploy is involved either way.
+Set the per-feature var, never the global `OPENAI_MODEL`. That one is read by eleven services,
+most of which call OpenAI through Chat Completions with no model fallback — an id the account
+cannot serve is a 400 and the feature is dead. That is the `gpt-5.4` incident recorded in
+`ai-model-config.ts`. The summariser goes through `callResponses`, which retries on `gpt-4o`,
+so it is the one caller that degrades instead of breaking.
+
+After any change, confirm what took: open any client's Documents tab, click **Summarise** on a
+pending batch, and read the model name on the new entry. That field records the model that
+ANSWERED, so a rejected id shows as `gpt-4o` — the silent fallback is visible.
 
 - Verify the same way as the other jobs: confirm the job exists under `Integrations -> Cron`
   and shows recent runs in `cron.job_run_details`, then confirm the Edge Function logs show
