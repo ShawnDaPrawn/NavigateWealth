@@ -31,6 +31,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/newsletter-studio', () => import('./newsletter-studio-routes.ts'));
   lazy(app, '/consultation', () => import('./consultation.ts'));
   lazy(app, '/documents', () => import('./documents.ts'));
+  lazy(app, '/client-document-summaries', () => import('./client-document-summaries-routes.ts'));
   lazy(app, '/ai-advisor', () => import('./ai-advisor.ts'));
   lazy(app, '/ai-intelligence', () => import('./ai-intelligence.ts'));
   lazy(app, '/todo', () => import('./todo-routes.ts'));
@@ -49,6 +50,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/transcription', () => import('./transcription-routes.ts'));
   lazy(app, '/tasks-digest', () => import('./tasks-digest-routes.ts'));
   lazy(app, '/calendar-digest', () => import('./calendar-digest-routes.ts'));
+  lazy(app, '/client-birthdays', () => import('./client-birthday-routes.ts'));
   lazy(app, '/kv-cleanup', () => import('./kv-cleanup-routes.ts'));
   lazy(app, '/admin-audit', () => import('./admin-audit-routes.ts'));
   lazy(app, '/quality-issues', () => import('./quality-issues-routes.ts'));
