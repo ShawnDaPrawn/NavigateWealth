@@ -10,7 +10,17 @@
 // Client with profile data
 export interface Client {
   id: string;
+  /**
+   * The address to write to. Equals `signInEmail` for every client that owns
+   * its mailbox; for a client linked to a household mailbox it is the owner's
+   * real address, so campaign, newsletter and greeting mail lands in an inbox
+   * a person actually reads.
+   */
   email: string;
+  /** The Supabase Auth login identity. Unique across all clients. */
+  signInEmail?: string;
+  /** True when `email` and `signInEmail` differ — a linked household record. */
+  emailIsShared?: boolean;
   firstName: string;
   lastName: string;
   createdAt: string;
