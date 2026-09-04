@@ -1,7 +1,8 @@
 # Migrations — repo vs. production
 
 **Reconciled 2026-08-24 against project `vpjmdsltwrnpefzcgdmz`. The folder now
-tells the truth.**
+tells the truth.** Last appended to 2026-09-02 (`20260902194331`, applied and
+verified against the same project).
 
 Before this reconciliation the repo held four migration files, production had
 recorded three unrelated versions, and five tables existed that no migration
@@ -33,12 +34,20 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260824222932_fna_intake_rls_draft_only.sql`                | ✅ `20260824222932`  | Applied by this reconciliation                |
 | `20260824223052_dedupe_kv_key_indexes.sql`                    | ✅ `20260824223052`  | Applied by this reconciliation                |
 | `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` | ✅ `20260826073401`  | Applied via `apply_migration`, verified after |
+| `20260902194331_calendar_events_schema_alignment.sql`         | ✅ `20260902194331`  | Applied via `apply_migration`, verified after |
 
-Of the seven files that correspond to something production has run, five carry
+Of the files above that correspond to something production has run, five carry
 SQL **copied verbatim** from what production actually executed, not inferred.
 The baseline is reconstructed from introspection and says so in its own header.
-`20260826073401` is the one that was authored here and then applied, in that
-order, with the result verified afterwards.
+`20260826073401` and `20260902194331` were authored here and then applied, in
+that order, with the result verified afterwards.
+
+⚠️ **This table is not the whole folder.** Six files from the 2026-08-25
+hardening pass (`20260825004011`, `20260825004035`, `20260825085409`,
+`20260825085435`, `20260825092958`, `20260825093144`) are recorded in
+`schema_migrations` and present on disk but were never added here — they are
+described in the remediation log below instead. Trust `ls` and the
+`schema_migrations` query above over this table until that is reconciled.
 
 ## What was wrong, and what was done
 
@@ -193,6 +202,40 @@ select grantee, privilege_type from information_schema.role_table_grants
 where table_schema='public' and table_name='<new table>'
   and grantee in ('anon','authenticated');
 ```
+
+### ~~The calendar schema had drifted behind the application contract~~ — CLOSED 2026-09-02
+
+Every "New Event" submission failed with the toast **"Failed to create event"**.
+Zod validation passed; the INSERT then died, for three independent reasons:
+
+| #   | Sent by                                                                                     | Database had                                   | Error              |
+| --- | ------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------ |
+| 1   | `recurrence_rule`, on **every** create                                                      | no such column on `events`                     | `42703` / PGRST204 |
+| 2   | `location_type = 'virtual'` (a Location Type the form offers)                               | `{in_person,video,phone,other}`                | `22P02`            |
+| 3   | `event_type` of `consultation`/`deadline`, and `birthday`/`renewal` from the Filters drawer | `{meeting,review,call,webinar,internal,other}` | `22P02`            |
+
+Only #1 is the reason _every_ create failed — it is in the insert unconditionally,
+so no combination of form input avoided it. #2 and #3 were each independently
+fatal for the options a user is most likely to pick. #3 also broke the calendar
+**read**: the type filter reaches the database as `.in('event_type', ...)`, so
+ticking "Birthday" failed the whole query.
+
+Reminders carried the identical drift and are fixed in the same migration —
+`CreateReminderSchema` _defaults_ `priority` to `'medium'`, which
+`reminder_priority` did not have, so the first caller of the live
+`POST /calendar/reminders` route would have failed on a value it never set.
+
+`reminder_type` also gained `'compliance'`: production already had it, but the
+baseline file's `CREATE TYPE` omits it, so a database rebuilt from this folder
+would not. Fixed forward under rule 3 rather than by editing the baseline.
+
+**The class of bug matters more than the instance.** Validation schemas and the
+database schema were each tested in isolation and each was self-consistent;
+nothing compared them, so the contract between them could drift silently and
+only ever surfaced as a runtime toast. `calendar-schema-contract.test.ts` now
+parses this folder and fails if a value the UI can pick, or a column the service
+writes, has no backing migration. It was confirmed to fail without this
+migration (9 of 11 assertions) before being committed.
 
 ### Leaked-password protection is disabled
 
