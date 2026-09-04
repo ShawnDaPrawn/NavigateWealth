@@ -25,6 +25,7 @@ import {
   verifyCurrentPassword,
   getPendingEmailChange,
   getEmailChangeSummary,
+  resolveDeliveryEmail,
   type UserSecurityStatus,
 } from './security-shared.ts';
 
@@ -97,7 +98,12 @@ app.post('/:userId/password', requireAuth, async (c) => {
     // Send email notification if requested
     if (emailPassword && user.user.email) {
       try {
-        log.info(`📧 Sending password reset notification to ${user.user.email}`);
+        // Deliver to the contact inbox — a client on a household mailbox signs
+        // in with a derived alias, and credentials that never arrive are a
+        // lockout. `Username` below stays the sign-in address: that is the
+        // thing the reader has to type, and it is the point of the message.
+        const deliverTo = await resolveDeliveryEmail(userId, user.user.email);
+        log.info('📧 Sending password reset notification');
 
         const footerSettings = await getFooterSettings();
 
@@ -161,7 +167,7 @@ Log In: ${buttonUrl}
         `.trim();
 
         await sendEmail({
-          to: user.user.email,
+          to: deliverTo,
           subject: 'Your Password Has Been Reset',
           html: emailHtml,
           text: textBody,

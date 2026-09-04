@@ -21,6 +21,7 @@ import {
   buildClientProfileFromApplication,
 } from './application-utils.ts';
 import { AdminClientOnboardingService } from './admin-client-onboarding-service.ts';
+import { resolveContactEmail } from './client-email-identity.ts';
 import { ERROR_MESSAGES } from './constants.ts';
 
 import { createModuleLogger } from './stderr-logger.ts';
@@ -77,10 +78,15 @@ export async function approveApplication(
   // Phase 3: MERGE (not overwrite) so admin edits to the profile are preserved.
   // For self-service clients, only create if a profile does not already exist
   // (don't overwrite admin edits made post-approval).
+  // Held across the try so the notification block below can resolve the
+  // client's contact address without a second read of the same key.
+  let clientProfile: Record<string, unknown> | null = null;
+
   try {
     const profileKey = `user_profile:${userId}:personal_info`;
     const isAdminOnboardedProfile = application.origin === 'admin_import';
     const existingProfile = await kv.get(profileKey);
+    clientProfile = existingProfile;
 
     if (!existingProfile) {
       // No profile exists — create from scratch using application data
@@ -90,6 +96,7 @@ export async function approveApplication(
       profileData.accountStatus = 'approved';
       profileData.role = 'client';
       await kv.set(profileKey, profileData);
+      clientProfile = profileData;
     } else if (isAdminOnboardedProfile) {
       // Admin-onboarded: MERGE application data into existing profile
       // instead of overwriting, preserving any enriched fields (policies,
@@ -111,6 +118,7 @@ export async function approveApplication(
       mergedProfile.role = mergedProfile.role || 'client';
 
       await kv.set(profileKey, mergedProfile);
+      clientProfile = mergedProfile;
       log.info('Approval-time profile merge complete (admin-onboarded)', { userId });
     } else {
       // Self-service client with existing profile — update accountStatus and role
@@ -124,6 +132,7 @@ export async function approveApplication(
         role: existingProfile.role || 'client',
       };
       await kv.set(profileKey, updatedProfile);
+      clientProfile = updatedProfile;
       log.info('Approval-time profile accountStatus updated (self-service)', { userId });
     }
   } catch (profileError) {
@@ -141,6 +150,13 @@ export async function approveApplication(
     const clientName = `${appData.firstName || ''} ${appData.lastName || ''}`.trim();
     const appNumber = application.application_number || applicationId;
 
+    // Two addresses, and the difference matters exactly here. Supabase mints a
+    // recovery link against the AUTH identity, so the link must be generated
+    // for `user.email` — but a client enrolled on a household mailbox signs in
+    // with a derived alias, and the mail has to reach the inbox their guardian
+    // actually reads. Deliver to the resolved contact address.
+    const deliverTo = resolveContactEmail(user.email, clientProfile) || user.email!;
+
     if (isAdminOnboarded) {
       // Admin-onboarded client: send welcome email with password-setup link
       try {
@@ -149,7 +165,7 @@ export async function approveApplication(
           await sendEmailSafely(
             () =>
               sendAdminOnboardedWelcomeEmail({
-                to: user.email!,
+                to: deliverTo,
                 clientName,
                 applicationNumber: appNumber,
                 passwordResetLink: resetLink,
@@ -163,8 +179,7 @@ export async function approveApplication(
     } else {
       // Self-service client: send normal approval email
       await sendEmailSafely(
-        () =>
-          sendClientApprovalEmail(extractApprovalEmailData(user.email!, appData, applicationId)),
+        () => sendClientApprovalEmail(extractApprovalEmailData(deliverTo, appData, applicationId)),
         'client approval',
       );
     }
@@ -173,7 +188,7 @@ export async function approveApplication(
     await sendEmailSafely(
       () =>
         sendAdminApprovalNotification(
-          extractAdminNotificationData(user.email!, appData, applicationId, adminUserId),
+          extractAdminNotificationData(deliverTo, appData, applicationId, adminUserId),
         ),
       'admin notification',
     );
@@ -222,9 +237,14 @@ export async function declineApplication(
   // accountStatus to 'declined' so the frontend routes the client correctly.
   // Without this, the KV profile retains 'submitted_for_review' and the client
   // continues to see the pending page instead of the declined page.
+  // Held across the try so the decline notice can be addressed to the client's
+  // contact inbox rather than to their sign-in alias.
+  let clientProfile: Record<string, unknown> | null = null;
+
   try {
     const profileKey = `user_profile:${userId}:personal_info`;
     const existingProfile = await kv.get(profileKey);
+    clientProfile = existingProfile;
     if (existingProfile) {
       await kv.set(profileKey, {
         ...existingProfile,
@@ -245,10 +265,11 @@ export async function declineApplication(
   } = await supabase.auth.admin.getUserById(userId);
 
   if (user?.email) {
+    const deliverTo = resolveContactEmail(user.email, clientProfile) || user.email!;
     await sendEmailSafely(
       () =>
         sendClientDeclineEmail(
-          extractDeclineEmailData(user.email!, appData, reason || '', applicationId),
+          extractDeclineEmailData(deliverTo, appData, reason || '', applicationId),
         ),
       'client decline',
     );
