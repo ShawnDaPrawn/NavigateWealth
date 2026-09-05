@@ -5,7 +5,7 @@
 Before proposing any large change, read:
 
 ```text
-docs/PRODUCTION-READINESS.md
+docs/STATUS.md
 ```
 
 That file is the status ledger for:
@@ -29,7 +29,8 @@ If the user asks any version of:
 - "What did Claude change?"
 - "What is left?"
 
-read `docs/PRODUCTION-READINESS.md` first and answer from it.
+read `docs/STATUS.md` first and answer from it. For "what next?", read
+`docs/ROADMAP.md`.
 
 ---
 
@@ -322,8 +323,9 @@ Session handling in `src/components/auth/AuthContext.tsx` and
 - The historical `resolveNestedKey.test.tsx` suite issue is fixed — the file
   uses real Vitest `describe`/`it` and the full suite exits 0.
 - The Vite dev server opens `http://localhost:3000/` by default.
-- Architecture guidelines live in `src/guidelines/Guidelines.md`.
-- Status and roadmap live in `docs/PRODUCTION-READINESS.md`.
+- Architecture guidelines live in `docs/GUIDELINES.md`.
+- Status lives in `docs/STATUS.md`; the plan lives in `docs/ROADMAP.md`.
+- `docs/README.md` indexes every document and states the docs conventions.
 - Do not require the Playwright/UI-inspection path by default for routine
   sign-off. Use `npm run ui:inspect` only when the user explicitly asks for it
   or when a browser-level check is truly necessary and practical.

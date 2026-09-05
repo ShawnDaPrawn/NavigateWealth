@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apply API UAT JSON report to docs/fna-intake-uat-signoff.md
+ * Apply API UAT JSON report to docs/archive/2026-05-fna-intake-launch/uat-signoff.md
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const reportPath = resolve(__dirname, '../tmp/fna-intake-uat-report.json');
-const signoffPath = resolve(__dirname, '../docs/fna-intake-uat-signoff.md');
+const signoffPath = resolve(__dirname, '../docs/archive/2026-05-fna-intake-launch/uat-signoff.md');
 const consentPath = resolve(__dirname, '../src/supabase/functions/server/fna-intake-types.ts');
 
 const report = JSON.parse(readFileSync(reportPath, 'utf8'));

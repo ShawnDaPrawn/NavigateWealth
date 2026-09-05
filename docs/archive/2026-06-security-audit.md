@@ -1,3 +1,18 @@
+> **ARCHIVED — findings remediated. This is not an open incident.**
+> The audit below opens by saying its Critical findings are "live and exploitable
+> in production right now". That was true when it was written on 2026-06-09. It is
+> not true today: the P0 findings were remediated through the 2026-08 migrations
+> (`20260825004011_harden_function_search_path_and_grants.sql`,
+> `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` and their
+> siblings) and the router-auth ratchet in `quality/baselines/route-auth-baseline`
+> now holds the line.
+>
+> Kept because [`../ROADMAP.md`](../ROADMAP.md) cites its finding IDs, and because
+> the root-cause analysis in § 1 explains a trap worth not falling into twice.
+> For current security posture read [`../STATUS.md`](../STATUS.md).
+
+---
+
 # Navigate Wealth — Security Audit & Remediation Plan
 
 **Date:** 2026-06-09
@@ -184,7 +199,7 @@ default fail _closed_ so a missing `requireAuth` can never again silently expose
 | M-7 | Print/rich-text XSS sinks: `document.write()` + `dangerouslySetInnerHTML` of post-processed HTML; `style` attr allowed in legal-doc sanitizer | `ArticleDetailPage.tsx:732,1315`; `legalHtml.ts:1-20`; `RichTextEditor.tsx:92`; `ComposeForm.tsx`       | Re-run DOMPurify after any DOM post-processing; drop `style` from allowed attrs; render print content via a sandboxed blob URL, not `document.write` |
 | M-8 | GitHub Actions API error returned to clients (potential info leak)                                                                            | `integrations-portal-runtime.ts:177-190`                                                                | Return a sanitized message, never the raw upstream body                                                                                              |
 
-> **M-4 — do NOT "fail closed" on the CORS fallback.** `docs/PRODUCTION-READINESS.md`
+> **M-4 — do NOT "fail closed" on the CORS fallback.** `docs/archive/production-readiness-ledger-2026.md`
 > (§4.1 and the 2026-04-18 post-mortem) explicitly requires preserving the warning
 > fail-open fallback: a restrictive fallback previously locked production out (admin
 > dashboard "Network error", super-admin lost module visibility) when `NW_ALLOWED_ORIGINS`

@@ -9,11 +9,12 @@
 > **How it relates to the other docs.** This roadmap does not replace them; it
 > consolidates what _remains_ after their partial execution:
 >
-> - `docs/PRODUCTION-READINESS.md` — the status ledger (what is on `main`).
-> - `docs/ARCHITECTURE-REMEDIATION-PLAN.md` — the security/correctness fix
+> - [`STATUS.md`](STATUS.md) — what is true today (system shape, deliberate
+>   fallbacks, open operator items).
+> - [`archive/2026-08-architecture-remediation-plan.md`](archive/2026-08-architecture-remediation-plan.md) — archived: the security/correctness fix
 >   list (P0–P4) with per-finding evidence. Finding IDs (S4, A5, …) used below
 >   are defined there.
-> - `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md` — the target-state blueprint
+> - [`archive/2026-08-architecture-enhancement-plan.md`](archive/2026-08-architecture-enhancement-plan.md) — archived: the target-state blueprint
 >   (module contract, layering, fitness functions F1–F10, Stages A–F).
 > - **This doc** — the sequenced execution roadmap for everything still open,
 >   re-verified against the working tree rather than carried forward from
@@ -753,7 +754,7 @@ CI failure you have already been told about.
 6. **Capabilities get wired the day they're written.** The five instances of
    written-but-unconnected safety code are the house failure mode. A mechanism
    PR is not done until something calls it and a test fails when it's removed.
-7. **Update the ledger** (`docs/PRODUCTION-READINESS.md`) when state changes;
+7. **Update [`STATUS.md`](STATUS.md)** when state changes;
    append incidents to its Section 6. Mark items done **here** with date +
    commit, the way the remediation plan does.
 

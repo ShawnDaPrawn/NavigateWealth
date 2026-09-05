@@ -703,7 +703,7 @@ const STATIC_BODY_STYLE = `<style>
  * across all 26 prerendered routes, which in turn is what lets
  * `script-src` carry ONE sha256 hash instead of 26 — and what stops a renamed
  * slug from silently invalidating a hash and taking `'unsafe-inline'` back.
- * See docs/PRODUCTION-READINESS.md § CSP.
+ * See docs/archive/production-readiness-ledger-2026.md § CSP.
  */
 export function staticBodyPathGuard() {
   return `<script id="seo-static-body-guard">(function(){var el=document.getElementById('seo-static-body');if(!el)return;var want=el.getAttribute('data-seo-path')||'/';var p=location.pathname.replace(/\\/+$/,'')||'/';if(p!==want){el.style.display='none';}})();</script>`;

@@ -9,7 +9,7 @@ https://www.figma.com/design/MjgXeyfZj3PfMPXteh1PiH/Navigate-Wealth
 
 Before planning large changes, read the production status ledger:
 
-- [`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md)
+- [`docs/STATUS.md`](docs/STATUS.md)
 
 That document is the source of truth for what is landed, what is only proposed, known incidents, launch gates, and the next recommended engineering work. In particular:
 
@@ -166,9 +166,9 @@ Important backend behavior:
 |-- supabase/
 |   |-- functions/make-server-91ed8379/ # Supabase deploy entrypoint
 |   |-- migrations/                     # Postgres migrations
-|   `-- cron/                           # Cron SQL and smoke-test notes
+|   `-- cron/                           # Cron SQL and the publications smoke test
 |-- scripts/                            # SEO, provider worker, UAT, migration, smoke scripts
-|-- docs/                               # Production/readiness, launch, worker, gateway docs
+|-- docs/                               # Status, roadmap, guidelines, architecture, runbooks, archive
 |-- e2e/                                # Playwright specs
 |-- public/                             # Public assets, robots, service worker, generated SEO output
 |-- .github/workflows/                  # Quality and deploy workflows
@@ -375,8 +375,8 @@ Key files and docs:
 
 - `scripts/provider-portal-worker.mjs`
 - `scripts/Dockerfile.portal-worker`
-- `docs/provider-portal-worker.md`
-- `docs/provider-automation-golden-flows.md`
+- `docs/architecture/provider-portal-worker.md`
+- `docs/architecture/provider-automation-golden-flows.md`
 - `.github/workflows/provider-portal-worker.yml` if present in the current branch
 
 High-level flow:
@@ -406,22 +406,22 @@ Allan Gray RA is the protected golden regression flow. Provider-specific changes
 
 ## Important Documentation
 
-| Document                                                                                     | Purpose                                                        |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md)                               | Authoritative status ledger, incidents, blockers, and roadmap. |
-| [`src/guidelines/Guidelines.md`](src/guidelines/Guidelines.md)                               | Architecture and engineering guidelines.                       |
-| [`docs/fna-intake-launch-checklist.md`](docs/fna-intake-launch-checklist.md)                 | FNA intake launch, rollback, and monitoring checklist.         |
-| [`docs/fna-intake-support-runbook.md`](docs/fna-intake-support-runbook.md)                   | Adviser/support operations for client-led FNA intake.          |
-| [`docs/fna-intake-uat-signoff.md`](docs/fna-intake-uat-signoff.md)                           | FNA intake UAT matrix and sign-off.                            |
-| [`docs/form-prefill-production-launch-plan.md`](docs/form-prefill-production-launch-plan.md) | Form Prefill launch/hardening plan.                            |
-| [`docs/form-prefill-uat-signoff.md`](docs/form-prefill-uat-signoff.md)                       | Form Prefill UAT evidence.                                     |
-| [`docs/provider-portal-worker.md`](docs/provider-portal-worker.md)                           | Provider worker architecture, required secrets, and debugging. |
-| [`docs/provider-automation-golden-flows.md`](docs/provider-automation-golden-flows.md)       | Protected provider automation regression flows.                |
-| [`docs/openclaw-gateway.md`](docs/openclaw-gateway.md)                                       | OpenClaw gateway contract and capability model.                |
+| Document                                   | Purpose                                                                             |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| [`docs/README.md`](docs/README.md)         | Index of all documentation, and the conventions that keep it current.               |
+| [`docs/STATUS.md`](docs/STATUS.md)         | What is true today: system shape, deliberate fallbacks, open operator items.        |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md)       | The live plan — what to build or fix next.                                          |
+| [`docs/GUIDELINES.md`](docs/GUIDELINES.md) | Architecture and engineering rules.                                                 |
+| [`docs/INCIDENTS.md`](docs/INCIDENTS.md)   | What has gone wrong before, and the lesson from each.                               |
+| [`docs/architecture/`](docs/architecture/) | How individual subsystems work.                                                     |
+| [`docs/runbooks/`](docs/runbooks/)         | How to operate, verify or repair things in production.                              |
+| [`docs/decisions/`](docs/decisions/)       | Why past choices were made.                                                         |
+| [`docs/archive/`](docs/archive/)           | Completed launch records, superseded plans, the former status ledger. History only. |
 
 ## Contributing Guidelines
 
-1. Read `docs/PRODUCTION-READINESS.md` before large changes.
+1. Read [`docs/STATUS.md`](docs/STATUS.md) before large changes, and
+   [`docs/GUIDELINES.md`](docs/GUIDELINES.md) before structural ones.
 2. Check the current `package.json` before assuming which scripts exist.
 3. Keep changes scoped to the requested domain.
 4. Preserve auth hydration invariants and run the auth regression tests for auth/session work.
@@ -439,9 +439,15 @@ Allan Gray RA is the protected golden regression flow. Provider-specific changes
 | Browser says "Network error" for API calls | Check the Edge Function URL, `NW_ALLOWED_ORIGINS`, deployment status, request IDs, and Supabase function logs.                              |
 | Build fails while fetching articles        | Set or review `SEO_REQUIRE_ARTICLES`; local builds can be lenient, CI/Vercel are strict by default.                                         |
 | Public route metadata looks wrong          | Check `seo-route-manifest.json`, SEO scripts, route manifest data, and `npm run seo:verify`.                                                |
-| Provider automation stalls on OTP          | Use provider worker debug artifacts, traces, videos, and live screenshots; see `docs/provider-portal-worker.md`.                            |
+| Provider automation stalls on OTP          | Use provider worker debug artifacts, traces, videos, and live screenshots; see `docs/architecture/provider-portal-worker.md`.               |
 | Deno typecheck reports many errors         | Compare against `quality/baselines/deno-check-baseline`; the CI gate ratchets against the committed floor while the backlog is burned down. |
 
 ## License
 
 This repository is marked `"private": true` in `package.json` and does not currently include a public license file. Treat the codebase as proprietary unless the project owner adds an explicit license.
+
+## Credits
+
+This project includes components from [shadcn/ui](https://ui.shadcn.com/) under the
+[MIT licence](https://github.com/shadcn-ui/ui/blob/main/LICENSE.md), and photographs from
+[Unsplash](https://unsplash.com) under the [Unsplash licence](https://unsplash.com/license).
