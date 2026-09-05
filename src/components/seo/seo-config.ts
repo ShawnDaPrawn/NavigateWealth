@@ -266,7 +266,7 @@ export function getSEOData(page: string): SEOPageData {
   return seoPages[page] || seoPages.home;
 }
 
-/** SERP-safe title length; mirrors SEO_TITLE_MAX in scripts/seo-static-data.mjs. */
+/** SERP-safe title length; mirrors SEO_TITLE_MAX in scripts/seo/seo-static-data.mjs. */
 export const SEO_TITLE_MAX = 60;
 const TITLE_SUFFIX = ' | Navigate Wealth';
 
@@ -288,7 +288,7 @@ function truncateAtWord(value: string, max: number): string {
  * Build a SERP-safe article <title>. Keeps the brand suffix when the whole
  * tag fits, otherwise prefers the keyword-rich headline and drops/truncates
  * to stay within SEO_TITLE_MAX. Mirrors buildArticleTitle in
- * scripts/seo-static-data.mjs so the hydrated title matches the prerendered one.
+ * scripts/seo/seo-static-data.mjs so the hydrated title matches the prerendered one.
  */
 export function buildArticleTitle(rawHeadline: string | undefined): string {
   const headline = collapseWhitespace(rawHeadline ?? '') || 'Financial Planning Article';
@@ -309,7 +309,7 @@ export interface FAQEntry {
 
 /**
  * FAQ content lives in faqs.json — the single source of truth shared with the
- * build-time prerenderer (scripts/seo-static-data.mjs), so the visible FAQ
+ * build-time prerenderer (scripts/seo/seo-static-data.mjs), so the visible FAQ
  * sections, the FAQPage JSON-LD, and the prerendered static HTML always agree.
  */
 export const commonFAQs: FAQEntry[] = faqData['common'];

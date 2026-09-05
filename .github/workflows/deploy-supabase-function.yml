@@ -26,8 +26,8 @@ on:
       - 'supabase/functions/**'
       - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase-function.yml'
-      - 'scripts/post-deploy-smoke.mjs'
-      - 'scripts/strip-edge-function.mjs'
+      - 'scripts/ops/post-deploy-smoke.mjs'
+      - 'scripts/build/strip-edge-function.mjs'
 
 jobs:
   deploy:
@@ -47,7 +47,7 @@ jobs:
       # source, and Supabase hard-rejects above 5 MB of measured payload. The
       # graph crossed that line on 2026-08-30. Stripping types and comments —
       # exactly what the Deno runtime discards anyway — takes it from 4.44 MB
-      # to ~3.2 MB. See scripts/strip-edge-function.mjs for the full rationale.
+      # to ~3.2 MB. See scripts/build/strip-edge-function.mjs for the full rationale.
       #
       # This rewrites the checkout in place. That is safe here and nowhere
       # else: this job only deploys, and the runner's checkout is discarded
@@ -65,18 +65,33 @@ jobs:
           # than leaning on the runner's implicit CI=true.
           STRIP_EDGE_ALLOW_DIRTY: '1'
         run: |
-          # A rollback (`-f revision=<sha>`) checks out that revision's tree,
-          # which for anything before this change has no strip script. Skip
-          # rather than die on MODULE_NOT_FOUND: the rollback lever must keep
-          # working, and a revision predating the strip is one that fit under
-          # the 5 MB limit unstripped — that is why it was green enough to roll
-          # back to.
-          if [ ! -f ./scripts/strip-edge-function.mjs ]; then
+          # This workflow file comes from the dispatched branch, but `checkout`
+          # has replaced the tree with `revision`. On a rollback those disagree
+          # about where the script lives, so look in BOTH places:
+          #
+          #   scripts/build/strip-edge-function.mjs  — current
+          #   scripts/strip-edge-function.mjs        — before the scripts folder
+          #                                            was grouped
+          #
+          # Checking only the current path would treat every revision between
+          # the stripper landing and that move as having no stripper, and deploy
+          # its payload unstripped — those are exactly the revisions that need
+          # it, because their upload exceeds Supabase's 5 MB limit. An emergency
+          # rollback would then fail all three deploy attempts.
+          STRIP=""
+          for candidate in ./scripts/build/strip-edge-function.mjs ./scripts/strip-edge-function.mjs; do
+            if [ -f "$candidate" ]; then STRIP="$candidate"; break; fi
+          done
+          if [ -z "$STRIP" ]; then
+            # Genuinely predates the stripper, so it fit under 5 MB unstripped —
+            # that is why it was green enough to roll back to. The lever keeps
+            # working.
             echo "No strip script in this revision — deploying its payload as-is."
             exit 0
           fi
+          echo "Using $STRIP"
           npm install --no-save --no-audit --no-fund esbuild@0.25.12
-          node ./scripts/strip-edge-function.mjs
+          node "$STRIP"
 
       - name: Deploy make-server-91ed8379
         env:
@@ -120,7 +135,22 @@ jobs:
 
       - name: Blocking post-deploy smoke
         if: success()
-        run: node ./scripts/post-deploy-smoke.mjs
+        # Same rollback split as the strip step above: the tree is `revision`'s,
+        # so the smoke script may still be at its pre-grouping path. Running only
+        # the current path would fail a rollback with MODULE_NOT_FOUND *after* a
+        # successful deploy — reporting a live, good rollback as failed and
+        # skipping the authorization check that makes it trustworthy.
+        run: |
+          SMOKE=""
+          for candidate in ./scripts/ops/post-deploy-smoke.mjs ./scripts/post-deploy-smoke.mjs; do
+            if [ -f "$candidate" ]; then SMOKE="$candidate"; break; fi
+          done
+          if [ -z "$SMOKE" ]; then
+            echo "::warning::This revision predates the post-deploy smoke script. The deploy is LIVE but UNVERIFIED — check the health endpoint and an authenticated route by hand."
+            exit 0
+          fi
+          echo "Using $SMOKE"
+          node "$SMOKE"
 
       - name: Post-deploy form prefill API smoke
         if: success()

@@ -16,7 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
-const scriptHref = pathToFileURL(resolve(repoRoot, 'scripts/metrics-report.mjs')).href;
+const scriptHref = pathToFileURL(resolve(repoRoot, 'scripts/ops/metrics-report.mjs')).href;
 
 function call(expression: string): unknown {
   const source = `

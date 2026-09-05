@@ -4,7 +4,7 @@
 #
 # Run identically against the Supabase source and against the scratch Postgres
 # the weekly backup restores into (.github/workflows/weekly-backup.yml). The
-# output is consumed by scripts/compare-restore.py, which is where the rules for
+# output is consumed by scripts/ops/compare-restore.py, which is where the rules for
 # what may and may not differ are written down.
 #
 #   usage: capture-db-shape.sh <connection-string> <output.csv>

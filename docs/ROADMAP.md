@@ -596,7 +596,7 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
 ## 8. WS5 — Delivery confidence (tests, smoke, CI)
 
 1. **Blocking post-deploy smoke** in `deploy-supabase-function.yml`: **DONE
-   2026-08-24.** `scripts/post-deploy-smoke.mjs` hits `/health` + `/health/ready`
+   2026-08-24.** `scripts/ops/post-deploy-smoke.mjs` hits `/health` + `/health/ready`
    (200) and `/kv-store`, `/documents`, `/profile` (401), plus the anon-key-as-
    bearer case (401 `AUTH_INVALID`). The job fails on red. Rollback is documented
    in the workflow and the script header: re-run this workflow on the last green
@@ -647,7 +647,7 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
 
 - **A7 — the 853 MB of raw Figma images** — **DONE 2026-08-30.**
   Two halves, because either alone fails a different way.
-  `scripts/generate-figma-webp.mjs` runs as a pre-build step and emits
+  `scripts/build/generate-figma-webp.mjs` runs as a pre-build step and emits
   `<hash>.webp` into `node_modules/.cache/figma-webp/`, which
   `figmaAssetResolver` checks first. That closed the disconnect this entry
   described: the resolver's `.webp` preference was dead code because nothing

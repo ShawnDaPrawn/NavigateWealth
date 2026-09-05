@@ -30,7 +30,7 @@ import { describe, it, expect } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { staticBodyPathGuard } from '../../scripts/seo-static-data.mjs';
+import { staticBodyPathGuard } from '../../scripts/seo/seo-static-data.mjs';
 
 const repoRoot = resolve(__dirname, '../..');
 
