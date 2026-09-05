@@ -173,7 +173,7 @@ tagsSchedulingRoutes.post('/cron/process-scheduled', async (c) => {
           delete article.notify_on_publish;
 
           await kv.set(`article:${article.id}`, article);
-          syncArticleIndexInBackground(article, 'scheduled_article_published');
+          await syncArticleIndexInBackground(article, 'scheduled_article_published');
           processedCount++;
           published.push(article.title);
 
@@ -269,7 +269,7 @@ tagsSchedulingRoutes.post('/process-scheduled', requireAdmin, async (c) => {
           delete article.notify_on_publish;
 
           await kv.set(`article:${article.id}`, article);
-          syncArticleIndexInBackground(article, 'scheduled_article_published');
+          await syncArticleIndexInBackground(article, 'scheduled_article_published');
           processedCount++;
 
           // Notify newsletter subscribers only if opted-in at scheduling time

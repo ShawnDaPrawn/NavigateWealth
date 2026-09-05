@@ -134,7 +134,7 @@ articlesRoutes.post('/articles', requireAdmin, async (c) => {
     if (status === 'published') {
       triggerSiteRebuild(`article_created_published:${id}`);
       // Vasco's knowledge index follows publication state — no manual re-index needed.
-      syncArticleIndexInBackground(article, 'article_created_published');
+      await syncArticleIndexInBackground(article, 'article_created_published');
     }
 
     // Create initial version snapshot (Phase 4)
@@ -237,7 +237,7 @@ articlesRoutes.put('/articles/:id', requireAdmin, async (c) => {
     if (existing.status === 'published' || updated.status === 'published') {
       triggerSiteRebuild(`article_updated:${id}`);
       // Re-embed a live article (or drop one that just left publication).
-      syncArticleIndexInBackground(updated, 'article_updated');
+      await syncArticleIndexInBackground(updated, 'article_updated');
     }
 
     // Auto-create version snapshot on article update (Phase 4)
@@ -385,7 +385,7 @@ articlesRoutes.post('/articles/:id/publish', requireAdmin, async (c) => {
     await kv.set(`article:${id}`, updated);
 
     triggerSiteRebuild(`article_published:${id}`);
-    syncArticleIndexInBackground(updated, 'article_published');
+    await syncArticleIndexInBackground(updated, 'article_published');
 
     let notificationJob:
       | Awaited<ReturnType<typeof sendArticlePublishedNotificationsBlastThenRetryQueue>>['retryJob']

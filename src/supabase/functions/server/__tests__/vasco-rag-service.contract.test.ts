@@ -115,7 +115,9 @@ describe('knowledge base entries reach the index', () => {
     const result = await syncKnowledgeEntry(kbEntry());
     expect(result).toEqual({ indexed: true, chunkCount: 1 });
 
-    // Stored under the kb: key segment so it can never collide with an article id.
+    // Stored under the kb: key segment so it can never collide with an article id,
+    // with its own metadata row so concurrent syncs never overwrite each other.
+    expect(kvStore.has('vasco:src:kb:kb_1')).toBe(true);
     expect(kvStore.has('vasco:emb:kb:kb_1:0')).toBe(true);
     expect(kvStore.has('vasco:chunk:kb:kb_1:0')).toBe(true);
 
@@ -193,6 +195,65 @@ describe('knowledge base entries reach the index', () => {
   it('propagates an embedding failure so the route can report it (the entry itself is kept by the caller)', async () => {
     embeddingsDown();
     await expect(syncKnowledgeEntry(kbEntry())).rejects.toThrow(/Embedding generation failed/);
+  });
+
+  it('keeps the previous version retrievable when re-embedding an edit fails', async () => {
+    await syncKnowledgeEntry(kbEntry());
+
+    embeddingsDown();
+    await expect(
+      syncKnowledgeEntry(kbEntry({ answer: 'A retirement answer that never got embedded.' })),
+    ).rejects.toThrow();
+
+    // Old chunks and metadata are untouched: no hole, no lie in the status.
+    embeddingsWork();
+    const [hit] = await retrieveContext('retirement');
+    expect(hit.text).toContain('27.5%');
+    const status = await getIndexStatus();
+    expect(status.kbEntries).toHaveLength(1);
+    expect(status.totalChunks).toBe(1);
+  });
+
+  it('shrinking a source deletes only the surplus chunk slots', async () => {
+    const long = kbEntry({
+      type: 'article',
+      question: undefined,
+      answer: undefined,
+      content: ('Retirement planning paragraph. '.repeat(70) + '\n\n').repeat(3),
+    });
+    await syncKnowledgeEntry(long);
+    const before = (await getIndexStatus()).kbEntries[0].chunkCount;
+    expect(before).toBeGreaterThan(1);
+
+    await syncKnowledgeEntry(kbEntry());
+    expect(kvStore.has('vasco:emb:kb:kb_1:0')).toBe(true);
+    for (let i = 1; i < before; i++) {
+      expect(kvStore.has(`vasco:emb:kb:kb_1:${i}`)).toBe(false);
+      expect(kvStore.has(`vasco:chunk:kb:kb_1:${i}`)).toBe(false);
+    }
+    expect((await getIndexStatus()).totalChunks).toBe(1);
+  });
+
+  it('two syncs that overlap both land — neither overwrites the other', async () => {
+    await Promise.all([
+      syncKnowledgeEntry(kbEntry()),
+      syncKnowledgeEntry(
+        kbEntry({
+          id: 'kb_2',
+          title: 'Medical aid credits',
+          question: 'medical?',
+          answer: 'medical',
+        }),
+      ),
+      syncArticle(article()),
+    ]);
+
+    const status = await getIndexStatus();
+    expect(status.kbEntries.map((k) => k.entryId).sort()).toEqual(['kb_1', 'kb_2']);
+    expect(status.articles.map((a) => a.articleId)).toEqual(['art-tfsa']);
+    expect(await retrieveContext('medical')).toHaveLength(1);
+    expect(await retrieveContext('retirement')).toHaveLength(1);
+    expect(await retrieveContext('tfsa')).toHaveLength(1);
   });
 });
 
@@ -354,5 +415,67 @@ describe('retrieval edge cases', () => {
     await syncKnowledgeEntry(kbEntry());
     embeddingsDown();
     expect(await retrieveContext('retirement')).toEqual([]);
+  });
+});
+
+describe('index documents written before per-source rows', () => {
+  function seedLegacyIndex() {
+    kvStore.set('vasco:article_index', {
+      articles: [
+        {
+          articleId: 'legacy-1',
+          title: 'Legacy TFSA article',
+          slug: 'legacy-tfsa',
+          chunkCount: 1,
+          indexedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+      lastFullIndex: '2026-01-01T00:00:00Z',
+      totalChunks: 1,
+    });
+    kvStore.set('vasco:emb:legacy-1:0', {
+      articleId: 'legacy-1',
+      chunkIndex: 0,
+      embedding: embed('tfsa'),
+    });
+    kvStore.set('vasco:chunk:legacy-1:0', {
+      articleId: 'legacy-1',
+      articleTitle: 'Legacy TFSA article',
+      articleSlug: 'legacy-tfsa',
+      chunkIndex: 0,
+      text: 'Legacy TFSA text',
+    });
+  }
+
+  it('still retrieves and reports sources listed only in the old document', async () => {
+    seedLegacyIndex();
+    const [hit] = await retrieveContext('tfsa');
+    expect(hit).toMatchObject({ sourceType: 'article', articleSlug: 'legacy-tfsa' });
+
+    const status = await getIndexStatus();
+    expect(status.indexed).toBe(true);
+    expect(status.articles.map((a) => a.articleId)).toEqual(['legacy-1']);
+    expect(status.lastFullIndex).toBe('2026-01-01T00:00:00Z');
+  });
+
+  it('removing a legacy source strips it from the old document too', async () => {
+    seedLegacyIndex();
+    await removeArticleFromIndex('legacy-1');
+
+    expect(kvStore.has('vasco:emb:legacy-1:0')).toBe(false);
+    expect((await getIndexStatus()).articles).toEqual([]);
+    expect(await retrieveContext('tfsa')).toEqual([]);
+  });
+
+  it('a full rebuild drains the old lists and removes what is no longer published', async () => {
+    seedLegacyIndex();
+    kvStore.set('article:art-tfsa', article());
+
+    await indexAllArticles();
+
+    const doc = kvStore.get('vasco:article_index') as { articles?: unknown[] };
+    expect(doc.articles).toBeUndefined();
+    expect(kvStore.has('vasco:emb:legacy-1:0')).toBe(false);
+    expect((await getIndexStatus()).articles.map((a) => a.articleId)).toEqual(['art-tfsa']);
   });
 });

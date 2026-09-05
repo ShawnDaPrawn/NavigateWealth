@@ -69,6 +69,8 @@ lifecycleRoutes.post('/articles/:id/archive', async (c) => {
 
     if (article.status === 'published') {
       triggerSiteRebuild(`article_archived:${id}`);
+      // Archived content must stop being retrievable by Vasco.
+      await syncArticleIndexInBackground(updated, 'article_archived');
     }
 
     // Audit trail (non-blocking — §12.2)
@@ -152,7 +154,7 @@ lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
 
     triggerSiteRebuild(`article_unpublished:${id}`);
     // Unpublished content must stop being retrievable by Vasco.
-    syncArticleIndexInBackground(updated, 'article_unpublished');
+    await syncArticleIndexInBackground(updated, 'article_unpublished');
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
@@ -230,7 +232,7 @@ lifecycleRoutes.delete('/articles/:id', async (c) => {
 
     await kv.set(`article_deleted:${id}`, deletedArticle);
     await kv.del(`article:${id}`);
-    removeArticleFromIndexInBackground(id, 'article_deleted');
+    await removeArticleFromIndexInBackground(id, 'article_deleted');
 
     // Also delete any tag links
     const tagLinks = await kv.getByPrefix(`article_tag_link:${id}:`);

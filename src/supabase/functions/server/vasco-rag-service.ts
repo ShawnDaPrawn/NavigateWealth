@@ -17,11 +17,26 @@
  * a live KB entry is a retrievable source the moment it is saved.
  *
  * KV Key Conventions:
+ *   vasco:src:{articleId}                    — article metadata (one row per source)
+ *   vasco:src:kb:{entryId}                   — KB entry metadata (one row per source)
  *   vasco:emb:{articleId}:{chunkIndex}       — article embedding vector only
  *   vasco:chunk:{articleId}:{chunkIndex}     — article chunk text + metadata
  *   vasco:emb:kb:{entryId}:{chunkIndex}      — KB entry embedding vector only
  *   vasco:chunk:kb:{entryId}:{chunkIndex}    — KB entry chunk text + metadata
- *   vasco:article_index                      — metadata about every indexed source
+ *   vasco:article_index                      — timestamps only (+ legacy source lists)
+ *
+ * Why one metadata row PER SOURCE rather than one list in `vasco:article_index`:
+ * the KV store has no compare-and-swap, so two syncs that overlap (two admins
+ * saving, or the scheduled-publish cron overlapping an edit) would each
+ * read the same list and the last writer would silently drop the other's
+ * source. With a row per source, concurrent syncs touch different keys and
+ * cannot lose each other's work. `vasco:article_index` documents written
+ * before this scheme still carry `articles` / `kbEntries` arrays; they are
+ * read as a fallback until the next full rebuild drains them.
+ *
+ * Replacing a source is non-destructive: the new chunks are generated and
+ * written BEFORE anything old is removed, so an embedding outage during an
+ * edit leaves the previous version retrievable rather than leaving a hole.
  *
  * Memory Optimisation:
  *   - 256-dim embeddings (not 1536) → ~1 KB per vector instead of ~6 KB
@@ -65,6 +80,22 @@ interface StoredChunk {
   text: string;
 }
 
+/** Stored in vasco:src:* — one row per indexed source. */
+interface IndexedSource {
+  sourceType: RagSourceType;
+  sourceId: string;
+  title: string;
+  /** Empty for KB entries. */
+  slug: string;
+  chunkCount: number;
+  indexedAt: string;
+  // KB entries only
+  type?: KBEntry['type'];
+  category?: string;
+  agentScope?: 'all' | string[];
+  priority?: number;
+}
+
 export interface IndexedArticleMeta {
   articleId: string;
   title: string;
@@ -84,15 +115,20 @@ export interface IndexedKnowledgeMeta {
   priority: number;
 }
 
+/**
+ * `vasco:article_index`. Today it holds timestamps. Documents written before
+ * per-source rows also carry the source lists; those are honoured until the
+ * next full rebuild drains them.
+ */
 export interface ArticleIndex {
-  articles: IndexedArticleMeta[];
-  /** Absent on index documents written before KB entries joined the index. */
-  kbEntries?: IndexedKnowledgeMeta[];
-  /** When the whole index was last rebuilt. Null if it has only ever been synced incrementally. */
   lastFullIndex: string | null;
-  /** When anything in the index last changed (full rebuild or incremental sync). */
   lastUpdated?: string;
-  totalChunks: number;
+  /** @deprecated legacy — sources now live in vasco:src:* */
+  articles?: IndexedArticleMeta[];
+  /** @deprecated legacy — sources now live in vasco:src:* */
+  kbEntries?: IndexedKnowledgeMeta[];
+  /** @deprecated legacy — derived from the source rows now */
+  totalChunks?: number;
 }
 
 export interface RetrievedContext {
@@ -182,13 +218,14 @@ const DEFAULT_PRIORITY = 5;
 const INDEX_ID = 'article_index'; // key: vasco:article_index
 const KB_SOURCE_PREFIX = 'kb:';
 
-// Typed repositories over the four namespaces this service owns/reads.
+// Typed repositories over the namespaces this service owns/reads.
 const indexRepo = createKvRepository<ArticleIndex>('vasco:');
+const srcRepo = createKvRepository<IndexedSource>('vasco:src:');
 const embRepo = createKvRepository<StoredEmbedding>('vasco:emb:');
 const chunkRepo = createKvRepository<StoredChunk>('vasco:chunk:');
 const articleRepo = createKvRepository<ArticleRecord>('article:');
 
-/** The id segment used in vasco:emb:/vasco:chunk: keys for a given source. */
+/** The id segment used in vasco:src:/vasco:emb:/vasco:chunk: keys for a source. */
 function sourceKey(sourceType: RagSourceType, sourceId: string): string {
   return sourceType === 'kb' ? `${KB_SOURCE_PREFIX}${sourceId}` : sourceId;
 }
@@ -333,27 +370,117 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 // ============================================================================
-// INDEX DOCUMENT HELPERS
+// SOURCE LISTING — per-source rows, with the legacy list as fallback
 // ============================================================================
 
-async function loadIndex(): Promise<ArticleIndex | null> {
-  return await indexRepo.get(INDEX_ID);
+function legacyArticleToSource(meta: IndexedArticleMeta): IndexedSource {
+  return {
+    sourceType: 'article',
+    sourceId: meta.articleId,
+    title: meta.title,
+    slug: meta.slug,
+    chunkCount: meta.chunkCount,
+    indexedAt: meta.indexedAt,
+  };
 }
 
-function emptyIndex(): ArticleIndex {
-  return { articles: [], kbEntries: [], lastFullIndex: null, totalChunks: 0 };
+function legacyKnowledgeToSource(meta: IndexedKnowledgeMeta): IndexedSource {
+  return {
+    sourceType: 'kb',
+    sourceId: meta.entryId,
+    title: meta.title,
+    slug: '',
+    chunkCount: meta.chunkCount,
+    indexedAt: meta.indexedAt,
+    type: meta.type,
+    category: meta.category,
+    agentScope: meta.agentScope,
+    priority: meta.priority,
+  };
 }
 
-function recomputeTotals(index: ArticleIndex): ArticleIndex {
-  const kbEntries = index.kbEntries ?? [];
-  const totalChunks =
-    index.articles.reduce((sum, a) => sum + a.chunkCount, 0) +
-    kbEntries.reduce((sum, k) => sum + k.chunkCount, 0);
-  return { ...index, kbEntries, totalChunks, lastUpdated: new Date().toISOString() };
+/**
+ * Every indexed source. Per-source rows win; a pre-migration index document's
+ * embedded lists fill in anything not yet written as a row.
+ */
+async function loadSources(
+  reason: string,
+): Promise<{ sources: IndexedSource[]; index: ArticleIndex | null }> {
+  const [rows, index] = await Promise.all([srcRepo.listAll(reason), indexRepo.get(INDEX_ID)]);
+
+  const byKey = new Map<string, IndexedSource>();
+  for (const row of rows) {
+    if (row?.sourceType && row.sourceId) byKey.set(sourceKey(row.sourceType, row.sourceId), row);
+  }
+  for (const meta of index?.articles ?? []) {
+    const key = sourceKey('article', meta.articleId);
+    if (!byKey.has(key)) byKey.set(key, legacyArticleToSource(meta));
+  }
+  for (const meta of index?.kbEntries ?? []) {
+    const key = sourceKey('kb', meta.entryId);
+    if (!byKey.has(key)) byKey.set(key, legacyKnowledgeToSource(meta));
+  }
+
+  return { sources: Array.from(byKey.values()), index };
 }
 
-async function saveIndex(index: ArticleIndex): Promise<void> {
-  await indexRepo.put(INDEX_ID, recomputeTotals(index));
+async function findSource(
+  sourceType: RagSourceType,
+  sourceId: string,
+): Promise<IndexedSource | null> {
+  const row = await srcRepo.get(sourceKey(sourceType, sourceId));
+  if (row) return row;
+
+  // Legacy fallback: a source indexed before per-source rows existed.
+  const index = await indexRepo.get(INDEX_ID);
+  if (sourceType === 'article') {
+    const meta = index?.articles?.find((a) => a.articleId === sourceId);
+    return meta ? legacyArticleToSource(meta) : null;
+  }
+  const meta = index?.kbEntries?.find((k) => k.entryId === sourceId);
+  return meta ? legacyKnowledgeToSource(meta) : null;
+}
+
+/**
+ * Update the index document's timestamps. Timestamps are the only shared
+ * state left in it, and last-writer-wins on a timestamp loses nothing.
+ * A full rebuild also drains the legacy source lists.
+ */
+async function touchIndex(fullRebuildAt?: string): Promise<void> {
+  const existing = await indexRepo.get(INDEX_ID);
+  const now = new Date().toISOString();
+  if (fullRebuildAt) {
+    await indexRepo.put(INDEX_ID, { lastFullIndex: fullRebuildAt, lastUpdated: now });
+    return;
+  }
+  await indexRepo.put(INDEX_ID, {
+    ...(existing ?? {}),
+    lastFullIndex: existing?.lastFullIndex ?? null,
+    lastUpdated: now,
+  });
+}
+
+/** Strip a legacy list entry once its per-source row (or removal) supersedes it. */
+async function dropLegacyEntry(sourceType: RagSourceType, sourceId: string): Promise<void> {
+  const index = await indexRepo.get(INDEX_ID);
+  if (!index) return;
+  const hasLegacy =
+    sourceType === 'article'
+      ? index.articles?.some((a) => a.articleId === sourceId)
+      : index.kbEntries?.some((k) => k.entryId === sourceId);
+  if (!hasLegacy) return;
+
+  await indexRepo.put(INDEX_ID, {
+    ...index,
+    articles:
+      sourceType === 'article'
+        ? index.articles?.filter((a) => a.articleId !== sourceId)
+        : index.articles,
+    kbEntries:
+      sourceType === 'kb'
+        ? index.kbEntries?.filter((k) => k.entryId !== sourceId)
+        : index.kbEntries,
+  });
 }
 
 // ============================================================================
@@ -361,15 +488,17 @@ async function saveIndex(index: ArticleIndex): Promise<void> {
 // ============================================================================
 
 /**
- * Delete all stored embedding + chunk KV entries for a given source.
+ * Delete chunk entries `from` .. `to - 1` for a source.
  */
-async function deleteSourceEntries(
+async function deleteChunkRange(
   sourceType: RagSourceType,
   sourceId: string,
-  chunkCount: number,
+  from: number,
+  to: number,
 ): Promise<void> {
+  if (to <= from) return;
   const base = sourceKey(sourceType, sourceId);
-  const ids = Array.from({ length: chunkCount }, (_, i) => `${base}:${i}`);
+  const ids = Array.from({ length: to - from }, (_, i) => `${base}:${from + i}`);
   await Promise.all([
     ...ids.map((id) => embRepo.remove(id)),
     ...ids.map((id) => chunkRepo.remove(id)),
@@ -377,35 +506,54 @@ async function deleteSourceEntries(
 }
 
 /**
- * Chunk, embed and store one source. Returns the number of chunks written
- * (0 when there was nothing worth indexing).
+ * Remove one source completely: its chunks, its row, and any legacy list entry.
  */
-async function embedAndStoreSource(
-  sourceType: RagSourceType,
-  sourceId: string,
-  title: string,
-  slug: string,
+async function removeSource(source: IndexedSource): Promise<void> {
+  await deleteChunkRange(source.sourceType, source.sourceId, 0, source.chunkCount);
+  await srcRepo.remove(sourceKey(source.sourceType, source.sourceId));
+  await dropLegacyEntry(source.sourceType, source.sourceId);
+}
+
+/**
+ * Chunk, embed and store one source, replacing whatever was there before
+ * WITHOUT a window in which nothing is retrievable:
+ *
+ *   1. embed (the call most likely to fail — nothing has changed yet if it does)
+ *   2. write the new chunks over slots 0..n-1
+ *   3. delete old slots beyond n, if the source shrank
+ *   4. write the source row
+ *
+ * Returns the number of chunks written; 0 means there was nothing worth
+ * indexing and the source was removed instead.
+ */
+async function upsertSource(
+  meta: Omit<IndexedSource, 'chunkCount' | 'indexedAt'>,
   text: string,
 ): Promise<number> {
+  const previous = await findSource(meta.sourceType, meta.sourceId);
   const chunks = chunkText(text);
-  if (chunks.length === 0) return 0;
 
-  // One embeddings API call per source
+  if (chunks.length === 0) {
+    if (previous) await removeSource(previous);
+    return 0;
+  }
+
+  // One embeddings API call per source. Throws → nothing below has run.
   const embeddings = await generateEmbeddings(chunks);
-  const base = sourceKey(sourceType, sourceId);
+  const base = sourceKey(meta.sourceType, meta.sourceId);
 
   for (let i = 0; i < chunks.length; i++) {
     const embData: StoredEmbedding = {
-      sourceType,
-      articleId: sourceId,
+      sourceType: meta.sourceType,
+      articleId: meta.sourceId,
       chunkIndex: i,
       embedding: embeddings[i],
     };
     const chunkData: StoredChunk = {
-      sourceType,
-      articleId: sourceId,
-      articleTitle: title,
-      articleSlug: slug,
+      sourceType: meta.sourceType,
+      articleId: meta.sourceId,
+      articleTitle: meta.title,
+      articleSlug: meta.slug,
       chunkIndex: i,
       text: chunks[i],
     };
@@ -418,19 +566,42 @@ async function embedAndStoreSource(
 
   // Release reference to embeddings array before the caller moves on
   embeddings.length = 0;
+
+  if (previous && previous.chunkCount > chunks.length) {
+    await deleteChunkRange(meta.sourceType, meta.sourceId, chunks.length, previous.chunkCount);
+  }
+
+  await srcRepo.put(base, {
+    ...meta,
+    chunkCount: chunks.length,
+    indexedAt: new Date().toISOString(),
+  });
+  await dropLegacyEntry(meta.sourceType, meta.sourceId);
+
   return chunks.length;
 }
 
-function knowledgeMeta(entry: KBEntry, chunkCount: number): IndexedKnowledgeMeta {
+function knowledgeSourceMeta(entry: KBEntry): Omit<IndexedSource, 'chunkCount' | 'indexedAt'> {
   return {
-    entryId: entry.id,
+    sourceType: 'kb',
+    sourceId: entry.id,
     title: entry.title,
+    slug: '',
     type: entry.type,
     category: entry.category,
-    chunkCount,
-    indexedAt: new Date().toISOString(),
     agentScope: entry.agentScope ?? 'all',
     priority: entry.priority ?? DEFAULT_PRIORITY,
+  };
+}
+
+function articleSourceMeta(
+  article: ArticleRecord,
+): Omit<IndexedSource, 'chunkCount' | 'indexedAt'> {
+  return {
+    sourceType: 'article',
+    sourceId: article.id,
+    title: article.title,
+    slug: article.slug,
   };
 }
 
@@ -439,8 +610,12 @@ function knowledgeMeta(entry: KBEntry, chunkCount: number): IndexedKnowledgeMeta
 // ============================================================================
 
 /**
- * Rebuild the whole index: every published article AND every live KB entry.
- * Processes sources one-at-a-time to keep memory bounded.
+ * Bring the whole index in line with reality: every published article and
+ * every live KB entry is (re-)indexed, and anything indexed that is no longer
+ * published / live is removed. Each source is replaced non-destructively, so a
+ * rebuild that fails part-way leaves the previous versions in place rather
+ * than a half-empty index. Processes sources one-at-a-time to keep memory
+ * bounded.
  *
  * The name predates KB entries joining the index; it is what the admin route,
  * the frontend and the tests call, so it stays.
@@ -448,23 +623,12 @@ function knowledgeMeta(entry: KBEntry, chunkCount: number): IndexedKnowledgeMeta
 export async function indexAllArticles(): Promise<IndexResult> {
   const startTime = Date.now();
   const errors: string[] = [];
-  const indexedArticles: IndexedArticleMeta[] = [];
-  const indexedKb: IndexedKnowledgeMeta[] = [];
+  let articlesIndexed = 0;
+  let kbEntriesIndexed = 0;
+  let totalChunks = 0;
+  const wanted = new Set<string>();
 
   try {
-    // Get current index so we can clean up old entries
-    const existingIndex = await loadIndex();
-
-    // Delete all old embeddings/chunks per-source (bounded by source count)
-    if (existingIndex?.articles) {
-      for (const meta of existingIndex.articles) {
-        await deleteSourceEntries('article', meta.articleId, meta.chunkCount);
-      }
-    }
-    for (const meta of existingIndex?.kbEntries ?? []) {
-      await deleteSourceEntries('kb', meta.entryId, meta.chunkCount);
-    }
-
     // ── Articles ──────────────────────────────────────────────────────────
     const allArticles = await articleRepo.listAll('vasco full re-index');
     const publishedArticles = allArticles.filter((a) => a.status === 'published');
@@ -478,27 +642,18 @@ export async function indexAllArticles(): Promise<IndexResult> {
           log.warn(`Skipping article ${article.id}: body too short`);
           continue;
         }
-        const chunkCount = await embedAndStoreSource(
-          'article',
-          article.id,
-          article.title,
-          article.slug,
-          text,
-        );
+        const chunkCount = await upsertSource(articleSourceMeta(article), text);
         if (chunkCount === 0) continue;
-
-        indexedArticles.push({
-          articleId: article.id,
-          title: article.title,
-          slug: article.slug,
-          chunkCount,
-          indexedAt: new Date().toISOString(),
-        });
+        wanted.add(sourceKey('article', article.id));
+        articlesIndexed++;
+        totalChunks += chunkCount;
         log.info(`Indexed article "${article.title}": ${chunkCount} chunks`);
       } catch (err) {
         const msg = `Failed to index article "${article.title || article.id}": ${err instanceof Error ? err.message : String(err)}`;
         errors.push(msg);
         log.error(msg);
+        // Keep whatever was indexed for it before — do not remove it below.
+        wanted.add(sourceKey('article', article.id));
       }
     }
 
@@ -508,44 +663,40 @@ export async function indexAllArticles(): Promise<IndexResult> {
 
     for (const entry of liveEntries) {
       try {
-        const chunkCount = await embedAndStoreSource(
-          'kb',
-          entry.id,
-          entry.title,
-          '',
+        const chunkCount = await upsertSource(
+          knowledgeSourceMeta(entry),
           knowledgeEntryToText(entry),
         );
         if (chunkCount === 0) continue;
-        indexedKb.push(knowledgeMeta(entry, chunkCount));
+        wanted.add(sourceKey('kb', entry.id));
+        kbEntriesIndexed++;
+        totalChunks += chunkCount;
         log.info(`Indexed knowledge entry "${entry.title}": ${chunkCount} chunks`);
       } catch (err) {
         const msg = `Failed to index knowledge entry "${entry.title || entry.id}": ${err instanceof Error ? err.message : String(err)}`;
         errors.push(msg);
         log.error(msg);
+        wanted.add(sourceKey('kb', entry.id));
       }
     }
 
-    const now = new Date().toISOString();
-    const index = recomputeTotals({
-      articles: indexedArticles,
-      kbEntries: indexedKb,
-      lastFullIndex: now,
-      totalChunks: 0,
-    });
-    await indexRepo.put(INDEX_ID, index);
+    // ── Remove what is no longer wanted ───────────────────────────────────
+    const { sources } = await loadSources('vasco full re-index cleanup');
+    for (const source of sources) {
+      if (!wanted.has(sourceKey(source.sourceType, source.sourceId))) {
+        await removeSource(source);
+        log.info(`Removed stale ${source.sourceType} "${source.title}" from index`);
+      }
+    }
+
+    await touchIndex(new Date().toISOString());
 
     const durationMs = Date.now() - startTime;
     log.info(
-      `Indexing complete: ${indexedArticles.length} articles, ${indexedKb.length} KB entries, ${index.totalChunks} chunks in ${durationMs}ms`,
+      `Indexing complete: ${articlesIndexed} articles, ${kbEntriesIndexed} KB entries, ${totalChunks} chunks in ${durationMs}ms`,
     );
 
-    return {
-      articlesIndexed: indexedArticles.length,
-      kbEntriesIndexed: indexedKb.length,
-      totalChunks: index.totalChunks,
-      errors,
-      durationMs,
-    };
+    return { articlesIndexed, kbEntriesIndexed, totalChunks, errors, durationMs };
   } catch (err) {
     log.error('Fatal indexing error', err);
     throw err;
@@ -553,7 +704,7 @@ export async function indexAllArticles(): Promise<IndexResult> {
 }
 
 export async function getArticleIndex(): Promise<ArticleIndex | null> {
-  return await loadIndex();
+  return await indexRepo.get(INDEX_ID);
 }
 
 /**
@@ -561,8 +712,8 @@ export async function getArticleIndex(): Promise<ArticleIndex | null> {
  * in Publications / the Knowledge Base is what Vasco can actually retrieve.
  */
 export async function getIndexStatus(): Promise<KnowledgeIndexStatus> {
-  const [index, allArticles, allEntries] = await Promise.all([
-    loadIndex(),
+  const [{ sources, index }, allArticles, allEntries] = await Promise.all([
+    loadSources('vasco index status'),
     articleRepo.listAll('vasco index status'),
     getAllEntries(),
   ]);
@@ -572,24 +723,49 @@ export async function getIndexStatus(): Promise<KnowledgeIndexStatus> {
   );
   const activeIds = new Set(allEntries.filter((e) => e.status === 'active').map((e) => e.id));
 
-  const articles = index?.articles ?? [];
-  const kbEntries = index?.kbEntries ?? [];
+  const articles: IndexedArticleMeta[] = [];
+  const kbEntries: IndexedKnowledgeMeta[] = [];
+  let totalChunks = 0;
+  let staleSources = 0;
+
+  for (const s of sources) {
+    totalChunks += s.chunkCount;
+    if (s.sourceType === 'article') {
+      articles.push({
+        articleId: s.sourceId,
+        title: s.title,
+        slug: s.slug,
+        chunkCount: s.chunkCount,
+        indexedAt: s.indexedAt,
+      });
+      if (!publishedIds.has(s.sourceId)) staleSources++;
+    } else {
+      kbEntries.push({
+        entryId: s.sourceId,
+        title: s.title,
+        type: s.type ?? 'article',
+        category: s.category ?? '',
+        chunkCount: s.chunkCount,
+        indexedAt: s.indexedAt,
+        agentScope: s.agentScope ?? 'all',
+        priority: s.priority ?? DEFAULT_PRIORITY,
+      });
+      if (!activeIds.has(s.sourceId)) staleSources++;
+    }
+  }
+
   const indexedArticleIds = new Set(articles.map((a) => a.articleId));
   const indexedKbIds = new Set(kbEntries.map((k) => k.entryId));
-
   let pendingArticles = 0;
   for (const id of publishedIds) if (!indexedArticleIds.has(id)) pendingArticles++;
   let pendingKbEntries = 0;
   for (const id of activeIds) if (!indexedKbIds.has(id)) pendingKbEntries++;
-  let staleSources = 0;
-  for (const id of indexedArticleIds) if (!publishedIds.has(id)) staleSources++;
-  for (const id of indexedKbIds) if (!activeIds.has(id)) staleSources++;
 
   return {
-    indexed: !!index,
+    indexed: !!index || sources.length > 0,
     articles,
     kbEntries,
-    totalChunks: index?.totalChunks ?? 0,
+    totalChunks,
     lastFullIndex: index?.lastFullIndex ?? null,
     lastUpdated: index?.lastUpdated ?? index?.lastFullIndex ?? null,
     publishedArticleCount: publishedIds.size,
@@ -601,17 +777,11 @@ export async function getIndexStatus(): Promise<KnowledgeIndexStatus> {
 }
 
 export async function clearArticleIndex(): Promise<void> {
-  const index = await loadIndex();
-
-  if (index?.articles) {
-    for (const article of index.articles) {
-      await deleteSourceEntries('article', article.articleId, article.chunkCount);
-    }
+  const { sources } = await loadSources('vasco index clear');
+  for (const source of sources) {
+    await deleteChunkRange(source.sourceType, source.sourceId, 0, source.chunkCount);
+    await srcRepo.remove(sourceKey(source.sourceType, source.sourceId));
   }
-  for (const entry of index?.kbEntries ?? []) {
-    await deleteSourceEntries('kb', entry.entryId, entry.chunkCount);
-  }
-
   await indexRepo.remove(INDEX_ID);
   log.info('Knowledge index cleared');
 }
@@ -623,47 +793,29 @@ export async function clearArticleIndex(): Promise<void> {
 /**
  * Bring the index in line with one KB entry: a live entry is (re-)embedded, a
  * draft/archived one is removed. Called on every KB write so an admin never
- * has to press "rebuild" for their own change to reach Vasco.
+ * has to press "rebuild" for their own change to reach Vasco. Safe to run
+ * concurrently with other syncs — each source owns its own keys.
  */
 export async function syncKnowledgeEntry(entry: KBEntry): Promise<SourceSyncResult> {
-  const index = (await loadIndex()) ?? emptyIndex();
-  const kbEntries = index.kbEntries ?? [];
-
-  const previous = kbEntries.find((k) => k.entryId === entry.id);
-  if (previous) {
-    await deleteSourceEntries('kb', entry.id, previous.chunkCount);
-  }
-  const remaining = kbEntries.filter((k) => k.entryId !== entry.id);
-
   if (entry.status !== 'active') {
-    await saveIndex({ ...index, kbEntries: remaining });
+    await removeKnowledgeEntryFromIndex(entry.id);
     log.info('Knowledge entry removed from index', { id: entry.id, status: entry.status });
     return { indexed: false, chunkCount: 0 };
   }
 
-  const chunkCount = await embedAndStoreSource(
-    'kb',
-    entry.id,
-    entry.title,
-    '',
-    knowledgeEntryToText(entry),
-  );
-  if (chunkCount > 0) remaining.push(knowledgeMeta(entry, chunkCount));
-  await saveIndex({ ...index, kbEntries: remaining });
+  const chunkCount = await upsertSource(knowledgeSourceMeta(entry), knowledgeEntryToText(entry));
+  await touchIndex();
 
   log.info('Knowledge entry synced to index', { id: entry.id, chunkCount });
   return { indexed: chunkCount > 0, chunkCount };
 }
 
 export async function removeKnowledgeEntryFromIndex(entryId: string): Promise<void> {
-  const index = await loadIndex();
-  if (!index) return;
-  const kbEntries = index.kbEntries ?? [];
-  const previous = kbEntries.find((k) => k.entryId === entryId);
+  const previous = await findSource('kb', entryId);
   if (!previous) return;
 
-  await deleteSourceEntries('kb', entryId, previous.chunkCount);
-  await saveIndex({ ...index, kbEntries: kbEntries.filter((k) => k.entryId !== entryId) });
+  await removeSource(previous);
+  await touchIndex();
   log.info('Knowledge entry removed from index', { id: entryId });
 }
 
@@ -672,54 +824,25 @@ export async function removeKnowledgeEntryFromIndex(entryId: string): Promise<vo
  * anything else (draft, scheduled, archived, deleted) → removed.
  */
 export async function syncArticle(article: ArticleRecord): Promise<SourceSyncResult> {
-  const index = (await loadIndex()) ?? emptyIndex();
-
-  const previous = index.articles.find((a) => a.articleId === article.id);
-  if (previous) {
-    await deleteSourceEntries('article', article.id, previous.chunkCount);
-  }
-  const remaining = index.articles.filter((a) => a.articleId !== article.id);
-
   const text = article.status === 'published' ? articleToText(article) : null;
   if (!text) {
-    // Nothing to (re-)index. Only write when something actually changed.
-    if (previous) {
-      await saveIndex({ ...index, articles: remaining });
-      log.info('Article removed from index', { id: article.id, status: article.status });
-    }
+    await removeArticleFromIndex(article.id);
     return { indexed: false, chunkCount: 0 };
   }
 
-  const chunkCount = await embedAndStoreSource(
-    'article',
-    article.id,
-    article.title,
-    article.slug,
-    text,
-  );
-  if (chunkCount > 0) {
-    remaining.push({
-      articleId: article.id,
-      title: article.title,
-      slug: article.slug,
-      chunkCount,
-      indexedAt: new Date().toISOString(),
-    });
-  }
-  await saveIndex({ ...index, articles: remaining });
+  const chunkCount = await upsertSource(articleSourceMeta(article), text);
+  await touchIndex();
 
   log.info('Article synced to index', { id: article.id, chunkCount });
   return { indexed: chunkCount > 0, chunkCount };
 }
 
 export async function removeArticleFromIndex(articleId: string): Promise<void> {
-  const index = await loadIndex();
-  if (!index) return;
-  const previous = index.articles.find((a) => a.articleId === articleId);
+  const previous = await findSource('article', articleId);
   if (!previous) return;
 
-  await deleteSourceEntries('article', articleId, previous.chunkCount);
-  await saveIndex({ ...index, articles: index.articles.filter((a) => a.articleId !== articleId) });
+  await removeSource(previous);
+  await touchIndex();
   log.info('Article removed from index', { id: articleId });
 }
 
@@ -767,25 +890,16 @@ export async function retrieveContext(
   options: RetrieveOptions = {},
 ): Promise<RetrievedContext[]> {
   try {
-    const index = await loadIndex();
-    if (!index) return [];
+    const { sources: indexed } = await loadSources('vasco retrieval');
 
-    const sources: SearchSource[] = [
-      ...index.articles.map((a) => ({
-        sourceType: 'article' as const,
-        sourceId: a.articleId,
-        chunkCount: a.chunkCount,
-        boost: 1,
-      })),
-      ...(index.kbEntries ?? [])
-        .filter((k) => isVisibleToAgent(k.agentScope, options.agentId))
-        .map((k) => ({
-          sourceType: 'kb' as const,
-          sourceId: k.entryId,
-          chunkCount: k.chunkCount,
-          boost: priorityBoost(k.priority),
-        })),
-    ];
+    const sources: SearchSource[] = indexed
+      .filter((s) => s.sourceType === 'article' || isVisibleToAgent(s.agentScope, options.agentId))
+      .map((s) => ({
+        sourceType: s.sourceType,
+        sourceId: s.sourceId,
+        chunkCount: s.chunkCount,
+        boost: s.sourceType === 'kb' ? priorityBoost(s.priority) : 1,
+      }));
     if (sources.length === 0) return [];
 
     // Generate query embedding (256-dim)
