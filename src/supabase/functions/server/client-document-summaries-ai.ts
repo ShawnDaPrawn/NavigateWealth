@@ -251,21 +251,6 @@ async function downloadDocument(filePath: string): Promise<ArrayBuffer | null> {
   return await data.arrayBuffer();
 }
 
-/**
- * Identity of a file's CONTENT, for spotting the same document filed twice.
- *
- * This hashes the bytes rather than comparing filename and length, because a
- * pack is assembled from files the adviser picked out of different folders:
- * `quote.pdf` at 363,553 bytes is not evidence of being the same `quote.pdf`.
- * Collapsing on that pair would drop a real financial document from the request
- * while the stored record still claimed the model had read it — the exact kind
- * of false coverage this feature is not allowed to produce. Two files that hash
- * the same ARE the same, so the collapse is safe.
- */
-async function contentDigest(buffer: ArrayBuffer): Promise<string> {
-  return toBase64(await crypto.subtle.digest('SHA-256', buffer));
-}
-
 /** One attachment that made it into the request, and what it cost. */
 interface Attachment {
   id: string;
@@ -291,9 +276,9 @@ export interface SummaryInputOptions {
  * which half is a copy). Sending both wastes the byte budget, doubles the cost,
  * and makes it likelier the request trips a provider limit. The twin is still
  * listed in the manifest and still counts as analysed, because its contents did
- * reach the model — just once. Identity is a hash of the downloaded bytes, so
- * the twin is downloaded and only then collapsed: the saving is the upload and
- * the model's attention, which is where the cost is.
+ * reach the model — just once. Identity is the file's actual content, so the
+ * twin is downloaded and only then collapsed: the saving is the upload and the
+ * model's attention, which is where the cost is.
  */
 export async function buildSummaryInput(
   documents: DocumentForSummary[],
@@ -306,7 +291,14 @@ export async function buildSummaryInput(
   const analysed: SummarisedDocument[] = [];
   const fileBlocks: AiContentBlock[] = [];
   const attached: Attachment[] = [];
-  /** content hash -> index of the document whose bytes were actually sent. */
+  /**
+   * Encoded content -> index of the document whose bytes were actually sent.
+   *
+   * The key is the base64 the request itself carries, so it is the exact bytes
+   * rather than a digest of them: no collision to reason about, no crypto call,
+   * and nothing environment-specific. It costs no memory worth naming either —
+   * these are the same strings `fileBlocks` already holds for the request.
+   */
   const sentByContent = new Map<string, number>();
   /** Per-document manifest note, e.g. that it duplicates an earlier entry. */
   const notes: Array<string | null> = [];
@@ -347,10 +339,13 @@ export async function buildSummaryInput(
       continue;
     }
 
-    // Hashed before the budget check: a copy of something already attached
-    // costs nothing more, so it must not be turned away for being over budget.
-    const digest = await contentDigest(buffer);
-    const twinIndex = sentByContent.get(digest);
+    // Encoded up front so the comparison is against real content. That is the
+    // work this file would need anyway if it turns out not to be a copy, and
+    // the copy has to be recognised BEFORE the budget check: it adds nothing to
+    // the request, so it must not be turned away as over budget and then
+    // reported unread.
+    const dataBase64 = toBase64(buffer);
+    const twinIndex = sentByContent.get(dataBase64);
     if (twinIndex !== undefined) {
       // Byte-for-byte identical to one already sent: its content reached the
       // model, so it is analysed — we simply did not pay for it twice.
@@ -364,14 +359,13 @@ export async function buildSummaryInput(
     }
 
     attachedBytes += buffer.byteLength;
-    const dataBase64 = toBase64(buffer);
     fileBlocks.push(
       mime === PDF_MIME
         ? { type: 'file', filename: doc.fileName || `${doc.title}.pdf`, dataBase64, mimeType: mime }
         : { type: 'image', dataBase64, mimeType: mime },
     );
     attached.push({ id: doc.id, bytes: buffer.byteLength });
-    sentByContent.set(digest, analysed.length);
+    sentByContent.set(dataBase64, analysed.length);
     record(doc, true, null);
   }
 
