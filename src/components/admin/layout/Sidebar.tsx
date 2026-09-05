@@ -347,8 +347,9 @@ function SidebarContent({
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                       )}
                     >
+                      {/* size-* (not h-/w-) so the Button's default svg sizing rule does not override it */}
                       <Icon
-                        className={cn('shrink-0', collapsed && !isMobile ? 'h-5 w-5' : 'h-4 w-4')}
+                        className={cn('shrink-0', collapsed && !isMobile ? 'size-5' : 'size-4')}
                       />
                       {(!collapsed || isMobile) && <span>{config.label}</span>}
                       {showBadge && (!collapsed || isMobile) && (
@@ -362,7 +363,7 @@ function SidebarContent({
                       {showBadge && collapsed && !isMobile && (
                         <span
                           aria-hidden="true"
-                          className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-badge px-1 text-[10px] font-semibold leading-none tabular-nums text-sidebar-badge-foreground ring-2 ring-sidebar"
+                          className="pointer-events-none absolute -top-2.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-badge px-1 text-[10px] font-semibold leading-none tabular-nums text-sidebar-badge-foreground ring-2 ring-sidebar"
                         >
                           {formatSidebarBadgeCount(pendingData.count)}
                         </span>
