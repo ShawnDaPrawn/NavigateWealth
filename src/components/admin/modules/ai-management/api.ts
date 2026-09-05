@@ -18,9 +18,10 @@ import type {
   FeedbackEntry,
   HandoffRequest,
   HandoffStatus,
-  ArticleIndex,
+  KnowledgeIndexStatus,
   IndexResult,
   KBEntry,
+  KBSaveResult,
   CreateKBEntryInput,
   UpdateKBEntryInput,
   KBStats,
@@ -164,35 +165,39 @@ export const handoffApi = {
 };
 
 // ============================================================================
-// RAG INDEX
+// KNOWLEDGE INDEX
 // ============================================================================
 
 export const ragIndexApi = {
   /**
-   * Get current index status.
+   * Get current index status. Returns null only when the request itself
+   * fails; an index that has never been built comes back with `indexed: false`
+   * so the UI can still show how much is waiting to be indexed.
    */
-  async getStatus(): Promise<ArticleIndex | null> {
+  async getStatus(): Promise<KnowledgeIndexStatus | null> {
     try {
-      const response = await api.get<{
-        indexed: boolean;
-        articles: ArticleIndex['articles'];
-        totalChunks: number;
-        lastFullIndex: string | null;
-      }>(ENDPOINTS.RAG_INDEX);
-      if (!response.indexed || !response.lastFullIndex) return null;
+      const r = await api.get<Partial<KnowledgeIndexStatus>>(ENDPOINTS.RAG_INDEX);
       return {
-        articles: response.articles,
-        totalChunks: response.totalChunks,
-        lastFullIndex: response.lastFullIndex,
+        indexed: !!r.indexed,
+        articles: r.articles ?? [],
+        kbEntries: r.kbEntries ?? [],
+        totalChunks: r.totalChunks ?? 0,
+        lastFullIndex: r.lastFullIndex ?? null,
+        lastUpdated: r.lastUpdated ?? r.lastFullIndex ?? null,
+        publishedArticleCount: r.publishedArticleCount ?? 0,
+        activeKbCount: r.activeKbCount ?? 0,
+        pendingArticles: r.pendingArticles ?? 0,
+        pendingKbEntries: r.pendingKbEntries ?? 0,
+        staleSources: r.staleSources ?? 0,
       };
     } catch (error) {
-      logger.error('Failed to fetch RAG index status', error);
+      logger.error('Failed to fetch knowledge index status', error);
       return null;
     }
   },
 
   /**
-   * Trigger full re-indexing.
+   * Rebuild the whole index: every published article and every live KB entry.
    */
   async triggerReindex(): Promise<IndexResult> {
     const response = await api.post<IndexResult>(ENDPOINTS.RAG_INDEX, {});
@@ -247,19 +252,20 @@ export const kbApi = {
   },
 
   /**
-   * Create a new KB entry.
+   * Create a new KB entry. The server syncs a live entry into Vasco's index
+   * before answering and reports how that went alongside the entry.
    */
-  async create(input: CreateKBEntryInput): Promise<KBEntry> {
-    const response = await api.post<{ entry: KBEntry }>(ENDPOINTS.KB_LIST, input);
-    return response.entry;
+  async create(input: CreateKBEntryInput): Promise<KBSaveResult> {
+    const response = await api.post<KBSaveResult>(ENDPOINTS.KB_LIST, input);
+    return { entry: response.entry, index: response.index };
   },
 
   /**
-   * Update an existing KB entry.
+   * Update an existing KB entry (same index sync as create).
    */
-  async update(id: string, input: UpdateKBEntryInput): Promise<KBEntry> {
-    const response = await api.put<{ entry: KBEntry }>(ENDPOINTS.KB_DETAIL(id), input);
-    return response.entry;
+  async update(id: string, input: UpdateKBEntryInput): Promise<KBSaveResult> {
+    const response = await api.put<KBSaveResult>(ENDPOINTS.KB_DETAIL(id), input);
+    return { entry: response.entry, index: response.index };
   },
 
   /**

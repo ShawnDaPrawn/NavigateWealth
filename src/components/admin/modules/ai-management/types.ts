@@ -128,7 +128,7 @@ export interface HandoffRequest {
 }
 
 // ============================================================================
-// RAG INDEX
+// KNOWLEDGE INDEX (what Vasco can actually retrieve)
 // ============================================================================
 
 export interface IndexedArticleMeta {
@@ -139,31 +139,61 @@ export interface IndexedArticleMeta {
   indexedAt: string;
 }
 
-export interface ArticleIndex {
+export interface IndexedKnowledgeMeta {
+  entryId: string;
+  title: string;
+  type: KBEntryType;
+  category: string;
+  chunkCount: number;
+  indexedAt: string;
+  agentScope: KBAgentScope;
+  priority: number;
+}
+
+/**
+ * Index status as reported by GET /vasco/index. Compares what is indexed with
+ * what is published / live right now so the UI can say "out of date".
+ */
+export interface KnowledgeIndexStatus {
+  /** False when no index document exists at all (never built, or cleared). */
+  indexed: boolean;
   articles: IndexedArticleMeta[];
-  lastFullIndex: string;
+  kbEntries: IndexedKnowledgeMeta[];
   totalChunks: number;
+  /** Last full rebuild; null when only incremental syncs have run. */
+  lastFullIndex: string | null;
+  /** Last change of any kind (rebuild or single-source sync). */
+  lastUpdated: string | null;
+  publishedArticleCount: number;
+  activeKbCount: number;
+  /** Published articles not in the index yet. */
+  pendingArticles: number;
+  /** Live KB entries not in the index yet. */
+  pendingKbEntries: number;
+  /** Indexed sources that are no longer published / live. */
+  staleSources: number;
 }
 
 export interface IndexResult {
   articlesIndexed: number;
+  kbEntriesIndexed: number;
   totalChunks: number;
   errors: string[];
   durationMs: number;
+}
+
+/** Outcome of syncing one KB entry into the index, returned on every KB write. */
+export interface KBIndexOutcome {
+  indexed: boolean;
+  chunkCount: number;
+  error?: string;
 }
 
 // ============================================================================
 // MODULE TAB STATE
 // ============================================================================
 
-export type AIManagementTab =
-  | 'dashboard'
-  | 'agents'
-  | 'knowledge-base'
-  | 'prompt-studio'
-  | 'analytics'
-  | 'feedback'
-  | 'handoffs';
+export type AIManagementTab = 'overview' | 'knowledge' | 'prompts' | 'feedback' | 'leads';
 
 // ============================================================================
 // PROMPT STUDIO (Phase 3)
@@ -245,6 +275,13 @@ export interface CreateKBEntryInput {
   agentScope: KBAgentScope;
   priority: number;
   status?: KBEntryStatus;
+}
+
+/** What the server returns after creating or updating an entry. */
+export interface KBSaveResult {
+  entry: KBEntry;
+  /** Absent only from servers that predate index syncing. */
+  index?: KBIndexOutcome;
 }
 
 /** Input for updating an existing KB entry */

@@ -203,15 +203,38 @@ describe('ragIndexApi', () => {
     expect(result?.lastFullIndex).toBe('2025-01-01T00:00:00Z');
   });
 
-  it('getStatus returns null when not indexed', async () => {
+  it('getStatus still reports what is waiting when nothing is indexed yet', async () => {
     mockApiGet.mockResolvedValue({
       indexed: false,
       articles: [],
       totalChunks: 0,
       lastFullIndex: null,
+      publishedArticleCount: 3,
+      activeKbCount: 2,
+      pendingArticles: 3,
+      pendingKbEntries: 2,
     });
     const result = await ragIndexApi.getStatus();
-    expect(result).toBeNull();
+    expect(result).toMatchObject({
+      indexed: false,
+      kbEntries: [],
+      pendingArticles: 3,
+      pendingKbEntries: 2,
+      staleSources: 0,
+      lastUpdated: null,
+    });
+  });
+
+  it('getStatus falls back to lastFullIndex for lastUpdated on older servers', async () => {
+    mockApiGet.mockResolvedValue({
+      indexed: true,
+      articles: [],
+      totalChunks: 5,
+      lastFullIndex: '2025-01-01T00:00:00Z',
+    });
+    const result = await ragIndexApi.getStatus();
+    expect(result?.lastUpdated).toBe('2025-01-01T00:00:00Z');
+    expect(result?.kbEntries).toEqual([]);
   });
 
   it('getStatus returns null on API error', async () => {
@@ -263,21 +286,32 @@ describe('kbApi', () => {
     expect(mockApiGet).toHaveBeenCalledWith('/ai-management/kb/kb-001');
   });
 
-  it('create posts new KB entry', async () => {
-    mockApiPost.mockResolvedValue({ entry: MOCK_KB_ENTRY });
+  it('create posts new KB entry and passes the index outcome through', async () => {
+    mockApiPost.mockResolvedValue({
+      entry: MOCK_KB_ENTRY,
+      index: { indexed: true, chunkCount: 1 },
+    });
     const result = await kbApi.create({
       title: 'Understanding FAIS',
       content: 'FAIS overview...',
     } as never);
-    expect(result).toEqual(MOCK_KB_ENTRY);
+    expect(result).toEqual({ entry: MOCK_KB_ENTRY, index: { indexed: true, chunkCount: 1 } });
     expect(mockApiPost).toHaveBeenCalledWith('/ai-management/kb', expect.any(Object));
+  });
+
+  it('create tolerates a server that does not report an index outcome', async () => {
+    mockApiPost.mockResolvedValue({ entry: MOCK_KB_ENTRY });
+    const result = await kbApi.create({ title: 'x', content: 'y' } as never);
+    expect(result.entry).toEqual(MOCK_KB_ENTRY);
+    expect(result.index).toBeUndefined();
   });
 
   it('update puts KB entry', async () => {
     const updated = { ...MOCK_KB_ENTRY, title: 'Updated FAIS Guide' };
-    mockApiPut.mockResolvedValue({ entry: updated });
+    mockApiPut.mockResolvedValue({ entry: updated, index: { indexed: false, chunkCount: 0 } });
     const result = await kbApi.update('kb-001', { title: 'Updated FAIS Guide' } as never);
-    expect(result.title).toBe('Updated FAIS Guide');
+    expect(result.entry.title).toBe('Updated FAIS Guide');
+    expect(result.index).toEqual({ indexed: false, chunkCount: 0 });
     expect(mockApiPut).toHaveBeenCalledWith('/ai-management/kb/kb-001', {
       title: 'Updated FAIS Guide',
     });

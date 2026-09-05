@@ -1397,6 +1397,39 @@ Test-Path <path>
 Append-only. Add entries for regressions, near misses, and confusing cleanup
 events that future agents could repeat.
 
+### 2026-09-05 - Knowledge Base Entries Were Written But Never Read
+
+- **Symptom:** Admins added entries in AI Management → Knowledge Base, tested
+  Vasco, and Vasco answered as if the entries did not exist. Reported as "the
+  seeding of the articles is not working".
+- **Root cause:** Two disconnected systems that the UI presented as one.
+  `kb-service.ts` stored entries at `ai:kb:*`; nothing on the server ever read
+  them back except the admin list. The only retrieval path — `retrieveContext`
+  in `vasco-rag-service.ts` — searched a separate index built from published
+  Publications articles, and that index was refreshed only when an admin
+  pressed "Re-index Articles" on a different tab. The portal advisor
+  (`ai-advisor-chat.ts`) retrieved nothing at all despite `ragEnabled: true`.
+- **Why it hid:** The KB tab reported "Active" with a green badge, the
+  dashboard card was titled "Knowledge Base Index", and nothing compared what
+  was stored with what was retrievable. A green status was describing the
+  database row, not Vasco.
+- **Fix (this change):** One index for both source kinds. Live KB entries are
+  embedded into `vasco:emb:kb:*` / `vasco:chunk:kb:*` on every write
+  (`syncKnowledgeEntry`, awaited by the KB routes, outcome returned to the UI);
+  published articles sync on publish/unpublish/delete via fire-and-forget hooks
+  (`vasco-index-sync.ts`); both Vasco agents retrieve through
+  `retrieveContext(query, { agentId })`, which honours per-entry agent scope and
+  priority. `GET /vasco/index` now reports indexed-vs-published/live counts so
+  the Knowledge tab can say "up to date" or "N waiting to be indexed" with a
+  rebuild button. Contract suite: `vasco-rag-service.contract.test.ts`.
+- **Operator step:** Existing entries created before this change are not in
+  the index until the first **Rebuild index** (AI Management → Knowledge). The
+  tab shows them as "waiting to be indexed" until then.
+- **Lesson:** A status badge must describe the effect, not the write. When a
+  feature's value is "the AI knows X", the UI has to show whether the AI can
+  actually retrieve X, and the thing that makes it retrievable has to happen on
+  the same save — not on a button on another tab.
+
 ### 2026-08-25 - Scheduled Jobs Silently Not Running
 
 - **Symptom:** None visible. No errors, no alerts, no failed requests. Found by

@@ -99,6 +99,9 @@ vi.mock('../article-notification-template.ts', () => ({
 }));
 vi.mock('../publications-notification-service.ts', () => stubModule());
 vi.mock('../publications-email-engagement-service.ts', () => stubModule());
+// Vasco's knowledge index follows article publication state via fire-and-forget
+// hooks; embedding is not this suite's concern and must not reach the network.
+vi.mock('../vasco-index-sync.ts', () => stubModule());
 vi.mock('../publications-phase4-service.ts', () => ({
   TemplateService: objStub(),
   VersionService: objStub(),
