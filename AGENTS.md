@@ -60,8 +60,20 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    npm test -- --coverage    # vitest WITH coverage — CI enforces the thresholds
                              # in vitest.config.ts, so plain `npm test` can pass
                              # locally while CI fails on a coverage drop. Mirror it.
+   npm run test:coverage:server  # SEPARATE gate on quality/vitest.config.server.ts.
+                             # The line above does NOT enforce the backend's
+                             # per-layer floors — different config, different job.
+   npm run bundle:check      # ratcheted; trips when a dependency lands in an
+                             # eagerly-loaded chunk. Re-baseline only deliberately.
+   npm audit                 # ratcheted against quality/baselines/npm-audit-baseline
+                             # on high+critical only
    npm run build             # production build
    ```
+
+   All eleven are blocking in `.github/workflows/quality-check.yml`. The three
+   added here were missing from this list for a while, which meant a run that
+   looked complete locally could still fail after push — the exact failure mode
+   this protocol exists to prevent.
 
    If a gate genuinely cannot run (e.g. a blocked `npm install`), **say so
    explicitly with the error** — do not commit unverified code and "let CI catch
