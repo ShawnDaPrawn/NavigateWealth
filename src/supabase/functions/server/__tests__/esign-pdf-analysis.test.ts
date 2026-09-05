@@ -14,7 +14,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ANCHOR_PATTERNS, rectForAnchor } from '../esign-pdf-analysis';
+import { PDFDocument, PDFName } from 'pdf-lib';
+import { ANCHOR_PATTERNS, detectAcroformFields, rectForAnchor } from '../esign-pdf-analysis';
 
 /** First pattern that matches the line — mirrors the scan loop's ordering. */
 function firstMatch(lineText: string) {
@@ -141,5 +142,78 @@ describe('rectForAnchor — geometry', () => {
     const nearBottom = { text, rect: [50, 5, 350, 15] as [number, number, number, number] };
     const [, b2] = rectForAnchor(nearBottom, match, 'signature', pageWidthPt);
     expect(b2).toBeGreaterThanOrEqual(0); // never extends past the page bottom
+  });
+});
+
+describe('detectAcroformFields — widgets keep their own page', () => {
+  /**
+   * Three-page form with a text field + checkbox on every page. Pins the
+   * regression where the widget→page lookup never resolved and every
+   * suggestion was stacked on page 1.
+   */
+  async function buildThreePageForm(opts: { stripPageRef?: boolean } = {}) {
+    const pdf = await PDFDocument.create();
+    const form = pdf.getForm();
+    for (let i = 0; i < 3; i++) {
+      const page = pdf.addPage([595, 842]);
+      form
+        .createTextField(`name_p${i + 1}`)
+        .addToPage(page, { x: 50, y: 700 - i * 100, width: 200, height: 24 });
+      form
+        .createCheckBox(`agree_p${i + 1}`)
+        .addToPage(page, { x: 50, y: 600, width: 18, height: 18 });
+    }
+    if (opts.stripPageRef) {
+      // Some authoring tools omit the widget's /P entry; the page must then
+      // be recovered from the page's /Annots array instead.
+      for (const field of form.getFields()) {
+        for (const widget of field.acroField.getWidgets()) {
+          widget.dict.delete(PDFName.of('P'));
+        }
+      }
+    }
+    return pdf.save();
+  }
+
+  function pagesByName(candidates: Awaited<ReturnType<typeof detectAcroformFields>>['candidates']) {
+    return Object.fromEntries(candidates.map((c) => [c.label, c.page]));
+  }
+
+  const expected = {
+    name_p1: 1,
+    agree_p1: 1,
+    name_p2: 2,
+    agree_p2: 2,
+    name_p3: 3,
+    agree_p3: 3,
+  };
+
+  it('places each widget on the page it was drawn on', async () => {
+    const res = await detectAcroformFields(await buildThreePageForm());
+    expect(res.ok).toBe(true);
+    expect(res.candidates).toHaveLength(6);
+    expect(pagesByName(res.candidates)).toEqual(expected);
+  });
+
+  it('falls back to the page /Annots scan when widgets carry no /P entry', async () => {
+    const res = await detectAcroformFields(await buildThreePageForm({ stripPageRef: true }));
+    expect(res.ok).toBe(true);
+    expect(res.candidates).toHaveLength(6);
+    expect(pagesByName(res.candidates)).toEqual(expected);
+  });
+
+  it("converts widget rects using the dimensions of the widget's own page", async () => {
+    const pdf = await PDFDocument.create();
+    const form = pdf.getForm();
+    pdf.addPage([595, 842]);
+    const wide = pdf.addPage([1000, 500]);
+    form.createTextField('wide').addToPage(wide, { x: 500, y: 250, width: 100, height: 20 });
+    const res = await detectAcroformFields(await pdf.save());
+    const cand = res.candidates.find((c) => c.label === 'wide');
+    expect(cand?.page).toBe(2);
+    // x = 500 / 1000 → 50%; y from top ≈ (500 - 270) / 500 → 46%. Against the
+    // 595×842 first page these would read ~84% and ~68% instead.
+    expect(cand?.x).toBeCloseTo(50, 0);
+    expect(cand?.y).toBeCloseTo(46, 0);
   });
 });
