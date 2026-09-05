@@ -228,7 +228,7 @@ it auto-deploys._ Honour that path; never reinvent it.
 
 ---
 
-## Cursor Cloud Specific Instructions
+## The product, in three paragraphs
 
 **Product**: Navigate Wealth - a React SPA (Vite + TypeScript) for a South
 African financial advisory platform. Single `package.json`, not a monorepo.
@@ -250,39 +250,21 @@ boundary.
 
 ## Dev Commands
 
-Commands that exist on clean `main` as of 2026-04-20:
+**`package.json` is the list.** This section used to carry two tables of
+commands "as of 2026-04-20" plus a list of commands that do not exist. Both went
+stale — the repository gained scripts the tables never mentioned, and the
+finalization protocol above already names every gate you must run. Read
+`package.json` rather than trusting a copy of it, which this file tells you to do
+elsewhere anyway.
 
-| Task                   | Command                                                                      |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| Install deps           | `npm install`                                                                |
-| Dev server             | `npm run dev` (Vite, port 3000)                                              |
-| Build                  | `npm run build`                                                              |
-| Tests                  | `npm test`                                                                   |
-| Test watch             | `npm run test:watch`                                                         |
-| Optional UI inspection | `npm run ui:inspect -- --path /your-route --output tmp/ui-inspect/check.png` |
-| Provider sync          | `npm run provider:sync`                                                      |
-| Provider worker        | `npm run provider:worker`                                                    |
+Three things worth knowing that `package.json` does not tell you:
 
-Quality-gate commands that now exist on `main` (run these locally before
-committing — see the finalization protocol above):
-
-| Gate                 | Command                        |
-| -------------------- | ------------------------------ |
-| Format (write)       | `npm run format`               |
-| Format (check)       | `npm run format:check`         |
-| Lint                 | `npm run lint`                 |
-| SPA typecheck        | `npm run typecheck`            |
-| Middleware typecheck | `npm run typecheck:middleware` |
-| Deno edge typecheck  | `npm run typecheck:deno`       |
-| Module boundaries    | `npm run depcruise`            |
-| Build                | `npm run build`                |
-
-Commands referenced historically that still do **not** exist:
-
-- `npm run test:coverage` (CI runs coverage via its own Vitest invocation)
-- `npm run deps:audit`
-- `npm run deps:boundaries` (use `npm run depcruise`)
-- `npm run check-env`
+- The Vite dev server opens on **port 3000**, not Vite's default 5173.
+- `npm test` runs the backend suites too — `vitest.config.ts` deliberately does
+  not exclude `src/supabase/functions/**`. That is why a partial run misses the
+  global ratchets, as the finalization protocol explains at length.
+- `npm run ui:inspect` is **not** a default sign-off step. Use it only when a
+  browser-level check is genuinely needed.
 
 ## Auth hydration (do not regress — 2026-05 incident)
 
@@ -322,15 +304,15 @@ Session handling in `src/components/auth/AuthContext.tsx` and
   0 errors (warnings are an accepted baseline).
 - The historical `resolveNestedKey.test.tsx` suite issue is fixed — the file
   uses real Vitest `describe`/`it` and the full suite exits 0.
-- The Vite dev server opens `http://localhost:3000/` by default.
 - Architecture guidelines live in `docs/GUIDELINES.md`.
 - Status lives in `docs/STATUS.md`; the plan lives in `docs/ROADMAP.md`.
 - `docs/README.md` indexes every document and states the docs conventions.
 - Do not require the Playwright/UI-inspection path by default for routine
   sign-off. Use `npm run ui:inspect` only when the user explicitly asks for it
   or when a browser-level check is truly necessary and practical.
-- If authenticated admin UI verification is explicitly requested, use the
-  machine-local encrypted credential file at
-  `C:\Users\ShawnFrancisco\.codex\secrets\navigate-wealth-admin.credential.clixml`.
-  This file is intentionally outside the repo; do not copy credentials into
-  source, commits, screenshots, or logs.
+- If authenticated admin UI verification is explicitly requested, the owner
+  keeps an encrypted credential file outside the repository on their own
+  machine; its path is in `AGENTS.local.md`, which is git-ignored. It is not
+  recorded here because a shared file is the wrong place to publish one
+  person's home directory layout. Whatever the path, the rule is the same:
+  never copy credentials into source, commits, screenshots, or logs.

@@ -1,0 +1,43 @@
+# Review routing. A path listed here requests the owner's review automatically.
+#
+# The point is not ceremony: these are the paths where a mistake is expensive or
+# hard to reverse — a migration that has already run, an auth boundary, a
+# compliance record, or the module that is deliberately separable from the rest
+# of the product. Everything else follows the repository default.
+#
+# Syntax: last matching pattern wins, so the specific entries sit below the
+# catch-all.
+
+*                                               @ShawnDaPrawn
+
+# Database changes reach production without a staging run — see docs/STATUS.md.
+/supabase/migrations/                           @ShawnDaPrawn
+/supabase/cron/                                 @ShawnDaPrawn
+/supabase/config.toml                           @ShawnDaPrawn
+
+# The authorization boundary. `verify_jwt = false` means these files are it.
+/src/supabase/functions/server/auth-mw.ts       @ShawnDaPrawn
+/src/supabase/functions/server/auth-routes.ts   @ShawnDaPrawn
+/src/supabase/functions/server/auth-signup.ts   @ShawnDaPrawn
+/src/supabase/functions/server/auth-validation.ts @ShawnDaPrawn
+/src/supabase/functions/server/constants.ts     @ShawnDaPrawn
+/src/supabase/functions/server/mount-core.ts    @ShawnDaPrawn
+/src/supabase/functions/server/mount-fna.ts     @ShawnDaPrawn
+/src/supabase/functions/server/mount-modules.ts @ShawnDaPrawn
+
+# Records a compliance review would ask for.
+/docs/compliance/                               @ShawnDaPrawn
+
+# A separate business, kept deletable in one sitting. See its README.
+/src/components/admin/modules/locked/           @ShawnDaPrawn
+/src/supabase/functions/server/locked/          @ShawnDaPrawn
+
+# The gates themselves, and the numbers they enforce.
+/.github/workflows/                             @ShawnDaPrawn
+/quality/                                       @ShawnDaPrawn
+/.husky/                                        @ShawnDaPrawn
+
+# Status and rules.
+/docs/STATUS.md                                 @ShawnDaPrawn
+/docs/GUIDELINES.md                             @ShawnDaPrawn
+/AGENTS.md                                      @ShawnDaPrawn

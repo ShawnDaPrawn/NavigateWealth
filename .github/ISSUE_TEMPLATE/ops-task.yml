@@ -1,0 +1,52 @@
+name: Operations task
+description: Something to run, configure, or verify in a live environment
+labels: ['ops']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For work that needs dashboard or credential access — a secret to set, a job
+        to verify, a cutover to run. If a runbook already covers it, link it; if
+        one does not exist and the task will recur, say so and it becomes part of
+        the task.
+  - type: textarea
+    id: task
+    attributes:
+      label: What needs doing
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where
+      options:
+        - Supabase dashboard
+        - Vercel dashboard
+        - GitHub repository settings
+        - Production database
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: runbook
+    attributes:
+      label: Runbook
+      description: Path under `docs/runbooks/`, or "none exists yet".
+      placeholder: docs/runbooks/scheduled-jobs.md
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: How we will know it worked
+      description: |
+        A specific, observable signal. "Job shows 200 in the function logs on its own
+        schedule" — not "job is green": `cron.job_run_details` reports success for a
+        request that was never delivered.
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: What happens if this goes wrong
+      description: And how to reverse it.
