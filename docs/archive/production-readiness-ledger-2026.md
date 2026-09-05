@@ -34,6 +34,45 @@ those proposed files exist on `main`.
 
 ---
 
+## Section 0 - Current Addendum As Of 2026-09-05 (Newsletter Studio — made operational)
+
+Three things were wrong with the Newsletter Studio admin module, none of them
+visible from the code review that shipped it. All three are fixed; the first two
+were production-state problems, the third a code defect.
+
+1. **The delivery cron job was never installed.** `supabase/cron/newsletter-studio-jobs.sql`
+   existed but had not been run, so only the browser accelerator ever ticked
+   (`nlstudio:processor:state` had `lastCronRunAt: null`). Scheduled sends
+   could not fire unattended. Installed 2026-09-05 as jobid 31 and verified
+   through the processor state, not just `cron.job_run_details` — see
+   `docs/runbooks/scheduled-jobs.md`.
+2. **The subscriber base was unreachable.** 218 `newsletter:{email}` consent
+   records existed (206 confirmed + active) but the `sys_newsletter_contacts`
+   communication group — the composer's default audience — had never been
+   created, because the subscription flow creates it lazily and every subscriber
+   arrived by admin import. A send would have resolved to zero recipients.
+   `newsletter-studio-service.ts` now treats the subscriber base as a
+   first-class audience list backed by the consent records directly (listed,
+   validated and resolved even when the group record is absent; unioned with it
+   when present), with contract tests pinning both cases.
+3. **The campaign composer crashed on open.** The shared TipTap editor was
+   mounted through `React.lazy` + `Suspense`; TipTap's `useEditor` builds the
+   editor during render and schedules its destruction when a render is
+   discarded, which a resolving Suspense boundary does, so the first effect ran
+   against a destroyed editor (`DOMSerializer.fromSchema` on a null schema).
+   Reproduced in isolation with nothing but that mount pattern. The module now
+   resolves the chunk in an effect and mounts the editor afterwards
+   (`components/LazyRichTextEditor.tsx`).
+
+The module's UI was also rebuilt end to end (overview, campaign list, composer
+with inbox preview and pre-flight checklist, drill-down with content preview
+and state-aware actions, template library, audiences), with URL-addressable
+campaign views, unsaved-change protection, loading/error/empty states, and a
+manual "run a delivery pass" for stalled campaigns. Frontend tests cover the
+formatters, scheduler health, preview sanitising, dashboard, list and composer.
+
+---
+
 ## Section 0 - Current Addendum As Of 2026-08-25 (scheduled jobs — RESOLVED, one cleanup open)
 
 > **RESOLVED 2026-08-26.** The audit below stands as the diagnosis, but its
