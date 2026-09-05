@@ -8,6 +8,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
+import {
+  CLIENT_LINK_ERROR_MESSAGE,
+  isClientLinkViolation,
+  withLinkedClient,
+} from './calendar-client-link.ts';
 import type {
   CalendarEvent,
   Reminder,
@@ -28,6 +33,13 @@ import {
 } from './shared-calendar-validation.ts';
 
 const log = createModuleLogger('calendar-service');
+
+/**
+ * NOTE on the `client` relation: rows are read with `select('*')` and the
+ * `client` object the SPA renders is derived from `attendees` by
+ * `withLinkedClient`. The previous `client:clients(*)` embed relied on a
+ * foreign key to the empty `public.clients` table; see calendar-client-link.ts.
+ */
 
 /**
  * Create Supabase client with Service Role Key for backend operations
@@ -54,10 +66,7 @@ export class CalendarService {
   async getEvents(userId: string, filters?: Partial<EventFilters>): Promise<CalendarEvent[]> {
     log.info('Getting events', { userId, filters });
 
-    let query = this.supabase
-      .from('events')
-      .select('*, client:clients(*)')
-      .eq('created_by', userId); // Enforce ownership
+    let query = this.supabase.from('events').select('*').eq('created_by', userId); // Enforce ownership
 
     // Apply filters
     if (filters?.start) {
@@ -91,7 +100,7 @@ export class CalendarService {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(withLinkedClient);
   }
 
   /**
@@ -100,7 +109,7 @@ export class CalendarService {
   async getEventById(userId: string, eventId: string): Promise<CalendarEvent> {
     const { data, error } = await this.supabase
       .from('events')
-      .select('*, client:clients(*)')
+      .select('*')
       .eq('id', eventId)
       .eq('created_by', userId)
       .single();
@@ -109,7 +118,7 @@ export class CalendarService {
       throw new NotFoundError('Event not found');
     }
 
-    return data;
+    return withLinkedClient(data);
   }
 
   /**
@@ -145,16 +154,19 @@ export class CalendarService {
         created_by: userId,
         recurrence_rule: validData.recurrence_rule,
       })
-      .select('*, client:clients(*)')
+      .select('*')
       .single();
 
     if (error) {
       log.error('Error creating event', error);
+      if (isClientLinkViolation(error)) {
+        throw new ValidationError(CLIENT_LINK_ERROR_MESSAGE);
+      }
       throw error;
     }
 
     log.success('Event created', { userId, eventId: event.id });
-    return event;
+    return withLinkedClient(event);
   }
 
   /**
@@ -183,16 +195,19 @@ export class CalendarService {
       .update(updatePayload)
       .eq('id', eventId)
       .eq('created_by', userId)
-      .select('*, client:clients(*)')
+      .select('*')
       .single();
 
     if (error) {
       log.error('Error updating event', error);
+      if (isClientLinkViolation(error)) {
+        throw new ValidationError(CLIENT_LINK_ERROR_MESSAGE);
+      }
       throw error;
     }
 
     log.success('Event updated', { userId, eventId });
-    return event;
+    return withLinkedClient(event);
   }
 
   /**
@@ -227,7 +242,7 @@ export class CalendarService {
 
     let query = this.supabase
       .from('reminders')
-      .select('*, client:clients(*)')
+      .select('*')
       .or(`assignee_id.eq.${userId},created_by.eq.${userId}`);
 
     // Apply filters
@@ -249,7 +264,7 @@ export class CalendarService {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(withLinkedClient);
   }
 
   /**
@@ -258,7 +273,7 @@ export class CalendarService {
   async getReminderById(userId: string, reminderId: string): Promise<Reminder> {
     const { data, error } = await this.supabase
       .from('reminders')
-      .select('*, client:clients(*)')
+      .select('*')
       .eq('id', reminderId)
       .or(`assignee_id.eq.${userId},created_by.eq.${userId}`)
       .single();
@@ -267,7 +282,7 @@ export class CalendarService {
       throw new NotFoundError('Reminder not found');
     }
 
-    return data;
+    return withLinkedClient(data);
   }
 
   /**
@@ -298,16 +313,19 @@ export class CalendarService {
         created_by: userId,
         assignee_id: userId, // Default to self-assigned for now
       })
-      .select('*, client:clients(*)')
+      .select('*')
       .single();
 
     if (error) {
       log.error('Error creating reminder', error);
+      if (isClientLinkViolation(error)) {
+        throw new ValidationError(CLIENT_LINK_ERROR_MESSAGE);
+      }
       throw error;
     }
 
     log.success('Reminder created', { userId, reminderId: reminder.id });
-    return reminder;
+    return withLinkedClient(reminder);
   }
 
   /**
@@ -332,16 +350,19 @@ export class CalendarService {
       .update(validUpdates)
       .eq('id', reminderId)
       .or(`assignee_id.eq.${userId},created_by.eq.${userId}`)
-      .select('*, client:clients(*)')
+      .select('*')
       .single();
 
     if (error) {
       log.error('Error updating reminder', error);
+      if (isClientLinkViolation(error)) {
+        throw new ValidationError(CLIENT_LINK_ERROR_MESSAGE);
+      }
       throw error;
     }
 
     log.success('Reminder updated', { userId, reminderId });
-    return reminder;
+    return withLinkedClient(reminder);
   }
 
   /**
