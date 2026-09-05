@@ -3,12 +3,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
+import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { Skeleton } from '../../../../ui/skeleton';
 import {
   acceptIntakeSession,
   listSubmittedIntakes,
@@ -26,6 +24,11 @@ import { FNAIntakeStatusBadge } from '@/shared/fna-intake/components/FNAIntakeSt
 import { PrefillReviewModal } from '../../form-prefill';
 import { clientApi } from '../api';
 import type { IntakeHandoffState } from './IntakeWizardHandoff';
+import {
+  FNAIntakeQueueSkeleton,
+  FNAIntakeQueueTitle,
+  INTAKE_RESULTS_CLASS,
+} from './FNAIntakeQueueSkeleton';
 
 interface FNAIntakeQueueProps {
   onAccept?: (result: IntakeHandoffState) => void;
@@ -182,82 +185,76 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
     }
   };
 
+  if (loading) {
+    return <FNAIntakeQueueSkeleton />;
+  }
+
   return (
     <>
-      <Card className="border-gray-200" aria-busy={loading}>
+      <Card className="border-gray-200">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            FNA Intake Queue
-            {loading && (
-              <span
-                className="inline-flex items-center gap-1.5 text-xs font-normal text-gray-500"
-                role="status"
-                aria-live="polite"
-              >
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" aria-hidden="true" />
-                Loading intakes…
-              </span>
-            )}
-          </CardTitle>
+          <FNAIntakeQueueTitle loading={false} />
         </CardHeader>
-        <CardContent className="space-y-3">
-          {loading ? (
-            <Skeleton className="h-5 w-64 max-w-full" />
-          ) : items.length === 0 ? (
-            <p className="text-sm text-gray-500">No client intakes awaiting review.</p>
-          ) : (
-            items.map((session) => (
-              <div
-                key={session.id}
-                className="flex flex-col gap-3 rounded-lg border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {DOMAIN_LABELS[session.domain] ?? session.domain}
-                    </p>
-                    <FNAIntakeStatusBadge status="submitted" mode="adviser" />
-                    <Badge variant="outline" className="text-[10px]">
-                      {session.progressPercent}% complete
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Client:{' '}
-                    <button
-                      type="button"
-                      className="font-medium text-primary hover:underline"
-                      onClick={() => onOpenClient?.(session.clientId)}
-                    >
-                      {clientNameFor(session.clientId)}
-                    </button>
-                  </p>
-                  {session.submittedAt && (
-                    <p className="text-xs text-gray-500">
-                      Submitted: {new Date(session.submittedAt).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={actingId === session.id}
-                    onClick={() => void handleRequestInfo(session)}
-                  >
-                    Request info
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={actingId === session.id}
-                    onClick={() => void handleAccept(session)}
-                    className="bg-primary text-primary-foreground"
-                  >
-                    Accept & open wizard
-                  </Button>
-                </div>
+        <CardContent>
+          <div className={INTAKE_RESULTS_CLASS}>
+            {items.length === 0 ? (
+              <div className="flex min-h-[94px] items-center rounded-lg border border-dashed border-gray-200 px-4">
+                <p className="text-sm text-gray-500">No client intakes awaiting review.</p>
               </div>
-            ))
-          )}
+            ) : (
+              items.map((session) => (
+                <div
+                  key={session.id}
+                  className="flex flex-col gap-3 rounded-lg border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {DOMAIN_LABELS[session.domain] ?? session.domain}
+                      </p>
+                      <FNAIntakeStatusBadge status="submitted" mode="adviser" />
+                      <Badge variant="outline" className="text-[10px]">
+                        {session.progressPercent}% complete
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Client:{' '}
+                      <button
+                        type="button"
+                        className="font-medium text-primary hover:underline"
+                        onClick={() => onOpenClient?.(session.clientId)}
+                      >
+                        {clientNameFor(session.clientId)}
+                      </button>
+                    </p>
+                    {session.submittedAt && (
+                      <p className="text-xs text-gray-500">
+                        Submitted: {new Date(session.submittedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actingId === session.id}
+                      onClick={() => void handleRequestInfo(session)}
+                    >
+                      Request info
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={actingId === session.id}
+                      onClick={() => void handleAccept(session)}
+                      className="bg-primary text-primary-foreground"
+                    >
+                      Accept & open wizard
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
