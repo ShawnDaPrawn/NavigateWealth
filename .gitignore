@@ -11,6 +11,10 @@ e2e/.env.local
 
 .vercel
 
+# Per-machine agent notes: local credential paths and similar. AGENTS.md is
+# shared; anything specific to one person's machine belongs here instead.
+AGENTS.local.md
+
 # Local / IDE tooling logs (Codex, Vite wrappers, etc.)
 .codex-*.log
 
