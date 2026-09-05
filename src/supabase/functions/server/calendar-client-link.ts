@@ -74,17 +74,20 @@ export function deriveLinkedClient(row: {
 }
 
 /**
- * Attach the derived `client` relation to a row (or to `null`, passed through).
+ * Attach the derived `client` relation to a row.
+ *
+ * The property is OMITTED rather than set to null when there is nothing to
+ * derive, matching the optional `client?: { … }` on `CalendarEvent`. This is
+ * also why there is no `(row: null) => null` overload: an overloaded function
+ * passed to `.map()` resolves to its last signature, which silently typed
+ * `events.map(withLinkedClient)` as `null[]` and cost a CI cycle. Every call
+ * site is non-null — the service throws or returns early before reaching here.
  */
 export function withLinkedClient<T extends { client_id?: string | null; attendees?: unknown }>(
   row: T,
-): T & { client: LinkedClient | null };
-export function withLinkedClient(row: null): null;
-export function withLinkedClient<T extends { client_id?: string | null; attendees?: unknown }>(
-  row: T | null,
-): (T & { client: LinkedClient | null }) | null {
-  if (!row) return null;
-  return { ...row, client: deriveLinkedClient(row) };
+): T & { client?: LinkedClient } {
+  const client = deriveLinkedClient(row);
+  return client ? { ...row, client } : { ...row };
 }
 
 /** Postgres SQLSTATE for a foreign-key violation. */

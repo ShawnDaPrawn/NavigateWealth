@@ -76,14 +76,24 @@ describe('withLinkedClient', () => {
     expect(row.client?.full_name).toBe('Jane');
   });
 
-  it('passes null through', () => {
-    expect(withLinkedClient(null)).toBeNull();
+  it('omits the client entirely rather than inventing one, and keeps the row', () => {
+    const row = withLinkedClient({ id: 'ev-2', title: 'Review', client_id: 'user-9' });
+    expect(row.client).toBeUndefined();
+    expect('client' in row).toBe(false);
+    expect(row.title).toBe('Review');
   });
 
-  it('attaches a null client rather than a placeholder when metadata is missing', () => {
-    const row = withLinkedClient({ id: 'ev-2', title: 'Review', client_id: 'user-9' });
-    expect(row.client).toBeNull();
-    expect(row.title).toBe('Review');
+  it('stays usable as a bare .map() callback', () => {
+    // Regression guard: an earlier version carried a `(row: null) => null`
+    // overload, and passing an overloaded function to .map() resolves to its
+    // LAST signature — which typed `events.map(withLinkedClient)` as `null[]`
+    // and failed the ratcheted Deno typecheck in CI.
+    const rows = [
+      { id: 'a', client_id: 'user-1', attendees: { 'user-1': { name: 'Jane' } } },
+      { id: 'b', client_id: null, attendees: {} },
+    ].map(withLinkedClient);
+    expect(rows[0].client?.full_name).toBe('Jane');
+    expect(rows[1].client).toBeUndefined();
   });
 });
 
