@@ -71,17 +71,17 @@ Legend: ✅ has it · 🟡 partial/caveat · ❌ not offered.
 
 ### 2.1 Envelope lifecycle
 
-| Capability                            | In-house                                                                                                                                                                                                 | Documenso                                   |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Draft → send → sign → complete flow   | ✅ 10-state machine incl. transient `completing` (`esign-types.ts`)                                                                                                                                      | ✅                                          |
-| Sequential and parallel signing order | ✅ server-enforced (`esign-signer-guards.ts`), changeable post-send                                                                                                                                      | ✅ signer ordering                          |
-| Reminders                             | ✅ fixed _and_ escalating tiers (default day 3/7/10/13) + pre-expiry urgent tier, per-envelope config, bulk remind (`esign-reminder-service.ts`)                                                         | 🟡 basic re-send/reminder                   |
-| Expiry                                | ✅ `expiryDays` (default 30) + 6-hourly sweeps — in-process interval plus the pg_cron backstop (repaired 2026-08-26 after the green-when-broken cron incident; `docs/PRODUCTION-READINESS.md` Section 0) | ✅ document expiry                          |
-| Recall / void                         | ✅ recall with token rotation + recall emails; guarded delete state machine; bulk void                                                                                                                   | ✅ void/delete                              |
-| Recovery bin (soft delete)            | ✅ 90-day window, restore/hard-delete (`esign-recovery-bin.ts`)                                                                                                                                          | ❌                                          |
-| Multi-document envelopes              | ✅ ordered doc refs, page-level manifests (reorder/rotate/delete) (`esign-pdf-transform.ts`)                                                                                                             | 🟡 one PDF per document; combine beforehand |
-| Packet workflows (chained envelopes)  | ✅ template chains that auto-advance on completion (`esign-packet-service.ts`)                                                                                                                           | ❌                                          |
-| Completion pipeline                   | ✅ background queue with retries + dead-letter; seal → certificate → hash → distribute (`esign-completion-queue.ts`, `esign-workflow.ts`)                                                                | ✅ (internally handled)                     |
+| Capability                            | In-house                                                                                                                                                                                                                     | Documenso                                   |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Draft → send → sign → complete flow   | ✅ 10-state machine incl. transient `completing` (`esign-types.ts`)                                                                                                                                                          | ✅                                          |
+| Sequential and parallel signing order | ✅ server-enforced (`esign-signer-guards.ts`), changeable post-send                                                                                                                                                          | ✅ signer ordering                          |
+| Reminders                             | ✅ fixed _and_ escalating tiers (default day 3/7/10/13) + pre-expiry urgent tier, per-envelope config, bulk remind (`esign-reminder-service.ts`)                                                                             | 🟡 basic re-send/reminder                   |
+| Expiry                                | ✅ `expiryDays` (default 30) + 6-hourly sweeps — in-process interval plus the pg_cron backstop (repaired 2026-08-26 after the green-when-broken cron incident; `docs/archive/production-readiness-ledger-2026.md` Section 0) | ✅ document expiry                          |
+| Recall / void                         | ✅ recall with token rotation + recall emails; guarded delete state machine; bulk void                                                                                                                                       | ✅ void/delete                              |
+| Recovery bin (soft delete)            | ✅ 90-day window, restore/hard-delete (`esign-recovery-bin.ts`)                                                                                                                                                              | ❌                                          |
+| Multi-document envelopes              | ✅ ordered doc refs, page-level manifests (reorder/rotate/delete) (`esign-pdf-transform.ts`)                                                                                                                                 | 🟡 one PDF per document; combine beforehand |
+| Packet workflows (chained envelopes)  | ✅ template chains that auto-advance on completion (`esign-packet-service.ts`)                                                                                                                                               | ❌                                          |
+| Completion pipeline                   | ✅ background queue with retries + dead-letter; seal → certificate → hash → distribute (`esign-completion-queue.ts`, `esign-workflow.ts`)                                                                                    | ✅ (internally handled)                     |
 
 ### 2.2 Fields, templates, bulk
 
@@ -296,8 +296,8 @@ Concrete, already-tracked-or-new backlog items, in rough priority order:
 
 In-house platform: code on `main` (`src/supabase/functions/server/esign-*`,
 `src/components/esign-signer/`, `src/components/admin/modules/esign/`),
-`docs/PRODUCTION-READINESS.md`, `docs/SECURITY-AUDIT-2026-06.md`,
-`docs/REFACTORING-ROADMAP.md`, `docs/compliance/form-prefill-esign-tokens.md`.
+`docs/archive/production-readiness-ledger-2026.md`, `docs/archive/2026-06-security-audit.md`,
+`docs/ROADMAP.md`, `docs/compliance/form-prefill-esign-tokens.md`.
 
 Documenso (retrieved August 2026):
 

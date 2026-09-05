@@ -1,8 +1,14 @@
+> **ARCHIVED — completed launch record.** Form Prefill Tier A launched
+> 2026-05-23. Kept as evidence, not as guidance. Day-to-day operations are in
+> [`../../runbooks/form-prefill.md`](../../runbooks/form-prefill.md).
+
+---
+
 # Form Prefill — Production Launch Plan
 
 **Purpose:** Close the gap between **Tier A code landed (2026-05-23)** and **production-grade** at the same bar as FNA Intake: deployed backend, UAT sign-off, governed audit, trustworthy adviser UX, and a separate PDF track.
 
-**Prerequisite:** Tier A implementation is in the repo. See `docs/PRODUCTION-READINESS.md` Section 10a and `docs/form-prefill-uat-signoff.md`.
+**Prerequisite:** Tier A implementation is in the repo. See `docs/archive/production-readiness-ledger-2026.md` Section 10a and `docs/archive/2026-05-form-prefill-launch/uat-signoff.md`.
 
 ---
 
@@ -66,7 +72,7 @@ flowchart TD
 
    Requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`.
 
-3. **Complete UAT matrix** — `docs/form-prefill-uat-signoff.md`
+3. **Complete UAT matrix** — `docs/archive/2026-05-form-prefill-launch/uat-signoff.md`
    - Tier A rows 1–10 (all six domains, conflict, empty profile, authZ, intake accept)
    - Record pass/fail and sign-off name + date
 
@@ -131,7 +137,7 @@ flowchart TD
    - Document retention in PRODUCTION-READINESS
 
 3. **Support runbook expansion**
-   - Add to `docs/form-prefill-uat-signoff.md` or new `docs/runbooks/form-prefill.md`:
+   - Add to `docs/archive/2026-05-form-prefill-launch/uat-signoff.md` or new `docs/runbooks/form-prefill.md`:
      - Empty prefill → check profile completeness keys
      - Wrong values → check client keys vs policies source in review modal
      - 429 rate limit → wait / clear KV key (service role)
@@ -266,14 +272,14 @@ Phase 4 can run in parallel with Phase 3 if e-sign is a priority. Phase 5 is a d
 
 ## Related files
 
-| Doc / code                                        | Role                     |
-| ------------------------------------------------- | ------------------------ |
-| `docs/PRODUCTION-READINESS.md` §10a               | Status ledger            |
-| `docs/form-prefill-uat-signoff.md`                | UAT checklist            |
-| `scripts/form-prefill-api-smoke.mjs`              | Deploy verification      |
-| `src/shared/form-prefill/`                        | Registry + types         |
-| `src/supabase/functions/server/form-prefill-*.ts` | Resolver + routes + auth |
-| `src/components/admin/modules/form-prefill/`      | Review UI                |
+| Doc / code                                                | Role                     |
+| --------------------------------------------------------- | ------------------------ |
+| `docs/archive/production-readiness-ledger-2026.md` §10a   | Status ledger            |
+| `docs/archive/2026-05-form-prefill-launch/uat-signoff.md` | UAT checklist            |
+| `scripts/form-prefill-api-smoke.mjs`                      | Deploy verification      |
+| `src/shared/form-prefill/`                                | Registry + types         |
+| `src/supabase/functions/server/form-prefill-*.ts`         | Resolver + routes + auth |
+| `src/components/admin/modules/form-prefill/`              | Review UI                |
 
 ---
 
