@@ -75,6 +75,7 @@ import {
   getCampaignStats,
   getCampaignView,
   getDashboardSummary,
+  listAudienceLists,
   listCampaigns,
   listTemplates,
   pauseCampaign,
@@ -226,6 +227,67 @@ describe('audience resolution (POPIA)', () => {
     const audience = await resolveAudience(['sys_newsletter_contacts']);
     expect(audience.items.map((i) => i.email)).toEqual(['ok@x.co']);
     expect(audience.excludedInvalid).toBe(1);
+  });
+});
+
+describe('subscriber base as a first-class audience', () => {
+  const subs = [
+    { email: 'sub-a@x.co', name: 'Sasha Able', confirmed: true, active: true },
+    { email: 'sub-b@x.co', name: 'Bo Baker', confirmed: true, active: true },
+    { email: 'pending@x.co', name: 'Pat Pending', confirmed: false, active: false },
+    { email: 'gone@x.co', name: 'Gone Guest', confirmed: true, active: false },
+  ];
+
+  it('lists and resolves confirmed active subscribers even when the group record is missing', async () => {
+    deps.getGroupById.mockResolvedValue(null);
+    deps.listSubscribers.mockResolvedValue(subs);
+
+    const lists = await listAudienceLists();
+    expect(lists[0]).toMatchObject({
+      id: 'sys_newsletter_contacts',
+      type: 'system',
+      memberCount: 2,
+      externalContactCount: 2,
+    });
+
+    const campaign = await createCampaign(
+      { name: 'x', subject: 'y', listIds: ['sys_newsletter_contacts'], bodyHtml: '<p>b</p>' },
+      'admin-1',
+    );
+    expect(campaign.listNames).toEqual(['Newsletter Contacts']);
+
+    const audience = await resolveAudience(['sys_newsletter_contacts']);
+    expect(audience.items.map((i) => i.email).sort()).toEqual(['sub-a@x.co', 'sub-b@x.co']);
+    expect(audience.items.find((i) => i.email === 'sub-a@x.co')?.firstName).toBe('Sasha');
+  });
+
+  it('unions a lagging group record with the consent records without double counting', async () => {
+    const group = seedGroup({
+      externalContacts: [external('sub-a@x.co'), external('legacy@x.co')],
+    });
+    deps.getGroups.mockResolvedValue({ data: [group], total: 1, limit: 1000, offset: 0 });
+    deps.listSubscribers.mockResolvedValue(subs);
+
+    const [list] = await listAudienceLists();
+    expect(list.id).toBe('sys_newsletter_contacts');
+    expect(list.memberCount).toBe(3); // sub-a, sub-b, legacy
+
+    const audience = await resolveAudience(['sys_newsletter_contacts']);
+    expect(audience.items.map((i) => i.email).sort()).toEqual([
+      'legacy@x.co',
+      'sub-a@x.co',
+      'sub-b@x.co',
+    ]);
+  });
+
+  it('still rejects genuinely unknown lists', async () => {
+    deps.getGroupById.mockResolvedValue(null);
+    await expect(
+      createCampaign(
+        { name: 'x', subject: 'y', listIds: ['sys_newsletter_contacts', 'nope'], bodyHtml: 'b' },
+        'admin-1',
+      ),
+    ).rejects.toThrow(/Unknown audience list\(s\): nope/);
   });
 });
 

@@ -55,6 +55,27 @@ export const nowIso = () => new Date().toISOString();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * The studio's always-present audience: every confirmed newsletter subscriber
+ * who has not opted out. It shares its id with the "Newsletter Contacts"
+ * communication group so existing campaigns keep resolving, but it is backed
+ * by the `newsletter:{email}` consent records directly — the group is only
+ * lazily created/backfilled by the subscription flow, and a store with
+ * subscribers but no group record (seen in production) must still be
+ * reachable from the studio.
+ */
+export const SUBSCRIBER_LIST_ID = 'sys_newsletter_contacts';
+const SUBSCRIBER_LIST_NAME = 'Newsletter Contacts';
+const SUBSCRIBER_LIST_DESCRIPTION =
+  'Every confirmed newsletter subscriber who has not opted out. Kept in sync automatically.';
+
+type SubscriberRecord = Awaited<ReturnType<typeof listSubscribers>>[number];
+
+/** Confirmed and still-active subscribers — the only ones a campaign may reach. */
+function eligibleSubscribers(subscribers: SubscriberRecord[]): SubscriberRecord[] {
+  return subscribers.filter((s) => s.confirmed && s.active);
+}
+
 // ── Campaign reads ───────────────────────────────────────────────────────────
 
 async function getCampaignOrThrow(id: string): Promise<NewsletterCampaign> {
@@ -145,11 +166,12 @@ export interface CreateCampaignInput {
 
 async function resolveListNames(listIds: string[]): Promise<string[]> {
   const groups = await Promise.all(listIds.map((id) => getGroupById(id)));
-  const missing = listIds.filter((_, i) => !groups[i]);
+  // The subscriber list is virtual: valid even before its group record exists.
+  const missing = listIds.filter((id, i) => !groups[i] && id !== SUBSCRIBER_LIST_ID);
   if (missing.length > 0) {
     throw new ValidationError(`Unknown audience list(s): ${missing.join(', ')}`);
   }
-  return groups.map((g) => g!.name as string);
+  return listIds.map((id, i) => (groups[i]?.name as string | undefined) ?? SUBSCRIBER_LIST_NAME);
 }
 
 export async function createCampaign(
@@ -313,8 +335,9 @@ export async function resolveAudience(listIds: string[]): Promise<ResolvedAudien
     }
   }
 
+  const subscribers = await listSubscribers();
   const unsubscribed = new Set(
-    (await listSubscribers()).filter((s) => s.active === false).map((s) => s.email.toLowerCase()),
+    subscribers.filter((s) => s.active === false).map((s) => s.email.toLowerCase()),
   );
 
   const byEmail = new Map<string, NewsletterAudienceItem>();
@@ -340,6 +363,14 @@ export async function resolveAudience(listIds: string[]): Promise<ResolvedAudien
       token: crypto.randomUUID().replace(/-/g, ''),
     });
   };
+
+  // The subscriber base itself, whether or not its group record has been
+  // created or backfilled yet. Only confirmed, active consent records count.
+  if (listIds.includes(SUBSCRIBER_LIST_ID)) {
+    for (const subscriber of eligibleSubscribers(subscribers)) {
+      consider(subscriber.email, subscriber.name);
+    }
+  }
 
   for (const group of groups) {
     for (const contact of group.externalContacts || []) {
@@ -708,22 +739,63 @@ export async function unsubscribeByRecipientToken(
 export async function listAudienceLists(): Promise<NewsletterListView[]> {
   // getGroups paginates in memory over the full namespace; 1000 is the
   // repository's own MAX_PAGE_SIZE and far above any realistic group count.
-  const { data: groups } = await getGroups({ limit: 1000 });
-  return groups
-    .map(
-      (group): NewsletterListView => ({
+  const [{ data: groups }, subscribers] = await Promise.all([
+    getGroups({ limit: 1000 }),
+    listSubscribers().catch(() => [] as SubscriberRecord[]),
+  ]);
+  const eligibleEmails = new Set(
+    eligibleSubscribers(subscribers).map((s) => s.email.toLowerCase()),
+  );
+
+  const lists = groups.map((group): NewsletterListView => {
+    const externalContacts = group.externalContacts || [];
+    const clientIds = group.clientIds || [];
+    if (group.id === SUBSCRIBER_LIST_ID) {
+      // The group record may lag behind the consent records — count the
+      // union so the estimate matches what resolveAudience will reach.
+      const external = new Set([
+        ...eligibleEmails,
+        ...externalContacts.map((c) => c.email.toLowerCase()),
+      ]);
+      return {
         id: group.id,
         name: group.name,
-        description: group.description || '',
-        type: group.type === 'system' ? 'system' : 'custom',
-        memberCount:
-          group.clientCount ??
-          (group.clientIds || []).length + (group.externalContacts || []).length,
-        externalContactCount: (group.externalContacts || []).length,
-        clientCount: (group.clientIds || []).length,
-      }),
-    )
-    .sort((a, b) => b.memberCount - a.memberCount);
+        description: group.description || SUBSCRIBER_LIST_DESCRIPTION,
+        type: 'system',
+        memberCount: external.size + clientIds.length,
+        externalContactCount: external.size,
+        clientCount: clientIds.length,
+      };
+    }
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description || '',
+      type: group.type === 'system' ? 'system' : 'custom',
+      memberCount: group.clientCount ?? clientIds.length + externalContacts.length,
+      externalContactCount: externalContacts.length,
+      clientCount: clientIds.length,
+    };
+  });
+
+  if (!lists.some((list) => list.id === SUBSCRIBER_LIST_ID)) {
+    lists.push({
+      id: SUBSCRIBER_LIST_ID,
+      name: SUBSCRIBER_LIST_NAME,
+      description: SUBSCRIBER_LIST_DESCRIPTION,
+      type: 'system',
+      memberCount: eligibleEmails.size,
+      externalContactCount: eligibleEmails.size,
+      clientCount: 0,
+    });
+  }
+
+  // Subscriber base first — it is the default audience — then by reach.
+  return lists.sort((a, b) => {
+    if (a.id === SUBSCRIBER_LIST_ID) return -1;
+    if (b.id === SUBSCRIBER_LIST_ID) return 1;
+    return b.memberCount - a.memberCount;
+  });
 }
 
 // ── Templates ────────────────────────────────────────────────────────────────

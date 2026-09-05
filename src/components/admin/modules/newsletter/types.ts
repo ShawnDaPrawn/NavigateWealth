@@ -194,3 +194,10 @@ export interface ProcessResult {
   finished: string[];
   errors: string[];
 }
+
+/** UX-only capability flags derived from the personnel permission set. */
+export interface NewsletterCaps {
+  create: boolean;
+  send: boolean;
+  delete: boolean;
+}

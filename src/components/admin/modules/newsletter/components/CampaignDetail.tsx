@@ -1,23 +1,32 @@
 /**
  * Newsletter Studio — campaign drill-down.
  *
- * The lifecycle hub: test sends, scheduling, send-now, pause/resume/cancel,
- * live delivery progress while the processor works, and engagement stats
- * (click-derived opens, per-link clicks) once delivery is underway.
+ * The lifecycle hub: one obvious next action for the campaign's current
+ * state, a status banner that explains what is happening, live delivery
+ * progress while the processor works, the content as recipients will see it,
+ * and the per-recipient log.
  */
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   Ban,
   CalendarClock,
+  CheckCircle2,
+  Clock,
   Copy,
+  Eye,
   FlaskConical,
+  Info,
   Loader2,
+  MoreHorizontal,
   Pause,
   Pencil,
   Play,
+  RefreshCw,
   Send,
   Trash2,
+  XCircle,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -28,99 +37,80 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '../../../../ui/alert-dialog';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
+import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
-import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
-import { Progress } from '../../../../ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../../ui/table';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
+import { Skeleton } from '../../../../ui/skeleton';
+import { useAuth } from '../../../../auth/AuthContext';
+import { NEWSLETTER_FROM_EMAIL, NEWSLETTER_REPLY_TO_EMAIL } from '../constants';
 import {
   useCancelCampaign,
-  useStudioDashboard,
   useDeleteCampaign,
   useDuplicateCampaign,
   usePauseCampaign,
   useResumeCampaign,
+  useRunProcessorNow,
   useScheduleCampaign,
   useSendCampaignNow,
   useSendTest,
   useStudioCampaign,
   useStudioCampaignStats,
-  useStudioRecipients,
+  useStudioDashboard,
+  useStudioLists,
 } from '../hooks/useNewsletterStudio';
-import { CampaignStatusBadge, DeliveryStatusBadge } from './StatusBadge';
-import type { NewsletterCaps } from './CampaignsTab';
-import type { NewsletterCampaign } from '../types';
-
-function formatDateTime(value: string | null): string {
-  if (!value) return '—';
-  try {
-    return new Date(value).toLocaleString('en-ZA', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '—';
-  }
-}
+import type { NewsletterCampaign, NewsletterCaps } from '../types';
+import { formatDateTime, formatNumber, formatRelative, pluralize } from '../utils/format';
+import { schedulerHealth } from '../utils/scheduler';
+import { isCampaignDeletable } from '../utils/campaign';
+import { EmailPreview } from './EmailPreview';
+import { CampaignStatusBadge } from './StatusBadge';
+import { DeliveryPanel, LinkPerformance } from './campaign-detail/DeliveryPanel';
+import { RecipientsPanel } from './campaign-detail/RecipientsPanel';
+import { ScheduleDialog, SendNowDialog, TestSendDialog } from './campaign-detail/CampaignDialogs';
+import { DetailRow, ErrorState, Notice, SectionHeader } from './shared';
 
 interface CampaignDetailProps {
   campaignId: string;
   caps: NewsletterCaps;
   onBack: () => void;
   onEdit: (campaign: NewsletterCampaign) => void;
+  onOpenCampaign: (campaignId: string) => void;
   onDeleted: () => void;
 }
+
+const EDITABLE: NewsletterCampaign['status'][] = ['draft', 'scheduled'];
+const CANCELLABLE: NewsletterCampaign['status'][] = ['scheduled', 'queued', 'sending', 'paused'];
 
 export function CampaignDetail({
   campaignId,
   caps,
   onBack,
   onEdit,
+  onOpenCampaign,
   onDeleted,
 }: CampaignDetailProps) {
-  const { data: campaign } = useStudioCampaign(campaignId);
+  const {
+    data: campaign,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useStudioCampaign(campaignId);
   const { data: dashboard } = useStudioDashboard();
-  // Null means the pg_cron job has never run: scheduling then only advances
-  // while an admin has the studio open. Say so before they rely on it.
-  const cronInstalled = Boolean(dashboard?.processor?.lastCronRunAt);
-  const isActive = campaign?.status === 'queued' || campaign?.status === 'sending';
+  const { data: lists = [] } = useStudioLists();
+  const { user } = useAuth();
+  const scheduler = schedulerHealth(dashboard?.processor);
+
   const hasDelivery = Boolean(campaign && campaign.recipientCount > 0);
   const { data: stats } = useStudioCampaignStats(campaignId, hasDelivery);
-
-  const [recipientPage, setRecipientPage] = useState(1);
-  const [recipientStatus, setRecipientStatus] = useState('all');
-  const recipientsQuery = useStudioRecipients(hasDelivery ? campaignId : null, {
-    page: recipientPage,
-    status: recipientStatus,
-  });
 
   const sendTest = useSendTest();
   const schedule = useScheduleCampaign();
@@ -130,448 +120,493 @@ export function CampaignDetail({
   const cancel = useCancelCampaign();
   const duplicate = useDuplicateCampaign();
   const deleteCampaign = useDeleteCampaign();
+  const runNow = useRunProcessorNow();
 
   const [testOpen, setTestOpen] = useState(false);
-  const [testEmails, setTestEmails] = useState('');
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [scheduleAt, setScheduleAt] = useState('');
+  const [sendNowOpen, setSendNowOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const editable = campaign?.status === 'draft' || campaign?.status === 'scheduled';
-  const deletable = campaign && ['draft', 'finished', 'cancelled'].includes(campaign.status);
-
-  const recipientTotalPages = useMemo(() => {
-    const total = recipientsQuery.data?.total ?? 0;
-    const limit = recipientsQuery.data?.limit ?? 50;
-    return Math.max(1, Math.ceil(total / limit));
-  }, [recipientsQuery.data]);
-
-  if (!campaign) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">Loading campaign…</p>;
+  if (isLoading) return <DetailSkeleton />;
+  if (isError && !campaign) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to campaigns
+        </Button>
+        <ErrorState
+          title="This campaign could not be loaded"
+          description={
+            error instanceof Error ? error.message : 'It may have been deleted by someone else.'
+          }
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
+      </div>
+    );
   }
+  if (!campaign) return <DetailSkeleton />;
 
-  const handleTestSend = async () => {
-    const emails = testEmails
-      .split(/[,;\s]+/)
-      .map((e) => e.trim())
-      .filter(Boolean)
-      .slice(0, 5);
-    if (emails.length === 0) return;
-    await sendTest.mutateAsync({ id: campaign.id, emails });
-    setTestOpen(false);
-  };
-
-  const handleSchedule = async () => {
-    if (!scheduleAt) return;
-    await schedule.mutateAsync({
-      id: campaign.id,
-      scheduledAt: new Date(scheduleAt).toISOString(),
-    });
-    setScheduleOpen(false);
-  };
+  const status = campaign.status;
+  const editable = EDITABLE.includes(status);
+  const isActive = status === 'queued' || status === 'sending';
+  const canDelete = caps.delete && isCampaignDeletable(campaign);
+  const busy =
+    pause.isPending ||
+    resume.isPending ||
+    cancel.isPending ||
+    sendNow.isPending ||
+    runNow.isPending;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="mr-1 h-4 w-4" aria-hidden /> Back
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-2">
+          <Button variant="ghost" size="sm" onClick={onBack} className="mt-0.5 shrink-0">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Campaigns
           </Button>
           <div className="min-w-0">
-            <h3 className="truncate text-lg font-semibold">{campaign.name}</h3>
-            <p className="truncate text-sm text-muted-foreground">{campaign.subject}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-xl font-semibold tracking-tight">{campaign.name}</h2>
+              <CampaignStatusBadge status={status} />
+              {campaign.stuck ? (
+                <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> stalled
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">{campaign.subject}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              To {campaign.listNames.join(', ') || '—'} · created{' '}
+              {formatRelative(campaign.createdAt)}
+              {campaign.completedAt ? ` · completed ${formatRelative(campaign.completedAt)}` : ''}
+            </p>
           </div>
-          <CampaignStatusBadge status={campaign.status} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {editable ? (
+          {editable && caps.send ? (
             <>
-              {caps.create ? (
-                <Button variant="outline" size="sm" onClick={() => onEdit(campaign)}>
-                  <Pencil className="mr-1 h-4 w-4" aria-hidden /> Edit
-                </Button>
-              ) : null}
-              {caps.send ? (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setTestOpen(true)}>
-                    <FlaskConical className="mr-1 h-4 w-4" aria-hidden /> Send test
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setScheduleOpen(true)}>
-                    <CalendarClock className="mr-1 h-4 w-4" aria-hidden /> Schedule
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" disabled={sendNow.isPending}>
-                        {sendNow.isPending ? (
-                          <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden />
-                        ) : (
-                          <Send className="mr-1 h-4 w-4" aria-hidden />
-                        )}
-                        Send now
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Send this campaign now?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          "{campaign.subject}" will be queued for delivery to{' '}
-                          {campaign.listNames.join(', ')}. Opted-out subscribers are excluded
-                          automatically. This cannot be edited once delivery starts.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Not yet</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => sendNow.mutate(campaign.id)}>
-                          Queue delivery
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              ) : null}
+              <Button variant="outline" size="sm" onClick={() => setTestOpen(true)}>
+                <FlaskConical className="h-4 w-4" aria-hidden /> Send test
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setScheduleOpen(true)}>
+                <CalendarClock className="h-4 w-4" aria-hidden />
+                {status === 'scheduled' ? 'Reschedule' : 'Schedule'}
+              </Button>
+              <Button size="sm" onClick={() => setSendNowOpen(true)} disabled={busy}>
+                {sendNow.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Send className="h-4 w-4" aria-hidden />
+                )}
+                Send now
+              </Button>
             </>
           ) : null}
-
+          {editable && !caps.send && caps.create ? (
+            <Button variant="outline" size="sm" onClick={() => onEdit(campaign)}>
+              <Pencil className="h-4 w-4" aria-hidden /> Edit
+            </Button>
+          ) : null}
           {isActive && caps.send ? (
             <Button
               variant="outline"
               size="sm"
               onClick={() => pause.mutate(campaign.id)}
-              disabled={pause.isPending}
+              disabled={busy}
             >
-              <Pause className="mr-1 h-4 w-4" aria-hidden /> Pause
+              {pause.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Pause className="h-4 w-4" aria-hidden />
+              )}
+              Pause
             </Button>
           ) : null}
-          {campaign.status === 'paused' && caps.send ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => resume.mutate(campaign.id)}
-              disabled={resume.isPending}
-            >
-              <Play className="mr-1 h-4 w-4" aria-hidden /> Resume
+          {status === 'paused' && caps.send ? (
+            <Button size="sm" onClick={() => resume.mutate(campaign.id)} disabled={busy}>
+              {resume.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Play className="h-4 w-4" aria-hidden />
+              )}
+              Resume delivery
             </Button>
           ) : null}
-          {['scheduled', 'queued', 'sending', 'paused'].includes(campaign.status) && caps.send ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Ban className="mr-1 h-4 w-4" aria-hidden /> Cancel
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Cancel this campaign?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Remaining recipients will not receive it. Already-delivered emails are
-                    unaffected.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep it</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => cancel.mutate(campaign.id)}>
-                    Cancel campaign
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          ) : null}
-
-          {caps.create ? (
+          {(status === 'finished' || status === 'cancelled') && caps.create ? (
             <Button
-              variant="outline"
               size="sm"
-              onClick={() => duplicate.mutate(campaign.id)}
+              onClick={() =>
+                duplicate.mutate(campaign.id, { onSuccess: (copy) => onOpenCampaign(copy.id) })
+              }
               disabled={duplicate.isPending}
             >
-              <Copy className="mr-1 h-4 w-4" aria-hidden /> Duplicate
+              {duplicate.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Copy className="h-4 w-4" aria-hidden />
+              )}
+              Duplicate
             </Button>
           ) : null}
-          {deletable && caps.delete ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Trash2 className="mr-1 h-4 w-4" aria-hidden /> Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete "{campaign.name}"?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    The campaign and its delivery records are removed permanently.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep it</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={async () => {
-                      await deleteCampaign.mutateAsync(campaign.id);
-                      onDeleted();
-                    }}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          ) : null}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8" aria-label="More actions">
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {editable && caps.create ? (
+                <DropdownMenuItem onSelect={() => onEdit(campaign)}>
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit content
+                </DropdownMenuItem>
+              ) : null}
+              {caps.create && !(status === 'finished' || status === 'cancelled') ? (
+                <DropdownMenuItem
+                  disabled={duplicate.isPending}
+                  onSelect={() =>
+                    duplicate.mutate(campaign.id, { onSuccess: (copy) => onOpenCampaign(copy.id) })
+                  }
+                >
+                  <Copy className="h-4 w-4" aria-hidden /> Duplicate
+                </DropdownMenuItem>
+              ) : null}
+              {caps.send && (isActive || status === 'paused') ? (
+                <DropdownMenuItem disabled={runNow.isPending} onSelect={() => runNow.mutate()}>
+                  <RefreshCw className="h-4 w-4" aria-hidden /> Run a delivery pass
+                </DropdownMenuItem>
+              ) : null}
+              {CANCELLABLE.includes(status) && caps.send ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setCancelOpen(true)}>
+                    <Ban className="h-4 w-4" aria-hidden />
+                    {status === 'scheduled' ? 'Cancel schedule' : 'Cancel campaign'}
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                    <Trash2 className="h-4 w-4" aria-hidden /> Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {campaign.status === 'scheduled' ? (
-        <p className="text-sm text-muted-foreground">
-          Scheduled for <span className="font-medium">{formatDateTime(campaign.scheduledAt)}</span>.
-        </p>
-      ) : null}
-      {campaign.lastError && campaign.status !== 'finished' ? (
-        <p className="text-sm text-rose-600 dark:text-rose-400">{campaign.lastError}</p>
+      <StatusBanner
+        campaign={campaign}
+        schedulerLive={scheduler.level === 'live'}
+        canSend={caps.send}
+        onRunNow={() => runNow.mutate()}
+        runningNow={runNow.isPending}
+        onEdit={() => onEdit(campaign)}
+        canEdit={caps.create}
+        onSendTest={() => setTestOpen(true)}
+      />
+
+      {hasDelivery ? <DeliveryPanel campaign={campaign} stats={stats} /> : null}
+      {stats && stats.links.length > 0 && campaign.sentCount > 0 ? (
+        <LinkPerformance stats={stats} />
       ) : null}
 
-      {hasDelivery ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Delivery</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Progress value={campaign.progressPercent} className="h-2 flex-1" />
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {campaign.progressPercent}%
-              </span>
-            </div>
-            <div className="grid gap-3 text-center sm:grid-cols-4">
-              <div>
-                <p className="text-xl font-semibold tabular-nums">{campaign.recipientCount}</p>
-                <p className="text-xs text-muted-foreground">Recipients</p>
-              </div>
-              <div>
-                <p className="text-xl font-semibold tabular-nums">{campaign.sentCount}</p>
-                <p className="text-xs text-muted-foreground">Delivered</p>
-              </div>
-              <div>
-                <p className="text-xl font-semibold tabular-nums">{campaign.pendingCount}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-              <div>
-                <p className="text-xl font-semibold tabular-nums">{campaign.failedCount}</p>
-                <p className="text-xs text-muted-foreground">Failed</p>
-              </div>
-            </div>
-            {stats ? (
-              <div className="grid gap-3 border-t pt-3 text-center sm:grid-cols-3">
-                <div>
-                  <p className="text-xl font-semibold tabular-nums">{stats.openCount}</p>
-                  <p className="text-xs text-muted-foreground">Opens ({stats.openRate}%)</p>
-                </div>
-                <div>
-                  <p className="text-xl font-semibold tabular-nums">{stats.clickCount}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Clicks ({stats.clickRate}% of delivered)
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xl font-semibold tabular-nums">
-                    {stats.clickedRecipientCount}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Unique clickers</p>
-                </div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {stats && stats.links.length > 0 ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Link performance</CardTitle>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <Card className="gap-0">
+          <CardHeader className="pb-4">
+            <SectionHeader
+              icon={Eye}
+              title="Email"
+              description="Exactly what recipients see, with sample merge values"
+              action={
+                editable && caps.create ? (
+                  <Button variant="outline" size="sm" onClick={() => onEdit(campaign)}>
+                    <Pencil className="h-4 w-4" aria-hidden /> Edit
+                  </Button>
+                ) : null
+              }
+            />
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Destination</TableHead>
-                    <TableHead className="w-24 text-right">Clicks</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stats.links.map((link) => (
-                    <TableRow key={link.id}>
-                      <TableCell className="max-w-md truncate font-mono text-xs">
-                        {link.url}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{link.clickCount}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <EmailPreview
+              allowDeviceToggle
+              bodyHtml={campaign.bodyHtml}
+              subject={campaign.subject}
+              preheader={campaign.preheader}
+              fromName={campaign.fromName}
+            />
           </CardContent>
         </Card>
-      ) : null}
 
-      {hasDelivery ? (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Recipients</CardTitle>
-            <Select
-              value={recipientStatus}
-              onValueChange={(value) => {
-                setRecipientStatus(value);
-                setRecipientPage(1);
+        <Card className="gap-0 self-start">
+          <CardHeader className="pb-2">
+            <SectionHeader icon={Info} title="Details" />
+          </CardHeader>
+          <CardContent>
+            <dl className="divide-y divide-border/60">
+              <DetailRow label="From">
+                {campaign.fromName}
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {NEWSLETTER_FROM_EMAIL}
+                </span>
+              </DetailRow>
+              <DetailRow label="Reply-to">{NEWSLETTER_REPLY_TO_EMAIL}</DetailRow>
+              <DetailRow label="Audience">
+                <span className="block max-w-48 truncate" title={campaign.listNames.join(', ')}>
+                  {campaign.listNames.join(', ') || '—'}
+                </span>
+              </DetailRow>
+              <DetailRow label="Click tracking">{campaign.trackClicks ? 'On' : 'Off'}</DetailRow>
+              <DetailRow label="Tracked links">{formatNumber(campaign.links.length)}</DetailRow>
+              {campaign.scheduledAt && status === 'scheduled' ? (
+                <DetailRow label="Scheduled for">{formatDateTime(campaign.scheduledAt)}</DetailRow>
+              ) : null}
+              {campaign.startedAt ? (
+                <DetailRow label="Started">{formatDateTime(campaign.startedAt)}</DetailRow>
+              ) : null}
+              {campaign.completedAt ? (
+                <DetailRow label="Completed">{formatDateTime(campaign.completedAt)}</DetailRow>
+              ) : null}
+              <DetailRow label="Last updated">{formatDateTime(campaign.updatedAt)}</DetailRow>
+            </dl>
+          </CardContent>
+        </Card>
+      </div>
+
+      {hasDelivery ? <RecipientsPanel campaign={campaign} stats={stats} /> : null}
+
+      {/* Dialogs */}
+      <TestSendDialog
+        open={testOpen}
+        onOpenChange={setTestOpen}
+        defaultEmail={user?.email}
+        pending={sendTest.isPending}
+        onSend={(emails) => sendTest.mutateAsync({ id: campaign.id, emails })}
+      />
+      <ScheduleDialog
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        schedulerLive={scheduler.level === 'live'}
+        pending={schedule.isPending}
+        current={campaign.scheduledAt}
+        onSchedule={(iso) => schedule.mutateAsync({ id: campaign.id, scheduledAt: iso })}
+      />
+      <SendNowDialog
+        open={sendNowOpen}
+        onOpenChange={setSendNowOpen}
+        campaign={campaign}
+        lists={lists}
+        pending={sendNow.isPending}
+        onConfirm={() => {
+          setSendNowOpen(false);
+          sendNow.mutate(campaign.id);
+        }}
+      />
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {status === 'scheduled' ? 'Cancel the scheduled send?' : 'Cancel this campaign?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {status === 'scheduled'
+                ? 'The campaign returns to a cancelled state and will not send. You can duplicate it later.'
+                : 'Remaining recipients will not receive it. Emails already delivered are unaffected.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              onClick={() => cancel.mutate(campaign.id)}
+            >
+              {status === 'scheduled' ? 'Cancel send' : 'Cancel campaign'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{campaign.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The campaign and its delivery records are removed permanently. Emails already
+              delivered are not affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              onClick={async () => {
+                await deleteCampaign.mutateAsync(campaign.id);
+                onDeleted();
               }}
             >
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="sent">Delivered</SelectItem>
-                <SelectItem value="failed_retryable">Retrying</SelectItem>
-                <SelectItem value="failed_terminal">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Recipient</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Delivered</TableHead>
-                    <TableHead>Engaged</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(recipientsQuery.data?.recipients ?? []).map((recipient) => (
-                    <TableRow key={recipient.token}>
-                      <TableCell>
-                        <span className="block max-w-56 truncate text-sm">{recipient.email}</span>
-                        {recipient.deliveryError ? (
-                          <span className="block max-w-56 truncate text-xs text-rose-600 dark:text-rose-400">
-                            {recipient.deliveryError}
-                          </span>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <DeliveryStatusBadge status={recipient.deliveryStatus} />
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {formatDateTime(recipient.sentAt)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {recipient.clicks.length > 0
-                          ? `${recipient.clicks.length} click(s)`
-                          : recipient.openedAt
-                            ? 'opened'
-                            : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Page {recipientPage} of {recipientTotalPages} · {recipientsQuery.data?.total ?? 0}{' '}
-                recipient(s)
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={recipientPage <= 1}
-                  onClick={() => setRecipientPage((p) => p - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={recipientPage >= recipientTotalPages}
-                  onClick={() => setRecipientPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+              Delete campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
 
-      <Dialog open={testOpen} onOpenChange={setTestOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send a test</DialogTitle>
-            <DialogDescription>
-              Up to 5 addresses, separated by commas. Subject is prefixed with [TEST]; links keep
-              their real destinations.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="nl-test-emails">Test addresses</Label>
-            <Input
-              id="nl-test-emails"
-              value={testEmails}
-              onChange={(e) => setTestEmails(e.target.value)}
-              placeholder="you@directfp.co.za, colleague@navigatewealth.co"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTestOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={handleTestSend} disabled={sendTest.isPending || !testEmails.trim()}>
-              {sendTest.isPending ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden />
-              ) : null}
-              Send test
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+// ── Status banner ────────────────────────────────────────────────────────────
 
-      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule delivery</DialogTitle>
-            <DialogDescription>
-              The audience is resolved at send time, so late sign-ups are included and opt-outs
-              respected.
-            </DialogDescription>
-          </DialogHeader>
-          {!cronInstalled ? (
-            <p className="rounded-md border border-amber-300/60 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
-              The scheduled delivery job has not checked in yet, so a scheduled send will only start
-              while an admin has the Newsletter Studio open. Ask an operator to install it
-              (supabase/cron/newsletter-studio-jobs.sql) for unattended sending.
-            </p>
-          ) : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="nl-schedule-at">Send at</Label>
-            <Input
-              id="nl-schedule-at"
-              type="datetime-local"
-              value={scheduleAt}
-              onChange={(e) => setScheduleAt(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setScheduleOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={handleSchedule} disabled={schedule.isPending || !scheduleAt}>
-              {schedule.isPending ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden />
+function StatusBanner({
+  campaign,
+  schedulerLive,
+  canSend,
+  canEdit,
+  onRunNow,
+  runningNow,
+  onEdit,
+  onSendTest,
+}: {
+  campaign: NewsletterCampaign;
+  schedulerLive: boolean;
+  canSend: boolean;
+  canEdit: boolean;
+  onRunNow: () => void;
+  runningNow: boolean;
+  onEdit: () => void;
+  onSendTest: () => void;
+}) {
+  const runNowButton = canSend ? (
+    <Button variant="outline" size="sm" onClick={onRunNow} disabled={runningNow}>
+      {runningNow ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <RefreshCw className="h-4 w-4" aria-hidden />
+      )}
+      Run a delivery pass
+    </Button>
+  ) : null;
+
+  switch (campaign.status) {
+    case 'draft':
+      return (
+        <Notice
+          tone="info"
+          icon={Info}
+          title="Draft — nothing has been sent"
+          action={
+            <div className="flex gap-2">
+              {canSend ? (
+                <Button variant="outline" size="sm" onClick={onSendTest}>
+                  <FlaskConical className="h-4 w-4" aria-hidden /> Send yourself a test
+                </Button>
               ) : null}
-              Schedule
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {canEdit ? (
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit
+                </Button>
+              ) : null}
+            </div>
+          }
+        >
+          Review the preview below, send a test to your own inbox, then send now or schedule it.
+        </Notice>
+      );
+    case 'scheduled':
+      return (
+        <Notice
+          tone={schedulerLive ? 'info' : 'warn'}
+          icon={schedulerLive ? CalendarClock : AlertTriangle}
+          title={`Scheduled for ${formatDateTime(campaign.scheduledAt)} (${formatRelative(campaign.scheduledAt)})`}
+        >
+          {schedulerLive
+            ? 'The audience is resolved at send time, so late sign-ups are included and opt-outs are respected. You can still edit the content until then.'
+            : 'The background delivery job has not checked in, so this send will only start while an admin has the studio open.'}
+        </Notice>
+      );
+    case 'queued':
+    case 'sending':
+      return (
+        <Notice
+          tone={campaign.stuck ? 'warn' : 'progress'}
+          icon={campaign.stuck ? AlertTriangle : Clock}
+          title={
+            campaign.stuck
+              ? 'Delivery looks stalled'
+              : `Delivering — ${formatNumber(campaign.sentCount)} of ${formatNumber(campaign.recipientCount)} sent`
+          }
+          action={campaign.stuck ? runNowButton : null}
+        >
+          {campaign.stuck
+            ? `No progress since ${formatRelative(campaign.lastProgressAt)}. A delivery pass will pick it up; you can also trigger one now.`
+            : `Sending in batches of 20 every few seconds. ${pluralize(campaign.pendingCount, 'recipient')} still to go.`}
+        </Notice>
+      );
+    case 'paused':
+      return (
+        <Notice tone="warn" icon={Pause} title="Delivery is paused" action={runNowButton}>
+          {campaign.lastError ? (
+            <span className="break-words">{campaign.lastError}</span>
+          ) : (
+            `Paused with ${pluralize(campaign.pendingCount, 'recipient')} remaining. Resume to continue where it left off.`
+          )}
+        </Notice>
+      );
+    case 'finished':
+      return (
+        <Notice
+          tone={campaign.failedCount > 0 ? 'warn' : 'success'}
+          icon={campaign.failedCount > 0 ? AlertTriangle : CheckCircle2}
+          title={
+            campaign.recipientCount === 0
+              ? 'Finished — nobody was eligible to receive it'
+              : `Sent to ${formatNumber(campaign.sentCount)} of ${formatNumber(campaign.recipientCount)} recipients`
+          }
+        >
+          {campaign.recipientCount === 0
+            ? campaign.lastError || 'The selected lists had no eligible recipients.'
+            : campaign.failedCount > 0
+              ? `${pluralize(campaign.failedCount, 'address', 'addresses')} failed permanently — see the recipient log below. Completed ${formatRelative(campaign.completedAt)}.`
+              : `Every recipient was delivered. Completed ${formatRelative(campaign.completedAt)}.`}
+        </Notice>
+      );
+    case 'cancelled':
+      return (
+        <Notice tone="error" icon={XCircle} title="Cancelled">
+          {campaign.sentCount > 0
+            ? `${formatNumber(campaign.sentCount)} emails had already been delivered before it was cancelled. Duplicate it to send again.`
+            : 'Stopped before anything was sent. Duplicate it to start again.'}
+        </Notice>
+      );
+    default:
+      return null;
+  }
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="space-y-5" data-testid="campaign-detail-skeleton">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-64" />
+          <Skeleton className="h-4 w-80" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      </div>
+      <Skeleton className="h-14 w-full rounded-xl" />
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <Skeleton className="h-96 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
     </div>
   );
 }
