@@ -1,0 +1,167 @@
+/**
+ * A ceiling on the size of any single tracked file.
+ *
+ * WHY THIS EXISTS. `src/assets` holds Figma exports at camera resolution — the
+ * largest is 31 MB — and they are tracked, so every clone and every CI checkout
+ * pays for them whether or not the build ever reads them. The build does not:
+ * `figmaAssetResolver` prefers a generated `.webp`, then a committed `.webp` /
+ * `.avif` / `.jpg` sibling, and only falls through to the original. For most of
+ * these the original is archival weight and nothing more.
+ *
+ * That weight is already paid and this test does not try to claw it back —
+ * removing it means rewriting history, which is a separate, announced decision
+ * (see `docs/STATUS.md`). What this test does is stop it growing: a new export
+ * dropped in at full camera resolution fails here rather than being noticed a
+ * year later when someone wonders why a clone takes four minutes.
+ *
+ * HOW TO RESPOND WHEN THIS FAILS. Do not raise the cap. Commit a web-sized
+ * sibling next to the original — the resolver picks it up with no code change —
+ * or export at a sane resolution in the first place. Nothing in this app renders
+ * wider than about 1440 CSS px, so 2200px wide is generous.
+ *
+ * The cap is deliberately set above the current maximum rather than at it. A
+ * ratchet pinned exactly to today's worst offender fails on the next unrelated
+ * change and trains people to edit the number, which is how a gate stops being
+ * a gate. `quality/baselines/` holds the counters that DO ratchet to the exact
+ * number; this is a ceiling, not a counter.
+ */
+import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
+const repoRoot = resolve(__dirname, '../..');
+
+/** Nothing tracked may exceed this. See the note above before changing it. */
+const MAX_TRACKED_FILE_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Anything newly added under these paths gets a tighter cap, because these are
+ * the directories where an oversized file is a mistake rather than a legacy.
+ */
+const WEB_ASSET_DIRS = ['src/assets/', 'public/'];
+const MAX_NEW_WEB_ASSET_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Files already over the web-asset cap when it was introduced. This list must
+ * only ever get shorter. Adding to it defeats the point; commit a smaller
+ * sibling instead.
+ */
+const GRANDFATHERED = new Set<string>([
+  'src/assets/fc6a85769d1248cdde73b1d2252674e730f0655a.png',
+  'src/assets/eae92cb5e7bd56806577215e734f8b397daa3e46.png',
+  'src/assets/482a45127e501f4b3cecd244241cff6024f47011.png',
+  'src/assets/5c0f670827aa0d401dd409a6c603459c23b5c4a3.png',
+  'src/assets/d0fa22ed135e395dabc605d8378a0fbcd5642ed7.png',
+  'src/assets/c6ebf07ce2d2b7d5973be0c78b41cc2d3efbcf39.png',
+  'src/assets/708b0e7710c401ef95a1826b60aa1fa5c231ef80.png',
+  'src/assets/0a60effb7ee71f5609f910b26a2203fd47255d98.png',
+  'src/assets/06f4f0d6aa6b0eb2450e2a43380c2e2d29ad658b.png',
+  'src/assets/654751ca8be2c3a6b86cd56b21742e6d3ec469ec.png',
+  'src/assets/793671a4751683b2272084a4fbc7762f16d67490.png',
+  'src/assets/46902e1b4e7cc612eaf07c17fb1352b7bdb1d876.png',
+  'src/assets/689d26eedad1e179b7cb6a7e0aeb42b33aac8696.png',
+  'src/assets/dc2935371f93dc2f6da2f85cfa093001ca172d63.png',
+  'src/assets/8c5fa58881863a67095e8aa29afc660f5cecd4d5.png',
+  'src/assets/dc7d1f92bcbe7857fe86f217588dc8719ba5a2f9.png',
+  'src/assets/3d217dec77363c6bc2c7322ec7ce8c6e59f53f53.png',
+  'src/assets/db05bf347ddb2b3ee326a6593ba2e53e220a8b57.png',
+  'src/assets/3adf41eeb556dca874c10a95709eda0ec378bf9e.png',
+  'src/assets/89c93e439f4cc9d1a730de65d575c3c6f2e060ec.png',
+  'src/assets/e7d418f9f6e2453bebdad7920dc5d338fc768fd4.png',
+  'src/assets/f4dccabf483213a63e0d519849049eacfd949bcb.png',
+  'src/assets/f9768bc43fd98373704bc54f70b3ea6ec0c8f020.png',
+  'src/assets/1f32a99aadd795f3c7f5c530f916c758d6ccb6f0.png',
+  'src/assets/842567497fa9b90bb6a11f4a8cd2092a0355be3e.png',
+  'src/assets/ba894cd523cb809fc58fbe47532929eda12b50da.png',
+  'src/assets/95a72733c6fb1b2e130e44b33bbad76a781daa85.png',
+  'src/assets/8a93f2fa219696290136738d0dc439f43b6c6235.png',
+  'src/assets/4edbc4d460d0ae6f679b5227752c118d5306e279.png',
+  'src/assets/b6c49e3128a8d7c0869121962a0c8a9836a4fef6.png',
+  'src/assets/61c60b4a45c33d3564e85aaf184ff3f3b9db37f8.png',
+  'src/assets/0e2b917f64eba502a24068ea5244bd25b0dfc9d5.png',
+  'src/assets/365200c034a353b5beb7a8f5a03c2a1a537c101b.png',
+  'src/assets/3a20bd72e539d6d53bb18a444a908939ce9db465.png',
+  'src/assets/58e37d5523feb65e353e0ac15275fd8643fc65e9.png',
+  'src/assets/c9d654dd575becaa809d4d9ce31d124144ee1c67.png',
+  'src/assets/f7f8a616cb10a78c61dfc9f8e66eeefbfeac413c.png',
+  'src/assets/623b0c66ffd502c662b87b4c531d9fe340d2de88.png',
+  'src/assets/735ec93e5649f0d2d281ac7aa06355a572058b48.png',
+  'src/assets/ec64cc77fab63db12f681738be6d7e622f955e8c.png',
+  'src/assets/974aab623b920eed5028b31b90f6ad78d88b7922.png',
+  'src/assets/a0ab0fcb56ab81f6626ad7140dbe807624f853ff.png',
+  'src/assets/4660d44f48d1f87bfd648cf720e5e52343bf1111.png',
+  'src/assets/d4773239f38262d45a5cc90213a838df6446dc6c.png',
+  'src/assets/0eb19d8516137ad854c3e1eff7fd832575e13bbe.png',
+  'src/assets/cfc1e439140eb46cc77ba92fad420182d167227d.png',
+  'src/assets/b0b37f186d8c48117bede379a79e329626b6ac95.png',
+  'src/assets/f418e978309128b782201b6c4f142b6e0a20d482.png',
+  'src/assets/4dff620ccf41d937ddc51c69e7668b15889a633c.png',
+  'src/assets/06a90a7204a3a0765a6ffe95ae6db0a382ea2312.png',
+  'src/assets/a5b12012f06f21058abb49ed8e43bf599d968395.png',
+  'src/assets/7f39ab25c8d51c8647ca73dc5c9126b4df46a0c6.png',
+  'src/assets/74818eb79f7881c1d63c16c0c2426eec343dfd42.png',
+  'src/assets/7f33deddff0f6240cb18dcef045f830436c30355.png',
+  'src/assets/cd48e241eab530d5767067af7cde123eed9c55d0.png',
+  'src/assets/6c666aace2acbb23684f35d02f79057dd364f5c6.png',
+  'src/assets/d84d9d4e620a44dabbbe1f028d18b3312e2327c0.png',
+  'src/assets/e687c01861aee919fa24cf06bfbd5e069af5249c.png',
+  'src/assets/cdaed82d69fb87a2a9ba8ab94b6ed69c92ae131f.png',
+  'src/assets/9b5a01c260b3e9de54fd63026cbbfdec6cfc0d79.png',
+  'src/assets/05476d116bd826bed8f620f9ca8ef63eeaa74a6f.png',
+  'src/assets/92b794db8aaf43fddd94915592627908c2f21176.png',
+  'src/assets/76fc906be4d2c342ff5272cc2c0d901ad65ff7f6.png',
+  'src/assets/00f21f624e8160ae5a1793de40e7c0e7ba1ee60d.png',
+  'src/assets/47655f7ea49b8154455dbaefe83366869b59cabb.png',
+]);
+
+function trackedFiles(): string[] {
+  return execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 })
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+}
+
+function sizeOf(relativePath: string): number {
+  try {
+    return statSync(join(repoRoot, relativePath)).size;
+  } catch {
+    return 0; // deleted in the working tree; not this test's business
+  }
+}
+
+describe('tracked file size', () => {
+  const files = trackedFiles();
+
+  it('finds tracked files (guards against the listing silently failing)', () => {
+    expect(files.length).toBeGreaterThan(100);
+  });
+
+  it('has no tracked file above the hard ceiling', () => {
+    const oversized = files
+      .map((f) => ({ file: f, bytes: sizeOf(f) }))
+      .filter(({ bytes }) => bytes > MAX_TRACKED_FILE_BYTES)
+      .sort((a, b) => b.bytes - a.bytes)
+      .map(({ file, bytes }) => `${(bytes / 1024 / 1024).toFixed(1)} MB  ${file}`);
+
+    expect(
+      oversized,
+      'Commit a web-sized sibling rather than raising the cap — see the note at the top of this file.',
+    ).toEqual([]);
+  });
+
+  it('has no NEW web asset above the web-asset cap', () => {
+    const offenders = files
+      .filter((f) => WEB_ASSET_DIRS.some((d) => f.startsWith(d)))
+      .filter((f) => !GRANDFATHERED.has(f))
+      .map((f) => ({ file: f, bytes: sizeOf(f) }))
+      .filter(({ bytes }) => bytes > MAX_NEW_WEB_ASSET_BYTES)
+      .sort((a, b) => b.bytes - a.bytes)
+      .map(({ file, bytes }) => `${(bytes / 1024 / 1024).toFixed(1)} MB  ${file}`);
+
+    expect(
+      offenders,
+      'A web asset over 2 MB reaches every visitor on the cold path. Export at 2200px or commit a sibling.',
+    ).toEqual([]);
+  });
+});
