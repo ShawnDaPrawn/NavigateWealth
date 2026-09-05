@@ -223,7 +223,7 @@ describe('stripForbiddenKeys', () => {
       loginSucceeded: true,
       password: 'should-not-survive',
       updates: [{ title: 'Notice', otp: '123456', summary: 'ok' }],
-      credentials: { username: 'Navigate94', password: 'nope' },
+      credentials: { username: 'portal-user', password: 'nope' },
     }) as Record<string, unknown>;
     expect(cleaned.password).toBeUndefined();
     expect(cleaned.credentials).toEqual({});
