@@ -1,5 +1,7 @@
 import { z } from 'npm:zod';
 import {
+  GOAML_ALLOWED_HOSTS,
+  GOAML_HOME_URL,
   MAX_EXCERPT,
   MAX_NOTES,
   MAX_SUMMARY,
@@ -25,6 +27,27 @@ export function stripForbiddenKeys(value: unknown): unknown {
     return out;
   }
   return value;
+}
+
+/**
+ * Portal links in the digest email. Relative paths are resolved against the
+ * goAML origin. Anything that is not https on goweb.fic.gov.za is dropped so
+ * a `javascript:` or phishing href cannot ride along as a clickable link.
+ */
+export function sanitizeGoamlHref(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  try {
+    const url = trimmed.startsWith('/') ? new URL(trimmed, GOAML_HOME_URL) : new URL(trimmed);
+    if (url.protocol !== 'https:') return undefined;
+    if (!(GOAML_ALLOWED_HOSTS as readonly string[]).includes(url.hostname.toLowerCase())) {
+      return undefined;
+    }
+    return url.toString();
+  } catch {
+    return undefined;
+  }
 }
 
 export const GoamlUpdateSchema = z.object({

@@ -70,7 +70,7 @@ const {
   buildDigestBodies,
   processGoamlNotify,
 } = await import('../goaml-digest-service.ts');
-const { stripForbiddenKeys } = await import('../goaml-digest-validation.ts');
+const { stripForbiddenKeys, sanitizeGoamlHref } = await import('../goaml-digest-validation.ts');
 const { DEFAULT_DIGEST_RECIPIENTS } = await import('../goaml-digest-types.ts');
 
 const TEMPLATE = {
@@ -187,6 +187,7 @@ describe('duplicate suppression', () => {
         fingerprintUpdates([update()]),
         '2026-09-05',
         false,
+        true,
       ),
     ).toBe(true);
   });
@@ -203,17 +204,50 @@ describe('duplicate suppression', () => {
       addedCount: 1,
       removedCount: 0,
     };
-    expect(shouldSkipDuplicate(last, fingerprintUpdates([update()]), '2026-09-05', true)).toBe(
-      false,
-    );
+    expect(
+      shouldSkipDuplicate(last, fingerprintUpdates([update()]), '2026-09-05', true, true),
+    ).toBe(false);
     expect(
       shouldSkipDuplicate(
         last,
         fingerprintUpdates([update({ title: 'Other' })]),
         '2026-09-05',
         false,
+        true,
       ),
     ).toBe(false);
+  });
+
+  it('does not treat a login failure as a duplicate of a successful empty scan', () => {
+    const last = {
+      kind: 'send' as const,
+      scannedAt: '2026-09-05T06:00:00.000Z',
+      sastDate: '2026-09-05',
+      loginSucceeded: true,
+      updates: [],
+      fingerprint: fingerprintUpdates([]),
+      outcome: 'sent' as const,
+      addedCount: 0,
+      removedCount: 0,
+    };
+    expect(shouldSkipDuplicate(last, fingerprintUpdates([]), '2026-09-05', false, false)).toBe(
+      false,
+    );
+  });
+});
+
+describe('sanitizeGoamlHref', () => {
+  it('keeps https goAML links and resolves portal-relative paths', () => {
+    expect(sanitizeGoamlHref('https://goweb.fic.gov.za/notices/1')).toBe(
+      'https://goweb.fic.gov.za/notices/1',
+    );
+    expect(sanitizeGoamlHref('/notices/1')).toBe('https://goweb.fic.gov.za/notices/1');
+  });
+
+  it('drops javascript, http, and off-host links', () => {
+    expect(sanitizeGoamlHref('javascript:alert(1)')).toBeUndefined();
+    expect(sanitizeGoamlHref('http://goweb.fic.gov.za/x')).toBeUndefined();
+    expect(sanitizeGoamlHref('https://evil.example/phish')).toBeUndefined();
   });
 });
 
@@ -253,6 +287,23 @@ describe('email composition', () => {
     expect(htmlBody).not.toContain('<img src=x');
     expect(htmlBody).toContain('&lt;script&gt;');
     expect(text).toContain('NEW: <img src=x onerror=alert(1)>');
+  });
+
+  it('does not list yesterday as removed when login failed', () => {
+    const { htmlBody, text } = buildDigestBodies(
+      report({ loginSucceeded: false, updates: [], notes: 'OTP never arrived' }),
+      {
+        added: [],
+        removed: [update({ title: 'Outstanding query' })],
+        unchanged: [],
+      },
+      'Saturday, 05 September 2026',
+      '<p>Intro</p>',
+    );
+    expect(htmlBody).not.toContain('No longer listed');
+    expect(htmlBody).not.toContain('Outstanding query');
+    expect(htmlBody).toContain('portal was not reached');
+    expect(text).toContain('LOGIN FAILED');
   });
 
   it('fills the subject placeholders from the scan', () => {
@@ -303,16 +354,36 @@ describe('processGoamlNotify', () => {
   });
 
   it('still mails when login failed so the operators hear about it', async () => {
+    store.rows.set('latest', {
+      kind: 'snapshot',
+      updates: [update({ title: 'Outstanding query' })],
+      loginSucceeded: true,
+    });
     const result = await processGoamlNotify(
       report({ loginSucceeded: false, updates: [], notes: 'OTP never arrived' }),
     );
     expect(result.outcome).toBe('login_failed_notified');
     expect(result.sent).toBe(true);
-    const payload = sendEmail.mock.calls[0][0] as { subject: string; text: string };
+    expect(result.removedCount).toBe(0);
+    const payload = sendEmail.mock.calls[0][0] as { subject: string; text: string; html: string };
     expect(payload.subject).toContain('scan failed');
     expect(payload.text).toContain('LOGIN FAILED');
-    expect(store.rows.has('latest')).toBe(false);
+    expect(payload.html).not.toContain('Outstanding query');
+    expect(store.rows.has('latest')).toBe(true);
+    expect(
+      (store.rows.get('latest') as { updates: Array<{ title: string }> }).updates[0].title,
+    ).toBe('Outstanding query');
     expect(store.rows.has('last_sent')).toBe(true);
+  });
+
+  it('mails a same-day login failure after a successful empty scan', async () => {
+    await processGoamlNotify(report({ updates: [] }));
+    sendEmail.mockClear();
+    const failed = await processGoamlNotify(
+      report({ loginSucceeded: false, updates: [], notes: 'OTP timed out' }),
+    );
+    expect(failed.outcome).toBe('login_failed_notified');
+    expect(sendEmail).toHaveBeenCalledTimes(1);
   });
 
   it('sends nothing when the transactional template is disabled', async () => {

@@ -13,6 +13,9 @@ export const GOAML_DIGEST_TEMPLATE_ID = 'goaml_scan_digest';
 export const GOAML_LOGIN_URL = 'https://goweb.fic.gov.za/goAMLWeb_PRD/Account/LogOn';
 export const GOAML_HOME_URL = 'https://goweb.fic.gov.za/';
 
+/** Only these hosts may become clickable links in the digest email. */
+export const GOAML_ALLOWED_HOSTS = ['goweb.fic.gov.za'] as const;
+
 /** Staff recipients when NW_GOAML_DIGEST_TO is unset. */
 export const DEFAULT_DIGEST_RECIPIENTS = [
   'shawn@navigatewealth.co',

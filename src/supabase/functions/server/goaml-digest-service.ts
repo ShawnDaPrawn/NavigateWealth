@@ -20,6 +20,7 @@ import {
   GOAML_DIGEST_LAST_SENT_ID,
   GOAML_DIGEST_LATEST_ID,
 } from './repositories/goaml-digest-repository.ts';
+import { sanitizeGoamlHref } from './goaml-digest-validation.ts';
 import {
   DEFAULT_DIGEST_RECIPIENTS,
   GOAML_DIGEST_TEMPLATE_ID,
@@ -87,10 +88,19 @@ export function shouldSkipDuplicate(
   fingerprint: string,
   sastDate: string,
   force: boolean,
+  loginSucceeded: boolean,
 ): boolean {
   if (force) return false;
   if (!lastSent) return false;
-  return lastSent.sastDate === sastDate && lastSent.fingerprint === fingerprint;
+  return (
+    lastSent.sastDate === sastDate &&
+    lastSent.fingerprint === fingerprint &&
+    lastSent.loginSucceeded === loginSucceeded
+  );
+}
+
+export function sanitizeReportUpdates(updates: GoamlUpdate[]): GoamlUpdate[] {
+  return updates.map((item) => ({ ...item, href: sanitizeGoamlHref(item.href) }));
 }
 
 function severityColour(severity: GoamlUpdate['severity']): { bg: string; text: string } {
@@ -106,8 +116,9 @@ function renderUpdateRows(updates: GoamlUpdate[], emptyLabel: string): string {
   return updates
     .map((item) => {
       const colour = severityColour(item.severity);
-      const title = item.href
-        ? `<a href="${escapeHtml(item.href)}" style="color: #111827; font-weight: 600; text-decoration: underline;">${escapeHtml(item.title)}</a>`
+      const safeHref = sanitizeGoamlHref(item.href);
+      const title = safeHref
+        ? `<a href="${escapeHtml(safeHref)}" style="color: #111827; font-weight: 600; text-decoration: underline;">${escapeHtml(item.title)}</a>`
         : `<span style="font-weight: 600; color: #111827;">${escapeHtml(item.title)}</span>`;
       const area = item.area ? escapeHtml(item.area) : 'Portal';
       return `
@@ -143,10 +154,8 @@ export function buildDigestBodies(
     ? `<p style="font-size: 13px; color: #374151; margin-top: 12px;"><strong>Operator notes:</strong> ${escapeHtml(report.notes)}</p>`
     : '';
 
-  const htmlBody = `
-    ${introHtml}
-    <p>${statusLine}</p>
-    ${notesBlock}
+  const diffTables = report.loginSucceeded
+    ? `
     <h3 style="margin: 24px 0 8px; font-size: 15px; color: #111827;">New since last digest</h3>
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
       <thead>
@@ -169,7 +178,14 @@ export function buildDigestBodies(
              <tbody>${renderUpdateRows(diff.removed, '')}</tbody>
            </table>`
         : ''
-    }
+    }`
+    : `<p style="font-size: 13px; color: #6b7280; margin-top: 12px;">Yesterday's items are not listed here — the portal was not reached, so nothing can be marked resolved.</p>`;
+
+  const htmlBody = `
+    ${introHtml}
+    <p>${statusLine}</p>
+    ${notesBlock}
+    ${diffTables}
     <p style="font-size: 12px; color: #6b7280; margin-top: 20px;">
       Scan time (SAST date ${escapeHtml(dateLabel)}). Source: ${escapeHtml(report.sourceUrl)}.
     </p>
@@ -234,12 +250,19 @@ function toRecord(
   };
 }
 
-export async function processGoamlNotify(report: GoamlScanReport): Promise<GoamlNotifyResult> {
+export async function processGoamlNotify(incoming: GoamlScanReport): Promise<GoamlNotifyResult> {
   const sastDate = sastDateKey();
   const dateLabel = formatSastDate();
   const previous = await goamlDigestStore.get(GOAML_DIGEST_LATEST_ID);
   const lastSent = await goamlDigestStore.get(GOAML_DIGEST_LAST_SENT_ID);
-  const diff = diffUpdates(previous?.updates, report.updates);
+  const report: GoamlScanReport = {
+    ...incoming,
+    updates: incoming.loginSucceeded ? sanitizeReportUpdates(incoming.updates) : [],
+  };
+  // A failed login has no portal view — do not treat yesterday's items as gone.
+  const diff = incoming.loginSucceeded
+    ? diffUpdates(previous?.updates, report.updates)
+    : { added: [], removed: [], unchanged: [] };
   const fingerprint = fingerprintUpdates(report.updates);
   const recipients = parseDigestRecipients(Deno.env.get('NW_GOAML_DIGEST_TO'));
 
@@ -257,7 +280,7 @@ export async function processGoamlNotify(report: GoamlScanReport): Promise<Goaml
     throw new Error('NW_GOAML_DIGEST_TO resolved to an empty recipient list');
   }
 
-  if (shouldSkipDuplicate(lastSent, fingerprint, sastDate, report.force)) {
+  if (shouldSkipDuplicate(lastSent, fingerprint, sastDate, report.force, report.loginSucceeded)) {
     log.info('Skipping duplicate GoAML digest for today', { sastDate });
     return { ...baseResult, sent: false, outcome: 'skipped_duplicate' };
   }
