@@ -36,7 +36,7 @@
  * ============================================================================
  */
 
-import { PDFDocument } from 'npm:pdf-lib@1.17.1';
+import { PDFArray, PDFDict, PDFDocument, PDFPage, PDFRef } from 'npm:pdf-lib@1.17.1';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
@@ -137,8 +137,13 @@ interface AcroformWidget {
  * Walk every AcroForm field, then every widget annotation under each field,
  * and pull out the page index + rect for the studio to render.
  *
- * pdf-lib does not give us the page index of a widget directly, so we scan
- * each page's annotation array and match by widget reference.
+ * Page resolution mirrors pdf-lib's own `PDFForm.findWidgetPage`: a widget
+ * normally carries a `/P` entry pointing at its page, and when it doesn't
+ * (some authoring tools omit it) the page is the one whose `/Annots` array
+ * references the widget. An earlier version tried to match widgets to pages
+ * by rect through a lookup that never resolved, so every widget fell
+ * through to the "assume page 1" fallback and a multi-page form had all of
+ * its suggestions stacked on the first page.
  */
 async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidget[]> {
   const pdf = await PDFDocument.load(buffer, { ignoreEncryption: true });
@@ -158,16 +163,12 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
     const acroField = (field as unknown as { acroField: { getWidgets: () => unknown[] } })
       .acroField;
     const fieldWidgets = (acroField?.getWidgets?.() ?? []) as Array<{
-      Rect?: () =>
-        | { asRectangle?: () => { x: number; y: number; width: number; height: number } }
-        | undefined;
-      P?: () => unknown;
+      P?: () => PDFRef | undefined;
+      dict?: PDFDict;
       getRectangle?: () => { x: number; y: number; width: number; height: number };
     }>;
 
     for (const widget of fieldWidgets) {
-      // Rect lookup — pdf-lib API surface here varies; try the documented
-      // helper first then fall back to the dictionary entry.
       let rect: { x: number; y: number; width: number; height: number } | undefined;
       try {
         rect = widget.getRectangle?.();
@@ -176,36 +177,7 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
       }
       if (!rect) continue;
 
-      // Match this widget to a page by inspecting page annotations.
-      let pageIndex = -1;
-      for (let i = 0; i < pages.length; i++) {
-        const annots = pages[i].node.Annots();
-        if (!annots) continue;
-        const arr = annots.asArray?.() ?? [];
-        // We can't easily check ref equality here without leaking pdf-lib
-        // internals, so accept the first page whose annotations include a
-        // widget at the same rect (cheap and sufficient).
-        for (const annot of arr) {
-          const obj = (annot as { lookupMaybe?: (k: unknown) => unknown }).lookupMaybe?.(undefined);
-          if (!obj) continue;
-          // Best-effort match: same rect within 1pt.
-          const aRect = (obj as { Rect?: () => unknown }).Rect?.();
-          if (!aRect) continue;
-          const arr4 = (
-            aRect as { asRectangle?: () => { x: number; y: number; width: number; height: number } }
-          ).asRectangle?.();
-          if (!arr4) continue;
-          if (
-            Math.abs(arr4.x - rect.x) < 1 &&
-            Math.abs(arr4.y - rect.y) < 1 &&
-            Math.abs(arr4.width - rect.width) < 1
-          ) {
-            pageIndex = i;
-            break;
-          }
-        }
-        if (pageIndex >= 0) break;
-      }
+      let pageIndex = findWidgetPageIndex(pdf, pages, widget);
 
       // Last resort — assume page 1 so the candidate isn't lost. The sender
       // can drag it to the right page if needed.
@@ -221,6 +193,67 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
   }
 
   return widgets;
+}
+
+/**
+ * Resolve the 0-based page index a widget annotation lives on, or -1 when
+ * it cannot be determined.
+ *
+ *   1. `/P` on the widget dict — the page reference, present on most
+ *      widgets.
+ *   2. The page whose `/Annots` array holds the widget's own reference
+ *      (pdf-lib's `findPageForAnnotationRef`).
+ *   3. The page whose `/Annots` array resolves to the same dict object —
+ *      covers widgets that were merged into the field dict and so have no
+ *      reference of their own.
+ */
+function findWidgetPageIndex(
+  pdf: PDFDocument,
+  pages: PDFPage[],
+  widget: { P?: () => PDFRef | undefined; dict?: PDFDict },
+): number {
+  try {
+    const pageRef = widget.P?.();
+    if (pageRef) {
+      const byRef = pages.findIndex((p) => p.ref === pageRef);
+      if (byRef >= 0) return byRef;
+    }
+  } catch {
+    /* fall through to the annotation scan */
+  }
+
+  const dict = widget.dict;
+  if (!dict) return -1;
+
+  try {
+    const widgetRef = pdf.context.getObjectRef(dict);
+    if (widgetRef) {
+      const page = pdf.findPageForAnnotationRef(widgetRef);
+      if (page) {
+        const idx = pages.findIndex((p) => p.ref === page.ref);
+        if (idx >= 0) return idx;
+      }
+    }
+  } catch {
+    /* fall through to the dict-identity scan */
+  }
+
+  for (let i = 0; i < pages.length; i++) {
+    let annots: PDFArray | undefined;
+    try {
+      annots = pages[i].node.Annots();
+    } catch {
+      continue;
+    }
+    if (!annots) continue;
+    const entries = annots.asArray();
+    for (const entry of entries) {
+      const resolved = entry instanceof PDFRef ? pdf.context.lookup(entry) : entry;
+      if (resolved === dict) return i;
+    }
+  }
+
+  return -1;
 }
 
 /**
