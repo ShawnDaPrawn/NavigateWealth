@@ -21,6 +21,8 @@ not linked from this page, it should either be linked or be deleted.
 **`architecture/`** — how a subsystem is built and why. Durable explanations
 that change only when the design changes.
 
+- [`overview.md`](architecture/overview.md) — how a request travels from browser to Edge Function to storage, and the invariants on each leg
+- [`build-and-seo.md`](architecture/build-and-seo.md) — what `npm run build` does, the environment variable model, feature flags
 - [`provider-portal-worker.md`](architecture/provider-portal-worker.md) — the Playwright worker, its secrets, and debugging
 - [`provider-automation-golden-flows.md`](architecture/provider-automation-golden-flows.md) — protected regression flows for provider automation
 - [`openclaw-gateway.md`](architecture/openclaw-gateway.md) — the OpenClaw gateway contract and capability model
@@ -28,6 +30,8 @@ that change only when the design changes.
 **`runbooks/`** — how to operate, verify or repair something that is running.
 Written for someone acting under time pressure.
 
+- [`deployment.md`](runbooks/deployment.md) — how each part reaches production, and the manual paths that exist for recovery
+- [`troubleshooting.md`](runbooks/troubleshooting.md) — first things to check for symptoms that have come up before
 - [`scheduled-jobs.md`](runbooks/scheduled-jobs.md) — every `pg_cron` job, the green-when-broken trap, and repair procedure
 - [`edge-function-latency.md`](runbooks/edge-function-latency.md) — diagnosing slow Edge Function responses
 - [`edge-function-metrics.md`](runbooks/edge-function-metrics.md) — reading the function's metrics
@@ -68,6 +72,8 @@ Short READMEs live next to the thing they describe, which is where they belong.
 | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | [`../AGENTS.md`](../AGENTS.md)                                         | Working agreement for coding agents: the finalization protocol and deployment rules |
 | [`../README.md`](../README.md)                                         | Project front page: what the app is, quick start, commands                          |
+| [`../SECURITY.md`](../SECURITY.md)                                     | Vulnerability reporting, scope, and the design choices that look like findings      |
+| `../.github/pull_request_template.md`                                  | The finalization checklist a PR loads                                               |
 | `../src/components/admin/modules/*/README.md`                          | Per-module architecture and constraints for seven admin modules                     |
 | [`../quality/baselines/README.md`](../quality/baselines/README.md)     | What each ratchet baseline counts and which gate enforces it                        |
 | [`../supabase/migrations/README.md`](../supabase/migrations/README.md) | Migration conventions                                                               |
