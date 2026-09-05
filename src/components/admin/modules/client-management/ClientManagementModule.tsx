@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
+import { Skeleton } from '../../../ui/skeleton';
 import {
   Plus,
   Filter,
@@ -63,6 +64,33 @@ const IntakeWizardHandoff = React.lazy(() =>
 );
 
 /** Shared spinner for lazy-loaded sub-components */
+/**
+ * Occupies the exact footprint of the intake queue card while its chunk and
+ * data load, so the stat cards and client table below never jump.
+ */
+function FNAIntakeQueuePlaceholder() {
+  return (
+    <Card className="border-gray-200" aria-busy="true">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          FNA Intake Queue
+          <span
+            className="inline-flex items-center gap-1.5 text-xs font-normal text-gray-500"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" aria-hidden="true" />
+            Loading intakes…
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Skeleton className="h-5 w-64 max-w-full" />
+      </CardContent>
+    </Card>
+  );
+}
+
 function LazyFallback() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -314,7 +342,7 @@ export function ClientManagementModule() {
         </div>
       </div>
 
-      <Suspense fallback={<LazyFallback />}>
+      <Suspense fallback={<FNAIntakeQueuePlaceholder />}>
         <FNAIntakeQueue
           onOpenClient={(clientId) => {
             const match = safeClients.find((c) => c.id === clientId);

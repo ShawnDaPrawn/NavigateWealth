@@ -3,11 +3,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { BrandSectionLoader } from '../../../../ui/brand-loader';
+import { Skeleton } from '../../../../ui/skeleton';
 import {
   acceptIntakeSession,
   listSubmittedIntakes,
@@ -181,23 +182,28 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
     }
   };
 
-  if (loading) {
-    return (
-      <BrandSectionLoader
-        title="Loading intake queue"
-        message="Fetching submitted client intakes."
-      />
-    );
-  }
-
   return (
     <>
-      <Card className="border-gray-200">
+      <Card className="border-gray-200" aria-busy={loading}>
         <CardHeader>
-          <CardTitle className="text-base">FNA Intake Queue</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            FNA Intake Queue
+            {loading && (
+              <span
+                className="inline-flex items-center gap-1.5 text-xs font-normal text-gray-500"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" aria-hidden="true" />
+                Loading intakes…
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {items.length === 0 ? (
+          {loading ? (
+            <Skeleton className="h-5 w-64 max-w-full" />
+          ) : items.length === 0 ? (
             <p className="text-sm text-gray-500">No client intakes awaiting review.</p>
           ) : (
             items.map((session) => (
