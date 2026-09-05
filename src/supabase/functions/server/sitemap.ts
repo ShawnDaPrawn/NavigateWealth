@@ -51,7 +51,7 @@ const getSupabase = () =>
 /**
  * When adding new public pages, update BOTH:
  * 1. This SITEMAP_URLS array (the backend single source of truth)
- * 2. scripts/generate-seo-files.mjs (build emits public/sitemap.xml for the SPA host)
+ * 2. scripts/seo/generate-seo-files.mjs (build emits public/sitemap.xml for the SPA host)
  * 3. Then call POST /sitemap/publish to update the public storage file
  *
  * Google ignores <priority> and <changefreq> — only <loc> and <lastmod> matter.

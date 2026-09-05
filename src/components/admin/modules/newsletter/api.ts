@@ -41,12 +41,24 @@ export const newsletterStudioApi = {
     q.set('limit', String(params.limit ?? 100));
     if (params.status && params.status !== 'all') q.set('status', params.status);
     if (params.search?.trim()) q.set('search', params.search.trim());
-    const response = await api.get<CampaignListResult>(`${ENDPOINTS.CAMPAIGNS}?${q.toString()}`);
+    const response = await api.get<Partial<CampaignListResult>>(
+      `${ENDPOINTS.CAMPAIGNS}?${q.toString()}`,
+    );
     return {
       campaigns: response.campaigns ?? [],
       total: response.total ?? 0,
       page: response.page ?? 1,
       limit: response.limit ?? 100,
+      statusCounts: {
+        draft: 0,
+        scheduled: 0,
+        queued: 0,
+        sending: 0,
+        paused: 0,
+        finished: 0,
+        cancelled: 0,
+        ...(response.statusCounts ?? {}),
+      },
     };
   },
 

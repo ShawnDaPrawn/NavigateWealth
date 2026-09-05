@@ -281,14 +281,84 @@ export const ANALYTICS_STALE_TIME = 5 * 60 * 1000; // 5 minutes
 // TAB CONFIG
 // ============================================================================
 
+/**
+ * Five tabs, one job each. The previous seven overlapped (Dashboard and Agents
+ * rendered the same screen; Analytics repeated the Dashboard's numbers) and
+ * named things by mechanism ("RAG", "Handoffs") rather than by what an admin
+ * is trying to do.
+ */
 export const TAB_CONFIG = [
-  { id: 'dashboard' as const, label: 'Dashboard', icon: 'LayoutDashboard' },
-  { id: 'agents' as const, label: 'Agents', icon: 'Bot' },
-  { id: 'knowledge-base' as const, label: 'Knowledge Base', icon: 'BookOpen' },
-  { id: 'analytics' as const, label: 'Analytics', icon: 'BarChart3' },
-  { id: 'feedback' as const, label: 'Feedback', icon: 'MessageSquare' },
-  { id: 'handoffs' as const, label: 'Handoffs', icon: 'PhoneForwarded' },
+  {
+    id: 'overview' as const,
+    label: 'Overview',
+    icon: 'LayoutDashboard',
+    description: 'Switch Vasco on or off and see how it is being used',
+  },
+  {
+    id: 'knowledge' as const,
+    label: 'Knowledge',
+    icon: 'BookOpen',
+    description: 'What Vasco can draw on when it answers',
+  },
+  {
+    id: 'prompts' as const,
+    label: 'Prompts',
+    icon: 'MessageSquareText',
+    description: 'The instructions that shape how each assistant answers',
+  },
+  {
+    id: 'feedback' as const,
+    label: 'Feedback',
+    icon: 'ThumbsUp',
+    description: 'Ratings people gave to individual answers',
+  },
+  {
+    id: 'leads' as const,
+    label: 'Leads',
+    icon: 'PhoneForwarded',
+    description: 'Visitors who asked to speak to an adviser',
+  },
 ] as const;
+
+// ============================================================================
+// AGENT SURFACES — plain-language names for where an assistant runs
+// ============================================================================
+
+export const AGENT_CONTEXT_LABELS: Record<string, string> = {
+  public: 'Public website',
+  authenticated: 'Client portal',
+  admin: 'Admin console',
+};
+
+// ============================================================================
+// PROMPT STUDIO — assistants whose prompt is actually read from Prompt Studio
+// ============================================================================
+
+/**
+ * Only the two Vasco assistants load their system prompt from the KV-backed
+ * prompt store (`vasco-service.ts`, `ai-advisor-chat.ts`). The other
+ * registered agents use prompts fixed in code, so offering to edit them here
+ * would be a lie. Add an entry when an agent starts calling `getActivePrompt`.
+ */
+export const PROMPT_AGENTS: ReadonlyArray<{
+  id: string;
+  context: 'public' | 'authenticated' | 'admin';
+  label: string;
+  description: string;
+}> = [
+  {
+    id: 'vasco-public',
+    context: 'public',
+    label: 'Vasco on the public website',
+    description: 'Talks to anonymous visitors. General education and lead capture only.',
+  },
+  {
+    id: 'vasco-authenticated',
+    context: 'authenticated',
+    label: 'Vasco in the client portal',
+    description: 'Talks to logged-in clients with their profile, policies and FNAs in context.',
+  },
+];
 
 // ============================================================================
 // KNOWLEDGE BASE CONFIG (Phase 2)
@@ -349,7 +419,7 @@ export const KB_STATUS_CONFIG: Record<
     dotClass: 'bg-gray-400',
   },
   active: {
-    label: 'Active',
+    label: 'Live',
     badgeClass: 'bg-green-600 hover:bg-green-700 text-white',
     dotClass: 'bg-green-500',
   },
@@ -359,6 +429,32 @@ export const KB_STATUS_CONFIG: Record<
     dotClass: 'bg-amber-500',
   },
 } as const;
+
+/**
+ * Importance is the admin-facing face of the 1–10 `priority` field. Four
+ * named levels are easier to reason about than a number, and the server only
+ * uses priority to break ties between equally relevant sources.
+ */
+export const KB_IMPORTANCE_OPTIONS = [
+  { id: 'low', label: 'Low', priority: 3, description: 'Background detail' },
+  { id: 'normal', label: 'Normal', priority: 5, description: 'Most entries' },
+  { id: 'high', label: 'High', priority: 8, description: 'Prefer this when several match' },
+  { id: 'essential', label: 'Essential', priority: 10, description: 'Always prefer this' },
+] as const;
+
+export type KBImportance = (typeof KB_IMPORTANCE_OPTIONS)[number]['id'];
+
+export function importanceFromPriority(priority: number | undefined): KBImportance {
+  const p = typeof priority === 'number' ? priority : 5;
+  if (p >= 10) return 'essential';
+  if (p >= 8) return 'high';
+  if (p <= 3) return 'low';
+  return 'normal';
+}
+
+export function priorityFromImportance(importance: KBImportance): number {
+  return KB_IMPORTANCE_OPTIONS.find((o) => o.id === importance)?.priority ?? 5;
+}
 
 /** Default categories for KB entries */
 export const KB_DEFAULT_CATEGORIES = [

@@ -28,6 +28,7 @@ import {
   type ArticleTagLink,
 } from './publications-route-helpers.ts';
 import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
+import { syncArticleIndexInBackground } from './vasco-index-sync.ts';
 import { requireAdmin } from './auth-mw.ts';
 
 const log = createModuleLogger('publications-tags-scheduling-routes');
@@ -172,6 +173,7 @@ tagsSchedulingRoutes.post('/cron/process-scheduled', async (c) => {
           delete article.notify_on_publish;
 
           await kv.set(`article:${article.id}`, article);
+          await syncArticleIndexInBackground(article, 'scheduled_article_published');
           processedCount++;
           published.push(article.title);
 
@@ -267,6 +269,7 @@ tagsSchedulingRoutes.post('/process-scheduled', requireAdmin, async (c) => {
           delete article.notify_on_publish;
 
           await kv.set(`article:${article.id}`, article);
+          await syncArticleIndexInBackground(article, 'scheduled_article_published');
           processedCount++;
 
           // Notify newsletter subscribers only if opted-in at scheduling time

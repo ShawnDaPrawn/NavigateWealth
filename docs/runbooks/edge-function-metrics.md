@@ -16,7 +16,7 @@ The token is a Supabase **Management API** personal access token
 logged, never written to disk, and sent only to `api.supabase.com`.
 
 No token? The same SQL runs in the dashboard: **Logs → Logs Explorer**, paste
-the query from `scripts/metrics-report.mjs` (`METRICS_SQL`).
+the query from `scripts/ops/metrics-report.mjs` (`METRICS_SQL`).
 
 ## Why there is no instrumentation in the request path
 

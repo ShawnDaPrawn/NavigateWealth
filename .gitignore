@@ -1,7 +1,11 @@
 node_modules
 dist
-build
-tmp
+# Anchored to the repository root on purpose. Unanchored `build` and `tmp`
+# match a directory of that name at ANY depth, which silently swallowed
+# `scripts/build/` when the scripts folder was grouped — a new file added
+# there would never have been offered to git.
+/build
+/tmp
 supabase/.temp
 .env.local
 e2e/.env.local
@@ -10,6 +14,10 @@ e2e/.env.local
 *.secret.local
 
 .vercel
+
+# Per-machine agent notes: local credential paths and similar. AGENTS.md is
+# shared; anything specific to one person's machine belongs here instead.
+AGENTS.local.md
 
 # Local / IDE tooling logs (Codex, Vite wrappers, etc.)
 .codex-*.log
@@ -25,5 +33,5 @@ coverage
 coverage-server
 .claude/
 
-# Staged from node_modules by scripts/copy-pdfjs-assets.mjs (see that file for why).
+# Staged from node_modules by scripts/build/copy-pdfjs-assets.mjs (see that file for why).
 public/pdfjs/

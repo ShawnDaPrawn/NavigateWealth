@@ -17,7 +17,7 @@
  *
  * ── What this file measures, and why it is the cold path ────────────────────
  *
- * Production does not serve those siblings. `scripts/generate-figma-webp.mjs`
+ * Production does not serve those siblings. `scripts/build/generate-figma-webp.mjs`
  * runs before `vite build` and emits a ≤500 KB WebP per asset into
  * `node_modules/.cache/figma-webp/`, which the resolver checks first — 811 MB
  * of originals become 10 MB. The script owns that half: it enforces its own
@@ -55,31 +55,25 @@ const MAX_ASSET_BYTES = 1_536_000;
 /** The whole imported set must stay within a budget a person could download. */
 const MAX_TOTAL_BYTES = 40 * 1024 * 1024;
 
-/** Mirrors MAX_OUTPUT_BYTES in scripts/generate-figma-webp.mjs. */
+/** Mirrors MAX_OUTPUT_BYTES in scripts/build/generate-figma-webp.mjs. */
 const MAX_GENERATED_BYTES = 500 * 1024;
 
 /**
  * Assets that exceed the cap on the COLD path and have no optimized sibling.
  *
- * The generator converts all three to under 500 KB, so nothing ships oversized
- * in a normal build. What this list records is the degraded case: if the cache
- * is missing, these three are what a visitor downloads. Each is a JPEG that was
- * exported without being resized, and each needs a 2200px-wide sibling
- * committed beside it — at which point the resolver picks it up with no code
- * change and the entry comes out of this list.
+ * **Empty, and worth keeping empty.** The three entries that lived here —
+ * `00f21f62…`, `47655f7e…` (RiskManagementPage) and `76fc906b…`
+ * (InvestmentManagementPage) — were camera-scale JPEGs exported without being
+ * resized, 2.2 to 3.9 MB each. Each now has the 2200px-wide sibling this
+ * comment used to ask for, committed beside it, so the resolver picks it up
+ * with no code change and they come out of this list. They cost 139, 186 and
+ * 107 KB now.
  *
- * They are listed rather than tolerated by raising the cap, because a raised
- * cap silently permits the next one too.
- *
- * Recorded in docs/PRODUCTION-READINESS.md so it is a task, not a footnote.
+ * If an entry ever has to go back in here, commit the sibling instead. The list
+ * exists so a degraded cold path is named rather than tolerated by raising the
+ * cap — a raised cap silently permits the next one too.
  */
-const KNOWN_UNOPTIMIZED = new Set([
-  // RiskManagementPage
-  '00f21f624e8160ae5a1793de40e7c0e7ba1ee60d.png', // 3.4 MB
-  '47655f7ea49b8154455dbaefe83366869b59cabb.png', // 2.2 MB
-  // InvestmentManagementPage
-  '76fc906be4d2c342ff5272cc2c0d901ad65ff7f6.png', // 3.9 MB
-]);
+const KNOWN_UNOPTIMIZED = new Set<string>([]);
 
 /** Extensions the resolver tries inside `src/assets`, best first. */
 const SIBLING_EXTENSIONS = ['.webp', '.avif', '.jpg', '.jpeg'] as const;

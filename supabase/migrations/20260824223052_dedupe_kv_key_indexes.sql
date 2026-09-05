@@ -36,7 +36,7 @@
 -- at most ONE index: the single unsuffixed legacy name that a fresh rebuild of
 -- 20260316213718 creates. Bulk cleanup of an already-degraded database is an
 -- operational procedure, not a migration — see
--- `scripts/dedupe-kv-key-indexes.sql`.
+-- `scripts/ops/dedupe-kv-key-indexes.sql`.
 --
 -- DISCLOSURE — this file is NOT byte-identical to what production ran.
 -- The statement recorded against version 20260824223052 in

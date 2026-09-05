@@ -13,7 +13,7 @@
  * The boot-failure tests are the point of the change rather than a bonus. A
  * mount registrar that throws used to log to stderr and continue, leaving a
  * function that answered `/health` and `/health/ready` with 200 while missing a
- * third of its routes — and `scripts/post-deploy-smoke.mjs` would have called
+ * third of its routes — and `scripts/ops/post-deploy-smoke.mjs` would have called
  * that deploy green. Readiness now fails, so the existing smoke gate turns a
  * partial boot into a red deploy job.
  *
@@ -156,7 +156,7 @@ describe('createApp: health probes', () => {
       `${PREFIX}/health/ready`,
     );
     expect(res.status).toBe(200);
-    // The exact shape the post-deploy smoke asserts on (scripts/post-deploy-smoke.mjs).
+    // The exact shape the post-deploy smoke asserts on (scripts/ops/post-deploy-smoke.mjs).
     await expect(res.json()).resolves.toMatchObject({
       status: 'ready',
       checks: { kv: 'ok', mounts: 'ok' },

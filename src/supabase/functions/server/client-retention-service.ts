@@ -1,7 +1,7 @@
 /**
  * POPIA / FAIS retention sweep for closed client relationships.
  *
- * POLICY (owner decision, 2026-08-29 — recorded in docs/PRODUCTION-READINESS.md):
+ * POLICY (owner decision, 2026-08-29 — recorded in docs/archive/production-readiness-ledger-2026.md):
  *
  *   • A DELETED client profile is retained for 7 years.
  *   • The clock runs from RELATIONSHIP END, not from record creation.

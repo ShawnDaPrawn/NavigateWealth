@@ -4,7 +4,7 @@
  *
  * These images come from whatever URL a third-party RSS feed supplies, which no
  * Content-Security-Policy allowlist can express. The accepted decision
- * (docs/PRODUCTION-READINESS.md § CSP) is to let them be blocked rather than
+ * (docs/archive/production-readiness-ledger-2026.md § CSP) is to let them be blocked rather than
  * widen `img-src` to all of `https:` for the whole site — this is an internal
  * admin widget and the cost is a missing picture.
  *
