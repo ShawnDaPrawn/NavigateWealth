@@ -40,13 +40,16 @@ describe('deriveLinkedClient', () => {
     expect(deriveLinkedClient({})).toBeNull();
   });
 
-  it('falls back to a placeholder name when attendees lack the client', () => {
-    expect(deriveLinkedClient({ client_id: 'user-9', attendees: {} })).toEqual({
-      id: 'user-9',
-      full_name: 'Client',
-      email: '',
-    });
-    expect(deriveLinkedClient({ client_id: 'user-9', attendees: null })?.full_name).toBe('Client');
+  it('never invents a name when attendees carry no entry for the client', () => {
+    // `reminders` has no `attendees` column at all, and an event can be created
+    // through the API without one. A placeholder like "Client" would turn an
+    // absent field into a wrong one, so the relation is omitted instead.
+    expect(deriveLinkedClient({ client_id: 'user-9', attendees: {} })).toBeNull();
+    expect(deriveLinkedClient({ client_id: 'user-9', attendees: null })).toBeNull();
+    expect(deriveLinkedClient({ client_id: 'user-9' })).toBeNull();
+    expect(
+      deriveLinkedClient({ client_id: 'user-9', attendees: { 'user-9': { email: 'x@y.z' } } }),
+    ).toBeNull();
   });
 
   it('supports the array attendee shape by matching on id', () => {
@@ -75,6 +78,12 @@ describe('withLinkedClient', () => {
 
   it('passes null through', () => {
     expect(withLinkedClient(null)).toBeNull();
+  });
+
+  it('attaches a null client rather than a placeholder when metadata is missing', () => {
+    const row = withLinkedClient({ id: 'ev-2', title: 'Review', client_id: 'user-9' });
+    expect(row.client).toBeNull();
+    expect(row.title).toBe('Review');
   });
 });
 

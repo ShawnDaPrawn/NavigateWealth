@@ -15,6 +15,12 @@
  * relationship the old `client:clients(*)` embed depended on, so the `client`
  * relation the SPA renders is now derived from the `attendees` map instead —
  * which is where the UI already stores the linked client's name and email.
+ *
+ * EVENTS ONLY. `reminders` has no `attendees` column, so there is nothing to
+ * derive from and nothing here is applied to it. Never fabricate a name for a
+ * row whose real client metadata is not present: the embed used to yield
+ * `null` for those (the `clients` table is empty), and a placeholder would be
+ * a downgrade from an absent field to a wrong one.
  */
 
 export interface LinkedClient {
@@ -40,8 +46,9 @@ function str(value: unknown): string {
  * Derive the primary linked client for a row from its `client_id` and its
  * `attendees` JSONB map (`{ "<client-id>": { name, email, type } }`).
  *
- * Returns `null` when the row has no client, so the SPA's `event.client &&`
- * guards keep working unchanged.
+ * Returns `null` when the row has no client, and also when `attendees` carries
+ * no entry for it — an absent relation is honest, an invented name is not.
+ * Either way the SPA's `event.client &&` guards keep working unchanged.
  */
 export function deriveLinkedClient(row: {
   client_id?: string | null;
@@ -60,11 +67,10 @@ export function deriveLinkedClient(row: {
     match = asAttendee((attendees as Record<string, unknown>)[clientId]);
   }
 
-  return {
-    id: clientId,
-    full_name: str(match?.name) || 'Client',
-    email: str(match?.email),
-  };
+  const fullName = str(match?.name);
+  if (!fullName) return null;
+
+  return { id: clientId, full_name: fullName, email: str(match?.email) };
 }
 
 /**

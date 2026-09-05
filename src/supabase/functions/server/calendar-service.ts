@@ -35,10 +35,16 @@ import {
 const log = createModuleLogger('calendar-service');
 
 /**
- * NOTE on the `client` relation: rows are read with `select('*')` and the
- * `client` object the SPA renders is derived from `attendees` by
+ * NOTE on the `client` relation: rows are read with `select('*')` and, for
+ * EVENTS, the `client` object the SPA renders is derived from `attendees` by
  * `withLinkedClient`. The previous `client:clients(*)` embed relied on a
  * foreign key to the empty `public.clients` table; see calendar-client-link.ts.
+ *
+ * Reminders deliberately get no `client`: that table has no `attendees`
+ * column, so there is nothing to derive from, and the embed they used to carry
+ * always resolved to null against the empty table. Deriving one here could
+ * only invent a placeholder name — worse than the absent field callers
+ * already handle.
  */
 
 /**
@@ -264,7 +270,7 @@ export class CalendarService {
       throw error;
     }
 
-    return (data || []).map(withLinkedClient);
+    return data || [];
   }
 
   /**
@@ -282,7 +288,7 @@ export class CalendarService {
       throw new NotFoundError('Reminder not found');
     }
 
-    return withLinkedClient(data);
+    return data;
   }
 
   /**
@@ -325,7 +331,7 @@ export class CalendarService {
     }
 
     log.success('Reminder created', { userId, reminderId: reminder.id });
-    return withLinkedClient(reminder);
+    return reminder;
   }
 
   /**
@@ -362,7 +368,7 @@ export class CalendarService {
     }
 
     log.success('Reminder updated', { userId, reminderId });
-    return withLinkedClient(reminder);
+    return reminder;
   }
 
   /**
