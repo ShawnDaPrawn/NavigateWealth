@@ -150,5 +150,17 @@ is work not yet done, not budget.
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.
+- **Tracked asset weight, and the clone size behind it.** `src/assets` holds
+  Figma exports at camera resolution. The build never serves them —
+  `figmaAssetResolver` prefers a generated `.webp`, then a committed
+  `.webp`/`.avif`/`.jpg` sibling, and only falls through to the original — but
+  they are tracked, so every clone and CI checkout pays for them.
+  `src/__tests__/tracked-file-size.test.ts` now stops the pile growing: a hard
+  ceiling on any tracked file, and a 2 MB cap on anything **new** under
+  `src/assets/` or `public/`, with today's oversized files listed explicitly in
+  a grandfather set that may only shrink. Reclaiming the weight already in
+  history is a separate decision — it means a `git filter-repo` rewrite and a
+  one-time re-clone for every collaborator, and it has not been done.
+
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.

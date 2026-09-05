@@ -152,7 +152,7 @@ export function NewsletterModule() {
   const editTargetFailed = awaitingEditTarget && !openCampaignQuery.isLoading;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-6 p-6">
       {focused ? (
         <nav
           aria-label="Breadcrumb"
