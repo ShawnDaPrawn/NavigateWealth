@@ -248,21 +248,30 @@ path.
 
 ### 4.3 Split the god components (F2 burn-down)
 
-40 files breach the 1,000-line lint budget (74 exceed 1,000 raw lines). Split
-under **touch-it-you-fix-it** — when a file is opened for any other reason —
-except the top of the list, which is worth scheduling because every future
-change pays its reading cost. Worst offenders re-measured today:
+Files that breach the 1,000-line lint budget are split under
+**touch-it-you-fix-it** — when the file is opened for some other reason — except
+the worst few, which are worth scheduling because every future change pays their
+reading cost.
 
-| Raw lines | File                                                    | Note                                     |
-| --------: | ------------------------------------------------------- | ---------------------------------------- |
-|     2,125 | `advice-engine/components/RoAModuleContractManager.tsx` | split by contract section                |
-|     1,650 | `client-management/components/clientOverviewUtils.ts`   | pure utils — easiest big win, test-first |
-|     1,640 | `resources/components/EmailSignatureGenerator.tsx`      |                                          |
-|     1,637 | `product-management/keyManagerConstants.ts`             | data, not code — move to JSON or split   |
-|     1,615 | `client-management/components/ClientOverviewTab.tsx`    | also the §4.1 boundary leak — same PR    |
-|     1,605 | `modules/wills/WillDraftingFlow.tsx`                    |                                          |
-|     1,575 | `pages/quote/components/MedicalAidQuoteWizard.tsx`      | covered by §4.2 — don't schedule twice   |
-|     1,523 | `client-management/hooks/useClientProfile.ts`           | split queries from transforms            |
+**The list is not written down here, deliberately.** This section used to carry a
+table of the eight worst offenders with their line counts, "re-measured today".
+By the time it was next read, every single row was wrong: three of the eight
+paths no longer existed, and the five that did had been split to between 21% and
+48% of their listed size. `RoAModuleContractManager.tsx` was listed at 2,125
+lines and is 545. Scheduling from that table means scheduling work that is
+already done.
+
+Ask the filesystem instead:
+
+```bash
+git ls-files 'src/**/*.ts' 'src/**/*.tsx' \
+  | xargs wc -l | sort -rn | awk '$1 > 1000 && $2 != "total"' | head -20
+```
+
+`npm run lint` reports the same breaches as `max-lines` warnings, ratcheted
+against `quality/baselines/eslint-warning-baseline`, so the count cannot grow
+silently. Lowering the file-size budget from 1,000 toward 600 is the way this
+ends; the budget lives in `eslint.config.mjs`.
 
 Rules for every split: pure move first, behaviour later; keep the module's
 barrel the only public surface; add or keep a characterization test. When the

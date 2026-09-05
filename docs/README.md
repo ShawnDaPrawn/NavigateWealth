@@ -68,19 +68,21 @@ documents cite their finding IDs and section numbers.
 
 Short READMEs live next to the thing they describe, which is where they belong.
 
-| Location                                                               | Covers                                                                              |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [`../AGENTS.md`](../AGENTS.md)                                         | Working agreement for coding agents: the finalization protocol and deployment rules |
-| [`../README.md`](../README.md)                                         | Project front page: what the app is, quick start, commands                          |
-| [`../SECURITY.md`](../SECURITY.md)                                     | Vulnerability reporting, scope, and the design choices that look like findings      |
-| `../.github/pull_request_template.md`                                  | The finalization checklist a PR loads                                               |
-| `../src/components/admin/modules/*/README.md`                          | Per-module architecture and constraints for seven admin modules                     |
-| [`../quality/baselines/README.md`](../quality/baselines/README.md)     | What each ratchet baseline counts and which gate enforces it                        |
-| [`../supabase/migrations/README.md`](../supabase/migrations/README.md) | Migration conventions                                                               |
-| [`../supabase/cron/README.md`](../supabase/cron/README.md)             | Cron job SQL and the publications smoke test                                        |
-| [`../e2e/README.md`](../e2e/README.md)                                 | Running the opt-in Playwright suite                                                 |
-| [`../brand-source/README.md`](../brand-source/README.md)               | Why brand source material is not under `public/`                                    |
-| [`../public/brand-assets/README.md`](../public/brand-assets/README.md) | The web-ready brand assets the app actually uses                                    |
+| Location                                                                       | Covers                                                                                 |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| [`../AGENTS.md`](../AGENTS.md)                                                 | Working agreement for coding agents: the finalization protocol and deployment rules    |
+| [`../README.md`](../README.md)                                                 | Project front page: what the app is, quick start, commands                             |
+| [`../SECURITY.md`](../SECURITY.md)                                             | Vulnerability reporting, scope, and the design choices that look like findings         |
+| `../.github/pull_request_template.md`                                          | The finalization checklist a PR loads                                                  |
+| `../src/components/admin/modules/*/README.md`                                  | Per-module architecture and constraints for seven admin modules                        |
+| [`../src/components/features/README.md`](../src/components/features/README.md) | What a client-facing feature module is, and why the directory is not called `modules/` |
+| [`../scripts/README.md`](../scripts/README.md)                                 | What each scripts folder is for, which scripts are entry points, and the path rule     |
+| [`../quality/baselines/README.md`](../quality/baselines/README.md)             | What each ratchet baseline counts and which gate enforces it                           |
+| [`../supabase/migrations/README.md`](../supabase/migrations/README.md)         | Migration conventions                                                                  |
+| [`../supabase/cron/README.md`](../supabase/cron/README.md)                     | Cron job SQL and the publications smoke test                                           |
+| [`../e2e/README.md`](../e2e/README.md)                                         | Running the opt-in Playwright suite                                                    |
+| [`../brand-source/README.md`](../brand-source/README.md)                       | Why brand source material is not under `public/`                                       |
+| [`../public/brand-assets/README.md`](../public/brand-assets/README.md)         | The web-ready brand assets the app actually uses                                       |
 
 ## Conventions
 
