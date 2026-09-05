@@ -122,7 +122,7 @@ Use this sequence when hardening the automation module:
 1. Document the universal automation north star and provider-change guardrails.
 2. Freeze Allan Gray RA as the golden regression flow before moving runtime
    logic. The current golden flow ledger is
-   `docs/provider-automation-golden-flows.md`.
+   `docs/architecture/provider-automation-golden-flows.md`.
 3. Introduce a provider adapter registry and move Allan Gray-specific logic into
    an Allan Gray provider pack.
 4. Standardize shared field semantics and regression tests for common financial

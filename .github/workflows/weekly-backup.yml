@@ -60,7 +60,7 @@ jobs:
     #
     # What it does NOT test: Supabase's own platform restore, Storage objects
     # (the dump holds only their metadata), or auth users. See
-    # docs/PRODUCTION-READINESS.md § DR for the residual risk that leaves.
+    # docs/archive/production-readiness-ledger-2026.md § DR for the residual risk that leaves.
     services:
       scratch:
         image: postgres:17
@@ -187,7 +187,7 @@ jobs:
           #    Still not a restore — it proves the bytes are intact and
           #    decodable, not that they load into a live schema. A scratch
           #    restore remains the real bar and is tracked in
-          #    docs/PRODUCTION-READINESS.md under DR.
+          #    docs/archive/production-readiness-ledger-2026.md under DR.
           pg_restore --file=/dev/null "$BACKUP_FILE" 2> restore-check.log || {
             echo "::error::Archive failed a full decode — truncated or corrupt beyond the TOC.";
             tail -40 restore-check.log; exit 1; }

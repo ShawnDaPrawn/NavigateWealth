@@ -1,3 +1,9 @@
+> **ARCHIVED — completed launch record.** Form Prefill Tier A launched
+> 2026-05-23. Kept as evidence, not as guidance. Day-to-day operations are in
+> [`../../runbooks/form-prefill.md`](../../runbooks/form-prefill.md).
+
+---
+
 # Form Prefill — Verification Checklist
 
 No formal adviser sign-off required. Use this checklist after deploy + frontend ship.
@@ -77,4 +83,4 @@ form-prefill rollout cleanup and redeploy if the launched UI must be rolled back
 
 ## Support runbook
 
-See [`docs/runbooks/form-prefill.md`](runbooks/form-prefill.md).
+See [`docs/runbooks/form-prefill.md`](../../runbooks/form-prefill.md).

@@ -1,3 +1,9 @@
+> **ARCHIVED — completed launch record.** Client-led FNA intake launched
+> 2026-05-23; every gate below was closed at the time. Kept as evidence, not as
+> guidance. Day-to-day operations are in [`../../runbooks/fna-intake.md`](../../runbooks/fna-intake.md).
+
+---
+
 # FNA Intake — Staging UAT Sign-off
 
 Complete on **staging** with dedicated test client + assigned adviser before production launch.

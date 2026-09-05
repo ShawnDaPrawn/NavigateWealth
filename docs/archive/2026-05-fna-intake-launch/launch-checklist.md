@@ -1,6 +1,12 @@
+> **ARCHIVED — completed launch record.** Client-led FNA intake launched
+> 2026-05-23; every gate below was closed at the time. Kept as evidence, not as
+> guidance. Day-to-day operations are in [`../../runbooks/fna-intake.md`](../../runbooks/fna-intake.md).
+
+---
+
 # FNA Intake — Production Launch Checklist
 
-Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
+Execute after Gates 0–4 pass (see `docs/archive/production-readiness-ledger-2026.md` Section 0).
 
 ## Pre-launch (T-1)
 
@@ -24,7 +30,7 @@ Execute after Gates 0–4 pass (see `docs/PRODUCTION-READINESS.md` Section 0).
    _(Skipped — 0 KV intake sessions at cutover.)_
 6. [x] Switch reads to Postgres after verification:
    - `FNA_INTAKE_READ_FROM=postgres`
-7. [x] Staging UAT sign-off completed — `docs/fna-intake-uat-signoff.md` (automated API UAT, 2026-05-23)
+7. [x] Staging UAT sign-off completed — `docs/archive/2026-05-fna-intake-launch/uat-signoff.md` (automated API UAT, 2026-05-23)
 8. [x] Legal consent sign-off recorded (engineering verification)
 
 ## Launch (T-0)

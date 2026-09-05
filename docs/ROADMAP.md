@@ -9,11 +9,12 @@
 > **How it relates to the other docs.** This roadmap does not replace them; it
 > consolidates what _remains_ after their partial execution:
 >
-> - `docs/PRODUCTION-READINESS.md` — the status ledger (what is on `main`).
-> - `docs/ARCHITECTURE-REMEDIATION-PLAN.md` — the security/correctness fix
+> - [`STATUS.md`](STATUS.md) — what is true today (system shape, deliberate
+>   fallbacks, open operator items).
+> - [`archive/2026-08-architecture-remediation-plan.md`](archive/2026-08-architecture-remediation-plan.md) — archived: the security/correctness fix
 >   list (P0–P4) with per-finding evidence. Finding IDs (S4, A5, …) used below
 >   are defined there.
-> - `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md` — the target-state blueprint
+> - [`archive/2026-08-architecture-enhancement-plan.md`](archive/2026-08-architecture-enhancement-plan.md) — archived: the target-state blueprint
 >   (module contract, layering, fitness functions F1–F10, Stages A–F).
 > - **This doc** — the sequenced execution roadmap for everything still open,
 >   re-verified against the working tree rather than carried forward from
@@ -32,7 +33,7 @@
 The heavy lifting of the last two months is real and enforced in CI
 (`.github/workflows/quality-check.yml`):
 
-- **Fifteen enforced ratchets/floors are live** — the twelve baseline files in
+- **Fifteen enforced ratchets/floors are live** — the baseline files listed in
   §1.2 (lint warnings, Deno type errors, depcruise boundaries, npm audit,
   route-auth coverage, route validation, auth implementations,
   auth-without-authz discards, anon-key bearers, raw fetches, kv-direct
@@ -56,27 +57,29 @@ strict types, the API client, lazy-router, code splitting,
 
 ### 1.2 The measured debt that remains
 
-| Ratchet / measure                                 | Current               | Target          | Meaning                                                               |
-| ------------------------------------------------- | --------------------- | --------------- | --------------------------------------------------------------------- |
-| `quality/baselines/anon-key-bearer-baseline`      | 78                    | 0               | SPA call sites still sending the public anon key as a bearer          |
-| `quality/baselines/auth-implementations-baseline` | 5                     | 2               | Hand-rolled token verifiers (target: `auth-mw` + login itself)        |
-| `quality/baselines/auth-without-authz-baseline`   | 33                    | ~2              | Handlers that authenticate and discard the answer                     |
-| `quality/baselines/route-validation-baseline`     | 35                    | 0               | Body-reading mutating routes with no schema                           |
-| `quality/baselines/route-auth-baseline`           | 123                   | reviewed list   | Routes with no visible guard (includes public-by-design)              |
-| `quality/baselines/depcruise-baseline`            | 210                   | 0, then `error` | Module-boundary violations (109 cross-feature, 100 outsider-admin)    |
-| `.kv-direct-import-baseline`                      | 175                   | 0               | Files importing `kv_store` instead of a repository                    |
-| `quality/baselines/raw-fetch-baseline`            | 185                   | ~10             | Raw `fetch()` past the API client (103 in two `api.ts` files)         |
-| `quality/baselines/eslint-warning-baseline`       | 55 (40 `max-lines`)   | 0 at budget 600 | Warning ratchet; file-size budget currently 1000                      |
-| `quality/baselines/contract-coverage-baseline`    | 2                     | grows           | Validated response call sites (floors a gain, fails on falls)         |
-| `quality/baselines/npm-audit-baseline`            | 0                     | 0               | High/critical advisories — `sharp` upgraded to 0.35.3 on 2026-08-24   |
-| `quality/baselines/deno-check-baseline`           | 0                     | hold            | Done — keep at zero                                                   |
-| Backend coverage (floored)                        | ~13.7% stmts          | 40%+            | `quality/vitest.config.server.ts`, ratchets up only                   |
-| SPA coverage (floored)                            | ~31% stmts            | 50%+            | Excludes backend; per-layer by design                                 |
-| Files > 1,000 raw lines                           | 74 (40 counted)       | 0 at budget 600 | Readability ceiling; god files listed in §4                           |
-| `src/assets`                                      | 10 MB WebP emitted    | hold            | A7 — **DONE 2026-08-30**; 811 MB of originals no longer reach `dist/` |
-| Edge function                                     | 1 × ~136K lines       | 4–6 functions   | Stage E bounded-context split not started                             |
-| E2E in CI                                         | 1 (non-required)      | 3 seeded        | Public-render journey runs per PR; the 5 seeded specs still skipped   |
-| Metrics                                           | **`npm run metrics`** | hold            | DONE 2026-08-25 — queried from `function_edge_logs`, no middleware    |
+> **The live count for every ratchet below is the file itself**, under
+> `quality/baselines/`. This table deliberately does not copy those numbers: the
+> copies in an earlier revision drifted badly (it claimed 210 boundary violations
+> and 55 lint warnings when both had already been burned down to 0). Read the
+> baseline file for "where are we"; read this table for "where are we going".
+
+| Ratchet / measure                                 | Target                        | Meaning                                                          |
+| ------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------- |
+| `quality/baselines/anon-key-bearer-baseline`      | 0                             | SPA call sites still sending the public anon key as a bearer     |
+| `quality/baselines/auth-implementations-baseline` | 2                             | Hand-rolled token verifiers (target: `auth-mw` + login itself)   |
+| `quality/baselines/auth-without-authz-baseline`   | ~2                            | Handlers that authenticate and discard the answer                |
+| `quality/baselines/route-validation-baseline`     | 0                             | Body-reading mutating routes with no schema                      |
+| `quality/baselines/route-auth-baseline`           | reviewed list                 | Routes with no visible guard (includes public-by-design)         |
+| `quality/baselines/depcruise-baseline`            | **met** — 0, rules at `error` | Module-boundary violations                                       |
+| `quality/baselines/kv-direct-access-baseline`     | 0                             | Call sites reaching `kv_store` instead of a repository           |
+| `quality/baselines/raw-fetch-baseline`            | ~10                           | Raw `fetch()` past the API client                                |
+| `quality/baselines/eslint-warning-baseline`       | **met** — 0                   | Warning ratchet; next step is stepping the file-size budget down |
+| `quality/baselines/contract-coverage-baseline`    | grows                         | Validated response call sites (floors a gain, fails on falls)    |
+| `quality/baselines/npm-audit-baseline`            | 0                             | High/critical advisories                                         |
+| `quality/baselines/deno-check-baseline`           | **met** — hold at 0           | Edge type errors                                                 |
+| Backend coverage (floored)                        | 40%+                          | `quality/vitest.config.server.ts`, ratchets up only              |
+| SPA coverage (floored)                            | 50%+                          | Excludes backend; per-layer by design                            |
+| Files > 1,000 raw lines                           | 0 at budget 600               | Readability ceiling; god files listed in §4                      |
 
 ### 1.3 Security remainder — still open at HEAD, re-verified today
 
@@ -207,21 +210,23 @@ The SPA's problem is not structure-in-the-large (the admin module convention is
 good and 27/28 modules follow it); it is **enforcement gaps and a long tail of
 god files**. Work the ratchets down; never mass-rename.
 
-### 4.1 Burn down the 210 boundary violations (F1)
+### 4.1 Boundary violations (F1) — DONE
 
-- **What:** 109 cross-feature-internals + 100 outsider-admin-internals
+> **Completed.** `quality/baselines/depcruise-baseline` is at **0** and the three
+> rules in `quality/dependency-cruiser.cjs` are at `severity: 'error'`, so a
+> deliberate internal import now fails CI rather than adding to a backlog.
+> `npm run depcruise` cruises ~3,090 modules clean. The gate this section set for
+> itself — "baseline reaches 0; rules at `error`; a deliberate internal import
+> fails CI" — is met. Kept for the record of how it was done.
+
+- **What it was:** 109 cross-feature-internals + 100 outsider-admin-internals
   imports, all visible via `npm run depcruise`.
 - **How:** for each violation either (a) import via the module's `index`
   barrel, (b) promote genuinely shared code to `src/shared`, or (c) add the
-  missing barrel export. Start with the two named leaks that defeat
-  code-splitting: `HomeDashboardPage` → admin `ClientOverviewTab` (client page
-  pulling a 1,615-line admin component) and `AdminDashboardPage` → 19
+  missing barrel export. The two named leaks that defeated code-splitting were
+  `HomeDashboardPage` → admin `ClientOverviewTab` and `AdminDashboardPage` → 19
   module-internal skeletons.
-- **Slices:** ~10–20 violations per PR, lowering `quality/baselines/depcruise-baseline` each
-  time. At 0, flip the three rules to `error` in `quality/dependency-cruiser.cjs`.
-- **Effort:** L (mechanical after the first few).
-  **Gate:** baseline reaches 0; rules at `error`; a deliberate internal import
-  fails CI.
+- **Slices:** ~10–20 violations per PR, lowering the baseline each time.
 
 ### 4.2 De-duplicate the seven quote wizards (A4)
 
@@ -753,9 +758,9 @@ CI failure you have already been told about.
 6. **Capabilities get wired the day they're written.** The five instances of
    written-but-unconnected safety code are the house failure mode. A mechanism
    PR is not done until something calls it and a test fails when it's removed.
-7. **Update the ledger** (`docs/PRODUCTION-READINESS.md`) when state changes;
-   append incidents to its Section 6. Mark items done **here** with date +
-   commit, the way the remediation plan does.
+7. **Update [`STATUS.md`](STATUS.md)** when state changes; append incidents to
+   [`INCIDENTS.md`](INCIDENTS.md). Mark items done **here** with date + commit,
+   the way the remediation plan does.
 
 ---
 
