@@ -1,3 +1,11 @@
+> **ARCHIVED — superseded by [`../ROADMAP.md`](../ROADMAP.md).**
+> The target-state architecture blueprint as of 2026-08. Kept because the roadmap
+> refers to its fitness-function IDs (F1–F10) and stage letters, which are defined
+> here. Its conventions remain the direction of travel; its status claims do not.
+> Re-verify against the repository before acting.
+
+---
+
 # Navigate Wealth — Production-Grade Architecture & Codebase Organisation Enhancement Plan
 
 > **What this is.** The target-state blueprint: the architecture and code
@@ -6,8 +14,8 @@
 >
 > **How it relates to the other docs.**
 >
-> - `docs/PRODUCTION-READINESS.md` — the status ledger ("what is on `main`").
-> - `docs/ARCHITECTURE-REMEDIATION-PLAN.md` — the security-and-correctness fix
+> - `docs/archive/production-readiness-ledger-2026.md` — the status ledger ("what is on `main`").
+> - `docs/archive/2026-08-architecture-remediation-plan.md` — the security-and-correctness fix
 >   list, sequenced by risk (P0…P4). Stops the bleeding.
 > - **This doc** — the organisational north star. Where the remediation plan
 >   says _what to fix first_, this says _what good looks like_ and _how the
@@ -709,6 +717,6 @@ src/supabase/functions/<function>/<domain>-repository.ts  // data access
 ---
 
 _Prepared 2026-08-21 against `main` @ `6303993` as a companion to
-`docs/ARCHITECTURE-REMEDIATION-PLAN.md`. This is a target-state blueprint; it
+`docs/archive/2026-08-architecture-remediation-plan.md`. This is a target-state blueprint; it
 changes no application code and mandates no big-bang move — every step is
 incremental, enforced by a fitness function, and reversible._

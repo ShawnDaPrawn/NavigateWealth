@@ -36,6 +36,7 @@ import {
   NEWSLETTER_DEFAULT_FROM_NAME,
   NEWSLETTER_FROM_EMAIL,
   NEWSLETTER_REPLY_TO,
+  personalizeText,
   renderCampaignEmail,
 } from './newsletter-studio-render.ts';
 import {
@@ -340,7 +341,7 @@ async function deliverToRecipient(
     try {
       await sendEmail({
         to: item.email,
-        subject: campaign.subject,
+        subject: personalizeText(campaign.subject, item),
         html,
         text,
         from: {
@@ -600,10 +601,12 @@ export async function sendCampaignTestEmails(
   const links = campaign.links.length > 0 ? campaign.links : [];
   const outcomes: TestSendOutcome[] = [];
   for (const email of emails) {
+    // Same shape resolveAudience gives a real recipient without a stored
+    // name, so a test send exercises the exact merge output.
     const recipient = {
       email,
       name: email,
-      firstName: '',
+      firstName: email.split('@')[0] || '',
       token: `test-${crypto.randomUUID().slice(0, 8)}`,
     };
     try {
@@ -614,7 +617,7 @@ export async function sendCampaignTestEmails(
       });
       await sendEmail({
         to: email,
-        subject: `[TEST] ${campaign.subject}`,
+        subject: `[TEST] ${personalizeText(campaign.subject, recipient)}`,
         html,
         text,
         from: {

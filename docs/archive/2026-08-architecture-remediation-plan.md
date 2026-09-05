@@ -1,3 +1,11 @@
+> **ARCHIVED — superseded by [`../ROADMAP.md`](../ROADMAP.md).**
+> A sequenced security-and-correctness fix list verified against `main` at commit
+> `6303993` on 2026-08-21. Much of it has since landed. Kept because the roadmap
+> refers to its finding IDs (S4, A5, …), which are defined here and nowhere else.
+> Re-verify any item against the repository before acting on it.
+
+---
+
 # Navigate Wealth — Architecture Evaluation & Remediation Plan
 
 > **Purpose.** A single, evidence-based assessment of the codebase as it
@@ -5,7 +13,7 @@
 > plan to take it from "ships and works" to genuinely first-class,
 > better-than-production-grade. Written to be worked from top-down.
 >
-> This document complements `docs/PRODUCTION-READINESS.md` (the status
+> This document complements `docs/archive/production-readiness-ledger-2026.md` (the status
 > ledger). Where the two disagree, the corrections in
 > [§8 Ledger corrections](#8-ledger-corrections) are authoritative — they
 > are based on direct re-verification, not memory.
@@ -13,7 +21,7 @@
 > For the **target-state architecture and codebase-organisation blueprint** —
 > what "good" looks like once these fixes land, with the conventions and
 > fitness functions that keep it that way — see
-> `docs/ARCHITECTURE-ENHANCEMENT-PLAN.md`. This plan is the sequenced _fix
+> `docs/archive/2026-08-architecture-enhancement-plan.md`. This plan is the sequenced _fix
 > list_; that one is the _destination_.
 
 ---
@@ -1107,7 +1115,7 @@ until P4 is done.
 
 ## 8. Ledger corrections
 
-`docs/PRODUCTION-READINESS.md` is unusually honest, but three claims are now
+`docs/archive/production-readiness-ledger-2026.md` is unusually honest, but three claims are now
 known to overstate reality and should be corrected there:
 
 1. **"`npm run depcruise` — No violations (4683 modules… cruised)"** read as

@@ -71,7 +71,7 @@ const MAX_GENERATED_BYTES = 500 * 1024;
  * They are listed rather than tolerated by raising the cap, because a raised
  * cap silently permits the next one too.
  *
- * Recorded in docs/PRODUCTION-READINESS.md so it is a task, not a footnote.
+ * Recorded in docs/archive/production-readiness-ledger-2026.md so it is a task, not a footnote.
  */
 const KNOWN_UNOPTIMIZED = new Set([
   // RiskManagementPage
