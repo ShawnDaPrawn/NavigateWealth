@@ -11,7 +11,7 @@
  * Usage:
  *   SUPABASE_URL=https://<project>.supabase.co \
  *   SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
- *   node ./scripts/backfill-trusted-roles.mjs [--dry-run]
+ *   node ./scripts/ops/backfill-trusted-roles.mjs [--dry-run]
  *
  * Only users whose user_metadata.role is a privileged value are touched.
  * Users whose app_metadata.role already matches are skipped.

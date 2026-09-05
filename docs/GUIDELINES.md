@@ -200,7 +200,7 @@ These rules complement §4.1–4.3. They do not replace module boundary or KV ru
 
 - **`src/`**: application source; import alias **`@/`** → `src/` (see project `tsconfig` / Vite config).
 - **`src/shared/`**: shared types, Zod schemas, pure utilities; sync to edge per existing bridge process — not duplicated ad hoc under `server/`.
-- **`public/`**: static assets served as-is (brand assets, built **`robots.txt`** / **`sitemap.xml`** from `scripts/generate-seo-files.mjs` where applicable).
+- **`public/`**: static assets served as-is (brand assets, built **`robots.txt`** / **`sitemap.xml`** from `scripts/seo/generate-seo-files.mjs` where applicable).
 - **`scripts/`**: build and maintenance automation only; not imported by runtime bundles.
 - **Repo root**: **`package.json`**, **`vite.config.ts`**, **`tsconfig.json`**, **`vercel.json`** stay at root unless a tooling migration explicitly moves them.
 - **Ignored local artefacts** (e.g. per **`.gitignore`** such as **`.codex-*.log`**): must not be committed; they are not part of the product surface.

@@ -25,9 +25,9 @@ The frontend is built by Vite and deployed from `dist/`. `vercel.json` configure
 page.** An earlier revision of this runbook printed a raw
 `npx supabase functions deploy …` command. Running it does not merely skip a
 check — it fails: the function's source graph measures over Supabase's hard
-5 MB payload limit, and `scripts/strip-edge-function.mjs` is what brings it
+5 MB payload limit, and `scripts/build/strip-edge-function.mjs` is what brings it
 down to roughly 3.2 MB. The workflow also runs a **blocking** post-deploy smoke
-(`scripts/post-deploy-smoke.mjs`) that verifies the live authorization boundary
+(`scripts/ops/post-deploy-smoke.mjs`) that verifies the live authorization boundary
 before the deploy is considered good. A hand-run CLI deploy does neither.
 
 Deployment happens automatically when a change to any of these lands on `main`:
@@ -36,8 +36,8 @@ Deployment happens automatically when a change to any of these lands on `main`:
 src/supabase/functions/**
 supabase/functions/**
 supabase/config.toml
-scripts/post-deploy-smoke.mjs
-scripts/strip-edge-function.mjs
+scripts/ops/post-deploy-smoke.mjs
+scripts/build/strip-edge-function.mjs
 .github/workflows/deploy-supabase-function.yml
 ```
 

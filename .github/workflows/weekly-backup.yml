@@ -113,8 +113,8 @@ jobs:
           # database — and this one has cron jobs writing to it, so a single
           # after-count would fail the job on a backup that is perfectly good.
           # The restored count has to land inside the range the source held
-          # while the dump ran. See scripts/compare-restore.py.
-          bash scripts/capture-db-shape.sh "$DB_URL" source-before.csv
+          # while the dump ran. See scripts/ops/compare-restore.py.
+          bash scripts/ops/capture-db-shape.sh "$DB_URL" source-before.csv
           echo "before the dump:"; cat source-before.csv
 
       - name: Dump
@@ -142,7 +142,7 @@ jobs:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          bash scripts/capture-db-shape.sh "$DB_URL" source-after.csv
+          bash scripts/ops/capture-db-shape.sh "$DB_URL" source-after.csv
           echo "after the dump:"; cat source-after.csv
 
       - name: Verify the archive is readable
@@ -272,11 +272,11 @@ jobs:
             exit 1
           fi
 
-          bash scripts/capture-db-shape.sh "$SCRATCH" restored.csv
+          bash scripts/ops/capture-db-shape.sh "$SCRATCH" restored.csv
           echo "restored:"; cat restored.csv
 
           # THE SECOND GATE: every row, index, constraint and row-security flag.
-          python3 scripts/compare-restore.py source-before.csv source-after.csv restored.csv
+          python3 scripts/ops/compare-restore.py source-before.csv source-after.csv restored.csv
 
       - name: Upload
         if: steps.guard.outputs.configured == 'true'

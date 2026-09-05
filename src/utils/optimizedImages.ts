@@ -7,7 +7,7 @@ const OPTIMIZED_WIDTHS = [480, 768, 1024, 1440] as const;
  * 2.5 MB of 1024/1440 variants into `public/` that no `sizes` attribute can
  * ever select.
  *
- * Kept in step with LOGO_WIDTHS in scripts/optimize-images.mjs by
+ * Kept in step with LOGO_WIDTHS in scripts/brand/optimize-images.mjs by
  * optimized-image-coverage.test.ts, which asserts the files on disk match what
  * this module says to ask for.
  */

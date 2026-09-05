@@ -3,7 +3,7 @@
  * Backfill fna-intake:session:* KV records into public.fna_intake_sessions.
  *
  * Usage:
- *   node scripts/fna-intake-backfill.mjs [--dry-run]
+ *   node scripts/uat/fna-intake-backfill.mjs [--dry-run]
  *
  * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in env.
  */

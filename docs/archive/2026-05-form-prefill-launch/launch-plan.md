@@ -276,7 +276,7 @@ Phase 4 can run in parallel with Phase 3 if e-sign is a priority. Phase 5 is a d
 | --------------------------------------------------------- | ------------------------ |
 | `docs/archive/production-readiness-ledger-2026.md` §10a   | Status ledger            |
 | `docs/archive/2026-05-form-prefill-launch/uat-signoff.md` | UAT checklist            |
-| `scripts/form-prefill-api-smoke.mjs`                      | Deploy verification      |
+| `scripts/uat/form-prefill-api-smoke.mjs`                  | Deploy verification      |
 | `src/shared/form-prefill/`                                | Registry + types         |
 | `src/supabase/functions/server/form-prefill-*.ts`         | Resolver + routes + auth |
 | `src/components/admin/modules/form-prefill/`              | Review UI                |

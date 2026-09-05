@@ -2,7 +2,7 @@
  * Split a populated client-import workbook into import-ready rows
  * vs rows missing required Email Address / Cellphone Number (bulk importer rules).
  *
- * Usage: node scripts/fix-client-import-xlsx.mjs <src.xlsx> [dest.xlsx]
+ * Usage: node scripts/ops/fix-client-import-xlsx.mjs <src.xlsx> [dest.xlsx]
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -76,7 +76,7 @@ async function main() {
   let out = process.argv[3];
 
   if (!src) {
-    console.error('Usage: node scripts/fix-client-import-xlsx.mjs <src.xlsx> [dest.xlsx]');
+    console.error('Usage: node scripts/ops/fix-client-import-xlsx.mjs <src.xlsx> [dest.xlsx]');
     process.exit(1);
   }
 

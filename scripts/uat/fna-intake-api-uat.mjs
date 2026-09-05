@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * API-level FNA intake UAT — all six domains, draft → submit → accept.
- * Outputs JSON report for scripts/fna-intake-uat-report.mjs
+ * Outputs JSON report for scripts/uat/fna-intake-uat-report.mjs
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -18,7 +18,7 @@ const ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwam1kc2x0d3JucGVmemNnZG16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzNDcxNjUsImV4cCI6MjA3NTkyMzE2NX0.JeGS_wxI-iw6Tz2fTIwRMBT59oUEf0g1Q0ySvwhdSRg';
 
 function loadEnvLocal() {
-  const path = resolve(__dirname, '../e2e/.env.local');
+  const path = resolve(__dirname, '../../e2e/.env.local');
   const text = readFileSync(path, 'utf8');
   const env = {};
   for (const line of text.split('\n')) {
@@ -37,7 +37,7 @@ function getServiceRoleKey() {
   }
   const out = execSync(`npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`, {
     encoding: 'utf8',
-    cwd: resolve(__dirname, '..'),
+    cwd: resolve(__dirname, '../..'),
   });
   const row = JSON.parse(out).find((r) => r.name === 'service_role');
   if (!row?.api_key) throw new Error('Could not resolve service_role key');
@@ -157,7 +157,7 @@ async function main() {
   } = env;
 
   if (!clientEmail || !clientPassword || !adviserEmail || !adviserPassword || !clientId) {
-    throw new Error('Run scripts/fna-intake-bootstrap-uat-actors.mjs first');
+    throw new Error('Run scripts/uat/fna-intake-bootstrap-uat-actors.mjs first');
   }
 
   const clientToken = await signIn(clientEmail, clientPassword);
@@ -177,7 +177,7 @@ async function main() {
     domains: results,
   };
 
-  const outDir = resolve(__dirname, '../tmp');
+  const outDir = resolve(__dirname, '../../tmp');
   mkdirSync(outDir, { recursive: true });
   const outPath = resolve(outDir, 'fna-intake-uat-report.json');
   writeFileSync(outPath, JSON.stringify(report, null, 2), 'utf8');
