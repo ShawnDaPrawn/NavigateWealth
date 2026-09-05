@@ -57,15 +57,32 @@ const {
   isReadableByModel,
   isFileRejection,
   wasTruncated,
+  incompleteReason,
   mimeFromFileName,
   SummaryGenerationError,
   SUMMARY_MODEL_ENV,
   SUMMARY_MODEL_PREFERENCES,
 } = await import('../client-document-summaries-ai.ts');
-const { OPENAI_PRIMARY_MODEL, resetAvailableModelsCache } = await import('../ai-model-config.ts');
+const { OPENAI_PRIMARY_MODEL, resetAvailableModelsCache, AiCallError } =
+  await import('../ai-model-config.ts');
 
-function pdfBlob(sizeBytes = 16) {
-  return { data: { arrayBuffer: async () => new ArrayBuffer(sizeBytes) }, error: null };
+/**
+ * A downloaded PDF of `sizeBytes`, whose CONTENT depends on `seed`.
+ *
+ * Two blobs of the same length are not the same file, and the summariser is
+ * only allowed to collapse them when their bytes actually match — so the fake
+ * has to be able to express "same size, different document".
+ */
+function pdfBlob(sizeBytes = 16, seed = 0) {
+  const bytes = new Uint8Array(sizeBytes).fill(seed % 256);
+  return { data: { arrayBuffer: async () => bytes.buffer }, error: null };
+}
+
+/** Distinct-but-stable content per storage path, so nothing dedupes by accident. */
+function seedForPath(path: string): number {
+  let seed = 0;
+  for (const ch of path) seed = (seed * 31 + ch.charCodeAt(0)) % 251;
+  return seed;
 }
 
 function doc(over: Record<string, unknown> = {}) {
@@ -86,7 +103,7 @@ beforeEach(() => {
   servedModels = [];
   resetAvailableModelsCache();
   download.mockReset();
-  download.mockResolvedValue(pdfBlob());
+  download.mockImplementation(async (path: string) => pdfBlob(16, seedForPath(path)));
   callResponses.mockReset();
   vi.stubGlobal('fetch', async () => ({
     ok: true,
@@ -329,39 +346,61 @@ describe('the same file filed twice', () => {
     // request trips a provider limit, but the twin's contents DID reach the
     // model, so calling it unread would be its own lie.
     respondOk();
+    download.mockImplementation(async () => pdfBlob(2326161, 7));
     const twins = [
-      doc({ id: 'a', fileName: 'overview.pdf', fileSize: 2326161, filePath: 'c/1.pdf' }),
-      doc({ id: 'b', fileName: 'overview.pdf', fileSize: 2326161, filePath: 'c/2.pdf' }),
+      doc({ id: 'a', fileName: 'overview.pdf', filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'overview.pdf', filePath: 'c/2.pdf' }),
     ];
 
-    const { analysed } = await buildSummaryInput(twins);
+    const { analysed, attached } = await buildSummaryInput(twins);
 
-    expect(download).toHaveBeenCalledTimes(1);
+    expect(attached).toHaveLength(1);
     expect(analysed.map((a) => a.analysed)).toEqual([true, true]);
   });
 
-  it('treats a same-named file of a different size as its own document', async () => {
-    const notTwins = [
-      doc({ id: 'a', fileName: 'overview.pdf', fileSize: 100, filePath: 'c/1.pdf' }),
-      doc({ id: 'b', fileName: 'overview.pdf', fileSize: 200, filePath: 'c/2.pdf' }),
-    ];
+  it('collapses identical bytes even when the two are filed under different names', async () => {
+    respondOk();
+    download.mockImplementation(async () => pdfBlob(1024, 3));
 
-    const { attached } = await buildSummaryInput(notTwins);
+    const { attached } = await buildSummaryInput([
+      doc({ id: 'a', fileName: 'quote.pdf', filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'quote-signed-copy.pdf', filePath: 'c/2.pdf' }),
+    ]);
 
-    expect(attached).toHaveLength(2);
+    expect(attached).toHaveLength(1);
   });
 
-  it('does not collapse documents that carry no size', async () => {
-    // Without a size there is no evidence they are the same file, and merging
-    // on filename alone would silently drop a real document.
-    const unsized = [
-      doc({ id: 'a', fileName: 'overview.pdf', fileSize: undefined, filePath: 'c/1.pdf' }),
-      doc({ id: 'b', fileName: 'overview.pdf', fileSize: undefined, filePath: 'c/2.pdf' }),
-    ];
+  it('does NOT collapse two different documents that share a name and a size', async () => {
+    // The dangerous direction. A pack is assembled from files picked out of
+    // different folders, so `quote.pdf` at 363,553 bytes really can be two
+    // unrelated documents. Merging them on name and length would drop a real
+    // financial document from the request while the stored record still claimed
+    // the model had read it.
+    download.mockImplementation(async (path: string) =>
+      pdfBlob(363553, path.includes('1') ? 11 : 200),
+    );
 
-    const { attached } = await buildSummaryInput(unsized);
+    const { attached, analysed } = await buildSummaryInput([
+      doc({ id: 'a', fileName: 'quote.pdf', filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'quote.pdf', filePath: 'c/2.pdf' }),
+    ]);
 
-    expect(attached).toHaveLength(2);
+    expect(attached.map((a) => a.id)).toEqual(['a', 'b']);
+    expect(analysed.every((a) => a.analysed)).toBe(true);
+  });
+
+  it('lets a copy through the byte budget the original already paid for', async () => {
+    // The duplicate costs nothing to attach — it is not attached — so it must
+    // not be turned away as over budget and reported unread.
+    download.mockImplementation(async () => pdfBlob(5_000_000, 9));
+
+    const { attached, analysed } = await buildSummaryInput([
+      doc({ id: 'a', fileName: 'big.pdf', filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'big.pdf', filePath: 'c/2.pdf' }),
+    ]);
+
+    expect(attached).toHaveLength(1);
+    expect(analysed.map((a) => a.analysed)).toEqual([true, true]);
   });
 });
 
@@ -434,7 +473,7 @@ describe('a file the provider will not read', () => {
   });
 });
 
-describe('a reply that was cut off', () => {
+describe('a reply that stopped short', () => {
   it('says the reply was truncated instead of surfacing a JSON parser message', async () => {
     // What this actually looked like in production: "Unterminated string in JSON
     // at position 342" — a parser message that tells the reader nothing.
@@ -447,12 +486,81 @@ describe('a reply that was cut off', () => {
     await expect(generateSummaryDraft([doc()])).rejects.toThrow(/cut off/i);
   });
 
-  it('detects truncation on either API shape', () => {
-    expect(wasTruncated({ status: 'incomplete' })).toBe(true);
+  it('does not blame the output budget for an incomplete reply that stopped for another reason', async () => {
+    // Telling an adviser to raise a limit that was never the problem sends them
+    // looking in the wrong place, and no budget makes a filtered reply finish.
+    callResponses.mockResolvedValue({
+      text: '{"headline":"Filed"',
+      model: 'gpt-4o',
+      raw: { status: 'incomplete', incomplete_details: { reason: 'content_filter' } },
+    });
+
+    const error = await generateSummaryDraft([doc()]).catch((e) => e);
+
+    expect(error.message).toMatch(/content_filter/);
+    expect(error.message).not.toMatch(/budget/i);
+  });
+
+  it('reads the stop reason off either API shape', () => {
+    expect(incompleteReason({ incomplete_details: { reason: 'max_output_tokens' } })).toBe(
+      'max_output_tokens',
+    );
+    expect(incompleteReason({ choices: [{ finish_reason: 'length' }] })).toBe('max_output_tokens');
+    expect(incompleteReason({ choices: [{ finish_reason: 'content_filter' }] })).toBe(
+      'content_filter',
+    );
+    // Stopped short without saying why is still unfinished, so still fatal.
+    expect(incompleteReason({ status: 'incomplete' })).toBe('unspecified');
+    expect(incompleteReason({ choices: [{ finish_reason: 'stop' }] })).toBeNull();
+    expect(incompleteReason({ status: 'completed' })).toBeNull();
+    expect(incompleteReason(null)).toBeNull();
+  });
+
+  it('counts only the output limit as truncation', () => {
     expect(wasTruncated({ incomplete_details: { reason: 'max_output_tokens' } })).toBe(true);
     expect(wasTruncated({ choices: [{ finish_reason: 'length' }] })).toBe(true);
+    // A filtered or otherwise-incomplete reply is a different problem with a
+    // different answer, so it must not be reported as a budget shortfall.
+    expect(wasTruncated({ incomplete_details: { reason: 'content_filter' } })).toBe(false);
+    expect(wasTruncated({ status: 'incomplete' })).toBe(false);
     expect(wasTruncated({ choices: [{ finish_reason: 'stop' }] })).toBe(false);
-    expect(wasTruncated({ status: 'completed' })).toBe(false);
     expect(wasTruncated(null)).toBe(false);
+  });
+});
+
+describe('which model the failure is filed against', () => {
+  it('records the model that actually served the failed request', async () => {
+    // `callResponses` retries the fallback model on its own. Recording the model
+    // that was ASKED for names a model that never saw this batch, which is worse
+    // than recording nothing.
+    envValues.OPENAI_SUMMARY_MODEL = 'gpt-5-mini';
+    callResponses.mockRejectedValue(new AiCallError('OpenAI returned empty content', 'gpt-4o'));
+
+    const error = await generateSummaryDraft([doc()]).catch((e) => e);
+
+    expect(error).toBeInstanceOf(SummaryGenerationError);
+    expect(error.model).toBe('gpt-4o');
+  });
+
+  it('records the answering model when the call succeeded but its reply was unusable', async () => {
+    envValues.OPENAI_SUMMARY_MODEL = 'gpt-5-mini';
+    callResponses.mockResolvedValue({
+      text: 'I cannot help with that.',
+      model: 'gpt-4o',
+      raw: {},
+    });
+
+    const error = await generateSummaryDraft([doc()]).catch((e) => e);
+
+    expect(error.model).toBe('gpt-4o');
+  });
+
+  it('falls back to the requested model when nothing came back at all', async () => {
+    envValues.OPENAI_SUMMARY_MODEL = 'gpt-5-mini';
+    callResponses.mockRejectedValue(new Error('network down'));
+
+    const error = await generateSummaryDraft([doc()]).catch((e) => e);
+
+    expect(error.model).toBe('gpt-5-mini');
   });
 });

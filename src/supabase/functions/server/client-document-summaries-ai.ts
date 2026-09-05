@@ -19,7 +19,12 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { callResponses, parseJsonResponse, resolvePreferredModel } from './ai-model-config.ts';
+import {
+  AiCallError,
+  callResponses,
+  parseJsonResponse,
+  resolvePreferredModel,
+} from './ai-model-config.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { AiContentBlock } from './ai-model-config.ts';
@@ -146,8 +151,6 @@ export interface DocumentForSummary {
   id: string;
   title: string;
   fileName?: string;
-  /** Used with the filename to spot the same file filed twice. */
-  fileSize?: number;
   filePath?: string;
   productCategory: string;
   policyNumber?: string;
@@ -249,15 +252,18 @@ async function downloadDocument(filePath: string): Promise<ArrayBuffer | null> {
 }
 
 /**
- * Build the model input for a group of documents.
+ * Identity of a file's CONTENT, for spotting the same document filed twice.
  *
- * Returns the content blocks and the per-document record of what was actually
- * analysed, so the stored summary can be honest about its own coverage.
+ * This hashes the bytes rather than comparing filename and length, because a
+ * pack is assembled from files the adviser picked out of different folders:
+ * `quote.pdf` at 363,553 bytes is not evidence of being the same `quote.pdf`.
+ * Collapsing on that pair would drop a real financial document from the request
+ * while the stored record still claimed the model had read it — the exact kind
+ * of false coverage this feature is not allowed to produce. Two files that hash
+ * the same ARE the same, so the collapse is safe.
  */
-/** Identity of a file's CONTENT, for spotting the same document filed twice. */
-function contentKey(doc: DocumentForSummary): string | null {
-  if (!doc.fileName || typeof doc.fileSize !== 'number' || doc.fileSize <= 0) return null;
-  return `${doc.fileName}|${doc.fileSize}`;
+async function contentDigest(buffer: ArrayBuffer): Promise<string> {
+  return toBase64(await crypto.subtle.digest('SHA-256', buffer));
 }
 
 /** One attachment that made it into the request, and what it cost. */
@@ -285,7 +291,9 @@ export interface SummaryInputOptions {
  * which half is a copy). Sending both wastes the byte budget, doubles the cost,
  * and makes it likelier the request trips a provider limit. The twin is still
  * listed in the manifest and still counts as analysed, because its contents did
- * reach the model — just once.
+ * reach the model — just once. Identity is a hash of the downloaded bytes, so
+ * the twin is downloaded and only then collapsed: the saving is the upload and
+ * the model's attention, which is where the cost is.
  */
 export async function buildSummaryInput(
   documents: DocumentForSummary[],
@@ -298,7 +306,7 @@ export async function buildSummaryInput(
   const analysed: SummarisedDocument[] = [];
   const fileBlocks: AiContentBlock[] = [];
   const attached: Attachment[] = [];
-  /** content key -> index of the document whose bytes were actually sent. */
+  /** content hash -> index of the document whose bytes were actually sent. */
   const sentByContent = new Map<string, number>();
   /** Per-document manifest note, e.g. that it duplicates an earlier entry. */
   const notes: Array<string | null> = [];
@@ -316,15 +324,6 @@ export async function buildSummaryInput(
   };
 
   for (const doc of documents) {
-    const key = contentKey(doc);
-    const twinIndex = key ? sentByContent.get(key) : undefined;
-    if (twinIndex !== undefined) {
-      // Same filename and byte length as one already sent: its content reached
-      // the model, so it is analysed — we simply did not pay for it twice.
-      record(doc, analysed[twinIndex].analysed, `same file as item ${twinIndex + 1}`);
-      continue;
-    }
-
     const mime = mimeFromFileName(doc.fileName);
     const attachable =
       !options.metadataOnly &&
@@ -343,7 +342,23 @@ export async function buildSummaryInput(
     }
 
     const buffer = await downloadDocument(doc.filePath!);
-    if (!buffer || attachedBytes + buffer.byteLength > MAX_ATTACHMENT_BYTES) {
+    if (!buffer) {
+      record(doc, false, null);
+      continue;
+    }
+
+    // Hashed before the budget check: a copy of something already attached
+    // costs nothing more, so it must not be turned away for being over budget.
+    const digest = await contentDigest(buffer);
+    const twinIndex = sentByContent.get(digest);
+    if (twinIndex !== undefined) {
+      // Byte-for-byte identical to one already sent: its content reached the
+      // model, so it is analysed — we simply did not pay for it twice.
+      record(doc, analysed[twinIndex].analysed, `same file as item ${twinIndex + 1}`);
+      continue;
+    }
+
+    if (attachedBytes + buffer.byteLength > MAX_ATTACHMENT_BYTES) {
       record(doc, false, null);
       continue;
     }
@@ -356,7 +371,7 @@ export async function buildSummaryInput(
         : { type: 'image', dataBase64, mimeType: mime },
     );
     attached.push({ id: doc.id, bytes: buffer.byteLength });
-    if (key) sentByContent.set(key, analysed.length);
+    sentByContent.set(digest, analysed.length);
     record(doc, true, null);
   }
 
@@ -409,25 +424,46 @@ export function isFileRejection(error: unknown): boolean {
   );
 }
 
+/** Reason string used when a reply stopped for want of output budget. */
+const OUTPUT_LIMIT_REASON = 'max_output_tokens';
+
 /**
- * True when the model stopped because it ran out of output budget.
+ * Why the model stopped short, or null when it finished.
  *
  * Structured Outputs guarantees valid JSON only for a response that FINISHES.
- * A truncated one is invalid by definition, and surfaced as
- * "Unterminated string in JSON at position 342" — a parser message that tells
- * the reader nothing about the actual cause. Both API shapes are checked
- * because either can serve this call.
+ * An unfinished one is invalid by definition, and surfaced as "Unterminated
+ * string in JSON at position 342" — a parser message that tells the reader
+ * nothing about the actual cause. Both API shapes are read because either can
+ * serve this call.
+ *
+ * The REASON is carried rather than collapsed to a yes/no, because the two
+ * cases need opposite responses: running out of output budget is answered by a
+ * bigger budget, while a content filter is not answered by retrying at all, and
+ * telling an adviser to raise a limit that was never the problem sends them
+ * looking in the wrong place.
  */
-export function wasTruncated(raw: unknown): boolean {
-  if (!raw || typeof raw !== 'object') return false;
+export function incompleteReason(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
   const body = raw as {
     status?: unknown;
     incomplete_details?: { reason?: unknown };
     choices?: Array<{ finish_reason?: unknown }>;
   };
-  if (body.status === 'incomplete') return true;
-  if (body.incomplete_details?.reason === 'max_output_tokens') return true;
-  return body.choices?.[0]?.finish_reason === 'length';
+
+  const stated = body.incomplete_details?.reason;
+  if (typeof stated === 'string' && stated) return stated;
+  // Responses said it stopped short but not why; still unfinished, still fatal.
+  if (body.status === 'incomplete') return 'unspecified';
+
+  const finish = body.choices?.[0]?.finish_reason;
+  if (finish === 'length') return OUTPUT_LIMIT_REASON;
+  if (finish === 'content_filter') return 'content_filter';
+  return null;
+}
+
+/** True only when the reply stopped because it ran out of output budget. */
+export function wasTruncated(raw: unknown): boolean {
+  return incompleteReason(raw) === OUTPUT_LIMIT_REASON;
 }
 
 /** Parse and validate one model reply into a draft. */
@@ -435,10 +471,17 @@ function toDraft(
   result: { text: string; model: string; raw: unknown },
   analysed: SummarisedDocument[],
 ): SummaryDraft {
-  if (wasTruncated(result.raw)) {
+  const incomplete = incompleteReason(result.raw);
+  if (incomplete === OUTPUT_LIMIT_REASON) {
     throw new Error(
       'The AI reply was cut off before it finished, so it could not be read. ' +
         'This batch may need a larger output budget.',
+    );
+  }
+  if (incomplete) {
+    throw new Error(
+      `The AI stopped before finishing this summary (${incomplete}), so its reply ` +
+        'could not be read. Retrying will not change that on its own.',
     );
   }
 
@@ -503,6 +546,11 @@ export async function generateSummaryDraft(documents: DocumentForSummary[]): Pro
   for (let attempt = 1; attempt <= 3; attempt++) {
     const input = await buildSummaryInput(documents, { excludeIds, metadataOnly });
     analysed = input.analysed;
+    // What answered, as opposed to what was asked for. `callResponses` retries
+    // the fallback model on its own, so these differ more often than the name
+    // `model` suggests, and a failure must be filed against the one that
+    // produced it.
+    let servedBy = model;
 
     try {
       const result = await callResponses({
@@ -515,11 +563,18 @@ export async function generateSummaryDraft(documents: DocumentForSummary[]): Pro
         temperature: 0.2,
         jsonSchema: { name: 'client_document_summary', schema: SUMMARY_SCHEMA, strict: true },
       });
+      servedBy = result.model || model;
       return toDraft(result, analysed);
     } catch (error) {
+      // Three provenances, most specific first: the failed call named its own
+      // model; the call returned and `toDraft` rejected what it said; or nothing
+      // came back at all and the requested model is the best we know.
+      const servedByFailure = error instanceof AiCallError ? error.model : servedBy;
       const isLastAttempt = attempt === 3;
       if (isLastAttempt || !isFileRejection(error)) {
-        throw new SummaryGenerationError(getErrMsg(error), analysed, model, { cause: error });
+        throw new SummaryGenerationError(getErrMsg(error), analysed, servedByFailure, {
+          cause: error,
+        });
       }
 
       if (!metadataOnly && input.attached.length > 1) {

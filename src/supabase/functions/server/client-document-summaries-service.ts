@@ -132,7 +132,6 @@ function toDocumentForSummary(doc: RawDocument): DocumentForSummary {
     id: str(doc.id),
     title: str(doc.title, 'Untitled document'),
     fileName: str(doc.fileName) || undefined,
-    fileSize: typeof doc.fileSize === 'number' ? doc.fileSize : undefined,
     filePath: str(doc.filePath) || undefined,
     productCategory: str(doc.productCategory, 'General'),
     policyNumber: str(doc.policyNumber) || undefined,
