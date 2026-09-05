@@ -100,9 +100,43 @@ Three rules keep this from growing back into an unreadable pile.
    from this page. A document nobody can find is a document nobody maintains;
    three runbooks here had no inbound link at all before this index existed.
 
-A CI link check is being added so the build fails on any relative link in a
-Markdown file that does not resolve — a move that misses a reference should be
-caught by the gate, not discovered months later.
+These are enforced, not merely asked for. `src/__tests__/docs-links.test.ts`
+fails the build when a relative link in any Markdown file does not resolve, and
+when a Markdown file is not reachable from this page. It runs in `npm test`, so
+a move that misses a reference is caught before the push rather than months
+later by whoever was following the link.
+
+Rule 1 is the one no test can enforce — it is a habit. The other two now have
+teeth.
+
+## The sweep
+
+Ten minutes, quarterly. Each of these produced real findings the last time it
+was run; each is the query behind a gate that now exists, so a clean result is
+the expected one rather than a surprise.
+
+```bash
+# Markdown nobody links to — the gate above catches this, so this should be empty
+npx vitest run src/__tests__/docs-links.test.ts
+
+# Scripts nothing references. scripts/README.md is excluded on purpose:
+# it documents every no-caller script, so counting it makes them all look
+# referenced and the query silently returns nothing
+for f in $(git ls-files 'scripts/**/*.mjs' 'scripts/*.mjs'); do
+  [ "$(git grep -l "$(basename "$f")" -- ':!'"$f" ':!scripts/README.md' | wc -l)" -eq 0 ] \
+    && echo "$f"
+done
+
+# Tracked files over 2 MB outside the grandfather list — also gated
+npx vitest run src/__tests__/tracked-file-size.test.ts
+
+# Documents whose newest claim is old enough to be worth re-reading
+git ls-files 'docs/**/*.md' | xargs -I{} sh -c 'echo "$(git log -1 --format=%as -- {}) {}"' | sort | head -15
+```
+
+Anything the last query surfaces gets one of three outcomes: it is still true and
+left alone, it is wrong and corrected, or its work has shipped and it moves to
+`archive/`.
 
 ## Settled questions
 
