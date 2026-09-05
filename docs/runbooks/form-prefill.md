@@ -28,7 +28,7 @@ Operational guide for advisers and engineering when unified form prefill misbeha
 npm run form-prefill:smoke
 npm test -- form-prefill
 npx playwright test e2e/form-prefill-smoke.spec.ts --project=desktop-chromium
-node scripts/migrate-form-templates-to-storage.mjs --dry-run
+node scripts/ops/migrate-form-templates-to-storage.mjs --dry-run
 ```
 
 Smoke requires `e2e/.env.local` with `E2E_FNA_ADVISER_*` and `E2E_FNA_CLIENT_ID`.

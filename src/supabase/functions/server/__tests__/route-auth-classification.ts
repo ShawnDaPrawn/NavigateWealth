@@ -175,7 +175,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'platform-health',
     classification: 'public',
     reason:
-      'Platform health probe. Documented as the only endpoints reachable without a bearer token, and asserted on every deploy by scripts/post-deploy-smoke.mjs.',
+      'Platform health probe. Documented as the only endpoints reachable without a bearer token, and asserted on every deploy by scripts/ops/post-deploy-smoke.mjs.',
     routes: [
       'create-app.ts GET /make-server-91ed8379',
       'create-app.ts GET /make-server-91ed8379/health',

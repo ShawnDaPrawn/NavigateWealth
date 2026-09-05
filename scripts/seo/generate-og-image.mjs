@@ -3,7 +3,7 @@
  * social platforms expect (the older navigate-wealth-social.png is a 1780px
  * square kept for logo/sitemap use). Run once and commit the artifact:
  *
- *   node ./scripts/generate-og-image.mjs
+ *   node ./scripts/seo/generate-og-image.mjs
  *
  * Composition: the clean white horizontal lockup (boat icon + wordmark)
  * centered on the brand navy (#0B1220, matching the site's theme-color) with

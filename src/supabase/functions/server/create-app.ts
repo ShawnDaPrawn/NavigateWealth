@@ -26,7 +26,7 @@
  * module must not take the whole surface down — but a `console.error` in a
  * platform log is not a signal anyone sees. A deploy could lose every core
  * route while `/health` and `/health/ready` both answered a cheerful 200, and
- * the post-deploy smoke (`scripts/post-deploy-smoke.mjs`) would call it green.
+ * the post-deploy smoke (`scripts/ops/post-deploy-smoke.mjs`) would call it green.
  *
  * So failures are now recorded and the readiness probe reports them: a boot
  * with any failed registrar answers `/health/ready` with 503 `status:

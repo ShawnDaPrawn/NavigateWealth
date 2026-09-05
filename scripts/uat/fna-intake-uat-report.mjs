@@ -18,15 +18,15 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const reportPath = resolve(__dirname, '../tmp/fna-intake-uat-report.json');
-const outputDir = resolve(__dirname, '../tmp');
+const reportPath = resolve(__dirname, '../../tmp/fna-intake-uat-report.json');
+const outputDir = resolve(__dirname, '../../tmp');
 const signoffPath = resolve(outputDir, 'fna-intake-uat-signoff.md');
-const consentPath = resolve(__dirname, '../src/supabase/functions/server/fna-intake-types.ts');
+const consentPath = resolve(__dirname, '../../src/supabase/functions/server/fna-intake-types.ts');
 
 const report = JSON.parse(readFileSync(reportPath, 'utf8'));
 const commit = execSync('git rev-parse --short HEAD', {
   encoding: 'utf8',
-  cwd: resolve(__dirname, '..'),
+  cwd: resolve(__dirname, '../..'),
 }).trim();
 const date = new Date().toISOString().slice(0, 10);
 

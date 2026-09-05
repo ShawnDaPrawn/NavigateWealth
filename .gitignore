@@ -29,5 +29,5 @@ coverage
 coverage-server
 .claude/
 
-# Staged from node_modules by scripts/copy-pdfjs-assets.mjs (see that file for why).
+# Staged from node_modules by scripts/build/copy-pdfjs-assets.mjs (see that file for why).
 public/pdfjs/

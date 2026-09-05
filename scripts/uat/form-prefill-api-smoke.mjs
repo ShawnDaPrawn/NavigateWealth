@@ -25,7 +25,7 @@ const EXPECTED_FORM_IDS = [
 ];
 
 function loadEnvLocal() {
-  const path = resolve(__dirname, '../e2e/.env.local');
+  const path = resolve(__dirname, '../../e2e/.env.local');
   try {
     const text = readFileSync(path, 'utf8');
     const env = {};
@@ -159,7 +159,7 @@ async function main() {
   report.pass = Object.values(report.steps).every(Boolean);
   console.log('[form-prefill-smoke]', report.pass ? 'PASS' : 'FAIL', report);
 
-  const outDir = resolve(__dirname, '../tmp');
+  const outDir = resolve(__dirname, '../../tmp');
   mkdirSync(outDir, { recursive: true });
   writeFileSync(resolve(outDir, 'form-prefill-smoke-report.json'), JSON.stringify(report, null, 2));
 

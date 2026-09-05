@@ -24,7 +24,7 @@
  * the §7.5 gate, verbatim.
  *
  * USAGE
- *   SUPABASE_ACCESS_TOKEN=... node scripts/metrics-report.mjs [--hours 24] [--json]
+ *   SUPABASE_ACCESS_TOKEN=... node scripts/ops/metrics-report.mjs [--hours 24] [--json]
  *
  * The token is a Supabase Management API PAT (Account → Access Tokens). It is
  * read from the environment and never logged, never written to a file, and

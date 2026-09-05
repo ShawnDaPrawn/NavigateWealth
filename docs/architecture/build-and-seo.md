@@ -17,10 +17,10 @@ npm run build
 
 Build sequence:
 
-1. `scripts/generate-seo-files.mjs` generates `sitemap.xml`, `robots.txt`, and SEO route data.
+1. `scripts/seo/generate-seo-files.mjs` generates `sitemap.xml`, `robots.txt`, and SEO route data.
 2. `vite build` compiles the SPA into `dist/`.
-3. `scripts/apply-static-seo.mjs` prerenders route-level `<head>` metadata and crawler-friendly static `<noscript>` body content.
-4. `scripts/verify-seo-build.mjs` validates the generated output.
+3. `scripts/seo/apply-static-seo.mjs` prerenders route-level `<head>` metadata and crawler-friendly static `<noscript>` body content.
+4. `scripts/seo/verify-seo-build.mjs` validates the generated output.
 
 SEO-related environment variables:
 

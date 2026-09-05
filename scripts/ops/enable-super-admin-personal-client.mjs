@@ -3,10 +3,10 @@
  * One-time bootstrap: enable shawn@navigatewealth.co as a personal client test profile.
  *
  * Usage (preferred — calls deployed API as Shawn):
- *   ADMIN_EMAIL=shawn@navigatewealth.co ADMIN_PASSWORD=... node scripts/enable-super-admin-personal-client.mjs
+ *   ADMIN_EMAIL=shawn@navigatewealth.co ADMIN_PASSWORD=... node scripts/ops/enable-super-admin-personal-client.mjs
  *
  * Fallback (service role direct KV write when no password available):
- *   node scripts/enable-super-admin-personal-client.mjs --direct
+ *   node scripts/ops/enable-super-admin-personal-client.mjs --direct
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -26,7 +26,7 @@ const SUPER_ADMIN_EMAIL = 'shawn@navigatewealth.co';
 const useDirect = process.argv.includes('--direct');
 
 function loadEnvLocal() {
-  const path = resolve(__dirname, '../e2e/.env.local');
+  const path = resolve(__dirname, '../../e2e/.env.local');
   try {
     const text = readFileSync(path, 'utf8');
     const env = {};
@@ -49,7 +49,7 @@ function getServiceRoleKey() {
   }
   const out = execSync(`npx supabase projects api-keys --project-ref ${PROJECT_REF} -o json`, {
     encoding: 'utf8',
-    cwd: resolve(__dirname, '..'),
+    cwd: resolve(__dirname, '../..'),
   });
   const rows = JSON.parse(out);
   const row = rows.find((r) => r.name === 'service_role');

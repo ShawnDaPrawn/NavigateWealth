@@ -26,8 +26,8 @@ on:
       - 'supabase/functions/**'
       - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase-function.yml'
-      - 'scripts/post-deploy-smoke.mjs'
-      - 'scripts/strip-edge-function.mjs'
+      - 'scripts/ops/post-deploy-smoke.mjs'
+      - 'scripts/build/strip-edge-function.mjs'
 
 jobs:
   deploy:
@@ -47,7 +47,7 @@ jobs:
       # source, and Supabase hard-rejects above 5 MB of measured payload. The
       # graph crossed that line on 2026-08-30. Stripping types and comments —
       # exactly what the Deno runtime discards anyway — takes it from 4.44 MB
-      # to ~3.2 MB. See scripts/strip-edge-function.mjs for the full rationale.
+      # to ~3.2 MB. See scripts/build/strip-edge-function.mjs for the full rationale.
       #
       # This rewrites the checkout in place. That is safe here and nowhere
       # else: this job only deploys, and the runner's checkout is discarded
@@ -71,12 +71,12 @@ jobs:
           # working, and a revision predating the strip is one that fit under
           # the 5 MB limit unstripped — that is why it was green enough to roll
           # back to.
-          if [ ! -f ./scripts/strip-edge-function.mjs ]; then
+          if [ ! -f ./scripts/build/strip-edge-function.mjs ]; then
             echo "No strip script in this revision — deploying its payload as-is."
             exit 0
           fi
           npm install --no-save --no-audit --no-fund esbuild@0.25.12
-          node ./scripts/strip-edge-function.mjs
+          node ./scripts/build/strip-edge-function.mjs
 
       - name: Deploy make-server-91ed8379
         env:
@@ -120,7 +120,7 @@ jobs:
 
       - name: Blocking post-deploy smoke
         if: success()
-        run: node ./scripts/post-deploy-smoke.mjs
+        run: node ./scripts/ops/post-deploy-smoke.mjs
 
       - name: Post-deploy form prefill API smoke
         if: success()

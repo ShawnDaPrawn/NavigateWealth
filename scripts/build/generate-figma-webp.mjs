@@ -34,9 +34,9 @@
  * is the only thing consulted, and alpha is verified below rather than assumed.
  *
  * Usage:
- *   node ./scripts/generate-figma-webp.mjs           # generate (incremental)
- *   node ./scripts/generate-figma-webp.mjs --force   # ignore the cache
- *   node ./scripts/generate-figma-webp.mjs --check   # verify, generate nothing
+ *   node ./scripts/build/generate-figma-webp.mjs           # generate (incremental)
+ *   node ./scripts/build/generate-figma-webp.mjs --force   # ignore the cache
+ *   node ./scripts/build/generate-figma-webp.mjs --check   # verify, generate nothing
  */
 
 import fs from 'node:fs/promises';

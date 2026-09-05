@@ -165,7 +165,7 @@ const { metrics, entryDetail } = measure();
 if (process.argv.includes('--write-baseline')) {
   const payload = {
     _comment:
-      'Bundle-size floors for scripts/check-bundle-size.mjs (Stage A / F6). ' +
+      'Bundle-size floors for scripts/build/check-bundle-size.mjs (Stage A / F6). ' +
       'Regenerate with `npm run bundle:check -- --write-baseline` after an ' +
       'intentional size change, and say why in the commit message.',
     _tolerancePct: TOLERANCE_PCT,

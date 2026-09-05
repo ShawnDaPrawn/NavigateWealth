@@ -4,9 +4,9 @@
  * to Supabase Storage (make-91ed8379-documents/form-templates/...).
  *
  * Usage (requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY):
- *   node scripts/migrate-form-templates-to-storage.mjs
- *   node scripts/migrate-form-templates-to-storage.mjs --dry-run
- *   node scripts/migrate-form-templates-to-storage.mjs --delete-kv-after
+ *   node scripts/ops/migrate-form-templates-to-storage.mjs
+ *   node scripts/ops/migrate-form-templates-to-storage.mjs --dry-run
+ *   node scripts/ops/migrate-form-templates-to-storage.mjs --delete-kv-after
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -25,7 +25,7 @@ const dryRun = process.argv.includes('--dry-run');
 const deleteKvAfter = process.argv.includes('--delete-kv-after');
 
 function loadEnvLocal() {
-  for (const rel of ['../.env.local', '../e2e/.env.local']) {
+  for (const rel of ['../../.env.local', '../../e2e/.env.local']) {
     try {
       const text = readFileSync(resolve(__dirname, rel), 'utf8');
       const env = {};

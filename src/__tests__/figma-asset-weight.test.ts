@@ -17,7 +17,7 @@
  *
  * ── What this file measures, and why it is the cold path ────────────────────
  *
- * Production does not serve those siblings. `scripts/generate-figma-webp.mjs`
+ * Production does not serve those siblings. `scripts/build/generate-figma-webp.mjs`
  * runs before `vite build` and emits a ≤500 KB WebP per asset into
  * `node_modules/.cache/figma-webp/`, which the resolver checks first — 811 MB
  * of originals become 10 MB. The script owns that half: it enforces its own
@@ -55,7 +55,7 @@ const MAX_ASSET_BYTES = 1_536_000;
 /** The whole imported set must stay within a budget a person could download. */
 const MAX_TOTAL_BYTES = 40 * 1024 * 1024;
 
-/** Mirrors MAX_OUTPUT_BYTES in scripts/generate-figma-webp.mjs. */
+/** Mirrors MAX_OUTPUT_BYTES in scripts/build/generate-figma-webp.mjs. */
 const MAX_GENERATED_BYTES = 500 * 1024;
 
 /**

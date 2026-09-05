@@ -494,7 +494,7 @@ themselves via `supabase.auth.updateUser({ data: { role: 'admin' } })` — full
 privileged values from user_metadata demoted to `client`. Provisioning paths
 (super-admin bootstrap, ensure-dev-user, personnel create/backfill, admin metadata
 updates) now write `app_metadata.role`. **Deploy step:** run
-`node ./scripts/backfill-trusted-roles.mjs` once (or set `NW_ADMIN_EMAILS`) so existing
+`node ./scripts/ops/backfill-trusted-roles.mjs` once (or set `NW_ADMIN_EMAILS`) so existing
 staff keep access. Tests: `__tests__/trusted-role-resolution.test.ts`.
 
 **Fixed 2026-06-10 (server gating + frontend JWT migration shipped together):**

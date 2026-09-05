@@ -70,8 +70,8 @@ Credentials: copy `e2e/.env.example` → `e2e/.env.local` and set `E2E_ADMIN_EMA
 Migrate legacy KV templates (if any exist):
 
 ```bash
-node scripts/migrate-form-templates-to-storage.mjs --dry-run
-node scripts/migrate-form-templates-to-storage.mjs --delete-kv-after
+node scripts/ops/migrate-form-templates-to-storage.mjs --dry-run
+node scripts/ops/migrate-form-templates-to-storage.mjs --delete-kv-after
 ```
 
 After migration, set Edge Function secret `FORM_TEMPLATE_ALLOW_KV_FALLBACK=false`.

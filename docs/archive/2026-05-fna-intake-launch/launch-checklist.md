@@ -25,7 +25,7 @@ Execute after Gates 0–4 pass (see `docs/archive/production-readiness-ledger-20
    ```
 5. [x] Run backfill (if KV sessions exist):
    ```bash
-   node scripts/fna-intake-backfill.mjs
+   node scripts/uat/fna-intake-backfill.mjs
    ```
    _(Skipped — 0 KV intake sessions at cutover.)_
 6. [x] Switch reads to Postgres after verification:
