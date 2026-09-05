@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, LogOut, ArrowLeftRight, X } from 'lucide-react';
+import { Settings, LogOut, ArrowLeftRight, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import {
@@ -15,7 +15,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { cn } from '../../ui/utils';
 import { Logo } from '../../layout/Logo';
 import { AdminModule, PendingCounts } from './types';
-import { alwaysShowCounterModules, moduleConfig, moduleGroups, operationsModules } from './config';
+import {
+  alwaysShowCounterModules,
+  formatSidebarBadgeCount,
+  formatPendingSummary,
+  moduleConfig,
+  moduleGroups,
+  operationsModules,
+} from './config';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUserPermissions } from '../modules/personnel';
 import { useNavigate } from 'react-router';
@@ -217,13 +224,12 @@ function SidebarContent({
         )}
       >
         {collapsed && !isMobile ? (
-          <button
-            className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center cursor-pointer hover:bg-sidebar-primary/90 transition-colors"
-            onClick={() => setCollapsed(false)}
-            aria-label="Expand sidebar"
+          <div
+            className="w-9 h-9 rounded-full border border-sidebar-foreground/25 flex items-center justify-center select-none"
+            aria-hidden="true"
           >
-            <span className="text-sidebar-primary-foreground font-bold text-sm">N</span>
-          </button>
+            <span className="text-sidebar-foreground font-bold text-sm">N</span>
+          </div>
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
@@ -233,11 +239,12 @@ function SidebarContent({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 ml-auto hidden lg:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                className="h-8 w-8 ml-auto hidden lg:flex text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 onClick={() => setCollapsed(!collapsed)}
                 aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                title="Collapse sidebar"
               >
-                <ArrowLeftRight className="h-3 w-3" />
+                <PanelLeftClose className="h-4 w-4" />
               </Button>
             )}
             {isMobile && (
@@ -255,6 +262,30 @@ function SidebarContent({
         )}
       </div>
 
+      {/* Expand control - only in the collapsed desktop rail */}
+      {collapsed && !isMobile && (
+        <div className="flex justify-center px-2 pt-3">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-10 rounded-lg border border-dashed border-sidebar-foreground/30 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:border-sidebar-foreground/50"
+                  onClick={() => setCollapsed(false)}
+                  aria-label="Expand sidebar"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Expand sidebar
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto sidebar-scrollbar py-4" aria-label="Admin modules">
         {moduleGroups.map((section, sectionIdx) => {
@@ -263,7 +294,14 @@ function SidebarContent({
           if (visibleModules.length === 0) return null;
 
           return (
-            <div key={sectionIdx} className={cn('mb-6', collapsed && !isMobile && 'mb-4')}>
+            <div key={sectionIdx} className={cn('mb-6', collapsed && !isMobile && 'mb-3')}>
+              {/* Collapsed rail: a divider keeps the section grouping visible without a title */}
+              {collapsed && !isMobile && sectionIdx > 0 && (
+                <div
+                  className="mx-4 mb-3 border-t border-sidebar-foreground/15"
+                  aria-hidden="true"
+                />
+              )}
               {/* Section title - only show when not collapsed */}
               {(!collapsed || isMobile) && (
                 <div className="px-4 mb-2">
@@ -292,11 +330,17 @@ function SidebarContent({
                       }}
                       variant="ghost"
                       aria-current={isActive ? 'page' : undefined}
-                      aria-label={collapsed && !isMobile ? config.label : undefined}
-                      className={cn(
-                        'relative transition-all duration-200',
+                      aria-label={
                         collapsed && !isMobile
-                          ? 'w-10 h-10 p-0 justify-center'
+                          ? showBadge
+                            ? `${config.label}, ${formatPendingSummary(pendingData.count)}`
+                            : config.label
+                          : undefined
+                      }
+                      className={cn(
+                        'relative overflow-visible transition-all duration-200',
+                        collapsed && !isMobile
+                          ? 'w-10 h-10 p-0 justify-center rounded-lg'
                           : 'w-full justify-start gap-3',
                         isActive
                           ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground'
@@ -310,15 +354,18 @@ function SidebarContent({
                       {showBadge && (!collapsed || isMobile) && (
                         <Badge
                           variant="secondary"
-                          className="ml-auto text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground border-transparent"
+                          className="ml-auto h-5 min-w-5 px-1.5 py-0 text-xs tabular-nums bg-sidebar-badge text-sidebar-badge-foreground border-transparent hover:bg-sidebar-badge"
                         >
-                          {pendingData.count}
+                          {pendingData.count.toLocaleString()}
                         </Badge>
                       )}
                       {showBadge && collapsed && !isMobile && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-sidebar-primary text-sidebar-primary-foreground rounded-full flex items-center justify-center text-xs font-medium border-2 border-sidebar">
-                          {pendingData.count > 99 ? '99+' : pendingData.count}
-                        </div>
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-badge px-1 text-[10px] font-semibold leading-none tabular-nums text-sidebar-badge-foreground ring-2 ring-sidebar"
+                        >
+                          {formatSidebarBadgeCount(pendingData.count)}
+                        </span>
                       )}
                     </Button>
                   );
@@ -329,13 +376,12 @@ function SidebarContent({
                       <TooltipProvider key={itemIdx}>
                         <Tooltip>
                           <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
-                          <TooltipContent side="right">
+                          <TooltipContent side="right" sideOffset={8}>
                             <div className="flex flex-col">
                               <p className="font-medium">{config.label}</p>
                               {showBadge && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {pendingData.count} pending item
-                                  {pendingData.count !== 1 ? 's' : ''}
+                                <p className="mt-0.5 text-xs text-primary-foreground/85">
+                                  {formatPendingSummary(pendingData.count)}
                                 </p>
                               )}
                             </div>

@@ -45,6 +45,8 @@ body.schedule-consultation-modal-open footer.bg-black {
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #1f2937;
   --sidebar-ring: #6d28d9;
+  --sidebar-badge: #f59e0b;
+  --sidebar-badge-foreground: #111827;
 
   /* Theme-specific section backgrounds */
   --section-black: #000000;
@@ -90,6 +92,8 @@ body.schedule-consultation-modal-open footer.bg-black {
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #6d28d9;
+  --sidebar-badge: #fbbf24;
+  --sidebar-badge-foreground: #111111;
 }
 
 @theme inline {
@@ -131,6 +135,8 @@ body.schedule-consultation-modal-open footer.bg-black {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-badge: var(--sidebar-badge);
+  --color-sidebar-badge-foreground: var(--sidebar-badge-foreground);
 
   --color-section-black: var(--section-black);
   --color-section-white: var(--section-white);
@@ -286,6 +292,12 @@ body.schedule-consultation-modal-open footer.bg-black {
   }
   .sidebar-scrollbar::-webkit-scrollbar-track {
     background: transparent;
+  }
+  /* Windows Chromium draws arrow buttons on custom scrollbars; hide them */
+  .sidebar-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
   }
   .sidebar-scrollbar::-webkit-scrollbar-thumb {
     background-color: rgba(255, 255, 255, 0.25);

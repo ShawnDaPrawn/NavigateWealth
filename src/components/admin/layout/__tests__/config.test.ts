@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { moduleConfig, moduleGroups, operationsModules, alwaysShowCounterModules } from '../config';
+import {
+  moduleConfig,
+  moduleGroups,
+  operationsModules,
+  alwaysShowCounterModules,
+  formatSidebarBadgeCount,
+  formatPendingSummary,
+} from '../config';
 
 describe('admin/layout/config', () => {
   it('moduleConfig has dashboard and clients entries', () => {
@@ -38,5 +45,37 @@ describe('admin/layout/config', () => {
 
   it('alwaysShowCounterModules is defined', () => {
     expect(Array.isArray(alwaysShowCounterModules)).toBe(true);
+  });
+});
+
+describe('formatSidebarBadgeCount', () => {
+  it('returns the raw count up to 99', () => {
+    expect(formatSidebarBadgeCount(0)).toBe('0');
+    expect(formatSidebarBadgeCount(1)).toBe('1');
+    expect(formatSidebarBadgeCount(99)).toBe('99');
+  });
+
+  it('caps counts above 99 so the compact badge never overflows', () => {
+    expect(formatSidebarBadgeCount(100)).toBe('99+');
+    expect(formatSidebarBadgeCount(1234)).toBe('99+');
+  });
+
+  it('never renders a negative count', () => {
+    expect(formatSidebarBadgeCount(-5)).toBe('0');
+  });
+});
+
+describe('formatPendingSummary', () => {
+  it('describes an empty queue in words', () => {
+    expect(formatPendingSummary(0)).toBe('nothing pending');
+  });
+
+  it('reports the exact count when items are pending', () => {
+    expect(formatPendingSummary(1)).toBe('1 pending');
+    expect(formatPendingSummary(124)).toBe('124 pending');
+  });
+
+  it('uses the exact count for large numbers instead of the capped badge value', () => {
+    expect(formatPendingSummary(1234)).toBe((1234).toLocaleString() + ' pending');
   });
 });
