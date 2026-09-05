@@ -14,6 +14,41 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-09-05 - Newsletter Studio Shipped Without Its Delivery Job, Audience Or A Working Composer
+
+- **Symptom:** The Newsletter Studio admin module looked live (206 reachable
+  subscribers on the dashboard) but could not have sent a newsletter to anyone.
+  Its own dashboard was warning "The scheduled delivery job has not checked in
+  yet", and the composer crashed on open.
+- **Root cause:** Three independent gaps, none visible from the code review
+  that shipped the module. (1) `supabase/cron/newsletter-studio-jobs.sql` was
+  committed but never run, so only the browser accelerator ever ticked
+  (`nlstudio:processor:state` had `lastCronRunAt: null`) and scheduled sends
+  could not fire unattended. (2) The composer's default audience,
+  `sys_newsletter_contacts`, is created lazily by the public sign-up flow, and
+  every one of the 218 subscribers had arrived by admin import, so the group
+  never existed and a send would have resolved to zero recipients. (3) The
+  shared TipTap editor was mounted through `React.lazy` + `Suspense`; TipTap's
+  `useEditor` builds the editor during render and schedules its destruction
+  when a render is discarded, which a resolving Suspense boundary does, so the
+  first effect ran against a destroyed editor.
+- **Why it hid:** Each layer reported success from its own point of view. The
+  KPI tiles counted consent records, not reachable audience members; the
+  processor state said "healthy" because the manual ticks it did run succeeded;
+  the cron SQL file existing read as the job existing; and the composer had no
+  test that mounted it.
+- **Fix:** Job installed in production (jobid 31) and verified by the processor
+  state flipping to cron mode, not by `cron.job_run_details` — see
+  `runbooks/scheduled-jobs.md`. The subscriber base became a first-class
+  audience list backed directly by the consent records
+  (`newsletter-studio-service.ts`), with contract tests for the missing-group
+  case. The editor loads through an effect-driven loader
+  (`components/LazyRichTextEditor.tsx`), reproduced and pinned with a test.
+- **Lesson:** "Is it working?" for a module with a background job means checking
+  the job's own heartbeat in production, the audience it will actually resolve,
+  and the screen a user will open — not the presence of the SQL, the KPI, or
+  the component. A cron SQL file in the repo is a to-do, not a deployment.
+
 ### 2026-09-05 - Knowledge Base Entries Were Written But Never Read
 
 - **Symptom:** Admins added entries in AI Management → Knowledge Base, tested

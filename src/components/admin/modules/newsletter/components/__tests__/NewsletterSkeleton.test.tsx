@@ -21,7 +21,7 @@ describe('status badges', () => {
     );
     expect(screen.getByText('Draft')).toBeTruthy();
     expect(screen.getByText('Sending')).toBeTruthy();
-    expect(screen.getByText('Finished')).toBeTruthy();
+    expect(screen.getByText('Sent')).toBeTruthy();
   });
 
   it('labels delivery statuses, falling back safely on unknowns', () => {
