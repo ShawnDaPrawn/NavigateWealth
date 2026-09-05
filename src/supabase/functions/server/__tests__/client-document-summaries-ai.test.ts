@@ -55,7 +55,10 @@ const {
   buildSummaryInput,
   generateSummaryDraft,
   isReadableByModel,
+  isFileRejection,
+  wasTruncated,
   mimeFromFileName,
+  SummaryGenerationError,
   SUMMARY_MODEL_ENV,
   SUMMARY_MODEL_PREFERENCES,
 } = await import('../client-document-summaries-ai.ts');
@@ -90,6 +93,20 @@ beforeEach(() => {
     json: async () => ({ data: servedModels.map((id) => ({ id })) }),
   }));
 });
+
+/** The 400 OpenAI returns for a PDF it cannot parse. */
+const FILE_REJECTION =
+  'OpenAI request failed (400): { "error": { "message": "The uploaded file could not be ' +
+  'processed. Please try again with a different file.", "type": "invalid_request_error" } }';
+
+/** How many file blocks the Nth call to the model carried. */
+function attachmentsOnCall(index: number): number {
+  const [{ messages }] = callResponses.mock.calls[index] as [
+    { messages: Array<{ content: unknown }> },
+  ];
+  const blocks = messages[1].content as Array<{ type: string }>;
+  return blocks.filter((b) => b.type === 'file' || b.type === 'image').length;
+}
 
 /** A well-formed model reply, so a test can assert on the REQUEST instead. */
 function respondOk() {
@@ -302,5 +319,140 @@ describe('which model it asks for', () => {
     const draft = await generateSummaryDraft([doc()]);
 
     expect(draft.model).toBe('gpt-4o');
+  });
+});
+
+describe('the same file filed twice', () => {
+  it('sends duplicate content once but still counts both as analysed', async () => {
+    // A real client pack is three PDFs each uploaded twice — 9.4MB of which half
+    // is a copy. Sending both wastes the byte budget and makes it likelier the
+    // request trips a provider limit, but the twin's contents DID reach the
+    // model, so calling it unread would be its own lie.
+    respondOk();
+    const twins = [
+      doc({ id: 'a', fileName: 'overview.pdf', fileSize: 2326161, filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'overview.pdf', fileSize: 2326161, filePath: 'c/2.pdf' }),
+    ];
+
+    const { analysed } = await buildSummaryInput(twins);
+
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(analysed.map((a) => a.analysed)).toEqual([true, true]);
+  });
+
+  it('treats a same-named file of a different size as its own document', async () => {
+    const notTwins = [
+      doc({ id: 'a', fileName: 'overview.pdf', fileSize: 100, filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'overview.pdf', fileSize: 200, filePath: 'c/2.pdf' }),
+    ];
+
+    const { attached } = await buildSummaryInput(notTwins);
+
+    expect(attached).toHaveLength(2);
+  });
+
+  it('does not collapse documents that carry no size', async () => {
+    // Without a size there is no evidence they are the same file, and merging
+    // on filename alone would silently drop a real document.
+    const unsized = [
+      doc({ id: 'a', fileName: 'overview.pdf', fileSize: undefined, filePath: 'c/1.pdf' }),
+      doc({ id: 'b', fileName: 'overview.pdf', fileSize: undefined, filePath: 'c/2.pdf' }),
+    ];
+
+    const { attached } = await buildSummaryInput(unsized);
+
+    expect(attached).toHaveLength(2);
+  });
+});
+
+describe('a file the provider will not read', () => {
+  it('retries without the largest attachment rather than losing the batch', async () => {
+    // Before this, one unparseable PDF meant the client got no timeline entry
+    // at all for that pack.
+    download.mockImplementation(async (path: string) =>
+      pdfBlob(path.includes('big') ? 5_000_000 : 1000),
+    );
+    callResponses.mockRejectedValueOnce(new Error(FILE_REJECTION));
+    respondOk();
+
+    const draft = await generateSummaryDraft([
+      doc({ id: 'small', filePath: 'c/small.pdf', fileName: 'small.pdf', fileSize: 1000 }),
+      doc({ id: 'big', filePath: 'c/big.pdf', fileName: 'big.pdf', fileSize: 5_000_000 }),
+    ]);
+
+    expect(callResponses).toHaveBeenCalledTimes(2);
+    expect(attachmentsOnCall(0)).toBe(2);
+    expect(attachmentsOnCall(1)).toBe(1);
+    // The dropped one is reported unread; the survivor is not.
+    expect(draft.documents.find((d) => d.id === 'big')?.analysed).toBe(false);
+    expect(draft.documents.find((d) => d.id === 'small')?.analysed).toBe(true);
+  });
+
+  it('falls back to a metadata-only summary rather than none at all', async () => {
+    callResponses
+      .mockRejectedValueOnce(new Error(FILE_REJECTION))
+      .mockRejectedValueOnce(new Error(FILE_REJECTION));
+    respondOk();
+
+    const draft = await generateSummaryDraft([
+      doc({ id: 'a', filePath: 'c/a.pdf', fileName: 'a.pdf', fileSize: 10 }),
+      doc({ id: 'b', filePath: 'c/b.pdf', fileName: 'b.pdf', fileSize: 20 }),
+    ]);
+
+    expect(callResponses).toHaveBeenCalledTimes(3);
+    expect(attachmentsOnCall(2)).toBe(0);
+    expect(draft.documents.every((d) => !d.analysed)).toBe(true);
+  });
+
+  it('gives up after three attempts, carrying the analysis and model', async () => {
+    callResponses.mockRejectedValue(new Error(FILE_REJECTION));
+
+    const error = await generateSummaryDraft([
+      doc({ id: 'a', filePath: 'c/a.pdf', fileName: 'a.pdf', fileSize: 10 }),
+      doc({ id: 'b', filePath: 'c/b.pdf', fileName: 'b.pdf', fileSize: 20 }),
+    ]).catch((e) => e);
+
+    expect(callResponses).toHaveBeenCalledTimes(3);
+    expect(error).toBeInstanceOf(SummaryGenerationError);
+    expect(error.documents).toHaveLength(2);
+    expect(error.model).toBeTruthy();
+  });
+
+  it('does NOT retry a failure that sending less cannot fix', async () => {
+    // A rate limit or an auth error is not answered by dropping a file; paying
+    // to fail twice more would just be slower.
+    callResponses.mockRejectedValue(new Error('OpenAI API rate limit exceeded.'));
+
+    await expect(generateSummaryDraft([doc()])).rejects.toThrow(/rate limit/i);
+    expect(callResponses).toHaveBeenCalledTimes(1);
+  });
+
+  it('recognises a file rejection without mistaking other errors for one', () => {
+    expect(isFileRejection(new Error(FILE_REJECTION))).toBe(true);
+    expect(isFileRejection(new Error('OpenAI API rate limit exceeded.'))).toBe(false);
+    expect(isFileRejection(new Error('OpenAI request failed (401)'))).toBe(false);
+  });
+});
+
+describe('a reply that was cut off', () => {
+  it('says the reply was truncated instead of surfacing a JSON parser message', async () => {
+    // What this actually looked like in production: "Unterminated string in JSON
+    // at position 342" — a parser message that tells the reader nothing.
+    callResponses.mockResolvedValue({
+      text: '{"headline":"Filed","summary":"The client',
+      model: 'gpt-4o',
+      raw: { status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } },
+    });
+
+    await expect(generateSummaryDraft([doc()])).rejects.toThrow(/cut off/i);
+  });
+
+  it('detects truncation on either API shape', () => {
+    expect(wasTruncated({ status: 'incomplete' })).toBe(true);
+    expect(wasTruncated({ incomplete_details: { reason: 'max_output_tokens' } })).toBe(true);
+    expect(wasTruncated({ choices: [{ finish_reason: 'length' }] })).toBe(true);
+    expect(wasTruncated({ choices: [{ finish_reason: 'stop' }] })).toBe(false);
+    expect(wasTruncated({ status: 'completed' })).toBe(false);
+    expect(wasTruncated(null)).toBe(false);
   });
 });

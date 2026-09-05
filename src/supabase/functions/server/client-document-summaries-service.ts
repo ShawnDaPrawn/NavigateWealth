@@ -20,7 +20,11 @@
 import { createKvRepository } from './repositories/kv-repository.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { generateSummaryDraft, type DocumentForSummary } from './client-document-summaries-ai.ts';
+import {
+  generateSummaryDraft,
+  SummaryGenerationError,
+  type DocumentForSummary,
+} from './client-document-summaries-ai.ts';
 import type {
   DocumentGroup,
   DocumentSummaryRecord,
@@ -128,6 +132,7 @@ function toDocumentForSummary(doc: RawDocument): DocumentForSummary {
     id: str(doc.id),
     title: str(doc.title, 'Untitled document'),
     fileName: str(doc.fileName) || undefined,
+    fileSize: typeof doc.fileSize === 'number' ? doc.fileSize : undefined,
     filePath: str(doc.filePath) || undefined,
     productCategory: str(doc.productCategory, 'General'),
     policyNumber: str(doc.policyNumber) || undefined,
@@ -306,15 +311,24 @@ async function summariseGroup(
       groupKey: group.key,
       error: message,
     });
+    // A SummaryGenerationError knows what was actually sent and which model
+    // rejected it. Falling back to "nothing was analysed" is only correct when
+    // the failure happened before any of that was decided — asserting it
+    // unconditionally is what made a failed entry claim "0 of 6 files read by
+    // the AI" for six PDFs that had all been attached.
+    const attempted = error instanceof SummaryGenerationError ? error : null;
     const record: DocumentSummaryRecord = {
       ...base,
-      documents: documents.map((doc) => ({
-        id: doc.id,
-        title: doc.title,
-        fileName: doc.fileName,
-        productCategory: doc.productCategory,
-        analysed: false,
-      })),
+      model: attempted?.model,
+      documents:
+        attempted?.documents ??
+        documents.map((doc) => ({
+          id: doc.id,
+          title: doc.title,
+          fileName: doc.fileName,
+          productCategory: doc.productCategory,
+          analysed: false,
+        })),
       headline: `Summary unavailable — ${group.title}`,
       summary: 'The AI summary could not be generated for this batch. Retry from the timeline.',
       highlights: [],
