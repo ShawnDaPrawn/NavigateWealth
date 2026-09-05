@@ -18,7 +18,9 @@ export function DeliveryPanel({
   stats: NewsletterCampaignStats | undefined;
 }) {
   const live = campaign.status === 'queued' || campaign.status === 'sending';
-  const pending = stats?.pendingCount ?? campaign.pendingCount;
+  // Lifecycle counts always come from the campaign record: it is the query
+  // that polls while delivery runs, whereas stats refresh only on demand.
+  const pending = campaign.pendingCount;
   const indicator =
     campaign.status === 'finished'
       ? 'bg-emerald-500'

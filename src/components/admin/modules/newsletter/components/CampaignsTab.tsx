@@ -133,32 +133,40 @@ function CampaignList({
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const debouncedSearch = useDebounced(search.trim(), 250);
+  // The status filter is applied server-side, before pagination, so a chip
+  // shows every matching campaign however many exist; the server also returns
+  // per-status counts over the whole set for the chip badges.
+  const selectedStatuses = useMemo(
+    () => CAMPAIGN_STATUS_FILTERS.find((o) => o.id === filter)?.statuses ?? null,
+    [filter],
+  );
   const { data, isLoading, isError, error, refetch, isFetching } = useStudioCampaigns(
-    useMemo(() => ({ search: debouncedSearch || undefined, status: 'all' }), [debouncedSearch]),
+    useMemo(
+      () => ({
+        search: debouncedSearch || undefined,
+        status: selectedStatuses ? selectedStatuses.join(',') : 'all',
+      }),
+      [debouncedSearch, selectedStatuses],
+    ),
   );
   const duplicate = useDuplicateCampaign();
   const deleteCampaign = useDeleteCampaign();
   const [pendingDelete, setPendingDelete] = useState<NewsletterCampaign | null>(null);
 
-  const loaded = useMemo(() => data?.campaigns ?? [], [data]);
+  const visible = useMemo(() => data?.campaigns ?? [], [data]);
 
-  const chipOptions = useMemo(
-    () =>
-      CAMPAIGN_STATUS_FILTERS.map((option) => ({
-        id: option.id,
-        label: option.label,
-        count: option.statuses
-          ? loaded.filter((c) => option.statuses!.includes(c.status)).length
-          : loaded.length,
-      })),
-    [loaded],
-  );
-
-  const visible = useMemo(() => {
-    const option = CAMPAIGN_STATUS_FILTERS.find((o) => o.id === filter);
-    if (!option?.statuses) return loaded;
-    return loaded.filter((c) => option.statuses!.includes(c.status));
-  }, [loaded, filter]);
+  const chipOptions = useMemo(() => {
+    const counts = data?.statusCounts;
+    return CAMPAIGN_STATUS_FILTERS.map((option) => ({
+      id: option.id,
+      label: option.label,
+      count: counts
+        ? option.statuses
+          ? option.statuses.reduce((sum, status) => sum + (counts[status] ?? 0), 0)
+          : Object.values(counts).reduce((sum, n) => sum + n, 0)
+        : undefined,
+    }));
+  }, [data]);
 
   const openDetail = (campaignId: string) => onViewChange({ kind: 'detail', campaignId });
   const hasFilters = Boolean(debouncedSearch) || filter !== 'all';
@@ -390,9 +398,8 @@ function CampaignList({
           {!isLoading && visible.length > 0 ? (
             <div className="flex items-center justify-between border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
               <span>
-                Showing {formatNumber(visible.length)} of{' '}
-                {formatNumber(data?.total ?? loaded.length)}{' '}
-                {(data?.total ?? loaded.length) === 1 ? 'campaign' : 'campaigns'}
+                Showing {formatNumber(visible.length)} of {formatNumber(data?.total ?? 0)}{' '}
+                {(data?.total ?? 0) === 1 ? 'campaign' : 'campaigns'}
               </span>
               {isFetching ? (
                 <span className="inline-flex items-center gap-1.5">

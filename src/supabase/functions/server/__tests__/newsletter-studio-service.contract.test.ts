@@ -192,6 +192,24 @@ describe('campaign CRUD', () => {
     const drafts = await listCampaigns({ status: 'draft' });
     expect(drafts.total).toBe(1);
   });
+
+  it('reports per-status counts over the whole set and accepts several statuses', async () => {
+    const a = await makeDraft({ name: 'Alpha news' });
+    await makeDraft({ name: 'Beta brief' });
+    await sendCampaignNow(a.id);
+
+    // Counts ignore the status filter and pagination, so chips stay right.
+    const queuedOnly = await listCampaigns({ status: 'queued', limit: 1 });
+    expect(queuedOnly.total).toBe(1);
+    expect(queuedOnly.statusCounts).toMatchObject({ draft: 1, queued: 1, finished: 0 });
+
+    const inFlight = await listCampaigns({ status: 'queued,sending' });
+    expect(inFlight.campaigns.map((c) => c.id)).toEqual([a.id]);
+
+    // …but they do follow the search, so the chips describe what is listed.
+    const searched = await listCampaigns({ search: 'beta' });
+    expect(searched.statusCounts).toMatchObject({ draft: 1, queued: 0 });
+  });
 });
 
 describe('audience resolution (POPIA)', () => {
@@ -262,15 +280,21 @@ describe('subscriber base as a first-class audience', () => {
   });
 
   it('unions a lagging group record with the consent records without double counting', async () => {
+    // client-1 is sub-b: the group stores subscribers who are clients under
+    // clientIds, so counting them on top of the consent records would
+    // inflate the reach (review finding).
     const group = seedGroup({
       externalContacts: [external('sub-a@x.co'), external('legacy@x.co')],
+      clientIds: ['client-1'],
     });
     deps.getGroups.mockResolvedValue({ data: [group], total: 1, limit: 1000, offset: 0 });
+    deps.getAllClients.mockResolvedValue([{ id: 'client-1', email: 'sub-b@x.co', name: 'Bo' }]);
     deps.listSubscribers.mockResolvedValue(subs);
 
     const [list] = await listAudienceLists();
     expect(list.id).toBe('sys_newsletter_contacts');
-    expect(list.memberCount).toBe(3); // sub-a, sub-b, legacy
+    expect(list.memberCount).toBe(3); // sub-a, sub-b, legacy — not 4
+    expect(list.clientCount).toBe(1);
 
     const audience = await resolveAudience(['sys_newsletter_contacts']);
     expect(audience.items.map((i) => i.email).sort()).toEqual([

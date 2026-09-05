@@ -5,7 +5,13 @@ import type { NewsletterCampaign } from '../../types';
 const hooks = vi.hoisted(() => ({
   campaigns: {
     data: undefined as
-      | { campaigns: NewsletterCampaign[]; total: number; page: number; limit: number }
+      | {
+          campaigns: NewsletterCampaign[];
+          total: number;
+          page: number;
+          limit: number;
+          statusCounts: Record<NewsletterCampaign['status'], number>;
+        }
       | undefined,
     isLoading: false,
     isError: false,
@@ -17,8 +23,34 @@ const hooks = vi.hoisted(() => ({
   remove: { mutate: vi.fn(), isPending: false },
 }));
 
+const EMPTY_COUNTS = {
+  draft: 0,
+  scheduled: 0,
+  queued: 0,
+  sending: 0,
+  paused: 0,
+  finished: 0,
+  cancelled: 0,
+};
+
+/** Mirrors the server: counts over the whole set, then the status filter. */
+function serveCampaigns(filters: { status?: string }) {
+  const source = hooks.campaigns.data;
+  if (!source) return hooks.campaigns;
+  const statusCounts = { ...EMPTY_COUNTS };
+  for (const c of source.campaigns) statusCounts[c.status]++;
+  const statuses = (filters.status ?? 'all').split(',').filter((s) => s && s !== 'all');
+  const campaigns = statuses.length
+    ? source.campaigns.filter((c) => statuses.includes(c.status))
+    : source.campaigns;
+  return {
+    ...hooks.campaigns,
+    data: { ...source, campaigns, total: campaigns.length, statusCounts },
+  };
+}
+
 vi.mock('../../hooks/useNewsletterStudio', () => ({
-  useStudioCampaigns: () => hooks.campaigns,
+  useStudioCampaigns: (filters: { status?: string }) => serveCampaigns(filters),
   useDuplicateCampaign: () => hooks.duplicate,
   useDeleteCampaign: () => hooks.remove,
 }));
@@ -88,6 +120,7 @@ beforeEach(() => {
     total: 3,
     page: 1,
     limit: 100,
+    statusCounts: { ...EMPTY_COUNTS, draft: 1, sending: 1, finished: 1 },
   };
 });
 
@@ -136,7 +169,13 @@ describe('CampaignsTab', () => {
   });
 
   it('renders an empty state with a call to action, and a filtered empty state', () => {
-    hooks.campaigns.data = { campaigns: [], total: 0, page: 1, limit: 100 };
+    hooks.campaigns.data = {
+      campaigns: [],
+      total: 0,
+      page: 1,
+      limit: 100,
+      statusCounts: { ...EMPTY_COUNTS },
+    };
     const onViewChange = vi.fn();
     render(<CampaignsTab caps={caps} view={{ kind: 'list' }} onViewChange={onViewChange} />);
     fireEvent.click(screen.getByRole('button', { name: /create your first campaign/i }));

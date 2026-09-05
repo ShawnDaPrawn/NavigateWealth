@@ -106,12 +106,29 @@ export interface CampaignListFilters {
   search?: string;
 }
 
+export type CampaignStatusCounts = Record<NewsletterCampaign['status'], number>;
+
 export interface CampaignListResult {
   campaigns: NewsletterCampaignView[];
   total: number;
   page: number;
   limit: number;
+  /**
+   * Campaigns per status across the WHOLE (search-filtered) set, before the
+   * status filter and pagination — what the list's status chips display.
+   */
+  statusCounts: CampaignStatusCounts;
 }
+
+const EMPTY_STATUS_COUNTS: CampaignStatusCounts = {
+  draft: 0,
+  scheduled: 0,
+  queued: 0,
+  sending: 0,
+  paused: 0,
+  finished: 0,
+  cancelled: 0,
+};
 
 /**
  * Newest-first campaign listing with in-memory status/search filters.
@@ -127,14 +144,27 @@ export async function listCampaigns(
   const { items } = await newsletterCampaigns.list({ limit: 1000 });
   let campaigns = items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
-  if (filters.status && filters.status !== 'all') {
-    campaigns = campaigns.filter((c) => c.status === filters.status);
-  }
   if (filters.search?.trim()) {
     const needle = filters.search.trim().toLowerCase();
     campaigns = campaigns.filter(
       (c) => c.name.toLowerCase().includes(needle) || c.subject.toLowerCase().includes(needle),
     );
+  }
+
+  // Counted before the status filter so the chips stay accurate whichever
+  // one is selected, and before pagination so they cover every campaign.
+  const statusCounts: CampaignStatusCounts = { ...EMPTY_STATUS_COUNTS };
+  for (const campaign of campaigns) {
+    if (campaign.status in statusCounts) statusCounts[campaign.status]++;
+  }
+
+  // `status` may name several statuses, comma-separated ("queued,sending").
+  const statuses = (filters.status ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s && s !== 'all');
+  if (statuses.length > 0) {
+    campaigns = campaigns.filter((c) => statuses.includes(c.status));
   }
 
   const total = campaigns.length;
@@ -144,6 +174,7 @@ export async function listCampaigns(
     total,
     page,
     limit,
+    statusCounts,
   };
 }
 
@@ -752,8 +783,11 @@ export async function listAudienceLists(): Promise<NewsletterListView[]> {
     const clientIds = group.clientIds || [];
     if (group.id === SUBSCRIBER_LIST_ID) {
       // The group record may lag behind the consent records — count the
-      // union so the estimate matches what resolveAudience will reach.
-      const external = new Set([
+      // union of unique addresses so the estimate matches what
+      // resolveAudience will reach. Client members of this group are there
+      // BECAUSE they are confirmed subscribers, so their address is already
+      // in the eligible set; adding clientIds.length would count them twice.
+      const reachable = new Set([
         ...eligibleEmails,
         ...externalContacts.map((c) => c.email.toLowerCase()),
       ]);
@@ -762,8 +796,8 @@ export async function listAudienceLists(): Promise<NewsletterListView[]> {
         name: group.name,
         description: group.description || SUBSCRIBER_LIST_DESCRIPTION,
         type: 'system',
-        memberCount: external.size + clientIds.length,
-        externalContactCount: external.size,
+        memberCount: reachable.size,
+        externalContactCount: reachable.size,
         clientCount: clientIds.length,
       };
     }

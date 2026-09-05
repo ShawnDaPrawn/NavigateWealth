@@ -15,20 +15,14 @@ import {
   TableRow,
 } from '../../../../../ui/table';
 import { useStudioRecipients } from '../../hooks/useNewsletterStudio';
-import type { NewsletterCampaign, NewsletterCampaignStats } from '../../types';
+import type { NewsletterCampaign } from '../../types';
 import { formatDateTime, formatNumber, formatRelative } from '../../utils/format';
 import { DeliveryStatusBadge } from '../StatusBadge';
 import { EmptyState, FilterChips, SectionHeader } from '../shared';
 
 const PAGE_SIZE = 50;
 
-export function RecipientsPanel({
-  campaign,
-  stats,
-}: {
-  campaign: NewsletterCampaign;
-  stats: NewsletterCampaignStats | undefined;
-}) {
+export function RecipientsPanel({ campaign }: { campaign: NewsletterCampaign }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('all');
   const query = useStudioRecipients(campaign.id, { page, status });
@@ -36,15 +30,16 @@ export function RecipientsPanel({
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / (query.data?.limit ?? PAGE_SIZE)));
 
+  // Counts track the campaign record, which polls while delivery is live.
   const chips = useMemo(
     () => [
       { id: 'all', label: 'All', count: campaign.recipientCount },
-      { id: 'sent', label: 'Delivered', count: stats?.sentCount ?? campaign.sentCount },
-      { id: 'pending', label: 'Pending', count: stats?.pendingCount ?? campaign.pendingCount },
+      { id: 'sent', label: 'Delivered', count: campaign.sentCount },
+      { id: 'pending', label: 'Pending', count: campaign.pendingCount },
       { id: 'failed_retryable', label: 'Retrying' },
-      { id: 'failed_terminal', label: 'Failed', count: stats?.failedCount ?? campaign.failedCount },
+      { id: 'failed_terminal', label: 'Failed', count: campaign.failedCount },
     ],
-    [campaign, stats],
+    [campaign],
   );
 
   const recipients = query.data?.recipients ?? [];

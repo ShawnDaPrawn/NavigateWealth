@@ -118,6 +118,22 @@ export function applyMergeFields(bodyHtml: string, ctx: MergeContext): string {
   });
 }
 
+/**
+ * Merge fields for plain-text envelope fields (subject, preheader). No HTML
+ * escaping — these are never rendered as markup — and `{{unsubscribeUrl}}`
+ * is dropped, since a URL has no place in a subject line.
+ */
+export function personalizeText(
+  text: string,
+  recipient: Pick<NewsletterAudienceItem, 'email' | 'name' | 'firstName'>,
+): string {
+  if (!text) return text;
+  return text.replace(MERGE_FIELD_RE, (_full, field: keyof MergeContext) => {
+    if (field === 'unsubscribeUrl') return '';
+    return recipient[field] ?? '';
+  });
+}
+
 /** Inbox-preview text: visually hidden, read by mail clients as the snippet. */
 function preheaderHtml(preheader: string): string {
   return (
@@ -167,7 +183,7 @@ export async function renderCampaignEmail(
   }
 
   if (campaign.preheader) {
-    content = preheaderHtml(campaign.preheader) + content;
+    content = preheaderHtml(personalizeText(campaign.preheader, recipient)) + content;
   }
 
   const footerSettings = await getFooterSettings();

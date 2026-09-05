@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '../../../ui/button';
+import { Skeleton } from '../../../ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
 import { cn } from '../../../ui/utils';
 // Cross-module dependency: newsletter → personnel (public hook surface).
@@ -29,6 +30,7 @@ import { AudiencesTab } from './components/AudiencesTab';
 import { CampaignsTab, type CampaignsView, type EditorSeed } from './components/CampaignsTab';
 import { DashboardTab, type StudioTab } from './components/DashboardTab';
 import { TemplatesTab } from './components/TemplatesTab';
+import { ErrorState } from './components/shared';
 import { useStudioCampaign, useStudioDashboard } from './hooks/useNewsletterStudio';
 import type { NewsletterCaps } from './types';
 import { formatRelative } from './utils/format';
@@ -75,9 +77,10 @@ export function NewsletterModule() {
       ? tabParam
       : 'dashboard';
 
-  const { data: openCampaign } = useStudioCampaign(
+  const openCampaignQuery = useStudioCampaign(
     campaignParam && campaignParam !== 'new' ? campaignParam : null,
   );
+  const openCampaign = openCampaignQuery.data;
 
   const campaignsView: CampaignsView = useMemo(() => {
     if (!campaignParam) return { kind: 'list' };
@@ -142,8 +145,11 @@ export function NewsletterModule() {
 
   // Waiting for the campaign record before we can hand the composer an
   // existing campaign to edit — the editor must not mount with null and then
-  // flip to "existing", or it would seed an empty form.
+  // flip to "existing", or it would seed an empty form. Once loading ends
+  // without a record (deleted, bad id, forbidden, network) the URL must not
+  // dead-end on a blank page.
   const awaitingEditTarget = editing && campaignParam !== 'new' && !openCampaign;
+  const editTargetFailed = awaitingEditTarget && !openCampaignQuery.isLoading;
 
   return (
     <div className="space-y-6">
@@ -181,7 +187,30 @@ export function NewsletterModule() {
       )}
 
       {focused ? (
-        awaitingEditTarget ? null : (
+        editTargetFailed ? (
+          <div className="space-y-4">
+            <ErrorState
+              title="This campaign could not be opened for editing"
+              description={
+                openCampaignQuery.error instanceof Error
+                  ? openCampaignQuery.error.message
+                  : 'It may have been deleted, or the link may be wrong.'
+              }
+              onRetry={() => openCampaignQuery.refetch()}
+              retrying={openCampaignQuery.isFetching}
+            />
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={() => setTab('campaigns')}>
+                Back to campaigns
+              </Button>
+            </div>
+          </div>
+        ) : awaitingEditTarget ? (
+          <div className="space-y-4" data-testid="edit-target-loading">
+            <Skeleton className="h-14 w-full rounded-xl" />
+            <Skeleton className="h-96 w-full rounded-2xl" />
+          </div>
+        ) : (
           <CampaignsTab caps={caps} view={campaignsView} onViewChange={setCampaignsView} />
         )
       ) : (

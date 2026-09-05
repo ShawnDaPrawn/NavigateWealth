@@ -380,7 +380,7 @@ export function CampaignDetail({
         </Card>
       </div>
 
-      {hasDelivery ? <RecipientsPanel campaign={campaign} stats={stats} /> : null}
+      {hasDelivery ? <RecipientsPanel campaign={campaign} /> : null}
 
       {/* Dialogs */}
       <TestSendDialog
