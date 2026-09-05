@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 /**
- * Apply API UAT JSON report to docs/archive/2026-05-fna-intake-launch/uat-signoff.md
+ * Render the API UAT JSON report as a sign-off document.
+ *
+ * Output goes to `tmp/` (git-ignored), NOT to the archived 2026-05 sign-off.
+ * This script writes its target wholesale with `writeFileSync`, and the launch
+ * record at `docs/archive/2026-05-fna-intake-launch/uat-signoff.md` is a
+ * completed, read-only historical document: pointing this at it meant any
+ * re-run silently replaced the 2026-05 dates, deploy ref and approver with the
+ * current run's. If a future intake launch needs a new sign-off record, copy
+ * the generated file into `docs/` under its own dated name and commit it.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +19,8 @@ import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const reportPath = resolve(__dirname, '../tmp/fna-intake-uat-report.json');
-const signoffPath = resolve(__dirname, '../docs/archive/2026-05-fna-intake-launch/uat-signoff.md');
+const outputDir = resolve(__dirname, '../tmp');
+const signoffPath = resolve(outputDir, 'fna-intake-uat-signoff.md');
 const consentPath = resolve(__dirname, '../src/supabase/functions/server/fna-intake-types.ts');
 
 const report = JSON.parse(readFileSync(reportPath, 'utf8'));
@@ -91,6 +100,7 @@ Mark **Pass / Fail / N/A** for each domain: risk, medical, retirement, investmen
 **Launch approved:** ${report.allPass ? '☑ Yes' : '☐ No'} — approver: Cursor agent (${date})
 `;
 
+mkdirSync(outputDir, { recursive: true });
 writeFileSync(signoffPath, md, 'utf8');
-console.log(`Updated ${signoffPath}`);
+console.log(`Wrote ${signoffPath}`);
 process.exit(report.allPass ? 0 : 1);

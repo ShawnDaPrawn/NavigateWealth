@@ -1,15 +1,20 @@
-> **ARCHIVED — findings remediated. This is not an open incident.**
-> The audit below opens by saying its Critical findings are "live and exploitable
-> in production right now". That was true when it was written on 2026-06-09. It is
-> not true today: the P0 findings were remediated through the 2026-08 migrations
+> **ARCHIVED — the P0/Critical findings are remediated. Several follow-ups are NOT.**
+> The audit below opens by saying its Critical findings are "live and exploitable in
+> production right now". That was true on 2026-06-09 and is no longer true of the P0
+> set: those were remediated through the 2026-08 migrations
 > (`20260825004011_harden_function_search_path_and_grants.sql`,
-> `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` and their
-> siblings) and the router-auth ratchet in `quality/baselines/route-auth-baseline`
-> now holds the line.
+> `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` and their siblings),
+> and the router-auth ratchet in `quality/baselines/route-auth-baseline` holds the line.
 >
-> Kept because [`../ROADMAP.md`](../ROADMAP.md) cites its finding IDs, and because
-> the root-cause analysis in § 1 explains a trap worth not falling into twice.
-> For current security posture read [`../STATUS.md`](../STATUS.md).
+> **Still open**, as this document itself records under "Not yet addressed (follow-up)":
+> H-3/H-4 (rate-limiter fail-closed + atomic + OTP brute-force), H-5 rotation (owner
+> action — the KV fallback in `esign-pdf-protect.ts` still stores the platform signing
+> key and its passphrase in application-readable storage when no environment
+> certificate is provisioned), H-6/H-9 (e-sign download/attachment ownership), H-11
+> (upload limits), M-7 (XSS sink hardening), M-12 (idempotency body caching), and the
+> missing `POST /requests/:id/submit` endpoint. Do not read the archive banner as
+> "all clear" — see [`../STATUS.md`](../STATUS.md) for the current posture and
+> [`../ROADMAP.md`](../ROADMAP.md) for where these sit in the plan.
 
 ---
 

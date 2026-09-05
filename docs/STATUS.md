@@ -107,6 +107,23 @@ but cannot complete them.
 | Supabase password policy                          | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                                   | Archived ledger § 3.6                                                                                                       |
 | `NW_ALLOWED_ORIGINS`                              | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                               | Archived ledger § 3.2                                                                                                       |
 
+## Open security follow-ups
+
+The June 2026 audit's P0/Critical findings were remediated in the August
+migrations. These follow-ups from the same audit were **not**, and are recorded
+here so the archive banner is not mistaken for an all-clear. Detail and finding
+IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
+
+| Finding        | What is still open                                                                                                                                                                                                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it. |
+| H-3 / H-4      | Rate limiter is not fail-closed, needs atomicity, and OTP brute-force protection                                                                                                                                                                                                                                           |
+| H-6 / H-9      | E-sign download and attachment ownership checks                                                                                                                                                                                                                                                                            |
+| H-11           | Upload size limits                                                                                                                                                                                                                                                                                                         |
+| M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                         |
+| M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                   |
+| —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                             |
+
 ## Where money, not work, is the blocker
 
 When answering "is this production grade?", give both halves: whether every box
