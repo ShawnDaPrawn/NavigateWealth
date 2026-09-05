@@ -138,12 +138,22 @@ describe('TAB_CONFIG', () => {
     });
   });
 
-  it('contains dashboard, agents, knowledge-base, and analytics tabs', () => {
-    const ids = TAB_CONFIG.map((t) => t.id);
-    expect(ids).toContain('dashboard');
-    expect(ids).toContain('agents');
-    expect(ids).toContain('knowledge-base');
-    expect(ids).toContain('analytics');
+  it('has exactly the five task-oriented tabs, each with a plain-language description', () => {
+    expect(TAB_CONFIG.map((t) => t.id)).toEqual([
+      'overview',
+      'knowledge',
+      'prompts',
+      'feedback',
+      'leads',
+    ]);
+    TAB_CONFIG.forEach((tab) => {
+      expect(tab.description.length).toBeGreaterThan(10);
+    });
+  });
+
+  it('does not use two tabs for the same screen or the same icon twice', () => {
+    const icons = TAB_CONFIG.map((t) => t.icon);
+    expect(new Set(icons).size).toBe(icons.length);
   });
 });
 

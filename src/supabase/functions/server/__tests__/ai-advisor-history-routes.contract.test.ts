@@ -220,7 +220,8 @@ describe('POST /chat', () => {
       body: JSON.stringify({ message: 'hello' }),
     });
 
-    expect(chat.getUserContext).toHaveBeenCalledWith(CLIENT);
+    // The latest question rides along so the knowledge index can be searched for it.
+    expect(chat.getUserContext).toHaveBeenCalledWith(CLIENT, 'hello');
     const systemPrompt = chat.callOpenAI.mock.calls[0][1] as string;
     expect(systemPrompt).toContain('Stored base prompt.');
     expect(systemPrompt).toContain('runtime prompt');

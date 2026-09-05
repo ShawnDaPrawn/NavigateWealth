@@ -43,7 +43,7 @@ import {
 import { evaluateVascoPublicGuardrails } from './vasco-guardrails.ts';
 import {
   indexAllArticles,
-  getArticleIndex,
+  getIndexStatus,
   clearArticleIndex,
 } from './vasco-rag-service.ts';
 import {
@@ -354,35 +354,24 @@ app.put('/config', requireAdmin, asyncHandler(async (c) => {
 // ============================================================================
 
 app.post('/index', requireAdmin, asyncHandler(async (c) => {
-  log.info('Article indexing triggered by admin');
+  log.info('Knowledge index rebuild triggered by admin');
   const result = await indexAllArticles();
   return c.json({ success: true, ...result });
 }));
 
 // ============================================================================
-// ADMIN: Get article index status
+// ADMIN: Get knowledge index status
 // ============================================================================
 
+/**
+ * Everything the Knowledge tab needs: what is indexed (articles + KB entries),
+ * how many published articles / live entries exist right now, and how many of
+ * each are still waiting to be indexed. `indexed: false` means no index
+ * document exists at all.
+ */
 app.get('/index', requireAdmin, asyncHandler(async (c) => {
-  const index = await getArticleIndex();
-
-  if (!index) {
-    return c.json({
-      success: true,
-      indexed: false,
-      articles: [],
-      totalChunks: 0,
-      lastFullIndex: null,
-    });
-  }
-
-  return c.json({
-    success: true,
-    indexed: true,
-    articles: index.articles,
-    totalChunks: index.totalChunks,
-    lastFullIndex: index.lastFullIndex,
-  });
+  const status = await getIndexStatus();
+  return c.json({ success: true, ...status });
 }));
 
 // ============================================================================
