@@ -9,7 +9,8 @@
  * Follows the stat card standards from Guidelines §8.3 / §8.4.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
@@ -24,8 +25,9 @@ import {
   ArrowRight,
   Star,
 } from 'lucide-react';
-import { StatsAPI, ArticlesAPI } from '../../publications';
-import type { Article, ArticleStatus, PublicationStats } from '../../publications';
+import { StatsAPI, useArticles } from '../../publications';
+import type { ArticleStatus } from '../../publications';
+import { publicationKeys } from '../../../../../utils/queryKeys';
 import type { PublicationsCardProps } from '../types';
 
 /** Status → badge styling + label (config-driven, §5.3). */
@@ -61,37 +63,38 @@ interface StatusTile {
 }
 
 export function PublicationsCard({ onModuleChange, maxArticles = 5 }: PublicationsCardProps) {
-  const [stats, setStats] = useState<PublicationStats | null>(null);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // Both reads go through React Query so this card is cached like the rest of
+  // the dashboard. It used to fetch in an effect into local state, which meant
+  // a fresh pair of requests and a fresh spinner every time the dashboard was
+  // mounted — including every time an admin came back from another module.
+  const {
+    data: stats = null,
+    isLoading: statsLoading,
+    isError: statsFailed,
+  } = useQuery({
+    queryKey: publicationKeys.stats(),
+    queryFn: () => StatsAPI.getStats(),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.allSettled([StatsAPI.getStats(), ArticlesAPI.getArticles()]).then(
-      ([statsResult, articlesResult]) => {
-        if (cancelled) return;
-        if (statsResult.status === 'fulfilled') setStats(statsResult.value);
-        if (articlesResult.status === 'fulfilled') {
-          const sorted = [...articlesResult.value]
-            .filter((a) => a.status !== 'archived')
-            .sort(
-              (a, b) =>
-                new Date(b.updated_at || b.created_at).getTime() -
-                new Date(a.updated_at || a.created_at).getTime(),
-            );
-          setArticles(sorted);
-        }
-        if (statsResult.status === 'rejected' && articlesResult.status === 'rejected') {
-          setError(true);
-        }
-        setLoading(false);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // The Publications module's own hook, so the article list is fetched once and
+  // shared with it rather than fetched again on the way in.
+  const { articles, isLoading: articlesLoading, error: articlesError } = useArticles();
+
+  const loading = statsLoading || articlesLoading;
+  const error = statsFailed && !!articlesError;
+
+  const sortedArticles = useMemo(
+    () =>
+      [...articles]
+        .filter((a) => a.status !== 'archived')
+        .sort(
+          (a, b) =>
+            new Date(b.updated_at || b.created_at).getTime() -
+            new Date(a.updated_at || a.created_at).getTime(),
+        ),
+    [articles],
+  );
 
   const tiles: StatusTile[] = [
     {
@@ -124,7 +127,7 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
     },
   ];
 
-  const recentArticles = articles.slice(0, maxArticles);
+  const recentArticles = sortedArticles.slice(0, maxArticles);
 
   return (
     <Card className="h-full">

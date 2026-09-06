@@ -374,10 +374,27 @@ app.post('/recalculate-totals', requireAuth, async (c) => {
   }
 });
 
+/** Every FNA/INA namespace whose published entries count toward the dashboard total. */
+const FNA_NAMESPACES = [
+  'risk_planning_fna:client:',
+  'medical_fna:client:',
+  'retirement_fna:client:',
+  'investment_ina:client:',
+  'tax_planning_fna:client:',
+  'estate_planning_fna:client:',
+] as const;
+
 // GET /dashboard-stats
 app.get('/dashboard-stats', requireAdmin, async (c) => {
   try {
-    const allPoliciesKeys = await getByPrefix('policies:client:');
+    // Seven independent namespace scans. They used to be awaited one at a
+    // time, so this route cost the sum of seven round trips while the admin
+    // dashboard waited on it; issued together it costs the slowest one.
+    const [allPoliciesKeys, ...fnaNamespaces] = await Promise.all([
+      getByPrefix('policies:client:'),
+      ...FNA_NAMESPACES.map((prefix) => getByPrefix(prefix)),
+    ]);
+
     let totalActivePolicies = 0;
     let newPoliciesCount = 0;
 
@@ -394,26 +411,15 @@ app.get('/dashboard-stats', requireAdmin, async (c) => {
       }
     }
 
-    const riskFnaKeys = await getByPrefix('risk_planning_fna:client:');
-    const medicalFnaKeys = await getByPrefix('medical_fna:client:');
-    const retirementFnaKeys = await getByPrefix('retirement_fna:client:');
-    const investmentInaKeys = await getByPrefix('investment_ina:client:');
-    const taxPlanningKeys = await getByPrefix('tax_planning_fna:client:');
-    const estatePlanningKeys = await getByPrefix('estate_planning_fna:client:');
-
-    let publishedFnasCount = 0;
-
     const countPublished = (items: KvFnaEntry[]) => {
       if (!items || !Array.isArray(items)) return 0;
       return items.filter((item) => item?.status === 'published').length;
     };
 
-    publishedFnasCount += countPublished(riskFnaKeys);
-    publishedFnasCount += countPublished(medicalFnaKeys);
-    publishedFnasCount += countPublished(retirementFnaKeys);
-    publishedFnasCount += countPublished(investmentInaKeys);
-    publishedFnasCount += countPublished(taxPlanningKeys);
-    publishedFnasCount += countPublished(estatePlanningKeys);
+    let publishedFnasCount = 0;
+    for (const entries of fnaNamespaces) {
+      publishedFnasCount += countPublished(entries as KvFnaEntry[]);
+    }
 
     log.info('Dashboard stats calculated', {
       activePolicies: totalActivePolicies,

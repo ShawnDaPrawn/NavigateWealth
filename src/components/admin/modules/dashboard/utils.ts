@@ -1,4 +1,12 @@
-import type { TaskPriority, BadgeVariant, TrendDirection, TaskDueToday } from './types';
+import type {
+  TaskPriority,
+  BadgeVariant,
+  TrendDirection,
+  TaskDueToday,
+  DashboardStats,
+  DashboardMetrics,
+  SystemActivity,
+} from './types';
 import {
   formatNumber,
   formatCurrency,
@@ -159,4 +167,61 @@ export function sortByPriority<T extends { priority: TaskPriority }>(items: T[])
 
 export function isHighPriority(priority: TaskPriority): boolean {
   return priority === 'high' || priority === 'critical';
+}
+
+/**
+ * Build the System Activity tiles from the dashboard's stats and metrics.
+ *
+ * This is a projection, not a data source. It used to be
+ * `systemActivityApi.getAll()`, which re-fetched `/admin/stats` and
+ * `/integrations/dashboard-stats` — the two endpoints the dashboard was
+ * *already* fetching for its KPI cards — so every dashboard load hit each of
+ * them twice, and again on every 60s refetch. `/admin/stats` is the most
+ * expensive route in the app (it counts every client, which lists every auth
+ * user), so the duplicate was the single largest cost of loading this page.
+ *
+ * Deriving the tiles here keeps them identical while halving that cost.
+ * Returns `[]` until both inputs are present, which is what the card's empty
+ * state already expected from the old request while it was in flight.
+ */
+export function buildSystemActivity(
+  stats: DashboardStats | null,
+  metrics: DashboardMetrics | null,
+): SystemActivity[] {
+  if (!stats || !metrics) return [];
+
+  return [
+    {
+      type: 'new_applications',
+      count: stats.new_this_month,
+      growth: calculateGrowth(stats.new_this_month, stats.new_last_month),
+      label: 'New Applications',
+      description: 'Applications this month',
+      color: 'purple',
+    },
+    {
+      type: 'new_policies',
+      count: metrics.newPoliciesCount,
+      growth: 0,
+      label: 'New Policies',
+      description: 'Active policies added recently',
+      color: 'green',
+    },
+    {
+      type: 'pending_tasks',
+      count: stats.pending_tasks,
+      growth: 0,
+      label: 'Pending Tasks',
+      description: 'Tasks requiring attention',
+      color: 'orange',
+    },
+    {
+      type: 'completed_fnas',
+      count: metrics.completedFNAs,
+      growth: 0,
+      label: 'Completed FNAs',
+      description: 'Financial Needs Analyses done',
+      color: 'blue',
+    },
+  ];
 }
