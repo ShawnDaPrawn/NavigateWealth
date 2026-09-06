@@ -14,8 +14,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { PDFDocument, PDFName } from 'pdf-lib';
-import { ANCHOR_PATTERNS, detectAcroformFields, rectForAnchor } from '../esign-pdf-analysis';
+import { PDFDocument, PDFName, StandardFonts } from 'pdf-lib';
+import {
+  ANCHOR_PATTERNS,
+  detectAcroformFields,
+  detectSmartAnchors,
+  findLineAnchors,
+  rectForAnchor,
+} from '../esign-pdf-analysis';
 
 /** First pattern that matches the line — mirrors the scan loop's ordering. */
 function firstMatch(lineText: string) {
@@ -215,5 +221,144 @@ describe('detectAcroformFields — widgets keep their own page', () => {
     // 595×842 first page these would read ~84% and ~68% instead.
     expect(cand?.x).toBeCloseTo(50, 0);
     expect(cand?.y).toBeCloseTo(46, 0);
+  });
+});
+
+describe('findLineAnchors — every blank on the line becomes a field', () => {
+  const labels = (line: string) => findLineAnchors(line).map((a) => `${a.type}:${a.label}`);
+
+  it('proposes a text field for a caption the pattern list does not know', () => {
+    // The regression: only ten identity captions had patterns, so an ordinary
+    // form line produced nothing at all.
+    expect(labels('Occupation: _______________')).toEqual(['text:Occupation']);
+    expect(labels('Policy number: ____________')).toEqual(['text:Policy number']);
+    expect(labels('Annual income before tax: ______')).toEqual(['text:Annual income before tax']);
+  });
+
+  it('finds every blank on a line, not just the first', () => {
+    expect(labels('Employer: ______  Position: ______  Years: ______')).toEqual([
+      'text:Employer',
+      'text:Position',
+      'text:Years',
+    ]);
+  });
+
+  it('labels each blank from its own caption, not the one before it', () => {
+    const anchors = findLineAnchors('Town: ________ Postal code: ________');
+    expect(anchors.map((a) => a.label)).toEqual(['Town', 'Postal code']);
+  });
+
+  it('keeps the specific patterns winning, with their prefill tokens', () => {
+    const [email] = findLineAnchors('Email address: ____________');
+    expect(email.type).toBe('text');
+    expect(email.prefillToken).toBe('client.email');
+
+    expect(labels('Signature: ________   Date: ________')).toEqual([
+      'signature:Signature',
+      'date:Date',
+    ]);
+  });
+
+  it('does not double-propose over a blank a caption-only pattern left behind', () => {
+    // "Sign here" matches without consuming the underscores; the generic pass
+    // must not add a second field on top of the same blank.
+    expect(labels('Sign here ______________')).toEqual(['signature:Sign here']);
+  });
+
+  it('takes an unlabelled blank as a plain text field', () => {
+    expect(labels('__________')).toEqual(['text:Text field']);
+  });
+
+  it('ignores a long unlabelled run — that is a divider, not a blank', () => {
+    expect(findLineAnchors('_'.repeat(80))).toEqual([]);
+    // A caption in front of it means it really is a field, however long.
+    expect(labels(`Notes: ${'_'.repeat(80)}`)).toEqual(['text:Notes']);
+  });
+
+  it('treats a punctuation-separated mask as one field', () => {
+    // The date pattern claims only the first run; the remaining runs are the
+    // rest of the same entry, not two more fields labelled "/".
+    expect(labels('Date: ____ / ____ / ____')).toEqual(['date:Date']);
+    expect(labels('ID number: ______ ______ ______')).toEqual(['text:ID number']);
+    // A word between two blanks still starts a new field.
+    expect(labels('From: ______ To: ______')).toEqual(['text:From', 'text:To']);
+  });
+
+  it("marks where a generic blank's caption starts, not just the blank", () => {
+    // `start` is the underscore run; the caption in front of it is what the
+    // previous field on the line has to stop short of.
+    const [, position] = findLineAnchors('Employer: ______ Position: ______');
+    expect(position.start).toBe(27);
+    expect(position.captionStart).toBe(17);
+  });
+
+  it('reads a caption whose words the PDF split apart', () => {
+    // groupItemsIntoLines restores the space; without it this read
+    // "Firstname:" and matched no pattern.
+    const [first] = findLineAnchors('First name: ______');
+    expect(first.label).toBe('First name');
+    expect(first.prefillToken).toBe('key:profile_first_name');
+  });
+});
+
+describe('detectSmartAnchors — a realistic form', () => {
+  const LINES = [
+    'Full name: ______________________',
+    'Occupation: _____________________',
+    'Policy number: __________________',
+    'Beneficiary: ____________________',
+    'Signature: ______________   Date: __________',
+  ];
+
+  async function buildForm() {
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const page = pdf.addPage([595, 842]);
+    LINES.forEach((text, i) => page.drawText(text, { x: 50, y: 760 - i * 30, size: 11, font }));
+    return pdf.save();
+  }
+
+  it('proposes a field for every blank, on the right page', async () => {
+    const res = await detectSmartAnchors(await buildForm());
+    expect(res.ok).toBe(true);
+    expect(res.candidates.map((c) => c.label)).toEqual([
+      'Name',
+      'Occupation',
+      'Policy number',
+      'Beneficiary',
+      'Signature',
+      'Date',
+    ]);
+    expect(res.candidates.map((c) => c.type)).toEqual([
+      'text',
+      'text',
+      'text',
+      'text',
+      'signature',
+      'date',
+    ]);
+    expect(res.candidates.every((c) => c.page === 1)).toBe(true);
+  });
+
+  it('stops a field before the next caption, not just the next blank', async () => {
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const page = pdf.addPage([595, 842]);
+    page.drawText('Employer: ______ Position: ______', { x: 50, y: 700, size: 11, font });
+    const res = await detectSmartAnchors(await pdf.save());
+
+    const captionX = 50 + font.widthOfTextAtSize('Employer: ______ ', 11);
+    const first = res.candidates[0];
+    const rightPt = (first.x / 100) * 595 + first.width;
+    expect(first.label).toBe('Employer');
+    expect(rightPt).toBeLessThanOrEqual(captionX);
+  });
+
+  it('does not let two fields on one line overlap', async () => {
+    const res = await detectSmartAnchors(await buildForm());
+    const sig = res.candidates.find((c) => c.type === 'signature')!;
+    const date = res.candidates.find((c) => c.type === 'date')!;
+    const sigRightPct = sig.x + (sig.width / 595) * 100;
+    expect(sigRightPct).toBeLessThanOrEqual(date.x);
   });
 });
