@@ -10,11 +10,12 @@
  * are Supabase Auth user ids, so every create that attached a client failed
  * with a foreign-key violation and surfaced as "Failed to create event".
  *
- * The migration `20260905170000_calendar_client_fk_to_auth_users.sql` re-points
- * both foreign keys at `auth.users`. That also removes the PostgREST
- * relationship the old `client:clients(*)` embed depended on, so the `client`
- * relation the SPA renders is now derived from the `attendees` map instead —
- * which is where the UI already stores the linked client's name and email.
+ * The migration `20260906005533_calendar_client_fk_to_auth_users.sql` (applied
+ * 2026-09-06) re-points both foreign keys at `auth.users`. That also removed
+ * the PostgREST relationship the old `client:clients(*)` embed depended on, so
+ * the `client` relation the SPA renders is derived from the `attendees` map
+ * instead — which is where the UI already stores the linked client's name and
+ * email.
  *
  * EVENTS ONLY. `reminders` has no `attendees` column, so there is nothing to
  * derive from and nothing here is applied to it. Never fabricate a name for a
