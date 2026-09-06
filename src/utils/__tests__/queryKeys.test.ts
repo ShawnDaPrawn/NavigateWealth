@@ -51,7 +51,6 @@ describe('admin / dashboard keys', () => {
     expect(dashboardKeys.metrics()).toEqual(['dashboard-metrics']);
     expect(dashboardKeys.tasksToday()).toEqual(['dashboard-tasks-today']);
     expect(dashboardKeys.recentRequests()).toEqual(['dashboard-recent-requests']);
-    expect(dashboardKeys.systemActivity()).toEqual(['dashboard-system-activity']);
   });
 });
 
@@ -231,6 +230,7 @@ describe('publications / newsletter / applications', () => {
     expect(publicationKeys.article('a1')).toEqual(['publications', 'articles', 'a1']);
     expect(publicationKeys.categories()).toEqual(['publications', 'categories']);
     expect(publicationKeys.types()).toEqual(['publications', 'types']);
+    expect(publicationKeys.stats()).toEqual(['publications', 'stats']);
     expect(publicationKeys.marketNews()).toEqual(['publications', 'market-news']);
     expect(publicationKeys.templates()).toEqual(['publications', 'templates']);
     expect(publicationKeys.versions('a1')).toEqual(['publications', 'versions', 'a1']);

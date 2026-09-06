@@ -36,6 +36,28 @@ function createServiceClient() {
   return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
+/**
+ * `kv.mget` filters with PostgREST's `in.(...)`, which travels in the request
+ * URL, so one batch cannot hold an unbounded key list. 200 keys keeps a batch
+ * of `user_profile:<uuid>:personal_info` keys around 12KB — comfortably inside
+ * every gateway limit — while still collapsing thousands of individual reads
+ * into a handful of round trips.
+ */
+const KV_BATCH_SIZE = 200;
+
+/** Read many keys as a few batched queries, preserving the order of `keys`. */
+async function mgetBatched<T>(keys: string[]): Promise<(T | undefined)[]> {
+  if (keys.length === 0) return [];
+
+  const batches: string[][] = [];
+  for (let i = 0; i < keys.length; i += KV_BATCH_SIZE) {
+    batches.push(keys.slice(i, i + KV_BATCH_SIZE));
+  }
+
+  const results = await Promise.all(batches.map((batch) => kv.mget(batch)));
+  return results.flat();
+}
+
 export class ClientsService {
   /**
    * Convert client data to group matcher format
@@ -156,74 +178,99 @@ export class ClientsService {
       clientsToProcess: clientUsers.length,
     });
 
-    // Enhance users with profile data
-    const enhancedUsers = await Promise.all(
-      clientUsers.map(async (user) => {
-        try {
-          // Get profile from KV
-          const profileKey = `user_profile:${user.id}:personal_info`;
-          const profile = await kv.get(profileKey);
-
-          // Get application if exists
-          let application = null;
-          const appId = profile?.applicationId || profile?.application_id;
-
-          if (appId) {
-            application = await kv.get(`application:${appId}`);
-          }
-
-          // Get security status
-          const security = await kv.get(`security:${user.id}`);
-
-          const signInEmail = normalizeEmail(user.email);
-          const contactEmail = resolveContactEmail(user.email, profile);
-
-          return {
-            id: user.id,
-            // The address to WRITE to, which is the auth email for every client
-            // that owns its mailbox and the guardian's address for one that does
-            // not. Everything downstream — campaigns, the newsletter audience,
-            // birthday greetings — reads `client.email`, so resolving it here is
-            // what keeps a linked minor's mail going to a real inbox instead of
-            // to her derived sign-in alias.
-            email: contactEmail,
-            /** The login identity. Differs from `email` only for linked clients. */
-            signInEmail,
-            emailIsShared: contactEmail !== signInEmail,
-            firstName:
-              user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
-            lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
-            createdAt: user.created_at,
-            accountType: user.user_metadata?.accountType || 'personal',
-            applicationStatus:
-              application?.status || user.user_metadata?.applicationStatus || 'none',
-            suspended: security?.suspended || false,
-            deleted: security?.deleted || false,
-            accountStatus: profile?.accountStatus,
-            role: user.user_metadata?.role || 'client',
-            profile,
-            application,
-          };
-        } catch (err) {
-          log.error('Error fetching client data', err as Error, { userId: user.id });
-          return {
-            id: user.id,
-            email: normalizeEmail(user.email),
-            signInEmail: normalizeEmail(user.email),
-            emailIsShared: false,
-            firstName: '',
-            lastName: '',
-            createdAt: user.created_at,
-            accountType: 'personal',
-            applicationStatus: 'unknown',
-            suspended: false,
-            deleted: false,
-            accountStatus: undefined,
-            role: 'client',
-          };
-        }
-      }),
+    // ── Batched KV reads ────────────────────────────────────────────────
+    // This used to do three awaited `kv.get`s PER CLIENT — profile, then the
+    // application that profile names, then security — which is 3N round trips,
+    // each one opening its own Postgres client. /admin/stats calls this just to
+    // count clients, and the admin dashboard blocks its first paint on that
+    // call, so the per-client fan-out was the dominant cost of loading the
+    // page. The same reads now go out as three batches, and the application
+    // batch still waits for the profiles because it is keyed off them.
+    const profiles = await mgetBatched<ClientProfile>(
+      clientUsers.map((user) => `user_profile:${user.id}:personal_info`),
     );
+
+    const applicationIds = profiles.map(
+      (profile) => profile?.applicationId ?? profile?.application_id,
+    );
+    const uniqueApplicationIds = [...new Set(applicationIds.filter(Boolean))] as string[];
+
+    const [applicationRows, securityRows] = await Promise.all([
+      mgetBatched<{ status?: string }>(uniqueApplicationIds.map((id) => `application:${id}`)),
+      // `deleted` is written by the client-deletion flow but is not on
+      // ClientSecurity; the status columns below still read it.
+      mgetBatched<ClientSecurity & { deleted?: boolean }>(
+        clientUsers.map((user) => `security:${user.id}`),
+      ),
+    ]);
+
+    const applicationsById = new Map(
+      uniqueApplicationIds.map((id, idx) => [id, applicationRows[idx] ?? null]),
+    );
+
+    // Enhance users with profile data
+    const enhancedUsers = clientUsers.map((user, index) => {
+      try {
+        // `?? null` keeps the serialised shape identical to the per-client
+        // `kv.get` this replaced, which returned null rather than undefined for
+        // a client with no profile row.
+        const profile = profiles[index] ?? null;
+
+        const appId = applicationIds[index];
+        const application = appId ? (applicationsById.get(appId) ?? null) : null;
+
+        const security = securityRows[index];
+
+        // `user_metadata` is a bag of `unknown`; read it as the strings these
+        // fields have always been so the merges below stay string-typed.
+        const metadata = (user.user_metadata ?? {}) as Record<string, string | undefined>;
+
+        const signInEmail = normalizeEmail(user.email);
+        const contactEmail = resolveContactEmail(user.email, profile);
+
+        return {
+          id: user.id,
+          // The address to WRITE to, which is the auth email for every client
+          // that owns its mailbox and the guardian's address for one that does
+          // not. Everything downstream — campaigns, the newsletter audience,
+          // birthday greetings — reads `client.email`, so resolving it here is
+          // what keeps a linked minor's mail going to a real inbox instead of
+          // to her derived sign-in alias.
+          email: contactEmail,
+          /** The login identity. Differs from `email` only for linked clients. */
+          signInEmail,
+          emailIsShared: contactEmail !== signInEmail,
+          firstName: metadata.firstName || profile?.personalInformation?.firstName || '',
+          lastName: metadata.surname || profile?.personalInformation?.lastName || '',
+          createdAt: user.created_at,
+          accountType: metadata.accountType || 'personal',
+          applicationStatus: application?.status || metadata.applicationStatus || 'none',
+          suspended: security?.suspended || false,
+          deleted: security?.deleted || false,
+          accountStatus: profile?.accountStatus,
+          role: metadata.role || 'client',
+          profile,
+          application,
+        };
+      } catch (err) {
+        log.error('Error fetching client data', err as Error, { userId: user.id });
+        return {
+          id: user.id,
+          email: normalizeEmail(user.email),
+          signInEmail: normalizeEmail(user.email),
+          emailIsShared: false,
+          firstName: '',
+          lastName: '',
+          createdAt: user.created_at,
+          accountType: 'personal',
+          applicationStatus: 'unknown',
+          suspended: false,
+          deleted: false,
+          accountStatus: undefined,
+          role: 'client',
+        };
+      }
+    });
 
     // Apply filters
     let filteredClients = enhancedUsers.filter((client) =>
