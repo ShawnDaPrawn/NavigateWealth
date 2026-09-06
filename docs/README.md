@@ -73,7 +73,7 @@ Short READMEs live next to the thing they describe, which is where they belong.
 | [`../AGENTS.md`](../AGENTS.md)                                                 | Working agreement for coding agents: the finalization protocol and deployment rules    |
 | [`../README.md`](../README.md)                                                 | Project front page: what the app is, quick start, commands                             |
 | [`../SECURITY.md`](../SECURITY.md)                                             | Vulnerability reporting, scope, and the design choices that look like findings         |
-| `../.github/pull_request_template.md`                                          | The finalization checklist a PR loads                                                  |
+| [`../.github/pull_request_template.md`](../.github/pull_request_template.md)   | The finalization checklist a PR loads                                                  |
 | `../src/components/admin/modules/*/README.md`                                  | Per-module architecture and constraints for seven admin modules                        |
 | [`../src/components/features/README.md`](../src/components/features/README.md) | What a client-facing feature module is, and why the directory is not called `modules/` |
 | [`../scripts/README.md`](../scripts/README.md)                                 | What each scripts folder is for, which scripts are entry points, and the path rule     |
