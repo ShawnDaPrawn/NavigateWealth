@@ -25,6 +25,11 @@
 /src/supabase/functions/server/mount-fna.ts     @ShawnDaPrawn
 /src/supabase/functions/server/mount-modules.ts @ShawnDaPrawn
 
+# Documentation. The whole tree, not just the compliance records: the point is
+# that someone answers the PR template's "does STATUS.md still describe reality?"
+# rather than everyone assuming someone else did.
+/docs/                                          @ShawnDaPrawn
+
 # Records a compliance review would ask for.
 /docs/compliance/                               @ShawnDaPrawn
 
