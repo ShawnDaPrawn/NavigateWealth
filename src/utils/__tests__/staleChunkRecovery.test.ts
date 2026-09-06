@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { isStaleChunkLoadFailure, reloadOnceForStaleChunk } from '../staleChunkRecovery';
+import {
+  isDefinitiveStaleChunkLoadFailure,
+  isStaleChunkLoadFailure,
+  reloadOnceForStaleChunk,
+} from '../staleChunkRecovery';
 
 describe('isStaleChunkLoadFailure', () => {
   it('matches Vite/webpack chunk-load messages', () => {
@@ -90,6 +94,41 @@ describe('isStaleChunkLoadFailure', () => {
   });
 });
 
+describe('isDefinitiveStaleChunkLoadFailure', () => {
+  it('is true for every pattern that can only mean a stale chunk', () => {
+    expect(
+      isDefinitiveStaleChunkLoadFailure(new Error('Failed to fetch dynamically imported module')),
+    ).toBe(true);
+    expect(
+      isDefinitiveStaleChunkLoadFailure(
+        new TypeError("Cannot read properties of undefined (reading 'default')"),
+      ),
+    ).toBe(true);
+    expect(
+      isDefinitiveStaleChunkLoadFailure(
+        new TypeError("Cannot read properties of undefined (reading 'ResourcesModule')"),
+      ),
+    ).toBe(true);
+  });
+
+  it('is false for the ambiguous React #283/#306 invariant, unlike isStaleChunkLoadFailure', () => {
+    // This codebase has hit a genuine (non-stale) #306 before, by
+    // double-wrapping a module barrel's own lazy export — see
+    // noDoubleLazy.test.ts. isStaleChunkLoadFailure still triggers a reload
+    // for it (harmless, and fixes the real stale-chunk case), but callers
+    // must use isDefinitiveStaleChunkLoadFailure to decide whether to also
+    // stop reporting it, so a genuine recurring miswiring doesn't silently
+    // vanish from Issue Manager.
+    const error306 = new Error('Minified React error #306; visit ...');
+    expect(isStaleChunkLoadFailure(error306)).toBe(true);
+    expect(isDefinitiveStaleChunkLoadFailure(error306)).toBe(false);
+
+    const error283 = new Error('Minified React error #283; visit ...');
+    expect(isStaleChunkLoadFailure(error283)).toBe(true);
+    expect(isDefinitiveStaleChunkLoadFailure(error283)).toBe(false);
+  });
+});
+
 /**
  * Finds every `.then((m) => ({ default: m.<Name> }))` lazy-export name under
  * `src`, the same idiom `isStaleChunkLoadFailure`'s comment documents. This
@@ -98,9 +137,14 @@ describe('isStaleChunkLoadFailure', () => {
  * below instead of silently going unrecognised the next time a stale deploy
  * throws for it, the way `*Tab` (e.g. EsignTab) did before this suffix list
  * grew past `Module` / `Page`.
+ *
+ * The `.then(...)` call is often wrapped onto its own line by Prettier once
+ * the arguments get long (e.g. `ClientProfileViewerFull`, spread across
+ * three lines) — `\s*` between every token, not a literal single space, is
+ * what makes this match those too instead of only the single-line form.
  */
 function findLazyExportNames(dir: string, names: Set<string> = new Set()): Set<string> {
-  const pattern = /\.then\(\(m\) => \(\{ default: m\.([A-Za-z0-9]+)/g;
+  const pattern = /\.then\(\s*\(m\)\s*=>\s*\(\{\s*default:\s*m\.([A-Za-z0-9]+)/g;
 
   for (const entry of readdirSync(dir)) {
     const fullPath = join(dir, entry);
@@ -133,9 +177,12 @@ describe('the lazy-export suffix list stays complete', () => {
 
     expect(names.size).toBeGreaterThan(20); // sanity check the scan itself still finds real hits
 
+    // The suffix list only governs the definitive TypeError patterns — the
+    // ambiguous #283/#306 invariant match has nothing to do with export
+    // names, so it is deliberately not part of this check.
     const unmatched = [...names].filter(
       (name) =>
-        !isStaleChunkLoadFailure(
+        !isDefinitiveStaleChunkLoadFailure(
           new TypeError(`Cannot read properties of undefined (reading '${name}')`),
         ),
     );

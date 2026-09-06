@@ -20,8 +20,9 @@
  * `somePdfLib.GlobalWorkerOptions.workerSrc = ...` failing for a real
  * reason.
  *
- * The suffix list is exactly the set found by:
- *   grep -rhoE "\.then\(\(m\) => \(\{ default: m\.[A-Za-z0-9]+" src --include=*.tsx --include=*.ts | grep -v __tests__
+ * The suffix list is exactly the set found by scanning every
+ * `.then((m) => ({ default: m.<Name> }))` call (the `.then(...)` can wrap
+ * onto its own line — the scan tolerates that, it is not a single-line grep).
  * `src/utils/__tests__/staleChunkRecovery.test.ts` re-runs that scan and
  * fails if a new lazy export uses a suffix not covered here, so this list
  * cannot rot the way the old two-suffix version did.
@@ -32,8 +33,19 @@
  * than the app's `.then()` callback throwing first), React throws its own
  * "Element type is invalid. Received a promise that resolves to: undefined.
  * Lazy element type must resolve to a class or function." — minified error
- * #306 (or #283 for a bare `<SomePromise />` element). Both mean the same
- * thing as the TypeError case: a stale chunk, not a real component bug.
+ * #306 (or #283 for a bare `<SomePromise />` element).
+ *
+ * Unlike every pattern above, #283/#306 are NOT treated as definitive: this
+ * codebase has also hit a genuine (non-stale) #306 by double-wrapping a
+ * module barrel's own `lazy()` export in a second `React.lazy` at the call
+ * site — see `src/components/pages/__tests__/noDoubleLazy.test.ts`, which
+ * guards against that specific shape but cannot cover every way a `.then()`
+ * callback could resolve to a non-component. So #283/#306 still trigger the
+ * one-time reload (harmless either way, and fixes the real stale-chunk case
+ * immediately), but — unlike the definitive patterns — the caller keeps
+ * reporting it to Issue Manager: `isDefinitiveStaleChunkLoadFailure` is what
+ * distinguishes "safe to reload AND silently drop" from "reload, but still
+ * worth telling someone if it keeps happening."
  */
 
 const RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
@@ -48,6 +60,8 @@ const LAZY_EXPORT_SUFFIXES = [
   'Dialog',
   'Drawer',
   'Form',
+  'Full',
+  'Gathering',
   'Generator',
   'Handoff',
   'History',
@@ -74,18 +88,21 @@ const LAZY_EXPORT_SUFFIXES = [
   'Wizard',
 ];
 
-const STALE_CHUNK_PATTERNS = [
+// These mean "definitely a stale chunk" — safe to reload AND to skip
+// reporting entirely.
+const DEFINITIVE_STALE_CHUNK_PATTERNS = [
   /failed to fetch dynamically imported module/i,
   /importing a module script failed/i,
   /chunkloaderror/i,
   new RegExp(
     `[Cc]annot read propert(?:y|ies) of undefined \\(reading ["'](?:default|[A-Z][A-Za-z0-9]*(?:${LAZY_EXPORT_SUFFIXES.join('|')}))["']\\)`,
   ),
-  // Minified React errors #283 and #306: a promise (from React.lazy or a
-  // bare promise-as-element) resolved to something other than a class or
-  // function. See the module comment above.
-  /minified react error #(?:283|306)\b/i,
 ];
+
+// Minified React errors #283 and #306: a promise (from React.lazy or a bare
+// promise-as-element) resolved to something other than a class or function.
+// Ambiguous — see the module comment above for why this is not definitive.
+const AMBIGUOUS_LAZY_INVARIANT_PATTERN = /minified react error #(?:283|306)\b/i;
 
 function errorText(value: unknown): string {
   if (value instanceof Error) {
@@ -97,9 +114,25 @@ function errorText(value: unknown): string {
   return String(value ?? '');
 }
 
+/** True for a definitive OR ambiguous stale-chunk shape — use this to decide whether to reload. */
 export function isStaleChunkLoadFailure(value: unknown): boolean {
   const text = errorText(value);
-  return STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(text));
+  return (
+    DEFINITIVE_STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(text)) ||
+    AMBIGUOUS_LAZY_INVARIANT_PATTERN.test(text)
+  );
+}
+
+/**
+ * True only for the patterns that can *only* mean a stale chunk. Use this to
+ * decide whether to also skip reporting to Issue Manager — the ambiguous
+ * #283/#306 case should still reload (see `isStaleChunkLoadFailure`) but
+ * keeps being reported, since it can also be a genuine miswiring bug that a
+ * reload will not fix and that would otherwise go completely unreported.
+ */
+export function isDefinitiveStaleChunkLoadFailure(value: unknown): boolean {
+  const text = errorText(value);
+  return DEFINITIVE_STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 /** Reload once inside a 60s window. Returns true if a reload was triggered. */
