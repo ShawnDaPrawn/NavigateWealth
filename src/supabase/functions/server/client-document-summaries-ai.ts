@@ -19,7 +19,12 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { callResponses, parseJsonResponse, resolvePreferredModel } from './ai-model-config.ts';
+import {
+  AiCallError,
+  callResponses,
+  parseJsonResponse,
+  resolvePreferredModel,
+} from './ai-model-config.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { AiContentBlock } from './ai-model-config.ts';
@@ -87,6 +92,18 @@ export const MAX_ATTACHMENTS = 6;
 /** Ceiling on the combined size of those files, before base64 expansion. */
 export const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
 
+/**
+ * Output budget for one summary.
+ *
+ * Raised from 1200 after a real batch came back cut off mid-sentence: with
+ * Structured Outputs a truncated reply is invalid JSON, so the budget running
+ * out surfaced as "Unterminated string in JSON at position 342" rather than as
+ * anything a reader could act on. The entry itself is a headline, a short
+ * paragraph and two small lists, so this is generous for the content — the
+ * headroom is for models that spend output tokens on reasoning before writing.
+ */
+export const MAX_SUMMARY_OUTPUT_TOKENS = 3000;
+
 const PDF_MIME = 'application/pdf';
 const IMAGE_MIMES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
 
@@ -142,6 +159,27 @@ export interface DocumentForSummary {
   description?: string;
   sourceSystem?: string;
   uploadDate: string;
+}
+
+/**
+ * A failure that still knows what it was working with.
+ *
+ * The stored `failed` record used to hardcode `analysed: false` for every
+ * document and carry no model at all, so a failed entry said "0 of 6 files read
+ * by the AI" whether six files had been sent or none, and gave no way to tell
+ * which model had rejected them. Both are facts the catch site cannot recover
+ * on its own, so the throw carries them.
+ */
+export class SummaryGenerationError extends Error {
+  constructor(
+    message: string,
+    readonly documents: SummarisedDocument[],
+    readonly model: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = 'SummaryGenerationError';
+  }
 }
 
 export interface SummaryDraft {
@@ -213,22 +251,75 @@ async function downloadDocument(filePath: string): Promise<ArrayBuffer | null> {
   return await data.arrayBuffer();
 }
 
+/** One attachment that made it into the request, and what it cost. */
+interface Attachment {
+  id: string;
+  bytes: number;
+}
+
+export interface SummaryInputOptions {
+  /** Document ids to leave unattached — the retry ladder narrows with this. */
+  excludeIds?: ReadonlySet<string>;
+  /** Send no bytes at all. The last rung: a metadata-only summary still beats none. */
+  metadataOnly?: boolean;
+}
+
 /**
  * Build the model input for a group of documents.
  *
- * Returns the content blocks and the per-document record of what was actually
- * analysed, so the stored summary can be honest about its own coverage.
+ * Returns the content blocks, the per-document record of what was actually
+ * analysed, and the attachments that were sent — the last so a retry can narrow
+ * the request without rebuilding this logic.
+ *
+ * DUPLICATES ARE SENT ONCE. A pack routinely holds the same file uploaded
+ * twice (one real client pack here is three PDFs filed twice over, 9.4MB of
+ * which half is a copy). Sending both wastes the byte budget, doubles the cost,
+ * and makes it likelier the request trips a provider limit. The twin is still
+ * listed in the manifest and still counts as analysed, because its contents did
+ * reach the model — just once. Identity is the file's actual content, so the
+ * twin is downloaded and only then collapsed: the saving is the upload and the
+ * model's attention, which is where the cost is.
  */
 export async function buildSummaryInput(
   documents: DocumentForSummary[],
-): Promise<{ blocks: AiContentBlock[]; analysed: SummarisedDocument[] }> {
+  options: SummaryInputOptions = {},
+): Promise<{
+  blocks: AiContentBlock[];
+  analysed: SummarisedDocument[];
+  attached: Attachment[];
+}> {
   const analysed: SummarisedDocument[] = [];
   const fileBlocks: AiContentBlock[] = [];
+  const attached: Attachment[] = [];
+  /**
+   * Encoded content -> index of the document whose bytes were actually sent.
+   *
+   * The key is the base64 the request itself carries, so it is the exact bytes
+   * rather than a digest of them: no collision to reason about, no crypto call,
+   * and nothing environment-specific. It costs no memory worth naming either —
+   * these are the same strings `fileBlocks` already holds for the request.
+   */
+  const sentByContent = new Map<string, number>();
+  /** Per-document manifest note, e.g. that it duplicates an earlier entry. */
+  const notes: Array<string | null> = [];
   let attachedBytes = 0;
+
+  const record = (doc: DocumentForSummary, wasAnalysed: boolean, note: string | null) => {
+    analysed.push({
+      id: doc.id,
+      title: doc.title,
+      fileName: doc.fileName,
+      productCategory: doc.productCategory,
+      analysed: wasAnalysed,
+    });
+    notes.push(note);
+  };
 
   for (const doc of documents) {
     const mime = mimeFromFileName(doc.fileName);
     const attachable =
+      !options.metadataOnly &&
+      !options.excludeIds?.has(doc.id) &&
       doc.type !== 'link' &&
       // RoA documents keep their bytes behind a KV pointer rather than a
       // storage path; their metadata is descriptive enough on its own.
@@ -238,42 +329,44 @@ export async function buildSummaryInput(
       fileBlocks.length < MAX_ATTACHMENTS;
 
     if (!attachable) {
-      analysed.push({
-        id: doc.id,
-        title: doc.title,
-        fileName: doc.fileName,
-        productCategory: doc.productCategory,
-        analysed: false,
-      });
+      record(doc, false, options.excludeIds?.has(doc.id) ? 'could not be read by the AI' : null);
       continue;
     }
 
     const buffer = await downloadDocument(doc.filePath!);
-    if (!buffer || attachedBytes + buffer.byteLength > MAX_ATTACHMENT_BYTES) {
-      analysed.push({
-        id: doc.id,
-        title: doc.title,
-        fileName: doc.fileName,
-        productCategory: doc.productCategory,
-        analysed: false,
-      });
+    if (!buffer) {
+      record(doc, false, null);
+      continue;
+    }
+
+    // Encoded up front so the comparison is against real content. That is the
+    // work this file would need anyway if it turns out not to be a copy, and
+    // the copy has to be recognised BEFORE the budget check: it adds nothing to
+    // the request, so it must not be turned away as over budget and then
+    // reported unread.
+    const dataBase64 = toBase64(buffer);
+    const twinIndex = sentByContent.get(dataBase64);
+    if (twinIndex !== undefined) {
+      // Byte-for-byte identical to one already sent: its content reached the
+      // model, so it is analysed — we simply did not pay for it twice.
+      record(doc, analysed[twinIndex].analysed, `same file as item ${twinIndex + 1}`);
+      continue;
+    }
+
+    if (attachedBytes + buffer.byteLength > MAX_ATTACHMENT_BYTES) {
+      record(doc, false, null);
       continue;
     }
 
     attachedBytes += buffer.byteLength;
-    const dataBase64 = toBase64(buffer);
     fileBlocks.push(
       mime === PDF_MIME
         ? { type: 'file', filename: doc.fileName || `${doc.title}.pdf`, dataBase64, mimeType: mime }
         : { type: 'image', dataBase64, mimeType: mime },
     );
-    analysed.push({
-      id: doc.id,
-      title: doc.title,
-      fileName: doc.fileName,
-      productCategory: doc.productCategory,
-      analysed: true,
-    });
+    attached.push({ id: doc.id, bytes: buffer.byteLength });
+    sentByContent.set(dataBase64, analysed.length);
+    record(doc, true, null);
   }
 
   const manifest = documents
@@ -287,7 +380,7 @@ export async function buildSummaryInput(
         doc.type === 'link' ? `link: ${doc.url || ''}` : '',
         doc.description ? `note: ${doc.description}` : '',
         `uploaded: ${doc.uploadDate}`,
-        `(${wasRead})`,
+        `(${[wasRead, notes[index]].filter(Boolean).join('; ')})`,
       ].filter(Boolean);
       return parts.join(' — ');
     })
@@ -304,47 +397,102 @@ export async function buildSummaryInput(
     ...fileBlocks,
   ];
 
-  return { blocks, analysed };
+  return { blocks, analysed, attached };
 }
 
 /**
- * Summarise a group of documents.
+ * True when the provider rejected an attached FILE rather than the request.
  *
- * Throws on a model or parse failure — the caller decides whether that means a
- * stored `failed` record (manual run, so the user sees why) or a counted
- * failure in a scan report.
+ * A PDF the provider cannot parse — scanned oddly, damaged, too many pages —
+ * comes back as a 400 about the upload, not about anything the retry could fix
+ * by waiting. Distinguishing it matters because it is the one failure worth
+ * answering by sending less, and previously it took the whole pack down.
  */
-export async function generateSummaryDraft(documents: DocumentForSummary[]): Promise<SummaryDraft> {
-  const { blocks, analysed } = await buildSummaryInput(documents);
+export function isFileRejection(error: unknown): boolean {
+  const message = getErrMsg(error).toLowerCase();
+  return (
+    message.includes('uploaded file could not be processed') ||
+    message.includes('invalid_image') ||
+    message.includes('failed to process file') ||
+    (message.includes('file') && message.includes('could not be processed'))
+  );
+}
 
-  const result = await callResponses({
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: blocks },
-    ],
-    // Resolved per call, not at module load: an operator changing the secret
-    // gets the new model on the next request rather than the next cold start.
-    // The account probe behind this is cached per instance, so the weekly scan
-    // pays for it once across its whole run.
-    model: await resolvePreferredModel(SUMMARY_MODEL_PREFERENCES, SUMMARY_MODEL_ENV),
-    maxOutputTokens: 1200,
-    temperature: 0.2,
-    jsonSchema: { name: 'client_document_summary', schema: SUMMARY_SCHEMA, strict: true },
-  });
+/** Reason string used when a reply stopped for want of output budget. */
+const OUTPUT_LIMIT_REASON = 'max_output_tokens';
+
+/**
+ * Why the model stopped short, or null when it finished.
+ *
+ * Structured Outputs guarantees valid JSON only for a response that FINISHES.
+ * An unfinished one is invalid by definition, and surfaced as "Unterminated
+ * string in JSON at position 342" — a parser message that tells the reader
+ * nothing about the actual cause. Both API shapes are read because either can
+ * serve this call.
+ *
+ * The REASON is carried rather than collapsed to a yes/no, because the two
+ * cases need opposite responses: running out of output budget is answered by a
+ * bigger budget, while a content filter is not answered by retrying at all, and
+ * telling an adviser to raise a limit that was never the problem sends them
+ * looking in the wrong place.
+ */
+export function incompleteReason(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const body = raw as {
+    status?: unknown;
+    incomplete_details?: { reason?: unknown };
+    choices?: Array<{ finish_reason?: unknown }>;
+  };
+
+  const stated = body.incomplete_details?.reason;
+  if (typeof stated === 'string' && stated) return stated;
+  // Responses said it stopped short but not why; still unfinished, still fatal.
+  if (body.status === 'incomplete') return 'unspecified';
+
+  const finish = body.choices?.[0]?.finish_reason;
+  if (finish === 'length') return OUTPUT_LIMIT_REASON;
+  if (finish === 'content_filter') return 'content_filter';
+  return null;
+}
+
+/** True only when the reply stopped because it ran out of output budget. */
+export function wasTruncated(raw: unknown): boolean {
+  return incompleteReason(raw) === OUTPUT_LIMIT_REASON;
+}
+
+/** Parse and validate one model reply into a draft. */
+function toDraft(
+  result: { text: string; model: string; raw: unknown },
+  analysed: SummarisedDocument[],
+): SummaryDraft {
+  const incomplete = incompleteReason(result.raw);
+  if (incomplete === OUTPUT_LIMIT_REASON) {
+    throw new Error(
+      'The AI reply was cut off before it finished, so it could not be read. ' +
+        'This batch may need a larger output budget.',
+    );
+  }
+  if (incomplete) {
+    throw new Error(
+      `The AI stopped before finishing this summary (${incomplete}), so its reply ` +
+        'could not be read. Retrying will not change that on its own.',
+    );
+  }
 
   let parsed: Partial<SummaryDraft>;
   try {
     parsed = parseJsonResponse<Partial<SummaryDraft>>(result.text);
   } catch (error) {
+    // Wrapped, not re-thrown raw: a bare "Unexpected token 'I'" reaches the
+    // timeline as the stored reason and tells the reader nothing about what
+    // went wrong or what to do.
     log.error('Summary response was not JSON', { error: getErrMsg(error) });
     throw new Error(`AI summary could not be parsed: ${getErrMsg(error)}`, { cause: error });
   }
 
   const headline = typeof parsed.headline === 'string' ? parsed.headline.trim() : '';
   const summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
-  if (!headline || !summary) {
-    throw new Error('AI summary was empty');
-  }
+  if (!headline || !summary) throw new Error('AI summary was empty');
 
   return {
     headline,
@@ -358,4 +506,88 @@ export async function generateSummaryDraft(documents: DocumentForSummary[]): Pro
     documents: analysed,
     model: result.model,
   };
+}
+
+/**
+ * Summarise a group of documents.
+ *
+ * ONE UNREADABLE FILE NO LONGER COSTS THE WHOLE BATCH. A pack is summarised as
+ * a unit, so before this a single PDF the provider could not parse left the
+ * client with no timeline entry at all and an error nobody could act on. The
+ * request now narrows and retries instead:
+ *
+ *   1. everything attached;
+ *   2. the largest attachment dropped — size is a heuristic for the awkward
+ *      file, not a diagnosis, but the provider does not say which file it
+ *      rejected and one guided retry beats bisecting six multi-megabyte
+ *      uploads;
+ *   3. metadata only, which cannot be rejected for its files.
+ *
+ * Bounded at three attempts, and only a file rejection advances a rung —
+ * anything else throws immediately rather than paying to fail again.
+ *
+ * Throws {@link SummaryGenerationError}, which carries the per-document
+ * analysis and the model attempted so the stored failure can be honest about
+ * both.
+ */
+export async function generateSummaryDraft(documents: DocumentForSummary[]): Promise<SummaryDraft> {
+  // Resolved once for the whole ladder: retries must not silently change model.
+  const model = await resolvePreferredModel(SUMMARY_MODEL_PREFERENCES, SUMMARY_MODEL_ENV);
+  const excludeIds = new Set<string>();
+  let metadataOnly = false;
+  let analysed: SummarisedDocument[] = [];
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const input = await buildSummaryInput(documents, { excludeIds, metadataOnly });
+    analysed = input.analysed;
+    // What answered, as opposed to what was asked for. `callResponses` retries
+    // the fallback model on its own, so these differ more often than the name
+    // `model` suggests, and a failure must be filed against the one that
+    // produced it.
+    let servedBy = model;
+
+    try {
+      const result = await callResponses({
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: input.blocks },
+        ],
+        model,
+        maxOutputTokens: MAX_SUMMARY_OUTPUT_TOKENS,
+        temperature: 0.2,
+        jsonSchema: { name: 'client_document_summary', schema: SUMMARY_SCHEMA, strict: true },
+      });
+      servedBy = result.model || model;
+      return toDraft(result, analysed);
+    } catch (error) {
+      // Three provenances, most specific first: the failed call named its own
+      // model; the call returned and `toDraft` rejected what it said; or nothing
+      // came back at all and the requested model is the best we know.
+      const servedByFailure = error instanceof AiCallError ? error.model : servedBy;
+      const isLastAttempt = attempt === 3;
+      if (isLastAttempt || !isFileRejection(error)) {
+        throw new SummaryGenerationError(getErrMsg(error), analysed, servedByFailure, {
+          cause: error,
+        });
+      }
+
+      if (!metadataOnly && input.attached.length > 1) {
+        const largest = input.attached.reduce((a, b) => (b.bytes > a.bytes ? b : a));
+        excludeIds.add(largest.id);
+        log.warn('Provider rejected a file — retrying without the largest attachment', {
+          droppedDocumentId: largest.id,
+          droppedBytes: largest.bytes,
+          remaining: input.attached.length - 1,
+        });
+      } else {
+        metadataOnly = true;
+        log.warn('Provider rejected a file — retrying with metadata only', {
+          documentCount: documents.length,
+        });
+      }
+    }
+  }
+
+  // Unreachable: the loop either returns or throws on its third attempt.
+  throw new SummaryGenerationError('AI summary could not be generated', analysed, model);
 }
