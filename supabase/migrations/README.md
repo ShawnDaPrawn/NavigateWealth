@@ -33,7 +33,14 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260824222932_fna_intake_rls_draft_only.sql`                | ✅ `20260824222932`  | Applied by this reconciliation                |
 | `20260824223052_dedupe_kv_key_indexes.sql`                    | ✅ `20260824223052`  | Applied by this reconciliation                |
 | `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` | ✅ `20260826073401`  | Applied via `apply_migration`, verified after |
-| `20260906005533_calendar_client_fk_to_auth_users.sql`         | ✅ `20260906005533`  | Applied via `apply_migration`, verified after |
+| `20260906005533_calendar_client_fk_to_auth_users.sql`         | ✅ `20260906005533`  | Repo-authored, then applied and verified      |
+
+`20260906005533` is stamped later than the day it was authored, and that is
+correct rather than drift: it had to be applied _after_ the Edge Function that
+stopped embedding `client:clients(*)` was deployed, because PostgREST resolved
+that embed through the very foreign key the migration replaces. Applying it
+through `apply_migration` stamped the moment it actually ran, and the file was
+renamed to match — which is the rule at the top of this page doing its job.
 
 Of the seven files that correspond to something production has run, five carry
 SQL **copied verbatim** from what production actually executed, not inferred.
