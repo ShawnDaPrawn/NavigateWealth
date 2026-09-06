@@ -1,4 +1,4 @@
-import { api } from '../../../../utils/api/client';
+import { api, type APIRequestOptions } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import { getErrorMessage } from '../../../../utils/errorUtils';
 import { ENDPOINTS } from './constants';
@@ -14,10 +14,19 @@ import type {
   AuditSeverity,
 } from './types';
 
+/**
+ * Request options the three dashboard fetchers forward untouched.
+ *
+ * The only caller that passes anything is `prefetchDashboardData`, which
+ * supplies the access token straight off the auth event so the prefetch makes
+ * no auth call of its own — see `accessToken` on APIRequestOptions.
+ */
+export type DashboardFetchOptions = Pick<APIRequestOptions, 'accessToken'>;
+
 export const dashboardStatsApi = {
-  async getStats(): Promise<DashboardStats> {
+  async getStats(options?: DashboardFetchOptions): Promise<DashboardStats> {
     try {
-      const response = await api.get<{ stats: DashboardStats }>(ENDPOINTS.ADMIN_STATS);
+      const response = await api.get<{ stats: DashboardStats }>(ENDPOINTS.ADMIN_STATS, options);
       return response.stats;
     } catch (error) {
       const message = getErrorMessage(error);
@@ -94,13 +103,13 @@ export const dashboardStatsApi = {
 };
 
 export const dashboardMetricsApi = {
-  async getMetrics(): Promise<DashboardMetrics> {
+  async getMetrics(options?: DashboardFetchOptions): Promise<DashboardMetrics> {
     try {
       const response = await api.get<{
         activePolicies: number;
         newPoliciesCount: number;
         publishedFnas: number;
-      }>(ENDPOINTS.DASHBOARD_STATS);
+      }>(ENDPOINTS.DASHBOARD_STATS, options);
 
       return {
         activePolicies: response.activePolicies || 0,
@@ -151,10 +160,11 @@ export const dashboardMetricsApi = {
 };
 
 export const tasksApi = {
-  async getDueToday(): Promise<TaskDueToday[]> {
+  async getDueToday(options?: DashboardFetchOptions): Promise<TaskDueToday[]> {
     try {
       const response = await api.get<{ success: boolean; data: TaskDueToday[] }>(
         ENDPOINTS.TASKS_DUE_TODAY,
+        options,
       );
       return response.data || [];
     } catch (error) {
