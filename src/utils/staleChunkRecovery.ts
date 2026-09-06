@@ -11,25 +11,80 @@
  * idiom (used throughout, not just for the outer `default`) throws the same
  * TypeError but naming the re-exported component instead: `reading
  * 'ResourcesModule'`, `reading 'NotesModule'`, etc. Every top-level lazy
- * export in this codebase (AdminDashboardPage.tsx, AppRoutes.tsx, and every
- * module barrel) follows the same `*Module` / `*Page` naming convention —
- * confirmed by grepping every `.SomeName` access matching that shape in the
- * whole source tree, which is exclusively these lazy-loaded components —
- * so matching on that suffix (not just any capitalised identifier) catches
- * the stale-deploy case without swallowing an unrelated genuine crash that
- * happens to read an undefined PascalCase property, e.g. a third-party
+ * export in this codebase follows a `*<Suffix>` naming convention, but that
+ * suffix is not just `Module` / `Page` — dialogs, tabs, wizards, managers,
+ * drawers and more all go through this same idiom. Matching a fixed suffix
+ * list (not just any capitalised identifier) catches the stale-deploy case
+ * without swallowing an unrelated genuine crash that happens to read an
+ * undefined PascalCase property, e.g. a third-party
  * `somePdfLib.GlobalWorkerOptions.workerSrc = ...` failing for a real
  * reason.
+ *
+ * The suffix list is exactly the set found by:
+ *   grep -rhoE "\.then\(\(m\) => \(\{ default: m\.[A-Za-z0-9]+" src --include=*.tsx --include=*.ts | grep -v __tests__
+ * `src/utils/__tests__/staleChunkRecovery.test.ts` re-runs that scan and
+ * fails if a new lazy export uses a suffix not covered here, so this list
+ * cannot rot the way the old two-suffix version did.
+ *
+ * Production React ships minified, so the same failure can also surface as
+ * React's own invariant instead of a raw property-read TypeError: when the
+ * `{ default: undefined }` shape above reaches `React.lazy` itself (rather
+ * than the app's `.then()` callback throwing first), React throws its own
+ * "Element type is invalid. Received a promise that resolves to: undefined.
+ * Lazy element type must resolve to a class or function." — minified error
+ * #306 (or #283 for a bare `<SomePromise />` element). Both mean the same
+ * thing as the TypeError case: a stale chunk, not a real component bug.
  */
 
 const RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
 const RELOAD_WINDOW_MS = 60_000;
 
+// Suffixes used by this codebase's lazy-loaded `.then((m) => ({ default:
+// m.<Name> }))` exports. See the module-level comment above for how this
+// list is derived and kept honest.
+const LAZY_EXPORT_SUFFIXES = [
+  'Builder',
+  'Dashboard',
+  'Dialog',
+  'Drawer',
+  'Form',
+  'Generator',
+  'Handoff',
+  'History',
+  'Insights',
+  'Inspector',
+  'Interface',
+  'Manager',
+  'Modal',
+  'Module',
+  'Page',
+  'Panel',
+  'Picker',
+  'Queue',
+  'Renderer',
+  'Repository',
+  'Section',
+  'Step',
+  'Studio',
+  'Subscribers',
+  'Tab',
+  'Tool',
+  'View',
+  'Viewer',
+  'Wizard',
+];
+
 const STALE_CHUNK_PATTERNS = [
   /failed to fetch dynamically imported module/i,
   /importing a module script failed/i,
   /chunkloaderror/i,
-  /[Cc]annot read propert(?:y|ies) of undefined \(reading ["'](?:default|[A-Z][A-Za-z0-9]*(?:Module|Page))["']\)/,
+  new RegExp(
+    `[Cc]annot read propert(?:y|ies) of undefined \\(reading ["'](?:default|[A-Z][A-Za-z0-9]*(?:${LAZY_EXPORT_SUFFIXES.join('|')}))["']\\)`,
+  ),
+  // Minified React errors #283 and #306: a promise (from React.lazy or a
+  // bare promise-as-element) resolved to something other than a class or
+  // function. See the module comment above.
+  /minified react error #(?:283|306)\b/i,
 ];
 
 function errorText(value: unknown): string {
