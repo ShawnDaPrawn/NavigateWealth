@@ -578,6 +578,13 @@ export interface LineAnchor {
   /** Span claimed in the line text, so passes don't propose the same blank twice. */
   start: number;
   end: number;
+  /**
+   * Where this field's own printed text begins — its caption for a pattern
+   * match, the word in front of the blank for a generic one. `start` is the
+   * blank itself for a generic anchor, so it is the wrong boundary to stop a
+   * previous field at: it would let that field cover this one's caption.
+   */
+  captionStart: number;
 }
 
 /**
@@ -594,16 +601,26 @@ const DECORATIVE_RUN_CHARS = 60;
  * `Name: ____ Surname: ____` labels the second field "Surname" rather than
  * dragging the first caption along with it.
  */
-function captionBefore(lineText: string, blankStart: number): string {
+function captionBefore(
+  lineText: string,
+  blankStart: number,
+): { label: string; captionStart: number; previousBlankEnd: number; between: string } {
   const previousBlankEnd = lineText.lastIndexOf('_', blankStart - 1);
-  const before = lineText.slice(previousBlankEnd + 1, blankStart);
+  const between = lineText.slice(previousBlankEnd + 1, blankStart);
   // Trailing separators belong to the caption's punctuation, not its text.
-  const caption = before.replace(/[\s:\-–]+$/, '').trim();
-  if (!caption) return '';
+  const caption = between.replace(/[\s:\-–]+$/, '').trim();
+  // The caption occupies the preceding text from its first printed character;
+  // that whole span has to be protected from the previous field, even when the
+  // label below is trimmed to its last few words.
+  const captionStart = previousBlankEnd + 1 + (between.length - between.trimStart().length);
+  if (!caption) {
+    return { label: '', captionStart: blankStart, previousBlankEnd, between };
+  }
   // A caption sits at the END of the preceding text — anything earlier is
   // the sentence or section heading it was printed under.
   const words = caption.split(/\s+/).slice(-5).join(' ');
-  return words.length > 40 ? words.slice(words.length - 40).trim() : words;
+  const label = words.length > 40 ? words.slice(words.length - 40).trim() : words;
+  return { label, captionStart, previousBlankEnd, between };
 }
 
 /**
@@ -648,7 +665,16 @@ export function findLineAnchors(lineText: string): LineAnchor[] {
       }
       if (claimed.some(([s, e]) => start < e && end > s)) continue;
       claimed.push([start, end]);
-      anchors.push({ match: { 0: text, index: start }, type, label, prefillToken, start, end });
+      anchors.push({
+        match: { 0: text, index: start },
+        type,
+        label,
+        prefillToken,
+        start,
+        end,
+        // A pattern match opens at its own caption.
+        captionStart: start,
+      });
     }
   }
 
@@ -657,7 +683,21 @@ export function findLineAnchors(lineText: string): LineAnchor[] {
     const start = m.index ?? 0;
     const end = start + m[0].length;
     if (claimed.some(([s, e]) => start < e && end > s)) continue;
-    const label = captionBefore(lineText, start);
+    const { label, captionStart, previousBlankEnd, between } = captionBefore(lineText, start);
+
+    // A blank separated from the one before it by punctuation alone is the
+    // rest of a mask, not a new field: `Date: ____ / ____ / ____` is one date
+    // entry. Widen the field that owns the first run instead of proposing a
+    // second and third on top of the same entry.
+    if (previousBlankEnd >= 0 && !/[A-Za-z0-9]/.test(between)) {
+      const owner = anchors.filter((a) => a.end <= start).sort((a, b) => b.end - a.end)[0];
+      if (owner) {
+        owner.end = end;
+        claimed.push([start, end]);
+        continue;
+      }
+    }
+
     if (!label && m[0].length >= DECORATIVE_RUN_CHARS) continue;
     claimed.push([start, end]);
     anchors.push({
@@ -666,6 +706,7 @@ export function findLineAnchors(lineText: string): LineAnchor[] {
       label: label || 'Text field',
       start,
       end,
+      captionStart,
     });
   }
 
@@ -766,9 +807,16 @@ export async function detectSmartAnchors(buffer: Uint8Array): Promise<AnalysisRe
         // to cover the caption that follows: on "Name: ____ Surname: ____"
         // both blanks are shorter than the 140pt text minimum, so without this
         // the first suggestion lands on top of the second.
-        for (let i = 0; i < rects.length - 1; i++) {
-          const nextStartX = xForCharIndex(line, anchors[i + 1].start);
-          const limit = nextStartX - FIELD_GUTTER_PT;
+        for (let i = 0; i < rects.length; i++) {
+          // Cover the whole of a claimed span, so a field merged across a
+          // mask ("____ / ____ / ____") spans the entry rather than its
+          // first run.
+          rects[i][2] = Math.max(rects[i][2], xForCharIndex(line, anchors[i].end));
+          if (i === rects.length - 1) break;
+          // Stop before the NEXT field's caption, not its blank: a generic
+          // anchor starts at its underscores, so clamping to that would let
+          // this field cover the caption printed in between.
+          const limit = xForCharIndex(line, anchors[i + 1].captionStart) - FIELD_GUTTER_PT;
           if (rects[i][2] > limit) rects[i][2] = Math.max(limit, rects[i][0] + 1);
         }
 

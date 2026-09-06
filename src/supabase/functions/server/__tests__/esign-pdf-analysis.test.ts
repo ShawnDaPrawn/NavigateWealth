@@ -275,6 +275,23 @@ describe('findLineAnchors — every blank on the line becomes a field', () => {
     expect(labels(`Notes: ${'_'.repeat(80)}`)).toEqual(['text:Notes']);
   });
 
+  it('treats a punctuation-separated mask as one field', () => {
+    // The date pattern claims only the first run; the remaining runs are the
+    // rest of the same entry, not two more fields labelled "/".
+    expect(labels('Date: ____ / ____ / ____')).toEqual(['date:Date']);
+    expect(labels('ID number: ______ ______ ______')).toEqual(['text:ID number']);
+    // A word between two blanks still starts a new field.
+    expect(labels('From: ______ To: ______')).toEqual(['text:From', 'text:To']);
+  });
+
+  it("marks where a generic blank's caption starts, not just the blank", () => {
+    // `start` is the underscore run; the caption in front of it is what the
+    // previous field on the line has to stop short of.
+    const [, position] = findLineAnchors('Employer: ______ Position: ______');
+    expect(position.start).toBe(27);
+    expect(position.captionStart).toBe(17);
+  });
+
   it('reads a caption whose words the PDF split apart', () => {
     // groupItemsIntoLines restores the space; without it this read
     // "Firstname:" and matched no pattern.
@@ -321,6 +338,20 @@ describe('detectSmartAnchors — a realistic form', () => {
       'date',
     ]);
     expect(res.candidates.every((c) => c.page === 1)).toBe(true);
+  });
+
+  it('stops a field before the next caption, not just the next blank', async () => {
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const page = pdf.addPage([595, 842]);
+    page.drawText('Employer: ______ Position: ______', { x: 50, y: 700, size: 11, font });
+    const res = await detectSmartAnchors(await pdf.save());
+
+    const captionX = 50 + font.widthOfTextAtSize('Employer: ______ ', 11);
+    const first = res.candidates[0];
+    const rightPt = (first.x / 100) * 595 + first.width;
+    expect(first.label).toBe('Employer');
+    expect(rightPt).toBeLessThanOrEqual(captionX);
   });
 
   it('does not let two fields on one line overlap', async () => {
