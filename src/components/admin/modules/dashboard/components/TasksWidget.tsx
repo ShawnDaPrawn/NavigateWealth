@@ -13,7 +13,12 @@ export function TasksWidget({
   onViewTask,
   maxTasks = 5,
 }: TasksWidgetProps) {
-  const { tasks, loading } = useDashboardData();
+  // Only the tasks query gates this widget. Reading the hook's combined
+  // `loading` kept the list skeletonised until stats and metrics had landed
+  // too, so the fastest data on the page was displayed at the speed of the
+  // slowest.
+  const { tasks, loadingStates } = useDashboardData();
+  const loading = loadingStates.tasks;
 
   const handleViewAll = () => {
     if (onModuleChange) {

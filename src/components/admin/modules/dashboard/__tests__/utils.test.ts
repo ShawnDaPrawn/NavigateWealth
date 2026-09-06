@@ -20,6 +20,7 @@ import {
   groupBy,
   sortByPriority,
   isHighPriority,
+  buildSystemActivity,
 } from '../utils';
 
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
@@ -112,5 +113,65 @@ describe('groupBy', () => {
     const g = groupBy([{ t: 'a' }, { t: 'b' }, { t: 'a' }], (x) => x.t);
     expect(g.get('a')?.length).toBe(2);
     expect(g.get('b')?.length).toBe(1);
+  });
+});
+
+describe('buildSystemActivity', () => {
+  const stats = {
+    total_clients: 42,
+    pending_applications: 5,
+    pending_tasks: 8,
+    new_this_month: 10,
+    new_last_month: 6,
+    total_completed: 30,
+    avg_completion_time: 3.5,
+  };
+  const metrics = {
+    activePolicies: 100,
+    newPoliciesCount: 12,
+    completedFNAs: 20,
+    pendingFNAs: 0,
+  };
+
+  it('returns the four activity tiles the card renders', () => {
+    expect(buildSystemActivity(stats, metrics).map((a) => a.type)).toEqual([
+      'new_applications',
+      'new_policies',
+      'pending_tasks',
+      'completed_fnas',
+    ]);
+  });
+
+  it('reads its counts from stats and metrics', () => {
+    const byType = new Map(buildSystemActivity(stats, metrics).map((a) => [a.type, a.count]));
+    expect(byType.get('new_applications')).toBe(10);
+    expect(byType.get('new_policies')).toBe(12);
+    expect(byType.get('pending_tasks')).toBe(8);
+    expect(byType.get('completed_fnas')).toBe(20);
+  });
+
+  it('computes month-on-month growth for new applications', () => {
+    const [newApps] = buildSystemActivity(stats, metrics);
+    // 10 this month against 6 last month.
+    expect(newApps.growth).toBeCloseTo(66.67, 1);
+  });
+
+  it('reports 100% growth when last month was zero and this month was not', () => {
+    const [newApps] = buildSystemActivity({ ...stats, new_last_month: 0 }, metrics);
+    expect(newApps.growth).toBe(100);
+  });
+
+  it('reports no growth when both months were zero', () => {
+    const [newApps] = buildSystemActivity(
+      { ...stats, new_this_month: 0, new_last_month: 0 },
+      metrics,
+    );
+    expect(newApps.growth).toBe(0);
+  });
+
+  it('returns nothing until both inputs have arrived', () => {
+    expect(buildSystemActivity(null, metrics)).toEqual([]);
+    expect(buildSystemActivity(stats, null)).toEqual([]);
+    expect(buildSystemActivity(null, null)).toEqual([]);
   });
 });

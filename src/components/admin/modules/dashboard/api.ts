@@ -6,7 +6,6 @@ import type {
   DashboardStats,
   DashboardMetrics,
   TaskDueToday,
-  SystemActivity,
   LastCleanupRun,
   CleanupRunResult,
   AdminAuditEntry,
@@ -198,103 +197,19 @@ export const tasksApi = {
   },
 };
 
-export const systemActivityApi = {
-  async getAll(): Promise<SystemActivity[]> {
-    try {
-      const [stats, metrics] = await Promise.all([
-        dashboardStatsApi.getStats(),
-        dashboardMetricsApi.getMetrics(),
-      ]);
-
-      const activities: SystemActivity[] = [
-        {
-          type: 'new_applications',
-          count: stats.new_this_month,
-          growth:
-            stats.new_last_month > 0
-              ? ((stats.new_this_month - stats.new_last_month) / stats.new_last_month) * 100
-              : stats.new_this_month > 0
-                ? 100
-                : 0,
-          label: 'New Applications',
-          description: 'Applications this month',
-          color: 'purple',
-        },
-        {
-          type: 'new_policies',
-          count: metrics.newPoliciesCount,
-          growth: 0,
-          label: 'New Policies',
-          description: 'Active policies added recently',
-          color: 'green',
-        },
-        {
-          type: 'pending_tasks',
-          count: stats.pending_tasks,
-          growth: 0,
-          label: 'Pending Tasks',
-          description: 'Tasks requiring attention',
-          color: 'orange',
-        },
-        {
-          type: 'completed_fnas',
-          count: metrics.completedFNAs,
-          growth: 0,
-          label: 'Completed FNAs',
-          description: 'Financial Needs Analyses done',
-          color: 'blue',
-        },
-      ];
-
-      return activities;
-    } catch (error) {
-      logger.error('Failed to fetch system activity', error);
-      return [];
-    }
-  },
-
-  async getByType(type: string): Promise<SystemActivity | null> {
-    try {
-      const activities = await this.getAll();
-      return activities.find((a) => a.type === type) || null;
-    } catch (error) {
-      logger.error(`Failed to fetch activity for type ${type}`, error);
-      return null;
-    }
-  },
-};
-
+/**
+ * The dashboard's three data sources — one request each, no aggregate fetcher.
+ *
+ * There is deliberately no `activity` member: System Activity is a projection
+ * of stats + metrics, derived client-side by `buildSystemActivity` in
+ * `utils.ts`. It used to be a fourth fetcher that re-requested both of the
+ * endpoints below, which is how one dashboard load came to hit the app's most
+ * expensive route twice.
+ */
 export const dashboardApi = {
-  async getAll() {
-    try {
-      const [stats, metrics, tasks, activities] = await Promise.all([
-        dashboardStatsApi.getStats(),
-        dashboardMetricsApi.getMetrics(),
-        tasksApi.getDueToday(),
-        systemActivityApi.getAll(),
-      ]);
-
-      return {
-        stats,
-        metrics,
-        tasks,
-        activities,
-      };
-    } catch (error) {
-      logger.error('Failed to fetch all dashboard data', error);
-      throw error;
-    }
-  },
-
-  async refresh() {
-    logger.info('Refreshing dashboard data...');
-    return this.getAll();
-  },
-
   stats: dashboardStatsApi,
   metrics: dashboardMetricsApi,
   tasks: tasksApi,
-  activity: systemActivityApi,
 };
 
 export const systemHealthApi = {
