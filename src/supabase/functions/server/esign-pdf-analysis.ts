@@ -524,7 +524,28 @@ function groupItemsIntoLines(
   const lines: Array<{ text: string; rect: [number, number, number, number] }> = [];
   for (const bucket of buckets.values()) {
     bucket.sort((a, b) => a.transform[4] - b.transform[4]);
-    const text = bucket.map((b) => b.str).join('');
+    // Join with a space wherever the PDF leaves a visible horizontal gap.
+    // pdfjs hands back a caption like "First name" as two items and does not
+    // always emit the space between them; concatenating blind produced
+    // "Firstname", which no `\s+` caption pattern can match — so those blanks
+    // lost their label (and their prefill token) and fell through to the
+    // generic rule below.
+    let text = '';
+    let prevEnd: number | null = null;
+    for (const item of bucket) {
+      const startX = item.transform[4];
+      const gap = prevEnd === null ? 0 : startX - prevEnd;
+      if (
+        prevEnd !== null &&
+        gap > Math.max(1, (item.height || 10) * 0.2) &&
+        !text.endsWith(' ') &&
+        !item.str.startsWith(' ')
+      ) {
+        text += ' ';
+      }
+      text += item.str;
+      prevEnd = startX + (item.width ?? 0);
+    }
     if (!text.trim()) continue;
     const xs = bucket.map((b) => b.transform[4]);
     const x1 = Math.min(...xs);
@@ -539,6 +560,134 @@ function groupItemsIntoLines(
 }
 
 /**
+ * The slice of `RegExpMatchArray` the geometry helper actually reads. The
+ * generic blank rule below synthesises these rather than running a regex per
+ * candidate, so the helper takes the narrow shape instead of a full match.
+ */
+export interface AnchorMatch {
+  0: string;
+  index?: number;
+}
+
+/** One proposed field found on a single line of text. */
+export interface LineAnchor {
+  match: AnchorMatch;
+  type: FieldCandidate['type'];
+  label: string;
+  prefillToken?: string;
+  /** Span claimed in the line text, so passes don't propose the same blank twice. */
+  start: number;
+  end: number;
+}
+
+/**
+ * An underscore run this long with no caption in front of it is a decorative
+ * rule (a page divider, a signature baseline drawn across the sheet), not a
+ * blank waiting to be filled.
+ */
+const DECORATIVE_RUN_CHARS = 60;
+
+/**
+ * Label a generic blank from the words immediately before it.
+ *
+ * Only the text after the previous blank on the same line counts, so
+ * `Name: ____ Surname: ____` labels the second field "Surname" rather than
+ * dragging the first caption along with it.
+ */
+function captionBefore(lineText: string, blankStart: number): string {
+  const previousBlankEnd = lineText.lastIndexOf('_', blankStart - 1);
+  const before = lineText.slice(previousBlankEnd + 1, blankStart);
+  // Trailing separators belong to the caption's punctuation, not its text.
+  const caption = before.replace(/[\s:\-–]+$/, '').trim();
+  if (!caption) return '';
+  // A caption sits at the END of the preceding text — anything earlier is
+  // the sentence or section heading it was printed under.
+  const words = caption.split(/\s+/).slice(-5).join(' ');
+  return words.length > 40 ? words.slice(words.length - 40).trim() : words;
+}
+
+/**
+ * Find every field a single line of text proposes.
+ *
+ * Two passes, because the specific patterns carry meaning the generic rule
+ * cannot infer — a signature block, or a caption bound to a CRM prefill token:
+ *
+ *   1. `ANCHOR_PATTERNS`, specific-first, every occurrence on the line. A
+ *      later match is dropped when its span overlaps one already claimed
+ *      ("First name:" also matches the generic "Name" pattern).
+ *   2. Every blank the first pass left, as a plain text field labelled from
+ *      the caption in front of it.
+ *
+ * Pass 2 is what makes the scan useful on a real form. The patterns in pass 1
+ * only know ten identity captions, so a document full of ordinary blanks
+ * ("Occupation: ____", "Policy number: ____") used to come back with nothing
+ * but its signature and date lines.
+ *
+ * Exported for unit tests.
+ */
+export function findLineAnchors(lineText: string): LineAnchor[] {
+  const claimed: Array<[number, number]> = [];
+  const anchors: LineAnchor[] = [];
+
+  for (const { pattern, type, label, prefillToken } of ANCHOR_PATTERNS) {
+    const global = new RegExp(
+      pattern.source,
+      pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`,
+    );
+    for (const m of lineText.matchAll(global)) {
+      const start = m.index ?? 0;
+      let text = m[0];
+      let end = start + text.length;
+      // Swallow a trailing blank the pattern itself did not take (caption-only
+      // patterns like "Sign here" stop at the caption), so pass 2 does not
+      // propose a second field over the very same underscores.
+      const tail = /^\s*_{3,}/.exec(lineText.slice(end));
+      if (tail) {
+        text += tail[0];
+        end += tail[0].length;
+      }
+      if (claimed.some(([s, e]) => start < e && end > s)) continue;
+      claimed.push([start, end]);
+      anchors.push({ match: { 0: text, index: start }, type, label, prefillToken, start, end });
+    }
+  }
+
+  // A fillable blank: three or more underscores in a row.
+  for (const m of lineText.matchAll(/_{3,}/g)) {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    if (claimed.some(([s, e]) => start < e && end > s)) continue;
+    const label = captionBefore(lineText, start);
+    if (!label && m[0].length >= DECORATIVE_RUN_CHARS) continue;
+    claimed.push([start, end]);
+    anchors.push({
+      match: { 0: m[0], index: start },
+      type: 'text',
+      label: label || 'Text field',
+      start,
+      end,
+    });
+  }
+
+  return anchors.sort((a, b) => a.start - b.start);
+}
+
+/** Breathing room between a field's right edge and the next caption. */
+const FIELD_GUTTER_PT = 4;
+
+/**
+ * Approximate the x of a character index within a line, by its position in
+ * the line's own text. Same assumption `rectForAnchor` makes.
+ */
+function xForCharIndex(
+  line: { text: string; rect: [number, number, number, number] },
+  index: number,
+): number {
+  const [x1, , x2] = line.rect;
+  return x1 + (x2 - x1) * (index / Math.max(line.text.length, 1));
+}
+
+/**
  * For an anchor match like `Signature: ____________`, place the candidate
  * field over the trailing underscore run rather than the whole line so the
  * sender doesn't get a field that overlaps the caption.
@@ -547,7 +696,7 @@ function groupItemsIntoLines(
  */
 export function rectForAnchor(
   line: { text: string; rect: [number, number, number, number] },
-  match: RegExpMatchArray,
+  match: AnchorMatch,
   type: FieldCandidate['type'],
   pageWidthPt: number,
 ): [number, number, number, number] {
@@ -610,20 +759,21 @@ export async function detectSmartAnchors(buffer: Uint8Array): Promise<AnalysisRe
       const lines = groupItemsIntoLines(content.items, pageHeightPt);
 
       for (const line of lines) {
-        // A line can legitimately carry several anchors ("Signature: ___
-        // Date: ___"), but overlapping matches are the same anchor seen by
-        // two patterns ("First name:" also matches the generic "Name"
-        // pattern). Patterns are ordered specific-first; a later match is
-        // dropped when its span overlaps an already-claimed one.
-        const claimed: Array<[number, number]> = [];
-        for (const { pattern, type, label, prefillToken } of ANCHOR_PATTERNS) {
-          const match = line.text.match(pattern);
-          if (!match) continue;
-          const start = match.index ?? 0;
-          const end = start + match[0].length;
-          if (claimed.some(([s, e]) => start < e && end > s)) continue;
-          claimed.push([start, end]);
-          const [x1, y1, x2, y2] = rectForAnchor(line, match, type, pageWidthPt);
+        const anchors = findLineAnchors(line.text);
+        const rects = anchors.map((a) => rectForAnchor(line, a.match, a.type, pageWidthPt));
+        // A field must not run into the next blank on the same line. The type
+        // minimum in `rectForAnchor` is a floor for a lone blank, not licence
+        // to cover the caption that follows: on "Name: ____ Surname: ____"
+        // both blanks are shorter than the 140pt text minimum, so without this
+        // the first suggestion lands on top of the second.
+        for (let i = 0; i < rects.length - 1; i++) {
+          const nextStartX = xForCharIndex(line, anchors[i + 1].start);
+          const limit = nextStartX - FIELD_GUTTER_PT;
+          if (rects[i][2] > limit) rects[i][2] = Math.max(limit, rects[i][0] + 1);
+        }
+
+        for (const [index, { match, type, label, prefillToken }] of anchors.entries()) {
+          const [x1, y1, x2, y2] = rects[index];
           // Convert PDF-space (origin bottom-left) → x/y percentage with y
           // from top; width/height stay in PDF points, taken verbatim from
           // the rect — rectForAnchor already applied the type minimums with
