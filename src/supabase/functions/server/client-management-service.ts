@@ -28,34 +28,13 @@ import {
   resolveContactEmail,
 } from './client-email-identity.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
+import { mgetBatched } from './kv-batch.ts';
 
 const log = createModuleLogger('clients-service');
 
 // Helper to create Supabase client
 function createServiceClient() {
   return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-}
-
-/**
- * `kv.mget` filters with PostgREST's `in.(...)`, which travels in the request
- * URL, so one batch cannot hold an unbounded key list. 200 keys keeps a batch
- * of `user_profile:<uuid>:personal_info` keys around 12KB — comfortably inside
- * every gateway limit — while still collapsing thousands of individual reads
- * into a handful of round trips.
- */
-const KV_BATCH_SIZE = 200;
-
-/** Read many keys as a few batched queries, preserving the order of `keys`. */
-async function mgetBatched<T>(keys: string[]): Promise<(T | undefined)[]> {
-  if (keys.length === 0) return [];
-
-  const batches: string[][] = [];
-  for (let i = 0; i < keys.length; i += KV_BATCH_SIZE) {
-    batches.push(keys.slice(i, i + KV_BATCH_SIZE));
-  }
-
-  const results = await Promise.all(batches.map((batch) => kv.mget(batch)));
-  return results.flat();
 }
 
 export class ClientsService {

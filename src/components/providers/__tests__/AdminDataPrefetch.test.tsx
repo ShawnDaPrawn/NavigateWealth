@@ -18,6 +18,7 @@ import { makeTestQueryClient } from '../../../test/utils';
 
 const mockUnsubscribe = vi.fn();
 const mockPrefetchDashboardData = vi.fn();
+const mockPreloadAdminModule = vi.fn();
 let authCallback: ((authUser: unknown, meta: unknown) => unknown) | null = null;
 
 vi.mock('../../../utils/auth', () => ({
@@ -29,6 +30,10 @@ vi.mock('../../../utils/auth', () => ({
 
 vi.mock('../../admin/modules/dashboard', () => ({
   prefetchDashboardData: (...args: unknown[]) => mockPrefetchDashboardData(...args),
+}));
+
+vi.mock('../../admin/moduleLoaders', () => ({
+  preloadAdminModule: (...args: unknown[]) => mockPreloadAdminModule(...args),
 }));
 
 vi.mock('../../../utils/logger', () => ({
@@ -135,10 +140,12 @@ describe('AdminDataPrefetch', () => {
     expect(authCallback).toBeNull();
   });
 
-  it('does not spend the requests when another admin module is deep-linked', () => {
+  it('does not spend the dashboard requests when another module is deep-linked', () => {
     setLocation('/admin?module=clients');
     renderPrefetch();
+    // No auth subscription at all: the dashboard's data is not wanted here.
     expect(authCallback).toBeNull();
+    expect(mockPrefetchDashboardData).not.toHaveBeenCalled();
   });
 
   it('still prefetches when the dashboard module is named explicitly', async () => {
@@ -228,5 +235,39 @@ describe('AdminDataPrefetch — never blocks the auth callback', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(unhandled).not.toHaveBeenCalled();
     process.off('unhandledRejection', unhandled);
+  });
+});
+
+// ── Chunk warming ────────────────────────────────────────────────────────────
+//
+// Data and chunk are different bets. Requesting `/admin/stats` for a page that
+// renders Client Management is waste; downloading the chunk that page is about
+// to render is not, and nothing about that download depends on auth.
+
+describe('AdminDataPrefetch — module chunk warming', () => {
+  it('warms the dashboard chunk on a bare /admin', () => {
+    renderPrefetch();
+    expect(mockPreloadAdminModule).toHaveBeenCalledWith('dashboard');
+  });
+
+  it('warms the deep-linked module’s chunk instead of bailing', () => {
+    setLocation('/admin?module=clients');
+    renderPrefetch();
+    expect(mockPreloadAdminModule).toHaveBeenCalledWith('clients');
+  });
+
+  it('warms nothing outside the admin route', () => {
+    setLocation('/dashboard');
+    renderPrefetch();
+    expect(mockPreloadAdminModule).not.toHaveBeenCalled();
+  });
+
+  it('does not wait for a session before warming', () => {
+    // The chunk is needed whoever is signing in, so this must not sit behind
+    // the auth event the way the data prefetch does.
+    setLocation('/admin?module=reporting');
+    renderPrefetch();
+    expect(mockPreloadAdminModule).toHaveBeenCalledWith('reporting');
+    expect(authCallback).toBeNull();
   });
 });
