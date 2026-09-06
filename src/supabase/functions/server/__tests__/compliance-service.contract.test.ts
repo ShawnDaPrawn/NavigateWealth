@@ -467,3 +467,53 @@ describe('compliance summary', () => {
     expect(Date.parse(summary.lastUpdated)).toBeGreaterThanOrEqual(before - 1000);
   });
 });
+
+// ── The summary's four scans overlap ─────────────────────────────────────────
+//
+// FAIS, AML, POPIA and debarment live in four unrelated namespaces, so the
+// summary reads them together. They used to be awaited one after another, which
+// made opening the Compliance module cost the sum of four scans rather than the
+// slowest one. Nothing about the counts changes if that regresses — only the
+// latency — so the overlap needs its own assertion.
+
+describe('getComplianceSummary — the scans run together', () => {
+  const service = new ComplianceService();
+
+  it('starts every namespace scan before the first one has resolved', async () => {
+    const kv = await import('../kv_store.tsx');
+    const started: string[] = [];
+    let releaseFirst: (() => void) | undefined;
+    const firstScanStarted = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    // Reads the backing store directly rather than delegating: `spyOn` replaces
+    // the live binding, so calling through it would recurse into this mock.
+    const spy = vi
+      .spyOn(kv, 'getByPrefix')
+      .mockImplementation(async (prefix: string): Promise<unknown[]> => {
+        started.push(prefix);
+        // Hold the FAIS scan open. If the others awaited it, they would not
+        // have been issued by the time the test looks.
+        if (prefix === 'compliance_fais:') {
+          releaseFirst?.();
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        const rows: unknown[] = [];
+        kvStore.forEach((value, key) => {
+          if (key.startsWith(prefix)) rows.push(value);
+        });
+        return rows;
+      });
+
+    const pending = service.getComplianceSummary();
+    await firstScanStarted;
+
+    expect(started).toContain('compliance_aml:');
+    expect(started).toContain('compliance_popia:');
+    expect(started).toContain('compliance_debarment:');
+
+    await pending;
+    spy.mockRestore();
+  });
+});

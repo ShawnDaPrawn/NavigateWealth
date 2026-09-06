@@ -18,6 +18,7 @@ import { AdminModule, PendingCounts } from './types';
 import { alwaysShowCounterModules, moduleConfig, moduleGroups, operationsModules } from './config';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUserPermissions } from '../modules/personnel';
+import { preloadAdminModule } from '../moduleLoaders';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { InstallAppMenuItem } from './InstallAppMenuItem';
@@ -290,6 +291,15 @@ function SidebarContent({
                         onModuleChange(module);
                         setMobileOpen(false);
                       }}
+                      // Navigation intent: start the module's chunk downloading
+                      // while the pointer is still on the item, so the click
+                      // lands on a chunk that has already arrived rather than
+                      // starting the download. Idempotent and fire-and-forget.
+                      onMouseEnter={() => preloadAdminModule(module)}
+                      onFocus={() => preloadAdminModule(module)}
+                      // Touch has no hover, but there is still a beat between
+                      // finger-down and the click firing.
+                      onTouchStart={() => preloadAdminModule(module)}
                       variant="ghost"
                       aria-current={isActive ? 'page' : undefined}
                       aria-label={collapsed && !isMobile ? config.label : undefined}

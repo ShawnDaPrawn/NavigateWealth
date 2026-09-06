@@ -5,6 +5,7 @@
 
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
+import { mgetBatched, mgetIdLists, mgetKeyed } from './kv-batch.ts';
 import type {
   EsignDocument,
   EsignEnvelope,
@@ -311,58 +312,60 @@ export async function getClientEnvelopes(
     const envelopeIdSet = new Set([...clientLinkedIds, ...emailLinkedIds]);
     const envelopeIds = Array.from(envelopeIdSet);
 
-    const envelopes = await Promise.all(
-      envelopeIds.map(async (envelopeId: string) => {
-        const envelope = await kv.get(EsignKeys.envelope(envelopeId));
-        if (!envelope) return null;
-        // P6.8 — hide soft-deleted envelopes from client-facing lists.
-        if ((envelope as { deleted_at?: string }).deleted_at) return null;
-
-        // Document, signer list, field list and audit list are independent of
-        // one another; only the envelope had to be read first. Fetched
-        // together rather than in four serial steps — and this block runs once
-        // per envelope, so the saving multiplies by the size of the list.
-        const [document, rawSignerIds, rawFieldIds, rawAuditIds] = await Promise.all([
-          kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id),
-          kv.get(EsignKeys.envelopeSigners(envelopeId)),
-          kv.get(EsignKeys.envelopeFields(envelopeId)),
-          kv.get(EsignKeys.envelopeAudit(envelopeId)),
-        ]);
-
-        // Guard against corrupt KV values
-        const signerIds = Array.isArray(rawSignerIds) ? rawSignerIds : [];
-        const fieldIds = Array.isArray(rawFieldIds) ? rawFieldIds : [];
-
-        const validFieldIds: string[] = fieldIds.filter(
-          (item: unknown) => typeof item === 'string',
-        ) as string[];
-
-        const auditIds = rawAuditIds || [];
-        const recentAuditIds = auditIds.slice(-5); // Last 5 events
-
-        // Second wave: every id list is known, so all three hydrations go out
-        // together too.
-        const [signers, fields, auditEvents] = await Promise.all([
-          Promise.all(signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id))),
-          Promise.all(validFieldIds.map((id: string) => kv.get(EsignKeys.field(id)))),
-          Promise.all(recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id))),
-        ]);
-
-        // Calculate counts
-        const totalSigners = signers.filter(Boolean).length;
-        const signedCount = signers.filter((s: EsignSigner) => s && s.status === 'signed').length;
-
-        return {
-          ...envelope,
-          document,
-          signers: signers.filter(Boolean),
-          fields: fields.filter(Boolean),
-          totalSigners,
-          signedCount,
-          audit_events: auditEvents.filter(Boolean),
-        };
-      }),
+    // ── Batched enrichment ──────────────────────────────────────────────
+    // Each envelope used to hydrate itself: its own row, then its own index
+    // lists, then its own signers/fields/audit events. The waves inside one
+    // envelope were already parallel, but the whole block ran once per
+    // envelope, so a client with a long signing history opened a Postgres
+    // client per row read. These are the same rows in a fixed number of
+    // batched queries instead.
+    const envelopeRows = await mgetBatched<EsignEnvelope>(
+      envelopeIds.map((id) => EsignKeys.envelope(id)),
     );
+
+    // P6.8 — hide soft-deleted envelopes from client-facing lists.
+    const liveEnvelopes = envelopeRows.filter(
+      (e): e is EsignEnvelope => !!e && !(e as { deleted_at?: string }).deleted_at,
+    );
+
+    const [signerIdLists, fieldIdLists, auditIdLists] = await Promise.all([
+      mgetIdLists(liveEnvelopes.map((e) => EsignKeys.envelopeSigners(e.id))),
+      mgetIdLists(liveEnvelopes.map((e) => EsignKeys.envelopeFields(e.id))),
+      mgetIdLists(liveEnvelopes.map((e) => EsignKeys.envelopeAudit(e.id))),
+    ]);
+
+    // Field ids have carried non-string junk before, hence the guard the
+    // per-envelope version applied; keep it.
+    const validFieldIdLists = fieldIdLists.map((ids) =>
+      ids.filter((item: unknown) => typeof item === 'string'),
+    );
+    const recentAuditIdLists = auditIdLists.map((ids) => ids.slice(-5)); // Last 5 events
+
+    const [documentsById, signersById, fieldsById, auditById] = await Promise.all([
+      mgetKeyed<Record<string, unknown>>(
+        EsignKeys.PREFIX_DOCUMENT,
+        liveEnvelopes.map((e) => e.document_id).filter(Boolean) as string[],
+      ),
+      mgetKeyed<EsignSigner>(EsignKeys.PREFIX_SIGNER, signerIdLists.flat()),
+      mgetKeyed<Record<string, unknown>>(EsignKeys.PREFIX_FIELD, validFieldIdLists.flat()),
+      mgetKeyed<Record<string, unknown>>(EsignKeys.PREFIX_AUDIT, recentAuditIdLists.flat()),
+    ]);
+
+    const envelopes = liveEnvelopes.map((envelope, index) => {
+      const signers = signerIdLists[index]
+        .map((id) => signersById.get(id))
+        .filter(Boolean) as EsignSigner[];
+
+      return {
+        ...envelope,
+        document: envelope.document_id ? (documentsById.get(envelope.document_id) ?? null) : null,
+        signers,
+        fields: validFieldIdLists[index].map((id) => fieldsById.get(id)).filter(Boolean),
+        totalSigners: signers.length,
+        signedCount: signers.filter((s: EsignSigner) => s.status === 'signed').length,
+        audit_events: recentAuditIdLists[index].map((id) => auditById.get(id)).filter(Boolean),
+      };
+    });
 
     return envelopes
       .filter(Boolean)
@@ -403,51 +406,66 @@ export async function getAllEnvelopes(status?: string): Promise<Record<string, u
       filtered = filtered.filter((e: EsignEnvelope) => e.status === status);
     }
 
-    // Enrich with signers/recipients and document info for display in list
-    const enrichedEnvelopes = await Promise.all(
-      filtered.map(async (envelope: EsignEnvelope) => {
-        // Fetch signers — guard against corrupt KV values
-        const rawSIds = await kv.get(EsignKeys.envelopeSigners(envelope.id));
-        const signerIds = Array.isArray(rawSIds) ? rawSIds : [];
-        const signers = await Promise.all(
-          signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
-        );
-        const validSigners = signers.filter(Boolean);
+    // ── Batched enrichment ──────────────────────────────────────────────
+    // This used to run per envelope: await the signer-id list, then await each
+    // signer, then await the document, then await the audit-id list, then await
+    // each audit row. That is three serial legs and roughly (signers + 10)
+    // individual `kv.get`s FOR EVERY ROW IN THE LIST, each opening its own
+    // Postgres client — so the cost of opening E-Signature grew with the number
+    // of envelopes times the number of signers on them.
+    //
+    // The same rows are now read in a fixed number of batched queries: the two
+    // index lists together, then the signers, documents and audit events
+    // together. Nothing about the response changes.
+    const [signerIdLists, auditIdLists] = await Promise.all([
+      mgetIdLists(filtered.map((e: EsignEnvelope) => EsignKeys.envelopeSigners(e.id))),
+      mgetIdLists(filtered.map((e: EsignEnvelope) => EsignKeys.envelopeAudit(e.id))),
+    ]);
 
-        // Fetch document
-        const document = envelope.document_id
-          ? await kv.get(EsignKeys.PREFIX_DOCUMENT + envelope.document_id)
-          : null;
+    // Only the last 10 audit events per envelope are displayed, so only those
+    // are fetched — the index can be long on a well-travelled envelope.
+    const recentAuditIdLists = auditIdLists.map((ids) => ids.slice(-10));
 
-        // Fetch recent audit events (last 10 for display) — guard against corrupt KV values
-        const rawAIds = await kv.get(EsignKeys.envelopeAudit(envelope.id));
-        const auditIds = Array.isArray(rawAIds) ? rawAIds : [];
-        const recentAuditIds = auditIds.slice(-10);
-        const auditEvents = await Promise.all(
-          recentAuditIds.map((id: string) => kv.get(EsignKeys.PREFIX_AUDIT + id)),
-        );
+    const [signersById, documentsById, auditById] = await Promise.all([
+      mgetKeyed<EsignSigner>(EsignKeys.PREFIX_SIGNER, signerIdLists.flat()),
+      mgetKeyed<Record<string, unknown>>(
+        EsignKeys.PREFIX_DOCUMENT,
+        filtered.map((e: EsignEnvelope) => e.document_id).filter(Boolean) as string[],
+      ),
+      mgetKeyed<Record<string, unknown>>(EsignKeys.PREFIX_AUDIT, recentAuditIdLists.flat()),
+    ]);
 
-        return {
-          ...envelope,
-          document,
-          signers: validSigners,
-          recipients: validSigners.map((s: EsignSigner) => ({
-            id: s.id,
-            name: s.name,
-            email: s.email,
-            status: s.status,
-            role: s.role,
-            signed_at: s.signed_at,
-            otp_required: s.requires_otp,
-          })),
-          audit_events: auditEvents.filter(Boolean),
-          totalSigners: validSigners.length,
-          signedCount: validSigners.filter((s: EsignSigner) => s.status === 'signed').length,
-          createdAt: envelope.created_at,
-          updatedAt: envelope.updated_at,
-        };
-      }),
-    );
+    const enrichedEnvelopes = filtered.map((envelope: EsignEnvelope, index: number) => {
+      const validSigners = signerIdLists[index]
+        .map((id) => signersById.get(id))
+        .filter(Boolean) as EsignSigner[];
+
+      const document = envelope.document_id
+        ? (documentsById.get(envelope.document_id) ?? null)
+        : null;
+
+      const auditEvents = recentAuditIdLists[index].map((id) => auditById.get(id)).filter(Boolean);
+
+      return {
+        ...envelope,
+        document,
+        signers: validSigners,
+        recipients: validSigners.map((s: EsignSigner) => ({
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          status: s.status,
+          role: s.role,
+          signed_at: s.signed_at,
+          otp_required: s.requires_otp,
+        })),
+        audit_events: auditEvents,
+        totalSigners: validSigners.length,
+        signedCount: validSigners.filter((s: EsignSigner) => s.status === 'signed').length,
+        createdAt: envelope.created_at,
+        updatedAt: envelope.updated_at,
+      };
+    });
 
     return enrichedEnvelopes.sort(
       (a: Record<string, unknown>, b: Record<string, unknown>) =>

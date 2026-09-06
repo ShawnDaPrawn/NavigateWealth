@@ -66,28 +66,39 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { onAuthStateChange } from '../../utils/auth';
 import { buildAppUserFromAuthSessionFallback } from '../../utils/auth/profileService';
+import { preloadAdminModule } from '../admin/moduleLoaders';
+import type { AdminModule } from '../admin/layout/types';
 import { logger } from '../../utils/logger';
 
 /**
- * True when this page load is heading for the admin dashboard itself.
+ * The admin module this page load is heading for, or `null` when it is not
+ * heading into `/admin` at all.
  *
  * `/admin` renders whichever module `?module=` names, defaulting to the
- * dashboard. Prefetching for `?module=clients` would spend a request on the
- * heaviest route in the app for a page that never reads it.
+ * dashboard.
  */
-function isHeadingForAdminDashboard(): boolean {
-  if (typeof window === 'undefined') return false;
+function targetAdminModule(): AdminModule | null {
+  if (typeof window === 'undefined') return null;
   const { pathname, search } = window.location;
-  if (pathname !== '/admin') return false;
-  const activeModule = new URLSearchParams(search).get('module');
-  return !activeModule || activeModule === 'dashboard';
+  if (pathname !== '/admin') return null;
+  return (new URLSearchParams(search).get('module') as AdminModule | null) ?? 'dashboard';
 }
 
 export function AdminDataPrefetch() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!isHeadingForAdminDashboard()) return;
+    const target = targetAdminModule();
+    if (!target) return;
+
+    // Whatever module the URL names, its chunk is needed and nothing about the
+    // download depends on auth — so start it now rather than after hydration.
+    // Only the dashboard's DATA is prefetched below; spending requests on a
+    // module the page will not render is a different matter from spending
+    // bandwidth on a chunk it certainly will.
+    preloadAdminModule(target);
+
+    if (target !== 'dashboard') return;
 
     let done = false;
 

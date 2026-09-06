@@ -356,10 +356,15 @@ export class ComplianceService {
    * Get compliance summary
    */
   async getComplianceSummary(): Promise<ComplianceSummary> {
-    const faisRecords = await this.getFAISRecords();
-    const amlChecks = await this.getAMLChecks();
-    const popiaConsents = await this.getPOPIAConsents();
-    const debarmentChecks = await this.getDebarmentChecks();
+    // Four unrelated namespaces, so they are scanned together rather than one
+    // after another. This is the Compliance module's landing endpoint, and the
+    // sequential version made opening it cost the sum of all four scans.
+    const [faisRecords, amlChecks, popiaConsents, debarmentChecks] = await Promise.all([
+      this.getFAISRecords(),
+      this.getAMLChecks(),
+      this.getPOPIAConsents(),
+      this.getDebarmentChecks(),
+    ]);
 
     // Count active/valid records
     const activeFAIS = faisRecords.filter((r) => r.status === 'active').length;
@@ -413,10 +418,15 @@ export class ComplianceService {
     // Collect all compliance events
     const events: Array<Record<string, unknown> & { event_type: string; timestamp: string }> = [];
 
-    const faisRecords = await this.getFAISRecords();
-    const amlChecks = await this.getAMLChecks();
-    const popiaConsents = await this.getPOPIAConsents();
-    const debarmentChecks = await this.getDebarmentChecks();
+    // Four unrelated namespaces, so they are scanned together rather than one
+    // after another. This is the Compliance module's landing endpoint, and the
+    // sequential version made opening it cost the sum of all four scans.
+    const [faisRecords, amlChecks, popiaConsents, debarmentChecks] = await Promise.all([
+      this.getFAISRecords(),
+      this.getAMLChecks(),
+      this.getPOPIAConsents(),
+      this.getDebarmentChecks(),
+    ]);
 
     // Add all events with type
     faisRecords.forEach((r) => events.push({ ...r, event_type: 'fais', timestamp: r.created_at }));
