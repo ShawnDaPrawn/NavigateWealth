@@ -278,6 +278,10 @@ describe('POST /chat/stream', () => {
       CLIENT,
       [{ role: 'user', content: 'hi' }],
       undefined,
+      // 4th arg: the request Origin, forwarded so the SSE response answers CORS
+      // from the allow-list instead of '*' (cors-origin.ts). `call()` sends no
+      // Origin header, so it arrives undefined.
+      undefined,
     );
   });
 
@@ -288,7 +292,7 @@ describe('POST /chat/stream', () => {
       body: JSON.stringify({ messages: [], sessionId: 's-42' }),
     });
 
-    expect(chat.buildAdvisorSseResponse).toHaveBeenCalledWith(CLIENT, [], 's-42');
+    expect(chat.buildAdvisorSseResponse).toHaveBeenCalledWith(CLIENT, [], 's-42', undefined);
   });
 
   it('reports a failure as a 500 rather than a broken stream', async () => {

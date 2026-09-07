@@ -35,6 +35,7 @@ import {
 import type { ProviderTerminologyMap, FieldDiff } from './policy-extraction-types.ts';
 import { recalculateClientTotals } from './integrations-derive.ts';
 import { OPENAI_PRIMARY_MODEL } from './ai-model-config.ts';
+import { corsResponseHeaders } from './cors-origin.ts';
 
 const app = new Hono();
 const log = createModuleLogger('integrations-policy-extraction');
@@ -970,7 +971,8 @@ app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
       headers: {
         'Content-Type': 'application/x-ndjson',
         'Transfer-Encoding': 'chunked',
-        'Access-Control-Allow-Origin': '*',
+        // Allow-list, not '*' — this stream reports extracted policy data.
+        ...corsResponseHeaders(c.req.header('origin')),
         'Cache-Control': 'no-cache',
       },
     });

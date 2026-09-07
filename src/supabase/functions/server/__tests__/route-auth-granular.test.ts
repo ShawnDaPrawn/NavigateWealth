@@ -82,7 +82,7 @@ const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/route-auth-baseline');
 
 /** Kept in sync with router-auth-guard.test.ts, plus the portal-worker secret guard. */
 const AUTH_MARKERS =
-  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken|requirePortalWorker/;
+  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken|requirePortalWorker|requirePrimaryAuth/;
 
 /** Hono route registration with a literal path starting `/`. */
 const ROUTE_RE = /\b(\w+)\.(get|post|put|patch|delete)\(\s*(['"`])(\/[^'"`]*)\3/g;

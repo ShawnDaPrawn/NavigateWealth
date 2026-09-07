@@ -19,6 +19,7 @@ import { downloadDocument } from './esign-storage.ts';
 import { generateCompletionCertificate } from './esign-certificates.ts';
 import { buildEvidencePack } from './esign-evidence-export.ts';
 import { getReminderConfig, setReminderConfig } from './esign-automation.ts';
+import { corsResponseHeaders } from './cors-origin.ts';
 
 const log = createModuleLogger('esign-sender-download-routes');
 
@@ -378,9 +379,11 @@ app.get('/envelopes/:envelopeId/audit/export', async (c) => {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="audit-trail-${envelopeId.slice(0, 8)}.csv"`,
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
+        // Allow-list, not '*' — this CSV is a signing audit trail (signer
+        // emails, IP addresses). The method/header lines the '*' came with are
+        // preflight concerns and are answered by the cors() middleware in
+        // create-app.ts; a response to an actual GET does not need them.
+        ...corsResponseHeaders(c.req.header('origin')),
       },
     });
   } catch (error: unknown) {

@@ -33,6 +33,7 @@ import {
   resolveSecurityContact,
   type UserSecurityStatus,
 } from './security-shared.ts';
+import { secureRandomDigits, constantTimeEqual } from './crypto-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
@@ -206,8 +207,19 @@ app.post('/:userId/2fa/send-code', requirePrimaryAuth, async (c) => {
       return c.json({ success: false, error: 'No email address found for user' }, 400);
     }
 
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit code.
+    //
+    // CSPRNG, not Math.random(). `Math.random()` is a fast non-cryptographic
+    // PRNG whose internal state is recoverable from a handful of observed
+    // outputs, after which every subsequent code is predictable (CWE-338) —
+    // and this is the code that stands between a stolen password and a client's
+    // account. `secureRandomDigits` draws from crypto.getRandomValues with
+    // rejection sampling, so the digits are uniform and unpredictable.
+    //
+    // The e-sign OTP path (esign-otp.ts) has always used the CSPRNG helper;
+    // this login path was written before crypto-utils.ts existed and was the
+    // last Math.random()-derived secret left in the server.
+    const code = secureRandomDigits(6);
 
     // Store code with expiration (5 minutes)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -323,7 +335,11 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
     }
 
     // ── Verify code ──────────────────────────────────────────────
-    if (storedData.code !== code) {
+    // Constant-time compare: `!==` returns as soon as two characters differ,
+    // so its timing leaks how many leading digits were correct — enough to
+    // recover a code digit-by-digit rather than guessing all 10^6 (CWE-208).
+    // Same helper every other secret comparison in the server uses.
+    if (!constantTimeEqual(String(storedData.code ?? ''), String(code ?? ''))) {
       log.info('❌ Invalid 2FA code');
 
       // Increment per-code attempts
