@@ -12,6 +12,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { newsletterSubscriberRecords } from './repositories/newsletter-studio-repository.ts';
 import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
 import {
   addNewsletterSubscriber,
@@ -430,12 +431,17 @@ export async function autoSubscribeClient(
  * subscribed.  Explicitly unsubscribed clients (active: false) are
  * skipped to honour their opt-out.
  *
- * Returns { added, skipped, alreadySubscribed, errors } for audit.
+ * An already-subscribed client is not re-subscribed, but their stored NAME is
+ * refreshed when the profile disagrees with it — see the loop below for why
+ * that is not merely tidying.
+ *
+ * Returns { added, skipped, alreadySubscribed, renamed, errors } for audit.
  */
 export async function reconcileClientsToSubscribers(): Promise<{
   added: number;
   skippedUnsubscribed: number;
   alreadySubscribed: number;
+  renamed: number;
   errors: string[];
   totalClients: number;
   totalSubscribersBefore: number;
@@ -488,6 +494,7 @@ export async function reconcileClientsToSubscribers(): Promise<{
   let added = 0;
   let skippedUnsubscribed = 0;
   let alreadySubscribed = 0;
+  let renamed = 0;
 
   // 3. Create missing newsletter entries
   for (const [, client] of clientEmails) {
@@ -500,9 +507,50 @@ export async function reconcileClientsToSubscribers(): Promise<{
         continue;
       }
 
-      // Already active and confirmed
+      // Already active and confirmed — subscribe nothing, but the stored name
+      // is not left alone.
+      //
+      // `resolveAudience` personalises a subscriber-list campaign from the name
+      // frozen on this record, NOT from the client's profile. This branch used
+      // to `continue` outright, so a client corrected on their profile kept
+      // being greeted by the old name in every newsletter — and it is precisely
+      // the long-standing subscribers who land here, the ones most likely to be
+      // mailed. Reading the profile correctly upstream fixes nothing while the
+      // stale copy downstream is the one that gets used.
+      //
+      // Only the name moves. `source`, `confirmed`, `subscribedAt` and
+      // `confirmedAt` are consent provenance and are left exactly as they are:
+      // re-stamping them would rewrite the record of how this person opted in.
       if (existing && existing.confirmed && existing.active) {
         alreadySubscribed++;
+
+        // An absent value never overwrites a stored one — same rule as the
+        // create branch below, so a profile missing a surname cannot blank one.
+        const nextFirstName = client.firstName || existing.firstName || '';
+        const nextSurname = client.surname || existing.surname || '';
+        const nextName = composeName(nextFirstName, nextSurname, existing.name);
+
+        if (
+          nextFirstName !== (existing.firstName || '') ||
+          nextSurname !== (existing.surname || '') ||
+          nextName !== (existing.name || '')
+        ) {
+          // Through the typed repository that already owns this namespace,
+          // rather than a raw `kv.set` — see repositories/kv-repository.ts.
+          await newsletterSubscriberRecords.put(client.email, {
+            ...existing,
+            email: client.email,
+            firstName: nextFirstName,
+            surname: nextSurname,
+            name: nextName,
+          });
+          // And in the Newsletter Contacts group, which campaigns read for
+          // external contacts — leaving it behind would just move the stale
+          // name one hop.
+          await updateNewsletterSubscriberContact(client.email, client.email, nextName);
+          renamed++;
+        }
+
         continue;
       }
 
@@ -538,6 +586,7 @@ export async function reconcileClientsToSubscribers(): Promise<{
     added,
     skippedUnsubscribed,
     alreadySubscribed,
+    renamed,
     errors: errors.length,
   });
 
@@ -545,6 +594,7 @@ export async function reconcileClientsToSubscribers(): Promise<{
     added,
     skippedUnsubscribed,
     alreadySubscribed,
+    renamed,
     errors,
     totalClients,
     totalSubscribersBefore,
