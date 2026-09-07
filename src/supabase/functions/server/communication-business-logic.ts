@@ -448,6 +448,16 @@ export async function processScheduledCampaigns() {
         campaign,
         supabase as unknown as SupabaseAdminClient,
       );
+      const { getUnsubscribeIndex, isUnsubscribed } =
+        await import('./communication-unsubscribes.ts');
+      const unsubscribeIndex = await getUnsubscribeIndex();
+      const eligibleRecipients = recipients.filter(
+        (recipient) =>
+          !isUnsubscribed(unsubscribeIndex, {
+            clientId: recipient.id,
+            email: recipient.email,
+          }),
+      );
       const sendGridAttachments = await processAttachments(
         campaign.attachments || [],
         supabase as unknown as SupabaseAdminClient,
@@ -455,7 +465,7 @@ export async function processScheduledCampaigns() {
       let sentCount = 0;
       let firstFailure: string | undefined;
 
-      for (const recipient of recipients) {
+      for (const recipient of eligibleRecipients) {
         if (!recipient.email) continue;
         const subject = resolveMergeFields(campaign.subject, recipient);
         const htmlBody = createEmailTemplate(resolveMergeFields(campaign.bodyHtml, recipient), {
