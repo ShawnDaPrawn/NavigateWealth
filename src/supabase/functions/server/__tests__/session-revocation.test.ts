@@ -7,15 +7,24 @@
  * leave every issued token alive. A user who changes their password because
  * someone else has it did not evict that someone.
  *
- * The two properties worth pinning are the ones that are easy to get subtly
- * backwards, and both were got backwards once while this was being written:
+ * The property worth pinning is the one that is easy to get subtly backwards,
+ * and it WAS got backwards here first — this block used to argue the opposite
+ * of what the tests below now assert, which is why it is spelled out:
  *
- *   1. A self-service change must NOT sign the caller out. The watermark goes
- *      at the caller's own `iat`, not at `now` — a `now` watermark refuses the
- *      very token that authorised the change, on the caller's next request.
+ *   The cutoff is the CHANGE, with no exception for the caller's own token.
  *
- *   2. An admin reset MUST end every session, including any the target has
- *      open right now, because that is what an administrative reset is for.
+ * The tempting alternative is to watermark at the caller's `iat`, so that the
+ * session performing the change keeps working. That admits every token minted
+ * after it — including one an attacker obtained more recently than the victim,
+ * which is the single session a password change exists to evict. `scope:
+ * 'others'` kills that token's refresh, not the access token already in hand.
+ *
+ * The caller keeps working because the client refreshes immediately afterwards,
+ * not because the server carved it an exception. If the refresh fails the user
+ * signs in again with the password they just set — the cheap failure.
+ *
+ * An admin reset ends every session for the same reason, and has no caller
+ * session to preserve in the first place.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
