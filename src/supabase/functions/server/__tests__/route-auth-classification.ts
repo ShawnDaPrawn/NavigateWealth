@@ -315,17 +315,15 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'vasco-routes.ts POST /session',
     ],
   },
-  // The `require-primary-auth` group that used to sit here is GONE, and its
-  // three routes with it. It existed to carry routes the detector could not
-  // see were guarded, for exactly one reason: `requirePrimaryAuth` was missing
-  // from `AUTH_MARKERS`. That marker is now present (see the note beside it in
-  // route-auth-granular.test.ts), so the detector reports these routes as
-  // guarded on its own and a registry entry claiming the same thing would be
-  // the "fiction" the staleness test exists to catch.
+  // The 'require-primary-auth' entry that used to sit here is gone, and that is
+  // the point: it existed only because `requirePrimaryAuth` was missing from
+  // AUTH_MARKERS, so three genuinely guarded routes were reported as unguarded
+  // and had to be documented as false positives. The marker set now recognises
+  // it, the detector sees the real middleware, and the routes need no entry.
   //
-  // Worth keeping as a note rather than deleting silently: a registry entry
-  // that documents a hole in the analysis is a workaround, and the fix is to
-  // teach the analysis, not to grow the registry.
+  // Removing an entry is normally a red flag — a route losing its guard looks
+  // the same from here. It is safe in this direction only because the detector
+  // got MORE sensitive, not less: the floor moved 129 -> 126.
   {
     kind: 'inline-gate',
     classification: 'guarded',

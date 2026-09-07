@@ -146,7 +146,12 @@ app.post('/chat/stream', requireAuth, async (c) => {
     const user = c.get('user') as { id: string };
     const body = await c.req.json();
     const { messages: clientMessages, sessionId } = body;
-    return await buildAdvisorSseResponse(user.id, clientMessages, sessionId);
+    return await buildAdvisorSseResponse(
+      user.id,
+      clientMessages,
+      sessionId,
+      c.req.header('origin'),
+    );
   } catch (error: unknown) {
     log.error('Streaming chat error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Chat failed' }, 500);
@@ -392,7 +397,7 @@ app.post('/admin/chat/stream', async (c) => {
     }
     const denied = await assertCanProxyClientVasco(c, userId, role, uid);
     if (denied) return denied;
-    return await buildAdvisorSseResponse(uid, clientMessages, sessionId);
+    return await buildAdvisorSseResponse(uid, clientMessages, sessionId, c.req.header('origin'));
   } catch (error: unknown) {
     if (error instanceof AuthError) {
       const ae = error as AuthError;

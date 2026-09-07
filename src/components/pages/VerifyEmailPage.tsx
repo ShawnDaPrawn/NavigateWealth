@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Mail, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { getCurrentUser, getSupabaseClient } from '../../utils/auth';
+import { Mail, CheckCircle2, ArrowLeft, RefreshCw } from 'lucide-react';
+import { getCurrentUser, getSupabaseClient, resendVerificationEmail } from '../../utils/auth';
 import { Logo } from '../layout/Logo';
 import { logger } from '../../utils/logger';
 
@@ -13,6 +13,8 @@ export function VerifyEmailPage() {
   const [email, setEmail] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const [success, setSuccess] = useState('');
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [resendError, setResendError] = useState('');
 
   useEffect(() => {
     // Get email from location state or current user
@@ -52,6 +54,40 @@ export function VerifyEmailPage() {
 
     checkAuthStatus();
   }, [location, navigate]);
+
+  /**
+   * Resend the confirmation link.
+   *
+   * This page is the ONLY reliable place to offer it. Signup now creates an
+   * unconfirmed account (auth-signup.ts), so the confirmation mail is what
+   * unlocks sign-in — and if that first send fails, the person lands here
+   * looking at "check your email" for a mail that never left.
+   *
+   * LoginPage.tsx also has a resend button, but it is rendered only when the
+   * sign-in error text contains "verify your email", which requires Supabase to
+   * answer `Email not confirmed`. For an account created through
+   * `admin.createUser` it can instead answer `Invalid login credentials` —
+   * errorHandler.ts maps that to invalid_credentials, and the button never
+   * appears. Recovery cannot depend on that classification, so it lives here,
+   * where the email address is already known and no error parsing is involved.
+   */
+  const handleResend = async () => {
+    if (!email) {
+      setResendError('Enter your email on the sign-in page to resend the link.');
+      return;
+    }
+    setResendError('');
+    setResendState('sending');
+    try {
+      await resendVerificationEmail(email);
+      setResendState('sent');
+    } catch (err: unknown) {
+      setResendState('idle');
+      setResendError(
+        err instanceof Error ? err.message : 'Could not resend the verification email.',
+      );
+    }
+  };
 
   const handleBackToSignIn = () => {
     navigate('/login');
@@ -102,6 +138,33 @@ export function VerifyEmailPage() {
                   </span>
                 </p>
               </div>
+
+              {/* Resend — the recovery path when the first send failed */}
+              {resendState === 'sent' ? (
+                <Alert className="mb-4 border-green-200 bg-green-50">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    Verification email sent. Check your inbox, and your spam folder.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Button
+                  onClick={handleResend}
+                  disabled={resendState === 'sending'}
+                  className="w-full mb-3"
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${resendState === 'sending' ? 'animate-spin' : ''}`}
+                  />
+                  {resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+                </Button>
+              )}
+
+              {resendError && (
+                <Alert className="mb-4 border-red-200 bg-red-50" role="alert">
+                  <AlertDescription className="text-red-800">{resendError}</AlertDescription>
+                </Alert>
+              )}
 
               {/* Back to Sign In Button */}
               <Button

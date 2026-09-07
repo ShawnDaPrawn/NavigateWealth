@@ -52,15 +52,27 @@ import {
   USER_ID,
 } from './helpers/auth-routes-harness.ts';
 
+/**
+ * Per-test environment overrides, consulted before the fixed answers below.
+ *
+ * Needed since the reset-link destination started being checked against
+ * `NW_ALLOWED_ORIGINS` (see `isTrustedRedirectOrigin`): a test about which
+ * origins are trusted has to be able to say what the allow-list contains.
+ * Cleared in `beforeEach`, so one test's allow-list is never another's.
+ */
+const denoEnv = vi.hoisted(() => new Map<string, string>());
+
 vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = {
     env: {
       get: (k: string) =>
-        k === 'SUPABASE_URL'
-          ? 'https://test.supabase.co'
-          : k === 'SUPER_ADMIN_PASSWORD'
-            ? 'sekrit'
-            : 'test',
+        denoEnv.has(k)
+          ? denoEnv.get(k)
+          : k === 'SUPABASE_URL'
+            ? 'https://test.supabase.co'
+            : k === 'SUPER_ADMIN_PASSWORD'
+              ? 'sekrit'
+              : 'test',
     },
   };
 });
@@ -116,6 +128,7 @@ const GENERIC_RESET_MESSAGE =
   'If an account exists with this email, a password reset link has been sent.';
 
 beforeEach(async () => {
+  denoEnv.clear();
   kvStore.clear();
   vi.clearAllMocks();
   resetAuthMocks();
@@ -837,47 +850,72 @@ describe('POST /password-reset — the limit is in front of the send', () => {
     expect(await providerDown.json()).toEqual(GENERIC);
   });
 
-  it('refuses an off-origin redirectTo — a reset link is a credential', async () => {
-    // Unchecked, this would have GoTrue mail a recovery link pointing at a
-    // host the attacker controls, harvesting reset tokens from real inboxes.
-    await app.request('/password-reset', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'CF-Connecting-IP': CLEAN_IP,
-        Origin: 'https://www.navigatewealth.co',
-      },
-      body: JSON.stringify({
-        email: 'user@example.com',
-        redirectTo: 'https://evil.example/steal',
-      }),
-    });
+  const SITE = 'https://www.navigatewealth.co';
 
+  function resetWith(headers: Record<string, string>, body: Record<string, unknown>) {
+    return app.request('/password-reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': CLEAN_IP, ...headers },
+      body: JSON.stringify(body),
+    });
+  }
+
+  function lastRedirect(): string {
     const [, options] = supa.resetPasswordForEmail.mock.calls[0] as [
       string,
       { redirectTo: string },
     ];
-    expect(options.redirectTo).toBe('https://www.navigatewealth.co/reset-password');
+    return options.redirectTo;
+  }
+
+  it('refuses an attacker-chosen redirectTo — a reset link is a credential', async () => {
+    // The destination is checked against the ALLOW-LIST, not against the
+    // request's own Origin header. Validating one attacker-supplied value
+    // against another always passes, which is exactly what the first version
+    // of this route did: Origin: evil + redirectTo: evil/... read as
+    // "same-origin" and the recovery link was mailed to the attacker's host.
+    denoEnv.set('NW_ALLOWED_ORIGINS', SITE);
+    denoEnv.set('SITE_URL', SITE);
+
+    await resetWith(
+      { Origin: 'https://evil.example' },
+      { email: 'user@example.com', redirectTo: 'https://evil.example/steal' },
+    );
+
+    expect(lastRedirect()).toBe(`${SITE}/reset-password`);
+    expect(lastRedirect()).not.toContain('evil.example');
   });
 
-  it('honours a same-origin redirectTo', async () => {
-    await app.request('/password-reset', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'CF-Connecting-IP': CLEAN_IP,
-        Origin: 'https://www.navigatewealth.co',
-      },
-      body: JSON.stringify({
-        email: 'user@example.com',
-        redirectTo: 'https://www.navigatewealth.co/reset-password',
-      }),
-    });
+  it('refuses an off-origin redirectTo even from an allow-listed Origin', async () => {
+    denoEnv.set('NW_ALLOWED_ORIGINS', SITE);
+    denoEnv.set('SITE_URL', SITE);
 
-    const [, options] = supa.resetPasswordForEmail.mock.calls[0] as [
-      string,
-      { redirectTo: string },
-    ];
-    expect(options.redirectTo).toBe('https://www.navigatewealth.co/reset-password');
+    await resetWith(
+      { Origin: SITE },
+      { email: 'user@example.com', redirectTo: 'https://evil.example/steal' },
+    );
+
+    expect(lastRedirect()).toBe(`${SITE}/reset-password`);
+  });
+
+  it('honours a redirectTo under an allow-listed origin', async () => {
+    denoEnv.set('NW_ALLOWED_ORIGINS', SITE);
+
+    await resetWith(
+      { Origin: SITE },
+      { email: 'user@example.com', redirectTo: `${SITE}/reset-password` },
+    );
+
+    expect(lastRedirect()).toBe(`${SITE}/reset-password`);
+  });
+
+  it('falls back to the canonical site when no allow-list is configured', async () => {
+    // isTrustedRedirectOrigin fails CLOSED, so an unconfigured deploy sends
+    // recovery links to the canonical site rather than wherever it is asked to.
+    denoEnv.set('SITE_URL', SITE);
+
+    await resetWith({ Origin: 'https://evil.example' }, { email: 'user@example.com' });
+
+    expect(lastRedirect()).toBe(`${SITE}/reset-password`);
   });
 });

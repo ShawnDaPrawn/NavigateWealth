@@ -68,16 +68,32 @@ Two constraints on the gates that are easy to trip over:
 Each of these looks like a bug and is not. Removing one without meeting its
 stated prerequisite has already caused a production outage once.
 
-| Where                                        | The fallback                                                                                                                           | Why it exists                                                                                                                                                                                | What must be true before removing it                                                                                                                           |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/supabase/functions/server/index.tsx`    | When `NW_ALLOWED_ORIGINS` is unset, reflect the incoming browser origin and log a warning. A strict allow-list applies when it is set. | Prevents a repeat of the 2026-04-18 CORS lockout. Auth, not CORS, is the authorization boundary.                                                                                             | Every real SPA origin is known and set in `NW_ALLOWED_ORIGINS`, and preflights pass from each one.                                                             |
-| `supabase/config.toml`                       | `verify_jwt = false` on the function.                                                                                                  | The function exposes anonymous health probes.                                                                                                                                                | Health probes move to an unauthenticated sibling function. Until then, **every sub-router must apply its own auth at mount time** — this is the real boundary. |
-| `src/utils/supabase/info.tsx`                | Hardcoded project ref and anon key fallback.                                                                                           | Lets the SPA boot without local env vars.                                                                                                                                                    | Vercel production and preview env vars are pinned and verified.                                                                                                |
-| `src/supabase/functions/server/constants.ts` | `SUPER_ADMIN_EMAIL` as a single const, alongside the `SUPER_ADMIN_EMAILS` allowlist.                                                   | **Closed by decision, 2026-08-27 — do not remove.** Its two readers are a pre-auth rate-limit exemption and a singular owner lookup. Widening either to the allowlist would reduce security. | Nothing. Authorization goes through `isSuperAdminEmail()`; the pre-auth exemption stays narrow; the owner lookup stays singular.                               |
-| `middleware.ts`                              | Kept free of imports from the SPA source tree.                                                                                         | Importing SPA modules breaks the Vercel Edge build.                                                                                                                                          | Nothing — this is a permanent constraint of the Edge runtime.                                                                                                  |
+| Where                                          | The fallback                                                                                                                                                                                                                                             | Why it exists                                                                                                                                                                                | What must be true before removing it                                                                                                                           |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/supabase/functions/server/cors-origin.ts` | When `NW_ALLOWED_ORIGINS` is unset, reflect the incoming browser origin and log a warning. A strict allow-list applies when it is set. Hand-built `Response`s (streams, downloads) read the same list via `corsResponseHeaders` rather than sending `*`. | Prevents a repeat of the 2026-04-18 CORS lockout. Auth, not CORS, is the authorization boundary.                                                                                             | Every real SPA origin is known and set in `NW_ALLOWED_ORIGINS`, and preflights pass from each one.                                                             |
+| `supabase/config.toml`                         | `verify_jwt = false` on the function.                                                                                                                                                                                                                    | The function exposes anonymous health probes.                                                                                                                                                | Health probes move to an unauthenticated sibling function. Until then, **every sub-router must apply its own auth at mount time** — this is the real boundary. |
+| `src/utils/supabase/info.tsx`                  | Hardcoded project ref and anon key fallback.                                                                                                                                                                                                             | Lets the SPA boot without local env vars.                                                                                                                                                    | Vercel production and preview env vars are pinned and verified.                                                                                                |
+| `src/supabase/functions/server/constants.ts`   | `SUPER_ADMIN_EMAIL` as a single const, alongside the `SUPER_ADMIN_EMAILS` allowlist.                                                                                                                                                                     | **Closed by decision, 2026-08-27 — do not remove.** Its two readers are a pre-auth rate-limit exemption and a singular owner lookup. Widening either to the allowlist would reduce security. | Nothing. Authorization goes through `isSuperAdminEmail()`; the pre-auth exemption stays narrow; the owner lookup stays singular.                               |
+| `middleware.ts`                                | Kept free of imports from the SPA source tree.                                                                                                                                                                                                           | Importing SPA modules breaks the Vercel Edge build.                                                                                                                                          | Nothing — this is a permanent constraint of the Edge runtime.                                                                                                  |
 
 ## Standing constraints
 
+- **Signup creates an UNVERIFIED account, on purpose.**
+  `auth-signup.ts` passes `email_confirm: false`, so Supabase refuses
+  `signInWithPassword` until the emailed link is clicked. This previously read
+  `true` — with a verification email sent right after that nothing was gated on
+  — which let anyone sign up with an address they did not own. If new signups
+  report "Invalid login credentials", the cause is almost always a confirmation
+  email that did not arrive: check the Edge Function logs for the error-level
+  send failure, and send them to `/verify-email`, which resends the link.
+  Super-admin `POST /auth/confirm-email` is the last resort. Do not flip the
+  flag back.
+  Note the sign-in screen's own resend button is **not** a reliable fallback:
+  it renders only when the error text contains "verify your email", which needs
+  Supabase to answer `Email not confirmed`, and for an `admin.createUser`
+  account it may answer `Invalid login credentials` instead — which
+  `errorHandler.ts` maps to invalid_credentials. `/verify-email` resends
+  without depending on that classification.
 - **CORS is not authorization.** `requireAuth` and route-level permission checks
   are the security boundary. Do not harden CORS in a way that bricks production
   when a secret is missing.
@@ -152,7 +168,16 @@ launch-readiness checklist, and fixed in the same change:
   Now `requirePrimaryAuth`, identity from the token, body ignored.
 - **`NW_ALLOWED_ORIGINS=" , ,"` denied every origin, silently.** A typo could
   take the site down and look like a deliberate lock-down. It now takes the
-  same path as unset (reflect + log loudly at ERROR).
+  same path as unset (reflect + log loudly at ERROR). `isTrustedRedirectOrigin`
+  is deliberately unchanged: it fails closed, where "trust nothing" is already
+  the right answer for that input.
+- **Three places minted a recovery link from a caller-supplied origin.** Found
+  by merging #311, which added `isTrustedRedirectOrigin` for the signup
+  confirmation link — the same reasoning applies to any link that sets a
+  password. The worst was `POST /auth/password-reset`, which validated
+  `redirectTo` against the request's own `Origin` header: an attacker supplies
+  both, so the check always passed and the recovery link could be mailed to a
+  host they control. All three now resolve through the allow-list.
 
 ## Where money, not work, is the blocker
 

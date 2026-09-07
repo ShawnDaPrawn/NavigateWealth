@@ -5,6 +5,7 @@
  * Split out of `ai-advisor.ts` (1,443 lines). Same logger channel on purpose.
  */
 import { createModuleLogger } from './stderr-logger.ts';
+import { corsResponseHeaders } from './cors-origin.ts';
 import * as kv from './kv_store.tsx';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
@@ -61,6 +62,12 @@ export async function buildAdvisorSseResponse(
   subjectUserId: string,
   clientMessages: unknown,
   sessionId: unknown,
+  /**
+   * The caller's `Origin` header, used to answer CORS from the allow-list
+   * instead of `*`. Optional so the many existing call sites keep compiling;
+   * an absent origin simply omits the allow header, which is the deny.
+   */
+  requestOrigin?: string | null,
 ): Promise<Response> {
   const chatMessages = normalizeAdvisorChatMessages(clientMessages);
   if (!chatMessages) {
@@ -181,7 +188,9 @@ export async function buildAdvisorSseResponse(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      // Allow-list, not '*' — this stream carries the signed-in client's
+      // financial context. See cors-origin.ts.
+      ...corsResponseHeaders(requestOrigin),
     },
   });
 }

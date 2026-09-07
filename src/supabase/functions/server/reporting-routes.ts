@@ -7,6 +7,7 @@ import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { corsResponseHeaders } from './cors-origin.ts';
 import { ReportingService } from './reporting-service.ts';
 import {
   generateClientOverviewPDF,
@@ -149,7 +150,9 @@ app.post(
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
         'Content-Length': String(pdfBytes.byteLength),
-        'Access-Control-Allow-Origin': '*',
+        // Allow-list, not '*' — this PDF is a named client's financial
+        // overview. See cors-origin.ts.
+        ...corsResponseHeaders(c.req.header('origin')),
         'Access-Control-Expose-Headers': 'Content-Disposition',
       },
     });

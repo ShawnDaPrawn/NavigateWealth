@@ -41,6 +41,7 @@ import type { Context } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 
 import { runWithRequestContext } from './request-context.ts';
+import { resolveAllowedOrigins } from './cors-origin.ts';
 import { mountCoreRoutes } from './mount-core.ts';
 import { mountFnaRoutes } from './mount-fna.ts';
 import { mountModuleRoutes } from './mount-modules.ts';
@@ -216,72 +217,6 @@ export const DEFAULT_MOUNTS: MountRegistrar[] = [
 ];
 
 /**
- * Resolve the CORS allow-list from the environment.
- *
- * Read per `createApp()` call rather than once at module load: that is what
- * makes the fallback branch testable, and the value is only consulted at boot
- * either way.
- *
- * IMPORTANT — fail-OPEN fallback (deliberately):
- *   When `NW_ALLOWED_ORIGINS` is unset we reflect any origin and log a
- *   prominent warning every boot. CORS is defence-in-depth — every
- *   non-health route still requires a valid bearer token (`requireAuth`),
- *   so a permissive CORS default cannot by itself leak data. Failing
- *   closed on CORS would silently break every browser client (the
- *   incident captured on 2026-04-18 — dashboard "Network error" + super-
- *   admin lockout). Operators MUST set the env var before relying on the
- *   strict allow-list as a security boundary (Guidelines §12.4 / Phase 0.3),
- *   e.g. NW_ALLOWED_ORIGINS="https://www.navigatewealth.co,https://navigatewealth.co".
- *
- * THE FORMER SHARP EDGE, NOW RESOLVED:
- *   unset, empty-string, or separators-only (`" , ,"`) → all three mean
- *   "nothing usable was configured" and all three now take the same path:
- *   permissive reflection plus a loud log line. Previously the third denied
- *   EVERY origin, silently — an all-requests outage from a typo, and
- *   indistinguishable from a deliberate lock-down. The separators-only case
- *   logs at ERROR rather than WARN, because unlike an unset variable it means
- *   someone tried to configure an allow-list and it is not in effect.
- */
-function resolveAllowedOrigins(): string[] | null {
-  const raw = Deno.env.get('NW_ALLOWED_ORIGINS');
-  if (!raw) {
-    console.warn(
-      '[CORS] NW_ALLOWED_ORIGINS is not set — falling back to permissive ' +
-        'origin reflection. Set NW_ALLOWED_ORIGINS to lock this down ' +
-        '(see Guidelines §12.4).',
-    );
-    return null;
-  }
-
-  const origins = raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  // The sharp edge described above, now closed. A value of `" , ,"` used to
-  // parse to an EMPTY allow-list, which denies every origin — silently, and
-  // indistinguishably from a deliberate lock-down. It is a typo every time.
-  //
-  // Treated as a misconfiguration and routed to the same fallback as "unset":
-  // the two inputs now behave the same way, which is the property that was
-  // missing. Failing the boot instead was the other candidate and is the wrong
-  // trade here — CORS is not the authorization boundary on this server (every
-  // non-health route requires a bearer token), so a typo in this variable
-  // should not be able to take production down, which is the exact incident
-  // the permissive fallback exists to prevent.
-  if (origins.length === 0) {
-    console.error(
-      '[CORS] NW_ALLOWED_ORIGINS is set but contains no usable origins ' +
-        `(received ${JSON.stringify(raw)}). Treating as unset — falling back to ` +
-        'permissive origin reflection. Fix the variable to restore the allow-list.',
-    );
-    return null;
-  }
-
-  return origins;
-}
-
-/**
  * Build the Edge Function's Hono app: CORS, request-id, the root error
  * handler, the health probes, then every route family.
  *
@@ -306,7 +241,7 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     cors({
       origin: (origin) => {
         if (!origin) return null;
-        if (!allowedOrigins) return origin; // permissive fallback (see above)
+        if (!allowedOrigins) return origin; // permissive fallback (see cors-origin.ts)
         return allowedOrigins.includes(origin) ? origin : null;
       },
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

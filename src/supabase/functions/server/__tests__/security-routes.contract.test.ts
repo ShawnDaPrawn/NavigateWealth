@@ -435,6 +435,175 @@ describe('security.tsx route contracts', () => {
     });
   });
 
+  // ── 2FA code generation & comparison: security properties ─────────────────
+  //
+  // These assert HOW the login code is made and checked, not just that the
+  // route answers 200. The code emailed here is the second factor on a
+  // portal holding client financial records, and it was previously derived
+  // from `Math.random()` — a non-cryptographic PRNG whose internal state is
+  // recoverable from a few observed outputs, after which every later code is
+  // predictable (CWE-338). The e-sign OTP path had used the CSPRNG helper
+  // since crypto-utils.ts was written; this login path was the last holdout.
+  describe('2FA code security properties', () => {
+    it('never derives the code from Math.random()', async () => {
+      // The regression test proper, and deterministic: pin Math.random() to a
+      // fixed value and check the code is NOT the one the old expression
+      // produced from it. `Math.floor(100000 + 0.5 * 900000)` is 550000, so a
+      // reintroduced `Math.random()` generator fails here rather than shipping.
+      //
+      // Spying rather than asserting "not called" on purpose — Math.random()
+      // is still used legitimately in this route for cosmetic activity-log
+      // ids, so the claim has to be about the code itself.
+      const rand = vi.spyOn(Math, 'random').mockReturnValue(0.5);
+
+      const res = await securityApp.request('/test-user/2fa/send-code', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+
+      const stored = kvStore.get('2fa:test-user:code') as { code: string } | undefined;
+      expect(stored?.code).toBeDefined();
+      expect(stored!.code).not.toBe('550000');
+      expect(stored!.code).toMatch(/^[0-9]{6}$/);
+
+      rand.mockRestore();
+    });
+
+    it('draws the code from the CSPRNG', async () => {
+      const getRandomValues = vi.spyOn(globalThis.crypto, 'getRandomValues');
+
+      const res = await securityApp.request('/test-user/2fa/send-code', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(200);
+      expect(getRandomValues).toHaveBeenCalled();
+      getRandomValues.mockRestore();
+    });
+
+    it('stores a 6-digit numeric code', async () => {
+      await securityApp.request('/test-user/2fa/send-code', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      const stored = kvStore.get('2fa:test-user:code') as { code: string };
+      expect(stored.code).toMatch(/^[0-9]{6}$/);
+    });
+
+    it('does not repeat a code across sends', async () => {
+      // Not a randomness proof — a cheap smoke check that the generator is
+      // actually drawing each time rather than returning a constant.
+      const seen = new Set<string>();
+      for (let i = 0; i < 12; i++) {
+        kvStore.clear();
+        await securityApp.request('/test-user/2fa/send-code', {
+          method: 'POST',
+          body: JSON.stringify({}),
+          headers: { ...AUTH, 'Content-Type': 'application/json' },
+        });
+        seen.add((kvStore.get('2fa:test-user:code') as { code: string }).code);
+      }
+      expect(seen.size).toBeGreaterThan(1);
+    });
+
+    it('rejects a wrong code of the same length and counts the attempt', async () => {
+      kvStore.set('2fa:test-user:code', {
+        code: '654321',
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        attempts: 0,
+      });
+
+      const res = await securityApp.request('/test-user/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: '654322' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ success: false });
+      expect((kvStore.get('2fa:test-user:code') as { attempts: number }).attempts).toBe(1);
+    });
+
+    it('rejects a code that shares a prefix with the real one', async () => {
+      // The shape a timing oracle would be walked through, digit by digit.
+      // `constantTimeEqual` compares every character regardless.
+      kvStore.set('2fa:test-user:code', {
+        code: '654321',
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        attempts: 0,
+      });
+
+      const res = await securityApp.request('/test-user/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: '654399' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a wrong-length code without throwing', async () => {
+      // constantTimeEqual returns false on a length mismatch rather than
+      // indexing past the end of the shorter string.
+      kvStore.set('2fa:test-user:code', {
+        code: '654321',
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        attempts: 0,
+      });
+
+      const res = await securityApp.request('/test-user/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: '6543' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('still accepts the correct code', async () => {
+      // The constant-time comparison must not break the happy path.
+      kvStore.set('2fa:test-user:code', {
+        code: '654321',
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        attempts: 0,
+      });
+
+      const res = await securityApp.request('/test-user/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: '654321' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+
+    it('accepts a generated code end-to-end', async () => {
+      // Generation and verification agree: send, read what was stored, verify.
+      await securityApp.request('/test-user/2fa/send-code', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      const { code } = kvStore.get('2fa:test-user:code') as { code: string };
+
+      const res = await securityApp.request('/test-user/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ success: true });
+    });
+  });
+
   // ── POST /:userId/email-change/request ────────────────────────────────────
   describe('POST /:userId/email-change/request', () => {
     it('returns 401 without Authorization header', async () => {

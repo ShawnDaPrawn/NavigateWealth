@@ -16,6 +16,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import { requireAuth, requirePrimaryAuth } from './auth-mw.ts';
 import { revokeSessionsAfterCredentialChange } from './session-revocation.ts';
+import { isTrustedRedirectOrigin } from './cors-origin.ts';
 import { ChangePasswordSchema } from './security-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import {
@@ -150,8 +151,18 @@ app.post('/:userId/password', requireAuth, async (c) => {
 
         const footerSettings = await getFooterSettings();
 
-        const origin = c.req.header('origin') || c.req.header('referer') || '';
-        const redirectBase = origin ? origin.replace(/\/+$/, '') : 'https://www.navigatewealth.co';
+        // The recovery link below is a credential, so its destination is not
+        // the caller's to choose — `Origin` and `Referer` are both request
+        // headers. Checked against the configured allow-list, failing closed
+        // to the canonical site. (This route is admin-only, but "an admin sent
+        // it" is not a reason to let a request header pick where a
+        // password-setting link lands.)
+        const requestOrigin = c.req.header('origin');
+        const redirectBase = (
+          isTrustedRedirectOrigin(requestOrigin)
+            ? requestOrigin!
+            : Deno.env.get('SITE_URL') || 'https://www.navigatewealth.co'
+        ).replace(/\/+$/, '');
 
         // Single-use recovery link, minted against the sign-in address (NOT
         // the delivery alias — the link authenticates the account, and the

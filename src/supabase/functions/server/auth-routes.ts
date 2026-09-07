@@ -21,6 +21,7 @@ import {
   getBlockedIpAddressWarning,
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
+import { isTrustedRedirectOrigin } from './cors-origin.ts';
 import {
   requireSuperAdmin,
   requirePrimaryAuth,
@@ -69,6 +70,16 @@ const getAnonClient = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+/**
+ * Canonical site URL, used whenever a caller-supplied origin is not trusted.
+ * Overridable so a staging deploy sends its links to staging. Mirrors the
+ * helper of the same name in `auth-signup.ts`; read per call so a test can
+ * stub the environment.
+ */
+function siteUrlFallback(): string {
+  return Deno.env.get('SITE_URL') || 'https://www.navigatewealth.co';
+}
 
 // Helper function to get client IP
 function getClientIP(c: Context): string {
@@ -502,15 +513,28 @@ authRoutes.post('/password-reset', validateBody(PasswordResetSchema), async (c) 
       return genericResponse();
     }
 
-    // Only same-origin redirect targets are honoured. `redirectTo` arrives from
-    // the browser, and an unchecked value here would let an attacker have
-    // GoTrue mail a recovery link pointing at a host they control — turning
-    // this endpoint into a way to harvest reset tokens from real inboxes.
-    const origin = c.req.header('origin') || '';
+    // Where the recovery link is allowed to land.
+    //
+    // A reset link IS a credential: whoever opens it can set the password. So
+    // the destination must never be chosen by the caller — and validating
+    // `redirectTo` against the request's own `Origin` header would be exactly
+    // that, since an attacker supplies both and a same-origin check between two
+    // attacker-supplied values always passes. (It did, in the first version of
+    // this route.)
+    //
+    // `isTrustedRedirectOrigin` checks the configured allow-list instead, and
+    // fails CLOSED: an unrecognised origin — or no allow-list at all — falls
+    // back to the canonical site. A wrong-but-canonical redirect is a support
+    // ticket; an attacker-chosen one is account takeover.
+    const requestOrigin = c.req.header('origin');
+    const trustedBase = (
+      isTrustedRedirectOrigin(requestOrigin) ? requestOrigin! : siteUrlFallback()
+    ).replace(/\/+$/, '');
+
     const safeRedirect =
-      redirectTo && origin && redirectTo.startsWith(`${origin.replace(/\/+$/, '')}/`)
+      redirectTo && redirectTo.startsWith(`${trustedBase}/`)
         ? redirectTo
-        : `${(origin || 'https://www.navigatewealth.co').replace(/\/+$/, '')}/reset-password`;
+        : `${trustedBase}/reset-password`;
 
     const { error } = await getAnonClient().auth.resetPasswordForEmail(email, {
       redirectTo: safeRedirect,
