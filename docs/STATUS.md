@@ -85,8 +85,15 @@ stated prerequisite has already caused a production outage once.
   — which let anyone sign up with an address they did not own. If new signups
   report "Invalid login credentials", the cause is almost always a confirmation
   email that did not arrive: check the Edge Function logs for the error-level
-  send failure and use "Resend verification email" on the sign-in screen, or
-  super-admin `POST /auth/confirm-email`. Do not flip the flag back.
+  send failure, and send them to `/verify-email`, which resends the link.
+  Super-admin `POST /auth/confirm-email` is the last resort. Do not flip the
+  flag back.
+  Note the sign-in screen's own resend button is **not** a reliable fallback:
+  it renders only when the error text contains "verify your email", which needs
+  Supabase to answer `Email not confirmed`, and for an `admin.createUser`
+  account it may answer `Invalid login credentials` instead — which
+  `errorHandler.ts` maps to invalid_credentials. `/verify-email` resends
+  without depending on that classification.
 - **CORS is not authorization.** `requireAuth` and route-level permission checks
   are the security boundary. Do not harden CORS in a way that bricks production
   when a secret is missing.

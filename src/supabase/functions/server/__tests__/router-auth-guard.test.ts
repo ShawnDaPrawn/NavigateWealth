@@ -40,7 +40,7 @@ const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
  * let any KV-using router pass and defeat the ratchet (PR #115 review P1).
  */
 const AUTH_MARKERS =
-  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken/;
+  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken|requirePrimaryAuth/;
 
 /**
  * Routers that are INTENTIONALLY public (no auth on any route, by design).

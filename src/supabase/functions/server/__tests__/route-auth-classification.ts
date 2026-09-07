@@ -307,21 +307,15 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'vasco-routes.ts POST /session',
     ],
   },
-  {
-    kind: 'require-primary-auth',
-    classification: 'guarded',
-    reason:
-      'Guarded by requirePrimaryAuth, which is real auth middleware (resolveAuthUser) but is absent from the detector’s AUTH_MARKERS set.',
-    routes: [
-      'security-2fa-routes.ts POST /:userId/2fa/send-code',
-      // POST /:userId/2fa/verify-code was listed here until it started
-      // comparing the submitted code with `constantTimeEqual` — which IS in
-      // AUTH_MARKERS, so the detector now sees the guard on its own and the
-      // entry became stale. Its actual protection is unchanged
-      // (requirePrimaryAuth, same as send-code above).
-      'security-password-routes.ts GET /:userId/status',
-    ],
-  },
+  // The 'require-primary-auth' entry that used to sit here is gone, and that is
+  // the point: it existed only because `requirePrimaryAuth` was missing from
+  // AUTH_MARKERS, so three genuinely guarded routes were reported as unguarded
+  // and had to be documented as false positives. The marker set now recognises
+  // it, the detector sees the real middleware, and the routes need no entry.
+  //
+  // Removing an entry is normally a red flag — a route losing its guard looks
+  // the same from here. It is safe in this direction only because the detector
+  // got MORE sensitive, not less: the floor moved 129 -> 126.
   {
     kind: 'inline-gate',
     classification: 'guarded',
