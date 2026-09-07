@@ -43,6 +43,26 @@ vi.hoisted(() => {
 
 const createUser = vi.fn();
 
+/**
+ * The signup handler applies the atomic per-IP and per-email limit itself now,
+ * ahead of the password check — cheaper rejection, and it stops the endpoint
+ * being used as a password-policy oracle at volume. `checkRateLimit` fails
+ * CLOSED, so without this stub every request here is a 429 before the code
+ * under test runs.
+ */
+const checkRateLimit = vi.hoisted(() =>
+  vi.fn(async () => ({
+    allowed: true,
+    remaining: 2,
+    resetAt: new Date(Date.now() + 3_600_000),
+    blocked: false,
+  })),
+);
+vi.mock('../rateLimiter.ts', async () => {
+  const actual = await vi.importActual<typeof import('../rateLimiter.ts')>('../rateLimiter.ts');
+  return { ...actual, checkRateLimit };
+});
+
 vi.mock('../kv_store.tsx', async () =>
   (await import('./helpers/contract-harness.ts')).makeKvMock(),
 );

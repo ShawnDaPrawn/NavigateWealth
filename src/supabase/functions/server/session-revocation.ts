@@ -26,9 +26,12 @@
  * 2. `stampSessionsValidFrom` — writes a watermark onto `security:{userId}`.
  *    `enforceAccountSecurity` (auth-mw.ts) refuses any access token minted
  *    before it, so tokens already in an attacker's hands stop working on the
- *    next request rather than at their natural expiry. This half covers the
- *    admin-reset path, and it closes the up-to-one-hour window that half 1
- *    leaves open even where half 1 runs.
+ *    next request rather than at their natural expiry.
+ *
+ *    This is the half that does the real work. Half 1 only stops a session
+ *    RENEWING; the access token it already holds keeps working for up to an
+ *    hour, and this closes that window. It is also the only half that reaches
+ *    an administrator resetting somebody else's password.
  *
  * Callers do both wherever they can, and half 2 wherever they cannot.
  *
@@ -45,7 +48,6 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
-import { readTokenIssuedAt } from './jwt-claims.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
@@ -120,33 +122,39 @@ export async function revokeGoTrueSessions(
 }
 
 /**
- * Where the watermark goes when the caller is the account holder.
- *
- * NOT `now`. The caller is holding a token that was minted before this
- * request, so a `now` watermark would refuse their very next call and sign
- * them out of the change they just performed successfully. The line is drawn
- * at their own token's `iat` instead: "every session older than the one that
- * authorised this change is finished, and that one is not."
- *
- * Falls back to `now` when the `iat` cannot be read, because the alternative —
- * writing no watermark at all — leaves the stolen session alive, and being
- * signed out is the far cheaper failure of the two.
- */
-function selfServiceWatermark(accessToken: string | undefined): Date {
-  const issuedAt = readTokenIssuedAt(accessToken);
-  return issuedAt === null ? new Date() : new Date(issuedAt * 1000);
-}
-
-/**
  * The whole policy in one call, for a credential change on `userId`.
  *
- * `actor: 'self'`  — the caller IS the account holder and presented
- *                    `accessToken`. Their session survives; every older one
- *                    dies, at GoTrue and at this application's front door.
- * `actor: 'admin'` — someone else changed this user's password. No token for
- *                    the target exists, so GoTrue cannot be asked to revoke;
- *                    the watermark goes at `now` and ends every session the
- *                    user has, which is the intent of an administrative reset.
+ * THE WATERMARK IS ALWAYS `now`, AND THAT IS A CORRECTION
+ * -------------------------------------------------------
+ * The first version of this drew the line at the CALLER's own token `iat` for
+ * a self-service change, so that the session performing the change would not
+ * refuse its own next request. That reasoning was right about the symptom and
+ * wrong about the threat.
+ *
+ * Consider the case this whole module exists for. The victim signs in at T1.
+ * An attacker, holding the stolen password, signs in at T2 > T1. The victim
+ * notices and changes their password at T3, from the session they opened at
+ * T1. A watermark at T1 admits every token minted after T1 — including the
+ * attacker's, issued at T2. `scope: 'others'` kills its refresh token, so the
+ * attacker cannot renew, but the access token they already hold stays valid
+ * until it expires on its own. The one attacker the change was aimed at is
+ * precisely the one it did not evict.
+ *
+ * So the cutoff is the change itself: every token minted before this moment is
+ * finished, with no exception for the caller's. The caller keeps working
+ * because the client refreshes immediately afterwards (`updatePassword` in
+ * `authService.ts`, and `useProfileManager` for the server-side route),
+ * obtaining a token minted after the watermark. `scope: 'others'` leaves that
+ * session's refresh token alive precisely so the refresh can succeed.
+ *
+ * If the refresh fails, the user is signed out and has to log in with the
+ * password they just set. That is the correct direction to fail: a session
+ * that outlives a password change is the defect; an extra login is an
+ * inconvenience.
+ *
+ * `actor` therefore no longer selects a cutoff. It selects whether GoTrue can
+ * be asked to revoke at all: only a self-service caller presents a token, and
+ * `admin.signOut` addresses a session rather than a user id.
  */
 export async function revokeSessionsAfterCredentialChange(options: {
   userId: string;
@@ -156,7 +164,7 @@ export async function revokeSessionsAfterCredentialChange(options: {
 }): Promise<{ stamped: boolean; goTrueRevoked: boolean; validFrom: string }> {
   const { userId, actor, accessToken, scope = 'others' } = options;
 
-  const validFrom = actor === 'self' ? selfServiceWatermark(accessToken) : new Date();
+  const validFrom = new Date();
 
   const stamped = await stampSessionsValidFrom(userId, validFrom);
   const goTrueRevoked =

@@ -152,17 +152,54 @@ launch-readiness checklist, and fixed in the same change:
   `enforceAccountSecurity` enforces on every authenticated route — which is
   the only mechanism that covers an ADMIN resetting someone else's password.
   See `session-revocation.ts`.
+
+  The watermark is the moment of the CHANGE, with no exception for the caller's
+  own token. Drawing it at the caller's `iat` instead — to keep them signed in —
+  admits every token minted after it, including one an attacker obtained more
+  recently than the victim, which is the session a password change exists to
+  evict. The caller stays signed in because the client refreshes immediately;
+  if that fails they log in again with the password they just set.
+
 - **Admin password resets emailed the new password in plaintext.** Replaced
   with a single-use GoTrue recovery link; the administrator never learns the
   credential either.
 - **Authenticated AI routes had no usage cap.** Only per-call `max_tokens`,
   which bounds one answer and not the number of them. `ai-usage-limit.ts` adds
-  per-user burst + daily and per-IP daily caps across the nine metered
-  prefixes and the RoA conversation endpoints. Public Vasco keeps its own
+  per-user burst + daily and per-IP daily caps. Public Vasco keeps its own
   (tighter) guardrails.
+
+  The guards sit on the ENDPOINTS that call a provider, after each route's own
+  auth, reading the `userId` that auth verified. Two earlier shapes were wrong
+  and are worth not repeating: metering whole prefixes charged a model-priced
+  quota for ordinary CRUD and took that CRUD down whenever the counter service
+  was unavailable; and metering before the route's auth left no verified
+  principal, so the guard read an unverified `sub` claim — which let anyone who
+  knew a user's UUID spend that user's daily allowance on requests that fail
+  downstream and never refund it.
+
+  The inventory of what is metered is NOT a comment. `ai-usage-limit-coverage.test.ts`
+  recomputes it from the import graph and fails when a provider-calling router
+  has no guard. It found two on its first run: the policy-extraction endpoints,
+  and KB writes in `ai-management-routes.ts`, which re-embed through
+  `vasco-rag-service.ts`.
+
 - **Signup confirmed whether an address had an account** (409 `EMAIL_EXISTS`).
   For an advisory firm the client list is itself confidential. Duplicate
   signups now answer exactly like new ones and notify the real owner by email.
+  "Exactly" is load-bearing and took two attempts: the first version returned
+  both as 200 but with different bodies — `user` and `application` present on
+  one, absent on the other — so the oracle survived in the response shape. The
+  success path no longer returns them either, and the application number is
+  shown in the portal after verification instead.
+
+  That notice email needed two guards of its own, both found in review: the
+  live signup handler now applies the atomic per-IP and per-email limit
+  (previously only the skippable `/signup-validate` pre-flight did, so an
+  unlimited caller could email-bomb a known client and churn their recovery
+  links), and `firstName` is HTML-escaped before it reaches the template — it
+  comes from an unauthenticated payload and the message is delivered to
+  somebody else.
+
 - **`POST /auth/password-change` was unauthenticated** and took the account
   from the request body — a way to write into a stranger's security log.
   Now `requirePrimaryAuth`, identity from the token, body ignored.

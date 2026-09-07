@@ -71,18 +71,18 @@ export async function signUp(
       throw new AuthError(errorData.error || 'Signup failed', 'signup_failed');
     }
 
-    const data = await response.json();
+    await response.json();
     logger.info('Backend signup accepted');
 
-    // `user` is absent when the address already had an account. The server
-    // answers that case exactly like a new signup (and emails the real owner)
-    // so that signup cannot be used to test whether someone is a client — see
-    // auth-signup.ts. Nothing here may re-introduce the distinction, so the
-    // caller gets the same "verify your email" shape either way.
+    // The endpoint returns NOTHING account-specific — same body whether the
+    // address was new or already registered, so that signup cannot be used to
+    // test whether someone is a client of the firm (see auth-signup.ts). There
+    // is therefore no id or confirmed-email state to report, and the caller's
+    // only correct next step is the "check your email" screen.
     return {
       user: {
-        id: data.user?.id ?? '',
-        email: data.user?.email ?? email,
+        id: '',
+        email,
         emailConfirmed: false, // Email verification required
         createdAt: new Date().toISOString(),
       },
@@ -487,6 +487,29 @@ export async function updatePassword(newPassword: string): Promise<void> {
       }
     } catch (revokeError) {
       logger.warn('Could not revoke other sessions after password change', { error: revokeError });
+    }
+
+    // Then take a NEW access token, because the server is about to refuse
+    // every token minted before this change — this one included.
+    //
+    // The server-side watermark (`sessionsValidFrom`, see session-revocation.ts)
+    // is set to the moment of the change with no exception for the caller's own
+    // token: exempting it would also exempt an attacker who signed in more
+    // recently than the victim, which is the exact case the revocation exists
+    // for. `scope: 'others'` above deliberately leaves THIS session's refresh
+    // token alive so this call can succeed.
+    //
+    // If it fails the user is signed out and logs back in with the password
+    // they just set. That is the right direction to fail.
+    try {
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        logger.warn('Session refresh after password change failed; sign-in will be required', {
+          error: refreshError.message,
+        });
+      }
+    } catch (refreshError) {
+      logger.warn('Session refresh after password change threw', { error: refreshError });
     }
 
     // Log password change

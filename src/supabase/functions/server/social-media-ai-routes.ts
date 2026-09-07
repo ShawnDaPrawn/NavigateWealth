@@ -9,6 +9,7 @@
 
 import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
@@ -49,6 +50,7 @@ app.get('/', (c) => c.json({ service: 'social-media-ai', status: 'active' }));
 app.post(
   '/generate-post',
   requireAdmin,
+  aiUsageLimit({ surface: 'social-media-ai' }),
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const body = await c.req.json();
@@ -138,6 +140,7 @@ app.get(
 app.post(
   '/generate-image',
   requireAdmin,
+  aiUsageLimit({ surface: 'social-media-ai' }),
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const body = await c.req.json();
@@ -214,6 +217,7 @@ app.get(
 app.post(
   '/generate-bundle',
   requireAdmin,
+  aiUsageLimit({ surface: 'social-media-ai' }),
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const body = await c.req.json();

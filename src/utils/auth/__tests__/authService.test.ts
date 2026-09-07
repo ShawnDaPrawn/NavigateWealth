@@ -184,9 +184,15 @@ describe('signIn', () => {
 
 describe('signUp', () => {
   it('creates the account via the backend endpoint (email unconfirmed, no session)', async () => {
-    fetchResolving({ user: { id: 'u1', email: 'a@b.co' } });
+    // The endpoint returns NOTHING account-specific — the same body whether the
+    // address was new or already registered, so signup cannot be used to test
+    // whether someone is a client of the firm. There is therefore no id to
+    // assert on, and the caller reports the address it was given.
+    fetchResolving({ success: true, verificationRequired: true });
+
     const res = await authService.signUp('a@b.co', 'pw', { firstName: 'Ann', surname: 'Bee' });
-    expect(res.user).toMatchObject({ id: 'u1', email: 'a@b.co', emailConfirmed: false });
+
+    expect(res.user).toMatchObject({ email: 'a@b.co', emailConfirmed: false });
     expect(res.session).toBeNull();
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/auth-signup/signup'),

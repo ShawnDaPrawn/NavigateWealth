@@ -92,17 +92,42 @@ describe('stampSessionsValidFrom', () => {
 });
 
 describe('revokeSessionsAfterCredentialChange', () => {
-  it('self-service: watermarks at the caller’s own token, so the caller survives', async () => {
-    const iat = Math.floor(Date.parse('2026-05-01T10:00:00Z') / 1000);
+  it('self-service: watermarks at the CHANGE, not at the caller’s token', async () => {
+    // The correction Codex caught on the first version of this file.
+    //
+    // Watermarking at the caller's own `iat` admits every token minted after
+    // it — including one an attacker obtained AFTER the victim's current
+    // session began, which is exactly the session a password change is meant
+    // to evict. The caller keeps working because the client refreshes; it does
+    // not keep working because the server carved it an exception.
+    const oldIat = Math.floor(Date.parse('2026-05-01T10:00:00Z') / 1000);
+    const before = Date.now();
+
     const result = await revokeSessionsAfterCredentialChange({
       userId: 'u1',
       actor: 'self',
-      accessToken: tokenWith({ sub: 'u1', iat }),
+      accessToken: tokenWith({ sub: 'u1', iat: oldIat }),
     });
 
-    expect(result.validFrom).toBe('2026-05-01T10:00:00.000Z');
-    // Not `now` — that is the whole point.
-    expect(Date.parse(result.validFrom)).toBeLessThan(Date.now());
+    expect(Date.parse(result.validFrom)).toBeGreaterThanOrEqual(before);
+    expect(result.validFrom).not.toBe('2026-05-01T10:00:00.000Z');
+  });
+
+  it('self-service: an attacker’s NEWER token is revoked too', async () => {
+    // Victim signs in at T1, attacker at T2 > T1, victim changes the password
+    // at T3 from the T1 session. The attacker's token must not survive.
+    const victimIat = Math.floor(Date.parse('2026-05-01T10:00:00Z') / 1000);
+    const attackerIat = Math.floor(Date.parse('2026-05-01T11:00:00Z') / 1000);
+
+    await revokeSessionsAfterCredentialChange({
+      userId: 'u1',
+      actor: 'self',
+      accessToken: tokenWith({ sub: 'u1', iat: victimIat }),
+    });
+
+    await expect(enforceAccountSecurity('u1', attackerIat)).rejects.toMatchObject({
+      code: 'SESSION_REVOKED',
+    });
   });
 
   it('self-service: asks GoTrue to end the OTHER sessions', async () => {

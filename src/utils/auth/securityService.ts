@@ -367,7 +367,13 @@ export const securityService = {
   },
 
   /**
-   * Update password
+   * Update password.
+   *
+   * The server revokes every session minted before the change, this caller's
+   * token included (see session-revocation.ts for why there is no exception
+   * for it). So the session is refreshed immediately afterwards, using the
+   * refresh token that `scope: 'others'` deliberately leaves alive — otherwise
+   * the next API call from this tab would 401 on a change that succeeded.
    */
   updatePassword: async (userId: string, currentPassword: string, newPassword: string) => {
     const data = await api.post<{ success: boolean; error?: string }>(
@@ -381,6 +387,20 @@ export const securityService = {
     if (!data.success) {
       throw new Error(data.error || 'Failed to update password');
     }
+
+    // Non-fatal: the password HAS changed by now, so a failure here means
+    // "sign in again", not "the change failed".
+    try {
+      const { error } = await getSupabaseClient().auth.refreshSession();
+      if (error) {
+        logger.warn('Session refresh after password change failed; sign-in will be required', {
+          error: error.message,
+        });
+      }
+    } catch (error) {
+      logger.warn('Session refresh after password change threw', { error });
+    }
+
     return data;
   },
 

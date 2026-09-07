@@ -4,22 +4,25 @@
  *
  * WHAT THIS IS, AND WHAT IT IS EMPHATICALLY NOT
  * ---------------------------------------------
- * These functions decode the payload segment of a JWT and return a claim.
- * They do NOT check the signature, and nothing here may ever be the reason a
- * request is treated as authenticated. Every caller either:
+ * `readTokenIssuedAt` decodes the payload segment of a JWT and returns a
+ * claim. It does NOT check the signature, and it may never be the reason a
+ * request is treated as authenticated. Its callers — `auth-mw.ts` and
+ * `fna-auth.ts` — have ALREADY had the same token verified by
+ * `auth.getUser(token)`, so they are re-reading a claim from bytes that were
+ * proven authentic moments earlier.
  *
- *   - has ALREADY had the same token verified by `auth.getUser(token)`, and is
- *     re-reading a claim from bytes that were proven authentic
- *     (`readTokenIssuedAt`, called from `auth-mw.ts` and `fna-auth.ts`); or
+ * THAT IS THE ONLY LEGITIMATE PATTERN HERE, and it is narrower than it first
+ * looked. A `readTokenSubject` used to live beside this, reading `sub` from an
+ * UNVERIFIED token to pick a rate-limit bucket. The argument was that a forged
+ * token only buys a bucket for a request that will be rejected anyway. The
+ * argument was wrong: forging a VICTIM's subject spends the victim's
+ * allowance, and every one of those requests failing downstream does not give
+ * it back. `ai-usage-limit.ts` verifies the token now, and that function is
+ * gone rather than left here for the next caller to reach for.
  *
- *   - is using the value only to pick a rate-limit bucket for a request that
- *     is about to be verified downstream, where a forged value buys a counter
- *     for a request that will be rejected before it can cost anything
- *     (`readTokenSubject`, called from `ai-usage-limit.ts`).
- *
- * If a third kind of caller ever appears, that is the moment to stop and check
- * which of those two it is. "It is only a hint" is how an unverified claim
- * becomes an authorization decision.
+ * So if a new caller wants a claim from a token this module has not seen
+ * verified, the answer is to verify it. "It is only a hint" is how an
+ * unverified claim becomes an authorization decision.
  *
  * WHY IT IS ITS OWN MODULE
  * ------------------------
@@ -65,19 +68,4 @@ export function readTokenIssuedAt(token: string | undefined): number | null {
   const payload = decodePayload(token);
   const iat = payload?.iat;
   return typeof iat === 'number' && Number.isFinite(iat) ? iat : null;
-}
-
-/**
- * The `sub` (subject / user id) claim, or null when it cannot be read.
- *
- * Takes the whole `Authorization` header rather than a bare token, because its
- * one caller has the header and nothing else at that point in the chain.
- * Truncated at 64 characters: the value goes into a rate-limit key, and a key
- * built from an attacker-supplied string needs a bound.
- */
-export function readTokenSubject(authorizationHeader: string | undefined): string | null {
-  if (!authorizationHeader?.toLowerCase().startsWith('bearer ')) return null;
-  const payload = decodePayload(authorizationHeader.slice(7).trim());
-  const sub = payload?.sub;
-  return typeof sub === 'string' && sub.length > 0 ? sub.slice(0, 64) : null;
 }

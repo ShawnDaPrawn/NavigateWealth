@@ -153,19 +153,16 @@ export function SignupPage() {
         throw new Error('Account creation failed. Please try again.');
       }
 
-      // A successful response with no `user` is the address-already-registered
-      // case. The server answers it identically to a new signup on purpose —
-      // saying "that email is taken" here would let anyone test whether a
-      // given person is a client of the firm — and emails the real owner
-      // instead. So this branch must NOT reveal what it now knows either: same
-      // screen, same wording, no application number (there is no application).
-      const created = Boolean(result.user);
-
-      setSuccess(
-        created && result.application?.application_number
-          ? `Account created successfully! Your application number is ${result.application.application_number}. Redirecting to verification...`
-          : 'Thanks — check your email to continue. Redirecting...',
-      );
+      // The response is the SAME for a new account and for an address that
+      // already had one — no `user`, no `application`, nothing this screen
+      // could branch on. That is deliberate: for an advisory firm, "is this
+      // person a client" is confidential, and a signup form that answers it is
+      // an enumeration oracle. The real owner is told by email instead.
+      //
+      // The application number therefore is not shown here any more. It is
+      // still generated and stored, and appears in the portal once the user
+      // verifies and signs in.
+      setSuccess('Thanks — check your email to continue. Redirecting...');
 
       // Redirect to verify email page
       setTimeout(() => {

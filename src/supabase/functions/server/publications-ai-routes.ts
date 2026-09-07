@@ -10,6 +10,7 @@
 
 import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   processAIWritingRequest,
@@ -26,6 +27,11 @@ const log = createModuleLogger('publications-ai');
 // API-quota burn and prompt injection into generated content. Back-office
 // tooling, admin only; the AIWritingAPI frontend callers send admin JWTs.
 app.use('*', requireAdmin);
+
+// Metered AFTER the auth guard above, so the verified `userId` is on the
+// context. Router-scope rather than per route because every write here is a
+// provider call.
+app.use('*', aiUsageLimit({ surface: 'publications-ai' }));
 
 // Root handler
 app.get('/', (c) => c.json({ service: 'publications-ai', status: 'active' }));

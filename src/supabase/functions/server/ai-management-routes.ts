@@ -21,6 +21,7 @@
 
 import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getAllAgents, getAgent } from './ai-management-service.ts';
@@ -125,6 +126,9 @@ app.get(
  */
 app.post(
   '/kb',
+  // Writing a KB entry re-embeds it through vasco-rag-service, which is a
+  // paid OpenAI call. The rest of this router is configuration CRUD.
+  aiUsageLimit({ surface: 'kb-embedding' }),
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const input = (await c.req.json()) as kbService.CreateKBInput;
@@ -177,6 +181,9 @@ app.get(
  */
 app.put(
   '/kb/:id',
+  // Writing a KB entry re-embeds it through vasco-rag-service, which is a
+  // paid OpenAI call. The rest of this router is configuration CRUD.
+  aiUsageLimit({ surface: 'kb-embedding' }),
   asyncHandler(async (c) => {
     const { id } = c.req.param();
     const input = (await c.req.json()) as kbService.UpdateKBInput;

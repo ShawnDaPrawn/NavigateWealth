@@ -72,15 +72,21 @@ const TWO_FACTOR_GRACE_MS = 3 * 60 * 60 * 1000;
  * token so the session cannot be renewed, this check kills the access token
  * already in the attacker's hands before it expires.
  *
- * FAIL-OPEN on an unreadable `iat`, deliberately: `passedIssuedAt` is null for
- * callers that do not have the raw token to hand (`ai-intelligence.tsx`,
- * `tasks-digest-routes.ts`), and turning "cannot tell" into a 401 would lock
- * out every user of those paths on the first password change anyone performs.
- * The stamp is still enforced everywhere the token IS available: every guard
- * built on `resolveAuthUser` (the plain auth guard and both role guards below)
- * plus `getAuthContext` — together, the routes that matter.
+ * EVERY caller now passes the `iat`. The first version of this made the
+ * parameter optional and left four hand-rolled auth paths — `ai-advisor.ts`,
+ * `ai-intelligence.tsx`, `tasks-digest-routes.ts` and the admin check in
+ * `auth-routes.ts` — calling it with one argument. All four already had the
+ * raw token in scope, so that was not "cannot tell", it was "did not ask": a
+ * revoked token kept working on those routes, the paid AI endpoints included.
+ * They pass it now, and `session-revocation.test.ts` pins the behaviour.
  *
- * Naming those two guards adjacently in prose is deliberately avoided here:
+ * The parameter stays optional, and null still fails OPEN, for one reason: a
+ * FUTURE caller that genuinely cannot produce an `iat` must degrade to today's
+ * behaviour rather than locking every user out of its routes on the first
+ * password change anyone performs. It is not a licence to omit it — if you are
+ * holding a token, pass `readTokenIssuedAt(token)`.
+ *
+ * Naming the two role guards adjacently in prose is deliberately avoided here:
  * `auth-middleware-cost.test.ts` greps this source for the redundant
  * `requireAuth`-then-role-guard pairing, and a comment containing that literal
  * sequence reads to it as a real route registration.

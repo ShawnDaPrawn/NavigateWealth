@@ -30,17 +30,36 @@
  *
  * HOW THE PRINCIPAL IS RESOLVED
  * -----------------------------
- * From the `sub` claim of the bearer token, read locally without a network
- * call — see `readTokenSubject`. This middleware runs BEFORE the sub-router's
- * own `requireAuth`, which is what verifies the signature, so the claim it
- * reads is unverified at this point.
+ * From `c.get('userId')` — the id the route's OWN auth middleware already put
+ * on the context after verifying the token. This guard is always registered
+ * after that middleware, so by the time it runs the principal is established
+ * and there is nothing here to verify.
  *
- * That is sound here, and the reason is worth stating plainly. A forged token
- * buys a fresh counter, but the request it is attached to is rejected by
- * `requireAuth` moments later and never reaches OpenAI — so the forger has
- * bought a free bucket for requests that cost nothing. The counter exists to
- * bound SPEND, and only a genuine token can cause spend. The IP dimension
- * below still bounds the volume of forged attempts.
+ * It took two wrong turns to get there, and both are worth recording.
+ *
+ * First it read the `sub` claim from the bearer token locally, without
+ * checking the signature, and argued that a forged token only buys a bucket
+ * for a request that will be rejected anyway. That had the threat backwards:
+ * the attack is forging a VICTIM's subject, not a new one. Anyone who knew a
+ * user's UUID could spend that user's whole daily allowance on requests that
+ * fail downstream — a denial-of-service against a named account, driven by a
+ * stranger, and the failing requests do not give the quota back.
+ *
+ * Then it verified the token itself with `auth.getUser`, which fixed the
+ * attack and introduced two new problems: a second auth round trip on every
+ * AI request, and a hand-rolled token verifier outside `auth-mw.ts` — which
+ * `auth-consolidation.test.ts` catches, correctly, because a module that
+ * verifies tokens and does not apply the account-security policy is how the
+ * two drift apart.
+ *
+ * Reading the id the route's own guard already resolved has none of those
+ * costs. Where a router authenticates INSIDE its handler rather than in
+ * middleware (`will-chat-routes.ts`, `tax-agent-routes.ts`), the handler calls
+ * `chargeAiUsage` directly once it has the user, rather than this middleware.
+ *
+ * With no principal on the context, only the IP dimension applies. That is the
+ * honest answer for an unauthenticated request, and the route's own auth is
+ * what rejects it moments later.
  *
  * DEFAULTS, AND WHY THEY ARE WHERE THEY ARE
  * -----------------------------------------
@@ -53,9 +72,8 @@
  * @module server/ai-usage-limit
  */
 
-import type { MiddlewareHandler } from 'npm:hono';
+import type { Context, MiddlewareHandler } from 'npm:hono';
 import { checkRateLimit, type RateLimitConfig } from './rateLimiter.ts';
-import { readTokenSubject } from './jwt-claims.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('ai-usage-limit');
@@ -139,6 +157,82 @@ export interface AiUsageLimitOptions {
  * outage of the limiter must not become unlimited spending — and it matches
  * what the login limiter already does.
  */
+/**
+ * Apply the caps for one request. Returns a 429 `Response` when a dimension is
+ * exhausted, or null to continue.
+ *
+ * Exported for handlers that authenticate inside themselves rather than in
+ * middleware, where `c.get('userId')` is not set when a middleware would run.
+ * Call it immediately after the user is resolved and return its result if it
+ * is not null.
+ */
+export async function chargeAiUsage(
+  c: Context,
+  options: { surface: string; userId?: string | null },
+): Promise<Response | null> {
+  const { surface, userId } = options;
+  const limits = aiUsageLimits();
+  const ip = clientIp(c);
+
+  // IP first: it is the only bound on an unauthenticated flood, and it costs
+  // nothing to apply before the account dimensions.
+  const dimensions: Array<{ id: string; action: string; config: RateLimitConfig }> = [
+    { id: `ip:${ip}`, action: 'ai_daily_ip', config: limits.PER_IP_DAILY },
+  ];
+
+  if (userId) {
+    dimensions.push(
+      { id: `usr:${userId}`, action: `ai_burst:${surface}`, config: limits.PER_USER_BURST },
+      { id: `usr:${userId}`, action: `ai_daily:${surface}`, config: limits.PER_USER_DAILY },
+    );
+  }
+
+  for (const dimension of dimensions) {
+    const result = await checkRateLimit(dimension.id, dimension.action, dimension.config);
+
+    c.header('X-RateLimit-Limit', String(dimension.config.maxAttempts));
+    c.header('X-RateLimit-Remaining', String(result.remaining));
+    c.header('X-RateLimit-Reset', String(Math.floor(result.resetAt.getTime() / 1000)));
+
+    if (!result.allowed) {
+      const retryAfter = Math.max(1, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000));
+      c.header('Retry-After', String(retryAfter));
+      log.warn('AI usage limit reached', {
+        surface,
+        action: dimension.action,
+        // Never the raw id or IP: this log is read on the admin quality
+        // dashboard, and neither value is needed to act on it.
+        idHashPrefix: dimension.id.slice(0, 12),
+      });
+      return c.json(
+        {
+          error:
+            'You have reached the AI usage limit for now. Please try again later, or contact your administrator if you need a higher limit.',
+          code: 'AI_USAGE_LIMIT',
+          retryAfterSeconds: retryAfter,
+        },
+        429,
+      );
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Hono middleware factory.
+ *
+ *   app.post('/chat', requireAuth, aiUsageLimit({ surface: 'ai-advisor' }), handler);
+ *
+ * MUST be registered after the route's own auth guard — that is what puts the
+ * verified `userId` on the context. Registered before it, this degrades to
+ * IP-only metering silently, which is the failure mode
+ * `ai-usage-limit-coverage.test.ts` exists to make visible.
+ *
+ * FAILS CLOSED, via `checkRateLimit`: if the counter cannot be consulted the
+ * request is refused. That is the correct direction for a spend limit — an
+ * outage of the limiter must not become unlimited spending.
+ */
 export function aiUsageLimit(options: AiUsageLimitOptions): MiddlewareHandler {
   const { surface, methods = ['POST', 'PUT', 'PATCH'] } = options;
   const allowedMethods = new Set(methods.map((m) => m.toUpperCase()));
@@ -146,58 +240,9 @@ export function aiUsageLimit(options: AiUsageLimitOptions): MiddlewareHandler {
   return async (c, next) => {
     if (!allowedMethods.has(c.req.method.toUpperCase())) return next();
 
-    const limits = aiUsageLimits();
-    const subject = readTokenSubject(c.req.header('Authorization'));
-    const ip = clientIp(c);
-
-    // Ordered cheapest-signal-first so a burst is caught before the daily
-    // counters are touched, and so the user-scoped dimensions (the ones that
-    // reflect real spend) decide the outcome ahead of the shared IP bucket.
-    const dimensions: Array<{ id: string; action: string; config: RateLimitConfig }> = [];
-    if (subject) {
-      dimensions.push(
-        {
-          id: `usr:${subject}`,
-          action: `ai_burst:${surface}`,
-          config: limits.PER_USER_BURST,
-        },
-        {
-          id: `usr:${subject}`,
-          action: `ai_daily:${surface}`,
-          config: limits.PER_USER_DAILY,
-        },
-      );
-    }
-    dimensions.push({ id: `ip:${ip}`, action: 'ai_daily_ip', config: limits.PER_IP_DAILY });
-
-    for (const dimension of dimensions) {
-      const result = await checkRateLimit(dimension.id, dimension.action, dimension.config);
-
-      c.header('X-RateLimit-Limit', String(dimension.config.maxAttempts));
-      c.header('X-RateLimit-Remaining', String(result.remaining));
-      c.header('X-RateLimit-Reset', String(Math.floor(result.resetAt.getTime() / 1000)));
-
-      if (!result.allowed) {
-        const retryAfter = Math.max(1, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000));
-        c.header('Retry-After', String(retryAfter));
-        log.warn('AI usage limit reached', {
-          surface,
-          action: dimension.action,
-          // Never the raw subject or IP: this log is read on the admin quality
-          // dashboard, and neither value needs to be there to act on it.
-          idHashPrefix: dimension.id.slice(0, 12),
-        });
-        return c.json(
-          {
-            error:
-              'You have reached the AI usage limit for now. Please try again later, or contact your administrator if you need a higher limit.',
-            code: 'AI_USAGE_LIMIT',
-            retryAfterSeconds: retryAfter,
-          },
-          429,
-        );
-      }
-    }
+    const userId = c.get('userId') as string | undefined;
+    const refusal = await chargeAiUsage(c, { surface, userId });
+    if (refusal) return refusal;
 
     await next();
   };

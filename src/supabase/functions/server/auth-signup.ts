@@ -22,9 +22,12 @@ import { isTrustedRedirectOrigin } from './cors-origin.ts';
 import { submissionsService } from './submissions-service.ts';
 import { autoSubscribeClient } from './newsletter-service.ts';
 import {
+  extractClientIp,
   getBlockedClientIp,
   getBlockedIpAddressWarning,
 } from '../../../shared/submissions/blockedIpAddresses.ts';
+import { checkRateLimit, RATE_LIMITS } from './rateLimiter.ts';
+import { escapeHtml } from './shared-validation-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('auth-signup');
@@ -90,10 +93,16 @@ async function sendExistingAccountSignupNotice(
     </p>
   `;
 
+  // `firstName` is whatever the UNAUTHENTICATED signup payload said, and this
+  // message is delivered to somebody else — the address's real owner. Left
+  // raw, an attacker could inject markup into a branded Navigate Wealth email
+  // and turn the notice into a phishing page addressed to a real client.
+  const safeFirstName = firstName ? escapeHtml(firstName) : '';
+
   const html = createEmailTemplate(body, {
     title: 'You already have an account',
     subtitle: 'A sign-up was attempted with your email address',
-    greeting: firstName ? `Hello ${firstName},` : 'Hello,',
+    greeting: safeFirstName ? `Hello ${safeFirstName},` : 'Hello,',
     ...(actionLink ? { buttonUrl: actionLink, buttonLabel: 'Set a new password' } : {}),
     footerSettings,
   });
@@ -121,6 +130,8 @@ async function sendExistingAccountSignupNotice(
  */
 app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
   const blockedIpAddress = getBlockedClientIp((headerName) => c.req.header(headerName));
+  const ip = extractClientIp((headerName) => c.req.header(headerName)) || 'unknown';
+
   if (blockedIpAddress) {
     log.warn('Blocked auth signup from abusive IP address', { blockedIpAddress });
     return c.json(
@@ -143,6 +154,39 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
     if (!email || !password || !firstName || !surname) {
       log.error('❌ Missing required fields');
       return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    // Rate limit, on the route that is actually reachable.
+    //
+    // `POST /auth/signup-validate` has applied this for a long time, but it is
+    // a pre-flight the SPA calls and a direct caller can simply skip — the same
+    // shape of hole that `/auth/login` exists to close. It mattered less while
+    // the worst outcome was an unwanted account; it matters now, because this
+    // handler sends mail: an address that already exists gets a notice with a
+    // freshly minted recovery link, so an unlimited caller could email-bomb a
+    // known client and churn their recovery links at will. The static blocked-IP
+    // list above is a denylist of known abusers, not a bound on ordinary abuse.
+    //
+    // Both dimensions, IP first, so spraying one address from many hosts cannot
+    // exhaust that address's budget for its real owner.
+    for (const [identifier, dimension] of [
+      [ip, 'ip'],
+      [email, 'email'],
+    ] as const) {
+      const limit = await checkRateLimit(identifier, 'signup', RATE_LIMITS.SIGNUP);
+      if (!limit.allowed) {
+        log.warn('Signup rejected: rate limit exceeded', { dimension });
+        const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
+        c.header('Retry-After', String(retryAfter));
+        return c.json(
+          {
+            error: 'Too many signup attempts. Please try again later.',
+            blocked: true,
+            resetAt: limit.resetAt,
+          },
+          429,
+        );
+      }
     }
 
     // Password strength, on the route that is actually reachable.
@@ -269,18 +313,13 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
           log.warn('Could not send existing-account notice', { error: String(noticeError) });
         }
 
-        return c.json(
-          {
-            success: true,
-            // Same shape as the success path, with nothing in it that is
-            // derived from an account we must not confirm exists. The client
-            // routes on `success` and shows the "check your email" screen.
-            verificationRequired: true,
-            message:
-              'Thanks — check your email to continue. If you already have an account, we have sent you a sign-in link instead.',
-          },
-          200,
-        );
+        // Byte-identical to the success path below. Any divergence here —
+        // an extra field, a different message — is the oracle coming back.
+        return c.json({
+          success: true,
+          verificationRequired: true,
+          message: 'Thanks — check your email to continue.',
+        });
       }
 
       log.error('❌ Failed to create user:', userError);
@@ -473,18 +512,24 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
       }
     })();
 
-    // Return success with user and application data
+    // The ONE response this endpoint gives, for a new account and for an
+    // address that already had one alike.
+    //
+    // It used to return the new `user` and `application` here and a different
+    // shape on the duplicate path. Both were 200, which looked like enough —
+    // it was not: a caller could tell the two apart by whether `user` was
+    // present, so the enumeration oracle survived the fix that was supposed to
+    // remove it. For an advisory firm the client list is itself confidential,
+    // and a "fix" that only defeats someone reading status codes is worse than
+    // none, because it stops anyone looking again.
+    //
+    // The application number is still generated and stored; it is shown in the
+    // portal once the user verifies and signs in. It is not worth a channel
+    // that tells a stranger who banks here.
     return c.json({
       success: true,
-      user: {
-        id: userId,
-        email: userData.user.email,
-      },
-      application: {
-        id: applicationId,
-        application_number: applicationNumber,
-        status: 'draft',
-      },
+      verificationRequired: true,
+      message: 'Thanks — check your email to continue.',
     });
   } catch (error: unknown) {
     log.error('❌ Signup error:', error);

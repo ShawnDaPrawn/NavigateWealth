@@ -27,6 +27,7 @@ import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
 import { resolveTrustedRole } from './constants.ts';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import { readTokenIssuedAt } from './jwt-claims.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
@@ -167,7 +168,7 @@ async function requireCronOrAdminAuth(
         // suspended admin to log in again — a loop that cannot succeed — so the
         // status and code are returned directly instead.
         try {
-          await enforceAccountSecurity(user.id);
+          await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
         } catch (securityError) {
           if (securityError instanceof AuthError) {
             return new Response(

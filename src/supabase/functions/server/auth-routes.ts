@@ -22,6 +22,7 @@ import {
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
 import { isTrustedRedirectOrigin } from './cors-origin.ts';
+import { readTokenIssuedAt } from './jwt-claims.ts';
 import {
   requireSuperAdmin,
   requirePrimaryAuth,
@@ -940,7 +941,7 @@ authRoutes.get('/security-status', async (c) => {
     // token itself rather than going through requireAdmin, and so had skipped
     // the suspended/deleted/stale-2FA check entirely.
     try {
-      await enforceAccountSecurity(user.id);
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(

@@ -24,6 +24,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { requireAuth } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import type { KvPolicy } from './integrations-types.ts';
 import {
   extractPolicyDocument,
@@ -49,137 +50,142 @@ const log = createModuleLogger('integrations-policy-extraction');
  * Trigger AI extraction on a policy's attached document.
  * Body: { policyId, clientId }
  */
-app.post('/policy-extraction/extract', requireAuth, async (c) => {
-  try {
-    const body = await c.req.json();
-    const { policyId, clientId } = body;
+app.post(
+  '/policy-extraction/extract',
+  requireAuth,
+  aiUsageLimit({ surface: 'policy-extraction' }),
+  async (c) => {
+    try {
+      const body = await c.req.json();
+      const { policyId, clientId } = body;
 
-    if (!policyId || !clientId) {
-      return c.json({ error: 'Missing policyId or clientId' }, 400);
-    }
-
-    const policiesKey = `policies:client:${clientId}`;
-    const policies = (await kv.get(policiesKey)) || [];
-    const policyIndex = (policies as KvPolicy[]).findIndex((p: KvPolicy) => p.id === policyId);
-
-    if (policyIndex === -1) {
-      return c.json({ error: 'Policy not found' }, 404);
-    }
-
-    const policy = (policies as KvPolicy[])[policyIndex];
-
-    if (!policy.document?.storageKey) {
-      return c.json(
-        { error: 'No document attached to this policy. Upload a document first.' },
-        400,
-      );
-    }
-
-    // Phase 3: Preserve previous extraction in history before overwriting
-    const previousExtraction = policy.extraction;
-
-    if (
-      previousExtraction &&
-      (previousExtraction.status === 'completed' || previousExtraction.status === 'failed')
-    ) {
-      // Pass the stored field mappings snapshot for comparison in history
-      const previousFieldMappings = policy.lastFieldMappingsSnapshot
-        ? policy.lastFieldMappingsSnapshot.map((s) => ({
-            canonicalKey: s.k,
-            schemaFieldId: s.f,
-            schemaFieldName: s.n,
-            value: s.v,
-            confidence: s.c,
-          }))
-        : undefined;
-
-      const historyEntry = buildHistoryEntry(
-        previousExtraction,
-        previousExtraction.appliedFields?.length || 0,
-        policy.document?.fileName,
-        previousFieldMappings,
-      );
-
-      const existingHistory = policy.extractionHistory || [];
-      // Keep last 10 history entries to prevent unbounded growth
-      const trimmedHistory = [...existingHistory, historyEntry].slice(-10);
-
-      (policies as KvPolicy[])[policyIndex] = {
-        ...policy,
-        extractionHistory: trimmedHistory,
-      };
-    }
-
-    // Mark extraction as pending
-    (policies as KvPolicy[])[policyIndex] = {
-      ...(policies as KvPolicy[])[policyIndex],
-      extraction: {
-        extractedData: null,
-        extractedAt: new Date().toISOString(),
-        confidence: 0,
-        status: 'pending',
-        model: OPENAI_PRIMARY_MODEL,
-      },
-      updatedAt: new Date().toISOString(),
-    };
-    await kv.set(policiesKey, policies);
-
-    // Run the extraction (this can take 10-30 seconds)
-    const { extraction, fieldMappings } = await extractPolicyDocument(policy);
-
-    // Phase 3: Generate diff comparing new extraction against current policy data
-    let diff: FieldDiff[] | undefined;
-    if (extraction.status === 'completed') {
-      const changedFields = fieldMappings.filter((m) => {
-        const current = policy.data?.[m.schemaFieldId];
-        return (
-          current !== undefined &&
-          current !== null &&
-          current !== '' &&
-          String(current) !== String(m.value)
-        );
-      });
-
-      if (changedFields.length > 0) {
-        diff = changedFields.map((m) => ({
-          schemaFieldId: m.schemaFieldId,
-          fieldName: m.schemaFieldName,
-          oldValue: policy.data?.[m.schemaFieldId] ?? null,
-          newValue: m.value,
-          oldConfidence: 0,
-          newConfidence: m.confidence,
-          changed: true,
-        }));
+      if (!policyId || !clientId) {
+        return c.json({ error: 'Missing policyId or clientId' }, 400);
       }
+
+      const policiesKey = `policies:client:${clientId}`;
+      const policies = (await kv.get(policiesKey)) || [];
+      const policyIndex = (policies as KvPolicy[]).findIndex((p: KvPolicy) => p.id === policyId);
+
+      if (policyIndex === -1) {
+        return c.json({ error: 'Policy not found' }, 404);
+      }
+
+      const policy = (policies as KvPolicy[])[policyIndex];
+
+      if (!policy.document?.storageKey) {
+        return c.json(
+          { error: 'No document attached to this policy. Upload a document first.' },
+          400,
+        );
+      }
+
+      // Phase 3: Preserve previous extraction in history before overwriting
+      const previousExtraction = policy.extraction;
+
+      if (
+        previousExtraction &&
+        (previousExtraction.status === 'completed' || previousExtraction.status === 'failed')
+      ) {
+        // Pass the stored field mappings snapshot for comparison in history
+        const previousFieldMappings = policy.lastFieldMappingsSnapshot
+          ? policy.lastFieldMappingsSnapshot.map((s) => ({
+              canonicalKey: s.k,
+              schemaFieldId: s.f,
+              schemaFieldName: s.n,
+              value: s.v,
+              confidence: s.c,
+            }))
+          : undefined;
+
+        const historyEntry = buildHistoryEntry(
+          previousExtraction,
+          previousExtraction.appliedFields?.length || 0,
+          policy.document?.fileName,
+          previousFieldMappings,
+        );
+
+        const existingHistory = policy.extractionHistory || [];
+        // Keep last 10 history entries to prevent unbounded growth
+        const trimmedHistory = [...existingHistory, historyEntry].slice(-10);
+
+        (policies as KvPolicy[])[policyIndex] = {
+          ...policy,
+          extractionHistory: trimmedHistory,
+        };
+      }
+
+      // Mark extraction as pending
+      (policies as KvPolicy[])[policyIndex] = {
+        ...(policies as KvPolicy[])[policyIndex],
+        extraction: {
+          extractedData: null,
+          extractedAt: new Date().toISOString(),
+          confidence: 0,
+          status: 'pending',
+          model: OPENAI_PRIMARY_MODEL,
+        },
+        updatedAt: new Date().toISOString(),
+      };
+      await kv.set(policiesKey, policies);
+
+      // Run the extraction (this can take 10-30 seconds)
+      const { extraction, fieldMappings } = await extractPolicyDocument(policy);
+
+      // Phase 3: Generate diff comparing new extraction against current policy data
+      let diff: FieldDiff[] | undefined;
+      if (extraction.status === 'completed') {
+        const changedFields = fieldMappings.filter((m) => {
+          const current = policy.data?.[m.schemaFieldId];
+          return (
+            current !== undefined &&
+            current !== null &&
+            current !== '' &&
+            String(current) !== String(m.value)
+          );
+        });
+
+        if (changedFields.length > 0) {
+          diff = changedFields.map((m) => ({
+            schemaFieldId: m.schemaFieldId,
+            fieldName: m.schemaFieldName,
+            oldValue: policy.data?.[m.schemaFieldId] ?? null,
+            newValue: m.value,
+            oldConfidence: 0,
+            newConfidence: m.confidence,
+            changed: true,
+          }));
+        }
+      }
+
+      // Save the extraction result and field mappings snapshot for future history comparison
+      (policies as KvPolicy[])[policyIndex] = {
+        ...(policies as KvPolicy[])[policyIndex],
+        extraction,
+        lastFieldMappingsSnapshot: fieldMappings.slice(0, 50).map((fm) => ({
+          k: fm.canonicalKey,
+          f: fm.schemaFieldId,
+          n: fm.schemaFieldName,
+          v: fm.value,
+          c: fm.confidence,
+        })),
+        updatedAt: new Date().toISOString(),
+      };
+      await kv.set(policiesKey, policies);
+
+      return c.json({
+        success: true,
+        extraction,
+        fieldMappings,
+        diff: diff || [],
+        historyCount: (policies as KvPolicy[])[policyIndex].extractionHistory?.length || 0,
+      });
+    } catch (e) {
+      log.error('Error extracting policy data:', e);
+      return c.json({ error: `Extraction failed: ${getErrMsg(e)}` }, 500);
     }
-
-    // Save the extraction result and field mappings snapshot for future history comparison
-    (policies as KvPolicy[])[policyIndex] = {
-      ...(policies as KvPolicy[])[policyIndex],
-      extraction,
-      lastFieldMappingsSnapshot: fieldMappings.slice(0, 50).map((fm) => ({
-        k: fm.canonicalKey,
-        f: fm.schemaFieldId,
-        n: fm.schemaFieldName,
-        v: fm.value,
-        c: fm.confidence,
-      })),
-      updatedAt: new Date().toISOString(),
-    };
-    await kv.set(policiesKey, policies);
-
-    return c.json({
-      success: true,
-      extraction,
-      fieldMappings,
-      diff: diff || [],
-      historyCount: (policies as KvPolicy[])[policyIndex].extractionHistory?.length || 0,
-    });
-  } catch (e) {
-    log.error('Error extracting policy data:', e);
-    return c.json({ error: `Extraction failed: ${getErrMsg(e)}` }, 500);
-  }
-});
+  },
+);
 
 /**
  * GET /policy-extraction/result
@@ -785,201 +791,206 @@ app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
  * and queue them for re-extraction. Supports dry-run mode (default: true).
  * Body: { providerId, dryRun?: boolean }
  */
-app.post('/policy-extraction/bulk-reextract', requireAuth, async (c) => {
-  try {
-    const body = await c.req.json();
-    const { providerId, dryRun = true } = body;
+app.post(
+  '/policy-extraction/bulk-reextract',
+  requireAuth,
+  aiUsageLimit({ surface: 'policy-extraction' }),
+  async (c) => {
+    try {
+      const body = await c.req.json();
+      const { providerId, dryRun = true } = body;
 
-    if (!providerId) {
-      return c.json({ error: 'Missing providerId' }, 400);
-    }
+      if (!providerId) {
+        return c.json({ error: 'Missing providerId' }, 400);
+      }
 
-    // Scan all client policy keys to find policies with this provider
-    const allClientEntries = await kv.getByPrefix('policies:client:');
-    const candidates: Array<{
-      clientId: string;
-      policyId: string;
-      providerName: string;
-      fileName: string;
-      hasExistingExtraction: boolean;
-    }> = [];
+      // Scan all client policy keys to find policies with this provider
+      const allClientEntries = await kv.getByPrefix('policies:client:');
+      const candidates: Array<{
+        clientId: string;
+        policyId: string;
+        providerName: string;
+        fileName: string;
+        hasExistingExtraction: boolean;
+      }> = [];
 
-    for (const entry of allClientEntries || []) {
-      // getByPrefix returns raw values — each is the array of KvPolicy[]
-      const policies = (Array.isArray(entry) ? entry : []) as KvPolicy[];
+      for (const entry of allClientEntries || []) {
+        // getByPrefix returns raw values — each is the array of KvPolicy[]
+        const policies = (Array.isArray(entry) ? entry : []) as KvPolicy[];
 
-      for (const policy of policies) {
-        if (policy.providerId === providerId && policy.document?.storageKey && !policy.archived) {
-          candidates.push({
-            clientId: policy.clientId,
-            policyId: policy.id,
-            providerName: policy.providerName,
-            fileName: policy.document.fileName,
-            hasExistingExtraction: !!policy.extraction?.extractedData,
-          });
+        for (const policy of policies) {
+          if (policy.providerId === providerId && policy.document?.storageKey && !policy.archived) {
+            candidates.push({
+              clientId: policy.clientId,
+              policyId: policy.id,
+              providerName: policy.providerName,
+              fileName: policy.document.fileName,
+              hasExistingExtraction: !!policy.extraction?.extractedData,
+            });
+          }
         }
       }
-    }
 
-    if (dryRun) {
-      return c.json({
-        success: true,
-        dryRun: true,
-        candidateCount: candidates.length,
-        candidates: candidates.map((cand) => ({
-          policyId: cand.policyId,
-          fileName: cand.fileName,
-          hasExistingExtraction: cand.hasExistingExtraction,
-        })),
-        message: `Found ${candidates.length} policies with documents for this provider. Set dryRun: false to execute.`,
-      });
-    }
-
-    // Live run — stream NDJSON progress events as each policy is processed
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        const send = (data: Record<string, unknown>) => {
-          controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'));
-        };
-
-        let successCount = 0;
-        let failCount = 0;
-        const total = candidates.length;
-
-        send({ type: 'start', total, providerId });
-
-        for (let i = 0; i < candidates.length; i++) {
-          const cand = candidates[i];
-          send({
-            type: 'progress',
-            current: i + 1,
-            total,
+      if (dryRun) {
+        return c.json({
+          success: true,
+          dryRun: true,
+          candidateCount: candidates.length,
+          candidates: candidates.map((cand) => ({
             policyId: cand.policyId,
             fileName: cand.fileName,
-            status: 'processing',
-          });
+            hasExistingExtraction: cand.hasExistingExtraction,
+          })),
+          message: `Found ${candidates.length} policies with documents for this provider. Set dryRun: false to execute.`,
+        });
+      }
 
-          try {
-            const policiesKey = `policies:client:${cand.clientId}`;
-            const policies = ((await kv.get(policiesKey)) || []) as KvPolicy[];
-            const policyIndex = policies.findIndex((p) => p.id === cand.policyId);
+      // Live run — stream NDJSON progress events as each policy is processed
+      const stream = new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          const send = (data: Record<string, unknown>) => {
+            controller.enqueue(encoder.encode(JSON.stringify(data) + '\n'));
+          };
 
-            if (policyIndex === -1) {
+          let successCount = 0;
+          let failCount = 0;
+          const total = candidates.length;
+
+          send({ type: 'start', total, providerId });
+
+          for (let i = 0; i < candidates.length; i++) {
+            const cand = candidates[i];
+            send({
+              type: 'progress',
+              current: i + 1,
+              total,
+              policyId: cand.policyId,
+              fileName: cand.fileName,
+              status: 'processing',
+            });
+
+            try {
+              const policiesKey = `policies:client:${cand.clientId}`;
+              const policies = ((await kv.get(policiesKey)) || []) as KvPolicy[];
+              const policyIndex = policies.findIndex((p) => p.id === cand.policyId);
+
+              if (policyIndex === -1) {
+                send({
+                  type: 'result',
+                  current: i + 1,
+                  total,
+                  policyId: cand.policyId,
+                  fileName: cand.fileName,
+                  status: 'skipped',
+                  error: 'Policy not found',
+                });
+                continue;
+              }
+
+              const policy = policies[policyIndex];
+
+              // Preserve previous extraction in history with field mappings snapshot
+              if (
+                policy.extraction &&
+                (policy.extraction.status === 'completed' || policy.extraction.status === 'failed')
+              ) {
+                const prevFM = policy.lastFieldMappingsSnapshot
+                  ? policy.lastFieldMappingsSnapshot.map((s) => ({
+                      canonicalKey: s.k,
+                      schemaFieldId: s.f,
+                      schemaFieldName: s.n,
+                      value: s.v,
+                      confidence: s.c,
+                    }))
+                  : undefined;
+
+                const historyEntry = buildHistoryEntry(
+                  policy.extraction,
+                  policy.extraction.appliedFields?.length || 0,
+                  policy.document?.fileName,
+                  prevFM,
+                );
+                const existingHistory = policy.extractionHistory || [];
+                policies[policyIndex] = {
+                  ...policy,
+                  extractionHistory: [...existingHistory, historyEntry].slice(-10),
+                };
+              }
+
+              const { extraction, fieldMappings: newFM } = await extractPolicyDocument(policy);
+
+              policies[policyIndex] = {
+                ...policies[policyIndex],
+                extraction,
+                lastFieldMappingsSnapshot: newFM.slice(0, 50).map((fm) => ({
+                  k: fm.canonicalKey,
+                  f: fm.schemaFieldId,
+                  n: fm.schemaFieldName,
+                  v: fm.value,
+                  c: fm.confidence,
+                })),
+                updatedAt: new Date().toISOString(),
+              };
+              await kv.set(policiesKey, policies);
+
+              successCount++;
               send({
                 type: 'result',
                 current: i + 1,
                 total,
                 policyId: cand.policyId,
                 fileName: cand.fileName,
-                status: 'skipped',
-                error: 'Policy not found',
+                status: extraction.status,
+                confidence: extraction.confidence,
               });
-              continue;
+            } catch (err) {
+              failCount++;
+              send({
+                type: 'result',
+                current: i + 1,
+                total,
+                policyId: cand.policyId,
+                fileName: cand.fileName,
+                status: 'failed',
+                error: getErrMsg(err),
+              });
             }
-
-            const policy = policies[policyIndex];
-
-            // Preserve previous extraction in history with field mappings snapshot
-            if (
-              policy.extraction &&
-              (policy.extraction.status === 'completed' || policy.extraction.status === 'failed')
-            ) {
-              const prevFM = policy.lastFieldMappingsSnapshot
-                ? policy.lastFieldMappingsSnapshot.map((s) => ({
-                    canonicalKey: s.k,
-                    schemaFieldId: s.f,
-                    schemaFieldName: s.n,
-                    value: s.v,
-                    confidence: s.c,
-                  }))
-                : undefined;
-
-              const historyEntry = buildHistoryEntry(
-                policy.extraction,
-                policy.extraction.appliedFields?.length || 0,
-                policy.document?.fileName,
-                prevFM,
-              );
-              const existingHistory = policy.extractionHistory || [];
-              policies[policyIndex] = {
-                ...policy,
-                extractionHistory: [...existingHistory, historyEntry].slice(-10),
-              };
-            }
-
-            const { extraction, fieldMappings: newFM } = await extractPolicyDocument(policy);
-
-            policies[policyIndex] = {
-              ...policies[policyIndex],
-              extraction,
-              lastFieldMappingsSnapshot: newFM.slice(0, 50).map((fm) => ({
-                k: fm.canonicalKey,
-                f: fm.schemaFieldId,
-                n: fm.schemaFieldName,
-                v: fm.value,
-                c: fm.confidence,
-              })),
-              updatedAt: new Date().toISOString(),
-            };
-            await kv.set(policiesKey, policies);
-
-            successCount++;
-            send({
-              type: 'result',
-              current: i + 1,
-              total,
-              policyId: cand.policyId,
-              fileName: cand.fileName,
-              status: extraction.status,
-              confidence: extraction.confidence,
-            });
-          } catch (err) {
-            failCount++;
-            send({
-              type: 'result',
-              current: i + 1,
-              total,
-              policyId: cand.policyId,
-              fileName: cand.fileName,
-              status: 'failed',
-              error: getErrMsg(err),
-            });
           }
-        }
 
-        log.info('Bulk re-extraction complete', {
-          providerId,
-          total,
-          success: successCount,
-          failed: failCount,
-        });
+          log.info('Bulk re-extraction complete', {
+            providerId,
+            total,
+            success: successCount,
+            failed: failCount,
+          });
 
-        send({
-          type: 'complete',
-          totalProcessed: total,
-          successCount,
-          failCount,
-        });
+          send({
+            type: 'complete',
+            totalProcessed: total,
+            successCount,
+            failCount,
+          });
 
-        controller.close();
-      },
-    });
+          controller.close();
+        },
+      });
 
-    return new Response(stream, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/x-ndjson',
-        'Transfer-Encoding': 'chunked',
-        // Allow-list, not '*' — this stream reports extracted policy data.
-        ...corsResponseHeaders(c.req.header('origin')),
-        'Cache-Control': 'no-cache',
-      },
-    });
-  } catch (e) {
-    log.error('Bulk re-extraction error:', e);
-    return c.json({ error: `Bulk re-extraction failed: ${getErrMsg(e)}` }, 500);
-  }
-});
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/x-ndjson',
+          'Transfer-Encoding': 'chunked',
+          // Allow-list, not '*' — this stream reports extracted policy data.
+          ...corsResponseHeaders(c.req.header('origin')),
+          'Cache-Control': 'no-cache',
+        },
+      });
+    } catch (e) {
+      log.error('Bulk re-extraction error:', e);
+      return c.json({ error: `Bulk re-extraction failed: ${getErrMsg(e)}` }, 500);
+    }
+  },
+);
 
 export default app;

@@ -2,21 +2,21 @@
  * AI usage limit — the properties that decide whether it is worth having.
  * =======================================================================
  *
- * The middleware runs on the PARENT app, ahead of the lazy import and
- * therefore ahead of the sub-router's own `requireAuth`. That ordering is what
- * makes two of these tests load-bearing rather than incidental:
+ * The guard is registered AFTER each route's own auth, so the principal it
+ * charges is the `userId` that auth already verified. Three properties carry
+ * the design, and each of the first two replaced a wrong answer:
  *
- *   - it must be safe on an unauthenticated request (no `c.get('userId')`);
- *   - it must not throttle reads, which cost nothing at the provider.
- *
- * And the third: it FAILS CLOSED. A limiter that cannot consult its counter
- * refusing the request is the correct direction for a spend cap — the failure
- * mode of the alternative is an unbounded third-party bill during exactly the
- * outage nobody is watching.
+ *   - it charges only a VERIFIED principal. Reading an unverified `sub` claim
+ *     let anyone who knew a victim's UUID spend the victim's daily allowance
+ *     on requests that fail downstream — the failures do not refund the quota.
+ *   - it does not throttle reads, which cost nothing at the provider.
+ *   - it FAILS CLOSED. A limiter that cannot consult its counter refusing the
+ *     request is the right direction for a spend cap; the alternative is an
+ *     unbounded third-party bill during exactly the outage nobody is watching.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.stubGlobal('Deno', { env: { get: () => undefined } });
+vi.stubGlobal('Deno', { env: { get: () => 'test-value' } });
 
 const checkRateLimit = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -34,17 +34,22 @@ vi.mock('../stderr-logger.ts', () => ({
 }));
 
 import { Hono } from 'npm:hono';
-import { aiUsageLimit } from '../ai-usage-limit';
+import { aiUsageLimit, chargeAiUsage } from '../ai-usage-limit';
 
-/** A bearer token carrying `sub`. The signature is never inspected. */
-function bearer(sub: string): string {
-  const b64 = (o: unknown) =>
-    btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `Bearer ${b64({ alg: 'HS256' })}.${b64({ sub })}.sig`;
-}
-
-function appWithLimiter() {
+/**
+ * An app shaped like a real route: an auth middleware that puts a verified
+ * `userId` on the context, THEN the limiter. Registering them the other way
+ * round is the mistake the limiter degrades silently on, so the fixture makes
+ * the ordering explicit.
+ */
+function appWithLimiter(userId?: string) {
   const app = new Hono();
+  if (userId !== undefined) {
+    app.use('*', async (c, next) => {
+      c.set('userId', userId);
+      await next();
+    });
+  }
   app.use('*', aiUsageLimit({ surface: 'test-surface' }));
   app.all('/x', (c) => c.json({ ok: true }));
   return app;
@@ -61,11 +66,8 @@ beforeEach(() => {
 });
 
 describe('aiUsageLimit', () => {
-  it('meters writes and attaches the rate-limit headers', async () => {
-    const res = await appWithLimiter().request('/x', {
-      method: 'POST',
-      headers: { Authorization: bearer('user-1') },
-    });
+  it('meters writes for an authenticated caller and attaches the headers', async () => {
+    const res = await appWithLimiter('user-1').request('/x', { method: 'POST' });
 
     expect(res.status).toBe(200);
     expect(res.headers.get('X-RateLimit-Remaining')).toBe('10');
@@ -73,38 +75,42 @@ describe('aiUsageLimit', () => {
   });
 
   it('does NOT meter reads — a GET costs nothing at the provider', async () => {
-    const res = await appWithLimiter().request('/x', {
-      method: 'GET',
-      headers: { Authorization: bearer('user-1') },
-    });
+    const res = await appWithLimiter('user-1').request('/x', { method: 'GET' });
 
     expect(res.status).toBe(200);
     expect(checkRateLimit).not.toHaveBeenCalled();
   });
 
-  it('keys the user dimensions on the token subject, per surface', async () => {
-    await appWithLimiter().request('/x', {
-      method: 'POST',
-      headers: { Authorization: bearer('user-1'), 'x-forwarded-for': '203.0.113.9' },
-    });
-
-    const actions = checkRateLimit.mock.calls.map((call) => [call[0], call[1]]);
-    expect(actions).toEqual([
-      ['usr:user-1', 'ai_burst:test-surface'],
-      ['usr:user-1', 'ai_daily:test-surface'],
-      ['ip:203.0.113.9', 'ai_daily_ip'],
-    ]);
-  });
-
-  it('falls back to the IP dimension alone when there is no readable token', async () => {
-    // The middleware runs before the sub-router's auth, so it MUST cope with a
-    // request that carries no usable token rather than throwing on one.
-    const res = await appWithLimiter().request('/x', {
+  it('meters IP first, then the verified user, per surface', async () => {
+    await appWithLimiter('user-1').request('/x', {
       method: 'POST',
       headers: { 'x-forwarded-for': '203.0.113.9' },
     });
 
-    expect(res.status).toBe(200);
+    // IP first: it is the only bound on an unauthenticated flood, and it costs
+    // nothing to apply ahead of the account dimensions.
+    expect(checkRateLimit.mock.calls.map((call) => [call[0], call[1]])).toEqual([
+      ['ip:203.0.113.9', 'ai_daily_ip'],
+      ['usr:user-1', 'ai_burst:test-surface'],
+      ['usr:user-1', 'ai_daily:test-surface'],
+    ]);
+  });
+
+  it('charges NO user bucket when auth has not established a principal', async () => {
+    // The finding that replaced an unverified `sub` read. A caller the route's
+    // auth has not vouched for must not be able to move a named user's
+    // counters — the requests it attaches to fail downstream and the quota
+    // never comes back.
+    const res = await appWithLimiter().request('/x', {
+      method: 'POST',
+      headers: {
+        // Deliberately present, and deliberately ignored.
+        Authorization: 'Bearer forged.claiming.victim',
+        'x-forwarded-for': '203.0.113.9',
+      },
+    });
+
+    expect(res.status).toBe(200); // the route's own auth is what rejects it
     expect(checkRateLimit.mock.calls.map((call) => call[0])).toEqual(['ip:203.0.113.9']);
   });
 
@@ -116,10 +122,7 @@ describe('aiUsageLimit', () => {
       blocked: true,
     });
 
-    const res = await appWithLimiter().request('/x', {
-      method: 'POST',
-      headers: { Authorization: bearer('user-1') },
-    });
+    const res = await appWithLimiter('user-1').request('/x', { method: 'POST' });
 
     expect(res.status).toBe(429);
     expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
@@ -134,10 +137,7 @@ describe('aiUsageLimit', () => {
       blocked: true,
     });
 
-    await appWithLimiter().request('/x', {
-      method: 'POST',
-      headers: { Authorization: bearer('user-1') },
-    });
+    await appWithLimiter('user-1').request('/x', { method: 'POST' });
 
     expect(checkRateLimit).toHaveBeenCalledTimes(1);
   });
@@ -153,11 +153,28 @@ describe('aiUsageLimit', () => {
       blocked: true,
     });
 
-    const res = await appWithLimiter().request('/x', {
-      method: 'POST',
-      headers: { Authorization: bearer('user-1') },
-    });
+    const res = await appWithLimiter('user-1').request('/x', { method: 'POST' });
 
     expect(res.status).toBe(429);
+  });
+});
+
+describe('chargeAiUsage — for routers that authenticate inside the handler', () => {
+  it('returns null under the limit and a 429 over it', async () => {
+    const app = new Hono();
+    app.post('/y', async (c) => {
+      const refusal = await chargeAiUsage(c, { surface: 'in-handler', userId: 'user-9' });
+      return refusal ?? c.json({ ok: true });
+    });
+
+    expect((await app.request('/y', { method: 'POST' })).status).toBe(200);
+
+    checkRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: new Date(Date.now() + 60_000),
+      blocked: true,
+    });
+    expect((await app.request('/y', { method: 'POST' })).status).toBe(429);
   });
 });

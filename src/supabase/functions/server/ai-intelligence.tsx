@@ -17,6 +17,8 @@ import type { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
+import { readTokenIssuedAt } from './jwt-claims.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import {
@@ -91,7 +93,7 @@ async function requireAdmin(c: Context, next: Next) {
     // its JWT stayed valid. Suspending an account does not invalidate an
     // already-issued token.
     try {
-      await enforceAccountSecurity(user.id);
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(
@@ -725,7 +727,7 @@ app.get('/status', requireAdmin, async (c) => {
 /**
  * POST /chat - Send a message to the AI Intelligence Agent
  */
-app.post('/chat', requireAdmin, async (c) => {
+app.post('/chat', requireAdmin, aiUsageLimit({ surface: 'ai-intelligence' }), async (c) => {
   try {
     const user = c.get('user') as { id: string };
     const body = await c.req.json();
@@ -902,21 +904,26 @@ app.delete('/history', requireAdmin, async (c) => {
 /**
  * POST /search-clients - Search for clients
  */
-app.post('/search-clients', requireAdmin, async (c) => {
-  try {
-    const body = await c.req.json();
-    const { searchTerm } = body;
+app.post(
+  '/search-clients',
+  requireAdmin,
+  aiUsageLimit({ surface: 'ai-intelligence' }),
+  async (c) => {
+    try {
+      const body = await c.req.json();
+      const { searchTerm } = body;
 
-    if (!searchTerm || searchTerm.length < 2) {
-      return c.json({ clients: [] });
+      if (!searchTerm || searchTerm.length < 2) {
+        return c.json({ clients: [] });
+      }
+
+      const clients = await searchClients(searchTerm);
+      return c.json({ clients });
+    } catch (error) {
+      log.error('Error searching clients:', error);
+      return c.json({ error: 'Failed to search clients' }, 500);
     }
-
-    const clients = await searchClients(searchTerm);
-    return c.json({ clients });
-  } catch (error) {
-    log.error('Error searching clients:', error);
-    return c.json({ error: 'Failed to search clients' }, 500);
-  }
-});
+  },
+);
 
 export default app;
