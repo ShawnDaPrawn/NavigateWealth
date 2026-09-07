@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { PDFPortfolioReport } from '../modules/portfolio/PDFPortfolioReport';
+import { PDFPortfolioReport } from '../features/portfolio/PDFPortfolioReport';
 import { ClientPortfolioData } from '../../utils/pdfGenerator';
 import { withNavigateWealthPrintTitle } from '../../utils/pdfPrintTitle';
 import { Download, X, Printer } from 'lucide-react';

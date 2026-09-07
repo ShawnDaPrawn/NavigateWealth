@@ -100,12 +100,11 @@ stated prerequisite has already caused a production outage once.
 These need dashboard or credential access. An agent can prepare and verify them
 but cannot complete them.
 
-| Item                                              | State                                                                                                                                                                                                                                   | Detail                                                                                                                      |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Retired cron rows still hold the service-role key | **Open.** Seven dead jobs were retired with `active = false`, which leaves `command` untouched; five rows (jobids 18–22) still contain the key in plaintext. Any rotation of the service-role key must also drop or rewrite those rows. | [`runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md#the-retired-jobs-still-hold-the-service-role-key-open-2026-08-30) |
-| `SUPABASE_DB_URL` secret and first backup run     | Open until one `weekly-backup` run has passed. Until then the disaster-recovery rehearsal is written but unproven. Use the **session pooler** string on port 5432, not the direct connection (IPv6-only; runners are IPv4).             | Archived ledger § 3.8                                                                                                       |
-| Supabase password policy                          | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                                   | Archived ledger § 3.6                                                                                                       |
-| `NW_ALLOWED_ORIGINS`                              | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                               | Archived ledger § 3.2                                                                                                       |
+| Item                                          | State                                                                                                                                                                                                                       | Detail                |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `SUPABASE_DB_URL` secret and first backup run | Open until one `weekly-backup` run has passed. Until then the disaster-recovery rehearsal is written but unproven. Use the **session pooler** string on port 5432, not the direct connection (IPv6-only; runners are IPv4). | Archived ledger § 3.8 |
+| Supabase password policy                      | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                       | Archived ledger § 3.6 |
+| `NW_ALLOWED_ORIGINS`                          | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                   | Archived ledger § 3.2 |
 
 ## Open security follow-ups
 
@@ -149,5 +148,17 @@ is work not yet done, not budget.
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.
+- **Tracked asset weight, and the clone size behind it.** `src/assets` holds
+  Figma exports at camera resolution. The build never serves them —
+  `figmaAssetResolver` prefers a generated `.webp`, then a committed
+  `.webp`/`.avif`/`.jpg` sibling, and only falls through to the original — but
+  they are tracked, so every clone and CI checkout pays for them.
+  `src/__tests__/tracked-file-size.test.ts` now stops the pile growing: a hard
+  ceiling on any tracked file, and a 2 MB cap on anything **new** under
+  `src/assets/` or `public/`, with today's oversized files listed explicitly in
+  a grandfather set that may only shrink. Reclaiming the weight already in
+  history is a separate decision — it means a `git filter-repo` rewrite and a
+  one-time re-clone for every collaborator, and it has not been done.
+
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.

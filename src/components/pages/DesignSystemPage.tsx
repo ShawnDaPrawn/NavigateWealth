@@ -13,7 +13,7 @@ import {
   ArrowUp,
   Sparkles,
 } from 'lucide-react';
-import { DownloadCodebaseTab } from '../modules/codebase/DownloadCodebaseTab';
+import { DownloadCodebaseTab } from '../features/codebase/DownloadCodebaseTab';
 import { TypographyTab } from './design-system/TypographyTab';
 import { IconsTab } from './design-system/IconsTab';
 import { PatternsTab } from './design-system/PatternsTab';

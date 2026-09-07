@@ -151,6 +151,29 @@ When a change is ready to ship, do **all** of the following **in the same turn**
      `npm run typecheck` returning 0 says nothing whatsoever about `server/`.
      `deno check` is the only thing that type-checks that code.
 
+     **A clean `34 TS7006` is NOT proof, and reading it as proof cost two CI
+     cycles on 2026-09-05 (PR #300).** Those 34 all read
+     `Parameter implicitly has an 'any' type` — the SYMPTOM of the JSR Supabase
+     types failing to resolve here. When they do not resolve, every row collapses to
+     `any`, so code whose correctness depends on a row's real type checks
+     vacuously here and fails in CI, where the types do resolve. The local
+     reading was `34 TS7006` and nothing else; CI found two real errors. The
+     blind spot is exactly the code most edge changes touch — anything handling
+     a `supabase` query result.
+
+     So when a change touches the shape of a query result, do not stop at the
+     count. Write a scratch `.ts` file that calls the changed function with the
+     repo's OWN row types (`CalendarEvent`, `Reminder`, and so on) in the
+     shapes the service actually uses, run `deno check` on that file, and
+     delete it. It needs no network, so it sees what CI sees; it reproduced
+     both errors in seconds after the count had said clean.
+
+     One further trap in the same gate: the workflow reports the count as
+     `999999` when there is exactly ONE error, because Deno prints its
+     `Found N errors` summary only for N greater than 1 and the grep then
+     matches nothing. `999999` means "one error, or the check died" — read the
+     log, never the number.
+
 2. **Commit, push the branch, open/update the PR** (ready for review, not a
    draft).
 

@@ -57,3 +57,16 @@ export const RecipientsManager = lazy(() =>
 export const PrepareFormStudio = lazy(() =>
   import('./components/PrepareFormStudio').then((m) => ({ default: m.PrepareFormStudio })),
 );
+
+/**
+ * Warm this module's chunk before it is rendered.
+ *
+ * This barrel is imported eagerly by AdminDashboardPage (its component is
+ * already lazy here, so wrapping it again would break the lazy contract), which
+ * means the barrel is in the initial bundle but `EsignModule` is not.
+ * `preloadAdminModule` calls this on navigation intent so the chunk downloads
+ * while the pointer is on the sidebar item rather than after the click.
+ *
+ * `import()` caches, so calling this repeatedly costs nothing after the first.
+ */
+export const preloadEsignModule = () => import('./EsignModule');

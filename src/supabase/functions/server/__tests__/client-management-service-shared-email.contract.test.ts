@@ -25,6 +25,7 @@ vi.mock('../kv_store.tsx', () => ({
     kvStore.set(key, clone(value));
   }),
   del: vi.fn(async () => {}),
+  mget: vi.fn(async (keys: string[]) => keys.map((key) => clone(kvStore.get(key) ?? undefined))),
   getByPrefix: vi.fn(async (prefix: string) => {
     const out: unknown[] = [];
     kvStore.forEach((v, k) => {
@@ -252,5 +253,45 @@ describe('updateClient', () => {
     ).toMatchObject(link);
     // Which is what keeps her mail pointed at a real inbox after the edit.
     expect(updated.email).toBe(MICHAEL_EMAIL);
+  });
+
+  /**
+   * A rename used to be written to auth `user_metadata` and nowhere else. Every
+   * display and every outbound email now reads the PROFILE first, so a rename
+   * that stopped at metadata would look like it had worked and change nothing
+   * the client or the advisor ever sees — which is the failure this whole
+   * change is about, reintroduced from the other end.
+   */
+  it('writes a renamed client to the profile, not only to auth metadata', async () => {
+    kvStore.set('user_profile:kirtan:personal_info', {
+      userId: 'kirtan',
+      firstName: 'Liezl',
+      lastName: 'Daya',
+      dateOfBirth: '1977-09-07',
+    });
+    getUserById.mockResolvedValue({
+      data: {
+        user: {
+          id: 'kirtan',
+          email: 'kirtandaya70@gmail.com',
+          created_at: '2026-01-01T00:00:00.000Z',
+          user_metadata: { firstName: 'Liezl', surname: 'Daya', role: 'client' },
+        },
+      },
+      error: null,
+    });
+
+    const updated = await new ClientsService().updateClient('kirtan', {
+      firstName: 'Kirtan',
+    } as never);
+
+    const stored = kvStore.get('user_profile:kirtan:personal_info') as Record<string, unknown>;
+    expect(stored.firstName).toBe('Kirtan');
+    // The rest of the profile survives a name-only update.
+    expect(stored.lastName).toBe('Daya');
+    expect(stored.dateOfBirth).toBe('1977-09-07');
+    expect(updateUserById).toHaveBeenCalled();
+    // Read back through the profile, which now outranks the stale metadata.
+    expect(updated.firstName).toBe('Kirtan');
   });
 });

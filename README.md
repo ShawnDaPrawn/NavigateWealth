@@ -131,6 +131,7 @@ The main scripts in the current `package.json` are:
 |   |-- assets/                         # Imported Figma/exported image assets
 |   |-- components/
 |   |   |-- admin/modules/              # Admin/adviser operational modules
+|   |   |-- features/                   # Client-facing feature modules (onboarding, wills, …)
 |   |   |-- auth/                       # Auth context, guards, login/session flows
 |   |   |-- client/                     # Client-facing FNA, communication, e-sign areas
 |   |   |-- layout/                     # Public/dashboard layout

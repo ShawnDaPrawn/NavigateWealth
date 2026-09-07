@@ -8,8 +8,11 @@ export function SystemActivityCard({
   onViewDetails,
   loading: propLoading,
 }: SystemActivityCardProps) {
-  const { activities, loading: hookLoading } = useDashboardData();
-  const loading = propLoading || hookLoading;
+  // The tiles are derived from stats + metrics, so those are the only two
+  // queries that can hold this card back — waiting on the hook's combined
+  // `loading` also made it wait on tasks, which it never renders.
+  const { activities, loadingStates } = useDashboardData();
+  const loading = propLoading || loadingStates.activities;
 
   const getActivityIcon = (type: string) => {
     switch (type) {

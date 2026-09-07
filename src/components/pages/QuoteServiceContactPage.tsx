@@ -16,7 +16,7 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { ArrowRight, ArrowLeft, CheckCircle, Loader2, FileText } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { WillDraftingFlow } from '../modules/wills/WillDraftingFlow';
+import { WillDraftingFlow } from '../features/wills/WillDraftingFlow';
 import { getServiceConfig, isValidServiceId } from './quote/constants';
 import { ProviderStrip } from './quote/components/ProviderStrip';
 import { TrustBar } from './quote/components/TrustBar';

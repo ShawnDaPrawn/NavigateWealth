@@ -91,3 +91,11 @@ export const operationsModules: AdminModule[] = [
 
 // Modules whose counters are status indicators and should remain visible at zero.
 export const alwaysShowCounterModules: AdminModule[] = ['issues'];
+
+/** Cap the compact (collapsed-rail) badge so it never overflows its pill. */
+export const formatSidebarBadgeCount = (count: number): string =>
+  count > 99 ? '99+' : String(Math.max(0, count));
+
+/** Human-readable pending summary used by tooltips and accessible labels. */
+export const formatPendingSummary = (count: number): string =>
+  count <= 0 ? 'nothing pending' : `${count.toLocaleString()} pending`;

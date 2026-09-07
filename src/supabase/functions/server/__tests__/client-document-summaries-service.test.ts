@@ -51,9 +51,21 @@ vi.mock('../kv_store.tsx', () => ({
 }));
 
 const generateSummaryDraft = vi.fn();
-vi.mock('../client-document-summaries-ai.ts', () => ({
-  generateSummaryDraft: (...args: unknown[]) => generateSummaryDraft(...args),
-}));
+/**
+ * Partial mock: the draft call is stubbed, but SummaryGenerationError is the
+ * REAL class. The service does an `instanceof` check on it to decide whether a
+ * failure knows what it analysed, and a stand-in class would make that check
+ * pass or fail for reasons the production code never sees.
+ */
+vi.mock('../client-document-summaries-ai.ts', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    generateSummaryDraft: (...args: unknown[]) => generateSummaryDraft(...args),
+  };
+});
+
+const { SummaryGenerationError } = await import('../client-document-summaries-ai.ts');
 
 const {
   groupDocuments,
@@ -533,5 +545,55 @@ describe('weekly scan', () => {
 
     expect(report.failed).toBe(1);
     expect(report.generated).toBe(1);
+  });
+});
+
+describe('what a failed record says about itself', () => {
+  it('reports the coverage and model the attempt actually had', async () => {
+    // The bug this closes: the catch hardcoded `analysed: false` for every
+    // document and stored no model, so a failed entry read "0 of 2 files read
+    // by the AI" whether two files had been sent or none — and gave no way to
+    // tell which model had rejected them.
+    seedDoc({ id: 'doc_a' });
+    seedDoc({ id: 'doc_b', packId: 'pack_x' });
+    generateSummaryDraft.mockRejectedValueOnce(
+      new SummaryGenerationError(
+        'The uploaded file could not be processed.',
+        [
+          { id: 'doc_b', title: 'Read one', productCategory: 'Life', analysed: true },
+          { id: 'doc_c', title: 'Unread one', productCategory: 'Life', analysed: false },
+        ],
+        'gpt-4o',
+      ),
+    );
+
+    const { summary } = await generateSummaryForGroup({
+      clientId: 'client-1',
+      packId: 'pack_x',
+      source: 'manual',
+      actorId: 'admin-1',
+    });
+
+    expect(summary.status).toBe('failed');
+    expect(summary.model).toBe('gpt-4o');
+    expect(summary.documents.filter((d) => d.analysed)).toHaveLength(1);
+  });
+
+  it('still falls back to "nothing analysed" for a failure that knows nothing', async () => {
+    // A failure raised before any of that was decided has no coverage to
+    // report, and claiming any would be the same lie in the other direction.
+    seedDoc();
+    generateSummaryDraft.mockRejectedValueOnce(new Error('boom'));
+
+    const { summary } = await generateSummaryForGroup({
+      clientId: 'client-1',
+      documentId: 'doc_1',
+      source: 'manual',
+      actorId: 'admin-1',
+    });
+
+    expect(summary.status).toBe('failed');
+    expect(summary.model).toBeUndefined();
+    expect(summary.documents.every((d) => !d.analysed)).toBe(true);
   });
 });

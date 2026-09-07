@@ -36,7 +36,7 @@
  * ============================================================================
  */
 
-import { PDFDocument } from 'npm:pdf-lib@1.17.1';
+import { PDFArray, PDFDict, PDFDocument, PDFPage, PDFRef } from 'npm:pdf-lib@1.17.1';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 
@@ -137,8 +137,13 @@ interface AcroformWidget {
  * Walk every AcroForm field, then every widget annotation under each field,
  * and pull out the page index + rect for the studio to render.
  *
- * pdf-lib does not give us the page index of a widget directly, so we scan
- * each page's annotation array and match by widget reference.
+ * Page resolution mirrors pdf-lib's own `PDFForm.findWidgetPage`: a widget
+ * normally carries a `/P` entry pointing at its page, and when it doesn't
+ * (some authoring tools omit it) the page is the one whose `/Annots` array
+ * references the widget. An earlier version tried to match widgets to pages
+ * by rect through a lookup that never resolved, so every widget fell
+ * through to the "assume page 1" fallback and a multi-page form had all of
+ * its suggestions stacked on the first page.
  */
 async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidget[]> {
   const pdf = await PDFDocument.load(buffer, { ignoreEncryption: true });
@@ -158,16 +163,12 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
     const acroField = (field as unknown as { acroField: { getWidgets: () => unknown[] } })
       .acroField;
     const fieldWidgets = (acroField?.getWidgets?.() ?? []) as Array<{
-      Rect?: () =>
-        | { asRectangle?: () => { x: number; y: number; width: number; height: number } }
-        | undefined;
-      P?: () => unknown;
+      P?: () => PDFRef | undefined;
+      dict?: PDFDict;
       getRectangle?: () => { x: number; y: number; width: number; height: number };
     }>;
 
     for (const widget of fieldWidgets) {
-      // Rect lookup — pdf-lib API surface here varies; try the documented
-      // helper first then fall back to the dictionary entry.
       let rect: { x: number; y: number; width: number; height: number } | undefined;
       try {
         rect = widget.getRectangle?.();
@@ -176,36 +177,7 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
       }
       if (!rect) continue;
 
-      // Match this widget to a page by inspecting page annotations.
-      let pageIndex = -1;
-      for (let i = 0; i < pages.length; i++) {
-        const annots = pages[i].node.Annots();
-        if (!annots) continue;
-        const arr = annots.asArray?.() ?? [];
-        // We can't easily check ref equality here without leaking pdf-lib
-        // internals, so accept the first page whose annotations include a
-        // widget at the same rect (cheap and sufficient).
-        for (const annot of arr) {
-          const obj = (annot as { lookupMaybe?: (k: unknown) => unknown }).lookupMaybe?.(undefined);
-          if (!obj) continue;
-          // Best-effort match: same rect within 1pt.
-          const aRect = (obj as { Rect?: () => unknown }).Rect?.();
-          if (!aRect) continue;
-          const arr4 = (
-            aRect as { asRectangle?: () => { x: number; y: number; width: number; height: number } }
-          ).asRectangle?.();
-          if (!arr4) continue;
-          if (
-            Math.abs(arr4.x - rect.x) < 1 &&
-            Math.abs(arr4.y - rect.y) < 1 &&
-            Math.abs(arr4.width - rect.width) < 1
-          ) {
-            pageIndex = i;
-            break;
-          }
-        }
-        if (pageIndex >= 0) break;
-      }
+      let pageIndex = findWidgetPageIndex(pdf, pages, widget);
 
       // Last resort — assume page 1 so the candidate isn't lost. The sender
       // can drag it to the right page if needed.
@@ -221,6 +193,67 @@ async function extractAcroformWidgets(buffer: Uint8Array): Promise<AcroformWidge
   }
 
   return widgets;
+}
+
+/**
+ * Resolve the 0-based page index a widget annotation lives on, or -1 when
+ * it cannot be determined.
+ *
+ *   1. `/P` on the widget dict — the page reference, present on most
+ *      widgets.
+ *   2. The page whose `/Annots` array holds the widget's own reference
+ *      (pdf-lib's `findPageForAnnotationRef`).
+ *   3. The page whose `/Annots` array resolves to the same dict object —
+ *      covers widgets that were merged into the field dict and so have no
+ *      reference of their own.
+ */
+function findWidgetPageIndex(
+  pdf: PDFDocument,
+  pages: PDFPage[],
+  widget: { P?: () => PDFRef | undefined; dict?: PDFDict },
+): number {
+  try {
+    const pageRef = widget.P?.();
+    if (pageRef) {
+      const byRef = pages.findIndex((p) => p.ref === pageRef);
+      if (byRef >= 0) return byRef;
+    }
+  } catch {
+    /* fall through to the annotation scan */
+  }
+
+  const dict = widget.dict;
+  if (!dict) return -1;
+
+  try {
+    const widgetRef = pdf.context.getObjectRef(dict);
+    if (widgetRef) {
+      const page = pdf.findPageForAnnotationRef(widgetRef);
+      if (page) {
+        const idx = pages.findIndex((p) => p.ref === page.ref);
+        if (idx >= 0) return idx;
+      }
+    }
+  } catch {
+    /* fall through to the dict-identity scan */
+  }
+
+  for (let i = 0; i < pages.length; i++) {
+    let annots: PDFArray | undefined;
+    try {
+      annots = pages[i].node.Annots();
+    } catch {
+      continue;
+    }
+    if (!annots) continue;
+    const entries = annots.asArray();
+    for (const entry of entries) {
+      const resolved = entry instanceof PDFRef ? pdf.context.lookup(entry) : entry;
+      if (resolved === dict) return i;
+    }
+  }
+
+  return -1;
 }
 
 /**
@@ -491,7 +524,28 @@ function groupItemsIntoLines(
   const lines: Array<{ text: string; rect: [number, number, number, number] }> = [];
   for (const bucket of buckets.values()) {
     bucket.sort((a, b) => a.transform[4] - b.transform[4]);
-    const text = bucket.map((b) => b.str).join('');
+    // Join with a space wherever the PDF leaves a visible horizontal gap.
+    // pdfjs hands back a caption like "First name" as two items and does not
+    // always emit the space between them; concatenating blind produced
+    // "Firstname", which no `\s+` caption pattern can match — so those blanks
+    // lost their label (and their prefill token) and fell through to the
+    // generic rule below.
+    let text = '';
+    let prevEnd: number | null = null;
+    for (const item of bucket) {
+      const startX = item.transform[4];
+      const gap = prevEnd === null ? 0 : startX - prevEnd;
+      if (
+        prevEnd !== null &&
+        gap > Math.max(1, (item.height || 10) * 0.2) &&
+        !text.endsWith(' ') &&
+        !item.str.startsWith(' ')
+      ) {
+        text += ' ';
+      }
+      text += item.str;
+      prevEnd = startX + (item.width ?? 0);
+    }
     if (!text.trim()) continue;
     const xs = bucket.map((b) => b.transform[4]);
     const x1 = Math.min(...xs);
@@ -506,6 +560,175 @@ function groupItemsIntoLines(
 }
 
 /**
+ * The slice of `RegExpMatchArray` the geometry helper actually reads. The
+ * generic blank rule below synthesises these rather than running a regex per
+ * candidate, so the helper takes the narrow shape instead of a full match.
+ */
+export interface AnchorMatch {
+  0: string;
+  index?: number;
+}
+
+/** One proposed field found on a single line of text. */
+export interface LineAnchor {
+  match: AnchorMatch;
+  type: FieldCandidate['type'];
+  label: string;
+  prefillToken?: string;
+  /** Span claimed in the line text, so passes don't propose the same blank twice. */
+  start: number;
+  end: number;
+  /**
+   * Where this field's own printed text begins — its caption for a pattern
+   * match, the word in front of the blank for a generic one. `start` is the
+   * blank itself for a generic anchor, so it is the wrong boundary to stop a
+   * previous field at: it would let that field cover this one's caption.
+   */
+  captionStart: number;
+}
+
+/**
+ * An underscore run this long with no caption in front of it is a decorative
+ * rule (a page divider, a signature baseline drawn across the sheet), not a
+ * blank waiting to be filled.
+ */
+const DECORATIVE_RUN_CHARS = 60;
+
+/**
+ * Label a generic blank from the words immediately before it.
+ *
+ * Only the text after the previous blank on the same line counts, so
+ * `Name: ____ Surname: ____` labels the second field "Surname" rather than
+ * dragging the first caption along with it.
+ */
+function captionBefore(
+  lineText: string,
+  blankStart: number,
+): { label: string; captionStart: number; previousBlankEnd: number; between: string } {
+  const previousBlankEnd = lineText.lastIndexOf('_', blankStart - 1);
+  const between = lineText.slice(previousBlankEnd + 1, blankStart);
+  // Trailing separators belong to the caption's punctuation, not its text.
+  const caption = between.replace(/[\s:\-–]+$/, '').trim();
+  // The caption occupies the preceding text from its first printed character;
+  // that whole span has to be protected from the previous field, even when the
+  // label below is trimmed to its last few words.
+  const captionStart = previousBlankEnd + 1 + (between.length - between.trimStart().length);
+  if (!caption) {
+    return { label: '', captionStart: blankStart, previousBlankEnd, between };
+  }
+  // A caption sits at the END of the preceding text — anything earlier is
+  // the sentence or section heading it was printed under.
+  const words = caption.split(/\s+/).slice(-5).join(' ');
+  const label = words.length > 40 ? words.slice(words.length - 40).trim() : words;
+  return { label, captionStart, previousBlankEnd, between };
+}
+
+/**
+ * Find every field a single line of text proposes.
+ *
+ * Two passes, because the specific patterns carry meaning the generic rule
+ * cannot infer — a signature block, or a caption bound to a CRM prefill token:
+ *
+ *   1. `ANCHOR_PATTERNS`, specific-first, every occurrence on the line. A
+ *      later match is dropped when its span overlaps one already claimed
+ *      ("First name:" also matches the generic "Name" pattern).
+ *   2. Every blank the first pass left, as a plain text field labelled from
+ *      the caption in front of it.
+ *
+ * Pass 2 is what makes the scan useful on a real form. The patterns in pass 1
+ * only know ten identity captions, so a document full of ordinary blanks
+ * ("Occupation: ____", "Policy number: ____") used to come back with nothing
+ * but its signature and date lines.
+ *
+ * Exported for unit tests.
+ */
+export function findLineAnchors(lineText: string): LineAnchor[] {
+  const claimed: Array<[number, number]> = [];
+  const anchors: LineAnchor[] = [];
+
+  for (const { pattern, type, label, prefillToken } of ANCHOR_PATTERNS) {
+    const global = new RegExp(
+      pattern.source,
+      pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`,
+    );
+    for (const m of lineText.matchAll(global)) {
+      const start = m.index ?? 0;
+      let text = m[0];
+      let end = start + text.length;
+      // Swallow a trailing blank the pattern itself did not take (caption-only
+      // patterns like "Sign here" stop at the caption), so pass 2 does not
+      // propose a second field over the very same underscores.
+      const tail = /^\s*_{3,}/.exec(lineText.slice(end));
+      if (tail) {
+        text += tail[0];
+        end += tail[0].length;
+      }
+      if (claimed.some(([s, e]) => start < e && end > s)) continue;
+      claimed.push([start, end]);
+      anchors.push({
+        match: { 0: text, index: start },
+        type,
+        label,
+        prefillToken,
+        start,
+        end,
+        // A pattern match opens at its own caption.
+        captionStart: start,
+      });
+    }
+  }
+
+  // A fillable blank: three or more underscores in a row.
+  for (const m of lineText.matchAll(/_{3,}/g)) {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    if (claimed.some(([s, e]) => start < e && end > s)) continue;
+    const { label, captionStart, previousBlankEnd, between } = captionBefore(lineText, start);
+
+    // A blank separated from the one before it by punctuation alone is the
+    // rest of a mask, not a new field: `Date: ____ / ____ / ____` is one date
+    // entry. Widen the field that owns the first run instead of proposing a
+    // second and third on top of the same entry.
+    if (previousBlankEnd >= 0 && !/[A-Za-z0-9]/.test(between)) {
+      const owner = anchors.filter((a) => a.end <= start).sort((a, b) => b.end - a.end)[0];
+      if (owner) {
+        owner.end = end;
+        claimed.push([start, end]);
+        continue;
+      }
+    }
+
+    if (!label && m[0].length >= DECORATIVE_RUN_CHARS) continue;
+    claimed.push([start, end]);
+    anchors.push({
+      match: { 0: m[0], index: start },
+      type: 'text',
+      label: label || 'Text field',
+      start,
+      end,
+      captionStart,
+    });
+  }
+
+  return anchors.sort((a, b) => a.start - b.start);
+}
+
+/** Breathing room between a field's right edge and the next caption. */
+const FIELD_GUTTER_PT = 4;
+
+/**
+ * Approximate the x of a character index within a line, by its position in
+ * the line's own text. Same assumption `rectForAnchor` makes.
+ */
+function xForCharIndex(
+  line: { text: string; rect: [number, number, number, number] },
+  index: number,
+): number {
+  const [x1, , x2] = line.rect;
+  return x1 + (x2 - x1) * (index / Math.max(line.text.length, 1));
+}
+
+/**
  * For an anchor match like `Signature: ____________`, place the candidate
  * field over the trailing underscore run rather than the whole line so the
  * sender doesn't get a field that overlaps the caption.
@@ -514,7 +737,7 @@ function groupItemsIntoLines(
  */
 export function rectForAnchor(
   line: { text: string; rect: [number, number, number, number] },
-  match: RegExpMatchArray,
+  match: AnchorMatch,
   type: FieldCandidate['type'],
   pageWidthPt: number,
 ): [number, number, number, number] {
@@ -577,20 +800,28 @@ export async function detectSmartAnchors(buffer: Uint8Array): Promise<AnalysisRe
       const lines = groupItemsIntoLines(content.items, pageHeightPt);
 
       for (const line of lines) {
-        // A line can legitimately carry several anchors ("Signature: ___
-        // Date: ___"), but overlapping matches are the same anchor seen by
-        // two patterns ("First name:" also matches the generic "Name"
-        // pattern). Patterns are ordered specific-first; a later match is
-        // dropped when its span overlaps an already-claimed one.
-        const claimed: Array<[number, number]> = [];
-        for (const { pattern, type, label, prefillToken } of ANCHOR_PATTERNS) {
-          const match = line.text.match(pattern);
-          if (!match) continue;
-          const start = match.index ?? 0;
-          const end = start + match[0].length;
-          if (claimed.some(([s, e]) => start < e && end > s)) continue;
-          claimed.push([start, end]);
-          const [x1, y1, x2, y2] = rectForAnchor(line, match, type, pageWidthPt);
+        const anchors = findLineAnchors(line.text);
+        const rects = anchors.map((a) => rectForAnchor(line, a.match, a.type, pageWidthPt));
+        // A field must not run into the next blank on the same line. The type
+        // minimum in `rectForAnchor` is a floor for a lone blank, not licence
+        // to cover the caption that follows: on "Name: ____ Surname: ____"
+        // both blanks are shorter than the 140pt text minimum, so without this
+        // the first suggestion lands on top of the second.
+        for (let i = 0; i < rects.length; i++) {
+          // Cover the whole of a claimed span, so a field merged across a
+          // mask ("____ / ____ / ____") spans the entry rather than its
+          // first run.
+          rects[i][2] = Math.max(rects[i][2], xForCharIndex(line, anchors[i].end));
+          if (i === rects.length - 1) break;
+          // Stop before the NEXT field's caption, not its blank: a generic
+          // anchor starts at its underscores, so clamping to that would let
+          // this field cover the caption printed in between.
+          const limit = xForCharIndex(line, anchors[i + 1].captionStart) - FIELD_GUTTER_PT;
+          if (rects[i][2] > limit) rects[i][2] = Math.max(limit, rects[i][0] + 1);
+        }
+
+        for (const [index, { match, type, label, prefillToken }] of anchors.entries()) {
+          const [x1, y1, x2, y2] = rects[index];
           // Convert PDF-space (origin bottom-left) → x/y percentage with y
           // from top; width/height stay in PDF points, taken verbatim from
           // the rect — rectForAnchor already applied the type minimums with

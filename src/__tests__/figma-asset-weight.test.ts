@@ -61,25 +61,19 @@ const MAX_GENERATED_BYTES = 500 * 1024;
 /**
  * Assets that exceed the cap on the COLD path and have no optimized sibling.
  *
- * The generator converts all three to under 500 KB, so nothing ships oversized
- * in a normal build. What this list records is the degraded case: if the cache
- * is missing, these three are what a visitor downloads. Each is a JPEG that was
- * exported without being resized, and each needs a 2200px-wide sibling
- * committed beside it — at which point the resolver picks it up with no code
- * change and the entry comes out of this list.
+ * **Empty, and worth keeping empty.** The three entries that lived here —
+ * `00f21f62…`, `47655f7e…` (RiskManagementPage) and `76fc906b…`
+ * (InvestmentManagementPage) — were camera-scale JPEGs exported without being
+ * resized, 2.2 to 3.9 MB each. Each now has the 2200px-wide sibling this
+ * comment used to ask for, committed beside it, so the resolver picks it up
+ * with no code change and they come out of this list. They cost 139, 186 and
+ * 107 KB now.
  *
- * They are listed rather than tolerated by raising the cap, because a raised
- * cap silently permits the next one too.
- *
- * Recorded in docs/archive/production-readiness-ledger-2026.md so it is a task, not a footnote.
+ * If an entry ever has to go back in here, commit the sibling instead. The list
+ * exists so a degraded cold path is named rather than tolerated by raising the
+ * cap — a raised cap silently permits the next one too.
  */
-const KNOWN_UNOPTIMIZED = new Set([
-  // RiskManagementPage
-  '00f21f624e8160ae5a1793de40e7c0e7ba1ee60d.png', // 3.4 MB
-  '47655f7ea49b8154455dbaefe83366869b59cabb.png', // 2.2 MB
-  // InvestmentManagementPage
-  '76fc906be4d2c342ff5272cc2c0d901ad65ff7f6.png', // 3.9 MB
-]);
+const KNOWN_UNOPTIMIZED = new Set<string>([]);
 
 /** Extensions the resolver tries inside `src/assets`, best first. */
 const SIBLING_EXTENSIONS = ['.webp', '.avif', '.jpg', '.jpeg'] as const;

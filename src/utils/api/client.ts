@@ -51,6 +51,24 @@ export class APIError extends Error {
 
 export interface APIRequestOptions extends RequestInit {
   retryTransientFailures?: boolean;
+  /**
+   * Send this bearer token instead of reading the session.
+   *
+   * A request carrying it performs NO auth calls — no `getSession()`, and no
+   * refresh-and-retry on a 401. That is the whole point of the option, not an
+   * incidental detail: `supabase.auth.getSession()` queues behind the auth
+   * lock, and auth-js holds that lock for the entire duration of every
+   * `onAuthStateChange` subscriber callback — which, in this app, includes
+   * `AuthContext`'s profile hydration. So a caller that already has a token
+   * from the auth event (see `AdminDataPrefetch`) and asks for the session
+   * anyway would be serialised behind that hydration, and if it awaited the
+   * result from inside the callback it would deadlock against it.
+   *
+   * Because there is no refresh, an expired token here simply 401s. Only pass
+   * one that has just come from the auth pipeline, and only for work that is
+   * safe to lose.
+   */
+  accessToken?: string;
 }
 
 class APIClient {
@@ -179,8 +197,14 @@ class APIClient {
     // Ensure endpoint starts with a slash
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.baseURL}${normalizedEndpoint}`;
-    const token = await this.getAuthToken();
-    const { retryTransientFailures = true, ...fetchOptions } = options ?? {};
+    const {
+      retryTransientFailures = true,
+      accessToken: suppliedToken,
+      ...fetchOptions
+    } = options ?? {};
+    // A supplied token means the caller has one already and must not touch the
+    // auth lock — see `accessToken` on APIRequestOptions.
+    const token = suppliedToken ?? (await this.getAuthToken());
 
     // No session => NO Authorization header, rather than the public anon key.
     //
@@ -238,8 +262,10 @@ class APIClient {
           return {} as T;
         }
 
-        // Handle 401 Unauthorized - Attempt Refresh & Retry (only on first attempt)
-        if (response.status === 401 && !isRetry && attempt === 0) {
+        // Handle 401 Unauthorized - Attempt Refresh & Retry (only on first attempt).
+        // Skipped for a supplied token: refreshing is an auth call, which is
+        // exactly what such a caller is avoiding.
+        if (response.status === 401 && !suppliedToken && !isRetry && attempt === 0) {
           const supabase = createClient();
           const freshToken = await this.refreshToken(supabase);
 

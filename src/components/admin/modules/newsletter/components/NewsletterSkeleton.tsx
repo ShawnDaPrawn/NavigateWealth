@@ -4,7 +4,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 /** First-paint placeholder for the Newsletter Studio module. */
 export function NewsletterSkeleton() {
   return (
-    <div className="space-y-6" data-testid="newsletter-skeleton">
+    <div className="mx-auto max-w-[1600px] space-y-6 p-6" data-testid="newsletter-skeleton">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Skeleton className="h-11 w-11 rounded-xl" />

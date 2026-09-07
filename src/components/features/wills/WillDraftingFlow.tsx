@@ -13,7 +13,7 @@
  *  5. Special Bequests & Wishes
  *  6. Review & Submit
  *
- * @module modules/wills/WillDraftingFlow
+ * @module features/wills/WillDraftingFlow
  */
 
 import { useState, useMemo } from 'react';
