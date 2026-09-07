@@ -16,6 +16,14 @@ jobs:
     # typical 13-20 minute run, so a merely slow runner still passes.
     timeout-minutes: 45
 
+    env:
+      # A non-secret boolean — deliberately NOT the token itself. A step-level
+      # `if:` cannot read the `secrets` context but can read `env`, and job-level
+      # `env` reaches every step in the job, `npm ci` included. Putting the token
+      # here would hand it to every dependency's install script; this hands them
+      # the string "true" or "false".
+      QUALITY_ISSUES_TOKEN_PRESENT: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN != '' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -329,10 +337,30 @@ jobs:
           echo "npm audit high+critical: $audit_high (ratchet floor: $(cat quality/baselines/npm-audit-baseline 2>/dev/null || echo '?'))"
           exit 0
 
+      # Telemetry, not a gate. Dependabot pull requests run with the
+      # `dependabot` secrets scope, so `secrets.QUALITY_ISSUES_INGEST_TOKEN` is
+      # empty on them; publish-quality-report.mjs treats a missing token in CI
+      # as fatal (deliberately — a silently unpublished snapshot on main is a
+      # real failure), so this step failed and took the whole job red on every
+      # dependency PR, whatever the dependencies actually did.
+      #
+      # That defeats the stated point of dependabot.yml: "a breaking bump shows
+      # up as a red check, not as a surprise in production". It cannot, if the
+      # check is already red for an unrelated reason — #292 passed every gate
+      # and still reported failure. Skip the step when no token reached the
+      # runner; keep failing loudly when one did and the publish went wrong.
+      # Runs whenever a token is available, AND on every non-pull_request event
+      # even when one is not. That second clause is the point: on a push to
+      # `main` a deleted or misconfigured secret must still fail the job loudly,
+      # which is exactly what publish-quality-report.mjs does and what catches a
+      # dashboard about to go silently stale. Only a pull request that cannot be
+      # given secrets in the first place — Dependabot's, and forks' — skips.
       - name: Publish quality issue snapshot
+        if: ${{ env.QUALITY_ISSUES_TOKEN_PRESENT == 'true' || github.event_name != 'pull_request' }}
         shell: bash
         env:
           QUALITY_ISSUES_INGEST_URL: https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report
+          # Step-scoped: only the publisher process gets the credential.
           QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
         run: node scripts/ops/publish-quality-report.mjs
 
