@@ -314,7 +314,11 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'Guarded by requirePrimaryAuth, which is real auth middleware (resolveAuthUser) but is absent from the detector’s AUTH_MARKERS set.',
     routes: [
       'security-2fa-routes.ts POST /:userId/2fa/send-code',
-      'security-2fa-routes.ts POST /:userId/2fa/verify-code',
+      // POST /:userId/2fa/verify-code was listed here until it started
+      // comparing the submitted code with `constantTimeEqual` — which IS in
+      // AUTH_MARKERS, so the detector now sees the guard on its own and the
+      // entry became stale. Its actual protection is unchanged
+      // (requirePrimaryAuth, same as send-code above).
       'security-password-routes.ts GET /:userId/status',
     ],
   },

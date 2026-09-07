@@ -57,6 +57,7 @@ import {
   updateHandoffStatus,
   getAnalyticsSummary,
 } from './vasco-analytics-service.ts';
+import { corsResponseHeaders } from './cors-origin.ts';
 
 const app = new Hono();
 const log = createModuleLogger('vasco-routes');
@@ -268,7 +269,12 @@ app.post('/chat/stream', asyncHandler(async (c) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      // Allow-list, not '*'. This endpoint is deliberately unauthenticated —
+      // Vasco answers the public site — so '*' leaked no private data here.
+      // It is narrowed anyway so the site's own origins are the ones that can
+      // spend the rate-limit budget (and the OpenAI spend behind it) from a
+      // browser, rather than any page on the internet embedding the widget.
+      ...corsResponseHeaders(c.req.header('origin')),
       'X-Vasco-Remaining': String(guardrail.remaining),
     },
   });

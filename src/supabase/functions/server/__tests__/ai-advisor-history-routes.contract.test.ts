@@ -448,6 +448,9 @@ describe('POST /admin/chat/stream', () => {
       CLIENT,
       [{ role: 'user', content: 'checking in' }],
       's-9',
+      // 4th arg: the request Origin, forwarded for allow-listed CORS on the
+      // stream (cors-origin.ts). No Origin header is sent here.
+      undefined,
     );
   });
 

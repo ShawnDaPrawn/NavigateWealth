@@ -40,6 +40,7 @@ import { Hono } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 
 import { runWithRequestContext } from './request-context.ts';
+import { resolveAllowedOrigins } from './cors-origin.ts';
 import { mountCoreRoutes } from './mount-core.ts';
 import { mountFnaRoutes } from './mount-fna.ts';
 import { mountModuleRoutes } from './mount-modules.ts';
@@ -97,51 +98,6 @@ export const DEFAULT_MOUNTS: MountRegistrar[] = [
 ];
 
 /**
- * Resolve the CORS allow-list from the environment.
- *
- * Read per `createApp()` call rather than once at module load: that is what
- * makes the fallback branch testable, and the value is only consulted at boot
- * either way.
- *
- * IMPORTANT — fail-OPEN fallback (deliberately):
- *   When `NW_ALLOWED_ORIGINS` is unset we reflect any origin and log a
- *   prominent warning every boot. CORS is defence-in-depth — every
- *   non-health route still requires a valid bearer token (`requireAuth`),
- *   so a permissive CORS default cannot by itself leak data. Failing
- *   closed on CORS would silently break every browser client (the
- *   incident captured on 2026-04-18 — dashboard "Network error" + super-
- *   admin lockout). Operators MUST set the env var before relying on the
- *   strict allow-list as a security boundary (Guidelines §12.4 / Phase 0.3),
- *   e.g. NW_ALLOWED_ORIGINS="https://www.navigatewealth.co,https://navigatewealth.co".
- *
- * KNOWN SHARP EDGE, PRESERVED VERBATIM FROM index.tsx:
- *   unset or empty-string  → permissive reflection + the warning above;
- *   `" , ,"` (only separators) → parses to an empty allow-list, which denies
- *   EVERY origin, silently, and is almost certainly a typo rather than intent.
- *   That inconsistency is real and is pinned by a test rather than quietly
- *   "fixed" here: this extraction is a pure move, and widening a CORS
- *   allow-list is not something a refactor gets to do on its own. Tightening
- *   it — treating the separators-only case as a misconfiguration and failing
- *   the boot loudly — is a deliberate decision for its own change.
- */
-function resolveAllowedOrigins(): string[] | null {
-  const raw = Deno.env.get('NW_ALLOWED_ORIGINS');
-  if (!raw) {
-    console.warn(
-      '[CORS] NW_ALLOWED_ORIGINS is not set — falling back to permissive ' +
-        'origin reflection. Set NW_ALLOWED_ORIGINS to lock this down ' +
-        '(see Guidelines §12.4).',
-    );
-    return null;
-  }
-
-  return raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-/**
  * Build the Edge Function's Hono app: CORS, request-id, the root error
  * handler, the health probes, then every route family.
  *
@@ -166,7 +122,7 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     cors({
       origin: (origin) => {
         if (!origin) return null;
-        if (!allowedOrigins) return origin; // permissive fallback (see above)
+        if (!allowedOrigins) return origin; // permissive fallback (see cors-origin.ts)
         return allowedOrigins.includes(origin) ? origin : null;
       },
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

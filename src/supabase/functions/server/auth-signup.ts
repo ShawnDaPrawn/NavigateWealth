@@ -13,6 +13,7 @@ import { sendAdminSignupNotification } from './email-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { recalculateAllGroupMemberships } from './communication-repo.ts';
 import { generateApplicationNumber } from './application-number-utils.ts';
+import { isTrustedRedirectOrigin } from './cors-origin.ts';
 import { submissionsService } from './submissions-service.ts';
 import { autoSubscribeClient } from './newsletter-service.ts';
 import {
@@ -22,6 +23,19 @@ import {
 
 const app = new Hono();
 const log = createModuleLogger('auth-signup');
+
+/**
+ * Where a confirmation link points when the request's `Origin` is not one we
+ * recognise. Overridable so a staging deploy confirms into staging.
+ *
+ * Read per call rather than once at module load, for the same reason
+ * create-app.ts reads its allow-list per `createApp()`: a module-level read is
+ * captured before a test can stub the environment, which makes the fallback
+ * branch untestable.
+ */
+function siteUrlFallback(): string {
+  return Deno.env.get('SITE_URL') || 'https://www.navigatewealth.co';
+}
 
 // Initialize Supabase client with service role key
 const getSupabaseClient = () => {
@@ -102,10 +116,31 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
       email,
       password,
-      // Automatically confirm the user's email since an email server hasn't been configured.
-      // Without this, Supabase returns "Invalid login credentials" on signInWithPassword
-      // for unconfirmed users, preventing all logins after signup.
-      email_confirm: true,
+      // Email ownership must be PROVEN before the account can sign in.
+      //
+      // This was `true` — the account was created already-confirmed and the
+      // verification email sent immediately below was decorative: anyone could
+      // sign up with an address they do not own and log straight in. (Worse,
+      // `auth.resend({ type: 'signup' })` has nothing to send for an
+      // already-confirmed user, so that call was failing into the warn-only
+      // catch below and no verification mail was going out at all.)
+      //
+      // The comment this replaces said "an email server hasn't been
+      // configured". That has not been true for a long time — this function
+      // sends 2FA codes, e-sign notifications and admin alerts through
+      // email-service.ts, and the resend call below is what now delivers the
+      // confirmation link.
+      //
+      // The SPA already expects this: authService.ts returns
+      // `session: null, // No session until email is verified` and
+      // SignupPage.tsx routes to /verify-email rather than logging the user in.
+      // Only this flag disagreed with that contract.
+      //
+      // Escape hatch for a client who genuinely cannot receive the mail:
+      // POST /auth/confirm-email (super-admin only, writes an admin audit
+      // record). Existing users are unaffected — they already carry
+      // `email_confirmed_at` and keep signing in exactly as before.
+      email_confirm: false,
       user_metadata: {
         firstName,
         surname,
@@ -141,10 +176,31 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
     const userId = userData.user.id;
     log.info('✅ User created:', { userId });
 
-    // Send verification email explicitly
-    // We need to do this because admin.createUser with email_confirm: false doesn't send the email automatically
+    // Send the verification email explicitly: the admin API never sends one,
+    // whatever `email_confirm` is set to.
+    //
+    // This send is now load-bearing rather than decorative. With
+    // `email_confirm: false` above, this link is the ONLY thing that turns the
+    // new account into one that can sign in, so a failure here is a person who
+    // cannot get in — hence error-level logging rather than a warning nobody
+    // reads. It is still non-fatal: the account and its application record are
+    // real, and LoginPage.tsx offers "Resend verification email" against the
+    // sign-in error, so the person recovers without support involvement.
     try {
-      const origin = c.req.header('origin') || 'https://www.navigatewealth.co';
+      // `Origin` is attacker-controlled, and this URL is where the
+      // confirmation link lands — with the session token in its fragment. An
+      // unrecognised origin is therefore replaced with the canonical site URL
+      // rather than trusted, so a signup POSTed with `Origin: evil.example`
+      // cannot redirect a real client's confirmation into someone else's page.
+      // (Supabase also allow-lists redirect URLs project-side; this is the
+      // half we control and can test.) See isTrustedRedirectOrigin.
+      const requestOrigin = c.req.header('origin');
+      const origin = isTrustedRedirectOrigin(requestOrigin) ? requestOrigin! : siteUrlFallback();
+      if (requestOrigin && origin !== requestOrigin) {
+        log.warn('Signup Origin is not allow-listed — using canonical site URL', {
+          requestOrigin,
+        });
+      }
       const redirectTo = `${origin}/auth/callback`;
 
       log.info('📧 Sending verification email to:', { email });
@@ -159,14 +215,16 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
       });
 
       if (resendError) {
-        log.warn('⚠️ Failed to send verification email:', { error: String(resendError) });
-        // We don't fail the request here, as the user is created.
-        // They can request a new verification email from the frontend.
+        log.error('❌ Failed to send verification email — user cannot sign in until resent:', {
+          error: String(resendError),
+        });
       } else {
         log.info('✅ Verification email sent successfully');
       }
     } catch (emailErr) {
-      log.warn('⚠️ Exception sending verification email:', { error: String(emailErr) });
+      log.error('❌ Exception sending verification email — user cannot sign in until resent:', {
+        error: String(emailErr),
+      });
     }
 
     // Generate Application Number
