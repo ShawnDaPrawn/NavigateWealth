@@ -487,8 +487,74 @@ describe('reconcileClientsToSubscribers', () => {
 
     const result = await reconcileClientsToSubscribers();
 
-    expect(result).toMatchObject({ added: 0, alreadySubscribed: 1 });
+    expect(result).toMatchObject({ added: 0, alreadySubscribed: 1, renamed: 0 });
     expect(stored('active@example.com')).toMatchObject({ source: 'Website' });
+  });
+
+  /**
+   * A subscriber-list campaign personalises from the name frozen on the
+   * `newsletter:{email}` record, not from the profile. So an active subscriber
+   * whose name was corrected on their profile has to be refreshed here or the
+   * correction never reaches them — and long-standing subscribers, the ones
+   * most likely to be mailed, are exactly who lands in this branch.
+   */
+  it('refreshes a stale name on an already-active subscriber', async () => {
+    seedProfile('c1', { email: 'renamed@example.com', firstName: 'Kirtan', lastName: 'Daya' });
+    seed('renamed@example.com', {
+      source: 'Website',
+      firstName: 'Liezl',
+      surname: 'Daya',
+      name: 'Liezl Daya',
+      subscribedAt: '2024-01-01T00:00:00.000Z',
+      confirmedAt: '2024-01-02T00:00:00.000Z',
+    });
+
+    const result = await reconcileClientsToSubscribers();
+
+    expect(result).toMatchObject({ added: 0, alreadySubscribed: 1, renamed: 1 });
+    expect(stored('renamed@example.com')).toMatchObject({
+      firstName: 'Kirtan',
+      surname: 'Daya',
+      name: 'Kirtan Daya',
+      // Consent provenance is untouched — this is a rename, not a re-opt-in.
+      source: 'Website',
+      confirmed: true,
+      active: true,
+      subscribedAt: '2024-01-01T00:00:00.000Z',
+      confirmedAt: '2024-01-02T00:00:00.000Z',
+    });
+    // The group copy campaigns read for external contacts moves with it.
+    expect(group.updateNewsletterSubscriberContact).toHaveBeenCalledWith(
+      'renamed@example.com',
+      'renamed@example.com',
+      'Kirtan Daya',
+    );
+  });
+
+  it('does not blank a stored name when the profile has no name', async () => {
+    seedProfile('c1', { email: 'partial@example.com' });
+    seed('partial@example.com', { firstName: 'Liezl', surname: 'Daya', name: 'Liezl Daya' });
+
+    const result = await reconcileClientsToSubscribers();
+
+    expect(result).toMatchObject({ renamed: 0 });
+    expect(stored('partial@example.com')).toMatchObject({
+      firstName: 'Liezl',
+      surname: 'Daya',
+      name: 'Liezl Daya',
+    });
+  });
+
+  it('leaves an unsubscribed client alone even when their name changed', async () => {
+    // The opt-out gate comes first, and a rename must not become a reason to
+    // touch a record belonging to someone who asked not to be mailed.
+    seedProfile('c1', { email: 'lapsed@example.com', firstName: 'Kirtan', lastName: 'Daya' });
+    seed('lapsed@example.com', { active: false, firstName: 'Liezl', name: 'Liezl Daya' });
+
+    const result = await reconcileClientsToSubscribers();
+
+    expect(result).toMatchObject({ skippedUnsubscribed: 1, renamed: 0 });
+    expect(stored('lapsed@example.com')).toMatchObject({ active: false, firstName: 'Liezl' });
   });
 
   it('de-duplicates two profiles sharing one address', async () => {
