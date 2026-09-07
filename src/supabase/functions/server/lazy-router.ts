@@ -27,7 +27,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import type { Context } from 'npm:hono';
+import type { Context, MiddlewareHandler } from 'npm:hono';
 
 const PREFIX = '/make-server-91ed8379';
 
@@ -128,6 +128,28 @@ async function attachSharedErrorHandler(router: LazyRouterModule, path: string):
 }
 
 /**
+ * Options for a lazy mount.
+ */
+export interface LazyOptions {
+  /**
+   * Middleware to run on this prefix BEFORE the module is imported.
+   *
+   * This is the only place a cross-cutting guard can be attached to a lazy
+   * mount without changing the module behind it: the sub-router is a separate
+   * Hono instance dispatched with `router.fetch()`, so middleware registered
+   * on the parent app for a broader path does not reach inside it, and
+   * middleware added inside the module would have to be repeated in every one.
+   *
+   * Registered on the parent, so it runs on the parent's context — before the
+   * import, and therefore before any of the module's own auth. A guard used
+   * here must be safe to run on an UNAUTHENTICATED request and must not
+   * assume `c.get('userId')` exists. See `ai-usage-limit.ts`, which is written
+   * to that constraint deliberately.
+   */
+  middleware?: MiddlewareHandler[];
+}
+
+/**
  * Register a lazily-loaded Hono sub-router at the given path.
  * The module is imported on first request and cached for subsequent requests.
  * Concurrent requests for the same unloaded module share a single import promise.
@@ -135,8 +157,14 @@ async function attachSharedErrorHandler(router: LazyRouterModule, path: string):
  * @param app - The parent Hono app
  * @param path - The sub-path (without PREFIX), e.g. '/esign'
  * @param load - A function that returns a dynamic import, e.g. () => import('./esign-routes.ts')
+ * @param options - Optional prefix-scoped middleware (see LazyOptions)
  */
-export function lazy(app: Hono, path: string, load: () => Promise<{ default: LazyRouterModule }>) {
+export function lazy(
+  app: Hono,
+  path: string,
+  load: () => Promise<{ default: LazyRouterModule }>,
+  options: LazyOptions = {},
+) {
   const base = `${PREFIX}${path}`;
 
   const handler = async (c: Context) => {
@@ -251,6 +279,14 @@ export function lazy(app: Hono, path: string, load: () => Promise<{ default: Laz
       }
     }
   };
+
+  // Middleware MUST be registered before the handlers below: Hono dispatches
+  // in registration order, and a `use()` added after the matching `all()` would
+  // silently never run.
+  for (const middleware of options.middleware ?? []) {
+    app.use(`${base}`, middleware);
+    app.use(`${base}/*`, middleware);
+  }
 
   // Register both exact-match and wildcard to cover all cases:
   //   /make-server-91ed8379/esign       → exact match (sub-router sees '/')

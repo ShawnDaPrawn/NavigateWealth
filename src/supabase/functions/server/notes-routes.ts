@@ -23,6 +23,7 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { requireAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import * as kv from './kv_store.tsx';
 
 const app = new Hono();
@@ -316,6 +317,9 @@ app.delete(
 
 app.post(
   '/:id/summarise',
+  // The one endpoint in this router that calls a model; the rest is note CRUD,
+  // which is why the guard is here rather than on the whole prefix.
+  aiUsageLimit({ surface: 'notes-summarise' }),
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const existing = (await kv.get(noteKey(id))) as KvNote | null;

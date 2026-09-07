@@ -6,15 +6,7 @@ import { AuthUser, SignUpResult, SignInResult, AuthCallback } from './types';
 import { AuthError, parseAuthError } from './errorHandler';
 import { AUTH_ERRORS, AUTH_ROUTES } from './constants';
 import { projectId, publicAnonKey } from '../supabase/info';
-import {
-  validateSignupData,
-  validateLoginAttempt,
-  logLoginSuccess,
-  logLoginFailure,
-  logLogout,
-  logPasswordResetRequest,
-  logPasswordChange,
-} from './securityService';
+import { validateSignupData, logLogout, logPasswordChange } from './securityService';
 import { logger } from '../logger';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
@@ -80,13 +72,17 @@ export async function signUp(
     }
 
     const data = await response.json();
-    logger.info('Backend signup successful:', { data });
+    logger.info('Backend signup accepted');
 
-    // Return success - user needs to verify email before they can sign in
+    // `user` is absent when the address already had an account. The server
+    // answers that case exactly like a new signup (and emails the real owner)
+    // so that signup cannot be used to test whether someone is a client — see
+    // auth-signup.ts. Nothing here may re-introduce the distinction, so the
+    // caller gets the same "verify your email" shape either way.
     return {
       user: {
-        id: data.user.id,
-        email: data.user.email,
+        id: data.user?.id ?? '',
+        email: data.user?.email ?? email,
         emailConfirmed: false, // Email verification required
         createdAt: new Date().toISOString(),
       },
@@ -99,7 +95,20 @@ export async function signUp(
 }
 
 /**
- * Sign in existing user with email and password
+ * Sign in existing user with email and password.
+ *
+ * WHY THIS GOES THROUGH THE EDGE FUNCTION
+ * ---------------------------------------
+ * It used to ask the server "may I try?" (`validateLoginAttempt`) and then, if
+ * told yes, authenticate against GoTrue directly. The lockout therefore only
+ * held for clients that chose to ask — which is to say it held for this app
+ * and for nobody attacking it. `POST /auth/login` performs the rate-limit
+ * check and the credential check in the same handler, so attempt six cannot
+ * reach GoTrue at all.
+ *
+ * The endpoint returns the GoTrue session unchanged; `setSession` installs it
+ * so every downstream consumer (`onAuthStateChange`, the token refresh loop,
+ * `getSession`) behaves exactly as it did when the browser signed in itself.
  */
 export async function signIn(email: string, password: string): Promise<SignInResult> {
   const supabase = getSupabaseClient();
@@ -107,97 +116,76 @@ export async function signIn(email: string, password: string): Promise<SignInRes
   try {
     logger.info('Starting sign in process...', { email });
 
-    // Check rate limiting and validate on server. Authentication is blocked if
-    // the security service cannot make a trustworthy decision.
-    const validation = await validateLoginAttempt(email);
-
-    if (!validation.allowed) {
-      const errorMsg = validation.error || 'Too many login attempts. Please try again later.';
-      await logLoginFailure(email, errorMsg);
-      throw new AuthError(errorMsg, 'rate_limited');
+    // One request, one round trip: the server rate-limits, authenticates, logs
+    // the attempt and clears the counters on success.
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // `apikey` only, and no `Authorization` — this endpoint is public by
+          // necessity and no route authenticates the anon key, so sending it as
+          // a bearer would disguise "not logged in" as "token rejected". See
+          // the anon-key-bearer ratchet.
+          apikey: publicAnonKey,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch (networkError) {
+      // The login service being unreachable is not a licence to fall back to
+      // signing in around it — that fallback is precisely the bypass this
+      // change removes, and an attacker can cause it at will by blocking one
+      // host. Fail closed and say so.
+      logger.warn('Login service unreachable', { error: networkError });
+      throw new AuthError(
+        'We could not reach the sign-in service. Please check your connection and try again.',
+        'network_error',
+      );
     }
 
-    logger.info('Rate limit check passed, attempting Supabase authentication...');
+    const result = (await response.json().catch(() => ({}))) as {
+      session?: { access_token?: string; refresh_token?: string } | null;
+      user?: { id?: string } | null;
+      error?: string;
+      blocked?: boolean;
+    };
 
-    // Attempt Supabase authentication with retry for transient network errors
-    let lastError: unknown = null;
-    const maxRetries = 2;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          console.error('❌ Sign in error:', error);
-          console.error('   Error name:', error.name);
-          console.error('   Error message:', error.message);
-          console.error('   Error status:', error.status);
-
-          // Check if it's a Supabase rate limit error (status 429)
-          if (error.status === 429 || error.message.includes('Too many')) {
-            console.error('⚠️ Supabase rate limit detected - user has been temporarily blocked');
-            await logLoginFailure(email, 'Supabase rate limit');
-            throw new AuthError(
-              'Too many login attempts. Please wait 5-10 minutes before trying again.',
-              'rate_limited',
-              error,
-            );
-          }
-
-          await logLoginFailure(email, error.message);
-          throw parseAuthError(error);
-        }
-
-        if (!data.user) {
-          console.error('❌ No user returned from Supabase');
-          await logLoginFailure(email, 'No user returned');
-          throw new AuthError(AUTH_ERRORS.INVALID_CREDENTIALS, 'invalid_credentials');
-        }
-
-        logger.info('Supabase authentication successful', {
-          userId: data.user.id,
-          email: data.user.email,
-          emailVerified: data.user.email_confirmed_at ? 'Yes' : 'No',
-        });
-        logger.info('Sign in successful', { userId: data.user.id });
-
-        // Log successful login (non-blocking)
-        logLoginSuccess(email, data.user.id).catch(() => {});
-
-        return {
-          user: mapSupabaseUserToAuthUser(data.user),
-          session: data.session,
-        };
-      } catch (retryError) {
-        lastError = retryError;
-
-        // Only retry on network errors (TypeError: Failed to fetch), not on auth errors
-        const isNetworkError =
-          retryError instanceof TypeError &&
-          (retryError.message.includes('Failed to fetch') ||
-            retryError.message.includes('Load failed'));
-
-        if (isNetworkError && attempt < maxRetries) {
-          logger.info('Network error on auth attempt, retrying...', {
-            attempt: attempt + 1,
-            delayMs: (attempt + 1) * 1000,
-          });
-          await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000));
-          continue;
-        }
-
-        // Not a retryable error or retries exhausted — throw
-        throw retryError;
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new AuthError(
+          result.error || 'Too many login attempts. Please try again later.',
+          'rate_limited',
+        );
       }
+      throw new AuthError(result.error || AUTH_ERRORS.INVALID_CREDENTIALS, 'invalid_credentials');
     }
 
-    // Should not reach here, but just in case
-    throw lastError || new AuthError('Authentication failed after retries', 'auth_failed');
+    if (!result.session?.access_token || !result.session?.refresh_token || !result.user) {
+      throw new AuthError(AUTH_ERRORS.INVALID_CREDENTIALS, 'invalid_credentials');
+    }
+
+    // Install the session the server obtained. This is what makes the rest of
+    // the app — which reads `supabase.auth.getSession()` — see a normal login.
+    const { data, error: setSessionError } = await supabase.auth.setSession({
+      access_token: result.session.access_token,
+      refresh_token: result.session.refresh_token,
+    });
+
+    if (setSessionError || !data.user) {
+      logger.error('Failed to install session after login', setSessionError);
+      throw parseAuthError(setSessionError ?? new Error('Session could not be established'));
+    }
+
+    logger.info('Sign in successful', { userId: data.user.id });
+
+    return {
+      user: mapSupabaseUserToAuthUser(data.user),
+      session: data.session,
+    };
   } catch (error) {
     console.error('❌ Exception in signIn:', error);
+    if (error instanceof AuthError) throw error;
     throw parseAuthError(error);
   }
 }
@@ -369,55 +357,50 @@ export async function isEmailVerified(): Promise<boolean> {
 }
 
 /**
- * Send password reset email
+
+/**
+ * Send password reset email.
+ *
+ * Goes through `POST /auth/password-reset` rather than calling
+ * `resetPasswordForEmail` here. The old order was: send the mail, THEN tell
+ * the server about it — so the server's 3-per-hour limit was counting messages
+ * that had already left. The server now applies the limit and sends the mail
+ * on the far side of it.
+ *
+ * The endpoint answers identically whatever happens (unknown address, limit
+ * hit, provider error), so there is nothing to branch on and nothing here that
+ * could leak whether the account exists.
  */
 export async function sendPasswordResetEmail(email: string): Promise<void> {
-  const supabase = getSupabaseClient();
-
   try {
-    // Build the redirect URL - ensure it matches EXACTLY what's in Supabase dashboard
-    const currentOrigin = window.location.origin;
-    const redirectUrl = `${currentOrigin}/reset-password`;
+    const redirectTo = `${window.location.origin}/reset-password`;
 
-    logger.info('Starting password reset email process...', {
-      email,
-      currentOrigin,
-      redirectUrl,
-    });
-    logger.info(
-      'CRITICAL: Add this EXACT URL to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs',
-      {
-        redirectUrl,
-        backupUrl: `${currentOrigin}/**`,
+    logger.info('Requesting password reset', { email, redirectTo });
+
+    const response = await fetch(`${API_BASE}/auth/password-reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Public endpoint — `apikey` only, no anon-key bearer. See signIn.
+        apikey: publicAnonKey,
       },
-    );
-
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
+      body: JSON.stringify({ email, redirectTo }),
     });
 
-    logger.info('Supabase password reset response', { data, error });
-
-    if (error) {
-      console.error('❌ [SEND RESET] Password reset email error:', error);
-      console.error('❌ [SEND RESET] Error details:', {
-        message: error.message,
-        status: error.status,
-        name: error.name,
-      });
-      throw parseAuthError(error);
+    if (!response.ok) {
+      // The route is built to return 200 for every outcome a caller is allowed
+      // to distinguish, so a non-200 means the service itself is unhealthy.
+      logger.error('Password reset request failed', { status: response.status });
+      throw new AuthError(
+        'We could not process that request right now. Please try again shortly.',
+        'reset_request_failed',
+      );
     }
 
-    logger.info('Password reset email request completed successfully');
-    logger.info(
-      'Note: Supabase always returns success even if email does not exist (security feature)',
-    );
-    logger.info('If email exists in database, user should receive email from Supabase');
-
-    // Log password reset request
-    await logPasswordResetRequest(email);
+    logger.info('Password reset request accepted');
   } catch (error) {
-    console.error('❌ [SEND RESET] Password reset failed (catch block):', error);
+    if (error instanceof AuthError) throw error;
+    console.error('❌ [SEND RESET] Password reset failed:', error);
     throw parseAuthError(error);
   }
 }
@@ -479,6 +462,32 @@ export async function updatePassword(newPassword: string): Promise<void> {
     }
 
     logger.info('Password updated successfully');
+
+    // End every OTHER session for this account.
+    //
+    // `updateUser({ password })` rotates the credential and leaves every
+    // already-issued token alive until it expires on its own — so a user who
+    // changes their password *because* someone else has it does not evict
+    // them. `scope: 'others'` revokes the sibling refresh tokens at the
+    // identity provider while keeping this tab signed in.
+    //
+    // Non-fatal on purpose: the password has already changed by this point,
+    // and reporting failure would send the user back to retry a change that
+    // has already taken effect, using a password that no longer works. The
+    // server-side watermark written by `POST /security/:userId/password`
+    // (see session-revocation.ts) is the backstop when this call fails.
+    try {
+      const { error: revokeError } = await supabase.auth.signOut({ scope: 'others' });
+      if (revokeError) {
+        logger.warn('Could not revoke other sessions after password change', {
+          error: revokeError.message,
+        });
+      } else {
+        logger.info('Other sessions revoked after password change');
+      }
+    } catch (revokeError) {
+      logger.warn('Could not revoke other sessions after password change', { error: revokeError });
+    }
 
     // Log password change
     const {

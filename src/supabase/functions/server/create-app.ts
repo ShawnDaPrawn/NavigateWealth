@@ -37,6 +37,7 @@
  */
 
 import { Hono } from 'npm:hono';
+import type { Context } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 
 import { runWithRequestContext } from './request-context.ts';
@@ -67,6 +68,124 @@ export const SERVER_PREFIX = '/make-server-91ed8379';
  * newlines or control characters into every downstream log line.
  */
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
+/**
+ * Request body ceilings (H-11).
+ * =============================
+ *
+ * Until this, no route had an upper bound on the body it would be handed.
+ * Four handlers checked a size after reading (`transcription-routes.ts`,
+ * `client-management-profile-crud-routes.ts` and two others) and every one of
+ * the remaining ~580 read `await c.req.json()` on whatever arrived. Storage
+ * buckets carry a `fileSizeLimit`, but that is enforced by Storage at the END
+ * of the upload — the isolate has already buffered the bytes by then.
+ *
+ * TWO CEILINGS, BY CONTENT TYPE, because one number cannot be both safe and
+ * useful here. A single limit high enough for a 50 MB signed PDF would leave
+ * every JSON endpoint accepting 50 MB of JSON to parse; a limit tight enough
+ * for JSON would break document upload. So:
+ *
+ *   JSON / text / form-encoded → 2 MB. Well above the largest legitimate
+ *     payload (the FNA intake session, itself already bounded by
+ *     `intakePayloadSizeOk`) and far below what it takes to hurt an isolate.
+ *
+ *   multipart/form-data and binary → 55 MB. Just above the largest configured
+ *     bucket limit (50 MB, `esign-storage.ts`), so no legitimate upload is
+ *     refused here and everything larger is rejected before it is buffered.
+ *
+ * ENFORCED FROM `content-length`, NOT BY COUNTING BYTES. A body with no
+ * declared length is passed through: streaming past this point to measure it
+ * would mean buffering the very thing the limit exists to avoid, and every
+ * client in this system (the SPA's `fetch`, the portal worker, SendGrid) sends
+ * a length. This is a cheap guard against the ordinary case — a runaway client,
+ * a mis-set retry, an accidental 200 MB paste — not a defence against a
+ * deliberately chunked upload, which the platform's own limits still bound.
+ */
+const JSON_BODY_LIMIT_BYTES = 2 * 1024 * 1024;
+const UPLOAD_BODY_LIMIT_BYTES = 55 * 1024 * 1024;
+
+/**
+ * Paths that legitimately carry a large JSON body, with their own ceiling.
+ *
+ * The one real case is transcription, which takes base64 audio inside JSON and
+ * enforces its own 10 MB bound on the decoded field
+ * (`transcription-routes.ts`). Base64 costs a third on top, and the JSON
+ * envelope a little more, so the ceiling here has to clear ~13.4 MB or the
+ * generic limit would reject payloads that route is designed to accept — a
+ * body limit that breaks a working feature gets reverted, and then there is no
+ * body limit at all.
+ *
+ * Kept as an explicit, short list rather than a raised global default: the
+ * other ~580 routes should not inherit a 14 MB allowance because one of them
+ * needs it. A new entry here should come with the route's own inner bound,
+ * the way this one does.
+ */
+const LARGE_JSON_PATH_LIMITS: ReadonlyArray<{ prefix: string; bytes: number }> = [
+  { prefix: `${SERVER_PREFIX}/transcription`, bytes: 15 * 1024 * 1024 },
+];
+
+/** Bodies of these types are uploads and get the larger ceiling. */
+function isUploadContentType(contentType: string): boolean {
+  return (
+    contentType.startsWith('multipart/form-data') ||
+    contentType.startsWith('application/octet-stream') ||
+    contentType.startsWith('image/') ||
+    contentType.startsWith('audio/') ||
+    contentType.startsWith('video/') ||
+    contentType === 'application/pdf'
+  );
+}
+
+/**
+ * Reject a request whose declared body is larger than its ceiling, with 413.
+ *
+ * Exported for test: the limits above are the kind of number that is easy to
+ * change by accident and expensive to be wrong about in either direction.
+ */
+export function bodyLimitMiddleware(): (
+  c: Context,
+  next: () => Promise<void>,
+) => Promise<Response | void> {
+  return async (c, next) => {
+    // GET/HEAD/OPTIONS carry no body worth bounding.
+    if (c.req.method === 'GET' || c.req.method === 'HEAD' || c.req.method === 'OPTIONS') {
+      return next();
+    }
+
+    const declared = c.req.header('content-length');
+    if (!declared) return next();
+
+    const length = Number.parseInt(declared, 10);
+    if (!Number.isFinite(length) || length < 0) return next();
+
+    const contentType = (c.req.header('content-type') ?? '').toLowerCase();
+    const pathOverride = LARGE_JSON_PATH_LIMITS.find((entry) =>
+      c.req.path.startsWith(entry.prefix),
+    );
+    const limit = pathOverride
+      ? pathOverride.bytes
+      : isUploadContentType(contentType)
+        ? UPLOAD_BODY_LIMIT_BYTES
+        : JSON_BODY_LIMIT_BYTES;
+
+    if (length > limit) {
+      console.warn(
+        `[BODY-LIMIT] Rejected ${length} byte ${contentType || 'untyped'} body ` +
+          `on ${c.req.path} (limit ${limit})`,
+      );
+      return c.json(
+        {
+          error: 'Request body too large',
+          code: 'PAYLOAD_TOO_LARGE',
+          maxBytes: limit,
+        },
+        413,
+      );
+    }
+
+    return next();
+  };
+}
 
 /** One route family's registrar, named so a failure can be reported. */
 export interface MountRegistrar {
@@ -114,15 +233,14 @@ export const DEFAULT_MOUNTS: MountRegistrar[] = [
  *   strict allow-list as a security boundary (Guidelines §12.4 / Phase 0.3),
  *   e.g. NW_ALLOWED_ORIGINS="https://www.navigatewealth.co,https://navigatewealth.co".
  *
- * KNOWN SHARP EDGE, PRESERVED VERBATIM FROM index.tsx:
- *   unset or empty-string  → permissive reflection + the warning above;
- *   `" , ,"` (only separators) → parses to an empty allow-list, which denies
- *   EVERY origin, silently, and is almost certainly a typo rather than intent.
- *   That inconsistency is real and is pinned by a test rather than quietly
- *   "fixed" here: this extraction is a pure move, and widening a CORS
- *   allow-list is not something a refactor gets to do on its own. Tightening
- *   it — treating the separators-only case as a misconfiguration and failing
- *   the boot loudly — is a deliberate decision for its own change.
+ * THE FORMER SHARP EDGE, NOW RESOLVED:
+ *   unset, empty-string, or separators-only (`" , ,"`) → all three mean
+ *   "nothing usable was configured" and all three now take the same path:
+ *   permissive reflection plus a loud log line. Previously the third denied
+ *   EVERY origin, silently — an all-requests outage from a typo, and
+ *   indistinguishable from a deliberate lock-down. The separators-only case
+ *   logs at ERROR rather than WARN, because unlike an unset variable it means
+ *   someone tried to configure an allow-list and it is not in effect.
  */
 function resolveAllowedOrigins(): string[] | null {
   const raw = Deno.env.get('NW_ALLOWED_ORIGINS');
@@ -135,10 +253,32 @@ function resolveAllowedOrigins(): string[] | null {
     return null;
   }
 
-  return raw
+  const origins = raw
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+
+  // The sharp edge described above, now closed. A value of `" , ,"` used to
+  // parse to an EMPTY allow-list, which denies every origin — silently, and
+  // indistinguishably from a deliberate lock-down. It is a typo every time.
+  //
+  // Treated as a misconfiguration and routed to the same fallback as "unset":
+  // the two inputs now behave the same way, which is the property that was
+  // missing. Failing the boot instead was the other candidate and is the wrong
+  // trade here — CORS is not the authorization boundary on this server (every
+  // non-health route requires a bearer token), so a typo in this variable
+  // should not be able to take production down, which is the exact incident
+  // the permissive fallback exists to prevent.
+  if (origins.length === 0) {
+    console.error(
+      '[CORS] NW_ALLOWED_ORIGINS is set but contains no usable origins ' +
+        `(received ${JSON.stringify(raw)}). Treating as unset — falling back to ` +
+        'permissive origin reflection. Fix the variable to restore the allow-list.',
+    );
+    return null;
+  }
+
+  return origins;
 }
 
 /**
@@ -195,6 +335,11 @@ export function createApp(options: CreateAppOptions = {}): Hono {
       maxAge: 86400,
     }),
   );
+
+  // ── Body size ceiling (H-11) ────────────────────────────────────────────
+  // Before the request-id middleware and everything downstream: an oversized
+  // body should cost a header read, not a request id, a log line and a parse.
+  app.use('*', bodyLimitMiddleware());
 
   // ── Request-ID middleware (Guidelines §22 — Observability) ──────────────
   app.use('*', async (c, next) => {

@@ -49,6 +49,7 @@ import {
   limitOnly,
   resetAuthMocks,
   supa,
+  USER_ID,
 } from './helpers/auth-routes-harness.ts';
 
 vi.hoisted(() => {
@@ -83,25 +84,55 @@ vi.mock('../admin-audit-service.ts', async () => ({
 const app = (await import('../auth-routes.ts')).default;
 
 /** Posts a JSON body with a client IP, the way Cloudflare presents one. */
-function post(path: string, body: unknown, { ip = CLEAN_IP, agent = 'vitest/1.0' } = {}) {
+function post(
+  path: string,
+  body: unknown,
+  {
+    ip = CLEAN_IP,
+    agent = 'vitest/1.0',
+    bearer,
+  }: { ip?: string; agent?: string; bearer?: string } = {},
+) {
   return app.request(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'CF-Connecting-IP': ip,
       'User-Agent': agent,
+      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
     },
     body: JSON.stringify(body),
   });
 }
 
+/** A bearer token carrying `sub` and `iat`; the harness never checks a signature. */
+function sessionToken(sub = USER_ID, iat = Math.floor(Date.now() / 1000)): string {
+  const b64 = (o: unknown) =>
+    btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${b64({ alg: 'HS256' })}.${b64({ sub, iat })}.sig`;
+}
+
 const GENERIC_RESET_MESSAGE =
   'If an account exists with this email, a password reset link has been sent.';
 
-beforeEach(() => {
+beforeEach(async () => {
   kvStore.clear();
   vi.clearAllMocks();
   resetAuthMocks();
+
+  // `vi.clearAllMocks()` clears CALLS but keeps implementations, so a test that
+  // makes the KV store fail (see "reports a 500 when a login-success log cannot
+  // be written") leaves it failing for everything after it in this file. That
+  // is invisible until a later test asserts on a logged event and finds none —
+  // which is precisely how it was found. Restore the store's behaviour here so
+  // failure injection stays scoped to the test that asked for it.
+  const kv = await import('../kv_store.tsx');
+  vi.mocked(kv.set).mockImplementation(async (key: string, value: unknown) => {
+    kvStore.set(key, structuredClone(value));
+  });
+  vi.mocked(kv.del).mockImplementation(async (key: string) => {
+    kvStore.delete(key);
+  });
 });
 
 // ============================================================================
@@ -616,10 +647,40 @@ describe('session events', () => {
     expect(await res.json()).toEqual({ success: true });
   });
 
-  it('logs a password change', async () => {
-    const res = await post('/password-change', { email: 'user@example.com', userId: 'u-1' });
-    expect(res.status).toBe(200);
-    expect(lastAuthEvent()).toMatchObject({ type: 'password_change', success: true });
+  describe('POST /password-change — now authenticated, and it revokes', () => {
+    /**
+     * This route used to take `email` and `userId` from an UNAUTHENTICATED
+     * body. That made it two things: a way to write entries into a stranger's
+     * security log, and — once it started revoking sessions — a way to sign an
+     * arbitrary user out by asserting their id. It now derives the identity
+     * from the token and ignores the body entirely.
+     */
+    it('refuses an unauthenticated caller', async () => {
+      const res = await post('/password-change', { email: 'user@example.com', userId: 'u-1' });
+      expect(res.status).toBe(401);
+    });
+
+    it('logs the change and stamps the revocation watermark for the TOKEN’s user', async () => {
+      supa.getUser.mockResolvedValue({
+        data: { user: { id: USER_ID, email: 'user@example.com', app_metadata: {} } },
+        error: null,
+      });
+
+      // The body names somebody else on purpose: if the route still trusted it,
+      // this request would revoke that person's sessions instead.
+      const res = await post(
+        '/password-change',
+        { email: 'victim@example.com', userId: 'someone-else' },
+        { bearer: sessionToken() },
+      );
+
+      expect(res.status).toBe(200);
+      expect(lastAuthEvent()).toMatchObject({ type: 'password_change', success: true });
+
+      const security = kvStore.get(`security:${USER_ID}`) as { sessionsValidFrom?: string };
+      expect(security?.sessionsValidFrom).toEqual(expect.any(String));
+      expect(kvStore.get('security:someone-else')).toBeUndefined();
+    });
   });
 
   it('reports a 500 when a login-success log cannot be written', async () => {
@@ -631,5 +692,192 @@ describe('session events', () => {
     vi.mocked(kv.set).mockRejectedValue(new Error('kv unavailable'));
     const res = await post('/login-success', { email: 'user@example.com', userId: 'u-1' });
     expect([200, 500]).toContain(res.status);
+  });
+});
+
+describe('POST /login — the rate limit is IN the auth path, not beside it', () => {
+  /**
+   * The defect: `/login-validate` answered "may I try?", and then the BROWSER
+   * authenticated against GoTrue on its own. Nothing made the second step
+   * depend on the first, so a caller that skipped the question — or was never
+   * a browser — never met the 5-in-15 lockout at all.
+   *
+   * This route does both in one handler. The tests that matter are therefore
+   * about ORDERING and about what is NOT reached: a rate-limited attempt must
+   * never get as far as `signInWithPassword`, or the limiter is decorative
+   * again in a different place.
+   */
+  const creds = { email: 'user@example.com', password: STRONG_PASSWORD };
+
+  function succeeds() {
+    supa.signInWithPassword.mockResolvedValue({
+      data: {
+        user: { id: USER_ID, email: 'user@example.com' },
+        session: { access_token: 'at', refresh_token: 'rt' },
+      },
+      error: null,
+    });
+  }
+
+  it('returns the session on correct credentials', async () => {
+    succeeds();
+    const res = await post('/login', creds);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      session: { access_token: 'at', refresh_token: 'rt' },
+    });
+    expect(lastAuthEvent()).toMatchObject({ type: 'login_success', success: true });
+  });
+
+  it('does not call the auth provider at all once the IP is rate-limited', async () => {
+    // THE test for this change. If `signInWithPassword` runs here, an attacker
+    // still gets a credential oracle out of a "blocked" response.
+    limitOnly(CLEAN_IP, { blocked: true });
+    const res = await post('/login', creds);
+
+    expect(res.status).toBe(429);
+    expect(supa.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('does not call the auth provider once the EMAIL is rate-limited', async () => {
+    limitOnly('user@example.com', { blocked: true });
+    const res = await post('/login', creds);
+
+    expect(res.status).toBe(429);
+    expect(supa.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('checks the IP before the email, so spraying cannot lock out a victim', async () => {
+    limitOnly(CLEAN_IP, { blocked: true });
+    await post('/login', creds);
+
+    // The email bucket must be untouched: a distributed attempt against one
+    // address should not be able to lock its owner out of their own account.
+    const identifiers = supa.rpc.mock.calls.map(
+      (call) => (call[1] as { p_identifier: string }).p_identifier,
+    );
+    expect(identifiers).not.toContain('user@example.com');
+  });
+
+  it('answers wrong-password and unknown-account identically', async () => {
+    // The difference between them is exactly what an enumeration probe wants.
+    supa.signInWithPassword.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: 'Invalid login credentials', status: 400 },
+    });
+    const wrongPassword = await post('/login', creds);
+
+    supa.signInWithPassword.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: 'User not found', status: 400 },
+    });
+    const noSuchUser = await post('/login', { email: 'nobody@example.com', password: 'x' });
+
+    expect(wrongPassword.status).toBe(noSuchUser.status);
+    expect(await wrongPassword.json()).toEqual(await noSuchUser.json());
+  });
+
+  it('refuses a blocked IP before doing any work', async () => {
+    const res = await post('/login', creds, { ip: BLOCKED_IP });
+    expect(res.status).toBe(403);
+    expect(supa.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('clears both counters after a successful login', async () => {
+    succeeds();
+    const kv = await import('../kv_store.tsx');
+    await post('/login', creds);
+
+    // A user who mistyped four times and then succeeded must not be one slip
+    // from a 30-minute lockout.
+    expect(vi.mocked(kv.del)).toHaveBeenCalled();
+  });
+});
+
+describe('POST /password-reset — the limit is in front of the send', () => {
+  /**
+   * `/password-reset-request` was called by the client AFTER it had already
+   * asked GoTrue to send the mail, so its 3-per-hour limit counted messages
+   * that were already gone. This route sends the mail itself, behind the
+   * limit — and answers identically in every case, because "you are being
+   * throttled" is itself a confirmation that the address is worth attacking.
+   */
+  const GENERIC = {
+    success: true,
+    message: 'If an account exists with this email, a password reset link has been sent.',
+  };
+
+  it('sends the mail and returns the generic message', async () => {
+    const res = await post('/password-reset', { email: 'user@example.com' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(GENERIC);
+    expect(supa.resetPasswordForEmail).toHaveBeenCalled();
+  });
+
+  it('does NOT send once rate-limited — and says nothing different', async () => {
+    limitOnly(CLEAN_IP, { blocked: true });
+    const res = await post('/password-reset', { email: 'user@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(GENERIC);
+    expect(supa.resetPasswordForEmail).not.toHaveBeenCalled();
+  });
+
+  it('answers identically for a malformed address and a provider failure', async () => {
+    const malformed = await post('/password-reset', { email: 'not-an-email' });
+
+    supa.resetPasswordForEmail.mockResolvedValue({ data: {}, error: { message: 'smtp down' } });
+    const providerDown = await post('/password-reset', { email: 'user@example.com' });
+
+    expect(malformed.status).toBe(200);
+    expect(providerDown.status).toBe(200);
+    expect(await malformed.json()).toEqual(GENERIC);
+    expect(await providerDown.json()).toEqual(GENERIC);
+  });
+
+  it('refuses an off-origin redirectTo — a reset link is a credential', async () => {
+    // Unchecked, this would have GoTrue mail a recovery link pointing at a
+    // host the attacker controls, harvesting reset tokens from real inboxes.
+    await app.request('/password-reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': CLEAN_IP,
+        Origin: 'https://www.navigatewealth.co',
+      },
+      body: JSON.stringify({
+        email: 'user@example.com',
+        redirectTo: 'https://evil.example/steal',
+      }),
+    });
+
+    const [, options] = supa.resetPasswordForEmail.mock.calls[0] as [
+      string,
+      { redirectTo: string },
+    ];
+    expect(options.redirectTo).toBe('https://www.navigatewealth.co/reset-password');
+  });
+
+  it('honours a same-origin redirectTo', async () => {
+    await app.request('/password-reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': CLEAN_IP,
+        Origin: 'https://www.navigatewealth.co',
+      },
+      body: JSON.stringify({
+        email: 'user@example.com',
+        redirectTo: 'https://www.navigatewealth.co/reset-password',
+      }),
+    });
+
+    const [, options] = supa.resetPasswordForEmail.mock.calls[0] as [
+      string,
+      { redirectTo: string },
+    ];
+    expect(options.redirectTo).toBe('https://www.navigatewealth.co/reset-password');
   });
 });

@@ -115,11 +115,19 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     reason:
       'Authentication bootstrap — a login/signup endpoint behind requireAuth is a bootstrap paradox. Abuse is bounded by the atomic Postgres rate limiter (migration 20260821210412), not by a guard.',
     routes: [
+      // The two ENFORCING endpoints. Unlike their `-validate` siblings these
+      // perform the credential check and the reset dispatch themselves, which
+      // is the point: the rate limiter now sits in the auth path rather than
+      // beside it, and a client cannot reach GoTrue through this application
+      // without passing it. Public by necessity — a login route behind
+      // requireAuth is a bootstrap paradox — and bounded by the same atomic
+      // limiter as the rest of this group.
+      'auth-routes.ts POST /login',
+      'auth-routes.ts POST /password-reset',
       'auth-routes.ts POST /login-failure',
       'auth-routes.ts POST /login-success',
       'auth-routes.ts POST /login-validate',
       'auth-routes.ts POST /logout',
-      'auth-routes.ts POST /password-change',
       'auth-routes.ts POST /password-reset-request',
       'auth-routes.ts POST /signup',
       'auth-routes.ts POST /signup-validate',
@@ -307,17 +315,17 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'vasco-routes.ts POST /session',
     ],
   },
-  {
-    kind: 'require-primary-auth',
-    classification: 'guarded',
-    reason:
-      'Guarded by requirePrimaryAuth, which is real auth middleware (resolveAuthUser) but is absent from the detector’s AUTH_MARKERS set.',
-    routes: [
-      'security-2fa-routes.ts POST /:userId/2fa/send-code',
-      'security-2fa-routes.ts POST /:userId/2fa/verify-code',
-      'security-password-routes.ts GET /:userId/status',
-    ],
-  },
+  // The `require-primary-auth` group that used to sit here is GONE, and its
+  // three routes with it. It existed to carry routes the detector could not
+  // see were guarded, for exactly one reason: `requirePrimaryAuth` was missing
+  // from `AUTH_MARKERS`. That marker is now present (see the note beside it in
+  // route-auth-granular.test.ts), so the detector reports these routes as
+  // guarded on its own and a registry entry claiming the same thing would be
+  // the "fiction" the staleness test exists to catch.
+  //
+  // Worth keeping as a note rather than deleting silently: a registry entry
+  // that documents a hole in the analysis is a workaround, and the fix is to
+  // teach the analysis, not to grow the registry.
   {
     kind: 'inline-gate',
     classification: 'guarded',

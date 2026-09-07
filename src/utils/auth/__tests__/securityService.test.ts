@@ -10,6 +10,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../supabase/info', () => ({ projectId: 'proj', publicAnonKey: 'anon-key' }));
 
+/**
+ * `logPasswordChange` now sends the USER'S access token rather than the anon
+ * key: the endpoint it calls draws the session-revocation watermark, and the
+ * server derives whose sessions to end from that token. A test session is
+ * therefore part of the fixture rather than incidental.
+ */
+const supabaseMock = vi.hoisted(() => ({
+  auth: {
+    getSession: vi.fn(async () => ({ data: { session: { access_token: 'user-token' } } })),
+  },
+}));
+vi.mock('../../supabase/client', () => ({ getSupabaseClient: () => supabaseMock }));
+
 const apiGet = vi.fn();
 const apiPost = vi.fn();
 vi.mock('../../api/client', () => ({
@@ -155,15 +168,32 @@ describe('audit loggers (fire-and-forget)', () => {
     );
   });
 
-  it('logPasswordChange posts to /password-change and swallows errors', async () => {
+  it('logPasswordChange posts to /password-change with the session token and swallows errors', async () => {
     fetchResolving({});
     await logPasswordChange('a@b.co', 'uid');
+
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/password-change'),
       expect.anything(),
     );
+
+    // The account is identified by the token, never by the body. Sending the
+    // anon key here (as this did before) would leave the endpoint unable to
+    // tell whose sessions to revoke — and, when it could, would let anyone
+    // revoke a stranger's by naming their id.
+    const [, init] = vi.mocked(global.fetch).mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer user-token');
+    expect(JSON.parse(String(init.body))).toEqual({});
+
     fetchRejecting(new Error('down'));
     await expect(logPasswordChange('a@b.co', 'uid')).resolves.toBeUndefined();
+  });
+
+  it('logPasswordChange sends nothing when there is no session to prove the account', async () => {
+    supabaseMock.auth.getSession.mockResolvedValueOnce({ data: { session: null } } as never);
+    fetchResolving({});
+    await expect(logPasswordChange('a@b.co', 'uid')).resolves.toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('logPasswordResetRequest always returns a generic success message (anti-enumeration)', async () => {

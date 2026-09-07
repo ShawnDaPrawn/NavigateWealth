@@ -428,20 +428,30 @@ describe('createApp: CORS allow-list (Guidelines §12.4)', () => {
     warn.mockRestore();
   });
 
-  it('denies every origin when the allow-list is separators only — the preserved sharp edge', async () => {
-    // `" , ,"` parses to an empty allow-list, which denies everything with no
-    // warning, while `""` falls through to permissive reflection. That
-    // inconsistency came across verbatim from index.tsx and is pinned, not
-    // fixed: a pure move does not get to widen a CORS allow-list. This test is
-    // what will fail — deliberately — when someone decides how it should behave.
+  it('treats a separators-only allow-list as a misconfiguration, not a lock-down', async () => {
+    // This is the decision the previous version of this test was waiting for.
+    //
+    // `" , ,"` used to parse to an empty allow-list and deny EVERY origin,
+    // silently, while `""` fell through to permissive reflection — two inputs
+    // that mean the same thing ("nothing usable here") behaving as opposites,
+    // one of them taking the site down with no signal. It is a typo every
+    // time; nobody spells "allow nothing" that way.
+    //
+    // It now takes the same path as unset: reflect, and say so loudly. The
+    // message goes to console.error rather than console.warn precisely because
+    // this input, unlike a genuinely unset variable, means someone TRIED to
+    // configure an allow-list and it is not in effect.
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     denoEnv.set('NW_ALLOWED_ORIGINS', ' , ,');
     const res = await get(createApp({ mounts: [] }), `${PREFIX}/health`, {
       headers: { Origin: 'https://anything.example' },
     });
-    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+    expect(res.headers.get('access-control-allow-origin')).toBe('https://anything.example');
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('NW_ALLOWED_ORIGINS'));
+    error.mockRestore();
   });
 
-  it('treats an empty-string allow-list as unset (permissive), unlike the case above', async () => {
+  it('treats an empty-string allow-list as unset (permissive), same as the case above', async () => {
     denoEnv.set('NW_ALLOWED_ORIGINS', '');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const res = await get(createApp({ mounts: [] }), `${PREFIX}/health`, {
@@ -533,5 +543,78 @@ describe('index.tsx stays a serve call and nothing else (A18)', () => {
     for (const forbidden of ['app.use(', 'app.get(', 'app.onError(', 'new Hono(', 'mount']) {
       expect(code).not.toContain(forbidden);
     }
+  });
+});
+
+describe('request body ceiling (H-11)', () => {
+  /**
+   * Enforced from `content-length` before anything downstream reads a body.
+   * The value of these tests is the SHAPE of the limit, not the numbers: one
+   * global ceiling could not be both safe for the ~580 JSON routes and large
+   * enough for a 50 MB signed PDF, so there are two, chosen by content type,
+   * plus a named exception for the one route that carries base64 in JSON.
+   */
+  const post = (app: Hono, path: string, headers: Record<string, string>) =>
+    app.fetch(new Request(`http://edge.test${path}`, { method: 'POST', headers }));
+
+  it('rejects an oversized JSON body with 413 before it is parsed', async () => {
+    const res = await post(createApp({ mounts: [] }), `${PREFIX}/anything`, {
+      'content-type': 'application/json',
+      'content-length': String(3 * 1024 * 1024),
+    });
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('admits a JSON body under the ceiling', async () => {
+    const res = await post(createApp({ mounts: [] }), `${PREFIX}/anything`, {
+      'content-type': 'application/json',
+      'content-length': String(512 * 1024),
+    });
+    // 404 from the router, not 413 — the point is that the limiter let it by.
+    expect(res.status).not.toBe(413);
+  });
+
+  it('gives multipart uploads the larger ceiling — a 50MB document must still upload', async () => {
+    const res = await post(createApp({ mounts: [] }), `${PREFIX}/anything`, {
+      'content-type': 'multipart/form-data; boundary=x',
+      'content-length': String(50 * 1024 * 1024),
+    });
+    expect(res.status).not.toBe(413);
+  });
+
+  it('still rejects a multipart body beyond even the upload ceiling', async () => {
+    const res = await post(createApp({ mounts: [] }), `${PREFIX}/anything`, {
+      'content-type': 'multipart/form-data; boundary=x',
+      'content-length': String(200 * 1024 * 1024),
+    });
+    expect(res.status).toBe(413);
+  });
+
+  it('honours the transcription exception — base64 audio in JSON', async () => {
+    // 10MB of audio is ~13.4MB once base64-encoded and wrapped in JSON. The
+    // generic 2MB JSON ceiling would reject a payload that route is designed
+    // to accept, and a body limit that breaks a working feature gets reverted.
+    const res = await post(createApp({ mounts: [] }), `${PREFIX}/transcription/transcribe`, {
+      'content-type': 'application/json',
+      'content-length': String(13 * 1024 * 1024),
+    });
+    expect(res.status).not.toBe(413);
+  });
+
+  it('passes through a request that declares no length', async () => {
+    // Measuring it would mean buffering the very thing the limit avoids.
+    const res = await post(createApp({ mounts: [] }), `${PREFIX}/anything`, {
+      'content-type': 'application/json',
+    });
+    expect(res.status).not.toBe(413);
+  });
+
+  it('never rejects a GET, whatever its headers claim', async () => {
+    const res = await get(createApp({ mounts: [] }), `${PREFIX}/health`, {
+      headers: { 'content-length': String(500 * 1024 * 1024) },
+    });
+    expect(res.status).toBe(200);
   });
 });

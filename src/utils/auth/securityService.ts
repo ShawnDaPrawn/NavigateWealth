@@ -2,6 +2,7 @@
 // Integrates with server-side security features
 
 import { projectId, publicAnonKey } from '../supabase/info';
+import { getSupabaseClient } from '../supabase/client';
 import { logger } from '../logger';
 import { api } from '../api/client';
 import { SECURITY_API_ENDPOINTS } from './securityConstants';
@@ -268,18 +269,45 @@ export async function logPasswordResetRequest(email: string): Promise<{
 /**
  * Log password change
  */
-export async function logPasswordChange(email: string, userId: string): Promise<void> {
+/**
+ * Tell the server a password change happened.
+ *
+ * This does more than log: the endpoint draws the session-revocation
+ * watermark for the account, which is what ends any session that predates the
+ * change. It therefore sends the USER'S access token, not the anon key — the
+ * server derives the identity from that token and ignores the body, so that
+ * nobody can revoke a stranger's sessions by naming their id.
+ *
+ * `email` and `userId` are still accepted for call-site compatibility and are
+ * no longer transmitted; the server has both from the token.
+ */
+export async function logPasswordChange(_email: string, _userId: string): Promise<void> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const {
+      data: { session },
+    } = await getSupabaseClient().auth.getSession();
+
+    if (!session?.access_token) {
+      // No session means no way to prove which account this is for, and the
+      // server would (correctly) reject the call. The password itself has
+      // already changed; say so in the console and move on rather than
+      // throwing inside a post-change bookkeeping step.
+      logger.warn('Password change not recorded: no active session');
+      clearTimeout(timeoutId);
+      return;
+    }
 
     await fetch(`${API_BASE}/password-change`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: publicAnonKey,
       },
-      body: JSON.stringify({ email, userId }),
+      body: JSON.stringify({}),
       signal: controller.signal,
     });
 

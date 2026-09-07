@@ -130,6 +130,17 @@ vi.mock('../quality-issues-runtime-server.ts', () => ({ scheduleRuntimeServerIss
  * role — the point of the file. A header-only mock that always returned one
  * role would make every authz assertion below vacuous.
  */
+// The AI usage limiter fails CLOSED when its counter is unreachable, which is
+// correct in production (a limiter outage must not become unlimited spend) and
+// means every metered route answers 429 under a harness with no Postgres.
+// These tests are about `canAccessRoADraft`, so the limiter is a pass-through
+// here; `ai-usage-limit.test.ts` covers the limiter itself.
+vi.mock('../ai-usage-limit.ts', () => ({
+  aiUsageLimit: () => async (_c: unknown, next: () => Promise<void>) => {
+    await next();
+  },
+}));
+
 vi.mock('../auth-mw.ts', () => ({
   requireAuth: async (c: any, next: any) => {
     if (!c.req.header('Authorization')) {

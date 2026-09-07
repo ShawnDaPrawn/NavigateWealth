@@ -21,6 +21,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { resolveTrustedRole } from './constants.ts';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import { readTokenIssuedAt } from './jwt-claims.ts';
 import { ClientAccessError } from './client-access.ts';
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
@@ -78,7 +79,7 @@ export async function authenticateUser(
     // JWT stayed valid, because suspending an account never invalidates an
     // already-issued token. Throws AuthError (403), preserved by the catch
     // below and mapped by fnaErrorResponse.
-    await enforceAccountSecurity(user.id);
+    await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
 
     // Role from trusted sources only — isFnaAdminRole grants admin powers to
     // 'adviser' as well, so privileged values in client-editable user_metadata

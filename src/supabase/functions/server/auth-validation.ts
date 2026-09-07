@@ -50,6 +50,34 @@ export const SignupSchema = z
 /** POST /login-validate and POST /password-reset-request — email only. */
 export const EmailOnlySchema = z.object({ email }).passthrough();
 
+/**
+ * POST /login — the ENFORCING login endpoint.
+ *
+ * Unlike `/login-validate` (which only ever saw an address) this one carries
+ * the password, because it performs the authentication itself rather than
+ * advising a browser that is about to perform it elsewhere. See the route for
+ * why that distinction is the whole point.
+ *
+ * No `.max()` on the password beyond a sanity bound: a length rule here would
+ * reject long passphrases that the account may legitimately have been created
+ * with, and this endpoint's job is to check a credential, not to re-litigate
+ * the policy it was chosen under.
+ */
+export const LoginSchema = z
+  .object({
+    email,
+    password: z.string().min(1, 'Password is required').max(1024),
+  })
+  .passthrough();
+
+/** POST /password-reset — the ENFORCING reset endpoint (see the route). */
+export const PasswordResetSchema = z
+  .object({
+    email,
+    redirectTo: z.string().max(2048).optional(),
+  })
+  .passthrough();
+
 /** POST /login-success, POST /logout, POST /password-change. */
 export const EmailAndUserIdSchema = z
   .object({ email, userId: z.string().optional() })

@@ -21,7 +21,12 @@ import {
   getBlockedIpAddressWarning,
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
-import { requireSuperAdmin, enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import {
+  requireSuperAdmin,
+  requirePrimaryAuth,
+  enforceAccountSecurity,
+  AuthError,
+} from './auth-mw.ts';
 import { validateBody } from './validate.ts';
 import {
   SignupValidateSchema,
@@ -30,6 +35,8 @@ import {
   EmailAndUserIdSchema,
   LoginFailureSchema,
   ConfirmEmailSchema,
+  LoginSchema,
+  PasswordResetSchema,
 } from './auth-validation.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 
@@ -42,6 +49,26 @@ authRoutes.route('/', adminAuthRoutes);
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+/**
+ * Anon-key client, for the two routes that act ON BEHALF OF an anonymous
+ * caller: `/login` (verify a password) and `/password-reset` (send a recovery
+ * mail).
+ *
+ * Deliberately NOT `getSupabase()`. The service-role key bypasses GoTrue's
+ * credential check — `signInWithPassword` under it is not a question with a
+ * wrong answer — so using it on a login route would convert an authentication
+ * into an impersonation. Separate factory, separate name, so the two cannot be
+ * confused at a call site.
+ *
+ * `persistSession: false` because this is a server: a shared, module-scoped
+ * client that remembered the last successful login would hand that session to
+ * whoever called next.
+ */
+const getAnonClient = () =>
+  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
 // Helper function to get client IP
 function getClientIP(c: Context): string {
@@ -281,6 +308,224 @@ authRoutes.post('/signup', validateBody(SignupSchema), async (c) => {
   } catch (error) {
     log.error('Signup error', error);
     return c.json({ error: 'Internal server error during signup' }, 500);
+  }
+});
+
+/**
+ * POST /auth/login  — authentication with the rate limit IN the path
+ * ==================================================================
+ *
+ * WHY THIS ROUTE EXISTS
+ * ---------------------
+ * `/login-validate` below is a pre-flight check: the browser asks "may I try?",
+ * this server answers, and then the browser authenticates against GoTrue on
+ * its own. Every part of that works — except that the second step does not
+ * depend on the first. A client that simply skips the question, or any caller
+ * that was never a browser, goes straight to
+ * `POST /auth/v1/token?grant_type=password` and the 5-attempts-in-15-minutes
+ * lockout never runs. The limiter was next to the auth path rather than in it,
+ * which makes it a UX nicety rather than a control.
+ *
+ * This route performs the authentication itself, after the limit, so the two
+ * cannot be separated. The limiter is now load-bearing: attempt six fails
+ * because this endpoint refuses to call GoTrue, not because a cooperative
+ * client decided not to.
+ *
+ * WHAT IT DOES NOT CLAIM
+ * ----------------------
+ * GoTrue is still reachable directly — it has to be; it is a hosted service on
+ * a public URL, and the SPA's own session refresh talks to it. What changes is
+ * that the application's OWN login path can no longer be used to bypass the
+ * lockout, and the SPA no longer offers a working example of how. Supabase's
+ * built-in per-IP limits remain the floor for anyone going around it.
+ *
+ * SESSION HANDLING
+ * ----------------
+ * Returns the GoTrue session verbatim so the client can install it with
+ * `setSession()`. Nothing is minted, signed or cached here — this server never
+ * becomes a second issuer of credentials, which would be a far larger change
+ * than closing a rate-limit hole.
+ *
+ * The anon key is used for the sign-in itself, exactly as the browser would.
+ * The service-role key is never involved in checking a password: it would
+ * succeed regardless of the password, and using it here would turn a
+ * credential check into a credential bypass one refactor from now.
+ */
+authRoutes.post('/login', validateBody(LoginSchema), async (c) => {
+  const ip = getClientIP(c);
+  const userAgent = getUserAgent(c);
+
+  // Same IP block-list that guards signup — applied before any work is done.
+  const blockedIpAddress = getBlockedIpAddress(ip);
+  if (blockedIpAddress) {
+    log.warn('Blocked login from abusive IP address', { blockedIpAddress });
+    return c.json({ error: getBlockedIpAddressWarning(blockedIpAddress), warning: true }, 403);
+  }
+
+  let email = '';
+  try {
+    const body = (await c.req.json()) as { email: string; password: string };
+    email = body.email;
+    const { password } = body;
+
+    // Super-admin exemption, kept deliberately narrow — see the long note on
+    // the same check in /login-validate. It exempts ONE hardcoded address from
+    // rate limiting and nothing else; the password is still verified below.
+    const isSuperAdmin = email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+
+    if (!isSuperAdmin) {
+      // Two dimensions, both enforced. IP first so a single attacker cannot
+      // walk a dictionary of addresses to get a fresh bucket per guess.
+      for (const [identifier, label] of [
+        [ip, 'ip'],
+        [email, 'email'],
+      ] as const) {
+        const limit = await checkRateLimit(identifier, 'login', RATE_LIMITS.LOGIN);
+        if (!limit.allowed) {
+          await logAuthEvent('login_attempt', email, false, {
+            ip,
+            userAgent,
+            errorMessage: `Rate limit exceeded (${label})`,
+          });
+          if (limit.blocked) {
+            await logAuthEvent('account_locked', email, false, {
+              ip,
+              userAgent,
+              errorMessage: limit.reason,
+            });
+          }
+          const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
+          c.header('Retry-After', String(retryAfter));
+          return c.json(
+            {
+              error: 'Too many login attempts. Please try again later.',
+              blocked: true,
+              resetAt: limit.resetAt,
+            },
+            429,
+          );
+        }
+      }
+    }
+
+    // Authenticate as the browser would: anon key, no elevated privilege.
+    const { data, error } = await getAnonClient().auth.signInWithPassword({ email, password });
+
+    if (error || !data?.session || !data?.user) {
+      await logAuthEvent('login_failure', email, false, {
+        ip,
+        userAgent,
+        errorMessage: error?.message ?? 'No session returned',
+      });
+      // One message for "no such account" and for "wrong password" — the
+      // difference between them is exactly what an enumeration probe is after.
+      return c.json({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' }, 401);
+    }
+
+    // Correct credentials clear the counters, so a user who mistyped four
+    // times and then succeeded is not one slip away from a 30-minute lockout.
+    await clearRateLimit(ip, 'login');
+    await clearRateLimit(email, 'login');
+
+    await logAuthEvent('login_success', email, true, { userId: data.user.id, ip, userAgent });
+
+    return c.json({ success: true, session: data.session, user: data.user }, 200);
+  } catch (error) {
+    log.error('Login error', error);
+    await logAuthEvent('login_failure', email || undefined, false, {
+      ip,
+      userAgent,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return c.json({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' }, 401);
+  }
+});
+
+/**
+ * POST /auth/password-reset — reset email with the rate limit IN the path
+ * =======================================================================
+ *
+ * The sibling of `/login` above, and it exists for the same reason.
+ * `/password-reset-request` (below) is called by the client AFTER it has
+ * already asked GoTrue to send the email, so the 3-per-hour limit it applies
+ * has nothing left to prevent — the message is gone by the time the counter
+ * moves. This route sends the email itself, on the far side of the limit.
+ *
+ * ALWAYS 200, ALWAYS THE SAME BODY
+ * --------------------------------
+ * Unknown address, rate-limited, malformed, GoTrue outage — every outcome
+ * returns the identical message. A caller cannot tell an account that exists
+ * from one that does not, and cannot tell that it has been throttled, which
+ * would otherwise itself confirm that the address is worth attacking.
+ */
+authRoutes.post('/password-reset', validateBody(PasswordResetSchema), async (c) => {
+  const ip = getClientIP(c);
+  const userAgent = getUserAgent(c);
+
+  /** The one response this route is allowed to give. */
+  const genericResponse = () =>
+    c.json(
+      {
+        success: true,
+        message: 'If an account exists with this email, a password reset link has been sent.',
+      },
+      200,
+    );
+
+  try {
+    const { email, redirectTo } = (await c.req.json()) as {
+      email: string;
+      redirectTo?: string;
+    };
+
+    for (const [identifier, label] of [
+      [ip, 'ip'],
+      [email, 'email'],
+    ] as const) {
+      const limit = await checkRateLimit(identifier, 'password_reset', RATE_LIMITS.PASSWORD_RESET);
+      if (!limit.allowed) {
+        await logAuthEvent('password_reset_request', email, false, {
+          ip,
+          userAgent,
+          errorMessage: `Rate limit exceeded (${label})`,
+        });
+        return genericResponse();
+      }
+    }
+
+    if (!validateEmail(email).isValid) {
+      await logAuthEvent('password_reset_request', email, false, {
+        ip,
+        userAgent,
+        errorMessage: 'Invalid email format',
+      });
+      return genericResponse();
+    }
+
+    // Only same-origin redirect targets are honoured. `redirectTo` arrives from
+    // the browser, and an unchecked value here would let an attacker have
+    // GoTrue mail a recovery link pointing at a host they control — turning
+    // this endpoint into a way to harvest reset tokens from real inboxes.
+    const origin = c.req.header('origin') || '';
+    const safeRedirect =
+      redirectTo && origin && redirectTo.startsWith(`${origin.replace(/\/+$/, '')}/`)
+        ? redirectTo
+        : `${(origin || 'https://www.navigatewealth.co').replace(/\/+$/, '')}/reset-password`;
+
+    const { error } = await getAnonClient().auth.resetPasswordForEmail(email, {
+      redirectTo: safeRedirect,
+    });
+
+    if (error) {
+      // Logged, never surfaced: which addresses fail is the enumeration signal.
+      log.warn('Password reset dispatch failed', { error: error.message });
+    }
+
+    await logAuthEvent('password_reset_request', email, true, { ip, userAgent });
+    return genericResponse();
+  } catch (error) {
+    log.error('Password reset error', error);
+    return genericResponse();
   }
 });
 
@@ -579,23 +824,67 @@ authRoutes.post('/password-reset-request', validateBody(EmailOnlySchema), async 
 
 /**
  * POST /auth/password-change
- * Log password change event
+ *
+ * Records the change AND draws the session-revocation watermark for the
+ * account. This is the path the RESET flow takes: `ResetPasswordPage` →
+ * `updatePassword()` → `supabase.auth.updateUser({ password })`, which never
+ * touches `/security/:userId/password` and so would otherwise rotate the
+ * credential while leaving every pre-existing session alive.
+ *
+ * NOW REQUIRES AUTHENTICATION, and derives the identity from the token.
+ * -------------------------------------------------------------------
+ * It used to take `email` and `userId` from the request body with no auth at
+ * all, which made it two things it should not have been: a way for anyone to
+ * write arbitrary entries into another account's security log, and — once it
+ * started revoking sessions — a way to sign an arbitrary user out by asserting
+ * their id. The body values are now ignored in favour of the verified token.
+ *
+ * `requirePrimaryAuth`, not `requireAuth`: a user completing a password reset
+ * may be mid-2FA or otherwise not yet past the full account gate, and this
+ * endpoint must not be the thing that stops them finishing the reset. It still
+ * proves possession of a valid session for the account it acts on, which is
+ * the property that matters here.
  */
-authRoutes.post('/password-change', validateBody(EmailAndUserIdSchema), async (c) => {
+authRoutes.post('/password-change', requirePrimaryAuth, async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
 
+  const userId = c.get('userId') as string;
+  const email = c.get('userEmail') as string | undefined;
+
   try {
-    const { email, userId } = await c.req.json();
+    // Watermark at the caller's own token, so the session that just performed
+    // the change survives and every older one does not. See
+    // session-revocation.ts for why this is not `now`.
+    const accessToken = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+    const { revokeSessionsAfterCredentialChange } = await import('./session-revocation.ts');
+    const revocation = await revokeSessionsAfterCredentialChange({
+      userId,
+      actor: 'self',
+      accessToken,
+      scope: 'others',
+    });
 
     await logAuthEvent('password_change', email, true, {
       userId,
       ip,
       userAgent,
+      metadata: { sessionsRevoked: revocation.stamped, goTrueRevoked: revocation.goTrueRevoked },
     });
 
-    return c.json({ success: true }, 200);
-  } catch (_error) {
+    return c.json({ success: true, sessionsRevoked: revocation.stamped }, 200);
+  } catch (error) {
+    // The password itself has already changed by the time this runs, so a
+    // failure here must not read as "the change failed". It IS worth logging
+    // as a security event: a change whose sessions were not revoked is the
+    // exact condition someone would want to find in the log later.
+    log.error('Password-change bookkeeping failed', error);
+    await logAuthEvent('password_change', email, false, {
+      userId,
+      ip,
+      userAgent,
+      errorMessage: 'Session revocation or logging failed',
+    });
     return c.json({ error: 'Failed to log password change' }, 500);
   }
 });

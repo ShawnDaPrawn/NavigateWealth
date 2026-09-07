@@ -81,8 +81,24 @@ const REPO_ROOT = resolve(SERVER_DIR, '../../../..');
 const BASELINE_FILE = join(REPO_ROOT, 'quality/baselines/route-auth-baseline');
 
 /** Kept in sync with router-auth-guard.test.ts, plus the portal-worker secret guard. */
+/**
+ * `requirePrimaryAuth` is in this list, and it is worth being explicit about
+ * why that is a narrowing of the detector's blind spot rather than the
+ * widening the note above warns against.
+ *
+ * It is `resolveAuthUser(c, false)`: it requires a Bearer token, verifies it
+ * through `auth.getUser`, and answers 401 when that fails — the same
+ * authentication as `requireAuth`. The single thing it skips is the
+ * ACCOUNT-STATE gate (suspended / deleted / stale-2FA), which is why routes
+ * that must remain reachable while a user is mid-2FA use it. An unauthenticated
+ * caller gets through it no more than through `requireAuth`.
+ *
+ * Note it does not match the `requireAuth` alternative by substring —
+ * "requirePrimaryAuth" does not contain "requireAuth" — which is precisely how
+ * a genuinely guarded route was being reported as open.
+ */
 const AUTH_MARKERS =
-  /requireAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken|requirePortalWorker/;
+  /requireAuth|requirePrimaryAuth|requireAdmin|requireSuperAdmin|getAuthContext|authenticateUser|verifyAdmin|constantTimeEqual|isAuthorizedPublicationsCron|CRON_SECRET|getSignerByToken|validateSignerToken|requirePortalWorker/;
 
 /** Hono route registration with a literal path starting `/`. */
 const ROUTE_RE = /\b(\w+)\.(get|post|put|patch|delete)\(\s*(['"`])(\/[^'"`]*)\3/g;

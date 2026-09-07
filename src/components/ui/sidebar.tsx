@@ -71,7 +71,20 @@ function SidebarProvider({
       }
 
       // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      //
+      // `SameSite=Lax` and `Secure` are here for hygiene rather than for a
+      // threat this cookie faces on its own: it holds a boolean about a UI
+      // panel, and nothing authenticates on it (auth is a bearer token, not a
+      // cookie). The reason to set them anyway is that this is the only
+      // `document.cookie` write in the app, so it is the template anyone
+      // copies for the next one — and a template without flags is how a
+      // session cookie eventually ships without them.
+      //
+      // `Secure` only over HTTPS: setting it on http://localhost makes the
+      // browser drop the cookie, which would silently break the sidebar in
+      // local development.
+      const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Lax${secureFlag}`;
     },
     [setOpenProp, open],
   );

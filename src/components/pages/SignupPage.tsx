@@ -149,13 +149,22 @@ export function SignupPage() {
         throw new Error(result.error || `Server error: ${response.status} ${response.statusText}`);
       }
 
-      if (!result.success || !result.user) {
+      if (!result.success) {
         throw new Error('Account creation failed. Please try again.');
       }
 
-      // Show success message with application number
+      // A successful response with no `user` is the address-already-registered
+      // case. The server answers it identically to a new signup on purpose —
+      // saying "that email is taken" here would let anyone test whether a
+      // given person is a client of the firm — and emails the real owner
+      // instead. So this branch must NOT reveal what it now knows either: same
+      // screen, same wording, no application number (there is no application).
+      const created = Boolean(result.user);
+
       setSuccess(
-        `Account created successfully! Your application number is ${result.application.application_number}. Redirecting to verification...`,
+        created && result.application?.application_number
+          ? `Account created successfully! Your application number is ${result.application.application_number}. Redirecting to verification...`
+          : 'Thanks — check your email to continue. Redirecting...',
       );
 
       // Redirect to verify email page
@@ -163,7 +172,7 @@ export function SignupPage() {
         navigate('/verify-email', {
           state: {
             email,
-            message: 'Please verify your email address to continue.',
+            message: 'Please check your email to continue.',
           },
         });
       }, 1500);
@@ -175,10 +184,18 @@ export function SignupPage() {
           error.message.includes('already exists') ||
           error.message.includes('User already registered')
         ) {
-          const msg =
-            'This email is already registered. Please sign in instead or use a different email address.';
-          setError(msg);
-          toast.error(msg);
+          // Defence in depth. The server no longer answers this way (see the
+          // success branch above), but an older cached bundle or a future
+          // caller could still surface the phrase, and repeating it on screen
+          // would put the enumeration oracle straight back. Say the same thing
+          // the non-enumerating path says.
+          const msg = 'Thanks — check your email to continue.';
+          setSuccess(msg);
+          setTimeout(() => {
+            navigate('/verify-email', {
+              state: { email, message: 'Please check your email to continue.' },
+            });
+          }, 1500);
         } else if (error.message.includes('password')) {
           const msg = 'Password does not meet requirements. Please try a different password.';
           setError(msg);
