@@ -41,7 +41,9 @@ describe('campaigns', () => {
     expect(url).toContain('page=2');
     expect(url).toContain('status=draft');
     expect(url).toContain('search=wrap');
-    expect(result).toEqual({ campaigns: [], total: 0, page: 1, limit: 100 });
+    expect(result).toMatchObject({ campaigns: [], total: 0, page: 1, limit: 100 });
+    // Per-status counts default to zeros when the server omits them.
+    expect(result.statusCounts).toMatchObject({ draft: 0, finished: 0 });
   });
 
   it('omits the all-status filter', async () => {

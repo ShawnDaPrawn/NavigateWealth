@@ -1,0 +1,64 @@
+name: Bug
+description: Something in the app behaves incorrectly
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The two fields that actually shorten a diagnosis here are the **request ID**
+        and the **role**. Every Edge Function response carries an `x-request-id`
+        header, and it is the fastest route into the Supabase function logs.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: input
+    id: route
+    attributes:
+      label: Route or screen
+      placeholder: /admin/clients, or "the FNA intake wizard, step 2"
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Signed in as
+      description: Authorization is role-scoped, so the same route behaves differently per role.
+      options:
+        - Not signed in (public page)
+        - Client
+        - Adviser
+        - Admin
+        - Super admin
+    validations:
+      required: true
+  - type: input
+    id: request-id
+    attributes:
+      label: Request ID
+      description: From the failing request's `x-request-id` response header, in DevTools → Network.
+      placeholder: leave blank if the failure was not a network call
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: console
+    attributes:
+      label: Console or network errors
+      description: Pasted as text, not a screenshot, so it is searchable.
+      render: text
+  - type: checkboxes
+    id: no-secrets
+    attributes:
+      label: Before submitting
+      options:
+        - label: This report contains no client personal data, tokens, or keys
+          required: true

@@ -9,12 +9,13 @@
  *   - Status indicator for "last broadcast" recency
  */
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
 import { Mail, Send, Users, Calendar, TrendingUp } from 'lucide-react';
 import { api } from '../../../../../utils/api';
+import { newsletterKeys } from '../../../../../utils/queryKeys';
 
 interface NewsletterStats {
   activeSubscribers: number;
@@ -69,15 +70,14 @@ function LastBroadcastBadge({ iso }: { iso: string }) {
 }
 
 export function NewsletterKPICard() {
-  const [stats, setStats] = useState<NewsletterStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchNewsletterStats().then((s) => {
-      setStats(s);
-      setLoading(false);
-    });
-  }, []);
+  // React Query rather than an effect into local state, so this card is cached
+  // with the rest of the dashboard instead of re-requesting and re-spinning on
+  // every mount — which included every return from another admin module.
+  const { data: stats = null, isLoading: loading } = useQuery({
+    queryKey: newsletterKeys.stats(),
+    queryFn: fetchNewsletterStats,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const primaryStats = [
     {

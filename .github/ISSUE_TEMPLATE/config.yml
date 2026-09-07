@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ShawnDaPrawn/NavigateWealth/security/advisories/new
+    about: Report privately. Do not open a public issue for a security finding.
+  - name: How something works
+    url: https://github.com/ShawnDaPrawn/NavigateWealth/blob/main/docs/README.md
+    about: Status, roadmap, architecture write-ups and runbooks are indexed here.

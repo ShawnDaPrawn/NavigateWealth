@@ -20,7 +20,7 @@ import path from 'path';
  * The ladder now has two halves, and each covers the other's weakness:
  *
  *   1. `node_modules/.cache/figma-webp/<hash>.webp` — built by
- *      `scripts/generate-figma-webp.mjs` as a pre-build step, capped at 500 KB
+ *      `scripts/build/generate-figma-webp.mjs` as a pre-build step, capped at 500 KB
  *      per image. This is what production actually serves: 811 MB of originals
  *      become 10 MB. It is generated, never committed, and Vercel persists the
  *      directory so the resize is paid once rather than per deploy.

@@ -28,6 +28,12 @@ import {
   resolveContactEmail,
 } from './client-email-identity.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
+import {
+  applyClientName,
+  resolveClientFirstName,
+  resolveClientLastName,
+} from './client-display-name.ts';
+import { mgetBatched } from './kv-batch.ts';
 
 const log = createModuleLogger('clients-service');
 
@@ -156,74 +162,103 @@ export class ClientsService {
       clientsToProcess: clientUsers.length,
     });
 
-    // Enhance users with profile data
-    const enhancedUsers = await Promise.all(
-      clientUsers.map(async (user) => {
-        try {
-          // Get profile from KV
-          const profileKey = `user_profile:${user.id}:personal_info`;
-          const profile = await kv.get(profileKey);
-
-          // Get application if exists
-          let application = null;
-          const appId = profile?.applicationId || profile?.application_id;
-
-          if (appId) {
-            application = await kv.get(`application:${appId}`);
-          }
-
-          // Get security status
-          const security = await kv.get(`security:${user.id}`);
-
-          const signInEmail = normalizeEmail(user.email);
-          const contactEmail = resolveContactEmail(user.email, profile);
-
-          return {
-            id: user.id,
-            // The address to WRITE to, which is the auth email for every client
-            // that owns its mailbox and the guardian's address for one that does
-            // not. Everything downstream — campaigns, the newsletter audience,
-            // birthday greetings — reads `client.email`, so resolving it here is
-            // what keeps a linked minor's mail going to a real inbox instead of
-            // to her derived sign-in alias.
-            email: contactEmail,
-            /** The login identity. Differs from `email` only for linked clients. */
-            signInEmail,
-            emailIsShared: contactEmail !== signInEmail,
-            firstName:
-              user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
-            lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
-            createdAt: user.created_at,
-            accountType: user.user_metadata?.accountType || 'personal',
-            applicationStatus:
-              application?.status || user.user_metadata?.applicationStatus || 'none',
-            suspended: security?.suspended || false,
-            deleted: security?.deleted || false,
-            accountStatus: profile?.accountStatus,
-            role: user.user_metadata?.role || 'client',
-            profile,
-            application,
-          };
-        } catch (err) {
-          log.error('Error fetching client data', err as Error, { userId: user.id });
-          return {
-            id: user.id,
-            email: normalizeEmail(user.email),
-            signInEmail: normalizeEmail(user.email),
-            emailIsShared: false,
-            firstName: '',
-            lastName: '',
-            createdAt: user.created_at,
-            accountType: 'personal',
-            applicationStatus: 'unknown',
-            suspended: false,
-            deleted: false,
-            accountStatus: undefined,
-            role: 'client',
-          };
-        }
-      }),
+    // ── Batched KV reads ────────────────────────────────────────────────
+    // This used to do three awaited `kv.get`s PER CLIENT — profile, then the
+    // application that profile names, then security — which is 3N round trips,
+    // each one opening its own Postgres client. /admin/stats calls this just to
+    // count clients, and the admin dashboard blocks its first paint on that
+    // call, so the per-client fan-out was the dominant cost of loading the
+    // page. The same reads now go out as three batches, and the application
+    // batch still waits for the profiles because it is keyed off them.
+    const profiles = await mgetBatched<ClientProfile>(
+      clientUsers.map((user) => `user_profile:${user.id}:personal_info`),
     );
+
+    const applicationIds = profiles.map(
+      (profile) => profile?.applicationId ?? profile?.application_id,
+    );
+    const uniqueApplicationIds = [...new Set(applicationIds.filter(Boolean))] as string[];
+
+    const [applicationRows, securityRows] = await Promise.all([
+      mgetBatched<{ status?: string }>(uniqueApplicationIds.map((id) => `application:${id}`)),
+      // `deleted` is written by the client-deletion flow but is not on
+      // ClientSecurity; the status columns below still read it.
+      mgetBatched<ClientSecurity & { deleted?: boolean }>(
+        clientUsers.map((user) => `security:${user.id}`),
+      ),
+    ]);
+
+    const applicationsById = new Map(
+      uniqueApplicationIds.map((id, idx) => [id, applicationRows[idx] ?? null]),
+    );
+
+    // Enhance users with profile data
+    const enhancedUsers = clientUsers.map((user, index) => {
+      try {
+        // `?? null` keeps the serialised shape identical to the per-client
+        // `kv.get` this replaced, which returned null rather than undefined for
+        // a client with no profile row.
+        const profile = profiles[index] ?? null;
+
+        const appId = applicationIds[index];
+        const application = appId ? (applicationsById.get(appId) ?? null) : null;
+
+        const security = securityRows[index];
+
+        // `user_metadata` is a bag of `unknown`; read it as the strings these
+        // fields have always been so the merges below stay string-typed.
+        const metadata = (user.user_metadata ?? {}) as Record<string, string | undefined>;
+
+        const signInEmail = normalizeEmail(user.email);
+        const contactEmail = resolveContactEmail(user.email, profile);
+
+        return {
+          id: user.id,
+          // The address to WRITE to, which is the auth email for every client
+          // that owns its mailbox and the guardian's address for one that does
+          // not. Everything downstream — campaigns, the newsletter audience,
+          // birthday greetings — reads `client.email`, so resolving it here is
+          // what keeps a linked minor's mail going to a real inbox instead of
+          // to her derived sign-in alias.
+          email: contactEmail,
+          /** The login identity. Differs from `email` only for linked clients. */
+          signInEmail,
+          emailIsShared: contactEmail !== signInEmail,
+          // The PROFILE first, `user_metadata` last — the same order every
+          // other read now uses. This was inverted, so an admin who corrected a
+          // name on the profile still saw the old one in this list: auth
+          // metadata is written once at signup and nothing corrects it.
+          firstName: resolveClientFirstName(profile, metadata),
+          lastName: resolveClientLastName(profile, metadata),
+          createdAt: user.created_at,
+          accountType: metadata.accountType || 'personal',
+          applicationStatus: application?.status || metadata.applicationStatus || 'none',
+          suspended: security?.suspended || false,
+          deleted: security?.deleted || false,
+          accountStatus: profile?.accountStatus,
+          role: metadata.role || 'client',
+          profile,
+          application,
+        };
+      } catch (err) {
+        log.error('Error fetching client data', err as Error, { userId: user.id });
+        return {
+          id: user.id,
+          email: normalizeEmail(user.email),
+          signInEmail: normalizeEmail(user.email),
+          emailIsShared: false,
+          firstName: '',
+          lastName: '',
+          createdAt: user.created_at,
+          accountType: 'personal',
+          applicationStatus: 'unknown',
+          suspended: false,
+          deleted: false,
+          accountStatus: undefined,
+          role: 'client',
+        };
+      }
+    });
 
     // Apply filters
     let filteredClients = enhancedUsers.filter((client) =>
@@ -331,8 +366,10 @@ export class ClientsService {
       email: contactEmail,
       signInEmail,
       emailIsShared: contactEmail !== signInEmail,
-      firstName: user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
-      lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
+      // Same precedence as the list above; a single fetch must not disagree
+      // with it about what the client is called.
+      firstName: resolveClientFirstName(profile, user.user_metadata),
+      lastName: resolveClientLastName(profile, user.user_metadata),
       createdAt: user.created_at,
       accountType: user.user_metadata?.accountType || 'personal',
       applicationStatus: application?.status || user.user_metadata?.applicationStatus || 'none',
@@ -362,24 +399,41 @@ export class ClientsService {
       });
     }
 
-    // Update profile in KV if provided.
+    // Update profile in KV.
     //
-    // This is a wholesale replacement, so `sharedEmail` has to be carried over
-    // explicitly: it is what routes a linked client's mail to their guardian's
-    // real inbox, and losing it would silently redirect every future message to
-    // a derived alias — a failure nobody notices until a client says they never
-    // received something.
-    if (updates.profile) {
+    // A profile payload is a wholesale replacement, so `sharedEmail` has to be
+    // carried over explicitly: it is what routes a linked client's mail to their
+    // guardian's real inbox, and losing it would silently redirect every future
+    // message to a derived alias — a failure nobody notices until a client says
+    // they never received something.
+    //
+    // A NAME CHANGE IS WRITTEN HERE TOO, not only to auth metadata above. The
+    // profile is what every display and every outbound email now reads first, so
+    // a rename that landed only in `user_metadata` would appear to succeed and
+    // change nothing anybody sees.
+    const renaming = Boolean(updates.firstName || updates.lastName);
+
+    if (updates.profile || renaming) {
       const profileKey = `user_profile:${clientId}:personal_info`;
       const existing = await kv.get(profileKey);
       const link = readSharedEmailLink(existing);
 
-      await kv.set(profileKey, {
-        ...updates.profile,
-        ...(link && !readSharedEmailLink(updates.profile as Record<string, unknown>)
-          ? { sharedEmail: link }
-          : {}),
-      });
+      const base = updates.profile
+        ? {
+            ...updates.profile,
+            ...(link && !readSharedEmailLink(updates.profile as Record<string, unknown>)
+              ? { sharedEmail: link }
+              : {}),
+          }
+        : { ...((existing as Record<string, unknown> | null) ?? {}) };
+
+      await kv.set(
+        profileKey,
+        applyClientName(base as Record<string, unknown>, {
+          firstName: updates.firstName,
+          lastName: updates.lastName,
+        }),
+      );
     }
 
     log.success('Client updated', { clientId });

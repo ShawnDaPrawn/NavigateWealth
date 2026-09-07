@@ -1,12 +1,12 @@
 /**
- * Tests for the build-time static body snapshots (scripts/seo-static-data.mjs)
+ * Tests for the build-time static body snapshots (scripts/seo/seo-static-data.mjs)
  * that get prerendered inside #root. The article path cannot always be
  * exercised by a live build (the article fetch needs network), so it is
  * covered here with fixtures.
  */
 import { describe, it, expect } from 'vitest';
 // Plain-JS build script module (no type declarations).
-import * as seoStaticData from '../../../../scripts/seo-static-data.mjs';
+import * as seoStaticData from '../../../../scripts/seo/seo-static-data.mjs';
 import faqData from '../faqs.json';
 
 const {

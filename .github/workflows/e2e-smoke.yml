@@ -26,7 +26,7 @@
 # required — it has reported on every PR since it landed, it just could not
 # block. No PR open at promotion time was affected. Push to the branch, or
 # dispatch this workflow against it — which is what `workflow_dispatch` is for.
-# Operator walkthrough: docs/PRODUCTION-READINESS.md § 3.7.
+# Operator walkthrough: docs/archive/production-readiness-ledger-2026.md § 3.7.
 #
 # WHAT IT COVERS
 # --------------

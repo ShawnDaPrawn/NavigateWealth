@@ -48,7 +48,7 @@ import { logger } from '../../../../../utils/logger';
 //
 // `?url` makes Vite emit the worker as a hashed same-origin asset. The fonts
 // cannot go through Vite: pdf.js wants a DIRECTORY prefix it appends filenames
-// to at runtime, so scripts/copy-pdfjs-assets.mjs stages the folder into
+// to at runtime, so scripts/build/copy-pdfjs-assets.mjs stages the folder into
 // public/pdfjs/ at build time, version-locked to the installed pdfjs-dist.
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 

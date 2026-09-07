@@ -3,7 +3,7 @@ import { render, screen } from '@/test/utils';
 import { MemoryRouter } from 'react-router';
 import DesignSystemPage from '../DesignSystemPage';
 
-vi.mock('../../modules/codebase/DownloadCodebaseTab', () => ({
+vi.mock('../../features/codebase/DownloadCodebaseTab', () => ({
   DownloadCodebaseTab: () => <div>Download Tab</div>,
 }));
 
