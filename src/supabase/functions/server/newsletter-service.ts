@@ -12,6 +12,7 @@
 
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
 import {
   addNewsletterSubscriber,
   addNewsletterSubscribersBulk,
@@ -469,14 +470,13 @@ export async function reconcileClientsToSubscribers(): Promise<{
 
     if (!profileEmail) continue;
 
-    const firstName = (profile.personalInformation?.firstName || profile.firstName || '').trim();
-
-    const surname = (
-      profile.personalInformation?.lastName ||
-      profile.lastName ||
-      profile.surname ||
-      ''
-    ).trim();
+    // Through the shared resolver, which reads the flat root BEFORE the nested
+    // block. This read had them the other way round, so a client whose name was
+    // corrected in the profile editor — which writes the root and leaves any
+    // legacy nested copy behind — stayed in the newsletter audience under the
+    // old name, and was greeted by it.
+    const firstName = resolveClientFirstName(profile, undefined);
+    const surname = resolveClientLastName(profile, undefined);
 
     // De-duplicate by email
     if (!clientEmails.has(profileEmail)) {
