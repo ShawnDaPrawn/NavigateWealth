@@ -28,6 +28,11 @@ import {
   resolveContactEmail,
 } from './client-email-identity.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
+import {
+  applyClientName,
+  resolveClientFirstName,
+  resolveClientLastName,
+} from './client-display-name.ts';
 import { mgetBatched } from './kv-batch.ts';
 
 const log = createModuleLogger('clients-service');
@@ -219,8 +224,12 @@ export class ClientsService {
           /** The login identity. Differs from `email` only for linked clients. */
           signInEmail,
           emailIsShared: contactEmail !== signInEmail,
-          firstName: metadata.firstName || profile?.personalInformation?.firstName || '',
-          lastName: metadata.surname || profile?.personalInformation?.lastName || '',
+          // The PROFILE first, `user_metadata` last — the same order every
+          // other read now uses. This was inverted, so an admin who corrected a
+          // name on the profile still saw the old one in this list: auth
+          // metadata is written once at signup and nothing corrects it.
+          firstName: resolveClientFirstName(profile, metadata),
+          lastName: resolveClientLastName(profile, metadata),
           createdAt: user.created_at,
           accountType: metadata.accountType || 'personal',
           applicationStatus: application?.status || metadata.applicationStatus || 'none',
@@ -357,8 +366,10 @@ export class ClientsService {
       email: contactEmail,
       signInEmail,
       emailIsShared: contactEmail !== signInEmail,
-      firstName: user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
-      lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
+      // Same precedence as the list above; a single fetch must not disagree
+      // with it about what the client is called.
+      firstName: resolveClientFirstName(profile, user.user_metadata),
+      lastName: resolveClientLastName(profile, user.user_metadata),
       createdAt: user.created_at,
       accountType: user.user_metadata?.accountType || 'personal',
       applicationStatus: application?.status || user.user_metadata?.applicationStatus || 'none',
@@ -388,24 +399,41 @@ export class ClientsService {
       });
     }
 
-    // Update profile in KV if provided.
+    // Update profile in KV.
     //
-    // This is a wholesale replacement, so `sharedEmail` has to be carried over
-    // explicitly: it is what routes a linked client's mail to their guardian's
-    // real inbox, and losing it would silently redirect every future message to
-    // a derived alias — a failure nobody notices until a client says they never
-    // received something.
-    if (updates.profile) {
+    // A profile payload is a wholesale replacement, so `sharedEmail` has to be
+    // carried over explicitly: it is what routes a linked client's mail to their
+    // guardian's real inbox, and losing it would silently redirect every future
+    // message to a derived alias — a failure nobody notices until a client says
+    // they never received something.
+    //
+    // A NAME CHANGE IS WRITTEN HERE TOO, not only to auth metadata above. The
+    // profile is what every display and every outbound email now reads first, so
+    // a rename that landed only in `user_metadata` would appear to succeed and
+    // change nothing anybody sees.
+    const renaming = Boolean(updates.firstName || updates.lastName);
+
+    if (updates.profile || renaming) {
       const profileKey = `user_profile:${clientId}:personal_info`;
       const existing = await kv.get(profileKey);
       const link = readSharedEmailLink(existing);
 
-      await kv.set(profileKey, {
-        ...updates.profile,
-        ...(link && !readSharedEmailLink(updates.profile as Record<string, unknown>)
-          ? { sharedEmail: link }
-          : {}),
-      });
+      const base = updates.profile
+        ? {
+            ...updates.profile,
+            ...(link && !readSharedEmailLink(updates.profile as Record<string, unknown>)
+              ? { sharedEmail: link }
+              : {}),
+          }
+        : { ...((existing as Record<string, unknown> | null) ?? {}) };
+
+      await kv.set(
+        profileKey,
+        applyClientName(base as Record<string, unknown>, {
+          firstName: updates.firstName,
+          lastName: updates.lastName,
+        }),
+      );
     }
 
     log.success('Client updated', { clientId });

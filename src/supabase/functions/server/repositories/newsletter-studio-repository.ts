@@ -79,8 +79,11 @@ export interface NewsletterSubscriberRecord {
   confirmed?: boolean;
   active?: boolean;
   subscribedAt?: string;
-  unsubscribedAt?: string;
-  removedBy?: string;
+  // Nullable, not merely optional: re-subscribing CLEARS these to `null`
+  // (newsletter-service.ts), so a record that has been through an unsubscribe
+  // and back holds null rather than dropping the key.
+  unsubscribedAt?: string | null;
+  removedBy?: string | null;
   [key: string]: unknown;
 }
 

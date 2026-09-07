@@ -25,7 +25,7 @@ import {
   verifyCurrentPassword,
   getPendingEmailChange,
   getEmailChangeSummary,
-  resolveDeliveryEmail,
+  resolveSecurityContact,
   type UserSecurityStatus,
 } from './security-shared.ts';
 
@@ -102,7 +102,12 @@ app.post('/:userId/password', requireAuth, async (c) => {
         // in with a derived alias, and credentials that never arrive are a
         // lockout. `Username` below stays the sign-in address: that is the
         // thing the reader has to type, and it is the point of the message.
-        const deliverTo = await resolveDeliveryEmail(userId, user.user.email);
+        // One read answers both: where this goes, and what to call the reader.
+        const { email: deliverTo, firstName } = await resolveSecurityContact(
+          userId,
+          user.user.email,
+          user.user.user_metadata,
+        );
         log.info('📧 Sending password reset notification');
 
         const footerSettings = await getFooterSettings();
@@ -112,7 +117,7 @@ app.post('/:userId/password', requireAuth, async (c) => {
 
         const title = 'Password Reset Notification';
         const subtitle = 'Your account password has been reset by an administrator';
-        const greeting = `Hello ${user.user.user_metadata?.firstName || 'Client'},`;
+        const greeting = `Hello ${firstName},`;
 
         const bodyContent = `
           <p>Your password for the Navigate Wealth Admin Panel has been reset.</p>
