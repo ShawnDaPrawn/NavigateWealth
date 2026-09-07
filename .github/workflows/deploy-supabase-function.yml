@@ -34,12 +34,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.revision || github.sha }}
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -53,7 +53,7 @@ jobs:
       # else: this job only deploys, and the runner's checkout is discarded
       # afterwards. It must run AFTER checkout and BEFORE the deploy.
       - name: Setup Node.js for payload strip
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
 
@@ -128,7 +128,7 @@ jobs:
       # or by reverting the merge on main. Do not fix-forward a 200/401 inversion.
       - name: Setup Node.js for post-deploy smoke
         if: success()
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
