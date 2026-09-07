@@ -12,6 +12,7 @@ import { sendEmail, createEmailTemplate } from './email-service.ts';
 import * as repo from './communication-repo.ts';
 import { logger } from './stderr-logger.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
+import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
 
 // --- Client Resolution ---
 
@@ -135,16 +136,16 @@ export async function getAllClients(supabase: SupabaseAdminClient): Promise<Comm
       return {
         id: u.id,
         email: u.email,
-        firstName:
-          (personalInfo.firstName as string) ||
-          (u.user_metadata?.firstName as string) ||
-          (u.user_metadata?.name as string)?.split(' ')[0] ||
-          'Client',
-        lastName:
-          (personalInfo.lastName as string) ||
-          (u.user_metadata?.surname as string) ||
-          (u.user_metadata?.name as string)?.split(' ').slice(1).join(' ') ||
-          '',
+        // Resolved through the shared helper rather than read from one shape.
+        // This used to look only at `personalInformation`, which the profile
+        // editor no longer writes, and then fall back to `user_metadata` — a
+        // snapshot taken at signup and never corrected. So every client whose
+        // profile carries a FLAT name (all self-service ones, and any row the
+        // editor has saved) was mailed under whatever they were called on the
+        // day they registered. It reached a client: a birthday greeting and the
+        // advisor's digest both addressed a renamed client by his old name.
+        firstName: resolveClientFirstName(profile, u.user_metadata, 'Client'),
+        lastName: resolveClientLastName(profile, u.user_metadata),
         phone: (personalInfo.cellphoneNumber as string) || u.phone || '',
         dateOfBirth: personalInfo.dateOfBirth as string | undefined,
         netWorth: (personalInfo.netWorth as number) || 0,

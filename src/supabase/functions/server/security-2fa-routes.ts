@@ -30,6 +30,7 @@ import {
   ensureSelfOrAdmin,
   ensureAdmin,
   resolveDeliveryEmail,
+  resolveSecurityContact,
   type UserSecurityStatus,
 } from './security-shared.ts';
 import { secureRandomDigits, constantTimeEqual } from './crypto-utils.ts';
@@ -418,11 +419,13 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
         // ── Send alert emails (non-blocking) ─────────────────────
         try {
           const { data: supabaseUser } = await getSupabase().auth.admin.getUserById(userId);
-          const clientEmail = supabaseUser?.user?.email;
-          const clientName =
-            supabaseUser?.user?.user_metadata?.firstName ||
-            supabaseUser?.user?.user_metadata?.name ||
-            'Client';
+          // Profile first — `user_metadata` is the signup snapshot, so greeting
+          // from it addresses a renamed client by the wrong name.
+          const { email: clientEmail, firstName: clientName } = await resolveSecurityContact(
+            userId,
+            supabaseUser?.user?.email,
+            supabaseUser?.user?.user_metadata,
+          );
           const footerSettings = await getFooterSettings();
 
           // 1) Email to client — security warning
