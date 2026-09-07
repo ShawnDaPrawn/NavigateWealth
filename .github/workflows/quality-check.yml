@@ -17,10 +17,12 @@ jobs:
     timeout-minutes: 45
 
     env:
-      # Lifted to job level so the `if:` guard on "Publish quality issue
-      # snapshot" can test it: the `secrets` context is not readable from a
-      # step-level `if:`, but `env` is.
-      QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
+      # A non-secret boolean — deliberately NOT the token itself. A step-level
+      # `if:` cannot read the `secrets` context but can read `env`, and job-level
+      # `env` reaches every step in the job, `npm ci` included. Putting the token
+      # here would hand it to every dependency's install script; this hands them
+      # the string "true" or "false".
+      QUALITY_ISSUES_TOKEN_PRESENT: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN != '' }}
 
     steps:
       - name: Checkout code
@@ -347,11 +349,19 @@ jobs:
       # check is already red for an unrelated reason — #292 passed every gate
       # and still reported failure. Skip the step when no token reached the
       # runner; keep failing loudly when one did and the publish went wrong.
+      # Runs whenever a token is available, AND on every non-pull_request event
+      # even when one is not. That second clause is the point: on a push to
+      # `main` a deleted or misconfigured secret must still fail the job loudly,
+      # which is exactly what publish-quality-report.mjs does and what catches a
+      # dashboard about to go silently stale. Only a pull request that cannot be
+      # given secrets in the first place — Dependabot's, and forks' — skips.
       - name: Publish quality issue snapshot
-        if: ${{ env.QUALITY_ISSUES_INGEST_TOKEN != '' }}
+        if: ${{ env.QUALITY_ISSUES_TOKEN_PRESENT == 'true' || github.event_name != 'pull_request' }}
         shell: bash
         env:
           QUALITY_ISSUES_INGEST_URL: https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report
+          # Step-scoped: only the publisher process gets the credential.
+          QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
         run: node scripts/ops/publish-quality-report.mjs
 
       - name: Upload quality reports
