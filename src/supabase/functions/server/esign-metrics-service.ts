@@ -26,6 +26,7 @@
 
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
+import { mgetIdLists, mgetKeyed } from './kv-batch.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import type { EsignEnvelope, EsignSigner } from './esign-types.ts';
 
@@ -112,6 +113,26 @@ async function listFirmEnvelopes(firmId: string): Promise<EsignEnvelope[]> {
     .filter((e) => firmId === '__all__' || (e.firm_id || 'standalone') === firmId);
 }
 
+/**
+ * Signers for each envelope, in the same order as `envelopes`.
+ *
+ * Both callers below used to read these inline: await the envelope's signer-id
+ * list, then await each signer ONE AT A TIME in a nested `for` loop. That made
+ * the cost strictly sequential in envelopes x signers — a hundred envelopes of
+ * two signers was three hundred round trips in series, and the E-Signature
+ * dashboard waited for all of them. Two batched reads replace the lot.
+ */
+async function loadSignersByEnvelope(envelopes: EsignEnvelope[]): Promise<EsignSigner[][]> {
+  if (envelopes.length === 0) return [];
+
+  const signerIdLists = await mgetIdLists(envelopes.map((e) => EsignKeys.envelopeSigners(e.id)));
+  const signersById = await mgetKeyed<EsignSigner>(EsignKeys.PREFIX_SIGNER, signerIdLists.flat());
+
+  return signerIdLists.map(
+    (ids) => ids.map((id) => signersById.get(id)).filter(Boolean) as EsignSigner[],
+  );
+}
+
 function pct(n: number, d: number): number {
   if (!d) return 0;
   return Math.round((n / d) * 1000) / 10;
@@ -166,14 +187,10 @@ export async function getEsignMetrics(firmId: string): Promise<EsignMetrics> {
   const stuckCandidates: Array<{ envelope: EsignEnvelope; signers: EsignSigner[] }> = [];
   const stuckThresholdMs = STUCK_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
 
-  for (const envelope of envelopes) {
-    const signerIdsRaw = await kv.get(EsignKeys.envelopeSigners(envelope.id));
-    const signerIds: string[] = Array.isArray(signerIdsRaw) ? signerIdsRaw : [];
-    const signers: EsignSigner[] = [];
-    for (const id of signerIds) {
-      const s = await kv.get(EsignKeys.PREFIX_SIGNER + id);
-      if (s) signers.push(s);
-    }
+  const signersByEnvelope = await loadSignersByEnvelope(envelopes);
+
+  for (const [index, envelope] of envelopes.entries()) {
+    const signers = signersByEnvelope[index];
 
     const sentAt = (envelope as { sent_at?: string }).sent_at;
     if (sentAt || envelope.status !== 'draft') funnelCounts.sent += 1;
@@ -303,27 +320,26 @@ export async function findStuckEnvelopes(
   const envelopes = await listFirmEnvelopes(firmId);
   const now = Date.now();
   const stuckThresholdMs = STUCK_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
-  const out: Array<{ envelope: EsignEnvelope; days: number }> = [];
 
-  for (const envelope of envelopes) {
-    if (!['sent', 'viewed', 'partially_signed'].includes(envelope.status)) continue;
-    const sentAt = (envelope as { sent_at?: string }).sent_at;
-    if (!sentAt) continue;
-    const ageMs = now - new Date(sentAt).getTime();
-    if (ageMs < stuckThresholdMs) continue;
+  // Age and status rule an envelope out without reading anything, so narrow
+  // first and only load signers for what is left — then load those together
+  // rather than one signer at a time inside the loop.
+  const candidates = envelopes
+    .map((envelope) => {
+      const sentAt = (envelope as { sent_at?: string }).sent_at;
+      if (!['sent', 'viewed', 'partially_signed'].includes(envelope.status) || !sentAt) return null;
+      const ageMs = now - new Date(sentAt).getTime();
+      if (ageMs < stuckThresholdMs) return null;
+      return { envelope, ageMs };
+    })
+    .filter(Boolean) as Array<{ envelope: EsignEnvelope; ageMs: number }>;
 
-    const signerIdsRaw = await kv.get(EsignKeys.envelopeSigners(envelope.id));
-    const signerIds: string[] = Array.isArray(signerIdsRaw) ? signerIdsRaw : [];
-    let opened = false;
-    for (const id of signerIds) {
-      const signer = await kv.get(EsignKeys.PREFIX_SIGNER + id);
-      if (signer?.viewed_at) {
-        opened = true;
-        break;
-      }
-    }
-    if (!opened) out.push({ envelope, days: Math.floor(ageMs / (24 * 60 * 60 * 1000)) });
-  }
+  const signersByCandidate = await loadSignersByEnvelope(candidates.map((c) => c.envelope));
 
-  return out;
+  return candidates
+    .filter((_, index) => !signersByCandidate[index].some((signer) => signer.viewed_at))
+    .map(({ envelope, ageMs }) => ({
+      envelope,
+      days: Math.floor(ageMs / (24 * 60 * 60 * 1000)),
+    }));
 }

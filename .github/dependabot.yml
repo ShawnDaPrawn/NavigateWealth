@@ -1,0 +1,56 @@
+# Dependency updates arrive as pull requests rather than as a scramble after an
+# advisory. The fflate advisory (GHSA-px8p-9vwx-vf98) was handled by hand in
+# 2026-08; this is what handles the next one.
+#
+# Updates are grouped so a week produces one or two reviewable PRs instead of
+# twenty. `quality-check` gates each of them exactly as it gates a human PR, so
+# a breaking bump shows up as a red check, not as a surprise in production.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '04:00'
+      timezone: Africa/Johannesburg
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 'deps'
+      prefix-development: 'deps(dev)'
+    groups:
+      # Patch and minor bumps are the boring majority. One PR for the lot.
+      production-minor-patch:
+        applies-to: version-updates
+        dependency-type: production
+        update-types: ['minor', 'patch']
+      development-minor-patch:
+        applies-to: version-updates
+        dependency-type: development
+        update-types: ['minor', 'patch']
+      # Security fixes travel together and get looked at first.
+      security:
+        applies-to: security-updates
+        patterns: ['*']
+    ignore:
+      # Version-pinned imports (`sonner@2.0.3`) are resolved through aliases in
+      # both vite.config.ts and vitest.config.ts. A major bump here needs those
+      # aliases updated in step, so it is a deliberate change, not a bot's.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: 'ci'
+    groups:
+      actions:
+        patterns: ['*']

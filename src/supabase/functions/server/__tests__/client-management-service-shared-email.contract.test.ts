@@ -25,6 +25,7 @@ vi.mock('../kv_store.tsx', () => ({
     kvStore.set(key, clone(value));
   }),
   del: vi.fn(async () => {}),
+  mget: vi.fn(async (keys: string[]) => keys.map((key) => clone(kvStore.get(key) ?? undefined))),
   getByPrefix: vi.fn(async (prefix: string) => {
     const out: unknown[] = [];
     kvStore.forEach((v, k) => {

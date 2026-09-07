@@ -38,7 +38,6 @@ export const dashboardKeys = {
   metrics: () => ['dashboard-metrics'] as const,
   tasksToday: () => ['dashboard-tasks-today'] as const,
   recentRequests: () => ['dashboard-recent-requests'] as const,
-  systemActivity: () => ['dashboard-system-activity'] as const,
 } as const;
 
 // ============================================================================
@@ -268,6 +267,7 @@ export const publicationKeys = {
   article: (id: string) => [...publicationKeys.articles(), id] as const,
   categories: () => [...publicationKeys.all, 'categories'] as const,
   types: () => [...publicationKeys.all, 'types'] as const,
+  stats: () => [...publicationKeys.all, 'stats'] as const,
   marketNews: () => [...publicationKeys.all, 'market-news'] as const,
   templates: () => [...publicationKeys.all, 'templates'] as const,
   versions: (articleId: string) => [...publicationKeys.all, 'versions', articleId] as const,

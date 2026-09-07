@@ -48,6 +48,7 @@ const ClientDrawer = React.lazy(() =>
   import('./components/ClientDrawer').then((m) => ({ default: m.ClientDrawer })),
 );
 import { CustomGroupManager } from '../communication';
+import { FNAIntakeQueueSkeleton } from './components/FNAIntakeQueueSkeleton';
 
 const ClientFieldRepository = React.lazy(() =>
   import('./components/ClientFieldRepository').then((m) => ({ default: m.ClientFieldRepository })),
@@ -314,7 +315,7 @@ export function ClientManagementModule() {
         </div>
       </div>
 
-      <Suspense fallback={<LazyFallback />}>
+      <Suspense fallback={<FNAIntakeQueueSkeleton />}>
         <FNAIntakeQueue
           onOpenClient={(clientId) => {
             const match = safeClients.find((c) => c.id === clientId);

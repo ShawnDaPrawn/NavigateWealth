@@ -99,6 +99,10 @@ function useInvalidateCampaigns() {
     if (campaignId) {
       queryClient.invalidateQueries({ queryKey: newsletterKeys.campaign(campaignId) });
       queryClient.invalidateQueries({ queryKey: newsletterKeys.campaignStats(campaignId) });
+    } else {
+      // No specific campaign (delete, manual delivery pass): every open
+      // drill-down may have moved, so refresh them all.
+      queryClient.invalidateQueries({ queryKey: [...newsletterKeys.all, 'studio', 'campaign'] });
     }
   };
 }
@@ -258,5 +262,33 @@ export function useDeleteTemplate() {
       toast.success('Template deleted');
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to delete template')),
+  });
+}
+
+/**
+ * Manual delivery pass from the UI — the same tick the scheduler runs, so an
+ * admin can nudge a stalled or freshly resumed campaign without waiting.
+ */
+export function useRunProcessorNow() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({
+    mutationFn: () => newsletterStudioApi.process(),
+    onSuccess: (result) => {
+      invalidate();
+      if (result.errors.length > 0) {
+        toast.warning(`Delivery pass finished with a problem: ${result.errors[0]}`);
+      } else if (result.sent > 0 || result.failed > 0) {
+        toast.success(
+          `Delivery pass complete — ${result.sent} sent${
+            result.failed > 0 ? `, ${result.failed} failed` : ''
+          }`,
+        );
+      } else if (result.campaignsProcessed > 0 || result.promotedScheduled > 0) {
+        toast.success('Delivery pass complete');
+      } else {
+        toast.info('Nothing is waiting to be sent');
+      }
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Delivery pass failed')),
   });
 }

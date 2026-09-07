@@ -15,7 +15,7 @@ here rather than in the repo root.
 | `anon-key-bearer-baseline`      | anon-key bearer headers                          | `src/utils/api/__tests__/anon-key-bearer-ratchet.test.ts`                    | must not rise     |
 | `auth-implementations-baseline` | distinct auth implementations on the edge server | `src/supabase/functions/server/__tests__/auth-consolidation.test.ts`         | must not rise     |
 | `auth-without-authz-baseline`   | authenticated routes with no ownership check     | `src/supabase/functions/server/__tests__/auth-without-authz-ratchet.test.ts` | must not rise     |
-| `bundle-size-baseline.json`     | per-chunk size floors                            | `scripts/check-bundle-size.mjs` (`npm run bundle:check`)                     | must not rise     |
+| `bundle-size-baseline.json`     | per-chunk size floors                            | `scripts/build/check-bundle-size.mjs` (`npm run bundle:check`)               | must not rise     |
 | `contract-coverage-baseline`    | `parseContract` call sites                       | `src/shared/contracts/__tests__/contract-coverage.test.ts`                   | **must not fall** |
 | `deno-check-baseline`           | Deno edge-code type errors                       | `.github/workflows/quality-check.yml`                                        | must not rise     |
 | `depcruise-baseline`            | module-boundary violations                       | `.github/workflows/quality-check.yml`                                        | must not rise     |

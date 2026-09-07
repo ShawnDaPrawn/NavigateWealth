@@ -454,6 +454,7 @@ here so the next audit starts from a complete set.
 | job                                     | schedule (UTC) | target path                                          | setup SQL                                          |
 | --------------------------------------- | -------------- | ---------------------------------------------------- | -------------------------------------------------- |
 | `client-document-summaries-weekly-scan` | `0 4 * * 6`    | `/client-document-summaries/maintenance/weekly-scan` | `supabase/cron/client-document-summaries-jobs.sql` |
+| `newsletter-studio-process-campaigns`   | `30 seconds`   | `/newsletter-studio/cron/process`                    | `supabase/cron/newsletter-studio-jobs.sql`         |
 
 Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
 renders as its activity timeline, for every document batch uploaded in the last
@@ -478,6 +479,23 @@ Four properties matter when reading its logs:
   again. A batch that is retried every week and keeps failing is a real problem
   with that batch (a corrupt file, an oversized PDF), not a flapping job — its
   stored record carries the error.
+
+### `newsletter-studio-process-campaigns` (installed 2026-09-05, jobid 31)
+
+The Newsletter Studio delivery driver. Until 2026-09-05 it had never been
+installed: the module shipped with the SQL file, but production only had the
+browser accelerator, so campaigns only moved while an admin had the studio open
+and scheduled sends could not fire unattended. The studio dashboard was saying so
+("The scheduled delivery job has not checked in yet").
+
+Installed from `supabase/cron/newsletter-studio-jobs.sql` with the anon key
+substituted; it authenticates with the same Vault-backed `x-nw-cron-auth` token
+as the weekly-scan job. Verified the way this runbook demands: query A green
+every 30 seconds AND the studio's processor state (`nlstudio:processor:state`
+in the KV table) flipped from `lastCronRunAt: null` to a live timestamp within a
+minute, which only a cron-mode tick writes. The studio header shows this as a
+"Scheduler live" pill; "Scheduler not installed" or "Scheduler stale" (no
+check-in for five minutes) means come back to this runbook.
 
 ## Do this after any change to a scheduled job
 

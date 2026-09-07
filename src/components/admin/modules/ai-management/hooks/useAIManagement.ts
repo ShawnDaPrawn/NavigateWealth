@@ -138,9 +138,16 @@ export function useTriggerReindex() {
     mutationFn: () => ragIndexApi.triggerReindex(),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: aiManagementKeys.ragIndex() });
+      const kbCount = result.kbEntriesIndexed ?? 0;
+      const seconds = ((result.durationMs ?? 0) / 1000).toFixed(1);
       toast.success(
-        `Indexed ${result.articlesIndexed} articles (${result.totalChunks} chunks) in ${(result.durationMs / 1000).toFixed(1)}s`,
+        `Rebuilt Vasco's knowledge: ${result.articlesIndexed} articles and ${kbCount} entries (${result.totalChunks} chunks) in ${seconds}s`,
       );
+      if (result.errors && result.errors.length > 0) {
+        toast.error(
+          `${result.errors.length} source${result.errors.length === 1 ? '' : 's'} could not be indexed: ${result.errors[0]}`,
+        );
+      }
     },
     onError: () => {
       toast.error('Failed to trigger re-indexing');

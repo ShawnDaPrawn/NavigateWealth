@@ -372,9 +372,35 @@ function extractResponsesText(resJson: Record<string, unknown>): string {
 }
 
 /**
+ * A failed OpenAI call that knows WHICH model failed.
+ *
+ * `callResponses` may answer on a model the caller never asked for: when the
+ * Responses attempt does not produce text, it retries the fallback model
+ * through Chat Completions. On the success path the answering model comes back
+ * in the result, but a caller that stores the failure had only the model it
+ * requested — so a failure caused by the fallback was filed under the primary,
+ * and the diagnostics pointed at the wrong model.
+ */
+export class AiCallError extends Error {
+  constructor(
+    message: string,
+    /** The model that actually served — and failed — this request. */
+    readonly model: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = 'AiCallError';
+  }
+}
+
+/**
  * Call the OpenAI Responses API with the primary model, transparently falling
  * back to Chat Completions on the fallback model. Returns the model's text
  * output. Supports inline file/image attachments and Structured Outputs.
+ *
+ * Throws {@link AiCallError} when the fallback request itself fails, so the
+ * caller can record the model that produced the failure rather than the one it
+ * asked for.
  */
 export async function callResponses(options: CallResponsesOptions): Promise<CallResponsesResult> {
   const apiKey = getOpenAIKey();
@@ -451,14 +477,20 @@ export async function callResponses(options: CallResponsesOptions): Promise<Call
   if (!res.ok) {
     const errBody = await res.text();
     if (res.status === 429) {
-      throw new Error('OpenAI API rate limit exceeded. Please wait and try again.');
+      throw new AiCallError(
+        'OpenAI API rate limit exceeded. Please wait and try again.',
+        fallbackModel,
+      );
     }
-    throw new Error(`OpenAI request failed (${res.status}): ${errBody.substring(0, 400)}`);
+    throw new AiCallError(
+      `OpenAI request failed (${res.status}): ${errBody.substring(0, 400)}`,
+      fallbackModel,
+    );
   }
 
   const chatJson = await res.json();
   const text = chatJson.choices?.[0]?.message?.content || '';
-  if (!text) throw new Error('OpenAI returned empty content');
+  if (!text) throw new AiCallError('OpenAI returned empty content', fallbackModel);
   return { text, model: fallbackModel, raw: chatJson };
 }
 

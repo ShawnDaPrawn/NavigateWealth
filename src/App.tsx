@@ -13,7 +13,11 @@ import {
   runtimeIssueFromUnknown,
 } from './utils/quality/runtimeIssueReporter';
 import { isWebLockStealAbort } from './utils/errorUtils';
-import { isStaleChunkLoadFailure, reloadOnceForStaleChunk } from './utils/staleChunkRecovery';
+import {
+  isDefinitiveStaleChunkLoadFailure,
+  isStaleChunkLoadFailure,
+  reloadOnceForStaleChunk,
+} from './utils/staleChunkRecovery';
 
 export default function App() {
   // Validate environment variables on first render
@@ -37,12 +41,22 @@ export default function App() {
     // cross-origin iframes, which is unavailable in sandboxed contexts (e.g. preview iframes).
     // This is non-fatal — widgets may still render correctly in production.
     const handleWindowError = (event: ErrorEvent) => {
-      if (isStaleChunkLoadFailure(event.message) || isStaleChunkLoadFailure(event.error)) {
+      const isStaleChunk =
+        isStaleChunkLoadFailure(event.message) || isStaleChunkLoadFailure(event.error);
+      if (isStaleChunk) {
         event.preventDefault();
-        return reloadOnceForStaleChunk();
-      }
-
-      if (
+        reloadOnceForStaleChunk();
+        // Definitive stale-chunk shapes stop here. The ambiguous React
+        // #283/#306 case (see staleChunkRecovery.ts) still reloads but falls
+        // through to report below, since it can also be a genuine
+        // lazy-miswiring bug a reload will not fix.
+        const isDefinitive =
+          isDefinitiveStaleChunkLoadFailure(event.message) ||
+          isDefinitiveStaleChunkLoadFailure(event.error);
+        if (isDefinitive) {
+          return;
+        }
+      } else if (
         event.message?.includes('contentWindow') ||
         event.message?.includes('Cannot listen to the event from the provided iframe')
       ) {
@@ -76,7 +90,16 @@ export default function App() {
       if (isStaleChunkLoadFailure(event.reason) || isStaleChunkLoadFailure(reason)) {
         event.preventDefault();
         reloadOnceForStaleChunk();
-        return;
+        // Definitive stale-chunk shapes stop here. The ambiguous React
+        // #283/#306 case (see staleChunkRecovery.ts) still reloads but falls
+        // through to report below, since it can also be a genuine
+        // lazy-miswiring bug a reload will not fix.
+        if (
+          isDefinitiveStaleChunkLoadFailure(event.reason) ||
+          isDefinitiveStaleChunkLoadFailure(reason)
+        ) {
+          return;
+        }
       }
 
       if (

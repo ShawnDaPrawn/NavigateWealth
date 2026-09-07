@@ -144,11 +144,15 @@ export interface NewsletterDashboardSummary {
   templateCount: number;
 }
 
+export type CampaignStatusCounts = Record<NewsletterCampaignStatus, number>;
+
 export interface CampaignListResult {
   campaigns: NewsletterCampaign[];
   total: number;
   page: number;
   limit: number;
+  /** Per-status counts over the whole search-filtered set (before the status filter). */
+  statusCounts: CampaignStatusCounts;
 }
 
 export interface RecipientPageResult {
@@ -193,4 +197,11 @@ export interface ProcessResult {
   failed: number;
   finished: string[];
   errors: string[];
+}
+
+/** UX-only capability flags derived from the personnel permission set. */
+export interface NewsletterCaps {
+  create: boolean;
+  send: boolean;
+  delete: boolean;
 }

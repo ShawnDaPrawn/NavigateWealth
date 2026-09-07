@@ -205,8 +205,12 @@ export async function updateVascoConfig(enabled: boolean, updatedBy: string): Pr
 }
 
 /**
- * Build a RAG context injection message from retrieved article chunks.
- * Returns the system message text and deduplicated citations.
+ * Build a RAG context injection message from retrieved chunks.
+ *
+ * Two kinds of source come back from the index: published articles, which the
+ * visitor can be linked to, and knowledge base entries written by admins,
+ * which are internal and get no citation. Returns the system message text and
+ * deduplicated article citations.
  */
 function buildRagContext(contexts: RetrievedContext[]): {
   contextMessage: string | null;
@@ -220,7 +224,10 @@ function buildRagContext(contexts: RetrievedContext[]): {
   const seen = new Set<string>();
   const citations: VascoCitation[] = [];
 
-  const contextParts = contexts.map((ctx, _i) => {
+  const contextParts = contexts.map((ctx) => {
+    if (ctx.sourceType === 'kb') {
+      return `[Knowledge base: "${ctx.articleTitle}"]\n${ctx.text}`;
+    }
     if (!seen.has(ctx.articleSlug)) {
       seen.add(ctx.articleSlug);
       citations.push({
@@ -232,7 +239,7 @@ function buildRagContext(contexts: RetrievedContext[]): {
     return `[Article: "${ctx.articleTitle}"]\n${ctx.text}`;
   });
 
-  const contextMessage = `ARTICLE_CONTEXT (from Navigate Wealth's published articles — use naturally if relevant to the user's question):\n\n${contextParts.join('\n\n---\n\n')}`;
+  const contextMessage = `ARTICLE_CONTEXT (from Navigate Wealth's published articles and internal knowledge base — use naturally if relevant to the user's question. Knowledge base entries are verified Navigate Wealth information and take precedence over general knowledge; do not cite them as articles):\n\n${contextParts.join('\n\n---\n\n')}`;
 
   return { contextMessage, citations };
 }
@@ -268,8 +275,10 @@ export async function chat(request: VascoChatRequest): Promise<VascoChatResponse
 
   if (lastUserMessage) {
     try {
-      // Retrieve relevant article chunks
-      const ragContexts = await retrieveContext(lastUserMessage.content);
+      // Retrieve relevant article + knowledge base chunks
+      const ragContexts = await retrieveContext(lastUserMessage.content, {
+        agentId: VASCO_PROMPT_AGENT_ID,
+      });
 
       if (ragContexts.length > 0) {
         const { contextMessage, citations: ragCitations } = buildRagContext(ragContexts);
@@ -366,7 +375,9 @@ export async function chatStream(
 
   if (lastUserMessage) {
     try {
-      const ragContexts = await retrieveContext(lastUserMessage.content);
+      const ragContexts = await retrieveContext(lastUserMessage.content, {
+        agentId: VASCO_PROMPT_AGENT_ID,
+      });
       if (ragContexts.length > 0) {
         const { contextMessage, citations: ragCitations } = buildRagContext(ragContexts);
         citations = ragCitations;

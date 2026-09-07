@@ -3,7 +3,6 @@ import {
   dashboardStatsApi,
   dashboardMetricsApi,
   tasksApi,
-  systemActivityApi,
   dashboardApi,
   systemHealthApi,
   adminAuditApi,
@@ -206,84 +205,21 @@ describe('tasksApi.getHighPriorityDueToday', () => {
   });
 });
 
-describe('systemActivityApi.getAll', () => {
-  it('returns activity array with known types', async () => {
-    mockApiGet.mockResolvedValueOnce({ stats: MOCK_STATS }).mockResolvedValueOnce(MOCK_METRICS);
-    const activities = await systemActivityApi.getAll();
-    const types = activities.map((a) => a.type);
-    expect(types).toContain('new_applications');
-    expect(types).toContain('pending_tasks');
-    expect(types).toContain('completed_fnas');
+describe('dashboardApi', () => {
+  it('exposes the three dashboard fetchers and no aggregate fetcher', () => {
+    expect(dashboardApi.stats.getStats).toBe(dashboardStatsApi.getStats);
+    expect(dashboardApi.metrics.getMetrics).toBe(dashboardMetricsApi.getMetrics);
+    expect(dashboardApi.tasks.getDueToday).toBe(tasksApi.getDueToday);
   });
 
-  it('calculates growth as 100 when previous month was 0', async () => {
-    const statsWithNoLastMonth = { ...MOCK_STATS, new_last_month: 0, new_this_month: 5 };
-    mockApiGet
-      .mockResolvedValueOnce({ stats: statsWithNoLastMonth })
-      .mockResolvedValueOnce(MOCK_METRICS);
-    const activities = await systemActivityApi.getAll();
-    const newApps = activities.find((a) => a.type === 'new_applications');
-    expect(newApps?.growth).toBe(100);
-  });
-
-  it('returns empty array on failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('Network fail'));
-    const activities = await systemActivityApi.getAll();
-    expect(activities).toEqual([]);
+  // Regression guard for the duplicate-fetch bug: System Activity was a fourth
+  // fetcher that re-requested /admin/stats and /integrations/dashboard-stats,
+  // so one dashboard load hit each of them twice. The tiles are now derived
+  // from the two queries the dashboard already runs (see buildSystemActivity).
+  it('has no activity fetcher — System Activity is derived, not fetched', () => {
+    expect('activity' in dashboardApi).toBe(false);
   });
 });
-
-describe('systemActivityApi.getByType', () => {
-  it('returns activity for a given type', async () => {
-    mockApiGet.mockResolvedValueOnce({ stats: MOCK_STATS }).mockResolvedValueOnce(MOCK_METRICS);
-    const activity = await systemActivityApi.getByType('pending_tasks');
-    expect(activity?.type).toBe('pending_tasks');
-    expect(activity?.count).toBe(8);
-  });
-
-  it('returns null for unknown type', async () => {
-    mockApiGet.mockResolvedValueOnce({ stats: MOCK_STATS }).mockResolvedValueOnce(MOCK_METRICS);
-    const activity = await systemActivityApi.getByType('unknown_type');
-    expect(activity).toBeNull();
-  });
-});
-
-describe('dashboardApi.getAll', () => {
-  it('returns combined dashboard data', async () => {
-    mockApiGet
-      .mockResolvedValueOnce({ stats: MOCK_STATS }) // stats
-      .mockResolvedValueOnce(MOCK_METRICS) // metrics
-      .mockResolvedValueOnce({ success: true, data: [MOCK_TASK] }) // tasks
-      .mockResolvedValueOnce({ stats: MOCK_STATS }) // systemActivity -> stats
-      .mockResolvedValueOnce(MOCK_METRICS); // systemActivity -> metrics
-    const data = await dashboardApi.getAll();
-    expect(data.stats.total_clients).toBe(42);
-    expect(data.tasks.length).toBe(1);
-  });
-
-  it('throws on complete failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('Complete failure'));
-    await expect(dashboardApi.getAll()).rejects.toThrow();
-  });
-});
-
-describe('dashboardApi.refresh', () => {
-  it('calls getAll', async () => {
-    mockApiGet
-      .mockResolvedValueOnce({ stats: MOCK_STATS })
-      .mockResolvedValueOnce(MOCK_METRICS)
-      .mockResolvedValueOnce({ success: true, data: [] })
-      .mockResolvedValueOnce({ stats: MOCK_STATS })
-      .mockResolvedValueOnce(MOCK_METRICS);
-    const data = await dashboardApi.refresh();
-    expect(data.stats).toBeDefined();
-    expect(data.tasks).toBeDefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// systemHealthApi
-// ---------------------------------------------------------------------------
 
 describe('systemHealthApi.getLastCleanupRun', () => {
   it('returns lastRun from API response', async () => {

@@ -326,6 +326,23 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     category: 'onboarding',
     isSystem: true,
   },
+  goaml_scan_digest: {
+    id: 'goaml_scan_digest',
+    name: 'GoAML Morning Digest',
+    enabled: true,
+    subject: 'GoAML {{ .Status }} — {{ .Date }}',
+    title: 'GoAML Morning Digest',
+    subtitle: '{{ .Date }}',
+    greeting: 'Good morning,',
+    bodyHtml:
+      '<p>This is the automated morning scan of the FIC goAML portal. New items since yesterday are listed first.</p>',
+    buttonLabel: 'Open goAML',
+    buttonUrl: 'https://goweb.fic.gov.za/',
+    footerNote:
+      'This is an automated compliance digest from Navigate Wealth. It is sent to the nominated compliance mailboxes only.',
+    category: 'compliance',
+    isSystem: true,
+  },
 };
 
 export async function getEmailTemplate(id: string): Promise<EmailTemplate> {

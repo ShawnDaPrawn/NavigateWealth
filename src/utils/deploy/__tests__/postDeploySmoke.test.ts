@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
-const scriptPath = resolve(repoRoot, 'scripts/post-deploy-smoke.mjs');
+const scriptPath = resolve(repoRoot, 'scripts/ops/post-deploy-smoke.mjs');
 const scriptHref = pathToFileURL(scriptPath).href;
 const workflowPath = resolve(repoRoot, '.github/workflows/deploy-supabase-function.yml');
 
@@ -215,7 +215,7 @@ describe('deploy workflow wires the smoke as blocking', () => {
   const workflow = readFileSync(workflowPath, 'utf8');
 
   it('runs post-deploy-smoke.mjs after the function deploy', () => {
-    expect(workflow).toContain('scripts/post-deploy-smoke.mjs');
+    expect(workflow).toContain('scripts/ops/post-deploy-smoke.mjs');
     expect(workflow).toMatch(/Deploy make-server-91ed8379[\s\S]*post-deploy-smoke\.mjs/);
   });
 

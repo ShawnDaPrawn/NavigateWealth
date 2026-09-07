@@ -1,5 +1,5 @@
 {
-  "//": "SPA-scoped typecheck config used by `npm run typecheck` and CI. Extends the base tsconfig but excludes the Supabase Edge Function source, which runs under Deno (jsr:/npm: imports + Deno globals) and must be checked with `deno check`, not tsc. See docs/PRODUCTION-READINESS.md.",
+  "//": "SPA-scoped typecheck config used by `npm run typecheck` and CI. Extends the base tsconfig but excludes the Supabase Edge Function source, which runs under Deno (jsr:/npm: imports + Deno globals) and must be checked with `deno check`, not tsc. See docs/archive/production-readiness-ledger-2026.md.",
   "extends": "./tsconfig.json",
   "exclude": ["node_modules", "dist", "build", "src/supabase/functions"]
 }

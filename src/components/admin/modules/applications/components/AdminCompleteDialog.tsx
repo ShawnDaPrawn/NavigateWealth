@@ -30,12 +30,12 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { toast } from 'sonner';
-import { useOnboarding } from '../../../../modules/onboarding/hooks/useOnboarding';
-import { Step1Personal } from '../../../../modules/onboarding/components/Step1Personal';
-import { Step2Contact } from '../../../../modules/onboarding/components/Step2Contact';
-import { Step3Employment } from '../../../../modules/onboarding/components/Step3Employment';
-import { Step4Services } from '../../../../modules/onboarding/components/Step4Services';
-import { Step5Terms } from '../../../../modules/onboarding/components/Step5Terms';
+import { useOnboarding } from '../../../../features/onboarding/hooks/useOnboarding';
+import { Step1Personal } from '../../../../features/onboarding/components/Step1Personal';
+import { Step2Contact } from '../../../../features/onboarding/components/Step2Contact';
+import { Step3Employment } from '../../../../features/onboarding/components/Step3Employment';
+import { Step4Services } from '../../../../features/onboarding/components/Step4Services';
+import { Step5Terms } from '../../../../features/onboarding/components/Step5Terms';
 import type { Application } from '../types';
 
 // -- Types --------------------------------------------------------------------

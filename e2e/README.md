@@ -29,7 +29,7 @@ npm run test:e2e
 # helpful flags
 npm run test:e2e -- --headed                  # see the browser
 npm run test:e2e -- --project=desktop-chromium
-npm run test:e2e -- e2e/signer-decline.spec.ts
+npm run test:e2e -- e2e/decline.spec.ts
 ```
 
 ## Required env

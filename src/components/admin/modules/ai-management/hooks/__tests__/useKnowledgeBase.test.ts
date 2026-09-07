@@ -220,7 +220,15 @@ describe('useCreateKBEntry', () => {
 
     renderHook(() => useCreateKBEntry());
 
-    (captured.onSuccess as (entry: { title: string }) => void)({ title: 'New Entry' });
+    (captured.onSuccess as (result: unknown) => void)({
+      entry: { id: 'kb-new', title: 'New Entry', status: 'active' },
+      index: { indexed: true, chunkCount: 1 },
+    });
+
+    // A live entry was written into Vasco's index, so its status must refresh too.
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['ai-management', 'rag-index'],
+    });
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['ai-management', 'kb-entries'],
@@ -240,9 +248,51 @@ describe('useCreateKBEntry', () => {
 
     renderHook(() => useCreateKBEntry());
 
-    (captured.onSuccess as (entry: { title: string }) => void)({ title: 'My Entry' });
+    (captured.onSuccess as (result: unknown) => void)({
+      entry: { id: 'kb-1', title: 'My Entry', status: 'active' },
+      index: { indexed: true, chunkCount: 1 },
+    });
 
     expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('My Entry'));
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('Vasco can use it now'));
+  });
+
+  it('onSuccess warns when a live entry could not be indexed for Vasco', async () => {
+    const { toast } = await import('sonner');
+    let captured: Record<string, unknown> = {};
+    mockUseMutation.mockImplementationOnce((opts: Record<string, unknown>) => {
+      captured = opts;
+      return {};
+    });
+
+    renderHook(() => useCreateKBEntry());
+
+    (captured.onSuccess as (result: unknown) => void)({
+      entry: { id: 'kb-1', title: 'My Entry', status: 'active' },
+      index: { indexed: false, chunkCount: 0, error: 'Embedding generation failed: 503' },
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('could not be added'));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('503'));
+  });
+
+  it('onSuccess says plainly that a draft is not used by Vasco', async () => {
+    const { toast } = await import('sonner');
+    let captured: Record<string, unknown> = {};
+    mockUseMutation.mockImplementationOnce((opts: Record<string, unknown>) => {
+      captured = opts;
+      return {};
+    });
+
+    renderHook(() => useCreateKBEntry());
+
+    (captured.onSuccess as (result: unknown) => void)({
+      entry: { id: 'kb-1', title: 'Draft Entry', status: 'draft' },
+      index: { indexed: false, chunkCount: 0 },
+    });
+
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('draft'));
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('will not use it'));
   });
 
   it('onError shows toast.error', async () => {
@@ -291,9 +341,9 @@ describe('useUpdateKBEntry', () => {
 
     renderHook(() => useUpdateKBEntry());
 
-    (captured.onSuccess as (entry: { id: string; title: string }) => void)({
-      id: 'kb-1',
-      title: 'Updated',
+    (captured.onSuccess as (result: unknown) => void)({
+      entry: { id: 'kb-1', title: 'Updated', status: 'active' },
+      index: { indexed: true, chunkCount: 1 },
     });
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
@@ -317,9 +367,9 @@ describe('useUpdateKBEntry', () => {
 
     renderHook(() => useUpdateKBEntry());
 
-    (captured.onSuccess as (entry: { id: string; title: string }) => void)({
-      id: 'kb-1',
-      title: 'Updated Entry',
+    (captured.onSuccess as (result: unknown) => void)({
+      entry: { id: 'kb-1', title: 'Updated Entry', status: 'active' },
+      index: { indexed: true, chunkCount: 1 },
     });
 
     expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('Updated Entry'));

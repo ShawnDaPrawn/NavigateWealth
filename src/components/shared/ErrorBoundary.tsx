@@ -6,7 +6,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
 import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
-import { isStaleChunkLoadFailure, reloadOnceForStaleChunk } from '../../utils/staleChunkRecovery';
+import {
+  isDefinitiveStaleChunkLoadFailure,
+  isStaleChunkLoadFailure,
+  reloadOnceForStaleChunk,
+} from '../../utils/staleChunkRecovery';
 
 interface Props {
   children: ReactNode;
@@ -56,7 +60,13 @@ export class ErrorBoundary extends Component<Props, State> {
     // logged as a "real" issue.
     if (isStaleChunkLoadFailure(error)) {
       reloadOnceForStaleChunk();
-      return;
+      // The ambiguous React #283/#306 case (see staleChunkRecovery.ts) still
+      // gets a reload, but falls through to report below — it can also be a
+      // genuine lazy-miswiring bug that a reload will not fix, and that
+      // would otherwise vanish from Issue Manager entirely.
+      if (isDefinitiveStaleChunkLoadFailure(error)) {
+        return;
+      }
     }
 
     // Log using unified logger

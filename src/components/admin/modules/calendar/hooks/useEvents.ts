@@ -9,8 +9,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { calendarApi } from '../api';
+import { APIError } from '../../../../../utils/api/client';
 import type { CalendarEvent, CreateEventInput, UpdateEventInput, CalendarFilters } from '../types';
 import { QUERY_STALE_TIME, QUERY_GC_TIME } from '../constants';
+
+// ============================================================================
+// ERRORS
+// ============================================================================
+
+/**
+ * A short reason for the failure toast. The API layer already extracts the
+ * server's `error` / `message` body, so the first line of an APIError is the
+ * most useful thing to show (e.g. the calendar's "client could not be linked"
+ * message). Network and unknown errors get no description.
+ */
+export function describeMutationError(error: unknown): string | undefined {
+  if (!(error instanceof APIError)) return undefined;
+  const firstLine = error.message.split('\n')[0]?.trim();
+  return firstLine || undefined;
+}
 
 // ============================================================================
 // QUERY KEYS
@@ -88,7 +105,7 @@ export function useCreateEvent() {
     },
     onError: (error) => {
       console.error('Failed to create event:', error);
-      toast.error('Failed to create event');
+      toast.error('Failed to create event', { description: describeMutationError(error) });
     },
   });
 }
@@ -111,7 +128,7 @@ export function useUpdateEvent() {
     },
     onError: (error) => {
       console.error('Failed to update event:', error);
-      toast.error('Failed to update event');
+      toast.error('Failed to update event', { description: describeMutationError(error) });
     },
   });
 }
@@ -133,7 +150,7 @@ export function useDeleteEvent() {
     },
     onError: (error) => {
       console.error('Failed to delete event:', error);
-      toast.error('Failed to delete event');
+      toast.error('Failed to delete event', { description: describeMutationError(error) });
     },
   });
 }
