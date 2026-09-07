@@ -17,6 +17,8 @@ import { sendEmail } from './email-service.ts';
 import { createArticleNotificationEmail } from './article-notification-template.ts';
 import { SITE_ORIGIN_APEX } from '../../../utils/siteOrigin.ts';
 import { requireAdmin } from './auth-mw.ts';
+import { mgetBatched } from './kv-batch.ts';
+import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
 import {
   generateId,
   generateSlug,
@@ -408,24 +410,33 @@ adminRoutes.post('/articles/:id/send-notifications', requireAdmin, async (c) => 
       return c.json({ success: false, error: 'Failed to fetch users' }, 500);
     }
 
+    // Names come from the KV profile, with auth metadata only as a fallback.
+    //
+    // This read `user_metadata` alone, which is written once when the account is
+    // created and never corrected afterwards — so a client renamed on their
+    // profile was greeted by their old name in every article notification. One
+    // batched read of the profiles is the whole cost of getting it right.
+    const profileKeys: string[] = [];
+    for (const user of users) profileKeys.push(`user_profile:${user.id}:personal_info`);
+    // `mgetBatched` returns one slot per key, in key order, so it zips by index.
+    const profiles = await mgetBatched<Record<string, unknown>>(profileKeys);
+
     // Create a map of users by ID for quick lookup
     const userMap = new Map<
       string,
       { id: string; email: string; emailVerified: boolean; firstName: string; lastName: string }
     >();
-    users.forEach((user) => {
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i];
+      const profile = profiles[i];
       userMap.set(user.id, {
         id: user.id,
         email: user.email ?? '',
         emailVerified: user.email_confirmed_at !== null,
-        firstName:
-          (user.user_metadata?.firstName as string) ||
-          (user.user_metadata?.first_name as string) ||
-          'Valued Client',
-        lastName:
-          (user.user_metadata?.surname as string) || (user.user_metadata?.lastName as string) || '',
+        firstName: resolveClientFirstName(profile, user.user_metadata, 'Valued Client'),
+        lastName: resolveClientLastName(profile, user.user_metadata),
       });
-    });
+    }
 
     // Collect recipients from all groups
     const recipientMap = new Map();
