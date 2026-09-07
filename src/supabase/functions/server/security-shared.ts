@@ -17,6 +17,7 @@ import {
   resolveContactEmail,
   normalizeEmail as normalizeContactEmail,
 } from './client-email-identity.ts';
+import { resolveClientFirstName } from './client-display-name.ts';
 
 const log = createModuleLogger('security-shared');
 
@@ -264,16 +265,45 @@ export async function resolveDeliveryEmail(
   userId: string,
   authEmail: string | null | undefined,
 ): Promise<string> {
+  return (await resolveSecurityContact(userId, authEmail)).email;
+}
+
+/**
+ * Who a security message goes to, and what to call them — from ONE profile read.
+ *
+ * The name half exists for the same reason as the address half. These flows have
+ * the auth user in hand and used to greet from its `user_metadata`, which is a
+ * snapshot written when the account was created and corrected by nothing: an
+ * admin who fixes a client's name on their profile does not touch it. So
+ * "Hello Liezl," kept going to a client whose profile had said Kirtan for
+ * months — the same defect that put the wrong name in his birthday greeting.
+ *
+ * Both halves are answered from a single `kv.get` because they always want the
+ * same row, and a security email that reads the profile twice is two chances to
+ * fail on a path where failure means a client cannot get back into their
+ * account. On a read error both fall back to what the auth user already says,
+ * so the message still goes out.
+ */
+export async function resolveSecurityContact(
+  userId: string,
+  authEmail: string | null | undefined,
+  metadata?: Record<string, unknown> | null,
+  nameFallback = 'Client',
+): Promise<{ email: string; firstName: string }> {
+  let profile: Record<string, unknown> | null = null;
   try {
-    const profile = (await kv.get(`user_profile:${userId}:personal_info`)) as Record<
+    profile = (await kv.get(`user_profile:${userId}:personal_info`)) as Record<
       string,
       unknown
     > | null;
-    return resolveContactEmail(authEmail, profile) || normalizeContactEmail(authEmail);
   } catch (error) {
-    logSafeError('resolveDeliveryEmail', error);
-    return normalizeContactEmail(authEmail);
+    logSafeError('resolveSecurityContact', error);
   }
+
+  return {
+    email: resolveContactEmail(authEmail, profile) || normalizeContactEmail(authEmail),
+    firstName: resolveClientFirstName(profile, metadata, nameFallback),
+  };
 }
 
 export async function updateStoredPrimaryEmail(userId: string, newEmail: string) {
