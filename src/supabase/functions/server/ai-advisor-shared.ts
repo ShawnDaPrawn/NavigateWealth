@@ -57,6 +57,12 @@ export interface AdvisorUserContext {
   fnaInformation: Record<string, unknown[]>;
   communicationHistory: unknown[];
   documentHistory: unknown[];
+  /**
+   * Chunks retrieved from Vasco's knowledge index (published articles + live
+   * Knowledge Base entries) for the latest user question. Empty when there was
+   * no question to retrieve against or the index is empty.
+   */
+  knowledgeContext: Array<{ title: string; sourceType: 'article' | 'kb'; text: string }>;
   schemaSources: {
     profile: string[];
     policies: string[];

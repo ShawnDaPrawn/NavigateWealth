@@ -28,6 +28,10 @@ import {
 } from './publications-route-helpers.ts';
 import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 import { requireAdmin } from './auth-mw.ts';
+import {
+  removeArticleFromIndexInBackground,
+  syncArticleIndexInBackground,
+} from './vasco-index-sync.ts';
 
 const log = createModuleLogger('publications-lifecycle-routes');
 
@@ -65,6 +69,8 @@ lifecycleRoutes.post('/articles/:id/archive', async (c) => {
 
     if (article.status === 'published') {
       triggerSiteRebuild(`article_archived:${id}`);
+      // Archived content must stop being retrievable by Vasco.
+      await syncArticleIndexInBackground(updated, 'article_archived');
     }
 
     // Audit trail (non-blocking — §12.2)
@@ -147,6 +153,8 @@ lifecycleRoutes.post('/articles/:id/unpublish', async (c) => {
     await kv.set(`article:${id}`, updated);
 
     triggerSiteRebuild(`article_unpublished:${id}`);
+    // Unpublished content must stop being retrievable by Vasco.
+    await syncArticleIndexInBackground(updated, 'article_unpublished');
 
     // Audit trail (non-blocking — §12.2)
     AdminAuditService.record({
@@ -224,6 +232,7 @@ lifecycleRoutes.delete('/articles/:id', async (c) => {
 
     await kv.set(`article_deleted:${id}`, deletedArticle);
     await kv.del(`article:${id}`);
+    await removeArticleFromIndexInBackground(id, 'article_deleted');
 
     // Also delete any tag links
     const tagLinks = await kv.getByPrefix(`article_tag_link:${id}:`);

@@ -274,7 +274,9 @@ describe('chat with retrieved article context', () => {
         { role: 'user', content: 'now tell me about medical aid' },
       ],
     });
-    expect(rag.retrieveContext).toHaveBeenCalledWith('now tell me about medical aid');
+    expect(rag.retrieveContext).toHaveBeenCalledWith('now tell me about medical aid', {
+      agentId: 'vasco-public',
+    });
   });
 
   it('answers anyway when retrieval fails — RAG is not on the critical path', async () => {

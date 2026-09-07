@@ -33,9 +33,65 @@ Use `supabase/cron/publications-jobs.sql` to create the production cron jobs for
 - Confirm recent runs in `cron.job_run_details`
 - Or run `supabase/cron/verify-publications-jobs.sql` in SQL Editor
 
-## Smoke Test
+## Publications Smoke Test
 
-- Follow `supabase/cron/publications-smoke-test.md` after deploy and cron setup
+Run this after deploying the edge function and creating the cron jobs.
+
+Use this after deploying the edge function and creating the cron jobs.
+
+### 1. Verify cron jobs exist
+
+- Open Supabase SQL Editor.
+- Run `supabase/cron/verify-publications-jobs.sql`.
+- Confirm both job names are present:
+  - `publications-process-scheduled`
+  - `publications-process-notification-jobs`
+- Confirm recent `cron.job_run_details` rows show `status = succeeded`.
+
+### 2. Publish test article
+
+- In admin, create or open a non-critical article.
+- Publish it with `Notify newsletter subscribers` enabled.
+- Confirm the publish modal shows a queued delivery job.
+- Confirm the modal or engagement panel shows a recipient count larger than 10 if you have more than 10 subscribers.
+
+### 3. Watch delivery progress
+
+- Wait 1 to 2 minutes.
+- Open the article email engagement panel.
+- Confirm `sent` keeps increasing without keeping the admin tab focused.
+- Confirm `pending` trends down toward zero.
+
+### 4. Validate full recipient coverage
+
+- Compare:
+  - newsletter subscriber count
+  - article notification job recipient count
+  - final `sent + failed`
+- These should reconcile. If they do not, inspect the failed recipient rows and the job's `lastError`.
+
+### 5. Retry smoke test
+
+- If any recipients are `failed`, click retry.
+- Confirm a retry job is queued for the undelivered publish recipients.
+- Wait another 1 to 2 minutes.
+- Confirm:
+  - `pending` decreases again
+  - `sent` increases or `failed` remains with a concrete provider error
+  - retry does not stop after a single recipient unless only one undelivered recipient remained
+
+### 6. Failure handling check
+
+- If failures remain, confirm the recipient detail rows show a specific delivery error message.
+- Confirm the article remains published even if some deliveries fail.
+- Confirm retry is still available for remaining undelivered publish recipients.
+
+### Good outcome
+
+- Article publishes immediately.
+- Delivery continues even if the admin page is closed or idle.
+- Large sends progress beyond the first 10 recipients automatically.
+- Retry processes the real remaining undelivered set, not a stale subset.
 
 ## Newsletter Studio Cron Setup
 
@@ -91,6 +147,42 @@ the client Documents tab's AI activity timeline up to date.
     -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
     -d '{"lookbackDays": 7}'
   ```
+
+### Choosing the model
+
+The summariser no longer sits on `gpt-4o` by default. It asks the account which models it can
+serve and takes the highest-ranked entry from `SUMMARY_MODEL_PREFERENCES` in
+`client-document-summaries-ai.ts` — cost-tier models first, since this is short,
+schema-constrained output over a handful of documents.
+
+That ranking is a preference, not a claim any of those models exist. Entries the account does
+not serve are skipped, so a name that is wrong, retired, or invented cannot 400 a request. If
+none match, or the probe fails, it uses `OPENAI_PRIMARY_MODEL` — today's behaviour. The worst
+case of a stale list is a no-op.
+
+To see what this account actually serves, read the Edge Function logs for
+`OpenAI models available to this account` — the first summary after each cold start logs the
+real text-model list, so no API key is needed in hand. Reorder the preference list against it.
+Equivalently, from a shell:
+
+```bash
+curl -s https://api.openai.com/v1/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY" | jq -r '.data[].id' | sort
+```
+
+To pin one model and skip the ranking entirely, set `OPENAI_SUMMARY_MODEL` (Supabase → Edge
+Functions → Secrets). An explicit setting wins outright and runs no probe. Clear it to return
+to the ranking.
+
+Set the per-feature var, never the global `OPENAI_MODEL`. That one is read by eleven services,
+most of which call OpenAI through Chat Completions with no model fallback — an id the account
+cannot serve is a 400 and the feature is dead. That is the `gpt-5.4` incident recorded in
+`ai-model-config.ts`. The summariser goes through `callResponses`, which retries on `gpt-4o`,
+so it is the one caller that degrades instead of breaking.
+
+After any change, confirm what took: open any client's Documents tab, click **Summarise** on a
+pending batch, and read the model name on the new entry. That field records the model that
+ANSWERED, so a rejected id shows as `gpt-4o` — the silent fallback is visible.
 
 - Verify the same way as the other jobs: confirm the job exists under `Integrations -> Cron`
   and shows recent runs in `cron.job_run_details`, then confirm the Edge Function logs show

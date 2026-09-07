@@ -461,7 +461,8 @@ describe('an anonymous caller is rate limited', () => {
  * an inline script whose hash is not in `script-src`. It is pasted verbatim,
  * 127.0.0.1 origins and all, because the point is that it is not idealised.
  *
- * This settles half of what PRODUCTION-READINESS.md records as unproven. That
+ * This settles half of what the archived readiness ledger
+ * (docs/archive/production-readiness-ledger-2026.md) records as unproven. That
  * note says "Headless Chromium emitted no reports to the collector even over
  * TLS on a same-origin endpoint" — it does emit, as `application/reports+json`
  * via the Reporting API rather than the legacy `application/csp-report`, which

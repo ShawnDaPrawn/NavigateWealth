@@ -455,8 +455,11 @@ app.post('/chat', requireAuth, async (c) => {
 
     if (!message) return c.json({ error: 'Message required' }, 400);
 
-    // Get context (Phase 3 KV-backed base prompt + context overlay)
-    const context = await getUserContext(user.id);
+    // Get context (Phase 3 KV-backed base prompt + context overlay + knowledge index hits)
+    const context = await getUserContext(
+      user.id,
+      typeof message === 'string' ? message : undefined,
+    );
     await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
     const activeBase =
       (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;

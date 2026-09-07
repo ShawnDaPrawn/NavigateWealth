@@ -200,7 +200,9 @@ export function RichTextEditor({
     // Only update if the external value truly differs from what the editor has
     if (value !== currentHtml && value !== initialContentRef.current) {
       isExternalUpdateRef.current = true;
-      editor.commands.setContent(value || '<p></p>', false);
+      // Tiptap v3: setContent's 2nd argument is an options object, not a
+      // positional emitUpdate boolean (emitUpdate now defaults to true).
+      editor.commands.setContent(value || '<p></p>', { emitUpdate: false });
       initialContentRef.current = value;
       setTimeout(() => {
         isExternalUpdateRef.current = false;

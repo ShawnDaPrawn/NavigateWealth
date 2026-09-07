@@ -23,8 +23,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Users,
 } from 'lucide-react';
-import { api } from '../../../../../utils/api/client';
+import { api, APIError } from '../../../../../utils/api/client';
 import {
   TITLES,
   GENDERS,
@@ -55,6 +56,23 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [idAutofilled, setIdAutofilled] = useState(false);
+
+  /**
+   * Set when the address is already a client's login identity.
+   *
+   * Two very different situations produce the same 409, and only the admin can
+   * tell them apart: the person is already onboarded (stop), or a household
+   * shares one inbox — a minor on a parent's address (link them). So the form
+   * asks rather than guessing.
+   */
+  const [emailConflict, setEmailConflict] = useState<{
+    email: string;
+    holderName?: string;
+    /** Only set when the holder is a client the server will let us re-key. */
+    holderId?: string;
+    holderIsStaff?: boolean;
+  } | null>(null);
+  const [relationshipToOwner, setRelationshipToOwner] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -223,7 +241,14 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
     return !hasError;
   };
 
-  const handleSubmit = async () => {
+  /**
+   * Submit the form.
+   *
+   * `shareMailbox` re-sends the same payload with the admin's confirmation that
+   * the address belongs to another household member, which makes the server
+   * derive a unique sign-in alias instead of rejecting the duplicate.
+   */
+  const handleSubmit = async (shareMailbox = false) => {
     if (!validateAll()) {
       toast.error('Please fix the highlighted errors before submitting');
       return;
@@ -238,22 +263,103 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       const result = await api.post<{
         success: boolean;
         applicationNumber?: string;
+        signInEmail?: string;
+        contactEmail?: string;
         error?: string;
-      }>('/admin/onboarding/add', { ...formData, adminConsentConfirmed: consentConfirmed });
+      }>('/admin/onboarding/add', {
+        ...formData,
+        adminConsentConfirmed: consentConfirmed,
+        ...(shareMailbox
+          ? {
+              emailIsShared: true,
+              sharedEmailOwnerUserId: emailConflict?.holderId,
+              relationshipToEmailOwner: relationshipToOwner.trim() || undefined,
+            }
+          : {}),
+      });
 
       if (result.success) {
-        toast.success(`Client added successfully. Application: ${result.applicationNumber}`);
+        const linked = result.signInEmail && result.signInEmail !== result.contactEmail;
+        toast.success(
+          linked
+            ? `Client added. Application: ${result.applicationNumber}. They sign in as ${result.signInEmail}; mail goes to ${result.contactEmail}.`
+            : `Client added successfully. Application: ${result.applicationNumber}`,
+        );
         onSuccess();
         onClose();
       } else {
         toast.error(result.error || 'Failed to add client');
       }
     } catch (error: unknown) {
+      // A 409 is the shared-mailbox case and is answerable in place, so it
+      // opens the prompt below instead of surfacing as a dead-end toast.
+      const conflict =
+        error instanceof APIError && error.statusCode === 409
+          ? (error.details as {
+              errorCode?: string;
+              conflictingClient?: { id: string; name: string; isClient?: boolean };
+            } | null)
+          : null;
+
+      if (conflict?.errorCode === 'EMAIL_EXISTS' && !shareMailbox) {
+        const holder = conflict.conflictingClient;
+        // A staff account holds its address for authorization reasons — the
+        // super admin's IS the allowlist — so never offer to re-key one. The
+        // server refuses it too; this keeps the button off the screen.
+        const holderIsStaff = Boolean(holder) && holder?.isClient === false;
+        setEmailConflict({
+          email: formData.emailAddress.trim(),
+          holderName: holder?.name,
+          holderId: holderIsStaff ? undefined : holder?.id,
+          holderIsStaff,
+        });
+        return;
+      }
+
       console.error('Add client error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to add client');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /**
+   * Free the address by moving its current holder onto an alias, then create
+   * this client on it.
+   *
+   * The mirror image of linking the new client: it is the RIGHT way round when
+   * the person already in the system is the dependant — a minor enrolled on a
+   * parent's inbox before the parent himself. The adult who owns the mailbox
+   * should hold it as his login identity, not be pushed onto an alias because
+   * his daughter was captured first.
+   */
+  const handleReleaseFromHolder = async () => {
+    if (!emailConflict?.holderId) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.post<{ success: boolean; freedEmail?: string; signInEmail?: string }>(
+        '/admin/onboarding/link-shared-mailbox',
+        {
+          userId: emailConflict.holderId,
+          relationship: relationshipToOwner.trim() || undefined,
+        },
+      );
+    } catch (error: unknown) {
+      console.error('Release shared mailbox error:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not free the address from its current owner',
+      );
+      setIsSubmitting(false);
+      return;
+    }
+    setIsSubmitting(false);
+
+    // The address is free now, so this is an ordinary create.
+    setEmailConflict(null);
+    await handleSubmit();
   };
 
   // --- shared classes ---
@@ -791,6 +897,103 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       </div>
 
       {/* ================================================================ */}
+      {/* SHARED MAILBOX PROMPT                                            */}
+      {/* ================================================================ */}
+      {emailConflict && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 shrink-0 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Users className="h-4 w-4 text-blue-700" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-blue-900">
+                  {emailConflict.email} is already a sign-in address
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-blue-800">
+                  {emailConflict.holderName
+                    ? `It belongs to ${emailConflict.holderName}. `
+                    : 'Another client already signs in with it. '}
+                  If this is the same person, cancel — they are already onboarded. If a household
+                  shares one inbox (a minor on a parent&apos;s address, a spouse without their own),
+                  keep both records: one of them signs in with a unique alias, and mail for both
+                  still goes to {emailConflict.email}.{' '}
+                  {emailConflict.holderIsStaff
+                    ? 'It is held by a staff account, which cannot be moved — the new client takes the alias.'
+                    : 'Choose whichever of them actually owns the mailbox — that person keeps the plain address.'}
+                </p>
+              </div>
+
+              <div className="max-w-xs">
+                <FieldLabel>Relationship to the mailbox owner</FieldLabel>
+                <Input
+                  id="relationshipToOwner"
+                  value={relationshipToOwner}
+                  onChange={(e) => setRelationshipToOwner(e.target.value)}
+                  placeholder="e.g. Daughter (minor)"
+                  className={inputBase}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button
+                  onClick={() => handleSubmit(true)}
+                  disabled={isSubmitting}
+                  className="bg-blue-700 hover:bg-blue-800"
+                  size="sm"
+                >
+                  {isSubmitting ? (
+                    <div className="contents">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Working...
+                    </div>
+                  ) : (
+                    <div className="contents">
+                      <Users className="mr-2 h-4 w-4" />
+                      {emailConflict.holderName
+                        ? `${emailConflict.holderName} owns it`
+                        : 'The existing client owns it'}
+                    </div>
+                  )}
+                </Button>
+                {emailConflict.holderId && (
+                  <Button
+                    onClick={handleReleaseFromHolder}
+                    disabled={isSubmitting}
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-300 text-blue-800 hover:bg-blue-100"
+                  >
+                    {formData.firstName || 'This client'} owns it
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isSubmitting}
+                  onClick={() => setEmailConflict(null)}
+                >
+                  Use a different email
+                </Button>
+              </div>
+
+              <p className="text-[11px] leading-relaxed text-blue-700/80">
+                {emailConflict.holderName || 'The existing client'} owns it →{' '}
+                {formData.firstName || 'the new client'} gets the alias.{' '}
+                {emailConflict.holderId && (
+                  <>
+                    {formData.firstName || 'The new client'} owns it →{' '}
+                    {emailConflict.holderName || 'the existing client'} moves to an alias and the
+                    plain address is freed.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================ */}
       {/* ACTIONS                                                          */}
       {/* ================================================================ */}
       <div className="flex items-center justify-between pt-2 pb-1">
@@ -810,7 +1013,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
             Cancel
           </Button>
           <Button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             disabled={isSubmitting}
             className="px-6 bg-[#6d28d9] hover:bg-[#5b21b6]"
           >

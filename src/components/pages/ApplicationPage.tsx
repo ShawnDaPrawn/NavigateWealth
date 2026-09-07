@@ -41,7 +41,7 @@ import {
   Step3Employment,
   Step4Services,
   Step5Terms,
-} from '../modules/onboarding';
+} from '../features/onboarding';
 
 const TRUST_POINTS = [
   { icon: Shield, label: 'FSCA Regulated' },

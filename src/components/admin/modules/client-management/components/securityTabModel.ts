@@ -9,7 +9,14 @@ export interface SecurityTabProps {
     id: string;
     firstName: string;
     lastName: string;
+    /** Contact address — where this client's mail goes. */
     email: string;
+    /**
+     * Login identity. Differs from `email` for a client enrolled on somebody
+     * else's mailbox; optional because rows fetched before the field existed
+     * do not carry it.
+     */
+    signInEmail?: string;
     accountStatus?: string;
   };
 }

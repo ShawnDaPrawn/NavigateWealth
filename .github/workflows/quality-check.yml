@@ -334,7 +334,7 @@ jobs:
         env:
           QUALITY_ISSUES_INGEST_URL: https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/quality-issues/ingest-ci-report
           QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
-        run: node scripts/publish-quality-report.mjs
+        run: node scripts/ops/publish-quality-report.mjs
 
       - name: Upload quality reports
         if: always()

@@ -42,6 +42,7 @@ import {
   extractCampaignLinks,
   renderCampaignEmail,
   rewriteLinksForRecipient,
+  personalizeText,
 } from '../newsletter-studio-render.ts';
 
 beforeEach(() => {
@@ -119,6 +120,17 @@ describe('applyMergeFields', () => {
       unsubscribeUrl: 'https://www.navigatewealth.co/newsletter/unsubscribe?email=a%40b.co',
     });
     expect(out).toContain('unsubscribe?email=a%40b.co');
+  });
+});
+
+describe('personalizeText', () => {
+  it('fills subject-line merge fields without HTML escaping and drops the unsubscribe token', () => {
+    const recipient = { email: 'ann@x.co', name: 'Ann & Co', firstName: 'Ann' };
+    expect(personalizeText('Hi {{firstName}} — {{ name }} <{{email}}>', recipient)).toBe(
+      'Hi Ann — Ann & Co <ann@x.co>',
+    );
+    expect(personalizeText('x {{unsubscribeUrl}} y', recipient)).toBe('x  y');
+    expect(personalizeText('', recipient)).toBe('');
   });
 });
 

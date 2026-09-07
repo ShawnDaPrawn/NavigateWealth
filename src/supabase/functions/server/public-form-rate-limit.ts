@@ -48,7 +48,7 @@
  * atomic path (`check_auth_rate_limit_91ed8379`, migration 20260821000001);
  * extending a Postgres-backed counter to these forms is a separate change with
  * its own migration, and is tracked as WS0.2's remaining half in
- * `docs/REFACTORING-ROADMAP.md`. The race admits a small burst — it does not
+ * `docs/ROADMAP.md`. The race admits a small burst — it does not
  * restore the unlimited-by-rotation hole this module closes.
  */
 import { createKvRepository } from './repositories/kv-repository.ts';

@@ -270,7 +270,16 @@ function ModuleConversationPanel({
     const text = draftMessage.trim();
     if (!text || isLoading) return;
     setDraftMessage('');
-    await sendMessage(text);
+    try {
+      await sendMessage(text);
+    } catch {
+      // useRoAModuleChat's onError already rolls back the optimistic message
+      // and shows a toast; restore the draft so the user doesn't lose it,
+      // and swallow here so the rejection doesn't reach window as an
+      // unhandled promise rejection (it was an onClick={handleSend} handler,
+      // so nothing else was awaiting this call).
+      setDraftMessage(text);
+    }
   };
 
   const handleUpload = async (uploadId: string, file: File | null) => {

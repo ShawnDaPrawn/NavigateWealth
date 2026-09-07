@@ -194,22 +194,50 @@ export async function getApplicationById(
 }
 
 /**
+ * Count clients the same way Client Management does, so the dashboard's
+ * "Total Clients" KPI and the Clients module can never disagree.
+ */
+async function countEligibleClients(): Promise<number> {
+  const { ClientsService } = await import('./client-management-service.ts');
+  return (await new ClientsService().getAllClients()).length;
+}
+
+/** Root application documents, minus deprecated rows and deleted clients'. */
+async function loadRootApplications(): Promise<KvApplication[]> {
+  const raw = ((await kv.getByPrefix('application:')) || []) as KvApplication[];
+  // Exclude deprecated applications and per-step KV rows (not root application documents)
+  const roots = raw
+    .filter((a: KvApplication) => a.deprecated !== true)
+    .filter(isRootApplicationRecord);
+  return await excludeApplicationsForDeletedClients(roots, false);
+}
+
+/**
  * Get application statistics
+ *
+ * Every read below is independent of every other, so they are issued together.
+ * They used to run one after another — five round trips in series on the most
+ * expensive route in the app, which the admin dashboard blocks its first paint
+ * on. `allSettled` preserves the old per-read error isolation: a namespace
+ * that fails degrades its own counts to zero and the endpoint still responds,
+ * rather than one failure taking the whole payload down.
  */
 export async function getStats(): Promise<ApplicationStats> {
-  // Wrap entire method in top-level try/catch so a crash here never
-  // kills the Edge Function response
+  const [applicationsRead, tasksRead, eligibleClientsRead, requestsRead, esignRead] =
+    await Promise.allSettled([
+      loadRootApplications(),
+      kv.getByPrefix('task:') as Promise<KvTask[]>,
+      countEligibleClients(),
+      kv.getByPrefix('requests:request:') as Promise<KvRequest[]>,
+      kv.getByPrefix('esign:envelope:') as Promise<KvEsignEnvelope[]>,
+    ]);
+
   let applications: KvApplication[] = [];
-  try {
-    const raw = ((await kv.getByPrefix('application:')) || []) as KvApplication[];
-    // Exclude deprecated applications and per-step KV rows (not root application documents)
-    applications = raw
-      .filter((a: KvApplication) => a.deprecated !== true)
-      .filter(isRootApplicationRecord);
-    applications = await excludeApplicationsForDeletedClients(applications, false);
-  } catch (kvError) {
-    log.error('getStats: Failed to fetch applications from KV', kvError as Error);
-    // Return safe defaults so the endpoint still responds
+  if (applicationsRead.status === 'fulfilled') {
+    applications = applicationsRead.value;
+  } else {
+    // Safe defaults so the endpoint still responds.
+    log.error('getStats: Failed to fetch applications from KV', applicationsRead.reason as Error);
   }
 
   const draftCount = applications.filter((a) => a.status === 'draft').length;
@@ -236,42 +264,36 @@ export async function getStats(): Promise<ApplicationStats> {
     return d >= startOfLastMonth && d <= endOfLastMonth;
   }).length;
 
+  // Tasks are stored in KV store (not a Postgres table)
   const taskStats = { new_tasks: 0, pending_tasks: 0 };
-  try {
-    // Tasks are stored in KV store (not a Postgres table)
-    const kvTasks = (await kv.getByPrefix('task:')) as KvTask[];
+  if (tasksRead.status === 'fulfilled') {
+    const kvTasks = tasksRead.value;
     if (Array.isArray(kvTasks)) {
       taskStats.new_tasks = kvTasks.filter((t) => t && t.status === 'new').length;
       taskStats.pending_tasks = kvTasks.filter(
         (t) => t && (t.status === 'new' || t.status === 'in_progress'),
       ).length;
     }
-  } catch (taskError) {
-    log.error('getStats: Failed to fetch task stats', taskError as Error);
+  } else {
+    log.error('getStats: Failed to fetch task stats', tasksRead.reason as Error);
   }
 
   // Client count MUST match Client Management (same eligibility as ClientsService.getAllClients)
   let activeUsers: number;
-
-  try {
-    const { ClientsService } = await import('./client-management-service.ts');
-    const allEligible = await new ClientsService().getAllClients();
-    activeUsers = allEligible.length;
-  } catch (criticalError) {
+  if (eligibleClientsRead.status === 'fulfilled') {
+    activeUsers = eligibleClientsRead.value;
+  } else {
     log.error(
       'getStats: ClientsService eligible count failed; falling back to application user IDs',
-      criticalError as Error,
+      eligibleClientsRead.reason as Error,
     );
-    const uniqueUserIds = new Set(applications.map((a) => a.user_id).filter(Boolean));
-    activeUsers = uniqueUserIds.size;
+    activeUsers = new Set(applications.map((a) => a.user_id).filter(Boolean)).size;
   }
 
   let pendingRequests = 0;
   let totalRequests = 0;
-  let pendingEsignatures = 0;
-  try {
-    // Get request stats
-    const requests = (await kv.getByPrefix('requests:request:')) as KvRequest[];
+  if (requestsRead.status === 'fulfilled') {
+    const requests = requestsRead.value;
     if (requests) {
       totalRequests = requests.length;
       pendingRequests = requests.filter(
@@ -282,9 +304,13 @@ export async function getStats(): Promise<ApplicationStats> {
           r.status === 'In Sign-Off',
       ).length;
     }
+  } else {
+    log.error('getStats: Failed to fetch request stats', requestsRead.reason as Error);
+  }
 
-    // Get pending e-signatures
-    const esignItems = (await kv.getByPrefix('esign:envelope:')) as KvEsignEnvelope[];
+  let pendingEsignatures = 0;
+  if (esignRead.status === 'fulfilled') {
+    const esignItems = esignRead.value;
     pendingEsignatures = esignItems
       ? esignItems.filter(
           (item) =>
@@ -295,8 +321,8 @@ export async function getStats(): Promise<ApplicationStats> {
             (item.status === 'sent' || item.status === 'in_progress'),
         ).length
       : 0;
-  } catch (requestError) {
-    log.error('getStats: Failed to fetch request/esign stats', requestError as Error);
+  } else {
+    log.error('getStats: Failed to fetch esign stats', esignRead.reason as Error);
   }
 
   return {

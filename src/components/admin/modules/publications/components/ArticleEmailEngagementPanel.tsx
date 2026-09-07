@@ -477,35 +477,37 @@ export function ArticleEmailEngagementPanel() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <CardTitle className="text-base">Article Email Engagement</CardTitle>
                 <CardDescription>
                   Same-domain links only. No tracking pixel. Opens and reads are recorded after
                   on-page engagement signals.
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void loadSummary()}
-                disabled={isLoading}
-                title="Refresh engagement data"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                <span className="ml-1.5">Refresh</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIncludeDeleted((current) => !current)}
-              >
-                {includeDeleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="ml-1.5">{includeDeleted ? 'Hide Deleted' : 'Show Deleted'}</span>
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void loadSummary()}
+                  disabled={isLoading}
+                  title="Refresh engagement data"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span className="ml-1.5">Refresh</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIncludeDeleted((current) => !current)}
+                >
+                  {includeDeleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  <span className="ml-1.5">{includeDeleted ? 'Hide Deleted' : 'Show Deleted'}</span>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

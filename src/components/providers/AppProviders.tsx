@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { RouterProvider } from 'react-router';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AuthProvider } from '../auth/AuthContext';
+import { AdminDataPrefetch } from './AdminDataPrefetch';
 import { Toaster } from '../ui/sonner';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { InactivityManager } from '../auth/InactivityManager';
@@ -96,6 +97,9 @@ export function AppProviders() {
   return (
     <ErrorBoundary fallbackTitle="Application Error" showDetails={true}>
       <QueryClientProvider client={queryClient}>
+        {/* Starts the admin dashboard's fetches alongside profile hydration
+            instead of after it. Renders nothing; see AdminDataPrefetch. */}
+        <AdminDataPrefetch />
         <ErrorBoundary fallbackTitle="Authentication Error">
           <AuthProvider>
             <RouterProvider router={router} />

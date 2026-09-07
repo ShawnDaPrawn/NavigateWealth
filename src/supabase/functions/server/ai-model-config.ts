@@ -41,6 +41,195 @@ export const OPENAI_PRIMARY_MODEL = readEnv('OPENAI_MODEL') || 'gpt-4o';
 export const OPENAI_FALLBACK_MODEL = readEnv('OPENAI_FALLBACK_MODEL') || 'gpt-4o';
 
 /**
+ * Resolve the model for ONE feature, from a feature-specific env var.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * `OPENAI_MODEL` is global: eleven services read `OPENAI_PRIMARY_MODEL`
+ * (policy extraction, Vasco, will-chat, tax-agent, the RoA conversation,
+ * social-media text, ai-advisor, ai-intelligence, ai-management, the
+ * integrations extraction routes and the document summariser). Moving it is
+ * therefore an all-or-nothing act across the whole product, and most of those
+ * callers reach OpenAI through Chat Completions with NO model fallback — which
+ * is precisely how the `gpt-5.4` default in this file's history took every AI
+ * feature down at once.
+ *
+ * A per-feature override makes adopting a new model an experiment on one
+ * surface instead of a bet on all of them. Roll it forward one feature at a
+ * time, watch that feature, and roll back by clearing one secret.
+ *
+ * SAFE ONLY WHERE THERE IS A FALLBACK. Use this for callers that go through
+ * `callResponses`, which retries on `OPENAI_FALLBACK_MODEL` via Chat
+ * Completions when the primary call fails: there a wrong or unavailable id
+ * degrades (an extra failed request, then a gpt-4o answer) rather than
+ * breaking the feature. Do NOT wire it into a bare Chat Completions caller,
+ * where a bad id is simply a 400 and the feature is dead.
+ *
+ * Returns `OPENAI_PRIMARY_MODEL` when the feature's var is unset, so an
+ * unconfigured feature behaves exactly as it did before this existed.
+ */
+export function resolveFeatureModel(envVar: string): string {
+  return readEnv(envVar) || OPENAI_PRIMARY_MODEL;
+}
+
+// ---------------------------------------------------------------------------
+// Account-verified model preferences
+// ---------------------------------------------------------------------------
+
+/**
+ * The account's own list of servable model ids, cached per function instance.
+ *
+ * WHY ASK THE ACCOUNT INSTEAD OF HARDCODING A NAME
+ * ------------------------------------------------
+ * Every previous attempt to move off gpt-4o in this repository has come down to
+ * someone naming a model from memory. `gpt-5.4` was named that way, did not
+ * exist, and took every AI feature down. Model line-ups also change faster than
+ * a codebase gets revisited, so a name that is right today is a latent outage
+ * later — and nothing in the code notices, because a bad id is just a 400 at
+ * request time.
+ *
+ * The account already knows the answer. Asking it turns "which model exists"
+ * from a guess into a fact, and turns a wrong name in a preference list from an
+ * outage into a skipped entry.
+ *
+ * `null` means the probe has not run or could not answer; callers treat that as
+ * "no information" and fall back, never as "nothing is available".
+ */
+let availableModelIds: Set<string> | null = null;
+
+/**
+ * Earliest time another probe may run. Set after EVERY attempt, successful or
+ * not — a failed probe is cached too.
+ *
+ * Without this the weekly scan re-probes per batch during an outage: it calls
+ * `generateSummaryDraft` sequentially for up to 40 groups, so one 429 becomes
+ * 40 doomed requests and 40 lots of latency ahead of work that was always going
+ * to fall back anyway. "Probed once per instance" has to hold when things are
+ * going badly, which is the only time it costs anything.
+ */
+let nextProbeAt = 0;
+
+/** Re-probe at most this often after a good answer. Model lists change rarely. */
+const MODEL_LIST_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * How long a FAILED probe is remembered. Much shorter than the success TTL:
+ * long enough to stop a scan hammering a rate-limited endpoint, short enough
+ * that a transient outage does not pin the feature to the fallback model for
+ * half an hour after it clears.
+ */
+const MODEL_LIST_FAILURE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Hard ceiling on the probe.
+ *
+ * This is the difference between failing open and hanging. A `fetch` with no
+ * abort signal that connects and then stalls never reaches the catch below, so
+ * the fail-open path never runs and the summary is blocked behind an OPTIONAL
+ * discovery call until the whole invocation is killed. Model selection is a
+ * nicety; it gets a few seconds and then it is skipped.
+ */
+const MODEL_LIST_TIMEOUT_MS = 5000;
+
+/** Reset the cache. Tests only — production has no reason to call this. */
+export function resetAvailableModelsCache(): void {
+  availableModelIds = null;
+  nextProbeAt = 0;
+}
+
+/**
+ * Fetch the model ids this account can serve.
+ *
+ * Fails OPEN, and that is load-bearing: every failure mode — non-2xx, an empty
+ * list, a thrown error, or a stall past `MODEL_LIST_TIMEOUT_MS` — returns null,
+ * the caller keeps its current model, and the outcome is cached so the next
+ * batch does not repeat it.
+ */
+export async function listAvailableModels(): Promise<Set<string> | null> {
+  const now = Date.now();
+  // Covers both cached outcomes: a good list, and a remembered failure (null).
+  if (now < nextProbeAt) return availableModelIds;
+
+  /** Remember this attempt so the next caller does not repeat it. */
+  const settle = (ids: Set<string> | null, ttl: number) => {
+    availableModelIds = ids;
+    nextProbeAt = now + ttl;
+    return ids;
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MODEL_LIST_TIMEOUT_MS);
+  try {
+    const res = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${getOpenAIKey()}` },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      log.warn('Could not list account models — keeping the configured model', {
+        status: res.status,
+      });
+      return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+    }
+
+    const json = (await res.json()) as { data?: Array<{ id?: unknown }> };
+    const ids = (json.data ?? [])
+      .map((entry) => entry?.id)
+      .filter((id): id is string => typeof id === 'string');
+    if (ids.length === 0) {
+      log.warn('Account model list came back empty — keeping the configured model');
+      return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+    }
+
+    // Logged once per instance, filtered to the text-generation families, so an
+    // operator can read the real list out of the function logs and refine a
+    // preference list without needing the API key in hand.
+    log.info('OpenAI models available to this account', {
+      count: ids.length,
+      textModels: ids.filter((id) => /^(gpt-|o\d)/i.test(id)).sort(),
+    });
+
+    return settle(new Set(ids), MODEL_LIST_TTL_MS);
+  } catch (error) {
+    log.warn('Model list probe failed — keeping the configured model', {
+      error: getErrMsg(error),
+    });
+    return settle(null, MODEL_LIST_FAILURE_TTL_MS);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Pick the first model in `preferences` this account actually serves.
+ *
+ * An explicit `envVar` wins outright and skips the probe: an operator who names
+ * a model has made a decision, and second-guessing it would make the setting
+ * untrustworthy.
+ *
+ * Otherwise the preference list is a RANKING, not an assertion. Entries the
+ * account does not serve — including ones that never existed — are skipped, so
+ * the list can be edited optimistically without risking anything. When nothing
+ * matches, or the probe could not answer, the answer is `OPENAI_PRIMARY_MODEL`,
+ * which is exactly what the caller would have used anyway.
+ */
+export async function resolvePreferredModel(
+  preferences: readonly string[],
+  envVar: string,
+): Promise<string> {
+  const explicit = readEnv(envVar);
+  if (explicit) return explicit;
+  if (preferences.length === 0) return OPENAI_PRIMARY_MODEL;
+
+  const available = await listAvailableModels();
+  if (!available) return OPENAI_PRIMARY_MODEL;
+
+  for (const candidate of preferences) {
+    if (available.has(candidate)) return candidate;
+  }
+  return OPENAI_PRIMARY_MODEL;
+}
+
+/**
  * GPT-5 family (and the o-series reasoning models) are served through the
  * Responses API and reject a custom `temperature`, using `max_output_tokens`
  * instead of `max_tokens`.
@@ -183,9 +372,35 @@ function extractResponsesText(resJson: Record<string, unknown>): string {
 }
 
 /**
+ * A failed OpenAI call that knows WHICH model failed.
+ *
+ * `callResponses` may answer on a model the caller never asked for: when the
+ * Responses attempt does not produce text, it retries the fallback model
+ * through Chat Completions. On the success path the answering model comes back
+ * in the result, but a caller that stores the failure had only the model it
+ * requested — so a failure caused by the fallback was filed under the primary,
+ * and the diagnostics pointed at the wrong model.
+ */
+export class AiCallError extends Error {
+  constructor(
+    message: string,
+    /** The model that actually served — and failed — this request. */
+    readonly model: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = 'AiCallError';
+  }
+}
+
+/**
  * Call the OpenAI Responses API with the primary model, transparently falling
  * back to Chat Completions on the fallback model. Returns the model's text
  * output. Supports inline file/image attachments and Structured Outputs.
+ *
+ * Throws {@link AiCallError} when the fallback request itself fails, so the
+ * caller can record the model that produced the failure rather than the one it
+ * asked for.
  */
 export async function callResponses(options: CallResponsesOptions): Promise<CallResponsesResult> {
   const apiKey = getOpenAIKey();
@@ -262,14 +477,20 @@ export async function callResponses(options: CallResponsesOptions): Promise<Call
   if (!res.ok) {
     const errBody = await res.text();
     if (res.status === 429) {
-      throw new Error('OpenAI API rate limit exceeded. Please wait and try again.');
+      throw new AiCallError(
+        'OpenAI API rate limit exceeded. Please wait and try again.',
+        fallbackModel,
+      );
     }
-    throw new Error(`OpenAI request failed (${res.status}): ${errBody.substring(0, 400)}`);
+    throw new AiCallError(
+      `OpenAI request failed (${res.status}): ${errBody.substring(0, 400)}`,
+      fallbackModel,
+    );
   }
 
   const chatJson = await res.json();
   const text = chatJson.choices?.[0]?.message?.content || '';
-  if (!text) throw new Error('OpenAI returned empty content');
+  if (!text) throw new AiCallError('OpenAI returned empty content', fallbackModel);
   return { text, model: fallbackModel, raw: chatJson };
 }
 

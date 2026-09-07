@@ -29,6 +29,7 @@ import {
   logSafeError,
   ensureSelfOrAdmin,
   ensureAdmin,
+  resolveDeliveryEmail,
   type UserSecurityStatus,
 } from './security-shared.ts';
 
@@ -194,8 +195,10 @@ app.post('/:userId/2fa/send-code', requirePrimaryAuth, async (c) => {
       return c.json({ success: false, error: 'User not found' }, 404);
     }
 
-    // Use user.user.email from Supabase if available, otherwise fallback to provided email
-    const targetEmail = user.user?.email || email;
+    // Deliver to the client's contact inbox, not necessarily their sign-in
+    // address: a client enrolled on a household mailbox signs in with a derived
+    // alias, and a login code that never arrives is a lockout.
+    const targetEmail = (await resolveDeliveryEmail(userId, user.user?.email)) || email;
 
     if (!targetEmail) {
       log.error('❌ No email address found for user');

@@ -1,10 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+/**
+ * EventFormModal
+ *
+ * One dialog for creating and editing calendar events, plus a read-only view
+ * for system-generated ones (birthdays, policy renewals, tasks).
+ *
+ * The form is deliberately short: title, type, when, where, clients, repeat,
+ * notes. "When" is a date + start time + duration instead of two raw
+ * datetime-local inputs, so the adviser never has to reason about end times.
+ * Warnings (outside business hours, in the past, clashes) are inline hints,
+ * not blocking dialogs.
+ */
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { format, isBefore } from 'date-fns';
+import {
+  AlertTriangle,
+  Cake,
+  Calendar as CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  Clock,
+  Info,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Users,
+  Video,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
-import { Switch } from '../../../../ui/switch';
+import { Badge } from '../../../../ui/badge';
+import { Calendar } from '../../../../ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import {
   Select,
   SelectContent,
@@ -13,27 +53,6 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import {
-  Calendar,
-  MapPin,
-  User,
-  Video,
-  Phone,
-  AlignLeft,
-  Clock,
-  Type,
-  Repeat,
-  AlertTriangle,
-  Check,
-  ChevronsUpDown,
-  X,
-  Info,
-  RefreshCw,
-  Cake,
-  ShieldCheck,
-} from 'lucide-react';
-import { Alert, AlertDescription } from '../../../../ui/alert';
-import { Badge } from '../../../../ui/badge';
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -41,25 +60,66 @@ import {
   CommandItem,
   CommandList,
 } from '../../../../ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { cn } from '../../../../ui/utils';
-import type { CalendarEvent, EventType, LocationType, CreateEventInput } from '../types';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, LOCATION_TYPE_LABELS } from '../constants';
 import { useClients } from '../../../../../hooks/useClients';
-import { format, addHours } from 'date-fns';
-import { toast } from 'sonner';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
-import { logger } from '../../../../../utils/logger';
 
-// System-generated event types that cannot be manually created
-const SYSTEM_EVENT_TYPES: EventType[] = ['birthday', 'renewal'];
+import type { CalendarEvent, CreateEventInput, EventType } from '../types';
+import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS } from '../constants';
+import {
+  buildDurationOptions,
+  buildRecurrenceRule,
+  buildTimeOptions,
+  combineDateAndTime,
+  computeEndAt,
+  DEFAULT_RECURRENCE,
+  defaultStart,
+  findConflict,
+  formatDuration,
+  formatTimeLabel,
+  FREQUENCY_UNIT,
+  isOutsideBusinessHours,
+  isValidMeetingLink,
+  normaliseLocationType,
+  parseRecurrenceRule,
+  recurrenceError,
+  splitEventTimes,
+  type FormLocationType,
+  type RecurrenceFrequency,
+  type RecurrenceState,
+} from './eventFormHelpers';
 
-// Event types available for manual creation (excludes system types)
-const MANUAL_EVENT_TYPE_ENTRIES = Object.entries(EVENT_TYPE_LABELS).filter(
-  ([value]) => !SYSTEM_EVENT_TYPES.includes(value as EventType),
-);
+// ============================================================================
+// OPTIONS
+// ============================================================================
 
-// Helper to check if an event is system-generated
+/** Event types an adviser can create by hand (birthday / renewal are system). */
+const EVENT_TYPE_OPTIONS: { value: EventType; label: string; dot: string }[] = [
+  { value: 'meeting', label: 'Meeting', dot: 'bg-blue-500' },
+  { value: 'call', label: 'Call', dot: 'bg-green-500' },
+  { value: 'review', label: 'Review', dot: 'bg-purple-500' },
+  { value: 'consultation', label: 'Consultation', dot: 'bg-teal-500' },
+  { value: 'webinar', label: 'Webinar', dot: 'bg-indigo-500' },
+  { value: 'internal', label: 'Internal', dot: 'bg-gray-500' },
+  { value: 'deadline', label: 'Deadline', dot: 'bg-rose-500' },
+  { value: 'other', label: 'Other', dot: 'bg-slate-400' },
+];
+
+const LOCATION_OPTIONS: { value: FormLocationType; label: string; icon: React.ElementType }[] = [
+  { value: 'in_person', label: 'In person', icon: MapPin },
+  { value: 'video', label: 'Video call', icon: Video },
+  { value: 'phone', label: 'Phone', icon: Phone },
+  { value: 'other', label: 'Other', icon: Info },
+];
+
+const REPEAT_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+];
+
 function isSystemEvent(event: CalendarEvent | null | undefined): boolean {
   if (!event) return false;
   return (
@@ -69,6 +129,175 @@ function isSystemEvent(event: CalendarEvent | null | undefined): boolean {
   );
 }
 
+// ============================================================================
+// SMALL BUILDING BLOCKS
+// ============================================================================
+
+function Field({
+  label,
+  hint,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <Label htmlFor={htmlFor} className="text-sm font-medium text-gray-800">
+          {label}
+        </Label>
+        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+interface PillOption<T extends string> {
+  value: T;
+  label: string;
+  dot?: string;
+  icon?: React.ElementType;
+}
+
+/** A row of single-select pills. Plain buttons, keyboard and screen-reader friendly. */
+function PillGroup<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: PillOption<T>[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
+      {options.map((option) => {
+        const selected = option.value === value;
+        const Icon = option.icon;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40',
+              selected
+                ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
+            )}
+          >
+            {option.dot && (
+              <span className={cn('h-2 w-2 rounded-full', selected ? 'bg-white/80' : option.dot)} />
+            )}
+            {Icon && <Icon className="h-3.5 w-3.5" />}
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Hint({
+  tone,
+  children,
+}: {
+  tone: 'warning' | 'info' | 'error';
+  children: React.ReactNode;
+}) {
+  const styles = {
+    warning: 'text-amber-700',
+    info: 'text-blue-700',
+    error: 'text-red-600',
+  }[tone];
+  const Icon = tone === 'info' ? Info : AlertTriangle;
+  return (
+    <p className={cn('flex items-start gap-1.5 text-xs', styles)}>
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+// ============================================================================
+// READ-ONLY VIEW FOR SYSTEM EVENTS
+// ============================================================================
+
+function SystemEventView({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
+  const isRenewal = event.event_type === 'renewal';
+  const isBirthday = event.event_type === 'birthday';
+  const Icon = isRenewal ? RefreshCw : isBirthday ? Cake : CalendarIcon;
+  const iconStyle = isRenewal
+    ? 'bg-amber-100 text-amber-600'
+    : isBirthday
+      ? 'bg-pink-100 text-pink-600'
+      : 'bg-blue-100 text-blue-600';
+  const note = isRenewal
+    ? 'Policy renewal reminders come from policy inception dates. Update the policy in the client profile to change this date.'
+    : isBirthday
+      ? 'Birthday reminders come from the client date of birth. Update the client profile to change this date.'
+      : 'Task events are managed in the Tasks module.';
+
+  return (
+    <div className="contents">
+      <DialogHeader className="px-6 pt-6 pb-4 text-left">
+        <DialogTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900">
+          <span className={cn('rounded-lg p-2', iconStyle)}>
+            <Icon className="h-5 w-5" />
+          </span>
+          {EVENT_TYPE_LABELS[event.event_type] || 'Event'}
+        </DialogTitle>
+        <DialogDescription>
+          This event is generated automatically and cannot be edited.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4 px-6 pb-6">
+        <Badge className={cn(EVENT_TYPE_COLORS[event.event_type], 'border-0 font-medium')}>
+          {EVENT_TYPE_LABELS[event.event_type]}
+        </Badge>
+        <p className="text-base font-semibold text-gray-900">{event.title}</p>
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-800">
+          <p className="font-medium">{format(new Date(event.start_at), 'EEEE, d MMMM yyyy')}</p>
+          <p className="text-gray-600">
+            {format(new Date(event.start_at), 'HH:mm')} – {format(new Date(event.end_at), 'HH:mm')}
+          </p>
+        </div>
+        {event.client && (
+          <p className="flex items-center gap-2 text-sm text-gray-700">
+            <Users className="h-4 w-4 text-gray-400" />
+            {event.client.full_name}
+          </p>
+        )}
+        {event.description && (
+          <p className="whitespace-pre-wrap text-sm text-gray-700">{event.description}</p>
+        )}
+        <Hint tone="info">{note}</Hint>
+      </div>
+
+      <DialogFooter className="border-t border-gray-100 px-6 py-4">
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
+// ============================================================================
+// FORM
+// ============================================================================
+
 interface EventFormModalProps {
   open: boolean;
   onClose: () => void;
@@ -77,6 +306,61 @@ interface EventFormModalProps {
   event?: CalendarEvent | null;
   events?: CalendarEvent[];
   isSubmitting?: boolean;
+}
+
+interface FormState {
+  title: string;
+  eventType: EventType;
+  date: Date;
+  time: string;
+  durationMinutes: number;
+  locationType: FormLocationType;
+  location: string;
+  videoLink: string;
+  clientIds: string[];
+  recurrence: RecurrenceState;
+  notes: string;
+}
+
+function emptyForm(): FormState {
+  const start = defaultStart();
+  return {
+    title: '',
+    eventType: 'meeting',
+    date: start.date,
+    time: start.time,
+    durationMinutes: 60,
+    locationType: 'in_person',
+    location: '',
+    videoLink: '',
+    clientIds: [],
+    recurrence: DEFAULT_RECURRENCE,
+    notes: '',
+  };
+}
+
+function formFromEvent(event: CalendarEvent, knownClientIds: Set<string>): FormState {
+  const times = splitEventTimes(event.start_at, event.end_at);
+  const clientIds = new Set<string>();
+  if (event.client_id) clientIds.add(event.client_id);
+  if (event.attendees && !Array.isArray(event.attendees)) {
+    Object.keys(event.attendees).forEach((id) => {
+      if (knownClientIds.has(id)) clientIds.add(id);
+    });
+  }
+  return {
+    title: event.title,
+    eventType: event.event_type,
+    date: times.date,
+    time: times.time,
+    durationMinutes: times.durationMinutes,
+    locationType: normaliseLocationType(event.location_type),
+    location: event.location || '',
+    videoLink: event.video_link || '',
+    clientIds: Array.from(clientIds),
+    recurrence: parseRecurrenceRule(event.recurrence_rule),
+    notes: event.description || '',
+  };
 }
 
 export function EventFormModal({
@@ -93,810 +377,460 @@ export function EventFormModal({
   });
   const { data: clients = [], isLoading: isLoadingClients } = useClients();
 
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    event_type: 'meeting' as EventType,
-    start_at: '',
-    end_at: '',
-    location_type: 'in_person' as LocationType,
-    location: '',
-    video_link: '',
-    client_id: '',
-  });
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [clientsOpen, setClientsOpen] = useState(false);
 
-  // Derived state for business hours check
-  const isOutsideBusinessHours = React.useMemo(() => {
-    if (!formData.start_at || !formData.end_at) return false;
-    const start = new Date(formData.start_at);
-    const end = new Date(formData.end_at);
+  const patch = (changes: Partial<FormState>) => setForm((prev) => ({ ...prev, ...changes }));
 
-    // Check weekends (0 = Sunday, 6 = Saturday)
-    const day = start.getDay();
-    if (day === 0 || day === 6) return true;
-
-    // Check hours (Standard: 08:00 - 18:00)
-    const startHour = start.getHours();
-    const endHour = end.getHours();
-    const endMinutes = end.getMinutes();
-
-    // Start before 8am
-    if (startHour < 8) return true;
-
-    // End after 6pm
-    if (endHour > 18 || (endHour === 18 && endMinutes > 0)) return true;
-
-    return false;
-  }, [formData.start_at, formData.end_at]);
-
-  const isPastEvent = React.useMemo(() => {
-    if (!formData.start_at) return false;
-    return new Date(formData.start_at) < new Date();
-  }, [formData.start_at]);
-
-  // Recurrence state
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState<
-    'daily' | 'weekly' | 'monthly' | 'yearly'
-  >('weekly');
-  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
-
-  // Multi-select state
-  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
-  const [openClientSelect, setOpenClientSelect] = useState(false);
-
-  // Initialize form when event changes
+  // Reset when the dialog opens or the event being edited changes. `clients`
+  // is read at open only: re-running on every refetch would wipe edits.
   useEffect(() => {
-    if (event) {
-      setFormData({
-        title: event.title,
-        description: event.description || '',
-        event_type: event.event_type,
-        start_at: format(new Date(event.start_at), "yyyy-MM-dd'T'HH:mm"),
-        end_at: format(new Date(event.end_at), "yyyy-MM-dd'T'HH:mm"),
-        location_type: event.location_type,
-        location: event.location || '',
-        video_link: event.video_link || '',
-        client_id: event.client_id || '',
-      });
-
-      // Initialize selected clients from event
-      const initialClientIds = new Set<string>();
-      if (event.client_id) initialClientIds.add(event.client_id);
-
-      if (event.attendees && typeof event.attendees === 'object') {
-        Object.keys(event.attendees).forEach((key) => {
-          // We assume keys in attendees that match client IDs are clients
-          if (clients.some((c) => c.id === key)) {
-            initialClientIds.add(key);
-          }
-        });
-      }
-      setSelectedClientIds(Array.from(initialClientIds));
-
-      // Parse recurrence rule if exists
-      if (event.recurrence_rule) {
-        try {
-          const rule = JSON.parse(event.recurrence_rule);
-          setIsRecurring(true);
-          setRecurrenceFrequency(rule.frequency || 'weekly');
-          setRecurrenceInterval(rule.interval || 1);
-          setRecurrenceEndDate(rule.endDate || '');
-        } catch (e) {
-          // If not JSON, maybe ignore or try to handle legacy format if any (none expected for events yet)
-          logger.debug('Failed to parse recurrence rule', { error: e });
-          setIsRecurring(false);
-        }
-      } else {
-        setIsRecurring(false);
-        setRecurrenceFrequency('weekly');
-        setRecurrenceInterval(1);
-        setRecurrenceEndDate('');
-      }
+    if (!open) return;
+    if (event && !isSystemEvent(event)) {
+      setForm(formFromEvent(event, new Set(clients.map((c) => c.id))));
     } else {
-      // Reset form for new event
-      const now = new Date();
-      now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15); // Round to next 15 min
-      const endTime = addHours(now, 1);
-
-      setFormData({
-        title: '',
-        description: '',
-        event_type: 'meeting',
-        start_at: format(now, "yyyy-MM-dd'T'HH:mm"),
-        end_at: format(endTime, "yyyy-MM-dd'T'HH:mm"),
-        location_type: 'in_person',
-        location: '',
-        video_link: '',
-        client_id: '',
-      });
-
-      setSelectedClientIds([]);
-      setIsRecurring(false);
-      setRecurrenceFrequency('weekly');
-      setRecurrenceInterval(1);
-      setRecurrenceEndDate('');
+      setForm(emptyForm());
     }
-    // `clients` excluded: adding it re-runs form-init on every refetch,
-    // wiping in-progress edits. The attendee mapping at open is sufficient.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, open]);
+
+  // Derived timing
+  const startAt = useMemo(() => combineDateAndTime(form.date, form.time), [form.date, form.time]);
+  const endAt = useMemo(
+    () => computeEndAt(startAt, form.durationMinutes),
+    [startAt, form.durationMinutes],
+  );
+  const timeOptions = useMemo(() => buildTimeOptions(form.time), [form.time]);
+  const durationOptions = useMemo(
+    () => buildDurationOptions(form.durationMinutes),
+    [form.durationMinutes],
+  );
+
+  const outsideHours = isOutsideBusinessHours(startAt, endAt);
+  const inPast = !event && isBefore(startAt, new Date());
+  const conflict = useMemo(
+    () => findConflict(events, startAt, endAt, event?.id),
+    [events, startAt, endAt, event?.id],
+  );
+  const repeatError = recurrenceError(form.recurrence, startAt);
+
+  const selectedClients = form.clientIds
+    .map((id) => clients.find((c) => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+  const toggleClient = (id: string) =>
+    patch({
+      clientIds: form.clientIds.includes(id)
+        ? form.clientIds.filter((c) => c !== id)
+        : [...form.clientIds, id],
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.start_at || !formData.end_at) {
+    const title = form.title.trim();
+    if (!title) {
+      toast.error('Give the event a title');
+      return;
+    }
+    if (form.locationType === 'video' && form.videoLink && !isValidMeetingLink(form.videoLink)) {
+      toast.error('The meeting link must start with http:// or https://');
+      return;
+    }
+    if (repeatError) {
+      toast.error(repeatError);
       return;
     }
 
-    // Validate Title
-    if (!formData.title.trim()) {
-      toast.error('Event title is required');
-      return;
-    }
-
-    // Validate end time is after start time
-    if (new Date(formData.end_at) <= new Date(formData.start_at)) {
-      toast.error('End time must be after start time');
-      return;
-    }
-
-    // Validate Minimum Duration (15 minutes)
-    const durationMs = new Date(formData.end_at).getTime() - new Date(formData.start_at).getTime();
-    if (durationMs < 15 * 60 * 1000) {
-      toast.error('Event must be at least 15 minutes long');
-      return;
-    }
-
-    // Warn if duration is very long (> 12 hours)
-    if (durationMs > 12 * 60 * 60 * 1000) {
-      if (
-        !window.confirm(
-          `This event is scheduled for ${(durationMs / (60 * 60 * 1000)).toFixed(1)} hours. Is this correct?`,
-        )
-      ) {
-        return;
-      }
-    }
-
-    // Validate Location Fields
-    if (formData.location_type === 'in_person' && !formData.location.trim()) {
-      toast.error('Please specify the location address or details');
-      return;
-    }
-
-    // Validate Video URL
-    if (formData.location_type === 'video' && formData.video_link) {
-      try {
-        const url = new URL(formData.video_link);
-        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-          throw new Error('Invalid protocol');
-        }
-      } catch (_) {
-        toast.error('Please enter a valid video meeting URL (starting with http:// or https://)');
-        return;
-      }
-    }
-
-    // Conflict Detection
-    if (events && events.length > 0) {
-      const newStart = new Date(formData.start_at).getTime();
-      const newEnd = new Date(formData.end_at).getTime();
-
-      const conflictingEvent = events.find((e) => {
-        if (event && e.id === event.id) return false; // Skip self
-        if (e.status === 'cancelled') return false; // Skip cancelled
-
-        const eStart = new Date(e.start_at).getTime();
-        const eEnd = new Date(e.end_at).getTime();
-
-        return newStart < eEnd && newEnd > eStart;
-      });
-
-      if (conflictingEvent) {
-        if (
-          !window.confirm(
-            `Time conflict detected with event: "${conflictingEvent.title}".\n\nDo you want to proceed anyway?`,
-          )
-        ) {
-          return;
-        }
-      }
-    }
-
-    // Construct recurrence rule
-    let recurrenceRule = null;
-    if (isRecurring) {
-      if (recurrenceEndDate) {
-        const start = new Date(formData.start_at);
-        const endRecur = new Date(recurrenceEndDate);
-
-        // Ensure end date is after start date
-        if (endRecur <= start) {
-          toast.error('Recurrence end date must be after the event start date.');
-          return;
-        }
-
-        const twoYearsLater = new Date(start);
-        twoYearsLater.setFullYear(start.getFullYear() + 2);
-
-        if (endRecur > twoYearsLater) {
-          toast.error('Recurring events cannot extend beyond 2 years from the start date.');
-          return;
-        }
-      }
-
-      recurrenceRule = JSON.stringify({
-        frequency: recurrenceFrequency,
-        interval: recurrenceInterval,
-        endDate: recurrenceEndDate || null,
-      });
-    }
-
-    // Construct attendees map
     const attendees: Record<string, unknown> = {};
-    selectedClientIds.forEach((id) => {
-      const client = clients.find((c) => c.id === id);
-      if (client) {
-        attendees[id] = {
-          name: client.full_name,
-          email: client.email,
-          type: 'client',
-        };
-      }
+    selectedClients.forEach((client) => {
+      attendees[client.id] = { name: client.full_name, email: client.email, type: 'client' };
     });
 
     onSubmit({
-      title: formData.title,
-      description: formData.description || null,
-      event_type: formData.event_type,
-      start_at: new Date(formData.start_at).toISOString(),
-      end_at: new Date(formData.end_at).toISOString(),
-      location_type: formData.location_type,
-      location: formData.location || null,
-      video_link: formData.video_link || null,
-      client_id: selectedClientIds.length > 0 ? selectedClientIds[0] : null,
+      title,
+      description: form.notes.trim() || null,
+      event_type: form.eventType,
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      location_type: form.locationType,
+      location:
+        form.locationType === 'in_person' || form.locationType === 'other'
+          ? form.location.trim() || null
+          : null,
+      video_link: form.locationType === 'video' ? form.videoLink.trim() || null : null,
+      client_id: form.clientIds[0] ?? null,
       attendees: attendees as unknown as Record<string, unknown>[],
-      recurrence_rule: recurrenceRule,
+      recurrence_rule: buildRecurrenceRule(form.recurrence),
     });
   };
 
+  const isEditing = Boolean(event);
+  const repeatUnit =
+    form.recurrence.frequency === 'none'
+      ? null
+      : FREQUENCY_UNIT[form.recurrence.frequency][form.recurrence.interval === 1 ? 0 : 1];
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 gap-0 overflow-hidden rounded-xl">
-        {/* System Event Read-Only View */}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[560px]">
         {event && isSystemEvent(event) ? (
-          <div className="contents">
-            <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
-              <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <div
-                  className={`p-2 rounded-lg ${
-                    event.event_type === 'renewal'
-                      ? 'bg-amber-100'
-                      : event.event_type === 'birthday'
-                        ? 'bg-pink-100'
-                        : 'bg-blue-100'
-                  }`}
-                >
-                  {event.event_type === 'renewal' ? (
-                    <RefreshCw
-                      className={`h-5 w-5 ${event.event_type === 'renewal' ? 'text-amber-600' : 'text-blue-600'}`}
-                    />
-                  ) : event.event_type === 'birthday' ? (
-                    <Cake className="h-5 w-5 text-pink-600" />
-                  ) : (
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                  )}
-                </div>
-                {EVENT_TYPE_LABELS[event.event_type] || 'Event'} Details
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1.5 ml-11">
-                This is a system-generated event and cannot be edited.
-              </p>
-            </DialogHeader>
-
-            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-              {/* System badge */}
-              <div className="flex items-center gap-2">
-                <Badge className={`${EVENT_TYPE_COLORS[event.event_type]} border-0 font-medium`}>
-                  {EVENT_TYPE_LABELS[event.event_type]}
-                </Badge>
-                <Badge variant="outline" className="text-gray-500 border-gray-200 font-normal">
-                  <ShieldCheck className="h-3 w-3 mr-1" />
-                  System Generated
-                </Badge>
-              </div>
-
-              {/* Title */}
-              <div>
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
-                  Title
-                </Label>
-                <p className="text-base font-semibold text-gray-900">{event.title}</p>
-              </div>
-
-              {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <div>
-                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
-                    <Clock className="h-3 w-3 inline mr-1" />
-                    Date
-                  </Label>
-                  <p className="text-sm font-medium text-gray-900">
-                    {format(new Date(event.start_at), 'EEEE, d MMMM yyyy')}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
-                    Time
-                  </Label>
-                  <p className="text-sm font-medium text-gray-900">
-                    {format(new Date(event.start_at), 'HH:mm')} –{' '}
-                    {format(new Date(event.end_at), 'HH:mm')}
-                  </p>
-                </div>
-              </div>
-
-              {/* Client */}
-              {event.client && (
-                <div>
-                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
-                    <User className="h-3 w-3 inline mr-1" />
-                    Client
-                  </Label>
-                  <p className="text-sm text-gray-700">{event.client.full_name}</p>
-                </div>
-              )}
-
-              {/* Description */}
-              {event.description && (
-                <div>
-                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1.5">
-                    <AlignLeft className="h-3 w-3 inline mr-1" />
-                    Details
-                  </Label>
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    {event.description}
-                  </div>
-                </div>
-              )}
-
-              {/* Info notice */}
-              <Alert className="bg-blue-50 border-blue-200 py-3">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-xs text-blue-800 ml-2">
-                  {event.event_type === 'renewal'
-                    ? 'Policy renewal reminders are automatically generated from policy inception dates. To change the date, update the policy details in the client profile.'
-                    : event.event_type === 'birthday'
-                      ? 'Birthday reminders are automatically generated from client date of birth. To change the date, update the client profile.'
-                      : 'Task events are managed through the Tasks module.'}
-                </AlertDescription>
-              </Alert>
-            </div>
-
-            <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-            </div>
-          </div>
+          <SystemEventView event={event} onClose={onClose} />
         ) : (
-          /* Regular Event Form */
-          <div className="contents">
-            <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
-              <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                {event ? (
-                  <div className="contents">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                    </div>
-                    Edit Event
-                  </div>
-                ) : (
-                  <div className="contents">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                    </div>
-                    New Event
-                  </div>
-                )}
+          <form onSubmit={handleSubmit} className="flex max-h-[88vh] flex-col">
+            <DialogHeader className="px-6 pt-6 pb-2 text-left">
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                {isEditing ? 'Edit Event' : 'New Event'}
               </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1.5 ml-11">
-                {event
-                  ? 'Update the details of your scheduled event.'
-                  : 'Schedule a new meeting, task, or reminder.'}
-              </p>
+              <DialogDescription>
+                {isEditing
+                  ? 'Change the details below and save.'
+                  : 'Pick a time, add who it is with, and you are done.'}
+              </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="flex flex-col max-h-[80vh]">
-              <div className="p-6 space-y-6 overflow-y-auto">
-                {/* Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm font-medium text-gray-700">
-                    Event Title <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="e.g. Client Meeting – Investment Review"
-                      required
-                      className="pl-9 h-11 bg-gray-50/50 focus:bg-white transition-colors"
-                    />
-                  </div>
-                </div>
+            <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+              {/* Title */}
+              <Input
+                id="event-title"
+                aria-label="Event title"
+                value={form.title}
+                onChange={(e) => patch({ title: e.target.value })}
+                placeholder="Add a title"
+                autoFocus
+                required
+                className="h-12 border-gray-200 text-base font-medium placeholder:font-normal"
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Event Type */}
-                  <div className="space-y-2">
-                    <Label htmlFor="event_type" className="text-sm font-medium text-gray-700">
-                      Event Type
-                    </Label>
-                    <Select
-                      value={formData.event_type}
-                      onValueChange={(value: EventType) =>
-                        setFormData((prev) => ({ ...prev, event_type: value }))
-                      }
-                    >
-                      <SelectTrigger className="h-11 bg-gray-50/50 focus:bg-white transition-colors">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MANUAL_EVENT_TYPE_ENTRIES.map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`w-2 h-2 rounded-full ${
-                                  value === 'meeting'
-                                    ? 'bg-blue-500'
-                                    : value === 'call'
-                                      ? 'bg-green-500'
-                                      : value === 'task'
-                                        ? 'bg-purple-500'
-                                        : value === 'deadline'
-                                          ? 'bg-red-500'
-                                          : value === 'review'
-                                            ? 'bg-orange-500'
-                                            : value === 'renewal'
-                                              ? 'bg-amber-500'
-                                              : value === 'birthday'
-                                                ? 'bg-pink-500'
-                                                : 'bg-gray-500'
-                                }`}
-                              />
-                              {label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* Type */}
+              <Field label="Type">
+                <PillGroup
+                  label="Event type"
+                  options={EVENT_TYPE_OPTIONS}
+                  value={form.eventType}
+                  onChange={(eventType) => patch({ eventType })}
+                />
+              </Field>
 
-                  {/* Location Type */}
-                  <div className="space-y-2">
-                    <Label htmlFor="location_type" className="text-sm font-medium text-gray-700">
-                      Location Type
-                    </Label>
-                    <Select
-                      value={formData.location_type}
-                      onValueChange={(value: LocationType) =>
-                        setFormData((prev) => ({ ...prev, location_type: value }))
-                      }
-                    >
-                      <SelectTrigger className="h-11 bg-gray-50/50 focus:bg-white transition-colors">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(LOCATION_TYPE_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            <div className="flex items-center gap-2">
-                              {value === 'in_person' && <MapPin className="h-3.5 w-3.5" />}
-                              {value === 'video' && <Video className="h-3.5 w-3.5" />}
-                              {value === 'phone' && <Phone className="h-3.5 w-3.5" />}
-                              {label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Date & Time */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="start_at"
-                      className="text-sm font-medium text-gray-700 flex items-center gap-2"
-                    >
-                      <Clock className="h-3.5 w-3.5 text-blue-600" />
-                      Starts
-                    </Label>
-                    <Input
-                      id="start_at"
-                      type="datetime-local"
-                      value={formData.start_at}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, start_at: e.target.value }))
-                      }
-                      required
-                      className="bg-white"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="end_at"
-                      className="text-sm font-medium text-gray-700 flex items-center gap-2"
-                    >
-                      <Clock className="h-3.5 w-3.5 text-gray-400" />
-                      Ends
-                    </Label>
-                    <Input
-                      id="end_at"
-                      type="datetime-local"
-                      value={formData.end_at}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, end_at: e.target.value }))}
-                      required
-                      className="bg-white"
-                    />
-                  </div>
-
-                  {isPastEvent && formData.event_type === 'meeting' && (
-                    <div className="col-span-1 md:col-span-2">
-                      <Alert className="bg-blue-50 border-blue-200 text-blue-900 py-2">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-xs text-blue-800 ml-2">
-                          You are scheduling a meeting in the past. It will be saved as a historical
-                          record.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
-
-                  {isOutsideBusinessHours && (
-                    <div className="col-span-1 md:col-span-2">
-                      <Alert className="bg-amber-50 border-amber-200 text-amber-900 py-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800 ml-2">
-                          This event is scheduled outside of standard business hours (Mon-Fri, 08:00
-                          - 18:00).
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
-                </div>
-
-                {/* Recurrence Section */}
-                <div className="space-y-4 p-4 rounded-lg border border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-white rounded-md border border-gray-200 shadow-sm">
-                        <Repeat className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="is_recurring"
-                          className="text-sm font-medium text-gray-900 cursor-pointer"
-                        >
-                          Recurring Event
-                        </Label>
-                        <p className="text-xs text-muted-foreground">Repeat this event regularly</p>
-                      </div>
-                    </div>
-                    <Switch
-                      id="is_recurring"
-                      checked={isRecurring}
-                      onCheckedChange={setIsRecurring}
-                    />
-                  </div>
-
-                  {isRecurring && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in slide-in-from-top-2 fade-in pt-2">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-500">Frequency</Label>
-                        <Select
-                          value={recurrenceFrequency}
-                          onValueChange={(v: string) =>
-                            setRecurrenceFrequency(v as typeof recurrenceFrequency)
-                          }
-                        >
-                          <SelectTrigger className="h-9 bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="yearly">Yearly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-500">Interval</Label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">Every</span>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={99}
-                            value={recurrenceInterval}
-                            onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                            className="h-9 bg-white"
-                          />
-                          <span className="text-sm text-gray-500">
-                            {recurrenceFrequency === 'daily'
-                              ? 'day(s)'
-                              : recurrenceFrequency === 'weekly'
-                                ? 'week(s)'
-                                : recurrenceFrequency === 'monthly'
-                                  ? 'month(s)'
-                                  : 'year(s)'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-gray-500">
-                          End Date (Optional)
-                        </Label>
-                        <Input
-                          type="date"
-                          value={recurrenceEndDate}
-                          onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                          className="h-9 bg-white"
-                          min={formData.start_at ? formData.start_at.split('T')[0] : undefined}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Client Selection (Multi-Select) */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Associated Clients</Label>
-                  <Popover open={openClientSelect} onOpenChange={setOpenClientSelect} modal={true}>
+              {/* When */}
+              <Field label="When" hint={`Ends ${format(endAt, 'HH:mm')}`}>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto_auto]">
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
                     <PopoverTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
-                        role="combobox"
-                        aria-expanded={openClientSelect}
-                        className="w-full justify-between h-auto min-h-[44px] bg-gray-50/50 hover:bg-white border-gray-200"
+                        aria-label="Date"
+                        className="col-span-2 h-10 justify-start border-gray-200 font-normal sm:col-span-1"
                       >
-                        <div className="flex flex-wrap gap-1 items-center text-left py-1">
-                          <User className="h-4 w-4 mr-2 text-gray-400 shrink-0" />
-                          {selectedClientIds.length > 0 ? (
-                            selectedClientIds.map((id) => {
-                              const client = clients.find((c) => c.id === id);
-                              return client ? (
-                                <Badge
-                                  variant="secondary"
-                                  key={id}
-                                  className="mr-1 hover:bg-gray-200 pl-2 pr-1 py-0.5 h-6 flex items-center gap-1"
-                                >
-                                  {client.full_name}
-                                  <div
-                                    className="rounded-full hover:bg-gray-300 p-0.5 cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedClientIds((prev) => prev.filter((p) => p !== id));
-                                    }}
-                                  >
-                                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                                  </div>
-                                </Badge>
-                              ) : null;
-                            })
-                          ) : (
-                            <span className="text-muted-foreground font-normal">
-                              Select clients...
-                            </span>
-                          )}
-                        </div>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
+                        {format(form.date, 'EEE, d MMM yyyy')}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput
-                          {...(clientSearchInputGuard as React.ComponentProps<typeof CommandInput>)}
-                          placeholder="Search clients..."
-                        />
-                        <CommandList>
-                          <CommandEmpty>
-                            {isLoadingClients ? 'Loading clients...' : 'No client found.'}
-                          </CommandEmpty>
-                          <CommandGroup className="max-h-[200px] overflow-auto">
-                            {clients.map((client) => (
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={form.date}
+                        defaultMonth={form.date}
+                        onSelect={(date) => {
+                          if (date) patch({ date });
+                          setDateOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Both selects ignore an empty change: Radix syncs a hidden native
+                      <select> whose option for a non-standard value (an event at
+                      09:20, a 70-minute duration) mounts a tick after the value
+                      itself, and that sync reports '' in between. */}
+                  <Select
+                    value={form.time}
+                    onValueChange={(time) => {
+                      if (time) patch({ time });
+                    }}
+                  >
+                    <SelectTrigger aria-label="Start time" className="h-10 w-full sm:w-[132px]">
+                      <Clock className="mr-1 h-4 w-4 text-gray-500" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {timeOptions.map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {formatTimeLabel(time)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={String(form.durationMinutes)}
+                    onValueChange={(value) => {
+                      if (value) patch({ durationMinutes: Number(value) });
+                    }}
+                  >
+                    <SelectTrigger aria-label="Duration" className="h-10 w-full sm:w-[132px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {durationOptions.map((minutes) => (
+                        <SelectItem key={minutes} value={String(minutes)}>
+                          {formatDuration(minutes)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(outsideHours || inPast || conflict) && (
+                  <div className="space-y-1 pt-1">
+                    {conflict && (
+                      <Hint tone="warning">
+                        Clashes with “{conflict.title}” (
+                        {format(new Date(conflict.start_at), 'HH:mm')}–
+                        {format(new Date(conflict.end_at), 'HH:mm')}). You can still save it.
+                      </Hint>
+                    )}
+                    {outsideHours && (
+                      <Hint tone="warning">Outside business hours (Mon–Fri, 08:00–18:00).</Hint>
+                    )}
+                    {inPast && (
+                      <Hint tone="info">
+                        This time is in the past. It will be saved as a record.
+                      </Hint>
+                    )}
+                  </div>
+                )}
+              </Field>
+
+              {/* Where */}
+              <Field label="Where">
+                <PillGroup
+                  label="Location type"
+                  options={LOCATION_OPTIONS}
+                  value={form.locationType}
+                  onChange={(locationType) => patch({ locationType })}
+                />
+                {(form.locationType === 'in_person' || form.locationType === 'other') && (
+                  <Input
+                    aria-label="Location"
+                    value={form.location}
+                    onChange={(e) => patch({ location: e.target.value })}
+                    placeholder={
+                      form.locationType === 'in_person'
+                        ? 'Address or meeting room (optional)'
+                        : 'Where is this happening? (optional)'
+                    }
+                    className="h-10 border-gray-200"
+                  />
+                )}
+                {form.locationType === 'video' && (
+                  <Input
+                    aria-label="Meeting link"
+                    type="url"
+                    inputMode="url"
+                    value={form.videoLink}
+                    onChange={(e) => patch({ videoLink: e.target.value })}
+                    placeholder="Paste the meeting link (optional)"
+                    className="h-10 border-gray-200"
+                  />
+                )}
+              </Field>
+
+              {/* Clients */}
+              <Field label="Clients" hint="Optional">
+                <Popover open={clientsOpen} onOpenChange={setClientsOpen} modal>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientsOpen}
+                      aria-label="Add clients"
+                      className="h-10 w-full justify-between border-gray-200 font-normal text-muted-foreground"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        {selectedClients.length === 0
+                          ? 'Add a client'
+                          : `${selectedClients.length} selected`}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        {...(clientSearchInputGuard as React.ComponentProps<typeof CommandInput>)}
+                        placeholder="Search by name or email"
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {isLoadingClients ? 'Loading clients…' : 'No client found.'}
+                        </CommandEmpty>
+                        <CommandGroup className="max-h-56 overflow-auto">
+                          {clients.map((client) => {
+                            const selected = form.clientIds.includes(client.id);
+                            return (
                               <CommandItem
                                 key={client.id}
                                 value={client.full_name}
                                 keywords={[client.email]}
-                                onSelect={() => {
-                                  setSelectedClientIds((prev) =>
-                                    prev.includes(client.id)
-                                      ? prev.filter((id) => id !== client.id)
-                                      : [...prev, client.id],
-                                  );
-                                }}
+                                onSelect={() => toggleClient(client.id)}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    selectedClientIds.includes(client.id)
-                                      ? 'opacity-100'
-                                      : 'opacity-0',
+                                    selected ? 'opacity-100' : 'opacity-0',
                                   )}
                                 />
-                                <div className="flex flex-col">
-                                  <span>{client.full_name}</span>
-                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                <span className="flex min-w-0 flex-col">
+                                  <span className="truncate">{client.full_name}</span>
+                                  <span className="truncate text-xs text-muted-foreground">
                                     {client.email}
                                   </span>
-                                </div>
+                                </span>
                               </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="description"
-                    className="text-sm font-medium text-gray-700 flex items-center gap-2"
-                  >
-                    <AlignLeft className="h-3.5 w-3.5 text-gray-400" />
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, description: e.target.value }))
-                    }
-                    placeholder="Add notes or an agenda..."
-                    className="min-h-[100px] bg-gray-50/50 focus:bg-white transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center mt-auto">
-                {event && onDelete ? (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => onDelete(event.id)}
-                    disabled={isSubmitting}
-                    className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-100"
-                  >
-                    Delete Event
-                  </Button>
-                ) : (
-                  <div /> // Spacer
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {selectedClients.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedClients.map((client) => (
+                      <Badge
+                        key={client.id}
+                        variant="secondary"
+                        className="h-7 gap-1 rounded-full pl-3 pr-1 font-normal"
+                      >
+                        {client.full_name}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${client.full_name}`}
+                          onClick={() => toggleClient(client.id)}
+                          className="rounded-full p-0.5 hover:bg-gray-300"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
                 )}
-                <div className="flex gap-3">
-                  <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+              </Field>
+
+              {/* Repeat */}
+              <Field label="Repeat">
+                <div className="flex flex-wrap gap-2">
+                  <Select
+                    value={form.recurrence.frequency}
+                    onValueChange={(frequency: RecurrenceFrequency) =>
+                      patch({ recurrence: { ...form.recurrence, frequency } })
+                    }
                   >
-                    {isSubmitting ? 'Saving...' : event ? 'Update Event' : 'Create Event'}
-                  </Button>
+                    <SelectTrigger aria-label="Repeat" className="h-10 w-full sm:w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REPEAT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {repeatUnit && (
+                    <div className="flex h-10 items-center gap-2 text-sm text-gray-600">
+                      <span>every</span>
+                      <Input
+                        aria-label="Repeat interval"
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={form.recurrence.interval}
+                        onChange={(e) =>
+                          patch({
+                            recurrence: {
+                              ...form.recurrence,
+                              interval: Math.min(99, Math.max(1, parseInt(e.target.value) || 1)),
+                            },
+                          })
+                        }
+                        className="h-10 w-16 border-gray-200 text-center"
+                      />
+                      <span>{repeatUnit}</span>
+                    </div>
+                  )}
+
+                  {repeatUnit && (
+                    <div className="flex h-10 items-center gap-2 text-sm text-gray-600">
+                      <span>until</span>
+                      <Input
+                        aria-label="Repeat until"
+                        type="date"
+                        value={form.recurrence.endDate}
+                        min={format(form.date, 'yyyy-MM-dd')}
+                        onChange={(e) =>
+                          patch({ recurrence: { ...form.recurrence, endDate: e.target.value } })
+                        }
+                        className="h-10 w-[150px] border-gray-200"
+                      />
+                    </div>
+                  )}
                 </div>
+                {repeatError && <Hint tone="error">{repeatError}</Hint>}
+              </Field>
+
+              {/* Notes */}
+              <Field label="Notes" hint="Optional" htmlFor="event-notes">
+                <Textarea
+                  id="event-notes"
+                  value={form.notes}
+                  onChange={(e) => patch({ notes: e.target.value })}
+                  placeholder="Agenda, documents to bring, anything to remember"
+                  rows={3}
+                  className="border-gray-200"
+                />
+              </Field>
+            </div>
+
+            <DialogFooter className="flex-row items-center justify-between border-t border-gray-100 bg-gray-50/60 px-6 py-4 sm:justify-between">
+              {event && onDelete ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onDelete(event.id)}
+                  disabled={isSubmitting}
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  Delete
+                </Button>
+              ) : (
+                <span />
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-purple-600 text-white hover:bg-purple-700"
+                >
+                  {isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Event'}
+                </Button>
               </div>
-            </form>
-          </div>
+            </DialogFooter>
+          </form>
         )}
       </DialogContent>
     </Dialog>

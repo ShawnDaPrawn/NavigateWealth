@@ -2,7 +2,7 @@
  * Every external origin in client code is either in the CSP or explained.
  * ======================================================================
  *
- * WHY THIS EXISTS. `docs/PRODUCTION-READINESS.md` justified leaving the
+ * WHY THIS EXISTS. `docs/archive/production-readiness-ledger-2026.md` justified leaving the
  * authenticated admin surface unprobed on the grounds that "static enumeration
  * of every external origin in the admin modules found only the three gaps
  * above, so the residual risk is narrow rather than unknown". That was true on

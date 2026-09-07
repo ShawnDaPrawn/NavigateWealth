@@ -4,7 +4,7 @@
  * Returns a genuine HTTP 404 for unmatched public URLs instead of the SPA's
  * soft-404 (200 + client-side NotFound). Uses standard Web APIs only — do NOT
  * import from `next/server` here (this project has no `next` dependency, and
- * doing so breaks the Vercel Edge build; see docs/PRODUCTION-READINESS.md).
+ * doing so breaks the Vercel Edge build; see docs/archive/production-readiness-ledger-2026.md).
  */
 import manifest from './seo-route-manifest.json';
 import { shouldReturnNotFound, type SeoRouteManifest } from './src/middleware/route-policy';

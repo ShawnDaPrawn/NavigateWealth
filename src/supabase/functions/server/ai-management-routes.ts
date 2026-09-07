@@ -26,9 +26,35 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getAllAgents, getAgent } from './ai-management-service.ts';
 import * as kbService from './kb-service.ts';
 import * as promptService from './prompt-service.ts';
+import { removeKnowledgeEntryFromIndex, syncKnowledgeEntry } from './vasco-rag-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-management-routes');
+
+/**
+ * What the admin is told about the entry's place in Vasco's knowledge index
+ * after a write. `indexed: true` means Vasco can retrieve it right now; a
+ * failure (embedding API down, key missing) is reported rather than thrown so
+ * the entry itself is never lost — the Knowledge tab offers a rebuild.
+ */
+interface KnowledgeIndexOutcome {
+  indexed: boolean;
+  chunkCount: number;
+  error?: string;
+}
+
+async function syncEntryToIndex(entry: kbService.KBEntry): Promise<KnowledgeIndexOutcome> {
+  try {
+    return await syncKnowledgeEntry(entry);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log.error('KB entry saved but could not be indexed for Vasco', {
+      id: entry.id,
+      error: message,
+    });
+    return { indexed: false, chunkCount: 0, error: message };
+  }
+}
 
 // Apply admin middleware to all routes
 app.use('*', requireAdmin);
@@ -123,7 +149,9 @@ app.post(
 
     const entry = await kbService.createEntry(input, userId);
     log.info('KB entry created via admin', { id: entry.id, userId });
-    return c.json({ entry }, 201);
+    // Live entries reach Vasco immediately; drafts are simply not indexed.
+    const index = await syncEntryToIndex(entry);
+    return c.json({ entry, index }, 201);
   }),
 );
 
@@ -159,7 +187,9 @@ app.put(
     }
 
     log.info('KB entry updated via admin', { id });
-    return c.json({ entry: updated });
+    // Re-embed live entries; archived/draft ones are removed from the index.
+    const index = await syncEntryToIndex(updated);
+    return c.json({ entry: updated, index });
   }),
 );
 
@@ -177,6 +207,15 @@ app.delete(
     }
 
     log.info('KB entry deleted via admin', { id });
+    try {
+      await removeKnowledgeEntryFromIndex(id);
+    } catch (err) {
+      // The entry is gone; a leftover vector is harmless noise until the next rebuild.
+      log.warn('Deleted KB entry could not be removed from the index', {
+        id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     return c.json({ success: true });
   }),
 );

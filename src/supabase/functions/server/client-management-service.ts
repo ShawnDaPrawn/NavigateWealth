@@ -22,7 +22,13 @@ import {
   shouldLoadClientManagementProfile,
 } from './client-management-visibility.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
+import {
+  normalizeEmail,
+  readSharedEmailLink,
+  resolveContactEmail,
+} from './client-email-identity.ts';
 import { autoSubscribeClient, removeSubscriberByEmail } from './newsletter-service.ts';
+import { mgetBatched } from './kv-batch.ts';
 
 const log = createModuleLogger('clients-service');
 
@@ -151,67 +157,109 @@ export class ClientsService {
       clientsToProcess: clientUsers.length,
     });
 
-    // Enhance users with profile data
-    const enhancedUsers = await Promise.all(
-      clientUsers.map(async (user) => {
-        try {
-          // Get profile from KV
-          const profileKey = `user_profile:${user.id}:personal_info`;
-          const profile = await kv.get(profileKey);
-
-          // Get application if exists
-          let application = null;
-          const appId = profile?.applicationId || profile?.application_id;
-
-          if (appId) {
-            application = await kv.get(`application:${appId}`);
-          }
-
-          // Get security status
-          const security = await kv.get(`security:${user.id}`);
-
-          return {
-            id: user.id,
-            email: user.email ?? '',
-            firstName:
-              user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
-            lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
-            createdAt: user.created_at,
-            accountType: user.user_metadata?.accountType || 'personal',
-            applicationStatus:
-              application?.status || user.user_metadata?.applicationStatus || 'none',
-            suspended: security?.suspended || false,
-            deleted: security?.deleted || false,
-            accountStatus: profile?.accountStatus,
-            role: user.user_metadata?.role || 'client',
-            profile,
-            application,
-          };
-        } catch (err) {
-          log.error('Error fetching client data', err as Error, { userId: user.id });
-          return {
-            id: user.id,
-            email: user.email ?? '',
-            firstName: '',
-            lastName: '',
-            createdAt: user.created_at,
-            accountType: 'personal',
-            applicationStatus: 'unknown',
-            suspended: false,
-            deleted: false,
-            accountStatus: undefined,
-            role: 'client',
-          };
-        }
-      }),
+    // ── Batched KV reads ────────────────────────────────────────────────
+    // This used to do three awaited `kv.get`s PER CLIENT — profile, then the
+    // application that profile names, then security — which is 3N round trips,
+    // each one opening its own Postgres client. /admin/stats calls this just to
+    // count clients, and the admin dashboard blocks its first paint on that
+    // call, so the per-client fan-out was the dominant cost of loading the
+    // page. The same reads now go out as three batches, and the application
+    // batch still waits for the profiles because it is keyed off them.
+    const profiles = await mgetBatched<ClientProfile>(
+      clientUsers.map((user) => `user_profile:${user.id}:personal_info`),
     );
+
+    const applicationIds = profiles.map(
+      (profile) => profile?.applicationId ?? profile?.application_id,
+    );
+    const uniqueApplicationIds = [...new Set(applicationIds.filter(Boolean))] as string[];
+
+    const [applicationRows, securityRows] = await Promise.all([
+      mgetBatched<{ status?: string }>(uniqueApplicationIds.map((id) => `application:${id}`)),
+      // `deleted` is written by the client-deletion flow but is not on
+      // ClientSecurity; the status columns below still read it.
+      mgetBatched<ClientSecurity & { deleted?: boolean }>(
+        clientUsers.map((user) => `security:${user.id}`),
+      ),
+    ]);
+
+    const applicationsById = new Map(
+      uniqueApplicationIds.map((id, idx) => [id, applicationRows[idx] ?? null]),
+    );
+
+    // Enhance users with profile data
+    const enhancedUsers = clientUsers.map((user, index) => {
+      try {
+        // `?? null` keeps the serialised shape identical to the per-client
+        // `kv.get` this replaced, which returned null rather than undefined for
+        // a client with no profile row.
+        const profile = profiles[index] ?? null;
+
+        const appId = applicationIds[index];
+        const application = appId ? (applicationsById.get(appId) ?? null) : null;
+
+        const security = securityRows[index];
+
+        // `user_metadata` is a bag of `unknown`; read it as the strings these
+        // fields have always been so the merges below stay string-typed.
+        const metadata = (user.user_metadata ?? {}) as Record<string, string | undefined>;
+
+        const signInEmail = normalizeEmail(user.email);
+        const contactEmail = resolveContactEmail(user.email, profile);
+
+        return {
+          id: user.id,
+          // The address to WRITE to, which is the auth email for every client
+          // that owns its mailbox and the guardian's address for one that does
+          // not. Everything downstream — campaigns, the newsletter audience,
+          // birthday greetings — reads `client.email`, so resolving it here is
+          // what keeps a linked minor's mail going to a real inbox instead of
+          // to her derived sign-in alias.
+          email: contactEmail,
+          /** The login identity. Differs from `email` only for linked clients. */
+          signInEmail,
+          emailIsShared: contactEmail !== signInEmail,
+          firstName: metadata.firstName || profile?.personalInformation?.firstName || '',
+          lastName: metadata.surname || profile?.personalInformation?.lastName || '',
+          createdAt: user.created_at,
+          accountType: metadata.accountType || 'personal',
+          applicationStatus: application?.status || metadata.applicationStatus || 'none',
+          suspended: security?.suspended || false,
+          deleted: security?.deleted || false,
+          accountStatus: profile?.accountStatus,
+          role: metadata.role || 'client',
+          profile,
+          application,
+        };
+      } catch (err) {
+        log.error('Error fetching client data', err as Error, { userId: user.id });
+        return {
+          id: user.id,
+          email: normalizeEmail(user.email),
+          signInEmail: normalizeEmail(user.email),
+          emailIsShared: false,
+          firstName: '',
+          lastName: '',
+          createdAt: user.created_at,
+          accountType: 'personal',
+          applicationStatus: 'unknown',
+          suspended: false,
+          deleted: false,
+          accountStatus: undefined,
+          role: 'client',
+        };
+      }
+    });
 
     // Apply filters
     let filteredClients = enhancedUsers.filter((client) =>
       shouldIncludeInClientManagement({
         user: {
           id: client.id,
-          email: client.email ?? undefined,
+          // The sign-in email, not the contact one: this gate asks whether the
+          // AUTH IDENTITY is the super admin's, and a linked client's contact
+          // address belongs to somebody else by construction.
+          email: client.signInEmail || undefined,
           user_metadata: {
             role: client.role,
             accountStatus: client.accountStatus,
@@ -237,6 +285,9 @@ export class ClientsService {
       filteredClients = filteredClients.filter(
         (c) =>
           (c.email ?? '').toLowerCase().includes(search) ||
+          // Also match the login identity, so searching a shared mailbox finds
+          // both the owner and the household members linked off it.
+          (c.signInEmail ?? '').toLowerCase().includes(search) ||
           c.firstName?.toLowerCase().includes(search) ||
           c.lastName?.toLowerCase().includes(search),
       );
@@ -296,9 +347,16 @@ export class ClientsService {
     // Get security status
     const security = await kv.get(`security:${clientId}`);
 
+    // Same split as getAllClients — a single fetch must not disagree with the
+    // list about where a client's mail goes.
+    const signInEmail = normalizeEmail(user.email);
+    const contactEmail = resolveContactEmail(user.email, profile);
+
     return {
       id: user.id,
-      email: user.email ?? '',
+      email: contactEmail,
+      signInEmail,
+      emailIsShared: contactEmail !== signInEmail,
       firstName: user.user_metadata?.firstName || profile?.personalInformation?.firstName || '',
       lastName: user.user_metadata?.surname || profile?.personalInformation?.lastName || '',
       createdAt: user.created_at,
@@ -330,9 +388,24 @@ export class ClientsService {
       });
     }
 
-    // Update profile in KV if provided
+    // Update profile in KV if provided.
+    //
+    // This is a wholesale replacement, so `sharedEmail` has to be carried over
+    // explicitly: it is what routes a linked client's mail to their guardian's
+    // real inbox, and losing it would silently redirect every future message to
+    // a derived alias — a failure nobody notices until a client says they never
+    // received something.
     if (updates.profile) {
-      await kv.set(`user_profile:${clientId}:personal_info`, updates.profile);
+      const profileKey = `user_profile:${clientId}:personal_info`;
+      const existing = await kv.get(profileKey);
+      const link = readSharedEmailLink(existing);
+
+      await kv.set(profileKey, {
+        ...updates.profile,
+        ...(link && !readSharedEmailLink(updates.profile as Record<string, unknown>)
+          ? { sharedEmail: link }
+          : {}),
+      });
     }
 
     log.success('Client updated', { clientId });

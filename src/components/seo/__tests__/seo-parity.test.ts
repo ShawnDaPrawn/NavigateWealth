@@ -1,7 +1,7 @@
 /**
  * Guards against drift between the two SEO metadata sources:
  * - Client-side: src/components/seo/SEO.tsx + seo-config.ts (applied on hydration)
- * - Build-time: scripts/seo-static-data.mjs (prerendered into per-route HTML)
+ * - Build-time: scripts/seo/seo-static-data.mjs (prerendered into per-route HTML)
  *
  * Google sees both (static head first, hydrated head after rendering JS), so
  * they must agree or pages send mixed signals.
@@ -11,7 +11,7 @@ import { createOrganizationSchema } from '../SEO';
 import { seoPages } from '../seo-config';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 // Plain-JS build script module (no type declarations).
-import * as seoStaticData from '../../../../scripts/seo-static-data.mjs';
+import * as seoStaticData from '../../../../scripts/seo/seo-static-data.mjs';
 
 const {
   createOrganizationSchema: createBuildOrganizationSchema,

@@ -121,182 +121,180 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        {filteredTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="mb-4 rounded-full bg-gray-50 p-4">
-              <Search className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="mb-1 text-lg font-medium text-gray-900">
-              {searchTerm ? 'No matches found' : 'No archived tasks'}
-            </h3>
-            <p className="max-w-sm text-sm text-gray-500">
-              {searchTerm
-                ? `No tasks found matching "${searchTerm}". Try adjusting your search.`
-                : 'Tasks that you archive will appear here for safe keeping.'}
-            </p>
-            {searchTerm && (
-              <Button variant="outline" className="mt-4" onClick={() => setSearchTerm('')}>
-                Clear Search
-              </Button>
-            )}
+      {filteredTasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <div className="mb-4 rounded-full bg-gray-50 p-4">
+            <Search className="h-8 w-8 text-gray-400" />
           </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {filteredTasks.map((task) => {
-              const preview = getTaskDescriptionPreview(task);
-              const issueManagerTask = isIssueManagerTask(task);
+          <h3 className="mb-1 text-lg font-medium text-gray-900">
+            {searchTerm ? 'No matches found' : 'No archived tasks'}
+          </h3>
+          <p className="max-w-sm text-sm text-gray-500">
+            {searchTerm
+              ? `No tasks found matching "${searchTerm}". Try adjusting your search.`
+              : 'Tasks that you archive will appear here for safe keeping.'}
+          </p>
+          {searchTerm && (
+            <Button variant="outline" className="mt-4" onClick={() => setSearchTerm('')}>
+              Clear Search
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {filteredTasks.map((task) => {
+            const preview = getTaskDescriptionPreview(task);
+            const issueManagerTask = isIssueManagerTask(task);
 
-              return (
+            return (
+              <div
+                key={task.id}
+                className="group relative cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-purple-300 hover:shadow-md sm:p-5"
+                onClick={() => onViewTask(task)}
+              >
                 <div
-                  key={task.id}
-                  className="group relative cursor-pointer p-4 transition-colors hover:bg-gray-50/60 sm:p-5"
-                  onClick={() => onViewTask(task)}
-                >
-                  <div
-                    className={`absolute bottom-5 left-0 top-5 w-1 rounded-r-full ${
-                      task.priority === 'critical' || task.priority === 'high'
-                        ? 'bg-red-500'
-                        : task.priority === 'medium'
-                          ? 'bg-amber-500'
-                          : 'bg-blue-500'
-                    }`}
-                  />
+                  className={`absolute bottom-4 left-0 top-4 w-1 rounded-r-full ${
+                    task.priority === 'critical' || task.priority === 'high'
+                      ? 'bg-red-500'
+                      : task.priority === 'medium'
+                        ? 'bg-amber-500'
+                        : 'bg-blue-500'
+                  }`}
+                />
 
-                  <div className="pl-4 sm:pl-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span
-                            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}
-                          >
-                            {PRIORITY_LABELS[task.priority]}
+                <div className="pl-3 sm:pl-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}
+                        >
+                          {PRIORITY_LABELS[task.priority]}
+                        </span>
+                        {issueManagerTask && (
+                          <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                            Issue Manager
                           </span>
-                          {issueManagerTask && (
-                            <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
-                              Issue Manager
-                            </span>
-                          )}
-                          {task.category ? (
-                            <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
-                              {task.category}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <h3 className="break-words text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover:text-purple-700 line-clamp-2">
-                          {task.title}
-                        </h3>
-
-                        {preview ? (
-                          <p className="mt-2 break-words text-xs leading-relaxed text-gray-500 line-clamp-2">
-                            {preview}
-                          </p>
+                        )}
+                        {task.category ? (
+                          <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+                            {task.category}
+                          </span>
                         ) : null}
-
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>Archived {format(new Date(task.updated_at), 'MMM d, yyyy')}</span>
-                          </div>
-
-                          {task.tags?.length ? (
-                            <div className="flex items-center gap-1">
-                              <Tag className="h-3 w-3" />
-                              <span>
-                                {task.tags.length} tag{task.tags.length === 1 ? '' : 's'}
-                              </span>
-                            </div>
-                          ) : null}
-
-                          {task.assignee_initials ? (
-                            <div className="ml-auto flex items-center gap-2">
-                              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-purple-200 bg-purple-100 text-[10px] font-bold text-purple-700 shadow-sm">
-                                {task.assignee_initials}
-                              </span>
-                            </div>
-                          ) : null}
-                        </div>
                       </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewTask(task);
-                            }}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
+                      <h3 className="break-words text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover:text-purple-700 line-clamp-2">
+                        {task.title}
+                      </h3>
 
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <RotateCcw className="mr-2 h-4 w-4" />
-                              Restore
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRestore(task, 'new');
-                                }}
-                              >
-                                To New
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRestore(task, 'in_progress');
-                                }}
-                              >
-                                To In Progress
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRestore(task, 'completed');
-                                }}
-                              >
-                                To Completed
-                              </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
+                      {preview ? (
+                        <p className="mt-2 break-words text-xs leading-relaxed text-gray-500 line-clamp-2">
+                          {preview}
+                        </p>
+                      ) : null}
 
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setTaskToDelete(task.id);
-                            }}
-                            className="text-red-600 focus:bg-red-50 focus:text-red-700"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Permanently
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>Archived {format(new Date(task.updated_at), 'MMM d, yyyy')}</span>
+                        </div>
+
+                        {task.tags?.length ? (
+                          <div className="flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            <span>
+                              {task.tags.length} tag{task.tags.length === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                        ) : null}
+
+                        {task.assignee_initials ? (
+                          <div className="ml-auto flex items-center gap-2">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-purple-200 bg-purple-100 text-[10px] font-bold text-purple-700 shadow-sm">
+                              {task.assignee_initials}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewTask(task);
+                          }}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Restore
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestore(task, 'new');
+                              }}
+                            >
+                              To New
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestore(task, 'in_progress');
+                              }}
+                            >
+                              To In Progress
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRestore(task, 'completed');
+                              }}
+                            >
+                              To Completed
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTaskToDelete(task.id);
+                          }}
+                          className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Permanently
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
         <AlertDialogContent>

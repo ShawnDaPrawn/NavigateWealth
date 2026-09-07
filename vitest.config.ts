@@ -98,7 +98,6 @@ export default defineConfig({
         'src/**/*.stories.{ts,tsx}',
         'src/test/**',
         'src/assets/**',
-        'src/guidelines/**',
         'src/supabase/functions/**',
       ],
       // Enforced regression floor (Phase 4). These are set just below the

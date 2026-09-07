@@ -47,10 +47,20 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
   const [newPassword, setNewPassword] = useState('');
   const [emailPasswordToClient, setEmailPasswordToClient] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [currentAuthEmail, setCurrentAuthEmail] = useState(selectedClient.email);
+  // `selectedClient.email` is the CONTACT address, which for a client enrolled
+  // on a household mailbox is somebody else's. Sign-in is about the login
+  // identity, so read `signInEmail` and only fall back for records fetched
+  // before the field existed.
+  const [currentAuthEmail, setCurrentAuthEmail] = useState(
+    selectedClient.signInEmail || selectedClient.email,
+  );
   const [newEmail, setNewEmail] = useState('');
   const [newEmailCode, setNewEmailCode] = useState('');
   const hasPendingEmailChange = Boolean(securityStatus.pendingEmailChange);
+  /** This client signs in with a derived alias off somebody else's mailbox. */
+  const sharesMailbox = Boolean(
+    selectedClient.signInEmail && selectedClient.signInEmail !== selectedClient.email,
+  );
 
   const fetchSecurityStatus = useCallback(async () => {
     if (!selectedClient?.id) return;
@@ -439,7 +449,9 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             <p className="mt-1 text-xs text-muted-foreground">
               {hasPendingEmailChange
                 ? `Pending change to ${securityStatus.pendingEmailChange?.newEmail}`
-                : 'Current authenticated email address.'}
+                : sharesMailbox
+                  ? `Signs in with a linked alias. Mail is delivered to ${selectedClient.email}.`
+                  : 'Current authenticated email address.'}
             </p>
           </div>
           <div className="rounded-lg border bg-muted/20 p-4">

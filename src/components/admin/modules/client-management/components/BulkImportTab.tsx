@@ -26,6 +26,7 @@ import {
   PartyPopper,
   Info,
 } from 'lucide-react';
+import { Checkbox } from '../../../../ui/checkbox';
 import { api } from '../../../../../utils/api/client';
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,8 @@ interface ImportResult {
   status: 'success' | 'failed' | 'skipped';
   applicationNumber?: string;
   error?: string;
+  /** Present when the row was created against a derived sign-in alias. */
+  signInEmail?: string;
 }
 
 interface BulkImportTabProps {
@@ -293,6 +296,12 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  /**
+   * A household book routinely lists two people on one inbox. Off by default,
+   * because silently linking duplicates would also swallow the ordinary mistake
+   * of importing the same client twice.
+   */
+  const [linkDuplicateEmails, setLinkDuplicateEmails] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
 
@@ -348,7 +357,10 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
         succeeded: number;
         failed: number;
         results: ImportResult[];
-      }>('/admin/onboarding/bulk-add', { clients: validRows.map((r) => r.data) });
+      }>('/admin/onboarding/bulk-add', {
+        clients: validRows.map((r) => r.data),
+        linkDuplicateEmails,
+      });
 
       setImportProgress(100);
       setImportResults(result.results || []);
@@ -473,6 +485,14 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
                     </TableCell>
                     <TableCell className="text-xs font-mono text-[#6d28d9]">
                       {r.applicationNumber || '—'}
+                      {r.signInEmail && (
+                        <span
+                          className="block text-[10px] font-normal text-gray-400"
+                          title={`Signs in as ${r.signInEmail}; mail goes to ${r.email}`}
+                        >
+                          linked: {r.signInEmail}
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -672,6 +692,27 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
                 </p>
               </div>
             )}
+
+            {/* Shared-mailbox option */}
+            <div className="mx-4 mb-3 flex items-start gap-2.5 p-3 bg-blue-50/60 border border-blue-200 rounded-lg">
+              <Checkbox
+                id="link-duplicate-emails"
+                checked={linkDuplicateEmails}
+                onCheckedChange={(v) => setLinkDuplicateEmails(v === true)}
+                disabled={isImporting}
+                className="mt-0.5 border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <label
+                htmlFor="link-duplicate-emails"
+                className="text-xs leading-relaxed text-blue-900 cursor-pointer"
+              >
+                <strong>Link rows that share an existing email</strong> — for households where a
+                minor or a spouse uses another client&apos;s inbox. Each linked client gets a unique
+                sign-in alias and still receives mail at the shared address. Leave this off to skip
+                duplicates instead, which is the safer choice if the file may list the same client
+                twice.
+              </label>
+            </div>
 
             {/* Import progress */}
             {isImporting && (

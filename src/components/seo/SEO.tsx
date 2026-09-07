@@ -198,7 +198,7 @@ export function SEO({
 
 export function createOrganizationSchema(): Record<string, unknown> {
   // Static organisation facts live in organization.json — the single source of
-  // truth shared with the build-time prerenderer (scripts/seo-static-data.mjs).
+  // truth shared with the build-time prerenderer (scripts/seo/seo-static-data.mjs).
   return {
     '@type': ['Organization', 'FinancialService'],
     '@id': `${BASE_URL}/#organization`,

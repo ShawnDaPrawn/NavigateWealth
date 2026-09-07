@@ -12,6 +12,11 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
+import {
+  readSharedEmailLink,
+  resolveContactEmail,
+  normalizeEmail as normalizeContactEmail,
+} from './client-email-identity.ts';
 
 const log = createModuleLogger('security-shared');
 
@@ -241,6 +246,36 @@ export async function writeActivityLog(
   });
 }
 
+/**
+ * The inbox to deliver a security message to for `userId`.
+ *
+ * A client enrolled on a household mailbox signs in with a derived alias, and
+ * these flows would otherwise address that alias directly. Sub-addressing is
+ * widely but not universally honoured, so a 2FA code or a reset password sent
+ * to the alias can silently fail to arrive — and a login code that never
+ * arrives is a lockout, not an inconvenience. Deliver to the address on the
+ * profile instead; the alias stays the login identity, which is what the
+ * message is usually telling the reader about.
+ *
+ * Falls back to the auth email whenever there is no link, so the ordinary case
+ * is unchanged.
+ */
+export async function resolveDeliveryEmail(
+  userId: string,
+  authEmail: string | null | undefined,
+): Promise<string> {
+  try {
+    const profile = (await kv.get(`user_profile:${userId}:personal_info`)) as Record<
+      string,
+      unknown
+    > | null;
+    return resolveContactEmail(authEmail, profile) || normalizeContactEmail(authEmail);
+  } catch (error) {
+    logSafeError('resolveDeliveryEmail', error);
+    return normalizeContactEmail(authEmail);
+  }
+}
+
 export async function updateStoredPrimaryEmail(userId: string, newEmail: string) {
   const profileKey = `user_profile:${userId}:personal_info`;
   const existingProfile = (await kv.get(profileKey)) as Record<string, unknown> | null;
@@ -251,6 +286,14 @@ export async function updateStoredPrimaryEmail(userId: string, newEmail: string)
     email: newEmail,
     updatedAt: new Date().toISOString(),
   };
+
+  // A verified email change means this client now holds an address of their
+  // own, so a household-mailbox link is stale: leaving it would keep routing
+  // their mail to the guardian they just moved off.
+  const link = readSharedEmailLink(existingProfile);
+  if (link && normalizeContactEmail(newEmail) !== link.contactEmail) {
+    delete nextProfile.sharedEmail;
+  }
 
   const contactInformation =
     existingProfile.contactInformation &&

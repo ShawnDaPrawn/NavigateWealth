@@ -8,6 +8,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import * as kv from './kv_store.tsx';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getPortfolioSummary } from './client-portal-service.ts';
+import { retrieveContext } from './vasco-rag-service.ts';
 import {
   OPENAI_PRIMARY_MODEL,
   applyChatTokenLimit,
@@ -69,7 +70,14 @@ export async function buildAdvisorSseResponse(
     });
   }
 
-  const context = await getUserContext(subjectUserId);
+  const lastUserMsg = [...(clientMessages as { role: string; content: string }[])]
+    .reverse()
+    .find((m) => m.role === 'user');
+
+  const context = await getUserContext(
+    subjectUserId,
+    typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : undefined,
+  );
   await ensureSeeded(ADVISOR_AGENT_ID, ADVISOR_CONTEXT, DEFAULT_PORTAL_PROMPT);
   const activeBase =
     (await getActivePrompt(ADVISOR_AGENT_ID, ADVISOR_CONTEXT)) ?? DEFAULT_PORTAL_PROMPT;
@@ -79,10 +87,6 @@ export async function buildAdvisorSseResponse(
   const reader = openaiResponse.body!.getReader();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-
-  const lastUserMsg = [...(clientMessages as { role: string; content: string }[])]
-    .reverse()
-    .find((m) => m.role === 'user');
   const finalSession = await ensureAdvisorSession(
     subjectUserId,
     typeof sessionId === 'string' ? sessionId : null,
@@ -183,9 +187,17 @@ export async function buildAdvisorSseResponse(
 }
 
 /**
- * Fetch client data for AI context
+ * Fetch client data for AI context.
+ *
+ * `latestQuestion` is the user's newest message. When given, the knowledge
+ * index (published articles + live Knowledge Base entries) is searched for it
+ * and the hits ride along in `knowledgeContext`, so the portal advisor answers
+ * from Navigate Wealth's own material rather than general knowledge alone.
  */
-export async function getUserContext(userId: string): Promise<AdvisorUserContext | null> {
+export async function getUserContext(
+  userId: string,
+  latestQuestion?: string,
+): Promise<AdvisorUserContext | null> {
   const profile = await safeResolve('profile', () => kv.get(PROFILE_KEY(userId)), {});
 
   const profileRecord = isRecord(profile) ? profile : {};
@@ -208,6 +220,7 @@ export async function getUserContext(userId: string): Promise<AdvisorUserContext
     investment,
     taxPlanning,
     estatePlanning,
+    knowledgeHits,
   ] = await Promise.all([
     safeResolve('client keys', () => kv.get(CLIENT_KEYS_KEY(userId)), null),
     safeResolve('policy collection', () => kv.get(POLICY_COLLECTION_KEY(userId)), []),
@@ -265,6 +278,14 @@ export async function getUserContext(userId: string): Promise<AdvisorUserContext
       () => kv.getByPrefix(`${FNA_PREFIXES.estatePlanning}${userId}:`),
       [],
     ),
+    safeResolve(
+      'knowledge index',
+      () =>
+        latestQuestion && latestQuestion.trim()
+          ? retrieveContext(latestQuestion, { agentId: ADVISOR_AGENT_ID })
+          : Promise.resolve([]),
+      [],
+    ),
   ]);
 
   const policyInformation = uniqueItems([
@@ -302,6 +323,11 @@ export async function getUserContext(userId: string): Promise<AdvisorUserContext
     fnaInformation,
     communicationHistory: sortByRecency(uniqueItems(communicationHistory)),
     documentHistory,
+    knowledgeContext: knowledgeHits.map((hit) => ({
+      title: hit.articleTitle,
+      sourceType: hit.sourceType,
+      text: hit.text,
+    })),
     schemaSources: {
       profile: [PROFILE_KEY(userId), CLIENT_KEYS_KEY(userId), RISK_PROFILE_KEY(userId)],
       policies: [POLICY_COLLECTION_KEY(userId), LEGACY_POLICY_PREFIX(userId)],
@@ -314,6 +340,25 @@ export async function getUserContext(userId: string): Promise<AdvisorUserContext
       ],
     },
   };
+}
+
+/**
+ * The Navigate Wealth knowledge the advisor may draw on for this question:
+ * retrieved article chunks and live Knowledge Base entries. Empty string when
+ * nothing relevant was found so the prompt does not grow a hollow section.
+ */
+function buildKnowledgeSection(
+  knowledgeContext: AdvisorUserContext['knowledgeContext'] | undefined,
+): string {
+  if (!knowledgeContext || knowledgeContext.length === 0) return '';
+  const parts = knowledgeContext.map((hit) => {
+    const label = hit.sourceType === 'kb' ? 'Knowledge base' : 'Article';
+    return `[${label}: "${hit.title}"]\n${hit.text}`;
+  });
+  return `### Navigate Wealth Knowledge
+Verified Navigate Wealth material retrieved for the client's latest question. Prefer it over general knowledge when it is relevant; do not invent details beyond it.
+
+${parts.join('\n\n---\n\n')}`;
 }
 
 /**
@@ -364,6 +409,8 @@ ${toPrettyJson(context.communicationHistory)}
 
 ### Document History
 ${toPrettyJson(context.documentHistory)}
+
+${buildKnowledgeSection(context.knowledgeContext)}
 
 ### Schema Awareness
 - The authenticated Vasco context reads live client data each request.
