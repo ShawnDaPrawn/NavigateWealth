@@ -1,5 +1,6 @@
 import { Hono } from 'npm:hono';
 import { requireAuth } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdviceEngineRoAService } from './advice-engine-roa-service.ts';
 import { AdviceEngineRoAContractService } from './advice-engine-roa-contract-service.ts';
@@ -558,6 +559,9 @@ async function loadAccessibleDraft(
 app.post(
   '/roa/drafts/:draftId/conversation/start',
   requireAuth,
+  // Metered: this fans out to one model conversation per active contract, so a
+  // single call is the most expensive thing in this router.
+  aiUsageLimit({ surface: 'roa-conversation' }),
   asyncHandler(async (c) => {
     const access = await loadAccessibleDraft(c);
     if (access.error) return access.error;
@@ -603,6 +607,7 @@ app.get(
 app.post(
   '/roa/drafts/:draftId/modules/:moduleId/chat',
   requireAuth,
+  aiUsageLimit({ surface: 'roa-conversation' }),
   asyncHandler(async (c) => {
     const access = await loadAccessibleDraft(c);
     if (access.error) return access.error;
@@ -627,6 +632,7 @@ app.post(
 app.post(
   '/roa/drafts/:draftId/modules/:moduleId/complete',
   requireAuth,
+  aiUsageLimit({ surface: 'roa-conversation' }),
   asyncHandler(async (c) => {
     const access = await loadAccessibleDraft(c);
     if (access.error) return access.error;

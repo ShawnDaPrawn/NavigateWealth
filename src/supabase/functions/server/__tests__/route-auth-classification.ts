@@ -115,11 +115,19 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     reason:
       'Authentication bootstrap — a login/signup endpoint behind requireAuth is a bootstrap paradox. Abuse is bounded by the atomic Postgres rate limiter (migration 20260821210412), not by a guard.',
     routes: [
+      // The two ENFORCING endpoints. Unlike their `-validate` siblings these
+      // perform the credential check and the reset dispatch themselves, which
+      // is the point: the rate limiter now sits in the auth path rather than
+      // beside it, and a client cannot reach GoTrue through this application
+      // without passing it. Public by necessity — a login route behind
+      // requireAuth is a bootstrap paradox — and bounded by the same atomic
+      // limiter as the rest of this group.
+      'auth-routes.ts POST /login',
+      'auth-routes.ts POST /password-reset',
       'auth-routes.ts POST /login-failure',
       'auth-routes.ts POST /login-success',
       'auth-routes.ts POST /login-validate',
       'auth-routes.ts POST /logout',
-      'auth-routes.ts POST /password-change',
       'auth-routes.ts POST /password-reset-request',
       'auth-routes.ts POST /signup',
       'auth-routes.ts POST /signup-validate',

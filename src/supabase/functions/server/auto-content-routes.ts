@@ -28,6 +28,7 @@
 
 import { Hono } from 'npm:hono';
 import { requireAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import { isAuthorizedCronRequest } from './cron-auth.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { AutoContentService } from './auto-content-service.ts';
@@ -134,7 +135,7 @@ app.post('/configs/seed', async (c) => {
 // Pipeline Trigger Routes
 // ---------------------------------------------------------------------------
 
-app.post('/trigger/:id', async (c) => {
+app.post('/trigger/:id', aiUsageLimit({ surface: 'auto-content' }), async (c) => {
   try {
     const id = c.req.param('id')!;
     if (!isValidPipelineId(id)) {
@@ -155,7 +156,7 @@ app.post('/trigger/:id', async (c) => {
 // Scheduled Auto-Processing — called by client-side poller
 // ---------------------------------------------------------------------------
 
-app.post('/process-due', async (c) => {
+app.post('/process-due', aiUsageLimit({ surface: 'auto-content' }), async (c) => {
   try {
     log.info('Processing due pipelines (scheduled auto-run)');
     const result = await AutoContentService.processDuePipelines();
@@ -167,7 +168,7 @@ app.post('/process-due', async (c) => {
   }
 });
 
-app.post('/trigger-all', async (c) => {
+app.post('/trigger-all', aiUsageLimit({ surface: 'auto-content' }), async (c) => {
   try {
     log.info('Manual trigger-all for enabled pipelines');
     const results = await AutoContentService.triggerAll();
@@ -180,7 +181,7 @@ app.post('/trigger-all', async (c) => {
 });
 
 // Trigger a single content source — must be registered BEFORE /:id routes
-app.post('/trigger-source/:sourceId', async (c) => {
+app.post('/trigger-source/:sourceId', aiUsageLimit({ surface: 'auto-content' }), async (c) => {
   try {
     const sourceId = c.req.param('sourceId')!;
     log.info(`Manual trigger for source: ${sourceId}`);

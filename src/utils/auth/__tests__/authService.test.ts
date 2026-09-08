@@ -19,6 +19,7 @@ const h = vi.hoisted(() => ({
     getUser: vi.fn(),
     getSession: vi.fn(),
     resetPasswordForEmail: vi.fn(),
+    setSession: vi.fn(),
     resend: vi.fn(),
     updateUser: vi.fn(),
     onAuthStateChange: vi.fn(),
@@ -79,12 +80,42 @@ beforeEach(() => {
 });
 
 describe('signIn', () => {
-  it('returns the mapped user + session and logs success', async () => {
-    h.auth.signInWithPassword.mockResolvedValue({
+  /**
+   * signIn no longer touches `signInWithPassword`. It POSTs to the Edge
+   * Function's `/auth/login`, which applies the rate limit and authenticates in
+   * the same handler, then installs the returned session with `setSession`.
+   * That is the whole point of the change these tests were rewritten for: the
+   * lockout used to be a question the client could decline to ask.
+   */
+  function loginResponding(body: unknown, { ok = true, status = 200 } = {}) {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok,
+      status,
+      json: async () => body,
+    }) as unknown as typeof fetch;
+  }
+
+  it('posts credentials to the server endpoint and installs the returned session', async () => {
+    loginResponding({
+      success: true,
+      session: { access_token: 't', refresh_token: 'r' },
+      user: { id: 'u1' },
+    });
+    h.auth.setSession.mockResolvedValue({
       data: { user: supaUser, session: { access_token: 't' } },
       error: null,
     });
+
     const res = await authService.signIn('a@b.co', 'pw');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/login'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(h.auth.setSession).toHaveBeenCalledWith({
+      access_token: 't',
+      refresh_token: 'r',
+    });
     expect(res.user).toEqual({
       id: 'u1',
       email: 'a@b.co',
@@ -92,55 +123,76 @@ describe('signIn', () => {
       createdAt: '2025-01-01T00:00:00Z',
     });
     expect(res.session).toEqual({ access_token: 't' });
-    expect(security.logLoginSuccess).toHaveBeenCalledWith('a@b.co', 'u1');
   });
 
-  it('throws rate_limited when the server gate blocks the attempt', async () => {
-    vi.mocked(security.validateLoginAttempt).mockResolvedValueOnce({
-      allowed: false,
-      error: 'Too many',
+  it('never calls signInWithPassword — the bypass this endpoint exists to close', async () => {
+    loginResponding({
+      success: true,
+      session: { access_token: 't', refresh_token: 'r' },
+      user: { id: 'u1' },
     });
+    h.auth.setSession.mockResolvedValue({
+      data: { user: supaUser, session: { access_token: 't' } },
+      error: null,
+    });
+
+    await authService.signIn('a@b.co', 'pw');
+
+    // Going direct to GoTrue is exactly what let a caller skip the 5-in-15
+    // lockout. If this ever passes again, the hole is back.
+    expect(h.auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('maps the server 429 to rate_limited', async () => {
+    loginResponding(
+      { error: 'Too many login attempts.', blocked: true },
+      { ok: false, status: 429 },
+    );
     await expect(authService.signIn('a@b.co', 'pw')).rejects.toMatchObject({
       code: 'rate_limited',
     });
-    expect(security.logLoginFailure).toHaveBeenCalled();
   });
 
-  it('maps a Supabase 429 to rate_limited', async () => {
-    h.auth.signInWithPassword.mockResolvedValue({
-      data: {},
-      error: { status: 429, message: 'Too many requests' },
-    });
-    await expect(authService.signIn('a@b.co', 'pw')).rejects.toMatchObject({
-      code: 'rate_limited',
-    });
-  });
-
-  it('throws invalid_credentials when Supabase returns no user', async () => {
-    h.auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: null });
+  it('maps a server 401 to invalid_credentials', async () => {
+    loginResponding({ error: 'Invalid credentials' }, { ok: false, status: 401 });
     await expect(authService.signIn('a@b.co', 'pw')).rejects.toMatchObject({
       code: 'invalid_credentials',
     });
   });
 
-  it('does not auto-confirm a legacy account from an email-only login attempt', async () => {
-    h.auth.signInWithPassword.mockResolvedValue({
-      data: {},
-      error: { status: 400, message: 'Invalid login credentials' },
-    });
-
+  it('rejects a 200 that carries no session rather than treating it as success', async () => {
+    loginResponding({ success: true, user: { id: 'u1' } });
     await expect(authService.signIn('a@b.co', 'pw')).rejects.toMatchObject({
       code: 'invalid_credentials',
     });
-    expect(h.auth.signInWithPassword).toHaveBeenCalledTimes(1);
+    expect(h.auth.setSession).not.toHaveBeenCalled();
+  });
+
+  it('FAILS CLOSED when the login service is unreachable', async () => {
+    // The important one. Falling back to signing in around the unreachable
+    // limiter would hand the bypass back to anyone who can block one host.
+    global.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError('Failed to fetch')) as unknown as typeof fetch;
+
+    await expect(authService.signIn('a@b.co', 'pw')).rejects.toMatchObject({
+      code: 'network_error',
+    });
+    expect(h.auth.signInWithPassword).not.toHaveBeenCalled();
   });
 });
 
 describe('signUp', () => {
   it('creates the account via the backend endpoint (email unconfirmed, no session)', async () => {
-    fetchResolving({ user: { id: 'u1', email: 'a@b.co' } });
+    // The endpoint returns NOTHING account-specific — the same body whether the
+    // address was new or already registered, so signup cannot be used to test
+    // whether someone is a client of the firm. There is therefore no id to
+    // assert on, and the caller reports the address it was given.
+    fetchResolving({ success: true, verificationRequired: true });
+
     const res = await authService.signUp('a@b.co', 'pw', { firstName: 'Ann', surname: 'Bee' });
-    expect(res.user).toMatchObject({ id: 'u1', email: 'a@b.co', emailConfirmed: false });
+
+    expect(res.user).toMatchObject({ email: 'a@b.co', emailConfirmed: false });
     expect(res.session).toBeNull();
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/auth-signup/signup'),
@@ -221,18 +273,30 @@ describe('session + user reads', () => {
 });
 
 describe('password flows', () => {
-  it('sendPasswordResetEmail calls Supabase with a redirect and logs the request', async () => {
-    h.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+  it('sendPasswordResetEmail posts to the server endpoint with a redirect', async () => {
+    // The mail is now sent BY the server, on the far side of the 3-per-hour
+    // limit. Calling resetPasswordForEmail here would put the send back in
+    // front of the counter, which is the defect this replaced.
+    fetchResolving({ success: true });
     await authService.sendPasswordResetEmail('a@b.co');
-    expect(h.auth.resetPasswordForEmail).toHaveBeenCalledWith(
-      'a@b.co',
-      expect.objectContaining({ redirectTo: expect.stringContaining('/reset-password') }),
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/password-reset'),
+      expect.objectContaining({ method: 'POST' }),
     );
-    expect(security.logPasswordResetRequest).toHaveBeenCalledWith('a@b.co');
+    const [, init] = vi.mocked(global.fetch).mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      email: 'a@b.co',
+      redirectTo: expect.stringContaining('/reset-password'),
+    });
+    expect(h.auth.resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
-  it('sendPasswordResetEmail throws on a Supabase error', async () => {
-    h.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: { message: 'bad' } });
+  it('sendPasswordResetEmail throws when the service itself is unhealthy', async () => {
+    // The route answers 200 for every outcome a caller may distinguish
+    // (unknown address, throttled, provider error), so a non-200 means the
+    // service is broken — not that the account does not exist.
+    fetchResolving({}, { ok: false, status: 503 });
     await expect(authService.sendPasswordResetEmail('a@b.co')).rejects.toBeInstanceOf(AuthError);
   });
 

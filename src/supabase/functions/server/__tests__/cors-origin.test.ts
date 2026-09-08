@@ -69,10 +69,32 @@ describe('resolveResponseOrigin — mirrors the createApp() cors() callback', ()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('NW_ALLOWED_ORIGINS'));
   });
 
-  it('denies every origin when the allow-list is separators only — the preserved sharp edge', async () => {
+  it('treats a separators-only allow-list as a misconfiguration, not a lock-down', async () => {
+    // This used to deny EVERY origin, silently — a whole-site outage from a
+    // typo, indistinguishable from a deliberate lock-down, while `""` (which
+    // means the same thing) reflected. The two now behave alike; see the note
+    // on resolveAllowedOrigins. ERROR rather than WARN because, unlike an
+    // unset variable, this input means someone tried to configure a list.
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     denoEnv.set('NW_ALLOWED_ORIGINS', ' , ,');
     const { resolveResponseOrigin } = await mod();
-    expect(resolveResponseOrigin(APEX)).toBeNull();
+
+    expect(resolveResponseOrigin(APEX)).toBe(APEX);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('NW_ALLOWED_ORIGINS'));
+    error.mockRestore();
+  });
+
+  it('still fails CLOSED for a redirect target on the same input', async () => {
+    // The asymmetry is the point: reflecting an origin back in a CORS header is
+    // defence-in-depth, but sending a user to one is account takeover. A
+    // misconfigured allow-list must not become "any redirect is fine".
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    denoEnv.set('NW_ALLOWED_ORIGINS', ' , ,');
+    const { isTrustedRedirectOrigin } = await mod();
+
+    expect(isTrustedRedirectOrigin(APEX)).toBe(false);
+    expect(isTrustedRedirectOrigin(EVIL)).toBe(false);
+    error.mockRestore();
   });
 });
 
@@ -98,6 +120,7 @@ describe('corsResponseHeaders — what a stream/download actually sends', () => 
     // The regression this whole module exists to prevent.
     const { corsResponseHeaders } = await mod();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     for (const allow of [undefined, '', ' , ,', SITE, `${SITE},${APEX}`]) {
       denoEnv.delete('NW_ALLOWED_ORIGINS');
       if (allow !== undefined) denoEnv.set('NW_ALLOWED_ORIGINS', allow);
@@ -106,6 +129,7 @@ describe('corsResponseHeaders — what a stream/download actually sends', () => 
       }
     }
     warn.mockRestore();
+    error.mockRestore();
   });
 });
 

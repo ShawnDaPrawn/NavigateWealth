@@ -39,6 +39,12 @@ export const supa = {
   createUser: vi.fn(),
   listUsers: vi.fn(),
   updateUserById: vi.fn(),
+  // The ENFORCING login/reset endpoints do the credential check and the mail
+  // dispatch themselves, on an anon client, so those two calls are part of the
+  // surface now. `/login` previously had no server-side auth call at all — it
+  // only advised a browser that was about to make one.
+  signInWithPassword: vi.fn(),
+  resetPasswordForEmail: vi.fn(),
 };
 
 export const auditRecord = vi.fn(async () => undefined);
@@ -50,6 +56,8 @@ export function makeSupabaseMock() {
       rpc: supa.rpc,
       auth: {
         getUser: supa.getUser,
+        signInWithPassword: supa.signInWithPassword,
+        resetPasswordForEmail: supa.resetPasswordForEmail,
         admin: {
           createUser: supa.createUser,
           listUsers: supa.listUsers,
@@ -127,5 +135,13 @@ export function resetAuthMocks(): void {
   supa.createUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
   supa.listUsers.mockResolvedValue({ data: { users: [] }, error: null });
   supa.updateUserById.mockResolvedValue({ data: {}, error: null });
+  // Default to a FAILED sign-in: a test that means to authenticate says so.
+  // Defaulting to success would let a route that forgot to check credentials
+  // pass every test in the file.
+  supa.signInWithPassword.mockResolvedValue({
+    data: { user: null, session: null },
+    error: { message: 'Invalid login credentials', status: 400 },
+  });
+  supa.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
   auditRecord.mockResolvedValue(undefined);
 }

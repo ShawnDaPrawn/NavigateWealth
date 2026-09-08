@@ -25,6 +25,7 @@
 
 import { Hono } from 'npm:hono';
 import { requireAuth, requireSuperAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 import { requireClientAccess, isPlatformAdminRole } from './client-access.ts';
 import { requireCronAuth } from './cron-auth.ts';
 import { asyncHandler } from './error.middleware.ts';
@@ -68,6 +69,7 @@ app.get('/', (c) => c.json({ service: 'client-document-summaries', status: 'acti
 app.post(
   '/maintenance/weekly-scan',
   requireCronAuth,
+  aiUsageLimit({ surface: 'client-document-summaries' }),
   asyncHandler(async (c) => {
     const raw = await c.req.json().catch(() => ({}));
     const parsed = WeeklyScanSchema.safeParse(raw);
@@ -134,6 +136,7 @@ app.get(
 app.post(
   '/:clientId/generate',
   requireAuth,
+  aiUsageLimit({ surface: 'client-document-summaries' }),
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const denied = await requireClientAccess(c, clientId);

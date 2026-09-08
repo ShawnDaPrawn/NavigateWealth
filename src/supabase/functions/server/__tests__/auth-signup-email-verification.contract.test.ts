@@ -82,6 +82,30 @@ vi.mock('../submissions-service.ts', () => ({
 }));
 vi.mock('../newsletter-service.ts', () => ({ autoSubscribeClient: vi.fn(async () => undefined) }));
 
+/**
+ * The signup handler now applies the atomic per-IP and per-email limit itself,
+ * rather than relying on the `/signup-validate` pre-flight a direct caller can
+ * skip. It matters here because this route sends mail: an address that already
+ * has an account gets a notice carrying a fresh recovery link, so an unlimited
+ * caller could email-bomb a known client.
+ *
+ * `checkRateLimit` fails CLOSED, so under a harness with no Postgres every
+ * request would be a 429. Allowed by default here; `signupLimit` narrows it for
+ * the test that checks the limit actually bites.
+ */
+const checkRateLimit = vi.hoisted(() =>
+  vi.fn(async () => ({
+    allowed: true,
+    remaining: 2,
+    resetAt: new Date(Date.now() + 3_600_000),
+    blocked: false,
+  })),
+);
+vi.mock('../rateLimiter.ts', async () => {
+  const actual = await vi.importActual<typeof import('../rateLimiter.ts')>('../rateLimiter.ts');
+  return { ...actual, checkRateLimit };
+});
+
 const app = (await import('../auth-signup.ts')).default;
 
 const VALID = {
@@ -131,19 +155,62 @@ describe('signup creates an UNVERIFIED account', () => {
     });
   });
 
-  it('still returns the application number the SPA shows the user', async () => {
-    // The signup itself must still succeed and hand back what SignupPage.tsx
-    // renders before redirecting to /verify-email.
+  it('returns nothing account-specific — not even to a genuinely new signup', async () => {
+    // CHANGED, and deliberately: this used to assert that the response carried
+    // `user.id` and the application number, because SignupPage.tsx rendered
+    // them. That made the response shape an enumeration oracle — a duplicate
+    // address could be told from a new one by whether `user` was present, even
+    // with both answering 200. For an advisory firm "is this person a client"
+    // is confidential, so the two responses are now byte-identical and neither
+    // carries an id.
+    //
+    // The application number is still generated and stored (the mocked
+    // `generateApplicationNumber` is still called below); it is shown in the
+    // portal once the user verifies and signs in.
     const res = await signup(SITE);
-    const body = (await res.json()) as {
-      success: boolean;
-      user: { id: string };
-      application: { application_number: string };
-    };
+    const body = (await res.json()) as Record<string, unknown>;
 
-    expect(body.success).toBe(true);
-    expect(body.user.id).toBe('user_1');
-    expect(body.application.application_number).toBe('NW-TEST-0001');
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      verificationRequired: true,
+      message: 'Thanks — check your email to continue.',
+    });
+    expect(body).not.toHaveProperty('user');
+    expect(body).not.toHaveProperty('application');
+  });
+
+  it('answers a DUPLICATE address with the identical body', async () => {
+    // The other half of the same property. If these two ever diverge — an
+    // extra field, a different message — the oracle is back.
+    const fresh = await (await signup(SITE)).json();
+
+    createUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: Object.assign(new Error('User already registered'), {
+        status: 422,
+        code: 'email_exists',
+      }),
+    });
+    const duplicate = await (await signup(SITE)).json();
+
+    expect(duplicate).toEqual(fresh);
+  });
+
+  it('refuses to send once the signup limit is exhausted', async () => {
+    // Without this the notice email above is an email-bomb primitive: every
+    // submission of a known address mints a recovery link and sends mail.
+    checkRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: new Date(Date.now() + 3_600_000),
+      blocked: true,
+    });
+
+    const res = await signup(SITE);
+
+    expect(res.status).toBe(429);
+    expect(createUser).not.toHaveBeenCalled();
   });
 
   it('requests the confirmation email', async () => {

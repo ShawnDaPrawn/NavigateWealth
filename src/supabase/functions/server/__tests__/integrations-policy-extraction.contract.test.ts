@@ -25,6 +25,16 @@ beforeAll(() => {
 const kvStore = new Map<string, unknown>();
 const clone = <T>(v: T): T => (v == null ? v : JSON.parse(JSON.stringify(v)));
 
+// The AI limiter fails CLOSED when its counter is unreachable — correct in
+// production, and it means every metered route answers 429 under a harness with
+// no Postgres. These tests are about the route's own behaviour.
+vi.mock('../ai-usage-limit.ts', () => ({
+  aiUsageLimit: () => async (_c: unknown, next: () => Promise<void>) => {
+    await next();
+  },
+  chargeAiUsage: async () => null,
+}));
+
 vi.mock('../kv_store.tsx', () => ({
   get: vi.fn(async (key: string) => clone(kvStore.get(key) ?? null)),
   set: vi.fn(async (key: string, value: unknown) => {

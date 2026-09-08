@@ -24,6 +24,7 @@
  */
 
 import { Hono } from 'npm:hono';
+import { chargeAiUsage } from './ai-usage-limit.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { assertClientAccess } from './client-access.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -174,6 +175,12 @@ app.post('/sessions/:sessionId/send', async (c) => {
   try {
     log.info('POST /sessions/:sessionId/send');
     const user = await authenticateUser(c.req.header('Authorization'), 'tax-agent');
+
+    // Metered here rather than as middleware: this router authenticates
+    // inside the handler, so there is no verified user on the context until
+    // now.
+    const overLimit = await chargeAiUsage(c, { surface: 'tax-agent', userId: user.id });
+    if (overLimit) return overLimit;
 
     const sessionId = c.req.param('sessionId')!;
     const clientId = sessionId.replace(/-ta-\d+$/, '');

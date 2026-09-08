@@ -129,15 +129,92 @@ migrations. These follow-ups from the same audit were **not**, and are recorded
 here so the archive banner is not mistaken for an all-clear. Detail and finding
 IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
 
-| Finding        | What is still open                                                                                                                                                                                                                                                                                                         |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it. |
-| H-3 / H-4      | Rate limiter is not fail-closed, needs atomicity, and OTP brute-force protection                                                                                                                                                                                                                                           |
-| H-6 / H-9      | E-sign download and attachment ownership checks                                                                                                                                                                                                                                                                            |
-| H-11           | Upload size limits                                                                                                                                                                                                                                                                                                         |
-| M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                         |
-| M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                   |
-| —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                             |
+| Finding        | What is still open                                                                                                                                                                                                                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it.                                     |
+| H-3 / H-4      | **Closed.** The limiter is atomic (RPC, migration 20260821210412) and fails closed, and OTP brute-force is bounded by `esign-rate-limit.ts`. The remaining half — that the login and password-reset limits sat BESIDE the auth path rather than in it, so a caller could skip them entirely — is closed by `POST /auth/login` and `POST /auth/password-reset`. |
+| H-6 / H-9      | E-sign download and attachment ownership checks                                                                                                                                                                                                                                                                                                                |
+| H-11           | **Closed.** Content-type-aware body ceiling in `create-app.ts` (2 MB JSON / 55 MB upload, with a named exception for transcription's base64 audio), enforced ahead of every route.                                                                                                                                                                             |
+| M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                                                             |
+| M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                                                       |
+| —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                                                                 |
+
+### Closed by the pre-launch security pass
+
+Not from the June audit — found by re-reading the app against a
+launch-readiness checklist, and fixed in the same change:
+
+- **A password change did not end other sessions.** Neither
+  `updateUser({ password })` nor `admin.updateUserById` revokes an issued
+  token, so the rotation a compromised user performs left the attacker's
+  session alive. Now two-part: GoTrue revocation where a token is available,
+  plus a `sessionsValidFrom` watermark on `security:{userId}` that
+  `enforceAccountSecurity` enforces on every authenticated route — which is
+  the only mechanism that covers an ADMIN resetting someone else's password.
+  See `session-revocation.ts`.
+
+  The watermark is the moment of the CHANGE, with no exception for the caller's
+  own token. Drawing it at the caller's `iat` instead — to keep them signed in —
+  admits every token minted after it, including one an attacker obtained more
+  recently than the victim, which is the session a password change exists to
+  evict. The caller stays signed in because the client refreshes immediately;
+  if that fails they log in again with the password they just set.
+
+- **Admin password resets emailed the new password in plaintext.** Replaced
+  with a single-use GoTrue recovery link; the administrator never learns the
+  credential either.
+- **Authenticated AI routes had no usage cap.** Only per-call `max_tokens`,
+  which bounds one answer and not the number of them. `ai-usage-limit.ts` adds
+  per-user burst + daily and per-IP daily caps. Public Vasco keeps its own
+  (tighter) guardrails.
+
+  The guards sit on the ENDPOINTS that call a provider, after each route's own
+  auth, reading the `userId` that auth verified. Two earlier shapes were wrong
+  and are worth not repeating: metering whole prefixes charged a model-priced
+  quota for ordinary CRUD and took that CRUD down whenever the counter service
+  was unavailable; and metering before the route's auth left no verified
+  principal, so the guard read an unverified `sub` claim — which let anyone who
+  knew a user's UUID spend that user's daily allowance on requests that fail
+  downstream and never refund it.
+
+  The inventory of what is metered is NOT a comment. `ai-usage-limit-coverage.test.ts`
+  recomputes it from the import graph and fails when a provider-calling router
+  has no guard. It found two on its first run: the policy-extraction endpoints,
+  and KB writes in `ai-management-routes.ts`, which re-embed through
+  `vasco-rag-service.ts`.
+
+- **Signup confirmed whether an address had an account** (409 `EMAIL_EXISTS`).
+  For an advisory firm the client list is itself confidential. Duplicate
+  signups now answer exactly like new ones and notify the real owner by email.
+  "Exactly" is load-bearing and took two attempts: the first version returned
+  both as 200 but with different bodies — `user` and `application` present on
+  one, absent on the other — so the oracle survived in the response shape. The
+  success path no longer returns them either, and the application number is
+  shown in the portal after verification instead.
+
+  That notice email needed two guards of its own, both found in review: the
+  live signup handler now applies the atomic per-IP and per-email limit
+  (previously only the skippable `/signup-validate` pre-flight did, so an
+  unlimited caller could email-bomb a known client and churn their recovery
+  links), and `firstName` is HTML-escaped before it reaches the template — it
+  comes from an unauthenticated payload and the message is delivered to
+  somebody else.
+
+- **`POST /auth/password-change` was unauthenticated** and took the account
+  from the request body — a way to write into a stranger's security log.
+  Now `requirePrimaryAuth`, identity from the token, body ignored.
+- **`NW_ALLOWED_ORIGINS=" , ,"` denied every origin, silently.** A typo could
+  take the site down and look like a deliberate lock-down. It now takes the
+  same path as unset (reflect + log loudly at ERROR). `isTrustedRedirectOrigin`
+  is deliberately unchanged: it fails closed, where "trust nothing" is already
+  the right answer for that input.
+- **Three places minted a recovery link from a caller-supplied origin.** Found
+  by merging #311, which added `isTrustedRedirectOrigin` for the signup
+  confirmation link — the same reasoning applies to any link that sets a
+  password. The worst was `POST /auth/password-reset`, which validated
+  `redirectTo` against the request's own `Origin` header: an attacker supplies
+  both, so the check always passed and the recovery link could be mailed to a
+  host they control. All three now resolve through the allow-list.
 
 ## Where money, not work, is the blocker
 

@@ -149,21 +149,27 @@ export function SignupPage() {
         throw new Error(result.error || `Server error: ${response.status} ${response.statusText}`);
       }
 
-      if (!result.success || !result.user) {
+      if (!result.success) {
         throw new Error('Account creation failed. Please try again.');
       }
 
-      // Show success message with application number
-      setSuccess(
-        `Account created successfully! Your application number is ${result.application.application_number}. Redirecting to verification...`,
-      );
+      // The response is the SAME for a new account and for an address that
+      // already had one — no `user`, no `application`, nothing this screen
+      // could branch on. That is deliberate: for an advisory firm, "is this
+      // person a client" is confidential, and a signup form that answers it is
+      // an enumeration oracle. The real owner is told by email instead.
+      //
+      // The application number therefore is not shown here any more. It is
+      // still generated and stored, and appears in the portal once the user
+      // verifies and signs in.
+      setSuccess('Thanks — check your email to continue. Redirecting...');
 
       // Redirect to verify email page
       setTimeout(() => {
         navigate('/verify-email', {
           state: {
             email,
-            message: 'Please verify your email address to continue.',
+            message: 'Please check your email to continue.',
           },
         });
       }, 1500);
@@ -175,10 +181,18 @@ export function SignupPage() {
           error.message.includes('already exists') ||
           error.message.includes('User already registered')
         ) {
-          const msg =
-            'This email is already registered. Please sign in instead or use a different email address.';
-          setError(msg);
-          toast.error(msg);
+          // Defence in depth. The server no longer answers this way (see the
+          // success branch above), but an older cached bundle or a future
+          // caller could still surface the phrase, and repeating it on screen
+          // would put the enumeration oracle straight back. Say the same thing
+          // the non-enumerating path says.
+          const msg = 'Thanks — check your email to continue.';
+          setSuccess(msg);
+          setTimeout(() => {
+            navigate('/verify-email', {
+              state: { email, message: 'Please check your email to continue.' },
+            });
+          }, 1500);
         } else if (error.message.includes('password')) {
           const msg = 'Password does not meet requirements. Please try a different password.';
           setError(msg);

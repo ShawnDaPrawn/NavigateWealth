@@ -37,6 +37,18 @@ const { authUsers, chat } = vi.hoisted(() => {
   };
 });
 
+// The AI limiter fails CLOSED when its counter is unreachable — correct in
+// production (a limiter outage must not become unlimited spend), and it means
+// every metered route answers 429 under a harness with no Postgres. These tests
+// are about the route's own behaviour; `ai-usage-limit.test.ts` and
+// `ai-usage-limit-coverage.test.ts` cover the limiter itself.
+vi.mock('../ai-usage-limit.ts', () => ({
+  aiUsageLimit: () => async (_c: unknown, next: () => Promise<void>) => {
+    await next();
+  },
+  chargeAiUsage: async () => null,
+}));
+
 vi.mock('../kv_store.tsx', async () =>
   (await import('./helpers/contract-harness.ts')).makeKvMock(),
 );

@@ -19,12 +19,18 @@ import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { requireAdmin } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
 
 const app = new Hono();
 const log = createModuleLogger('transcription');
 
 // All transcription routes require admin authentication
 app.use('*', requireAdmin);
+
+// Metered AFTER the auth guard above, so the verified `userId` is on the
+// context. Router-scope rather than per route because every write here is a
+// provider call.
+app.use('*', aiUsageLimit({ surface: 'transcription' }));
 
 // ============================================================================
 // CONSTANTS

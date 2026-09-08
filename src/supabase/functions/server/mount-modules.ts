@@ -9,6 +9,34 @@
 import { lazy } from './lazy-router.ts';
 import type { Hono } from 'npm:hono';
 
+/**
+ * WHERE THE AI SPEND CAPS LIVE — and why they are not here.
+ *
+ * An earlier version of this file carried the metering: nine prefixes, each
+ * mounted with an `aiUsageLimit` guard through a `middleware` option added to
+ * `lazy()`. Two things were wrong with it.
+ *
+ * A prefix guard charges a model-priced quota for every write under it —
+ * saving a config, renaming a source, editing a summary — and, because the
+ * limiter fails closed, takes that CRUD down whenever the counter service is
+ * unavailable. Most of those prefixes are mostly CRUD.
+ *
+ * And a guard mounted here runs BEFORE the sub-router's own authentication,
+ * so it had no verified principal to charge and had to work one out for
+ * itself. Every attempt at that was worse than the last: an unverified `sub`
+ * claim (which let a stranger drain a named user's quota), then a second auth
+ * round trip plus a hand-rolled token verifier outside `auth-mw.ts`.
+ *
+ * The guards now sit in the route files, after each route's own auth, reading
+ * the `userId` that auth already verified. `lazy()` went back to what it was.
+ *
+ * The inventory of what is metered is not a comment here either — a list
+ * nobody recomputes is a list that is wrong, and this one had already missed
+ * two endpoints that call OpenAI. `__tests__/ai-usage-limit-coverage.test.ts`
+ * recomputes it from the import graph and fails when a provider-calling router
+ * has no guard.
+ */
+
 export function mountModuleRoutes(app: Hono) {
   lazy(app, '/requests', () => import('./requests-routes.ts'));
   lazy(app, '/esign', () => import('./esign-routes.ts'));

@@ -9,6 +9,8 @@ import type { Context, Next } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getAuthContext, AuthError, enforceAccountSecurity } from './auth-mw.ts';
+import { aiUsageLimit } from './ai-usage-limit.ts';
+import { readTokenIssuedAt } from './jwt-claims.ts';
 import { PERSONNEL_ROLES } from './constants.ts';
 import { PROFILE_KEY, getOpenAIKey, getSupabase } from './ai-advisor-shared.ts';
 import {
@@ -66,7 +68,7 @@ async function requireAuth(c: Context, next: Next) {
     // ai-intelligence.tsx. Without it a suspended account keeps talking to the
     // advisor until its token expires on its own.
     try {
-      await enforceAccountSecurity(user.id);
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(
@@ -141,7 +143,7 @@ app.get('/status', requireAuth, (c) => {
 /**
  * POST /chat/stream — SSE streaming chat (real-time token delivery)
  */
-app.post('/chat/stream', requireAuth, async (c) => {
+app.post('/chat/stream', requireAuth, aiUsageLimit({ surface: 'ai-advisor' }), async (c) => {
   try {
     const user = c.get('user') as { id: string };
     const body = await c.req.json();
@@ -386,7 +388,7 @@ app.delete('/admin/sessions/:sessionId', async (c) => {
 /**
  * POST /admin/chat/stream — same SSE contract as /chat/stream but for a client's user id
  */
-app.post('/admin/chat/stream', async (c) => {
+app.post('/admin/chat/stream', aiUsageLimit({ surface: 'ai-advisor' }), async (c) => {
   try {
     const { userId, role } = await getAuthContext(c);
     const body = await c.req.json();
@@ -452,7 +454,7 @@ app.delete('/admin/history', async (c) => {
 /**
  * POST /chat
  */
-app.post('/chat', requireAuth, async (c) => {
+app.post('/chat', requireAuth, aiUsageLimit({ surface: 'ai-advisor' }), async (c) => {
   try {
     const user = c.get('user') as { id: string };
     const body = await c.req.json();

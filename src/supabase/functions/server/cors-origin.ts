@@ -50,15 +50,25 @@
  *   strict allow-list as a security boundary (Guidelines §12.4 / Phase 0.3),
  *   e.g. NW_ALLOWED_ORIGINS="https://www.navigatewealth.co,https://navigatewealth.co".
  *
- * KNOWN SHARP EDGE, PRESERVED VERBATIM FROM index.tsx:
- *   unset or empty-string  → permissive reflection + the warning above;
- *   `" , ,"` (only separators) → parses to an empty allow-list, which denies
- *   EVERY origin, silently, and is almost certainly a typo rather than intent.
- *   That inconsistency is real and is pinned by a test rather than quietly
- *   "fixed" here: this extraction is a pure move, and widening a CORS
- *   allow-list is not something a refactor gets to do on its own. Tightening
- *   it — treating the separators-only case as a misconfiguration and failing
- *   the boot loudly — is a deliberate decision for its own change.
+ * THE FORMER SHARP EDGE, NOW RESOLVED:
+ *   unset, empty-string, and separators-only (`" , ,"`) all mean "nothing
+ *   usable was configured", and all three now take the same path: permissive
+ *   reflection plus a loud log line. The third used to parse to an EMPTY
+ *   allow-list and deny EVERY origin — silently, and indistinguishably from a
+ *   deliberate lock-down, from what is a typo every time. Nobody spells "allow
+ *   nothing" that way.
+ *
+ *   It logs at ERROR rather than WARN: unlike an unset variable, this input
+ *   means someone TRIED to configure an allow-list and it is not in effect.
+ *
+ *   Failing the boot was the other candidate and is the wrong trade here. CORS
+ *   is not the authorization boundary on this server, so a typo in this
+ *   variable must not be able to take production down — which is the exact
+ *   incident the fail-open fallback above exists to prevent.
+ *
+ *   NOTE: `isTrustedRedirectOrigin` below is deliberately NOT changed by this.
+ *   It fails CLOSED, so a separators-only value there means "trust nothing",
+ *   which is already the safe answer and needs no special case.
  */
 export function resolveAllowedOrigins(): string[] | null {
   const raw = Deno.env.get('NW_ALLOWED_ORIGINS');
@@ -71,10 +81,21 @@ export function resolveAllowedOrigins(): string[] | null {
     return null;
   }
 
-  return raw
+  const origins = raw
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+
+  if (origins.length === 0) {
+    console.error(
+      '[CORS] NW_ALLOWED_ORIGINS is set but contains no usable origins ' +
+        `(received ${JSON.stringify(raw)}). Treating as unset — falling back to ` +
+        'permissive origin reflection. Fix the variable to restore the allow-list.',
+    );
+    return null;
+  }
+
+  return origins;
 }
 
 /**

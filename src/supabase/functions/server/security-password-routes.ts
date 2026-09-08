@@ -15,6 +15,8 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import { requireAuth, requirePrimaryAuth } from './auth-mw.ts';
+import { revokeSessionsAfterCredentialChange } from './session-revocation.ts';
+import { isTrustedRedirectOrigin } from './cors-origin.ts';
 import { ChangePasswordSchema } from './security-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import {
@@ -95,14 +97,51 @@ app.post('/:userId/password', requireAuth, async (c) => {
       return c.json({ success: false, error: error.message }, 500);
     }
 
-    // Send email notification if requested
+    // Every session that predates this change is now invalid (see
+    // session-revocation.ts). Runs BEFORE the notification email so a failure
+    // to send mail can never leave a rotated credential with live sessions
+    // behind it.
+    //
+    // Self-service change: the caller is the account holder, so their own
+    // token revokes the OTHER sessions at GoTrue and they stay signed in here.
+    // Admin reset: no token for the target user exists, so only the watermark
+    // is written — which is exactly the case the watermark was added for.
+    const callerToken = isAdminReset
+      ? undefined
+      : c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+    const revocation = await revokeSessionsAfterCredentialChange({
+      userId,
+      actor: isAdminReset ? 'admin' : 'self',
+      accessToken: callerToken,
+      scope: 'others',
+    });
+
+    // Notify the account holder.
+    //
+    // WHAT THIS DELIBERATELY NO LONGER DOES
+    // -------------------------------------
+    // The previous version of this branch put the new password, in plaintext,
+    // into the body of an email — and into the SendGrid/SES account that
+    // relayed it, the recipient's mailbox, and every backup of both. A
+    // credential that has been emailed is a credential that has been
+    // published: the reset was supposed to end an exposure, not create a
+    // durable second copy of the replacement.
+    //
+    // It sends a single-use recovery LINK instead. The link is minted by
+    // GoTrue, expires on the project's configured OTP lifetime, and is spent
+    // the first time it is opened, so an intercepted message is worth far less
+    // than an intercepted password — and the administrator performing the
+    // reset never learns the credential either.
+    //
+    // `newPassword` is still what the account is set to; it is simply never
+    // transmitted. An admin reset therefore hands the user a way back in
+    // rather than a secret to memorise.
     if (emailPassword && user.user.email) {
       try {
         // Deliver to the contact inbox — a client on a household mailbox signs
-        // in with a derived alias, and credentials that never arrive are a
-        // lockout. `Username` below stays the sign-in address: that is the
-        // thing the reader has to type, and it is the point of the message.
-        // One read answers both: where this goes, and what to call the reader.
+        // in with a derived alias, and a link that never arrives is a lockout.
+        // `Username` below stays the sign-in address: that is the thing the
+        // reader has to type, and it is the point of the message.
         const { email: deliverTo, firstName } = await resolveSecurityContact(
           userId,
           user.user.email,
@@ -112,83 +151,91 @@ app.post('/:userId/password', requireAuth, async (c) => {
 
         const footerSettings = await getFooterSettings();
 
-        // Construct email content manually since we don't have a specific template for this yet
-        // and we need to include the dynamic password which might not be safe to store in a template default
+        // The recovery link below is a credential, so its destination is not
+        // the caller's to choose — `Origin` and `Referer` are both request
+        // headers. Checked against the configured allow-list, failing closed
+        // to the canonical site. (This route is admin-only, but "an admin sent
+        // it" is not a reason to let a request header pick where a
+        // password-setting link lands.)
+        const requestOrigin = c.req.header('origin');
+        const redirectBase = (
+          isTrustedRedirectOrigin(requestOrigin)
+            ? requestOrigin!
+            : Deno.env.get('SITE_URL') || 'https://www.navigatewealth.co'
+        ).replace(/\/+$/, '');
 
-        const title = 'Password Reset Notification';
-        const subtitle = 'Your account password has been reset by an administrator';
-        const greeting = `Hello ${firstName},`;
+        // Single-use recovery link, minted against the sign-in address (NOT
+        // the delivery alias — the link authenticates the account, and the
+        // account is keyed on user.user.email).
+        const { data: linkData, error: linkError } = await getSupabase().auth.admin.generateLink({
+          type: 'recovery',
+          email: user.user.email,
+          options: { redirectTo: `${redirectBase}/reset-password` },
+        });
 
-        const bodyContent = `
-          <p>Your password for the Navigate Wealth Admin Panel has been reset.</p>
-          <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #e5e7eb;">
-            <p style="margin: 0; font-size: 14px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">New Password</p>
-            <p style="margin: 4px 0 0 0; font-size: 18px; font-family: monospace; color: #111827; font-weight: 600;">${newPassword}</p>
-          </div>
+        const actionLink = linkData?.properties?.action_link;
+        if (linkError || !actionLink) {
+          // No link means no usable email. Say so in the log and send nothing,
+          // rather than falling back to mailing the password — the fallback
+          // this change exists to remove.
+          log.error('❌ Could not generate recovery link; no reset email sent', linkError);
+        } else {
+          const title = 'Password Reset Notification';
+          const subtitle = 'Your account password has been reset by an administrator';
+          const greeting = `Hello ${firstName},`;
+
+          const bodyContent = `
+          <p>Your password for the Navigate Wealth Admin Panel has been reset by an administrator.</p>
+          <p>For your security we do not send passwords by email. Use the button below to choose a new password — the link can only be used once, and it expires shortly.</p>
           <p><strong>Username:</strong> ${user.user.email}</p>
-          <p>Please use these credentials to log in to your account.</p>
           <p style="color: #d97706; background-color: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fcd34d;">
-            <strong>Security Tip:</strong> We strongly encourage you to change this password after your first login for safety and security.
+            <strong>Didn't expect this?</strong> Contact us immediately — someone may have requested a reset on your account.
           </p>
         `;
 
-        // Extract project ID from Supabase URL
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-        // If running locally or on edge, construct the login URL appropriately
-        // For now, using the base URL + /login which is standard for SPAs hosted on Supabase or similar
-        // Or better, just point to the origin if known, but we don't have request origin easily here for the frontend app
-        // Let's assume the app is hosted where the user logs in.
-        // A safe bet is usually the frontend URL. Since I don't have a FRONTEND_URL env, I'll use a generic approach or try to infer.
-        // Actually, for this specific environment, I know it's a PWA.
+          const emailHtml = createEmailTemplate(bodyContent, {
+            title,
+            subtitle,
+            greeting,
+            buttonUrl: actionLink,
+            buttonLabel: 'Choose a new password',
+            footerSettings,
+          });
 
-        // Let's use a generic "Log In" link that points to the main app URL if possible,
-        // or just omit the link if we can't be sure.
-        // However, the user asked for "Log In Now" button.
-        // I'll try to use the Referer header from the request if available as a base, or default to a standard URL.
-        const origin = c.req.header('origin') || c.req.header('referer') || supabaseUrl;
-        const buttonUrl = `${origin.replace(/\/$/, '')}/login`;
-        const buttonLabel = 'Log In Now';
-
-        const emailHtml = createEmailTemplate(bodyContent, {
-          title,
-          subtitle,
-          greeting,
-          buttonUrl,
-          buttonLabel,
-          footerSettings,
-        });
-
-        const textBody = `
+          const textBody = `
 Password Reset Notification
 Your account password has been reset by an administrator.
 
-New Password: ${newPassword}
 Username: ${user.user.email}
 
-Please use these credentials to log in to your account.
-We strongly encourage you to change this password after your first login for safety and security.
+For your security we do not send passwords by email. Choose a new password here
+(single use, expires shortly):
 
-Log In: ${buttonUrl}
-        `.trim();
+${actionLink}
 
-        await sendEmail({
-          to: deliverTo,
-          subject: 'Your Password Has Been Reset',
-          html: emailHtml,
-          text: textBody,
-        });
+Didn't expect this? Contact us immediately.
+          `.trim();
 
-        log.info('✅ Password reset email sent');
+          await sendEmail({
+            to: deliverTo,
+            subject: 'Your Password Has Been Reset',
+            html: emailHtml,
+            text: textBody,
+          });
+
+          log.info('✅ Password reset email sent');
+        }
       } catch (emailError) {
         // Log but don't fail the request since password was already changed
         log.error('⚠️ Failed to send password reset email:', emailError);
       }
     }
 
-    // Update security status
-    const securityStatus = (await kv.get(`security:${userId}`)) || {};
-    securityStatus.passwordLastChanged = new Date().toISOString();
-    await kv.set(`security:${userId}`, securityStatus);
+    // `passwordLastChanged` is written by `stampSessionsValidFrom` above, in
+    // the same record and the same write as `sessionsValidFrom`. Re-writing it
+    // here would read the record back and put it again — and, on the unlucky
+    // interleaving, overwrite the watermark with a copy taken before it was
+    // set, silently un-revoking every session this route just revoked.
 
     // Log activity
     const timestamp = new Date().toISOString();
@@ -206,6 +253,7 @@ Log In: ${buttonUrl}
     return c.json({
       success: true,
       message: isAdminReset ? 'Password reset successfully' : 'Password changed successfully',
+      sessionsRevoked: revocation.stamped,
     });
   } catch (error) {
     const errorMsg = logSafeError('Error changing password', error);
