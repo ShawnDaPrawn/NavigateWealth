@@ -6,10 +6,14 @@
  * ---------------------------------------------
  * `readTokenIssuedAt` decodes the payload segment of a JWT and returns a
  * claim. It does NOT check the signature, and it may never be the reason a
- * request is treated as authenticated. Its callers — `auth-mw.ts` and
- * `fna-auth.ts` — have ALREADY had the same token verified by
- * `auth.getUser(token)`, so they are re-reading a claim from bytes that were
- * proven authentic moments earlier.
+ * request is treated as authenticated.
+ *
+ * The invariant every call site holds — stated as a rule rather than a roll
+ * call, because the roll call is what went stale here first: CALL THIS ONLY ON
+ * A TOKEN YOU HAVE JUST PASSED THROUGH `auth.getUser(token)` AND WHOSE RESULT
+ * YOU HAVE CHECKED. Under that rule the bytes were proven authentic moments
+ * earlier and re-reading a claim from them costs nothing; outside it, the
+ * claim is whatever the caller typed.
  *
  * THAT IS THE ONLY LEGITIMATE PATTERN HERE, and it is narrower than it first
  * looked. A `readTokenSubject` used to live beside this, reading `sub` from an
@@ -17,8 +21,13 @@
  * token only buys a bucket for a request that will be rejected anyway. The
  * argument was wrong: forging a VICTIM's subject spends the victim's
  * allowance, and every one of those requests failing downstream does not give
- * it back. `ai-usage-limit.ts` verifies the token now, and that function is
- * gone rather than left here for the next caller to reach for.
+ * it back. That function is gone rather than left here for the next caller to
+ * reach for, and `ai-usage-limit.ts` no longer reads a claim at all: it takes
+ * the `userId` the route's own auth middleware already verified and put on the
+ * context. Verifying the token a second time inside the limiter was the
+ * interim answer, and `auth-consolidation.test.ts` rejects it — a module that
+ * verifies tokens outside `auth-mw.ts` is how the account-security policy and
+ * the code that authenticates drift apart.
  *
  * So if a new caller wants a claim from a token this module has not seen
  * verified, the answer is to verify it. "It is only a hint" is how an

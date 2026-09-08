@@ -145,19 +145,6 @@ export interface AiUsageLimitOptions {
 }
 
 /**
- * Hono middleware factory.
- *
- *   app.use('/make-server-91ed8379/ai-advisor/*', aiUsageLimit({ surface: 'ai-advisor' }));
- *
- * On hit: 429 with `Retry-After` and `X-RateLimit-*`. On miss: continues, with
- * the headers attached so a client can back off before it is refused.
- *
- * FAILS CLOSED, via `checkRateLimit`: if the counter cannot be consulted the
- * request is refused. That is the correct direction for a spend limit — an
- * outage of the limiter must not become unlimited spending — and it matches
- * what the login limiter already does.
- */
-/**
  * Apply the caps for one request. Returns a 429 `Response` when a dimension is
  * exhausted, or null to continue.
  *
@@ -224,10 +211,18 @@ export async function chargeAiUsage(
  *
  *   app.post('/chat', requireAuth, aiUsageLimit({ surface: 'ai-advisor' }), handler);
  *
+ * or, for a router where every route spends and shares one auth guard:
+ *
+ *   app.use('*', requireAdmin);
+ *   app.use('*', aiUsageLimit({ surface: 'transcription' }));
+ *
  * MUST be registered after the route's own auth guard — that is what puts the
  * verified `userId` on the context. Registered before it, this degrades to
  * IP-only metering silently, which is the failure mode
- * `ai-usage-limit-coverage.test.ts` exists to make visible.
+ * `ai-usage-limit-coverage.test.ts` exists to make visible. That is also why
+ * neither example mounts it on the parent app in `mount-modules.ts`: a guard
+ * there runs before the sub-router authenticates, so it has no principal to
+ * charge — see the note at the top of that file.
  *
  * FAILS CLOSED, via `checkRateLimit`: if the counter cannot be consulted the
  * request is refused. That is the correct direction for a spend limit — an
