@@ -20,11 +20,13 @@ factors are ours to control.
 
 ## The numbers for this project
 
-Measured, not estimated — reproduce with `npm run build && du -sh dist`:
+Measured, not estimated. `npm run bundle:check` already tracks the build size
+and prints `totalDistBytes`; `du -sh dist` reports a couple of MB more because
+it counts block allocation rather than bytes.
 
 | Factor                       | Value                                        |
 | ---------------------------- | -------------------------------------------- |
-| `dist/` per deployment       | **~74 MB**                                   |
+| `dist/` per deployment       | **~71 MB** (74 MB on disk)                   |
 | — `dist/img/`                | 36 MB (380 webp + 380 avif responsive sizes) |
 | — `dist/assets/`             | 26 MB (~13 MB JS in 334 chunks, ~13 MB webp) |
 | — `dist/brand-assets/`       | 12 MB (28 PNGs, up to 1.5 MB each)           |
