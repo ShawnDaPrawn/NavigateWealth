@@ -1,0 +1,137 @@
+# Reclaim Vercel deployment storage from previews whose pull request has closed.
+#
+# WHAT THIS IS FOR
+# ----------------
+# Vercel's "Deployment Storage" allowance (10 GB free) is the sum of every
+# RETAINED deployment's build output. It is not the size of the live site and
+# has nothing to do with traffic — the "Your site is growing!" email that
+# announces you have filled it is measuring accumulated builds.
+#
+# This project's `dist/` is ~74 MB, and a sampled 26-hour window carried 20
+# deployments (13 of them per-push previews). That is ~1.5 GB/day, which fills
+# 10 GB in about a week, and nothing reclaims it: a preview for a branch that
+# merged in April is still holding its 74 MB today.
+#
+# A preview exists to review an OPEN pull request. Once that PR closes the
+# deployment is pure cost, so this deletes it — previews stay exactly as useful
+# as they are now, they just stop piling up.
+#
+# The companion lever is `vercel.json`'s `ignoreCommand`
+# (scripts/build/vercel-ignore-build.mjs), which stops docs-, CI- and
+# migration-only commits producing a 74 MB build at all.
+#
+# ONE-TIME SETUP (this workflow no-ops until it is done)
+# -----------------------------------------------------
+#   Settings → Secrets and variables → Actions
+#     Secret   VERCEL_TOKEN       https://vercel.com/account/tokens
+#     Variable VERCEL_PROJECT_ID  prj_… (Vercel → Project → Settings → General)
+#     Variable VERCEL_TEAM_ID     team_… (Vercel → Team → Settings → General)
+#
+# The token is the only real credential; the two IDs are identifiers, not
+# secrets, so they are repository VARIABLES and readable in run logs.
+#
+# CLEARING THE EXISTING BACKLOG
+# -----------------------------
+# This workflow only prunes PRs that close from now on. To reclaim what has
+# already accumulated, run it manually — Actions → this workflow → Run workflow
+# — with `older_than_days`. Leave `dry_run` on the first time and read the log:
+# it lists every deployment it would delete without deleting any.
+#
+# WHY `pull_request` AND NOT `pull_request_target`
+# ------------------------------------------------
+# `pull_request_target` runs with repository secrets against the PR's own head,
+# which hands a fork's branch a token that can delete deployments. This uses
+# `pull_request`, where GitHub withholds secrets from fork PRs; the guard below
+# then makes the job no-op rather than fail. Same-repo PRs — which is every PR
+# this repository actually gets — are unaffected.
+
+name: Vercel Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      older_than_days:
+        description: 'Delete previews older than this many days (backlog sweep)'
+        required: true
+        default: '14'
+      dry_run:
+        description: 'List what would be deleted without deleting it'
+        type: boolean
+        required: false
+        default: true
+
+# Deleting a deployment is not idempotent against a concurrent run of itself:
+# two sweeps racing produce a spray of 404s as each deletes what the other has
+# already listed. One at a time, and never cancel a run part-way through — a
+# half-finished prune is harmless but the log becomes hard to trust.
+concurrency:
+  group: vercel-preview-cleanup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    name: vercel-preview-cleanup
+    runs-on: ubuntu-latest
+
+    env:
+      # `if:` cannot read the `secrets` context but can read `env`. This puts
+      # the string "true"/"false" in the job environment, never the token —
+      # the token itself is scoped to the one step that needs it.
+      VERCEL_TOKEN_PRESENT: ${{ secrets.VERCEL_TOKEN != '' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      # Not a gate. A fork PR, or a repository where the one-time setup above
+      # has not been done, should leave a readable note and pass — a red X on
+      # every closed PR teaches people to ignore this workflow, and it is a
+      # housekeeping job, not a check on the change.
+      - name: Report missing configuration
+        if: env.VERCEL_TOKEN_PRESENT != 'true'
+        run: |
+          echo "::notice::VERCEL_TOKEN is not available to this run — skipping cleanup."
+          echo "Fork pull requests never receive secrets; that case is expected and fine."
+          echo "Otherwise see this file's header for the one-time setup."
+
+      - name: Prune previews for the closed pull request
+        if: env.VERCEL_TOKEN_PRESENT == 'true' && github.event_name == 'pull_request'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          VERCEL_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          # Quoted, and passed as one argument: branch names in this repository
+          # contain slashes (claude/…) and are attacker-influenced in the
+          # general case, so they must never reach a shell unquoted.
+          node scripts/ops/vercel-prune-deployments.mjs --branch "$HEAD_REF"
+
+      - name: Sweep the backlog
+        if: env.VERCEL_TOKEN_PRESENT == 'true' && github.event_name == 'workflow_dispatch'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          VERCEL_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          OLDER_THAN: ${{ inputs.older_than_days }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          args=(--older-than "$OLDER_THAN")
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          node scripts/ops/vercel-prune-deployments.mjs "${args[@]}"
