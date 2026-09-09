@@ -58,6 +58,9 @@
  *                          What ships is the already-optimized
  *                          `public/brand-assets/`, which is NOT allowlisted.
  *
+ * `public/` overrides all of the above (see ALWAYS_BUILD_PATTERNS): Vite copies
+ * it into `dist/` verbatim, so a path there ships whatever its extension.
+ *
  * DELIBERATELY NOT ALLOWLISTED, THOUGH IT WOULD PAY
  * -------------------------------------------------
  * `src/supabase/functions/**` — the Edge Function source — is not bundled
@@ -87,6 +90,22 @@ const SKIP = 0;
 const BUILD = 1;
 
 const explain = process.argv.includes('--explain');
+
+/**
+ * Checked BEFORE the allowlist, and wins over it.
+ *
+ * Vite copies `public/` into `dist/` verbatim, so NOTHING under it can ever be
+ * skip-safe whatever its extension. This is a separate list rather than an
+ * exclusion bolted onto each rule below because the next rule added would have
+ * to remember to carry the same exclusion, and the one that forgot would be
+ * silent.
+ *
+ * Not hypothetical: `public/brand-assets/README.md` exists today and ships as
+ * `dist/brand-assets/README.md`. The `*.md` rule below would otherwise have
+ * allowlisted it, so editing it — or adding any intended public Markdown
+ * download — would have changed the deployment and skipped the build.
+ */
+const ALWAYS_BUILD_PATTERNS = [/^public\//];
 
 /**
  * Anchored at the repository root, matched against `git diff --name-only`
@@ -132,18 +151,39 @@ function haveCommit(ref) {
  * exposes it once an Ignored Build Step is configured, and it is empty on a
  * branch's first deployment.
  *
- * Returns null when no range can be established — first deploy, or a shallow
- * clone that does not hold the base — which the caller treats as "build".
+ * THERE IS NO `HEAD^` FALLBACK ON VERCEL, and that is the whole point.
+ * An earlier revision fell back to `HEAD^` whenever the advertised base was not
+ * in the (shallow) clone, which quietly destroyed the guarantee the paragraph
+ * above claims. The failure needs two ordinary events: a deployment carrying an
+ * app change fails, then the next commit touches only docs. `HEAD^` sees just
+ * the docs commit, exits 0, and the app change is never deployed — while the
+ * base that would have caught it, the last SUCCESSFUL deployment, sits behind
+ * both. An advertised base we cannot read is uncertainty, so it builds.
+ *
+ * `HEAD^` survives only as a convenience for running this locally, where there
+ * is no deployment history to consult and nothing is at stake.
+ *
+ * Returns null when no range can be established, which the caller treats as
+ * "build".
  */
 function resolveRange() {
   const previous = process.env.VERCEL_GIT_PREVIOUS_SHA;
   const current = process.env.VERCEL_GIT_COMMIT_SHA || 'HEAD';
 
-  if (previous && haveCommit(previous) && haveCommit(current)) {
-    return { base: previous, head: current, source: 'VERCEL_GIT_PREVIOUS_SHA' };
+  if (previous) {
+    if (haveCommit(previous) && haveCommit(current)) {
+      return { base: previous, head: current, source: 'VERCEL_GIT_PREVIOUS_SHA' };
+    }
+    return null;
   }
+
+  // No previous successful deployment was advertised. On Vercel that means a
+  // first deployment (or an env we do not understand); either way there is no
+  // deployed state to diff against, so build.
+  if (process.env.VERCEL) return null;
+
   if (haveCommit('HEAD^')) {
-    return { base: 'HEAD^', head: 'HEAD', source: 'HEAD^' };
+    return { base: 'HEAD^', head: 'HEAD', source: 'HEAD^ (local)' };
   }
   return null;
 }
@@ -161,7 +201,13 @@ function decide() {
 
   let changed;
   try {
-    changed = git(['diff', '--name-only', `${range.base}..${range.head}`])
+    // `--no-renames` is load-bearing, not tidiness. Git detects renames by
+    // default, and `--name-only` then prints ONLY the destination: moving
+    // `src/app.ts` to `docs/app.ts` reports `docs/app.ts` alone, which the
+    // allowlist reads as a docs-only change and skips — while the deletion of
+    // `src/app.ts` genuinely changes `dist/`. Disabling detection reports the
+    // rename as its two halves, so the source path faces the allowlist too.
+    changed = git(['diff', '--no-renames', '--name-only', `${range.base}..${range.head}`])
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
@@ -178,7 +224,9 @@ function decide() {
   }
 
   const buildAffecting = changed.filter(
-    (file) => !NON_BUILD_PATTERNS.some((pattern) => pattern.test(file)),
+    (file) =>
+      ALWAYS_BUILD_PATTERNS.some((pattern) => pattern.test(file)) ||
+      !NON_BUILD_PATTERNS.some((pattern) => pattern.test(file)),
   );
 
   if (buildAffecting.length === 0) {

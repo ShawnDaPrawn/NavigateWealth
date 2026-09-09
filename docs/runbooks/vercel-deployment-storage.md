@@ -46,6 +46,15 @@ which compares the commit against the last successful deployment and exits 0
 — `docs/`, `.github/`, `e2e/`, `quality/`, `supabase/`, tests, `*.md`,
 `brand-source/`. Anything else, including any error, builds.
 
+`public/` overrides that list: Vite copies it into `dist/` verbatim, so a file
+there ships whatever its extension (`public/brand-assets/README.md` is a live
+example). Renames are compared with detection off, so moving a file _out_ of a
+build path is judged on the path it left, not only the one it arrived at. And
+when the last successful deployment cannot be read from the clone, the build
+runs rather than falling back to the previous commit — that fallback would
+compare against something already deployed and could strand an undeployed
+change behind a failed build.
+
 To force a build that the rule would skip, put `[vercel build]` anywhere in the
 commit message.
 

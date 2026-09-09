@@ -47,9 +47,15 @@
  *   VERCEL_TEAM_ID     required for team-scoped projects — team_…
  *
  * Exits 0 on success (including "nothing to do"), 1 on a configuration or API
- * error. A single failed deletion is reported and does not abort the run: the
- * next scheduled cleanup will retry it, and taking the whole job red over one
- * 429 would hide the deletions that did succeed.
+ * error, and 1 when any deletion could not be completed.
+ *
+ * That last case is deliberate. A transient 429 or 5xx is retried with backoff
+ * inside the run; anything still failing after that is NOT picked up later,
+ * because the workflow fires once per closed pull request and there is no
+ * scheduled sweep behind it. Exiting 0 with a warning would report success for
+ * storage that was never reclaimed, which is the one outcome this script exists
+ * to prevent. Deletions that already succeeded are not undone by the non-zero
+ * exit; re-running is safe and skips what is gone.
  */
 
 const API = 'https://api.vercel.com';
@@ -85,9 +91,39 @@ async function api(path, init = {}) {
   });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(`${init.method ?? 'GET'} ${path} -> ${response.status} ${body.slice(0, 300)}`);
+    const error = new Error(
+      `${init.method ?? 'GET'} ${path} -> ${response.status} ${body.slice(0, 300)}`,
+    );
+    error.status = response.status;
+    throw error;
   }
   return response.json();
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Rate limiting and 5xx are worth another go; 401/403/404 never are. */
+const isTransient = (error) => error.status === 429 || (error.status >= 500 && error.status < 600);
+
+/**
+ * Retry a transient failure inside THIS run.
+ *
+ * There is no scheduled sweep to catch it later — the workflow fires on
+ * `pull_request: closed`, once, for that branch. An earlier revision of this
+ * file said a failed deletion would be picked up by "the next run"; nothing
+ * would have been, and the deployment would have gone on consuming storage
+ * with only a warning in a log nobody reads. So failures are retried here, and
+ * whatever still fails makes the run exit non-zero rather than green.
+ */
+async function withRetry(operation, { attempts = 3, baseDelayMs = 1000 } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= attempts || !isTransient(error)) throw error;
+      await sleep(baseDelayMs * 2 ** (attempt - 1));
+    }
+  }
 }
 
 /**
@@ -194,7 +230,7 @@ async function main() {
     try {
       const query = new URLSearchParams();
       if (teamId) query.set('teamId', teamId);
-      await api(`/v13/deployments/${id}?${query}`, { method: 'DELETE' });
+      await withRetry(() => api(`/v13/deployments/${id}?${query}`, { method: 'DELETE' }));
       deleted += 1;
       console.log(`  deleted ${label}`);
     } catch (error) {
@@ -204,9 +240,17 @@ async function main() {
   }
 
   if (!args.dryRun) {
-    console.log(
-      `[vercel-prune] deleted ${deleted}, failed ${failed}` +
-        (failed ? ' — the next run retries these' : ''),
+    console.log(`[vercel-prune] deleted ${deleted}, failed ${failed}`);
+  }
+
+  // Deliberately loud. Nothing else will come back for these, so a green run
+  // with undeleted deployments would report success for storage that was never
+  // reclaimed — the one outcome this script exists to prevent. The deletions
+  // that DID succeed are already done and are not undone by exiting non-zero.
+  if (failed > 0) {
+    throw new Error(
+      `${failed} deployment(s) could not be deleted after retries — storage not reclaimed. ` +
+        `Re-run the workflow manually (Actions -> Vercel Preview Cleanup) to retry them.`,
     );
   }
 }
