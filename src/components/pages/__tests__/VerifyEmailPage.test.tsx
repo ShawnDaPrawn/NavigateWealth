@@ -71,6 +71,9 @@ describe('VerifyEmailPage', () => {
 
   it('resends to the address from signup', async () => {
     render(<VerifyEmailPage />);
+    // The address arrives from an async effect; clicking before it lands takes
+    // the "no email" branch and never calls the resend. Wait for it first.
+    await screen.findByText('thandi@example.com');
     const button = await screen.findByRole('button', { name: /resend verification email/i });
 
     await act(async () => {
@@ -82,6 +85,9 @@ describe('VerifyEmailPage', () => {
 
   it('confirms the resend so the person knows to look again', async () => {
     render(<VerifyEmailPage />);
+    // The address arrives from an async effect; clicking before it lands takes
+    // the "no email" branch and never calls the resend. Wait for it first.
+    await screen.findByText('thandi@example.com');
     const button = await screen.findByRole('button', { name: /resend verification email/i });
 
     await act(async () => {
@@ -96,6 +102,9 @@ describe('VerifyEmailPage', () => {
     // send, one click further along.
     resendVerificationEmail.mockRejectedValue(new Error('Rate limit exceeded'));
     render(<VerifyEmailPage />);
+    // The address arrives from an async effect; clicking before it lands takes
+    // the "no email" branch and never calls the resend. Wait for it first.
+    await screen.findByText('thandi@example.com');
     const button = await screen.findByRole('button', { name: /resend verification email/i });
 
     await act(async () => {
