@@ -86,6 +86,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/csp-report', () => import('./csp-report-routes.ts'));
   lazy(app, '/linktree', () => import('./linktree-routes.ts'));
   lazy(app, '/linkedin', () => import('./linkedin-routes.ts'));
+  lazy(app, '/buffer', () => import('./buffer-routes.ts'));
   lazy(app, '/net-worth-snapshots', () => import('./net-worth-snapshot-routes.ts'));
   lazy(app, '/vasco', () => import('./vasco-routes.ts'));
   lazy(app, '/ai-management', () => import('./ai-management-routes.ts'));
