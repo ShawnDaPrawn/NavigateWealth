@@ -3,6 +3,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 
 import { scrubSensitiveUrl } from './utils/analytics/scrubSensitiveUrl';
+import { isArticleEscapeHost, removeManifestLinkOnEscapeHost } from './utils/pwa/escapeHost';
 import { logger } from './utils/logger';
 import { validateEnv, logEnvironmentInfo } from './config/env';
 import { AppProviders } from './components/providers/AppProviders';
@@ -169,6 +170,15 @@ export default function App() {
         meta.name = 'viewport';
         meta.content = 'width=device-width, initial-scale=1';
         document.head.appendChild(meta);
+      }
+
+      // The apex host exists only so emailed article links open in a browser the
+      // installed PWA can never capture. Making it installable in its own right
+      // would hand those links straight back to an app — so no manifest and no
+      // service worker there. See utils/pwa/escapeHost.ts.
+      if (isArticleEscapeHost()) {
+        removeManifestLinkOnEscapeHost();
+        return;
       }
 
       // 1. Register Service Worker (All environments to allow install testing)

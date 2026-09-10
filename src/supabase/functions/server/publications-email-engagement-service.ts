@@ -11,6 +11,10 @@ const ARTICLE_EMAIL_PUBLISH_RECIPIENT_PREFIX = 'article_email_publish_recipient:
 // Origin used for article links sent in notification emails. Deliberately the
 // apex (no www) so the link falls outside the installed PWA's scope and always
 // opens in the browser rather than being captured into the portal-only app.
+// This depends on the apex SERVING article pages rather than redirecting them to
+// www: Android applies installed-app link capture to server redirects too, so an
+// apex link that 301s into www is handed to the PWA just like a www link. See
+// the `/resources/article/` exclusion on the apex redirect in `vercel.json`.
 const ARTICLE_EMAIL_LINK_ORIGIN = SITE_ORIGIN_APEX;
 // Each publish recipient currently fans out to three KV entries
 // (article, token, and publish recipient lookup). Large bulk upserts were

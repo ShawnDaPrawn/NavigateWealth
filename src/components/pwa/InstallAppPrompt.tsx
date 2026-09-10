@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { logger } from '../../utils/logger';
 import { isStandaloneDisplay } from '../../utils/pwa/displayMode';
+import { isArticleEscapeHost } from '../../utils/pwa/escapeHost';
 
 // Dismissal is scoped to the browser session (sessionStorage) so the prompt
 // re-appears at most once per session — never again after install.
@@ -196,8 +197,16 @@ export function InstallAppPrompt() {
   const alreadyInstalled = isAppInstalled || isStandalone || (iosSafari && installedFlag);
   // Android/desktop need a captured prompt; iOS Safari is always eligible.
   const canPrompt = iosSafari || showInstallOption;
+  // Never offer to install from the apex host: it exists purely so emailed
+  // article links open in a browser the installed app cannot capture, and a
+  // second app installed from there would start capturing them (escapeHost.ts).
   const visible =
-    onPromptRoute && !alreadyInstalled && !dismissed && canPrompt && !isMobileDevice();
+    onPromptRoute &&
+    !alreadyInstalled &&
+    !dismissed &&
+    canPrompt &&
+    !isMobileDevice() &&
+    !isArticleEscapeHost();
 
   if (!visible) {
     return null;
