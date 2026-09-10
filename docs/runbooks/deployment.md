@@ -14,10 +14,51 @@ when one of them needs a hand.
 The frontend is built by Vite and deployed from `dist/`. `vercel.json` configures:
 
 - `dist` as the output directory.
-- A canonical host redirect from `navigatewealth.co` to `www.navigatewealth.co`.
+- A canonical host redirect from `navigatewealth.co` to `www.navigatewealth.co`,
+  **excluding `/resources/article/*`** — see below.
 - Long-lived immutable caching for `/assets/*`.
 - SPA rewrites to `index.html`.
 - `X-Robots-Tag: noindex, nofollow` for app/admin/auth/dashboard-style routes that should not be indexed.
+
+### The apex host serves articles on purpose
+
+Article notification emails link to `https://navigatewealth.co/resources/article/…`
+— the apex, not `www`. That is the whole point: the PWA manifest is served from
+`www` with `scope: "/"`, so the installed app's intent filter covers every `www`
+path and none of the apex. Clients who installed the portal app would otherwise
+have every emailed article link captured into it.
+
+**The apex must answer those URLs itself, not redirect them.** Android applies
+installed-app link capture to server redirects as well as to the tapped URL, so
+an apex link that 301s to `www` is handed to the app anyway — and the app's
+escape interstitial then aimed back at the apex, which redirected into scope
+again. Clients saw the browser and the app trade the link back and forth in an
+endless loading loop. The `(?!resources/article/)` exclusion in `vercel.json` is
+what stops it, and `src/__tests__/apex-article-escape-routing.test.ts` pins it.
+
+This requires `navigatewealth.co` to be **attached to the Vercel project as a
+serving domain**, so requests reach the deployment and `vercel.json` decides what
+to redirect. It does _not_ work if the apex is configured as a Vercel
+"Redirect to `www.navigatewealth.co`" domain, or redirected at the DNS/registrar
+level — those happen before the deployment is reached, so the exclusion never
+runs and the loop returns.
+
+To check the apex is set up correctly:
+
+```bash
+# Article path: must be 200 on the apex, with NO redirect to www.
+curl -sSI "https://navigatewealth.co/resources/article/<a-published-slug>" | head -1
+
+# Everything else: must still be a 301 to the canonical www host.
+curl -sSI "https://navigatewealth.co/about" | grep -i "^location:"
+```
+
+Article pages served from the apex carry a canonical tag pointing at the `www`
+URL (`ArticleDetailPage` builds it from `SITE_ORIGIN`), and the sitemap only
+lists `www`, so serving both hosts does not split indexing. The apex also
+registers no service worker and exposes no manifest
+(`src/utils/pwa/escapeHost.ts`), so it can never become an installable origin of
+its own — which would recreate the capture problem on a second app.
 
 ## Supabase Edge Function
 

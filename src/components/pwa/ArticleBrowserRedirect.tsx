@@ -1,21 +1,24 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { getAuthenticatedRedirectPath } from '../auth/RouteGuards';
 import { useIsArticleBrowserEscape } from '../../hooks/useIsArticleBrowserEscape';
+import { claimEscapeAttempt } from '../../utils/pwa/articleEscapeAttempt';
 import { SITE_ORIGIN_APEX } from '../../utils/siteOrigin';
 
 /**
  * Builds the article URL on the APEX origin — never the canonical www host.
  *
- * The www origin is INSIDE the installed PWA's scope, so opening a www URL
- * from here gets captured straight back into the app on Android, which renders
- * this interstitial again: the client loops and never reaches the article.
- * The apex origin is outside the app's scope, so it always opens in a real
- * browser surface; the apex→www 301 then resolves to the canonical page as an
- * in-browser navigation, which does not re-trigger link capture (see
- * SITE_ORIGIN_APEX). The query string is preserved so the `nt` engagement
- * token still reaches the website article page.
+ * The www origin is INSIDE the installed PWA's scope, so opening a www URL from
+ * here gets captured straight back into the app on Android and the client never
+ * reaches the article. The apex is outside that scope, and it *serves* article
+ * pages rather than redirecting them to www (see the `/resources/article/`
+ * exclusion on the apex redirect in `vercel.json`) — which matters, because
+ * Android applies link capture to server redirects too, so an apex link that
+ * 301s into www would be handed back to the app exactly as a www link is.
+ *
+ * The query string is preserved so the `nt` engagement token still reaches the
+ * website article page.
  */
 function buildWebsiteArticleUrl(pathname: string, search: string): string {
   return `${SITE_ORIGIN_APEX}${pathname}${search}`;
@@ -33,8 +36,12 @@ function buildWebsiteArticleUrl(pathname: string, search: string): string {
  * When we detect that situation — standalone display mode on an article route —
  * we surface a focused interstitial that opens the article on the website. We
  * also fire a single best-effort `window.open` so capable browsers jump straight
- * there; where that is blocked (no user gesture on launch) the tappable button
- * guarantees the article still opens in the browser.
+ * there. That attempt is claimed through `claimEscapeAttempt`, which survives a
+ * relaunch of the app: if the hand-off bounces back into the PWA the second
+ * mount will not fire again, so the client sees one calm screen rather than the
+ * browser and the app trading the link back and forth. From there the button
+ * (or, if the device insists on capturing the link, the copied URL) opens the
+ * article.
  *
  * In a normal browser tab this renders nothing, so the website is unaffected and
  * the article page renders as usual.
@@ -43,17 +50,17 @@ export function ArticleBrowserRedirect() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  // Tracks the last article URL we auto-opened so a single article is only
-  // launched once, while a second article opened later still gets its attempt.
-  const lastAutoOpened = useRef<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const active = useIsArticleBrowserEscape();
   const websiteUrl = buildWebsiteArticleUrl(location.pathname, location.search);
 
   useEffect(() => {
-    if (!active || lastAutoOpened.current === websiteUrl) return;
+    if (!active) return;
+    // Claiming records the attempt where a relaunch can still see it, so a
+    // hand-off that bounces back into the app does not fire a second time.
+    if (!claimEscapeAttempt(websiteUrl)) return;
 
-    lastAutoOpened.current = websiteUrl;
     // Best-effort: capable browsers open the website immediately. With noopener
     // this returns null even on success, so we never rely on the result — the
     // interstitial button below is the guaranteed path.
@@ -63,6 +70,15 @@ export function ArticleBrowserRedirect() {
       // Ignore — the user can still tap the button to open the article.
     }
   }, [active, websiteUrl]);
+
+  const handleCopy = useCallback(() => {
+    void navigator.clipboard
+      ?.writeText(websiteUrl)
+      .then(() => setCopied(true))
+      .catch(() => {
+        // Clipboard denied — the button above still opens the article.
+      });
+  }, [websiteUrl]);
 
   if (!active) return null;
 
@@ -103,6 +119,14 @@ export function ArticleBrowserRedirect() {
         >
           Read article in browser
         </a>
+
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          {copied ? 'Link copied — paste it in your browser' : 'Copy article link'}
+        </button>
 
         <button
           type="button"

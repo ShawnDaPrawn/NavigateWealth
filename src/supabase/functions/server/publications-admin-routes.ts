@@ -396,8 +396,10 @@ adminRoutes.post('/articles/:id/send-notifications', requireAdmin, async (c) => 
 
     // Build article URL on the apex origin (NOT www) so the link is outside the
     // installed PWA's scope and always opens in the browser instead of being
-    // captured into the portal-only app. The apex 301-redirects to the canonical
-    // www URL in-browser. See SITE_ORIGIN_APEX.
+    // captured into the portal-only app. The apex serves article pages directly
+    // — it must not redirect them to www, because Android hands a redirect into
+    // app scope to the PWA just as it would the original link. See
+    // SITE_ORIGIN_APEX and the apex redirect exclusion in `vercel.json`.
     const articleUrl = `${SITE_ORIGIN_APEX}/resources/article/${article.slug}`;
 
     // Get all users from Supabase Auth

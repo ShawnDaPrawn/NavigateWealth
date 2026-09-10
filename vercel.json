@@ -2,14 +2,25 @@
   "ignoreCommand": "node ./scripts/build/vercel-ignore-build.mjs",
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/",
       "has": [
         {
           "type": "host",
           "value": "navigatewealth.co"
         }
       ],
-      "destination": "https://www.navigatewealth.co/:path*",
+      "destination": "https://www.navigatewealth.co/",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path((?!resources/article/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "navigatewealth.co"
+        }
+      ],
+      "destination": "https://www.navigatewealth.co/:path",
       "statusCode": 301
     },
     {
