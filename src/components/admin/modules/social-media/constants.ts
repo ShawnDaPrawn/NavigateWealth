@@ -53,7 +53,7 @@ export interface PlatformDisplayInfo {
   icon: React.ReactNode;
 }
 
-/** Minimal platform display lookup — used by DraftPosts, History, etc. */
+/** Minimal platform display lookup — used by History, calendar chips, etc. */
 export const PLATFORM_DISPLAY: Record<SocialPlatform, PlatformDisplayInfo> = {
   linkedin: {
     label: 'LinkedIn',

@@ -541,6 +541,16 @@ minute, which only a cron-mode tick writes. The studio header shows this as a
 "Scheduler live" pill; "Scheduler not installed" or "Scheduler stale" (no
 check-in for five minutes) means come back to this runbook.
 
+### `social-automation-render-images` and `social-automation-sync-buffer` (to install after the social-assets deploy)
+
+Two hourly jobs from `supabase/cron/social-automation-jobs.sql` supporting the routine-driven
+weekly social pipeline (`docs/runbooks/social-automation.md`). Targets:
+`POST /social-assets/jobs/render-images` and `POST /social-assets/jobs/sync-buffer`, both
+guarded by the Vault cron token (or an admin session for the "Run now" buttons). Install them
+only once the Edge Function carrying `/social-assets` is live — a job pointing at a 404 is
+finding 2 of the 2026-08-25 audit all over again — and confirm with query C that the paths
+answer 200.
+
 ## Do this after any change to a scheduled job
 
 Run query A **and** query C. **Query A alone cannot establish that a job works** —

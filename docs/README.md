@@ -42,6 +42,8 @@ Written for someone acting under time pressure.
 - [`fna-intake.md`](runbooks/fna-intake.md) — adviser and support operations for client-led FNA intake
 - [`seo.md`](runbooks/seo.md) — the SEO build pipeline and its recurring operational steps
 - [`vercel-deployment-storage.md`](runbooks/vercel-deployment-storage.md) — why the Vercel storage allowance fills, and how to reclaim it
+- [`social-automation.md`](runbooks/social-automation.md) — the routine-driven weekly social pipeline: the database contract a Claude/ChatGPT routine works through, Buffer as the publishing rail, setup, monitoring and failure modes
+  - Claude skills for the two halves of that pipeline, for a session with the repository checked out: [`social-weekly-generate`](../.claude/skills/social-weekly-generate/SKILL.md) and [`social-weekly-schedule`](../.claude/skills/social-weekly-schedule/SKILL.md)
 
 **`decisions/`** — one file per decision that closed an open question, named
 `YYYY-MM-DD-<decision>.md`. A decision record states what was chosen, what was

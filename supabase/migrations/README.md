@@ -1,7 +1,7 @@
 # Migrations — repo vs. production
 
 **Reconciled 2026-08-24 against project `vpjmdsltwrnpefzcgdmz`. The folder now
-tells the truth.** Last appended to 2026-09-02 (`20260902194331`, applied and
+tells the truth.** Last appended to 2026-09-10 (`20260910182003`, applied and
 verified against the same project).
 
 Before this reconciliation the repo held four migration files, production had
@@ -24,18 +24,20 @@ select version, name from supabase_migrations.schema_migrations order by version
 
 ## Current state — every file, verified
 
-| File                                                          | Applied?             | Source of its SQL                             |
-| ------------------------------------------------------------- | -------------------- | --------------------------------------------- |
-| `20260316213717_baseline_untracked_objects.sql`               | pre-existing objects | **Reconstructed** from `pg_catalog`           |
-| `20260316213718_create_kv_table_91ed8379.sql`                 | ✅ `20260316213718`  | Verbatim from `schema_migrations`             |
-| `20260420000001_esign_core_tables.sql`                        | ❌ **NOT APPLIED**   | Repo-authored, never run                      |
-| `20260522225558_fna_intake_sessions.sql`                      | ✅ `20260522225558`  | Verbatim from `schema_migrations`             |
-| `20260821210412_atomic_auth_rate_limit.sql`                   | ✅ `20260821210412`  | Verbatim from `schema_migrations`             |
-| `20260824222932_fna_intake_rls_draft_only.sql`                | ✅ `20260824222932`  | Applied by this reconciliation                |
-| `20260824223052_dedupe_kv_key_indexes.sql`                    | ✅ `20260824223052`  | Applied by this reconciliation                |
-| `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` | ✅ `20260826073401`  | Applied via `apply_migration`, verified after |
-| `20260902194331_calendar_events_schema_alignment.sql`         | ✅ `20260902194331`  | Applied via `apply_migration`, verified after |
-| `20260906005533_calendar_client_fk_to_auth_users.sql`         | ✅ `20260906005533`  | Repo-authored, then applied and verified      |
+| File                                                          | Applied?             | Source of its SQL                                                                                                                                                              |
+| ------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `20260316213717_baseline_untracked_objects.sql`               | pre-existing objects | **Reconstructed** from `pg_catalog`                                                                                                                                            |
+| `20260316213718_create_kv_table_91ed8379.sql`                 | ✅ `20260316213718`  | Verbatim from `schema_migrations`                                                                                                                                              |
+| `20260420000001_esign_core_tables.sql`                        | ❌ **NOT APPLIED**   | Repo-authored, never run                                                                                                                                                       |
+| `20260522225558_fna_intake_sessions.sql`                      | ✅ `20260522225558`  | Verbatim from `schema_migrations`                                                                                                                                              |
+| `20260821210412_atomic_auth_rate_limit.sql`                   | ✅ `20260821210412`  | Verbatim from `schema_migrations`                                                                                                                                              |
+| `20260824222932_fna_intake_rls_draft_only.sql`                | ✅ `20260824222932`  | Applied by this reconciliation                                                                                                                                                 |
+| `20260824223052_dedupe_kv_key_indexes.sql`                    | ✅ `20260824223052`  | Applied by this reconciliation                                                                                                                                                 |
+| `20260826073401_close_rls_bypasses_and_over_broad_grants.sql` | ✅ `20260826073401`  | Applied via `apply_migration`, verified after                                                                                                                                  |
+| `20260902194331_calendar_events_schema_alignment.sql`         | ✅ `20260902194331`  | Applied via `apply_migration`, verified after                                                                                                                                  |
+| `20260906005533_calendar_client_fk_to_auth_users.sql`         | ✅ `20260906005533`  | Repo-authored, then applied and verified                                                                                                                                       |
+| `20260910160442_social_automation.sql`                        | ✅ `20260910160442`  | Repo-authored, applied via `apply_migration`, verified after (playbook/settings seed lengths and 9 functions checked against the file)                                         |
+| `20260910182003_social_automation_claims.sql`                 | ✅ `20260910182003`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (14 assertions), verified after (playbook v2 lengths and md5 match the file; 10 functions; grants) |
 
 `20260906005533` is stamped later than the day it was authored, and that is
 correct rather than drift: it had to be applied _after_ the Edge Function that

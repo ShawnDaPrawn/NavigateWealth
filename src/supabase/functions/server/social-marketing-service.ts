@@ -1,457 +1,255 @@
 /**
- * Social & Marketing Module - Service Layer
+ * Social & Marketing — service layer (Buffer-backed).
+ *
+ * Channels, posts and analytics come straight from Buffer; the manual Compose
+ * path creates Buffer posts. There is no local copy of a post: what the
+ * calendar shows is what Buffer will publish, so the two cannot drift.
  */
 
-import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { ValidationError, NotFoundError } from './error.middleware.ts';
+import { ValidationError } from './error.middleware.ts';
+import {
+  bufferServiceToChannel,
+  bufferStatusToAppStatus,
+  createBufferPost,
+  deleteBufferPost,
+  getBufferAccount,
+  getBufferAggregatedMetrics,
+  isBufferConfigured,
+  listBufferChannels,
+  listBufferPosts,
+  type BufferChannel,
+  type BufferCreatePostInput,
+  type BufferImageAssetInput,
+  type BufferShareMode,
+} from './buffer-service.ts';
+import { publishPrivateImage } from './social-assets-storage.ts';
 import type {
-  SocialPost,
-  PostCreate,
-  PostUpdate,
-  PostFilters,
-  Campaign,
-  Analytics,
-  SocialProfile,
+  AnalyticsView,
+  ChannelView,
+  ComposeImageInput,
+  ComposePostInput,
+  ComposeResult,
+  PostView,
+  SocialMarketingStatus,
 } from './social-marketing-types.ts';
 
 const log = createModuleLogger('social-marketing-service');
 
-// Helper to generate unique ID
-function generateId(): string {
-  return crypto.randomUUID();
+/** The AI generator's private bucket, from which manual-compose images are copied. */
+const AI_IMAGES_BUCKET = 'make-91ed8379-social-ai-images';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export async function getStatus(): Promise<SocialMarketingStatus> {
+  if (!isBufferConfigured()) return { configured: false };
+  try {
+    const account = await getBufferAccount();
+    return {
+      configured: true,
+      account: { email: account.email, organizations: account.organizations },
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
-export class SocialMarketingService {
-  // ========================================================================
-  // SOCIAL PROFILES
-  // ========================================================================
+export function toChannelView(channel: BufferChannel): ChannelView {
+  return {
+    ...channel,
+    platform: bufferServiceToChannel(channel.service),
+    isConnected: !channel.isDisconnected && !channel.isLocked,
+  };
+}
 
-  /**
-   * Get all social profiles
-   */
-  async getAllProfiles(): Promise<SocialProfile[]> {
-    const profiles = await kv.getByPrefix('social_profile:');
-    if (!profiles || profiles.length === 0) {
-      return [];
+export async function listChannels(): Promise<ChannelView[]> {
+  const channels = await listBufferChannels();
+  return channels.map(toChannelView);
+}
+
+export interface ListPostsOptions {
+  from?: string;
+  to?: string;
+  channelId?: string;
+}
+
+/** Default window: two weeks back, nine weeks ahead — what a month calendar can reach. */
+export async function listPosts(options: ListPostsOptions = {}): Promise<PostView[]> {
+  const now = Date.now();
+  const from = options.from ?? new Date(now - 14 * DAY_MS).toISOString();
+  const to = options.to ?? new Date(now + 63 * DAY_MS).toISOString();
+  const posts = await listBufferPosts({
+    from,
+    to,
+    channelIds: options.channelId ? [options.channelId] : undefined,
+  });
+  return posts.map((post) => ({
+    ...post,
+    platform: bufferServiceToChannel(post.channelService),
+    appStatus: bufferStatusToAppStatus(post.status),
+  }));
+}
+
+function modeToBuffer(mode: ComposePostInput['mode']): {
+  mode: BufferShareMode;
+  saveToDraft?: boolean;
+} {
+  switch (mode) {
+    case 'now':
+      return { mode: 'shareNow' };
+    case 'scheduled':
+      return { mode: 'customScheduled' };
+    case 'draft':
+      return { mode: 'addToQueue', saveToDraft: true };
+    case 'queue':
+    default:
+      return { mode: 'addToQueue' };
+  }
+}
+
+/** Resolve compose images to public URLs Buffer can fetch. */
+async function resolveImages(
+  images: ComposeImageInput[] | undefined,
+): Promise<BufferImageAssetInput[]> {
+  const assets: BufferImageAssetInput[] = [];
+  for (const image of images ?? []) {
+    let url = image.url;
+    if (!url && image.storagePath) {
+      const target = `manual/${crypto.randomUUID()}.png`;
+      url = await publishPrivateImage(AI_IMAGES_BUCKET, image.storagePath, target);
     }
-    profiles.sort(
-      (a: SocialProfile, b: SocialProfile) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
-    return profiles;
-  }
-
-  /**
-   * Get profile by ID
-   */
-  async getProfileById(profileId: string): Promise<SocialProfile> {
-    const profile = await kv.get(`social_profile:${profileId}`);
-    if (!profile) {
-      throw new NotFoundError('Social profile not found');
-    }
-    return profile;
-  }
-
-  /**
-   * Connect (create) a social profile
-   */
-  async connectProfile(data: {
-    platform: string;
-    accessToken?: string;
-    refreshToken?: string;
-    accountType?: string;
-  }): Promise<SocialProfile> {
-    const profileId = generateId();
-    const timestamp = new Date().toISOString();
-
-    const profile: SocialProfile = {
-      id: profileId,
-      platform: data.platform as SocialProfile['platform'],
-      name: data.platform.charAt(0).toUpperCase() + data.platform.slice(1),
-      isConnected: true,
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      accountType: data.accountType as SocialProfile['accountType'],
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    await kv.set(`social_profile:${profileId}`, profile);
-    log.success('Social profile connected', { profileId, platform: data.platform });
-    return profile;
-  }
-
-  /**
-   * Update a social profile
-   */
-  async updateProfile(profileId: string, updates: Partial<SocialProfile>): Promise<SocialProfile> {
-    const profile = await this.getProfileById(profileId);
-    Object.assign(profile, updates);
-    profile.updated_at = new Date().toISOString();
-    await kv.set(`social_profile:${profileId}`, profile);
-    log.success('Social profile updated', { profileId });
-    return profile;
-  }
-
-  /**
-   * Disconnect a social profile
-   */
-  async disconnectProfile(profileId: string): Promise<void> {
-    const profile = await this.getProfileById(profileId);
-    profile.isConnected = false;
-    profile.accessToken = undefined;
-    profile.refreshToken = undefined;
-    profile.updated_at = new Date().toISOString();
-    await kv.set(`social_profile:${profileId}`, profile);
-    log.success('Social profile disconnected', { profileId });
-  }
-
-  /**
-   * Delete a social profile
-   */
-  async deleteProfile(profileId: string): Promise<void> {
-    await kv.del(`social_profile:${profileId}`);
-    log.success('Social profile deleted', { profileId });
-  }
-
-  // ========================================================================
-  // SOCIAL MEDIA POSTS
-  // ========================================================================
-
-  /**
-   * Get all posts
-   */
-  async getAllPosts(filters?: Partial<PostFilters>): Promise<SocialPost[]> {
-    const posts = await kv.getByPrefix('social_post:');
-
-    if (!posts || posts.length === 0) {
-      return [];
-    }
-
-    let filtered = posts;
-
-    // Apply filters
-    if (filters?.platform) {
-      filtered = filtered.filter((p: SocialPost) => p.platform === filters.platform);
-    }
-
-    if (filters?.status) {
-      filtered = filtered.filter((p: SocialPost) => p.status === filters.status);
-    }
-
-    // Sort by scheduled/created date (newest first)
-    filtered.sort((a: SocialPost, b: SocialPost) => {
-      const dateA = new Date(a.scheduled_for || a.created_at);
-      const dateB = new Date(b.scheduled_for || b.created_at);
-      return dateB.getTime() - dateA.getTime();
+    if (!url) continue;
+    assets.push({
+      image: { url, metadata: { altText: image.altText || 'Navigate Wealth' } },
     });
-
-    return filtered;
   }
+  return assets;
+}
 
-  /**
-   * Get post by ID
-   */
-  async getPostById(postId: string): Promise<SocialPost> {
-    const post = await kv.get(`social_post:${postId}`);
+/**
+ * Build the per-network payload. Instagram needs an image and cannot carry a
+ * link card; LinkedIn shows a link card instead of an image when a link is
+ * given; X has no link card, so the link goes into the text.
+ */
+export function buildCreateInput(
+  channel: BufferChannel,
+  input: ComposePostInput,
+  assets: BufferImageAssetInput[],
+): BufferCreatePostInput {
+  const { mode, saveToDraft } = modeToBuffer(input.mode);
+  const base: BufferCreatePostInput = {
+    channelId: channel.id,
+    text: input.text,
+    mode,
+    schedulingType: 'automatic',
+    ...(saveToDraft ? { saveToDraft } : {}),
+    ...(input.mode === 'scheduled' && input.scheduledAt ? { dueAt: input.scheduledAt } : {}),
+  };
 
-    if (!post) {
-      throw new NotFoundError('Social post not found');
+  switch (channel.service) {
+    case 'instagram': {
+      if (assets.length === 0) {
+        throw new ValidationError('Instagram posts need at least one image.');
+      }
+      return {
+        ...base,
+        assets,
+        metadata: { instagram: { type: 'post', shouldShareToFeed: true } },
+      };
     }
-
-    return post;
-  }
-
-  /**
-   * Create post
-   */
-  async createPost(createdBy: string, data: PostCreate): Promise<SocialPost> {
-    const postId = generateId();
-    const timestamp = new Date().toISOString();
-
-    const post: SocialPost = {
-      id: postId,
-      platform: data.platform,
-      content: data.content,
-      media_urls: data.media_urls || [],
-      hashtags: data.hashtags || [],
-      status: 'draft',
-      created_by: createdBy,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    await kv.set(`social_post:${postId}`, post);
-
-    log.success('Social post created', { postId, platform: post.platform });
-
-    return post;
-  }
-
-  /**
-   * Update post
-   */
-  async updatePost(postId: string, updates: PostUpdate): Promise<SocialPost> {
-    const post = await this.getPostById(postId);
-
-    if (post.status === 'published') {
-      throw new ValidationError('Cannot update published post');
+    case 'linkedin': {
+      if (input.link) {
+        return {
+          ...base,
+          metadata: {
+            linkedin: {
+              linkAttachment: {
+                url: input.link.url,
+                ...(input.link.title ? { title: input.link.title } : {}),
+                ...(input.link.description ? { description: input.link.description } : {}),
+              },
+            },
+          },
+        };
+      }
+      return { ...base, assets };
     }
-
-    Object.assign(post, updates);
-    post.updated_at = new Date().toISOString();
-
-    await kv.set(`social_post:${postId}`, post);
-
-    log.success('Social post updated', { postId });
-
-    return post;
-  }
-
-  /**
-   * Publish post
-   */
-  async publishPost(postId: string): Promise<{ success: boolean; message: string }> {
-    const post = await this.getPostById(postId);
-
-    if (post.status === 'published') {
-      throw new ValidationError('Post is already published');
+    case 'twitter': {
+      const text =
+        input.link && !input.text.includes(input.link.url)
+          ? `${input.text}\n${input.link.url}`
+          : input.text;
+      return { ...base, text, assets };
     }
-
-    // TODO: Integrate with actual social media APIs
-    // For now, just mark as published
-
-    post.status = 'published';
-    post.published_at = new Date().toISOString();
-    post.updated_at = new Date().toISOString();
-
-    await kv.set(`social_post:${postId}`, post);
-
-    log.success('Social post published', { postId, platform: post.platform });
-
-    return {
-      success: true,
-      message: 'Post published successfully',
-    };
+    default:
+      return { ...base, assets };
   }
+}
 
-  /**
-   * Schedule post
-   */
-  async schedulePost(postId: string, scheduledFor: string): Promise<SocialPost> {
-    const post = await this.getPostById(postId);
+export async function composePost(input: ComposePostInput, actor: string): Promise<ComposeResult> {
+  const channels = await listBufferChannels();
+  const byId = new Map(channels.map((c) => [c.id, c]));
+  const assets = await resolveImages(input.images);
 
-    post.status = 'scheduled';
-    post.scheduled_for = scheduledFor;
-    post.updated_at = new Date().toISOString();
-
-    await kv.set(`social_post:${postId}`, post);
-
-    log.success('Social post scheduled', { postId, scheduledFor });
-
-    return post;
-  }
-
-  /**
-   * Delete post
-   */
-  async deletePost(postId: string): Promise<void> {
-    await kv.del(`social_post:${postId}`);
-
-    log.success('Social post deleted', { postId });
-  }
-
-  // ========================================================================
-  // SCHEDULING
-  // ========================================================================
-
-  /**
-   * Get posting schedule
-   */
-  async getSchedule(dateRange?: { startDate?: string; endDate?: string }): Promise<SocialPost[]> {
-    const posts = await this.getAllPosts({ status: 'scheduled' });
-
-    let filtered = posts;
-
-    // Filter by date range
-    if (dateRange?.startDate) {
-      filtered = filtered.filter(
-        (p: SocialPost) =>
-          p.scheduled_for && new Date(p.scheduled_for) >= new Date(dateRange.startDate!),
-      );
+  const result: ComposeResult = { created: [], failed: [] };
+  for (const channelId of input.channelIds) {
+    const channel = byId.get(channelId);
+    if (!channel) {
+      result.failed.push({
+        channelId,
+        platform: null,
+        error: 'Channel is not connected to Buffer',
+      });
+      continue;
     }
-
-    if (dateRange?.endDate) {
-      filtered = filtered.filter(
-        (p: SocialPost) =>
-          p.scheduled_for && new Date(p.scheduled_for) <= new Date(dateRange.endDate!),
-      );
+    const platform = bufferServiceToChannel(channel.service);
+    try {
+      const created = await createBufferPost(buildCreateInput(channel, input, assets));
+      result.created.push({
+        channelId,
+        platform,
+        postId: created.id,
+        status: created.status,
+        dueAt: created.dueAt,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.warn('Compose failed for channel', { channelId, platform, error: message });
+      result.failed.push({ channelId, platform, error: message });
     }
-
-    return filtered;
   }
 
-  // ========================================================================
-  // ANALYTICS
-  // ========================================================================
+  log.info('Compose finished', {
+    actor,
+    created: result.created.length,
+    failed: result.failed.length,
+  });
+  return result;
+}
 
-  /**
-   * Get analytics
-   */
-  async getAnalytics(filters?: {
-    platform?: string;
-    startDate?: string;
-    endDate?: string;
-  }): Promise<Analytics> {
-    log.info('Generating social media analytics', { filters });
+export async function deletePost(postId: string): Promise<void> {
+  await deleteBufferPost(postId);
+}
 
-    const posts = await this.getAllPosts({ status: 'published' });
-
-    let filtered = posts;
-
-    // Apply filters
-    if (filters?.platform) {
-      filtered = filtered.filter((p: SocialPost) => p.platform === filters.platform);
-    }
-
-    if (filters?.startDate) {
-      filtered = filtered.filter(
-        (p: SocialPost) =>
-          p.published_at && new Date(p.published_at) >= new Date(filters.startDate!),
-      );
-    }
-
-    if (filters?.endDate) {
-      filtered = filtered.filter(
-        (p: SocialPost) => p.published_at && new Date(p.published_at) <= new Date(filters.endDate!),
-      );
-    }
-
-    // Calculate metrics
-    const totalPosts = filtered.length;
-    const totalEngagement = filtered.reduce((sum: number, p: SocialPost) => {
-      return sum + (p.metrics?.likes || 0) + (p.metrics?.comments || 0) + (p.metrics?.shares || 0);
-    }, 0);
-
-    const totalReach = filtered.reduce((sum: number, p: SocialPost) => {
-      return sum + (p.metrics?.reach || 0);
-    }, 0);
-
-    return {
-      totalPosts,
-      totalEngagement,
-      totalReach,
-      averageEngagement: totalPosts > 0 ? totalEngagement / totalPosts : 0,
-      byPlatform: this.groupByPlatform(filtered),
-    };
+export async function getAnalytics(days: number): Promise<AnalyticsView> {
+  const to = new Date();
+  const from = new Date(to.getTime() - days * DAY_MS);
+  const aggregated = await getBufferAggregatedMetrics({
+    from: from.toISOString(),
+    to: to.toISOString(),
+  });
+  const totals: Record<string, number> = {};
+  for (const metric of aggregated.metrics) {
+    totals[metric.type] = (totals[metric.type] ?? 0) + metric.value;
   }
-
-  /**
-   * Get engagement metrics
-   */
-  async getEngagementMetrics(): Promise<{
-    totalEngagement: number;
-    averageEngagement: number;
-    byPlatform: Record<string, unknown>;
-  }> {
-    const analytics = await this.getAnalytics();
-
-    return {
-      totalEngagement: analytics.totalEngagement,
-      averageEngagement: analytics.averageEngagement,
-      byPlatform: analytics.byPlatform,
-    };
-  }
-
-  /**
-   * Group posts by platform
-   */
-  private groupByPlatform(posts: SocialPost[]): Record<string, number> {
-    const grouped: Record<string, number> = {};
-
-    posts.forEach((post) => {
-      grouped[post.platform] = (grouped[post.platform] || 0) + 1;
-    });
-
-    return grouped;
-  }
-
-  // ========================================================================
-  // CAMPAIGNS
-  // ========================================================================
-
-  /**
-   * Get all campaigns
-   */
-  async getAllCampaigns(): Promise<Campaign[]> {
-    const campaigns = await kv.getByPrefix('marketing_campaign:');
-
-    if (!campaigns || campaigns.length === 0) {
-      return [];
-    }
-
-    // Sort by created date (newest first)
-    campaigns.sort(
-      (a: Campaign, b: Campaign) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
-
-    return campaigns;
-  }
-
-  /**
-   * Create campaign
-   */
-  async createCampaign(data: Partial<Campaign>): Promise<Campaign> {
-    const campaignId = generateId();
-    const timestamp = new Date().toISOString();
-
-    const campaign: Campaign = {
-      id: campaignId,
-      name: data.name!,
-      description: data.description,
-      start_date: data.start_date!,
-      end_date: data.end_date,
-      budget: data.budget,
-      status: 'draft',
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    await kv.set(`marketing_campaign:${campaignId}`, campaign);
-
-    log.success('Marketing campaign created', { campaignId });
-
-    return campaign;
-  }
-
-  /**
-   * Update campaign
-   */
-  async updateCampaign(campaignId: string, updates: Partial<Campaign>): Promise<Campaign> {
-    const campaign = await kv.get(`marketing_campaign:${campaignId}`);
-
-    if (!campaign) {
-      throw new NotFoundError('Campaign not found');
-    }
-
-    Object.assign(campaign, updates);
-    campaign.updated_at = new Date().toISOString();
-
-    await kv.set(`marketing_campaign:${campaignId}`, campaign);
-
-    log.success('Marketing campaign updated', { campaignId });
-
-    return campaign;
-  }
-
-  /**
-   * Delete campaign
-   */
-  async deleteCampaign(campaignId: string): Promise<void> {
-    await kv.del(`marketing_campaign:${campaignId}`);
-
-    log.success('Marketing campaign deleted', { campaignId });
-  }
+  return {
+    from: from.toISOString(),
+    to: to.toISOString(),
+    metricsUpdatedAt: aggregated.metricsUpdatedAt,
+    totals,
+    metrics: aggregated.metrics,
+  };
 }

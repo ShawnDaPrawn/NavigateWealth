@@ -5,4 +5,4 @@
  * This file re-exports for backward-compatible module-local imports.
  */
 
-export { socialMediaKeys } from '../../../../../utils/queryKeys';
+export { socialMediaKeys, socialAssetsKeys } from '../../../../../utils/queryKeys';
