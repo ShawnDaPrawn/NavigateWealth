@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   claimEscapeAttempt,
   resetEscapeAttempt,
@@ -40,22 +40,38 @@ describe('claimEscapeAttempt', () => {
     expect(claimEscapeAttempt(ARTICLE, 1_000 + ESCAPE_ATTEMPT_TTL_MS)).toBe(true);
   });
 
-  it('does not throw when storage is unavailable, and still guards the page', () => {
-    const getItem = Storage.prototype.getItem;
+  it('never hands off automatically when the record cannot survive a relaunch', async () => {
     const setItem = Storage.prototype.setItem;
-    Storage.prototype.getItem = () => {
-      throw new Error('storage blocked');
-    };
     Storage.prototype.setItem = () => {
       throw new Error('storage blocked');
     };
 
     try {
-      expect(claimEscapeAttempt(ARTICLE, 1_000)).toBe(true);
-      expect(claimEscapeAttempt(ARTICLE, 1_100)).toBe(false);
+      expect(claimEscapeAttempt(ARTICLE, 1_000)).toBe(false);
+
+      // The point of the check. An in-memory guard would live in module state,
+      // which a relaunched PWA resets along with everything else — so a bouncing
+      // link would clear it on every launch and fire again, restoring the loop.
+      // Re-importing the module is that reset.
+      vi.resetModules();
+      const relaunched = await import('../articleEscapeAttempt');
+      expect(relaunched.claimEscapeAttempt(ARTICLE, 1_100)).toBe(false);
+      expect(relaunched.claimEscapeAttempt(ARTICLE, 999_000)).toBe(false);
+    } finally {
+      Storage.prototype.setItem = setItem;
+    }
+  });
+
+  it('does not throw when reading is blocked but writing works', () => {
+    const getItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = () => {
+      throw new Error('read blocked');
+    };
+
+    try {
+      expect(() => claimEscapeAttempt(ARTICLE, 1_000)).not.toThrow();
     } finally {
       Storage.prototype.getItem = getItem;
-      Storage.prototype.setItem = setItem;
     }
   });
 

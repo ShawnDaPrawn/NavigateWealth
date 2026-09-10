@@ -14,9 +14,16 @@
  * attempt per article URL is allowed; anything after that renders the
  * interstitial and waits for a deliberate tap. The record expires so a client
  * returning to the same article later still gets an automatic hand-off.
+ *
+ * Where the record CANNOT survive a relaunch — private mode, hardened storage
+ * settings, a full quota — there is no automatic hand-off at all. An in-memory
+ * fallback would be worthless here: it resets with the page, so a bouncing link
+ * would clear it on every launch and fire again, which is precisely the loop.
+ * Better to leave the client on the interstitial and let them tap through.
  */
 
 const ATTEMPT_KEY = 'nw-article-escape-attempt';
+const PROBE_KEY = `${ATTEMPT_KEY}:probe`;
 
 /** How long a recorded attempt suppresses the next automatic one. */
 export const ESCAPE_ATTEMPT_TTL_MS = 90_000;
@@ -26,41 +33,56 @@ interface EscapeAttempt {
   at: number;
 }
 
-// Fallback for private-mode / blocked storage. It only survives within a single
-// page, which is enough to stop a same-page re-fire; a relaunch there falls back
-// to allowing one more attempt, which is still bounded and never a loop.
-let inMemoryAttempt: EscapeAttempt | null = null;
+/**
+ * Whether a record written now would still be readable after the app relaunches.
+ * Probing with a real write is the only honest check: storage can be present but
+ * refuse writes (private mode, blocked site data, exhausted quota).
+ */
+function canPersistAcrossRelaunch(): boolean {
+  try {
+    localStorage.setItem(PROBE_KEY, '1');
+    localStorage.removeItem(PROBE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function readAttempt(): EscapeAttempt | null {
   try {
     const raw = localStorage.getItem(ATTEMPT_KEY);
-    if (!raw) return inMemoryAttempt;
+    if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<EscapeAttempt> | null;
     if (!parsed || typeof parsed.url !== 'string' || typeof parsed.at !== 'number') {
-      return inMemoryAttempt;
+      return null;
     }
     return { url: parsed.url, at: parsed.at };
   } catch {
-    return inMemoryAttempt;
+    return null;
   }
 }
 
 function writeAttempt(attempt: EscapeAttempt): void {
-  inMemoryAttempt = attempt;
   try {
     localStorage.setItem(ATTEMPT_KEY, JSON.stringify(attempt));
   } catch {
-    /* storage unavailable — the in-memory record still guards this page */
+    /* Already ruled out by canPersistAcrossRelaunch; nothing useful to do. */
   }
 }
 
 /**
  * True when the automatic hand-off may fire for `url`, recording the attempt as
- * a side effect. Returns false once an attempt for the same URL is already on
- * record and still within {@link ESCAPE_ATTEMPT_TTL_MS} — that is the bounce
- * coming back, and firing again would restart the loop.
+ * a side effect.
+ *
+ * Returns false once an attempt for the same URL is already on record and still
+ * within {@link ESCAPE_ATTEMPT_TTL_MS} — that is the bounce coming back, and
+ * firing again would restart the loop. Also returns false whenever the record
+ * could not outlive the page, because then a bounce is indistinguishable from a
+ * first launch.
  */
 export function claimEscapeAttempt(url: string, now: number = Date.now()): boolean {
+  if (!canPersistAcrossRelaunch()) return false;
+
   const previous = readAttempt();
   if (previous && previous.url === url && now - previous.at < ESCAPE_ATTEMPT_TTL_MS) {
     return false;
@@ -69,9 +91,8 @@ export function claimEscapeAttempt(url: string, now: number = Date.now()): boole
   return true;
 }
 
-/** Test seam — clears both the stored and in-memory records. */
+/** Test seam — clears the stored record. */
 export function resetEscapeAttempt(): void {
-  inMemoryAttempt = null;
   try {
     localStorage.removeItem(ATTEMPT_KEY);
   } catch {
