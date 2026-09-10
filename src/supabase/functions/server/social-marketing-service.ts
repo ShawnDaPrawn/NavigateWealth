@@ -5,6 +5,7 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError } from './error.middleware.ts';
+import { BufferService } from './buffer-service.ts';
 import type {
   SocialPost,
   PostCreate,
@@ -16,6 +17,7 @@ import type {
 } from './social-marketing-types.ts';
 
 const log = createModuleLogger('social-marketing-service');
+const bufferService = new BufferService();
 
 // Helper to generate unique ID
 function generateId(): string {
@@ -219,8 +221,7 @@ export class SocialMarketingService {
       throw new ValidationError('Post is already published');
     }
 
-    // TODO: Integrate with actual social media APIs
-    // For now, just mark as published
+    const bufferResult = await bufferService.pushLocalPost(post, 'shareNow');
 
     post.status = 'published';
     post.published_at = new Date().toISOString();
@@ -228,7 +229,24 @@ export class SocialMarketingService {
 
     await kv.set(`social_post:${postId}`, post);
 
-    log.success('Social post published', { postId, platform: post.platform });
+    log.success('Social post published', {
+      postId,
+      platform: post.platform,
+      bufferPushed: bufferResult.pushed,
+    });
+
+    if (bufferResult.error) {
+      return {
+        success: true,
+        message: `Post saved locally, but Buffer publish failed: ${bufferResult.error}`,
+      };
+    }
+    if (bufferResult.pushed) {
+      return {
+        success: true,
+        message: `Post published and sent to Buffer (${bufferResult.postIds.length} channel${bufferResult.postIds.length === 1 ? '' : 's'})`,
+      };
+    }
 
     return {
       success: true,
@@ -247,6 +265,16 @@ export class SocialMarketingService {
     post.updated_at = new Date().toISOString();
 
     await kv.set(`social_post:${postId}`, post);
+
+    const bufferResult = await bufferService.pushLocalPost(post, 'customScheduled');
+    if (bufferResult.error) {
+      log.warn('Buffer schedule failed after local save', { postId, error: bufferResult.error });
+    } else if (bufferResult.pushed) {
+      log.success('Social post also queued on Buffer', {
+        postId,
+        channels: bufferResult.postIds.length,
+      });
+    }
 
     log.success('Social post scheduled', { postId, scheduledFor });
 

@@ -6,6 +6,7 @@ import {
   analyticsApi,
   socialMediaAIApi,
   linkedinApi,
+  bufferApi,
 } from '../api';
 
 vi.mock('../../../../../utils/supabase/info', () => ({
@@ -606,5 +607,53 @@ describe('linkedinApi', () => {
     expect(result.success).toBe(true);
     const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(fetchCall[0]).toContain('share/image');
+  });
+});
+
+describe('bufferApi', () => {
+  it('getStatus checks Buffer connection', async () => {
+    mockFetchOk({ connected: false, configured: false, canDisconnect: false });
+    const result = await bufferApi.getStatus();
+    expect(result.success).toBe(true);
+    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(fetchCall[0]).toContain('/buffer/status');
+  });
+
+  it('connect posts the API key', async () => {
+    mockFetchOk({ connected: true, configured: true, canDisconnect: true });
+    const result = await bufferApi.connect('buf_test_key');
+    expect(result.success).toBe(true);
+    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(fetchCall[0]).toContain('/buffer/connect');
+    expect(fetchCall[1]?.method).toBe('POST');
+  });
+
+  it('listChannels fetches Buffer channels', async () => {
+    mockFetchOk([{ id: 'ch1', name: 'LI', service: 'linkedin' }]);
+    const result = await bufferApi.listChannels();
+    expect(result.success).toBe(true);
+    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(fetchCall[0]).toContain('/buffer/channels');
+  });
+
+  it('createPost posts to Buffer posts endpoint', async () => {
+    mockFetchOk([{ postId: 'p1', channelId: 'ch1' }]);
+    const result = await bufferApi.createPost({
+      channelIds: ['ch1'],
+      text: 'Hello',
+      mode: 'addToQueue',
+    });
+    expect(result.success).toBe(true);
+    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(fetchCall[0]).toContain('/buffer/posts');
+    expect(fetchCall[1]?.method).toBe('POST');
+  });
+
+  it('disconnect posts to disconnect endpoint', async () => {
+    mockFetchOk({ message: 'Buffer disconnected' });
+    await bufferApi.disconnect();
+    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(fetchCall[0]).toContain('/buffer/disconnect');
+    expect(fetchCall[1]?.method).toBe('POST');
   });
 });

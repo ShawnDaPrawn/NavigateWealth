@@ -353,6 +353,12 @@ export const socialMediaKeys = {
     template: (id: string) => ['social-media', 'ai', 'template', id] as const,
     analytics: () => ['social-media', 'ai', 'analytics'] as const,
   },
+  buffer: {
+    all: ['social-media', 'buffer'] as const,
+    status: () => [...socialMediaKeys.buffer.all, 'status'] as const,
+    channels: () => [...socialMediaKeys.buffer.all, 'channels'] as const,
+    posts: () => [...socialMediaKeys.buffer.all, 'posts'] as const,
+  },
 } as const;
 
 // ============================================================================

@@ -24,3 +24,5 @@ export { useCustomTemplates } from './useCustomTemplates';
 
 // AI analytics hooks
 export { useAIAnalytics } from './useAIAnalytics';
+
+export { useBuffer } from './useBuffer';

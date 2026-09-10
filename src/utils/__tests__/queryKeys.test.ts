@@ -318,6 +318,9 @@ describe('socialMediaKeys', () => {
     expect(socialMediaKeys.ai.templates()).toEqual(['social-media', 'ai', 'templates']);
     expect(socialMediaKeys.ai.template('t')).toEqual(['social-media', 'ai', 'template', 't']);
     expect(socialMediaKeys.ai.analytics()).toEqual(['social-media', 'ai', 'analytics']);
+    expect(socialMediaKeys.buffer.status()).toEqual(['social-media', 'buffer', 'status']);
+    expect(socialMediaKeys.buffer.channels()).toEqual(['social-media', 'buffer', 'channels']);
+    expect(socialMediaKeys.buffer.posts()).toEqual(['social-media', 'buffer', 'posts']);
   });
 });
 

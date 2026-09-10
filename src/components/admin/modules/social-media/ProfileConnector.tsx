@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { SocialProfile, SocialPlatform, PLATFORM_LIMITS } from './types';
 import { LinkedInConnector } from './components/LinkedInConnector';
+import { BufferConnector } from './components/BufferConnector';
 import { BRAND } from './constants';
 
 // ============================================================================
@@ -196,7 +197,10 @@ export function ProfileConnector({
 
   return (
     <div className="space-y-6">
-      {/* Section 1: LinkedIn Integration (Real OAuth) */}
+      {/* Section 1: Buffer (Instagram, Facebook, LinkedIn, X via GraphQL) */}
+      <BufferConnector />
+
+      {/* Section 2: LinkedIn Integration (direct OAuth) */}
       <LinkedInConnector />
 
       {/* Section 2: Other Connected Profiles */}
@@ -207,7 +211,7 @@ export function ProfileConnector({
             <p className="text-sm text-muted-foreground mt-0.5">
               {connectedNonLinkedin.length > 0
                 ? `${connectedNonLinkedin.length} profile${connectedNonLinkedin.length !== 1 ? 's' : ''} connected`
-                : 'Connect additional social media platforms'}
+                : 'Use Buffer above for Instagram, Facebook, and X'}
             </p>
           </div>
 
