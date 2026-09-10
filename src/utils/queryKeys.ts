@@ -318,6 +318,8 @@ export const socialMediaKeys = {
     all: ['social-media', 'profiles'] as const,
     lists: () => [...socialMediaKeys.profiles.all, 'list'] as const,
     detail: (id: string) => [...socialMediaKeys.profiles.all, 'detail', id] as const,
+    /** Buffer reachability for the Channels panel banner. */
+    status: () => [...socialMediaKeys.profiles.all, 'status'] as const,
   },
   posts: {
     all: ['social-media', 'posts'] as const,
@@ -339,6 +341,8 @@ export const socialMediaKeys = {
   analytics: {
     all: ['social-media', 'analytics'] as const,
     overview: () => [...socialMediaKeys.analytics.all, 'overview'] as const,
+    /** Aggregated Buffer metrics over the trailing `days`. */
+    summary: (days: number) => [...socialMediaKeys.analytics.all, 'summary', days] as const,
     topPosts: (limit?: number) =>
       [...socialMediaKeys.analytics.all, 'top-posts', limit ?? 10] as const,
   },
@@ -353,6 +357,21 @@ export const socialMediaKeys = {
     template: (id: string) => ['social-media', 'ai', 'template', id] as const,
     analytics: () => ['social-media', 'ai', 'analytics'] as const,
   },
+} as const;
+
+// ============================================================================
+// SOCIAL AUTOMATION (routine-driven weekly assets)
+// ============================================================================
+
+export const socialAssetsKeys = {
+  all: ['social-assets'] as const,
+  batches: () => [...socialAssetsKeys.all, 'batches'] as const,
+  batchList: (limit: number) => [...socialAssetsKeys.batches(), 'list', limit] as const,
+  batch: (weekKey: string) => [...socialAssetsKeys.batches(), 'detail', weekKey] as const,
+  assets: (filters?: Record<string, unknown>) =>
+    [...socialAssetsKeys.all, 'assets', filters ?? {}] as const,
+  settings: () => [...socialAssetsKeys.all, 'settings'] as const,
+  playbooks: () => [...socialAssetsKeys.all, 'playbooks'] as const,
 } as const;
 
 // ============================================================================

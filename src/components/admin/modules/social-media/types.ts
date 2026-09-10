@@ -23,6 +23,7 @@ export type UserRole = 'admin' | 'marketer' | 'approver' | 'viewer';
 // ============================================================================
 
 export interface SocialProfile {
+  /** The Buffer channel id. */
   id: string;
   platform: SocialPlatform;
   name: string;
@@ -32,6 +33,12 @@ export interface SocialProfile {
   followerCount?: number;
   accountType?: 'personal' | 'business' | 'organization';
   lastSync?: Date;
+  /** Buffer's network slug (linkedin | instagram | twitter | ...). */
+  service?: string;
+  /** Link to the profile on the network. */
+  externalLink?: string | null;
+  timezone?: string;
+  postingSchedule?: Array<{ day: string; times: string[]; paused: boolean }>;
 }
 
 // ============================================================================
@@ -45,6 +52,8 @@ export interface MediaFile {
   alt?: string;
   filename: string;
   size: number;
+  /** Path in the private AI-images bucket; the server copies it to the public bucket for Buffer. */
+  storagePath?: string;
   dimensions?: {
     width: number;
     height: number;
@@ -73,8 +82,15 @@ export interface PostLink {
 // ============================================================================
 
 export interface SocialPost {
+  /** The Buffer post id. */
   id: string;
-  profiles: string[]; // Profile IDs
+  profiles: string[]; // Buffer channel IDs (one per post)
+  channelId?: string;
+  platform?: SocialPlatform | null;
+  /** Buffer's own status (scheduled | sending | sent | error | draft | needs_approval). */
+  bufferStatus?: string;
+  /** Link to the published post on the network, once sent. */
+  externalLink?: string | null;
   campaign?: string;
   body: string;
   firstComment?: string; // Instagram only
@@ -494,3 +510,72 @@ export interface AIAnalyticsSummary {
     createdAt: string;
   }>;
 }
+
+// ============================================================================
+// Buffer-backed publishing (channels, compose, analytics)
+// ============================================================================
+
+export type ComposeMode = 'now' | 'queue' | 'scheduled' | 'draft';
+
+export interface ComposeImage {
+  url?: string;
+  storagePath?: string;
+  altText?: string;
+}
+
+export interface ComposeRequest {
+  channelIds: string[];
+  text: string;
+  mode: ComposeMode;
+  /** ISO 8601 with offset; required when mode is 'scheduled'. */
+  scheduledAt?: string;
+  images?: ComposeImage[];
+  link?: { url: string; title?: string; description?: string };
+}
+
+export interface ComposeResult {
+  created: Array<{
+    channelId: string;
+    platform: SocialPlatform | null;
+    postId: string;
+    status: string;
+    dueAt: string | null;
+  }>;
+  failed: Array<{ channelId: string; platform: SocialPlatform | null; error: string }>;
+}
+
+export interface BufferStatus {
+  configured: boolean;
+  account?: { email: string; organizations: Array<{ id: string; name: string }> };
+  error?: string;
+}
+
+export interface SocialAnalyticsSummary {
+  from: string;
+  to: string;
+  metricsUpdatedAt: string | null;
+  /** Keyed by Buffer metric type: impressions, reactions, comments, shares, clicks, engagementRate, postCount... */
+  totals: Record<string, number>;
+  metrics: Array<{ name: string; type: string; value: number; unit: string; description: string }>;
+}
+
+// ============================================================================
+// Social automation (routine-driven weekly pipeline) — see ./assets/assetsTypes.ts
+// ============================================================================
+
+export type {
+  SocialChannel,
+  SocialBatchStatus,
+  SocialAssetState,
+  SocialImageStatus,
+  SocialAssetBatch,
+  SocialBatchSummary,
+  SocialAsset,
+  SocialAutomationSettings,
+  SocialAutomationSettingsPatch,
+  SocialAutomationPlaybook,
+  SocialAssetPatch,
+  RenderImagesReport,
+  SyncBufferReport,
+  SocialJobName,
+} from './assets/assetsTypes';

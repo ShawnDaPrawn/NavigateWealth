@@ -10,7 +10,7 @@ import type { SocialAIPlatform } from './social-media-ai-text.ts';
 
 const log = createModuleLogger('social-media-ai');
 
-const AI_IMAGES_BUCKET = 'make-91ed8379-social-ai-images';
+export const AI_IMAGES_BUCKET = 'make-91ed8379-social-ai-images';
 
 const NW_BRAND_DEFAULTS = {
   /** Core visual identity description injected into every DALL-E prompt */
@@ -313,7 +313,7 @@ async function uploadImageToStorage(
 /**
  * Call OpenAI DALL-E 3 API to generate an image.
  */
-async function callDALLE(
+export async function callDALLE(
   prompt: string,
   size: '1024x1024' | '1024x1792' | '1792x1024',
   quality: 'standard' | 'hd' = 'standard',
@@ -374,6 +374,21 @@ async function callDALLE(
     url: imageData.url,
     revisedPrompt: imageData.revised_prompt || prompt,
   };
+}
+
+/**
+ * The branded DALL-E prompt for an input, with the brand context resolved.
+ * Exported so the social-assets image job can render straight into its own
+ * (public) bucket while sharing the brand voice, colour and constraint rules.
+ */
+export async function buildBrandedImagePrompt(input: GenerateImageInput): Promise<string> {
+  const brand = await resolveBrandContext();
+  return buildImagePrompt(input, brand);
+}
+
+/** DALL-E 3 output size for a platform (falls back to LinkedIn landscape). */
+export function dalleSizeForPlatform(platform: string): '1024x1024' | '1024x1792' | '1792x1024' {
+  return (DALLE_PLATFORM_DIMENSIONS[platform] || DALLE_PLATFORM_DIMENSIONS.linkedin).size;
 }
 
 // ---------------------------------------------------------------------------

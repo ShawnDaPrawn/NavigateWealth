@@ -331,6 +331,16 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'Guarded by a file-local cron-or-admin gate that calls enforceAccountSecurity + resolveTrustedRole and returns 401 by default.',
     routes: ['tasks-digest-routes.ts GET /', 'tasks-digest-routes.ts GET /status'],
   },
+  {
+    kind: 'cron-or-admin',
+    classification: 'guarded',
+    reason:
+      'Guarded by a file-local `requireCronOrAdmin` gate: `isAuthorizedCronRequest` (the Vault-backed cron token) first, then `requireAdmin`. The scheduled job has no session and an admin clicking "Run now" has no cron token, so one route serves both; the detector cannot see either identifier because the gate is a named function defined above the routes. Pinned by social-assets-routes.contract.test.ts, which asserts both tiers on both routes.',
+    routes: [
+      'social-assets-routes.ts POST /jobs/render-images',
+      'social-assets-routes.ts POST /jobs/sync-buffer',
+    ],
+  },
 ];
 
 /** Flattened "<file> <METHOD> <path>" -> its group. */

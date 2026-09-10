@@ -1,8 +1,43 @@
+/**
+ * PostCalendar — Buffer's queue as a calendar.
+ *
+ * Every post here is a Buffer post (the weekly automation's and the manual
+ * ones alike). Editing happens in Buffer; from here a post can be opened once
+ * published, or deleted. Dates follow en-ZA (§8.3).
+ */
+
 import { useState } from 'react';
-import { Card, CardContent } from '../../../ui/card';
-import { Button } from '../../../ui/button';
+import {
+  AlertTriangle,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  ExternalLink,
+  Instagram,
+  Facebook,
+  Linkedin,
+  MoreVertical,
+  Plus,
+  Trash2,
+  Twitter,
+  XCircle,
+} from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../../ui/alert-dialog';
 import { Badge } from '../../../ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Button } from '../../../ui/button';
+import { Calendar } from '../../../ui/calendar';
+import { Card, CardContent } from '../../../ui/card';
 import {
   Dialog,
   DialogContent,
@@ -10,56 +45,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog';
-import { Calendar } from '../../../ui/calendar';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Clock,
-  MoreVertical,
-  Edit,
-  Copy,
-  Trash2,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Linkedin,
-  Instagram,
-  Facebook,
-  Twitter,
-  Plus,
-} from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import type { PostStatus, SocialPlatform, SocialPost, SocialProfile } from './types';
 
-import { SocialPost, SocialPlatform } from './types';
+export type CalendarViewMode = 'month' | 'week' | 'day';
 
 interface PostCalendarProps {
   posts: SocialPost[];
+  profiles?: SocialProfile[];
   selectedDate: Date;
   onDateChange: (date: Date) => void;
-  onPostEdit: (post: SocialPost) => void;
-  onPostDelete: (postId: string) => void;
-  onPostDuplicate: (post: SocialPost) => void;
+  onPostDelete: (postId: string) => void | Promise<unknown>;
   onCreatePost: (date: Date) => void;
-  viewMode: 'month' | 'week' | 'day';
-  onViewModeChange: (mode: 'month' | 'week' | 'day') => void;
+  viewMode: CalendarViewMode;
+  onViewModeChange: (mode: CalendarViewMode) => void;
 }
 
-const platformIcons = {
+const PLATFORM_ICONS: Record<SocialPlatform, typeof Linkedin> = {
   linkedin: Linkedin,
   instagram: Instagram,
   facebook: Facebook,
   x: Twitter,
 };
 
-const statusColors = {
+/** §8.3 vocabulary: green live, blue informational, amber pending, red error. */
+const STATUS_CLASSES: Record<PostStatus, string> = {
   draft: 'bg-gray-100 text-gray-700',
   scheduled: 'bg-blue-100 text-blue-700',
   published: 'bg-green-100 text-green-700',
   failed: 'bg-red-100 text-red-700',
-  pending_approval: 'bg-yellow-100 text-yellow-700',
+  pending_approval: 'bg-amber-100 text-amber-700',
 };
 
-const statusIcons = {
+const STATUS_ICONS: Record<PostStatus, typeof Clock> = {
   draft: MoreVertical,
   scheduled: Clock,
   published: CheckCircle,
@@ -67,137 +85,158 @@ const statusIcons = {
   pending_approval: AlertTriangle,
 };
 
+const STATUS_LABELS: Record<PostStatus, string> = {
+  draft: 'Draft',
+  scheduled: 'Scheduled',
+  published: 'Published',
+  failed: 'Failed',
+  pending_approval: 'Needs approval',
+};
+
+const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
+/** Monday of the week containing `date`, without mutating the input. */
+function startOfWeek(date: Date): Date {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  copy.setDate(copy.getDate() - day + (day === 0 ? -6 : 1));
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+const postDate = (post: SocialPost) => post.scheduledAt ?? post.publishedAt;
+const timeLabel = (date?: Date) =>
+  date ? date.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
+
+function PlatformIcon({
+  platform,
+  className,
+}: {
+  platform?: SocialPlatform | null;
+  className: string;
+}) {
+  const Icon = platform ? PLATFORM_ICONS[platform] : null;
+  return Icon ? <Icon className={className} /> : <CalendarIcon className={className} />;
+}
+
 export function PostCalendar({
   posts = [],
+  profiles = [],
   selectedDate,
   onDateChange,
-  onPostEdit,
   onPostDelete,
-  onPostDuplicate,
   onCreatePost,
   viewMode,
   onViewModeChange,
 }: PostCalendarProps) {
-  const [showPostDialog, setShowPostDialog] = useState(false);
   const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const handlePostClick = (post: SocialPost) => {
-    setSelectedPost(post);
-    setShowPostDialog(true);
-  };
+  const channelName = (post: SocialPost) =>
+    profiles.find((p) => p.id === post.channelId)?.name ?? post.platform ?? 'Channel';
 
-  // Helper function to check if dates are same day
-  const isSameDay = (date1: Date, date2: Date) => {
-    return date1.toDateString() === date2.toDateString();
-  };
+  const postsForDate = (date: Date) =>
+    posts
+      .filter((post) => {
+        const at = postDate(post);
+        return at && isSameDay(at, date);
+      })
+      .sort((a, b) => (postDate(a)?.getTime() ?? 0) - (postDate(b)?.getTime() ?? 0));
 
-  const getPostsForDate = (date: Date): SocialPost[] => {
-    return posts.filter((post) => {
-      const postDate = post.scheduledAt || post.publishedAt;
-      return postDate && isSameDay(postDate, date);
+  const weekDays = (date: Date) => {
+    const start = startOfWeek(date);
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + i);
+      return day;
     });
   };
 
-  // Helper function to get start of week
-  const getStartOfWeek = (date: Date) => {
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
-    return new Date(date.setDate(diff));
+  const shiftSelected = (direction: 1 | -1) => {
+    const next = new Date(selectedDate);
+    if (viewMode === 'month') next.setMonth(next.getMonth() + direction);
+    else next.setDate(next.getDate() + direction * (viewMode === 'day' ? 1 : 7));
+    onDateChange(next);
   };
 
-  // Helper function to get days of current week
-  const getWeekDays = (date: Date) => {
-    const startOfWeek = getStartOfWeek(new Date(date));
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek);
-      day.setDate(startOfWeek.getDate() + i);
-      days.push(day);
+  const headerLabel = () => {
+    if (viewMode === 'month') {
+      return selectedDate.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
     }
-    return days;
+    if (viewMode === 'week') {
+      const start = startOfWeek(selectedDate);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return `${start.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short' })} – ${end.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    }
+    return selectedDate.toLocaleDateString('en-ZA', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
   };
+
+  const PostChip = ({ post }: { post: SocialPost }) => (
+    <button
+      type="button"
+      className="w-full text-left p-2 rounded border text-xs hover:shadow-sm transition-shadow bg-white"
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedPost(post);
+      }}
+    >
+      <div className="flex items-center justify-between mb-1 gap-1">
+        <span className="flex items-center gap-1 text-muted-foreground truncate">
+          <PlatformIcon platform={post.platform} className="h-3 w-3 shrink-0" />
+          <span className="truncate">{channelName(post)}</span>
+        </span>
+        <span className={`px-1 py-0.5 rounded ${STATUS_CLASSES[post.status]}`}>
+          {STATUS_LABELS[post.status]}
+        </span>
+      </div>
+      <div className="line-clamp-2 mb-1">{post.body}</div>
+      <div className="text-muted-foreground">{timeLabel(postDate(post))}</div>
+    </button>
+  );
 
   const renderWeekView = () => {
-    const days = getWeekDays(selectedDate);
-
+    const days = weekDays(selectedDate);
     return (
       <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
-        {/* Day headers */}
         {days.map((day) => (
-          <div key={day.toISOString()} className="bg-card p-4 border-b">
-            <div className="font-medium text-center">
-              {day.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}
-            </div>
+          <div
+            key={`h-${day.toISOString()}`}
+            className="bg-card p-3 border-b text-center font-medium text-sm"
+          >
+            {day.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric' })}
           </div>
         ))}
-
-        {/* Day content */}
         {days.map((day) => {
-          const dayPosts = getPostsForDate(day);
+          const dayPosts = postsForDate(day);
           const isToday = isSameDay(day, new Date());
           const isSelected = isSameDay(day, selectedDate);
-
           return (
             <div
-              key={`content-${day.toISOString()}`}
-              className={`bg-card p-2 min-h-[200px] cursor-pointer hover:bg-muted/20 ${
-                isSelected ? 'ring-2 ring-primary' : ''
-              } ${isToday ? 'bg-primary/5' : ''}`}
+              key={`c-${day.toISOString()}`}
+              className={`bg-card p-2 min-h-[180px] cursor-pointer hover:bg-muted/20 ${isSelected ? 'ring-2 ring-primary ring-inset' : ''} ${isToday ? 'bg-primary/5' : ''}`}
               onClick={() => onDateChange(day)}
             >
               <div className="space-y-2">
                 {dayPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="p-2 rounded border text-xs hover:shadow-sm transition-shadow"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePostClick(post);
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1">
-                        {post.profiles.map((profileId) => {
-                          // Mock platform detection from profile ID
-                          const platform = profileId.split('-')[0] as SocialPlatform;
-                          const Icon = platformIcons[platform];
-                          return <Icon key={profileId} className="h-3 w-3" />;
-                        })}
-                      </div>
-                      <div className={`text-xs px-1 py-0.5 rounded ${statusColors[post.status]}`}>
-                        {post.status}
-                      </div>
-                    </div>
-
-                    <div className="text-xs line-clamp-2 mb-1">{post.body}</div>
-
-                    <div className="text-xs text-muted-foreground">
-                      {post.scheduledAt &&
-                        post.scheduledAt.toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      {post.publishedAt &&
-                        post.publishedAt.toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                    </div>
-                  </div>
+                  <PostChip key={post.id} post={post} />
                 ))}
-
-                {/* Add post button */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-8 text-xs"
+                  className="w-full h-8 text-xs text-muted-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
                     onCreatePost(day);
                   }}
                 >
                   <Plus className="h-3 w-3 mr-1" />
-                  Add Post
+                  Compose
                 </Button>
               </div>
             </div>
@@ -207,200 +246,125 @@ export function PostCalendar({
     );
   };
 
-  const renderMonthView = () => {
-    return (
+  const renderMonthView = () => (
+    <div className="flex flex-col gap-4 lg:flex-row">
       <Calendar
         mode="single"
         selected={selectedDate}
         onSelect={(date) => date && onDateChange(date)}
+        month={selectedDate}
+        onMonthChange={onDateChange}
         className="rounded-md border"
-        modifiers={{
-          hasPost: (date) => getPostsForDate(date).length > 0,
-        }}
-        modifiersStyles={{
-          hasPost: { backgroundColor: '#6d28d9', color: 'white' },
-        }}
+        modifiers={{ hasPost: (date) => postsForDate(date).length > 0 }}
+        modifiersStyles={{ hasPost: { backgroundColor: '#1B2A4A', color: 'white' } }}
       />
-    );
-  };
+      <div className="flex-1 space-y-2">
+        <p className="text-sm font-medium">
+          {selectedDate.toLocaleDateString('en-ZA', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+          })}
+        </p>
+        {postsForDate(selectedDate).length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nothing queued for this day.</p>
+        ) : (
+          postsForDate(selectedDate).map((post) => <PostChip key={post.id} post={post} />)
+        )}
+      </div>
+    </div>
+  );
 
   const renderDayView = () => {
-    const dayPosts = getPostsForDate(selectedDate);
-
+    const dayPosts = postsForDate(selectedDate);
     return (
       <div className="space-y-4">
-        <div className="text-center">
-          <h3 className="text-lg font-medium">
-            {selectedDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {dayPosts.length} post{dayPosts.length !== 1 ? 's' : ''} scheduled
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          {dayPosts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No posts scheduled for this day</p>
-              <Button className="mt-4" onClick={() => onCreatePost(selectedDate)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Post
-              </Button>
-            </div>
-          ) : (
-            dayPosts.map((post) => {
-              const StatusIcon = statusIcons[post.status];
-
-              return (
-                <Card
-                  key={post.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handlePostClick(post)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        {post.profiles.map((profileId) => {
-                          const platform = profileId.split('-')[0] as SocialPlatform;
-                          const Icon = platformIcons[platform];
-                          return <Icon key={profileId} className="h-4 w-4" />;
-                        })}
-                        <Badge variant="outline">
-                          {post.profiles.length} platform{post.profiles.length > 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm text-muted-foreground">
-                          {post.scheduledAt &&
-                            post.scheduledAt.toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          {post.publishedAt &&
-                            post.publishedAt.toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                        </div>
-                        <div
-                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${statusColors[post.status]}`}
-                        >
-                          <StatusIcon className="h-3 w-3" />
-                          {post.status}
-                        </div>
-                      </div>
+        <p className="text-sm text-muted-foreground text-center">
+          {dayPosts.length} post{dayPosts.length === 1 ? '' : 's'} in Buffer for this day
+        </p>
+        {dayPosts.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Nothing queued for this day</p>
+            <Button className="mt-4" onClick={() => onCreatePost(selectedDate)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Compose
+            </Button>
+          </div>
+        ) : (
+          dayPosts.map((post) => {
+            const StatusIcon = STATUS_ICONS[post.status];
+            return (
+              <Card
+                key={post.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedPost(post)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3 gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <PlatformIcon platform={post.platform} className="h-4 w-4" />
+                      <span className="font-medium">{channelName(post)}</span>
                     </div>
-
-                    <p className="text-sm mb-3 line-clamp-3">{post.body}</p>
-
-                    {post.media.length > 0 && (
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex -space-x-2">
-                          {post.media.slice(0, 3).map((media, _index) => (
-                            <div
-                              key={media.id}
-                              className="h-8 w-8 rounded border-2 border-white bg-muted overflow-hidden"
-                            >
-                              {media.type === 'image' ? (
-                                <img
-                                  src={media.url}
-                                  alt="Post media attachment"
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center bg-gray-200">
-                                  <span className="text-xs">📹</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {timeLabel(postDate(post))}
+                      </span>
+                      <span
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${STATUS_CLASSES[post.status]}`}
+                      >
+                        <StatusIcon className="h-3 w-3" />
+                        {STATUS_LABELS[post.status]}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm mb-3 line-clamp-3 whitespace-pre-wrap">{post.body}</p>
+                  {post.media.length > 0 && (
+                    <div className="flex -space-x-2">
+                      {post.media.slice(0, 3).map((media) => (
+                        <div
+                          key={media.id}
+                          className="h-8 w-8 rounded border-2 border-white bg-muted overflow-hidden"
+                        >
+                          {media.type === 'image' && (
+                            <img src={media.url} alt="" className="h-full w-full object-cover" />
+                          )}
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {post.media.length} media file{post.media.length > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    )}
-
-                    {post.analytics && (
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
-                        <span>👀 {post.analytics.impressions}</span>
-                        <span>👆 {post.analytics.clicks}</span>
-                        <span>❤️ {post.analytics.reactions}</span>
-                        <span>💬 {post.analytics.comments}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
     );
   };
 
   return (
     <div className="space-y-4">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const newDate = new Date(selectedDate);
-                newDate.setDate(selectedDate.getDate() - (viewMode === 'day' ? 1 : 7));
-                onDateChange(newDate);
-              }}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <h2 className="text-xl font-semibold">
-              {viewMode === 'month' &&
-                selectedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-              {viewMode === 'week' &&
-                `Week of ${getStartOfWeek(new Date(selectedDate)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-              {viewMode === 'day' &&
-                selectedDate.toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-            </h2>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const newDate = new Date(selectedDate);
-                newDate.setDate(selectedDate.getDate() + (viewMode === 'day' ? 1 : 7));
-                onDateChange(newDate);
-              }}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Previous"
+            onClick={() => shiftSelected(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h2 className="text-lg font-semibold min-w-[12rem] text-center">{headerLabel()}</h2>
+          <Button variant="outline" size="sm" aria-label="Next" onClick={() => shiftSelected(1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
           <Button variant="outline" size="sm" onClick={() => onDateChange(new Date())}>
             Today
           </Button>
         </div>
-
         <div className="flex items-center gap-2">
-          <Select
-            value={viewMode}
-            onValueChange={(value: string) => onViewModeChange(value as typeof viewMode)}
-          >
-            <SelectTrigger className="w-32">
+          <Select value={viewMode} onValueChange={(v) => onViewModeChange(v as CalendarViewMode)}>
+            <SelectTrigger className="w-32" aria-label="Calendar view">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -409,95 +373,110 @@ export function PostCalendar({
               <SelectItem value="month">Month</SelectItem>
             </SelectContent>
           </Select>
-
           <Button onClick={() => onCreatePost(selectedDate)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Post
+            Compose
           </Button>
         </div>
       </div>
 
-      {/* Calendar Content */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           {viewMode === 'month' && renderMonthView()}
           {viewMode === 'week' && renderWeekView()}
           {viewMode === 'day' && renderDayView()}
         </CardContent>
       </Card>
 
-      {/* Post Details Dialog */}
-      <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
+      <Dialog open={Boolean(selectedPost)} onOpenChange={(open) => !open && setSelectedPost(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Post Details</DialogTitle>
+            <DialogTitle>Post in Buffer</DialogTitle>
             <DialogDescription>
               {selectedPost?.status === 'published'
-                ? 'Published post analytics and details'
-                : 'Scheduled post details'}
+                ? 'Published — open it on the network below.'
+                : 'Queued in Buffer. Edit it there; delete it here or there.'}
             </DialogDescription>
           </DialogHeader>
-
           {selectedPost && (
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {selectedPost.profiles.map((profileId) => {
-                    const platform = profileId.split('-')[0] as SocialPlatform;
-                    const Icon = platformIcons[platform];
-                    return <Icon key={profileId} className="h-5 w-5" />;
-                  })}
+                <div className="flex items-center gap-2 text-sm">
+                  <PlatformIcon platform={selectedPost.platform} className="h-5 w-5" />
+                  <span className="font-medium">{channelName(selectedPost)}</span>
+                  <span className="text-muted-foreground">
+                    {postDate(selectedPost)?.toLocaleString('en-ZA', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
                 </div>
-                <div className={`px-3 py-1 rounded text-sm ${statusColors[selectedPost.status]}`}>
-                  {selectedPost.status}
-                </div>
+                <Badge variant="outline" className={STATUS_CLASSES[selectedPost.status]}>
+                  {STATUS_LABELS[selectedPost.status]}
+                </Badge>
               </div>
-
               <div className="p-4 bg-muted/20 rounded-lg">
-                <p className="whitespace-pre-wrap">{selectedPost.body}</p>
+                <p className="whitespace-pre-wrap text-sm">{selectedPost.body}</p>
               </div>
-
-              {selectedPost.analytics && (
-                <div className="grid grid-cols-4 gap-4 p-4 bg-muted/20 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-2xl font-medium">{selectedPost.analytics.impressions}</div>
-                    <div className="text-sm text-muted-foreground">Impressions</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-medium">{selectedPost.analytics.clicks}</div>
-                    <div className="text-sm text-muted-foreground">Clicks</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-medium">{selectedPost.analytics.reactions}</div>
-                    <div className="text-sm text-muted-foreground">Reactions</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-medium">
-                      {selectedPost.analytics.engagement_rate.toFixed(1)}%
+              {selectedPost.media.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedPost.media.slice(0, 3).map((media) => (
+                    <div key={media.id} className="aspect-square rounded bg-muted overflow-hidden">
+                      {media.type === 'image' && (
+                        <img src={media.url} alt="" className="h-full w-full object-cover" />
+                      )}
                     </div>
-                    <div className="text-sm text-muted-foreground">Engagement</div>
-                  </div>
+                  ))}
                 </div>
               )}
-
+              {selectedPost.failureReason && (
+                <p className="text-sm text-destructive">{selectedPost.failureReason}</p>
+              )}
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onPostDuplicate(selectedPost)}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Duplicate
-                </Button>
-                <Button variant="outline" onClick={() => onPostEdit(selectedPost)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button variant="destructive" onClick={() => onPostDelete(selectedPost.id)}>
+                {selectedPost.externalLink && (
+                  <Button asChild variant="outline">
+                    <a href={selectedPost.externalLink} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open post
+                    </a>
+                  </Button>
+                )}
+                <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  Delete in Buffer
                 </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this post in Buffer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes it from Buffer’s queue. A post that has already been published on the
+              network is not taken down by this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (selectedPost) await onPostDelete(selectedPost.id);
+                setConfirmDelete(false);
+                setSelectedPost(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

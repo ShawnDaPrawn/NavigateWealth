@@ -1,65 +1,23 @@
 /**
- * Social profile management (connect/disconnect platforms). One slice of the social-media API client —
- * api.ts re-exports the whole surface.
+ * Channels — the Buffer channels the practice publishes to, presented as
+ * `SocialProfile`s. Read-only: connecting a network happens in Buffer.
  */
-import type {
-  SocialProfile,
-  // UTMParameters, // Unused import
-} from '../types';
-import { SOCIAL_MEDIA_BASE, get, post, put, del, type APIResponse } from './apiBase';
-import type { ConnectProfileRequest, UpdateProfileRequest } from './requests';
+import { api } from '../../../../../utils/api';
+import type { BufferStatus, SocialProfile } from '../types';
+import { channelToProfile, type BufferChannelDto } from './bufferMapping';
+
+const BASE = '/social-marketing';
 
 export const profilesApi = {
-  /**
-   * Get all social media profiles
-   */
-  async getAll(): Promise<APIResponse<SocialProfile[]>> {
-    return get<SocialProfile[]>(`${SOCIAL_MEDIA_BASE}/profiles`);
+  /** All Buffer channels (connected or not). */
+  async getAll(): Promise<SocialProfile[]> {
+    const res = await api.get<{ success: boolean; data: BufferChannelDto[] }>(`${BASE}/channels`);
+    return (res.data ?? []).map(channelToProfile);
   },
 
-  /**
-   * Get a specific profile by ID
-   */
-  async getById(profileId: string): Promise<APIResponse<SocialProfile>> {
-    return get<SocialProfile>(`${SOCIAL_MEDIA_BASE}/profiles/${profileId}`);
-  },
-
-  /**
-   * Connect a new social media platform
-   */
-  async connect(data: ConnectProfileRequest): Promise<APIResponse<SocialProfile>> {
-    return post<SocialProfile>(`${SOCIAL_MEDIA_BASE}/profiles/connect`, data);
-  },
-
-  /**
-   * Update profile information
-   */
-  async update(profileId: string, data: UpdateProfileRequest): Promise<APIResponse<SocialProfile>> {
-    return put<SocialProfile>(`${SOCIAL_MEDIA_BASE}/profiles/${profileId}`, data);
-  },
-
-  /**
-   * Disconnect a social media profile
-   */
-  async disconnect(profileId: string): Promise<APIResponse<void>> {
-    return post<void>(`${SOCIAL_MEDIA_BASE}/profiles/${profileId}/disconnect`);
-  },
-
-  /**
-   * Sync profile data from platform
-   */
-  async sync(profileId: string): Promise<APIResponse<SocialProfile>> {
-    return post<SocialProfile>(`${SOCIAL_MEDIA_BASE}/profiles/${profileId}/sync`);
-  },
-
-  /**
-   * Delete a profile
-   */
-  async delete(profileId: string): Promise<APIResponse<void>> {
-    return del<void>(`${SOCIAL_MEDIA_BASE}/profiles/${profileId}`);
+  /** Whether the Edge Function can reach Buffer, and for which account. */
+  async getStatus(): Promise<BufferStatus> {
+    const res = await api.get<{ success: boolean; data: BufferStatus }>(`${BASE}/status`);
+    return res.data;
   },
 };
-
-// ============================================================================
-// Posts API
-// ============================================================================

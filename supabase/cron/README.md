@@ -188,3 +188,26 @@ ANSWERED, so a rejected id shows as `gpt-4o` — the silent fallback is visible.
   and shows recent runs in `cron.job_run_details`, then confirm the Edge Function logs show
   `POST /client-document-summaries/maintenance/weekly-scan` returning 200. `cron.job_run_details`
   stays green even when the HTTP call fails — see `docs/runbooks/scheduled-jobs.md`.
+
+## Social Automation Cron Setup
+
+Use `supabase/cron/social-automation-jobs.sql` to create the two hourly jobs that support the
+routine-driven weekly social pipeline (`docs/runbooks/social-automation.md`).
+
+- `social-automation-render-images`
+  - Runs hourly at :15.
+  - Renders a DALL-E 3 image into the public `make-91ed8379-social-assets` bucket for every
+    asset the generation routine wrote with an `image_brief` (`image_status = 'pending'`), up
+    to 12 per run. An idle run costs one HTTP call and no model call.
+- `social-automation-sync-buffer`
+  - Runs hourly at :40.
+  - Mirrors Buffer's status onto the assets the scheduling routine created there: `sent`
+    becomes `published`, `error` becomes `failed` with Buffer's message.
+- Before you run it, replace `__SUPABASE_ANON_KEY__` with the project anon key. No new secret
+  is needed: the jobs authenticate with the shared `x-nw-cron-auth` token provisioned in Vault
+  by migration `20260825085409_cron_auth_vault_token.sql`.
+- Both endpoints default to `dryRun: true`; the jobs send `"dryRun": false` explicitly. To
+  rehearse from a shell, `curl -X POST .../social-assets/jobs/render-images -d '{}'` with the
+  service-role bearer reports what would be rendered without spending.
+- Run it only AFTER the Edge Function that carries `/social-assets` is deployed, and verify the
+  same way as the other jobs: query A and query C in `docs/runbooks/scheduled-jobs.md`.

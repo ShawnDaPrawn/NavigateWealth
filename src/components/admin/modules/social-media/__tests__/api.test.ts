@@ -1,610 +1,206 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  profilesApi,
-  postsApi,
-  campaignsApi,
-  analyticsApi,
-  socialMediaAIApi,
-  linkedinApi,
-} from '../api';
+/**
+ * Social media API slices — contract with the Edge Function.
+ *
+ * The slices sit on the shared `api` client (Guidelines §20.3), so what is
+ * pinned here is the endpoint each call hits, the query it builds, and the
+ * shape it returns after mapping Buffer's vocabulary into the app's.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../../utils/supabase/info', () => ({
-  projectId: 'test-project',
-  publicAnonKey: 'test-anon-key',
+const client = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
 }));
 
-vi.mock('../../../../../utils/supabase/client', () => ({
-  createClient: () => ({
-    auth: {
-      getSession: async () => ({ data: { session: null } }),
-    },
-  }),
-}));
+vi.mock('../../../../../utils/api', () => ({ api: client }));
 
-vi.mock('../../../../../utils/logger', () => ({
-  logger: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+import { analyticsApi, postsApi, profilesApi, socialAssetsApi } from '../api';
 
-vi.mock('../../../../../utils/errorUtils', () => ({
-  getErrorMessage: (err: unknown) => (err instanceof Error ? err.message : 'Network error'),
-}));
+const channel = {
+  id: '6aa09ad0cd8b9c702c32ab6a',
+  name: 'navigatewealth',
+  displayName: 'Navigate Wealth',
+  service: 'linkedin',
+  type: 'page',
+  avatar: 'https://a/b.png',
+  isDisconnected: false,
+  isLocked: false,
+  timezone: 'Africa/Johannesburg',
+  externalLink: 'https://www.linkedin.com/company/1',
+  postingSchedule: [{ day: 'mon', times: ['07:30'], paused: false }],
+  platform: 'linkedin' as const,
+  isConnected: true,
+};
 
-function mockFetchOk(data: unknown) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      json: () => Promise.resolve({ data }),
-      blob: () => Promise.resolve(new Blob()),
-    }),
-  );
-}
-
-function mockFetchError(status = 500, errorMessage = 'Internal Server Error') {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({
-      ok: false,
-      status,
-      statusText: errorMessage,
-      json: () => Promise.resolve({ error: errorMessage }),
-    }),
-  );
-}
-
-function mockFetchThrows() {
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')));
-}
+const post = {
+  id: '6aa09ad0cd8b9c702c32ab6b',
+  channelId: channel.id,
+  channelService: 'twitter',
+  text: 'Hello',
+  status: 'sent',
+  dueAt: '2026-09-15T05:30:00.000Z',
+  sentAt: '2026-09-15T05:31:00.000Z',
+  externalLink: 'https://x.com/p/1',
+  via: 'api',
+  schedulingType: 'automatic',
+  createdAt: '2026-09-13T10:00:00.000Z',
+  updatedAt: '2026-09-15T05:31:00.000Z',
+  error: null,
+  assets: [{ type: 'image', source: 'https://cdn/a.png', thumbnail: 'https://cdn/a-thumb.png' }],
+  tags: [{ id: 't', name: 'nw-auto' }],
+  platform: 'x' as const,
+  appStatus: 'published' as const,
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-const MOCK_PROFILE = {
-  id: 'profile-001',
-  platform: 'linkedin',
-  name: 'Navigate Wealth Official',
-  active: true,
-};
-
-const MOCK_POST = {
-  id: 'post-001',
-  body: 'Check out our latest article!',
-  status: 'draft',
-  profiles: ['profile-001'],
-};
-
-const MOCK_CAMPAIGN = {
-  id: 'camp-001',
-  name: 'Q1 Campaign',
-  status: 'active',
-};
-
-describe('profilesApi', () => {
-  it('getAll returns profiles on success', async () => {
-    mockFetchOk([MOCK_PROFILE]);
-    const result = await profilesApi.getAll();
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual([MOCK_PROFILE]);
-  });
-
-  it('getAll returns error response on HTTP failure', async () => {
-    mockFetchError(403, 'Forbidden');
-    const result = await profilesApi.getAll();
-    expect(result.success).toBe(false);
-    expect(result.error).toBeTruthy();
-  });
-
-  it('getAll returns error response on network failure', async () => {
-    mockFetchThrows();
-    const result = await profilesApi.getAll();
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('Network failure');
-  });
-
-  it('getById returns profile by ID', async () => {
-    mockFetchOk(MOCK_PROFILE);
-    const result = await profilesApi.getById('profile-001');
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(MOCK_PROFILE);
-  });
-
-  it('connect posts to connect endpoint', async () => {
-    mockFetchOk(MOCK_PROFILE);
-    const result = await profilesApi.connect({ platform: 'linkedin', accessToken: 'token-xyz' });
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('profiles/connect');
-    expect(fetchCall[1]?.method).toBe('POST');
-  });
-
-  it('update calls put on profile endpoint', async () => {
-    mockFetchOk(MOCK_PROFILE);
-    const result = await profilesApi.update('profile-001', { name: 'Updated Name' });
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[1]?.method).toBe('PUT');
-  });
-
-  it('disconnect posts to disconnect endpoint', async () => {
-    mockFetchOk(null);
-    const result = await profilesApi.disconnect('profile-001');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('disconnect');
-  });
-
-  it('sync posts to sync endpoint', async () => {
-    mockFetchOk(MOCK_PROFILE);
-    const result = await profilesApi.sync('profile-001');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('sync');
-  });
-
-  it('delete calls DELETE on profile endpoint', async () => {
-    mockFetchOk(null);
-    const result = await profilesApi.delete('profile-001');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[1]?.method).toBe('DELETE');
-  });
-});
-
-describe('postsApi', () => {
-  it('getAll returns posts', async () => {
-    mockFetchOk([MOCK_POST]);
-    const result = await postsApi.getAll();
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual([MOCK_POST]);
-  });
-
-  it('getAll with status filter adds status query params', async () => {
-    mockFetchOk([MOCK_POST]);
-    await postsApi.getAll({ status: 'draft' });
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('status=draft');
-  });
-
-  it('getAll with multiple statuses appends each', async () => {
-    mockFetchOk([MOCK_POST]);
-    await postsApi.getAll({ status: ['draft', 'scheduled'] });
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('status=draft');
-    expect(fetchCall[0]).toContain('status=scheduled');
-  });
-
-  it('getAll with profiles and campaign adds query params', async () => {
-    mockFetchOk([]);
-    await postsApi.getAll({ profiles: ['profile-001'], campaign: 'camp-1', tags: ['tag1'] });
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('profile=profile-001');
-    expect(fetchCall[0]).toContain('campaign=camp-1');
-    expect(fetchCall[0]).toContain('tag=tag1');
-  });
-
-  it('getById returns post by ID', async () => {
-    mockFetchOk(MOCK_POST);
-    const result = await postsApi.getById('post-001');
-    expect(result.data).toEqual(MOCK_POST);
-  });
-
-  it('create posts to posts endpoint', async () => {
-    mockFetchOk(MOCK_POST);
-    const result = await postsApi.create({
-      profiles: ['profile-001'],
-      body: 'Hello world!',
+describe('profilesApi (Buffer channels)', () => {
+  it('maps channels to profiles', async () => {
+    client.get.mockResolvedValue({ success: true, data: [channel] });
+    const profiles = await profilesApi.getAll();
+    expect(client.get).toHaveBeenCalledWith('/social-marketing/channels');
+    expect(profiles[0]).toMatchObject({
+      id: channel.id,
+      platform: 'linkedin',
+      name: 'Navigate Wealth',
+      username: 'navigatewealth',
+      isConnected: true,
+      accountType: 'organization',
+      service: 'linkedin',
+      externalLink: channel.externalLink,
     });
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[1]?.method).toBe('POST');
   });
 
-  it('update calls put on post endpoint', async () => {
-    mockFetchOk(MOCK_POST);
-    const result = await postsApi.update('post-001', { body: 'Updated content' });
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('post-001');
-    expect(fetchCall[1]?.method).toBe('PUT');
-  });
-
-  it('delete calls DELETE on post endpoint', async () => {
-    mockFetchOk(null);
-    const result = await postsApi.delete('post-001');
-    expect(result.success).toBe(true);
-  });
-
-  it('schedule posts scheduledAt to schedule endpoint', async () => {
-    mockFetchOk(MOCK_POST);
-    const scheduledAt = new Date('2025-12-01T09:00:00Z');
-    await postsApi.schedule('post-001', scheduledAt);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('schedule');
-  });
-
-  it('publish posts to publish endpoint', async () => {
-    mockFetchOk({ ...MOCK_POST, status: 'published' });
-    await postsApi.publish('post-001');
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('publish');
-  });
-
-  it('duplicate posts to duplicate endpoint', async () => {
-    mockFetchOk({ ...MOCK_POST, id: 'post-002' });
-    const result = await postsApi.duplicate('post-001');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('duplicate');
-  });
-
-  it('cancelSchedule posts to cancel-schedule endpoint', async () => {
-    mockFetchOk(MOCK_POST);
-    await postsApi.cancelSchedule('post-001');
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('cancel-schedule');
-  });
-
-  it('getByDateRange delegates to getAll with date params', async () => {
-    mockFetchOk([MOCK_POST]);
-    const start = new Date('2025-01-01');
-    const end = new Date('2025-01-31');
-    const result = await postsApi.getByDateRange(start, end);
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('startDate=');
-    expect(fetchCall[0]).toContain('endDate=');
-  });
-
-  it('getAnalytics returns post analytics', async () => {
-    const analytics = { impressions: 500, clicks: 50, engagements: 25 };
-    mockFetchOk(analytics);
-    const result = await postsApi.getAnalytics('post-001');
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(analytics);
+  it('reads Buffer status', async () => {
+    client.get.mockResolvedValue({ success: true, data: { configured: false } });
+    expect(await profilesApi.getStatus()).toEqual({ configured: false });
+    expect(client.get).toHaveBeenCalledWith('/social-marketing/status');
   });
 });
 
-describe('campaignsApi', () => {
-  it('getAll returns campaigns list', async () => {
-    mockFetchOk([MOCK_CAMPAIGN]);
-    const result = await campaignsApi.getAll();
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual([MOCK_CAMPAIGN]);
-  });
-
-  it('getById returns campaign', async () => {
-    mockFetchOk(MOCK_CAMPAIGN);
-    const result = await campaignsApi.getById('camp-001');
-    expect(result.data).toEqual(MOCK_CAMPAIGN);
-  });
-
-  it('create posts new campaign', async () => {
-    mockFetchOk(MOCK_CAMPAIGN);
-    const result = await campaignsApi.create({
-      name: 'New Campaign',
-      startDate: new Date('2025-01-01'),
+describe('postsApi (Buffer posts)', () => {
+  it('builds the window query and maps posts', async () => {
+    client.get.mockResolvedValue({ success: true, data: [post] });
+    const posts = await postsApi.getByDateRange(
+      new Date('2026-09-14T00:00:00.000Z'),
+      new Date('2026-09-21T00:00:00.000Z'),
+    );
+    expect(client.get).toHaveBeenCalledWith(
+      '/social-marketing/posts?from=2026-09-14T00%3A00%3A00.000Z&to=2026-09-21T00%3A00%3A00.000Z',
+    );
+    expect(posts[0]).toMatchObject({
+      id: post.id,
+      profiles: [channel.id],
+      channelId: channel.id,
+      platform: 'x',
+      body: 'Hello',
+      status: 'published',
+      bufferStatus: 'sent',
+      externalLink: 'https://x.com/p/1',
+      tags: ['nw-auto'],
     });
-    expect(result.success).toBe(true);
+    expect(posts[0].scheduledAt?.toISOString()).toBe('2026-09-15T05:30:00.000Z');
+    expect(posts[0].publishedAt?.toISOString()).toBe('2026-09-15T05:31:00.000Z');
+    expect(posts[0].media).toEqual([
+      {
+        id: 'https://cdn/a.png#0',
+        url: 'https://cdn/a.png',
+        type: 'image',
+        filename: 'a.png',
+        size: 0,
+      },
+    ]);
   });
 
-  it('update calls put on campaign endpoint', async () => {
-    mockFetchOk(MOCK_CAMPAIGN);
-    await campaignsApi.update('camp-001', { name: 'Updated Campaign' });
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[1]?.method).toBe('PUT');
+  it('applies a client-side status filter and hits the bare endpoint without a window', async () => {
+    client.get.mockResolvedValue({
+      success: true,
+      data: [post, { ...post, id: 'x2', status: 'scheduled', appStatus: 'scheduled' }],
+    });
+    const scheduled = await postsApi.getAll({ status: 'scheduled' });
+    expect(client.get).toHaveBeenCalledWith('/social-marketing/posts');
+    expect(scheduled.map((p) => p.id)).toEqual(['x2']);
   });
 
-  it('delete calls DELETE on campaign endpoint', async () => {
-    mockFetchOk(null);
-    const result = await campaignsApi.delete('camp-001');
-    expect(result.success).toBe(true);
-  });
+  it('creates and deletes through the Edge Function', async () => {
+    client.post.mockResolvedValue({
+      success: true,
+      data: { created: [{ channelId: channel.id }], failed: [] },
+    });
+    const result = await postsApi.create({ channelIds: [channel.id], text: 'hi', mode: 'queue' });
+    expect(client.post).toHaveBeenCalledWith('/social-marketing/posts', {
+      channelIds: [channel.id],
+      text: 'hi',
+      mode: 'queue',
+    });
+    expect(result.created).toHaveLength(1);
 
-  it('getPosts returns posts associated with campaign', async () => {
-    mockFetchOk([MOCK_POST]);
-    const result = await campaignsApi.getPosts('camp-001');
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual([MOCK_POST]);
-  });
-
-  it('getAnalytics returns campaign analytics', async () => {
-    const analytics = {
-      totalImpressions: 1000,
-      totalClicks: 100,
-      totalEngagement: 50,
-      averageCTR: 10,
-      averageEngagementRate: 5,
-      postsByPlatform: {},
-      engagementByPlatform: {},
-    };
-    mockFetchOk(analytics);
-    const result = await campaignsApi.getAnalytics('camp-001');
-    expect(result.data).toEqual(analytics);
-  });
-
-  it('addPosts posts postIds to campaign', async () => {
-    mockFetchOk(MOCK_CAMPAIGN);
-    await campaignsApi.addPosts('camp-001', ['post-001', 'post-002']);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('posts');
-    expect(fetchCall[1]?.method).toBe('POST');
-  });
-
-  it('removePosts calls DELETE with ids query', async () => {
-    mockFetchOk(MOCK_CAMPAIGN);
-    await campaignsApi.removePosts('camp-001', ['post-001']);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('post-001');
-    expect(fetchCall[1]?.method).toBe('DELETE');
+    client.delete.mockResolvedValue({ success: true });
+    await postsApi.delete(post.id);
+    expect(client.delete).toHaveBeenCalledWith(`/social-marketing/posts/${post.id}`);
   });
 });
 
 describe('analyticsApi', () => {
-  it('getOverview returns analytics overview', async () => {
-    const overview = {
-      totalImpressions: 5000,
-      totalClicks: 500,
-      totalEngagement: 250,
-      averageCTR: 10,
-      averageEngagementRate: 5,
-      postsByPlatform: {},
-      engagementByPlatform: {},
-    };
-    mockFetchOk(overview);
-    const result = await analyticsApi.getOverview();
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(overview);
+  it('reads the aggregated summary for a window', async () => {
+    client.get.mockResolvedValue({ success: true, data: { totals: { impressions: 5 } } });
+    const summary = await analyticsApi.getSummary(7);
+    expect(client.get).toHaveBeenCalledWith('/social-marketing/analytics?days=7');
+    expect(summary.totals.impressions).toBe(5);
   });
+});
 
-  it('getOverview with filters adds query params', async () => {
-    mockFetchOk({});
-    await analyticsApi.getOverview({
-      profiles: ['profile-001'],
-      campaign: 'camp-1',
-      startDate: new Date('2025-01-01'),
-      endDate: new Date('2025-01-31'),
+describe('socialAssetsApi', () => {
+  it('lists batches, reads one, and filters assets', async () => {
+    client.get.mockResolvedValueOnce({ success: true, batches: [{ week_key: '2026-W38' }] });
+    expect(await socialAssetsApi.listBatches(3)).toEqual([{ week_key: '2026-W38' }]);
+    expect(client.get).toHaveBeenLastCalledWith('/social-assets/batches?limit=3');
+
+    client.get.mockResolvedValueOnce({ success: true, batch: { id: 'b' }, assets: [{ id: 'a' }] });
+    expect(await socialAssetsApi.getBatch('2026-W38')).toEqual({
+      batch: { id: 'b' },
+      assets: [{ id: 'a' }],
     });
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('profile=profile-001');
-    expect(fetchCall[0]).toContain('campaign=camp-1');
-  });
+    expect(client.get).toHaveBeenLastCalledWith('/social-assets/batches/2026-W38');
 
-  it('getByPlatform adds platform param', async () => {
-    mockFetchOk({});
-    await analyticsApi.getByPlatform('linkedin');
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('platform=linkedin');
-  });
-
-  it('getTopPosts calls analytics/top-posts endpoint', async () => {
-    mockFetchOk([MOCK_POST]);
-    await analyticsApi.getTopPosts(5);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('top-posts');
-    expect(fetchCall[0]).toContain('limit=5');
-  });
-
-  it('export returns blob on success', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        blob: () => Promise.resolve(new Blob(['csv,data'])),
-      }),
+    client.get.mockResolvedValueOnce({ success: true, assets: [] });
+    await socialAssetsApi.listAssets({
+      week: '2026-W38',
+      channel: 'x',
+      state: 'generated',
+      limit: 5,
+    });
+    expect(client.get).toHaveBeenLastCalledWith(
+      '/social-assets/assets?week=2026-W38&channel=x&state=generated&limit=5',
     );
-    const result = await analyticsApi.export();
-    expect(result.success).toBe(true);
-    expect(result.data).toBeInstanceOf(Blob);
   });
 
-  it('export returns error on HTTP failure', async () => {
-    mockFetchError(500, 'Export Error');
-    const result = await analyticsApi.export();
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Export failed');
-  });
+  it('updates an asset, settings and a playbook; runs a live job', async () => {
+    client.patch.mockResolvedValue({ success: true, asset: { id: 'a', state: 'rejected' } });
+    expect(await socialAssetsApi.updateAsset('a', { state: 'rejected' })).toMatchObject({
+      state: 'rejected',
+    });
+    expect(client.patch).toHaveBeenCalledWith('/social-assets/assets/a', { state: 'rejected' });
 
-  it('export returns error on network failure', async () => {
-    mockFetchThrows();
-    const result = await analyticsApi.export();
-    expect(result.success).toBe(false);
-  });
-});
+    client.put.mockResolvedValueOnce({ success: true, settings: { enabled: false } });
+    expect(await socialAssetsApi.updateSettings({ enabled: false })).toEqual({ enabled: false });
+    expect(client.put).toHaveBeenLastCalledWith('/social-assets/settings', { enabled: false });
 
-describe('socialMediaAIApi', () => {
-  it('generatePostText posts to generate-post endpoint', async () => {
-    const generated = { text: 'Exciting news about financial planning!', platform: 'linkedin' };
-    mockFetchOk(generated);
-    const result = await socialMediaAIApi.generatePostText({
-      topic: 'Financial planning',
-      platform: 'linkedin',
-    } as never);
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('generate-post');
-  });
+    client.put.mockResolvedValueOnce({ success: true, playbook: { id: 'generate', version: 2 } });
+    await socialAssetsApi.updatePlaybook('generate', { instructions: 'x' });
+    expect(client.put).toHaveBeenLastCalledWith('/social-assets/playbooks/generate', {
+      instructions: 'x',
+    });
 
-  it('generatePostText returns error on failure', async () => {
-    mockFetchThrows();
-    const result = await socialMediaAIApi.generatePostText({ topic: 'Test' } as never);
-    expect(result.success).toBe(false);
-  });
-
-  it('getHistory fetches AI generation history', async () => {
-    const history = [{ id: 'gen-001', topic: 'Test', generatedAt: '2025-01-01' }];
-    mockFetchOk(history);
-    const result = await socialMediaAIApi.getHistory(20);
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('limit=20');
-  });
-
-  it('getHistory returns error on failure', async () => {
-    mockFetchThrows();
-    const result = await socialMediaAIApi.getHistory();
-    expect(result.success).toBe(false);
-  });
-
-  it('getStatus checks AI service configuration', async () => {
-    mockFetchOk({ configured: true });
-    const result = await socialMediaAIApi.getStatus();
-    expect(result.success).toBe(true);
-    expect(result.data?.configured).toBe(true);
-  });
-
-  it('generateImage posts to generate-image endpoint', async () => {
-    const imageResult = { imageUrl: 'https://example.com/img.png', prompt: 'Financial chart' };
-    mockFetchOk(imageResult);
-    const result = await socialMediaAIApi.generateImage({ prompt: 'Financial chart' } as never);
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('generate-image');
-  });
-
-  it('generateImage returns error on failure', async () => {
-    mockFetchThrows();
-    const result = await socialMediaAIApi.generateImage({ prompt: 'Test' } as never);
-    expect(result.success).toBe(false);
-  });
-
-  it('generateBundle posts to generate-bundle endpoint', async () => {
-    mockFetchOk({ posts: [] });
-    const result = await socialMediaAIApi.generateBundle({ topic: 'Tax season' } as never);
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('generate-bundle');
-  });
-
-  it('getAllCustomTemplates fetches all templates', async () => {
-    const templates = [{ id: 't1', name: 'Brand Template' }];
-    mockFetchOk(templates);
-    const result = await socialMediaAIApi.getAllCustomTemplates();
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('templates');
-  });
-
-  it('createCustomTemplate posts template to endpoint', async () => {
-    const template = { id: 't1', name: 'New Brand Template' };
-    mockFetchOk(template);
-    const result = await socialMediaAIApi.createCustomTemplate({
-      name: 'New Brand Template',
-    } as never);
-    expect(result.success).toBe(true);
-  });
-
-  it('updateCustomTemplate puts to template endpoint', async () => {
-    const template = { id: 't1', name: 'Updated' };
-    mockFetchOk(template);
-    await socialMediaAIApi.updateCustomTemplate('t1', { name: 'Updated' } as never);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('t1');
-    expect(fetchCall[1]?.method).toBe('PUT');
-  });
-
-  it('deleteCustomTemplate calls DELETE on template endpoint', async () => {
-    mockFetchOk(null);
-    const result = await socialMediaAIApi.deleteCustomTemplate('t1');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[1]?.method).toBe('DELETE');
-  });
-
-  it('getAIAnalyticsSummary fetches analytics', async () => {
-    const summary = { totalGenerations: 100, successRate: 0.95 };
-    mockFetchOk(summary);
-    const result = await socialMediaAIApi.getAIAnalyticsSummary();
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('analytics');
-  });
-});
-
-describe('linkedinApi', () => {
-  it('getAuthUrl fetches OAuth auth URL', async () => {
-    mockFetchOk({ authUrl: 'https://linkedin.com/oauth?...' });
-    const result = await linkedinApi.getAuthUrl('https://myapp.com/callback');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('auth-url');
-    expect(fetchCall[0]).toContain('redirectUri=');
-  });
-
-  it('getAuthUrl returns error on failure', async () => {
-    mockFetchThrows();
-    const result = await linkedinApi.getAuthUrl('https://myapp.com/callback');
-    expect(result.success).toBe(false);
-  });
-
-  it('handleCallback posts code and state', async () => {
-    const status = { connected: true, personUrn: 'urn:li:person:abc' };
-    mockFetchOk(status);
-    const result = await linkedinApi.handleCallback(
-      'code-123',
-      'state-456',
-      'https://callback.url',
-    );
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('callback');
-    expect(fetchCall[1]?.method).toBe('POST');
-  });
-
-  it('getStatus checks LinkedIn connection', async () => {
-    const status = { connected: false };
-    mockFetchOk(status);
-    const result = await linkedinApi.getStatus();
-    expect(result.success).toBe(true);
-  });
-
-  it('disconnect posts to disconnect endpoint', async () => {
-    mockFetchOk(null);
-    await linkedinApi.disconnect();
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('disconnect');
-    expect(fetchCall[1]?.method).toBe('POST');
-  });
-
-  it('shareText posts to share/text endpoint', async () => {
-    mockFetchOk({ postId: 'li-post-001' });
-    const result = await linkedinApi.shareText('Check out our article!');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('share/text');
-  });
-
-  it('shareText returns error on failure', async () => {
-    mockFetchThrows();
-    const result = await linkedinApi.shareText('Hello!');
-    expect(result.success).toBe(false);
-  });
-
-  it('shareArticle posts to share/article endpoint', async () => {
-    mockFetchOk({ postId: 'li-art-001' });
-    const result = await linkedinApi.shareArticle('Article text', 'https://article.url', 'Title');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('share/article');
-  });
-
-  it('shareImage posts to share/image endpoint', async () => {
-    mockFetchOk({ postId: 'li-img-001' });
-    const result = await linkedinApi.shareImage('Image caption', 'https://image.url/img.jpg');
-    expect(result.success).toBe(true);
-    const fetchCall = (vi.mocked(fetch) as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toContain('share/image');
+    client.post.mockResolvedValue({ success: true, report: { rendered: 1 } });
+    expect(await socialAssetsApi.runJob('render-images')).toEqual({ rendered: 1 });
+    expect(client.post).toHaveBeenCalledWith('/social-assets/jobs/render-images', {
+      dryRun: false,
+    });
   });
 });

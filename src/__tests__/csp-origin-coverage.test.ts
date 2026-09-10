@@ -81,6 +81,7 @@ const NOT_FETCHED: Record<string, string> = {
   'twitter.com': 'social profile link (<a href>)',
   'x.com': 'social profile link (<a href>)',
   'wa.me': 'WhatsApp click-to-chat link (<a href>)',
+  'publish.buffer.com': 'Buffer dashboard link from the Channels panel (<a href>)',
   'maps.google.com': 'directions link (<a href>)',
   'youtube.com': 'bare form in a text placeholder and profile links, not an embed',
   'supabase.com': 'documentation link in a code comment/admin help text',
