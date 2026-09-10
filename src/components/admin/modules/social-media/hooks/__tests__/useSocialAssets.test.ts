@@ -113,9 +113,10 @@ describe('useSocialAssets hooks', () => {
         checked: 4,
         published: 1,
         failed: 1,
-        unchanged: 2,
+        removed: 1,
+        unchanged: 1,
         errors: [],
       }),
-    ).toBe('Buffer sync: 1 published, 1 failed, 2 unchanged (of 4 checked)');
+    ).toBe('Buffer sync: 1 published, 1 failed, 1 removed in Buffer, 1 unchanged (of 4 checked)');
   });
 });

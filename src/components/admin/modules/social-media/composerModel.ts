@@ -29,9 +29,29 @@ export function countForPlatform(text: string, platform: SocialPlatform): number
   return withoutLinks.length + links.length * X_LINK_LENGTH;
 }
 
-export function isOverLimit(text: string, platforms: SocialPlatform[]): boolean {
+/**
+ * The text Buffer will actually receive for a platform. X has no link card, so
+ * the server appends the link to the body when it is not already in it — the
+ * limit check and the counter must see that appended text, not just the body.
+ */
+export function effectiveTextFor(
+  draft: Pick<ComposeDraft, 'text' | 'linkUrl'>,
+  platform: SocialPlatform,
+): string {
+  const link = draft.linkUrl.trim();
+  if (platform === 'x' && link && !draft.text.includes(link)) {
+    return `${draft.text.trim()}\n${link}`;
+  }
+  return draft.text;
+}
+
+export function isOverLimit(
+  draft: Pick<ComposeDraft, 'text' | 'linkUrl'>,
+  platforms: SocialPlatform[],
+): boolean {
   return platforms.some(
-    (p) => countForPlatform(text, p) > (PLATFORM_LIMITS[p]?.maxCharacters ?? 280),
+    (p) =>
+      countForPlatform(effectiveTextFor(draft, p), p) > (PLATFORM_LIMITS[p]?.maxCharacters ?? 280),
   );
 }
 
@@ -97,7 +117,7 @@ export function composeBlocker(draft: ComposeDraft, profiles: SocialProfile[]): 
   if (draft.channelIds.length === 0) return 'Choose at least one channel.';
   if (!draft.text.trim()) return 'Write the post text.';
   const platforms = profiles.filter((p) => draft.channelIds.includes(p.id)).map((p) => p.platform);
-  if (isOverLimit(draft.text, platforms)) return 'The text is too long for a selected channel.';
+  if (isOverLimit(draft, platforms)) return 'The text is too long for a selected channel.';
   const needsImage =
     platforms.includes('instagram') && !draft.media.some((m) => m.type === 'image');
   if (needsImage) return 'Instagram posts need an image.';

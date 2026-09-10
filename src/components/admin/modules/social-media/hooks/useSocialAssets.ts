@@ -118,7 +118,7 @@ export function describeJobReport(
     return `Images: ${r.rendered} rendered, ${r.failed} failed, ${r.skipped} skipped (of ${r.scanned} pending)`;
   }
   const r = report as SyncBufferReport;
-  return `Buffer sync: ${r.published} published, ${r.failed} failed, ${r.unchanged} unchanged (of ${r.checked} checked)`;
+  return `Buffer sync: ${r.published} published, ${r.failed} failed, ${r.removed} removed in Buffer, ${r.unchanged} unchanged (of ${r.checked} checked)`;
 }
 
 export function useRunSocialJob() {

@@ -47,8 +47,9 @@ import {
 } from '../../../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import type { PostStatus, SocialPlatform, SocialPost, SocialProfile } from './types';
+import { startOfWeek, type CalendarViewMode } from './calendarModel';
 
-export type CalendarViewMode = 'month' | 'week' | 'day';
+export type { CalendarViewMode };
 
 interface PostCalendarProps {
   posts: SocialPost[];
@@ -94,15 +95,6 @@ const STATUS_LABELS: Record<PostStatus, string> = {
 };
 
 const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-
-/** Monday of the week containing `date`, without mutating the input. */
-function startOfWeek(date: Date): Date {
-  const copy = new Date(date);
-  const day = copy.getDay();
-  copy.setDate(copy.getDate() - day + (day === 0 ? -6 : 1));
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
 
 const postDate = (post: SocialPost) => post.scheduledAt ?? post.publishedAt;
 const timeLabel = (date?: Date) =>

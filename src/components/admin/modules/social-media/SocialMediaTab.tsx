@@ -14,7 +14,7 @@
  * @module social-media/SocialMediaTab
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Calendar,
@@ -35,6 +35,7 @@ import { AssetsTab } from './assets/AssetsTab';
 import { postingWeekKey } from './assets/assetsModel';
 import { ChannelsPanel } from './ChannelsPanel';
 import { PostCalendar, type CalendarViewMode } from './PostCalendar';
+import { covers, unionRange, visibleWindow } from './calendarModel';
 import { PostComposer } from './PostComposer';
 import { AIAnalyticsDashboard } from './components/AIAnalyticsDashboard';
 import { AIArticleRepurposer } from './components/AIArticleRepurposer';
@@ -45,7 +46,7 @@ import { AIGenerationHistory } from './components/AIGenerationHistory';
 import { AIImageGenerator } from './components/AIImageGenerator';
 import { useSocialAnalytics } from './hooks/useSocialAnalytics';
 import { useSocialBatches } from './hooks/useSocialAssets';
-import { useSocialPosts } from './hooks/useSocialPosts';
+import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
 import { useSocialProfiles } from './hooks/useSocialProfiles';
 import type { ComposeRequest, MediaFile, SocialAIPlatform } from './types';
 
@@ -97,7 +98,17 @@ export function SocialMediaTab() {
   const [composerInitialHashtags, setComposerInitialHashtags] = useState<string[] | undefined>();
 
   const { profiles } = useSocialProfiles();
-  const { posts, createPost, isCreating, deletePost, getPostsByStatus } = useSocialPosts();
+  const { posts, range, setRange, createPost, isCreating, deletePost, getPostsByStatus } =
+    useSocialPosts();
+
+  // The query window follows the calendar: whatever month/week/day is on screen is
+  // unioned into the fetched range, so navigating past the default window still
+  // shows Buffer's posts there. The range only grows, so this cannot loop.
+  useEffect(() => {
+    const visible = visibleWindow(selectedDate, viewMode);
+    if (!covers(range, visible)) setRange(unionRange(range, visible));
+  }, [selectedDate, viewMode, range, setRange]);
+  const defaultRange = useMemo(() => defaultPostRange(), []);
   const batchesQuery = useSocialBatches(16);
   const analytics = useSocialAnalytics(30);
 
@@ -107,7 +118,17 @@ export function SocialMediaTab() {
     ? Object.values(postingBatch.asset_counts).reduce((sum, n) => sum + n, 0)
     : 0;
 
-  const scheduledPosts = useMemo(() => getPostsByStatus('scheduled'), [getPostsByStatus]);
+  // "Queued in Buffer" counts the default window (two weeks back, nine ahead) so the
+  // number does not change as the calendar is navigated further out.
+  const scheduledPosts = useMemo(
+    () =>
+      getPostsByStatus('scheduled').filter(
+        (p) =>
+          !p.scheduledAt ||
+          (p.scheduledAt >= defaultRange.start && p.scheduledAt <= defaultRange.end),
+      ),
+    [getPostsByStatus, defaultRange],
+  );
   const nextScheduled = useMemo(
     () =>
       scheduledPosts

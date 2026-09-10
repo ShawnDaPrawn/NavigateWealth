@@ -6,8 +6,17 @@ vi.mock('../hooks/useSocialProfiles', () => ({
   useBufferStatus: () => ({ data: { configured: true } }),
 }));
 vi.mock('../hooks/useSocialPosts', () => ({
+  defaultPostRange: () => ({
+    start: new Date(Date.now() - 14 * 86_400_000),
+    end: new Date(Date.now() + 63 * 86_400_000),
+  }),
   useSocialPosts: () => ({
     posts: [],
+    range: {
+      start: new Date(Date.now() - 14 * 86_400_000),
+      end: new Date(Date.now() + 63 * 86_400_000),
+    },
+    setRange: vi.fn(),
     createPost: vi.fn(),
     isCreating: false,
     deletePost: vi.fn(),

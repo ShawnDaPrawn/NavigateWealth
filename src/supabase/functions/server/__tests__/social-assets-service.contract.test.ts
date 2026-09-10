@@ -121,6 +121,7 @@ import {
   updateAsset,
   updatePlaybook,
 } from '../social-assets-service.ts';
+import { APIError } from '../error.middleware.ts';
 
 function asset(overrides: Row): Row {
   return {
@@ -293,7 +294,7 @@ describe('syncBufferStatuses', () => {
     });
 
     const report = await syncBufferStatuses({ dryRun: false, maxPosts: 50 });
-    expect(report).toMatchObject({ checked: 4, published: 1, failed: 1, unchanged: 1 });
+    expect(report).toMatchObject({ checked: 4, published: 1, failed: 1, unchanged: 1, removed: 0 });
     expect(report.errors).toEqual([{ assetId: 's4', error: 'Buffer post not found' }]);
 
     const rows = db.tables.get('social_assets')!;
@@ -312,6 +313,52 @@ describe('syncBufferStatuses', () => {
       buffer_status: 'sending',
     });
     expect(rows.find((r) => r.id === 'g1')).toMatchObject({ state: 'generated' });
+  });
+
+  it('reconciles a post the operator deleted in Buffer instead of erroring every hour', async () => {
+    db.tables.set('social_assets', [
+      asset({
+        id: 'gone',
+        state: 'scheduled',
+        buffer_post_id: 'bp-gone',
+        buffer_status: 'scheduled',
+      }),
+      asset({
+        id: 'gql',
+        state: 'scheduled',
+        buffer_post_id: 'bp-gql',
+        buffer_status: 'scheduled',
+      }),
+      asset({
+        id: 'other',
+        state: 'scheduled',
+        buffer_post_id: 'bp-other',
+        buffer_status: 'scheduled',
+      }),
+    ]);
+    buffer.getBufferPost.mockImplementation(async (id: string) => {
+      if (id === 'bp-gone')
+        throw new APIError('Buffer post not found', 404, 'BUFFER_POST_NOT_FOUND');
+      if (id === 'bp-gql')
+        throw new APIError('Buffer API error: Post not found', 502, 'BUFFER_GRAPHQL_ERROR');
+      throw new APIError('Buffer API error (HTTP 500)', 502, 'BUFFER_HTTP_ERROR');
+    });
+
+    const report = await syncBufferStatuses({ dryRun: false, maxPosts: 50 });
+    expect(report).toMatchObject({ checked: 3, removed: 2, published: 0, failed: 0 });
+    expect(report.errors).toEqual([{ assetId: 'other', error: 'Buffer API error (HTTP 500)' }]);
+
+    const rows = db.tables.get('social_assets')!;
+    expect(rows.find((r) => r.id === 'gone')).toMatchObject({
+      state: 'rejected',
+      buffer_status: 'deleted',
+      buffer_error: 'Deleted in Buffer',
+    });
+    expect(rows.find((r) => r.id === 'gql')).toMatchObject({
+      state: 'rejected',
+      buffer_status: 'deleted',
+    });
+    expect(rows.find((r) => r.id === 'other')).toMatchObject({ state: 'scheduled' });
   });
 
   it('dry run reads Buffer but writes nothing', async () => {

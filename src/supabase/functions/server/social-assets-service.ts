@@ -15,7 +15,7 @@
  */
 
 import { createModuleLogger } from './stderr-logger.ts';
-import { NotFoundError, ValidationError } from './error.middleware.ts';
+import { APIError, NotFoundError, ValidationError } from './error.middleware.ts';
 import { getSocialSupabase as getSupabase } from './social-assets-storage.ts';
 import { getBufferPost } from './buffer-service.ts';
 import { renderAssetImage } from './social-assets-images.ts';
@@ -373,6 +373,7 @@ export async function syncBufferStatuses(options: {
     published: 0,
     failed: 0,
     unchanged: 0,
+    removed: 0,
     errors: [],
   };
 
@@ -407,6 +408,29 @@ export async function syncBufferStatuses(options: {
         if (writeError) throw new Error(writeError.message);
       }
     } catch (syncError) {
+      if (isBufferPostGone(syncError)) {
+        // The operator deleted it directly in Buffer — the documented way to stop a
+        // post. Reconcile instead of retrying every hour: the asset leaves `scheduled`
+        // (shown as "Removed"; restorable from its card) so the Assets tab is truthful
+        // and the next scheduling run does not count a post that no longer exists.
+        if (!options.dryRun) {
+          const { error: writeError } = await supabase
+            .from(ASSETS)
+            .update({
+              state: 'rejected',
+              buffer_status: 'deleted',
+              buffer_error: 'Deleted in Buffer',
+            })
+            .eq('id', asset.id);
+          if (writeError) {
+            report.errors.push({ assetId: asset.id, error: writeError.message });
+            continue;
+          }
+        }
+        log.info('Asset reconciled: post deleted in Buffer', { assetId: asset.id });
+        report.removed += 1;
+        continue;
+      }
       const message = syncError instanceof Error ? syncError.message : String(syncError);
       log.warn('Buffer status sync failed for asset', { assetId: asset.id, error: message });
       report.errors.push({ assetId: asset.id, error: message });
@@ -414,4 +438,11 @@ export async function syncBufferStatuses(options: {
   }
 
   return report;
+}
+
+/** Buffer no longer has the post: our own 404, or Buffer's GraphQL "not found" error. */
+function isBufferPostGone(error: unknown): boolean {
+  if (!(error instanceof APIError)) return false;
+  if (error.code === 'BUFFER_POST_NOT_FOUND') return true;
+  return error.code === 'BUFFER_GRAPHQL_ERROR' && /not found/i.test(error.message);
 }

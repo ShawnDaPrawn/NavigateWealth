@@ -135,6 +135,7 @@ export interface SyncBufferReport {
   published: number;
   failed: number;
   unchanged: number;
+  removed: number;
   errors: Array<{ assetId: string; error: string }>;
 }
 

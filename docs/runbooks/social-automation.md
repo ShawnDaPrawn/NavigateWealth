@@ -47,10 +47,11 @@ Two hard facts shaped the design:
 | `social_recent_articles` (view)                                                                 | Published articles from the KV store with an absolute public URL and tag-stripped body text.                                                                                                                  |
 | `social_automation_week_status` (view)                                                          | Counts per week / channel / state.                                                                                                                                                                            |
 | `social_automation_is_enabled()`                                                                | The kill switch, as a boolean.                                                                                                                                                                                |
-| `social_automation_start_batch(week, from, to, agent)`                                          | Idempotent batch start; reports `existed` and per-channel counts.                                                                                                                                             |
+| `social_automation_start_batch(week, from, to, agent)`                                          | Idempotent batch start with claim semantics: `claimed` is true for the run that owns generation (a new batch, or a dead run resumed after 3 h of inactivity); reports `existed` and per-channel counts.       |
+| `social_automation_claim_batch(batch_id, agent)`                                                | Atomically claims a batch for scheduling (`generated`/`failed` → `selecting`); a second caller gets `claimed: false`. A `selecting` batch idle for 3 h can be re-claimed.                                     |
 | `social_automation_add_asset(batch_id, json, agent)`                                            | One asset from one JSON object; sets `image_status = 'pending'` when a brief is given.                                                                                                                        |
 | `social_automation_finish_generation(batch_id, brief, report)`                                  | Marks the batch generated.                                                                                                                                                                                    |
-| `social_automation_select_asset(asset_id, rank, rationale, slot, body?, first_comment?, agent)` | Records a pick and its slot; optional final copy.                                                                                                                                                             |
+| `social_automation_select_asset(asset_id, rank, rationale, slot, body?, first_comment?, agent)` | Records a pick and its slot; optional final copy. Refuses a pick that would exceed `posts_per_channel_per_week` for the channel.                                                                              |
 | `social_automation_mark_scheduled(asset_id, buffer_post_id, slot, agent)`                       | Records the Buffer post.                                                                                                                                                                                      |
 | `social_automation_mark_failed(asset_id, error, agent)`                                         | Records a failure.                                                                                                                                                                                            |
 | `social_automation_finish_selection(batch_id, report, agent)`                                   | Marks the batch scheduled (or failed if nothing was).                                                                                                                                                         |
@@ -104,9 +105,24 @@ enabled on the task. Identify as `chatgpt-routine`. Nothing in the contract is C
 
 ### Running both
 
-Safe. Every step is idempotent: a batch that already exists is reported, not recreated;
-scheduling skips a channel that already has its posts for the week (checked in both the
-database and Buffer); a second routine finds the first one's work and stops.
+Safe, because each half of the pipeline is **claimed atomically** before any external
+side effect:
+
+- Generation: `social_automation_start_batch` creates the week's batch, or reports
+  `claimed: false` when a run is already active on it (a `generating` batch with activity in
+  the last 3 hours) or the week is already generated. A generating batch with no activity for
+  3 hours is a dead run and is resumed — only the assets still missing per channel are created.
+- Scheduling: `social_automation_claim_batch` moves the batch `generated → selecting` for
+  exactly one caller; a second routine gets `claimed: false` and stops. A `selecting` batch
+  with no activity for 3 hours (a crashed run) can be re-claimed, and so can a `failed` one
+  (nothing was scheduled, e.g. Buffer was down).
+- Quotas: the routine schedules only `posts_per_channel_per_week` minus what is already
+  scheduled — counted in the database **and** in Buffer's queue for the week — and
+  `social_automation_select_asset` refuses a pick that would exceed the quota, so a retry after
+  a crash cannot publish a third post for a channel configured for two.
+- A post the operator deletes directly in Buffer is reconciled by the hourly sync: the asset
+  moves to `rejected` (shown as "Removed") with `buffer_status = 'deleted'`, so the Assets tab
+  stays truthful and the next scheduling run counts it correctly.
 
 ## Operator setup checklist
 
@@ -155,14 +171,15 @@ from public.social_assets where week_key = '2026-W38' order by channel, selectio
 
 ## Failure modes
 
-| Symptom                               | Cause                                                              | Fix                                                                                       |
-| ------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| Batch stays `generating`              | The generation run stopped early.                                  | Re-run it; it continues with the missing assets per channel.                              |
-| Instagram skipped: images pending     | The render job has not run since generation.                       | Check the `social-automation-render-images` cron (query C); or click "Render images now". |
-| Image `failed`                        | DALL-E rejected the brief (content policy) or storage failed.      | Card → "Retry image", or remove the asset.                                                |
-| Asset `failed` with a Buffer error    | `create_post` rejected (token expired, plan limit, missing image). | Fix in Buffer (reconnect channel / plan), then re-run scheduling or post manually.        |
-| Batch `failed` after scheduling       | Nothing could be scheduled — read `run_report.selection`.          | Usually Buffer unreachable or all channels skipped.                                       |
-| `scheduled` never becomes `published` | `social-automation-sync-buffer` not running.                       | Query C on the cron; "Sync Buffer now" as a stopgap.                                      |
+| Symptom                                            | Cause                                                                     | Fix                                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Batch stays `generating`                           | The generation run stopped early.                                         | Re-run it; it continues with the missing assets per channel.                                                  |
+| Instagram skipped: images pending                  | The render job has not run since generation.                              | Check the `social-automation-render-images` cron (query C); or click "Render images now".                     |
+| Image `failed`                                     | DALL-E rejected the brief (content policy) or storage failed.             | Card → "Retry image", or remove the asset.                                                                    |
+| Asset `failed` with a Buffer error                 | `create_post` rejected (token expired, plan limit, missing image).        | Fix in Buffer (reconnect channel / plan), then re-run scheduling or post manually.                            |
+| Batch `failed` after scheduling                    | Nothing could be scheduled — read `run_report.selection`.                 | Usually Buffer unreachable or all channels skipped.                                                           |
+| `scheduled` never becomes `published`              | `social-automation-sync-buffer` not running.                              | Query C on the cron; "Sync Buffer now" as a stopgap.                                                          |
+| Asset shows `Removed` with Buffer status `deleted` | The post was deleted directly in Buffer (the documented way to stop one). | Nothing — that is the sync reconciling it. Restore the asset from its card if it should be a candidate again. |
 
 ## Costs
 

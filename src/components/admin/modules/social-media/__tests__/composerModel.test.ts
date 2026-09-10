@@ -5,6 +5,7 @@ import {
   combineDateAndTime,
   composeBlocker,
   countForPlatform,
+  effectiveTextFor,
   isOverLimit,
   toIsoWithOffset,
 } from '../composerModel';
@@ -30,8 +31,22 @@ describe('character limits', () => {
       'Read this https://www.navigatewealth.co/resources/article/a-very-long-slug-indeed';
     expect(countForPlatform(text, 'x')).toBe('Read this '.length + 23);
     expect(countForPlatform(text, 'linkedin')).toBe(text.length);
-    expect(isOverLimit('x'.repeat(281), ['x'])).toBe(true);
-    expect(isOverLimit('x'.repeat(281), ['linkedin'])).toBe(false);
+    expect(isOverLimit({ text: 'x'.repeat(281), linkUrl: '' }, ['x'])).toBe(true);
+    expect(isOverLimit({ text: 'x'.repeat(281), linkUrl: '' }, ['linkedin'])).toBe(false);
+  });
+
+  it('counts the link the server appends for X, but only when it is not already in the body', () => {
+    const body = 'x'.repeat(230);
+    expect(effectiveTextFor({ text: body, linkUrl: 'https://nw/a' }, 'x')).toBe(
+      `${body}\nhttps://nw/a`,
+    );
+    expect(effectiveTextFor({ text: body, linkUrl: 'https://nw/a' }, 'linkedin')).toBe(body);
+    expect(effectiveTextFor({ text: `${body} https://nw/a`, linkUrl: 'https://nw/a' }, 'x')).toBe(
+      `${body} https://nw/a`,
+    );
+    // 230 + newline + 23 for the link = 254 <= 280, but 260 + 24 = 284 > 280
+    expect(isOverLimit({ text: body, linkUrl: 'https://nw/a' }, ['x'])).toBe(false);
+    expect(isOverLimit({ text: 'x'.repeat(260), linkUrl: 'https://nw/a' }, ['x'])).toBe(true);
   });
 });
 
@@ -110,6 +125,12 @@ describe('composeBlocker', () => {
     expect(composeBlocker({ ...base, channelIds: ['x'], text: 'y'.repeat(300) }, profiles)).toBe(
       'The text is too long for a selected channel.',
     );
+    expect(
+      composeBlocker(
+        { ...base, channelIds: ['x'], text: 'y'.repeat(260), linkUrl: 'https://nw/a' },
+        profiles,
+      ),
+    ).toBe('The text is too long for a selected channel.');
     expect(composeBlocker({ ...base, channelIds: ['ig'] }, profiles)).toBe(
       'Instagram posts need an image.',
     );

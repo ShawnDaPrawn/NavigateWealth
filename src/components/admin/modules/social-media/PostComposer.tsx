@@ -42,6 +42,7 @@ import {
   combineDateAndTime,
   composeBlocker,
   countForPlatform,
+  effectiveTextFor,
 } from './composerModel';
 
 interface PostComposerProps {
@@ -192,7 +193,10 @@ export function PostComposer({
             <span>Post text</span>
             <div className="flex items-center gap-1.5">
               {platforms.map((platform) => {
-                const count = countForPlatform(text, platform);
+                const count = countForPlatform(
+                  effectiveTextFor({ text, linkUrl }, platform),
+                  platform,
+                );
                 const limit = PLATFORM_LIMITS[platform]?.maxCharacters ?? 280;
                 return (
                   <Badge key={platform} variant={count > limit ? 'destructive' : 'secondary'}>

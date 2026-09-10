@@ -139,5 +139,7 @@ export interface SyncBufferReport {
   published: number;
   failed: number;
   unchanged: number;
+  /** Assets whose Buffer post no longer exists (deleted in Buffer) and were marked removed. */
+  removed: number;
   errors: Array<{ assetId: string; error: string }>;
 }
