@@ -41,6 +41,7 @@ Written for someone acting under time pressure.
 - [`form-prefill.md`](runbooks/form-prefill.md) — form prefill operations
 - [`fna-intake.md`](runbooks/fna-intake.md) — adviser and support operations for client-led FNA intake
 - [`seo.md`](runbooks/seo.md) — the SEO build pipeline and its recurring operational steps
+- [`vercel-deployment-storage.md`](runbooks/vercel-deployment-storage.md) — why the Vercel storage allowance fills, and how to reclaim it
 
 **`decisions/`** — one file per decision that closed an open question, named
 `YYYY-MM-DD-<decision>.md`. A decision record states what was chosen, what was
