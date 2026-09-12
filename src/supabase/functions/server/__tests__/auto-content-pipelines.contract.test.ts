@@ -28,7 +28,6 @@ vi.mock('../publications-ai-service.ts', () => ({ generateFullArticle }));
 
 import { kvStore } from './helpers/contract-harness.ts';
 import { AutoContentService } from '../auto-content-service.ts';
-import { seedCalendarEvents } from '../auto-content-pipelines.ts';
 import {
   PROCESSED_PREFIX,
   USED_IMAGE_PREFIX,
@@ -471,27 +470,32 @@ describe('calendar_content', () => {
   });
 
   it('seeds the default calendar when none exists, and acts on exactly what is due', async () => {
-    // Seed first and snapshot that state *before* running the pipeline: the
-    // runner stamps `lastGeneratedYear` on whichever defaults it acts on, so
-    // reading the calendar back afterwards would hide the very events the
-    // dueCount below needs to count, undercounting by however many ran.
-    const seeded = (await seedCalendarEvents()).map(
-      (event) => kvStore.get(calendarKey(event.id)) as CalendarEvent,
+    // The calendar starts empty, so this exercises the runner's own seeding
+    // call (auto-content-pipelines.ts's runCalendarContent -> seedCalendarEvents)
+    // rather than pre-seeding around it — if that call were ever dropped, the
+    // assertions below would have nothing to count and this test would fail.
+    const result = await AutoContentService.triggerPipeline('calendar_content');
+
+    const seeded = keysWithPrefix('auto_content:calendar_event:').map(
+      (key) => kvStore.get(key) as CalendarEvent,
     );
     expect(seeded.length).toBeGreaterThan(0);
 
     // How many of the seeded defaults fall inside the window is a function of
     // today's date, so derive the expectation rather than hard-coding it — and
     // assert the runner generated exactly that many, no more and no fewer.
+    //
+    // No `lastGeneratedYear` exclusion here, unlike the runner's own check:
+    // every default starts that field unset, so none could have been marked
+    // generated before this very call — reading it back post-run would only
+    // hide whichever event the call itself just stamped, undercounting by one.
     const now = new Date();
     const dueCount = seeded.filter((event) => {
-      if (!event.isActive || event.lastGeneratedYear === now.getFullYear()) return false;
+      if (!event.isActive) return false;
       const date = new Date(event.year || now.getFullYear(), event.month - 1, event.day);
       const daysUntil = Math.ceil((date.getTime() - now.getTime()) / 86_400_000);
       return daysUntil >= 0 && daysUntil <= (event.leadTimeDays || 14);
     }).length;
-
-    const result = await AutoContentService.triggerPipeline('calendar_content');
 
     expect(result.articlesGenerated).toBe(dueCount);
     expect(generateFullArticle).toHaveBeenCalledTimes(dueCount);
