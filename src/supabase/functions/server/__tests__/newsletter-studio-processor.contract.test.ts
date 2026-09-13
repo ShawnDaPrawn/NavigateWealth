@@ -61,6 +61,8 @@ vi.mock('../publications-notification-state.ts', async (importOriginal) => ({
 }));
 
 import { kvStore } from './helpers/contract-harness.ts';
+import * as kv from '../kv_store.tsx';
+import { IDLE_HEARTBEAT_INTERVAL_MS } from '../publications-notification-state.ts';
 import {
   CAMPAIGN_LOCK_SETTLE_MS,
   CAMPAIGN_LOCK_TTL_MS,
@@ -75,6 +77,7 @@ import { createCampaign, sendCampaignNow } from '../newsletter-studio-service.ts
 import type {
   NewsletterCampaign,
   NewsletterCampaignRecipient,
+  NewsletterProcessorState,
 } from '../newsletter-studio-types.ts';
 
 const GROUP = {
@@ -410,6 +413,59 @@ describe('scheduling and admin controls', () => {
     // A later manual run preserves the cron mark rather than clearing it.
     await processNewsletterCampaigns({ mode: 'manual' });
     expect((kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt).toBe(cronStamp);
+  });
+
+  const STATE_KEY = 'nlstudio:processor:state';
+  const stateWrites = () => vi.mocked(kv.set).mock.calls.filter(([k]) => k === STATE_KEY).length;
+
+  it('leaves the state row alone on an idle cron tick inside the heartbeat interval', async () => {
+    // Every 30-second tick used to upsert this row even with nothing to send —
+    // the KV table's busiest writer (INCIDENTS 2026-09-13).
+    await processNewsletterCampaigns({ mode: 'cron' });
+    const first = kvStore.get(STATE_KEY);
+    const writesAfterFirst = stateWrites();
+
+    await processNewsletterCampaigns({ mode: 'cron' });
+
+    expect(stateWrites()).toBe(writesAfterFirst);
+    expect(kvStore.get(STATE_KEY)).toEqual(first);
+  });
+
+  it('refreshes a cron heartbeat whose stored lastCronRunAt is older than the idle interval', async () => {
+    // The dashboard declares the job stale off lastCronRunAt, so that mark —
+    // not just lastHeartbeatAt — must stay fresh across skipped ticks.
+    await processNewsletterCampaigns({ mode: 'cron' });
+    const stale = new Date(Date.now() - IDLE_HEARTBEAT_INTERVAL_MS - 1_000).toISOString();
+    kvStore.set(STATE_KEY, {
+      ...(kvStore.get(STATE_KEY) as NewsletterProcessorState),
+      lastCronRunAt: stale,
+    });
+    const writesBefore = stateWrites();
+
+    await processNewsletterCampaigns({ mode: 'cron' });
+
+    expect(stateWrites()).toBe(writesBefore + 1);
+    const state = kvStore.get(STATE_KEY) as NewsletterProcessorState;
+    expect(new Date(state.lastCronRunAt!).getTime()).toBeGreaterThan(new Date(stale).getTime());
+  });
+
+  it('still writes when the tick found work or the previous run had an error', async () => {
+    await processNewsletterCampaigns({ mode: 'cron' });
+    kvStore.set(STATE_KEY, {
+      ...(kvStore.get(STATE_KEY) as NewsletterProcessorState),
+      lastError: 'provider down',
+    });
+    const writesBefore = stateWrites();
+
+    // An error on the row must be cleared by the next clean tick, idle or not.
+    await processNewsletterCampaigns({ mode: 'cron' });
+    expect(stateWrites()).toBe(writesBefore + 1);
+    expect((kvStore.get(STATE_KEY) as NewsletterProcessorState).lastError).toBeNull();
+
+    await queuedCampaign(['a@x.co']);
+    await processNewsletterCampaigns({ mode: 'cron' });
+    expect(stateWrites()).toBe(writesBefore + 2);
+    expect((kvStore.get(STATE_KEY) as NewsletterProcessorState).sentInLastRun).toBe(1);
   });
 });
 

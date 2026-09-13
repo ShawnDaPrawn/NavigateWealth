@@ -211,3 +211,13 @@ routine-driven weekly social pipeline (`docs/runbooks/social-automation.md`).
   service-role bearer reports what would be rendered without spending.
 - Run it only AFTER the Edge Function that carries `/social-assets` is deployed, and verify the
   same way as the other jobs: query A and query C in `docs/runbooks/scheduled-jobs.md`.
+
+## Database maintenance jobs (migration-managed)
+
+`db-maintenance-purge-cron-history` and `db-maintenance-vacuum-system-tables`
+are not in this folder: they carry no secrets, so they are created by migration
+`supabase/migrations/20260913181044_cron_history_retention_and_pg_net_vacuum.sql`
+and apply with the rest of the schema. They keep `cron.job_run_details` at 7
+days of history and vacuum it and `net._http_response` nightly. Why they exist,
+and why you must never `count(*)` those tables on production, is in
+`docs/runbooks/scheduled-jobs.md` under "What these queries cost".

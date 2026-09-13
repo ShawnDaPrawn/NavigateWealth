@@ -24,6 +24,7 @@ import {
   acquireArticleNotificationJobLease,
   buildArticleNotificationProcessorState,
   campaignFromJobSnapshot,
+  canSkipIdleArticleNotificationProcessorStateWrite,
   createAndDeliverTrackingRecord,
   DEFAULT_AUTOMATED_MAX_BATCHES_PER_JOB,
   DEFAULT_AUTOMATED_MAX_JOBS,
@@ -741,20 +742,26 @@ export async function processArticleNotificationJobs(
       jobs: snapshots,
     };
 
-    await persistArticleNotificationProcessorState(
-      await buildArticleNotificationProcessorState({
-        mode,
-        lastHeartbeatAt: nowIso(),
-        lastRunAt: nowIso(),
-        lastSuccessAt: nowIso(),
-        lastError: null,
-        maxJobs,
-        maxBatchesPerJob,
-        processedJobs: result.processedJobs,
-        advancedJobs: result.advancedJobs,
-        completedJobs: result.completedJobs,
-      }),
-    );
+    const nextProcessorState = await buildArticleNotificationProcessorState({
+      mode,
+      lastHeartbeatAt: nowIso(),
+      lastRunAt: nowIso(),
+      lastSuccessAt: nowIso(),
+      lastError: null,
+      maxJobs,
+      maxBatchesPerJob,
+      processedJobs: result.processedJobs,
+      advancedJobs: result.advancedJobs,
+      completedJobs: result.completedJobs,
+    });
+    // An idle tick inside the heartbeat interval changes nothing but the
+    // timestamps; skipping the upsert is what keeps the 30-second cron from
+    // being the KV table's busiest writer (see IDLE_HEARTBEAT_INTERVAL_MS).
+    if (
+      !canSkipIdleArticleNotificationProcessorStateWrite(previousProcessorState, nextProcessorState)
+    ) {
+      await persistArticleNotificationProcessorState(nextProcessorState);
+    }
 
     return result;
   } catch (error) {

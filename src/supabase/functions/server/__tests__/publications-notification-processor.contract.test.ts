@@ -47,6 +47,7 @@ import {
   notificationCampaignKey,
   notificationJobKey,
   TRACKING_PREPARE_BATCH_SIZE,
+  IDLE_HEARTBEAT_INTERVAL_MS,
 } from '../publications-notification-state.ts';
 import { listArticleEmailTrackingRecords } from '../publications-email-engagement-service.ts';
 import type {
@@ -381,6 +382,58 @@ describe('processor state', () => {
 
   it('reports nothing before the processor has ever run', async () => {
     await expect(getArticleNotificationProcessorState()).resolves.toBeNull();
+  });
+
+  const stateWrites = () =>
+    vi.mocked(kv.set).mock.calls.filter(([key]) => key === ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY)
+      .length;
+
+  it('leaves the state row alone on an idle tick inside the heartbeat interval', async () => {
+    // Two cron ticks 30 s apart with nothing queued used to be two upserts
+    // whose only difference was the timestamp — ~5,800 a day (INCIDENTS
+    // 2026-09-13). The second must now be a read, not a write.
+    await processArticleNotificationJobs({ mode: 'cron' });
+    const first = await getArticleNotificationProcessorState();
+    const writesAfterFirst = stateWrites();
+
+    await processArticleNotificationJobs({ mode: 'cron' });
+
+    expect(stateWrites()).toBe(writesAfterFirst);
+    await expect(getArticleNotificationProcessorState()).resolves.toEqual(first);
+  });
+
+  it('refreshes the heartbeat once the stored one is older than the idle interval', async () => {
+    await processArticleNotificationJobs({ mode: 'cron' });
+    const stale = new Date(Date.now() - IDLE_HEARTBEAT_INTERVAL_MS - 1_000).toISOString();
+    kvStore.set(ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY, {
+      ...(kvStore.get(
+        ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY,
+      ) as ArticleNotificationProcessorState),
+      lastHeartbeatAt: stale,
+    });
+    const writesBefore = stateWrites();
+
+    await processArticleNotificationJobs({ mode: 'cron' });
+
+    expect(stateWrites()).toBe(writesBefore + 1);
+    const state = await getArticleNotificationProcessorState();
+    expect(new Date(state!.lastHeartbeatAt).getTime()).toBeGreaterThan(new Date(stale).getTime());
+  });
+
+  it('still writes an idle tick when the mode changed or work was found', async () => {
+    await processArticleNotificationJobs({ mode: 'cron' });
+    const writesAfterCron = stateWrites();
+
+    // The browser accelerator runs in manual mode; "Last mode" must stay truthful.
+    await processArticleNotificationJobs({ mode: 'manual' });
+    expect(stateWrites()).toBe(writesAfterCron + 1);
+    expect((await getArticleNotificationProcessorState())?.mode).toBe('manual');
+
+    // A tick that finds a job always records what it did.
+    await queuePublishJob(1);
+    await processArticleNotificationJobs({ mode: 'manual' });
+    expect(stateWrites()).toBe(writesAfterCron + 2);
+    expect(await getArticleNotificationProcessorState()).toMatchObject({ completedJobs: 1 });
   });
 });
 
