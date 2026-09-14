@@ -735,6 +735,10 @@ export function EsignModule() {
   const wizardContextLabel = templateBuilder
     ? templateBuilder.name
     : templateContext?.template.name;
+  /** Gates the recipients step the way `uploadBlocker` gates the documents
+   *  step: the hint says what is missing and the actions stay off until it is
+   *  not. `handleRecipientsNext` keeps its own guard as a backstop. */
+  const noRecipients = wizardData.signers.length === 0;
   /** Null once the documents step is complete; otherwise what is missing. */
   const uploadBlocker = documentStepBlocker({
     files: wizardData.files,
@@ -841,9 +845,7 @@ export function EsignModule() {
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
           onExit={exitWizard}
-          footerHint={
-            wizardData.signers.length === 0 ? 'Add at least one recipient to continue.' : undefined
-          }
+          footerHint={noRecipients ? 'Add at least one recipient to continue.' : undefined}
           backAction={{
             label: 'Back',
             onClick: () => {
@@ -863,6 +865,10 @@ export function EsignModule() {
               ? {
                   label: 'Send now (express)',
                   onClick: handleExpressSend,
+                  // handleExpressSend's "every recipient needs an email" guard
+                  // is vacuously true for an empty list, so without this an
+                  // empty template could send an envelope with no signers.
+                  disabled: noRecipients,
                   busy: uploading || sending,
                   busyLabel: 'Sending…',
                   icon: Send,
@@ -872,6 +878,7 @@ export function EsignModule() {
           primaryAction={{
             label: 'Next: Prepare Fields',
             onClick: handleRecipientsNext,
+            disabled: noRecipients,
             busy: uploading,
             busyLabel: 'Creating envelope…',
             icon: ArrowRight,

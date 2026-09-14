@@ -368,12 +368,17 @@ describe('EsignModule wizard flow', () => {
     expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('true');
   });
 
-  it('Next with zero recipients shows an error toast and stays put', async () => {
+  it('Next is unavailable with zero recipients, and says why', async () => {
     await openTemplate('use-tpl-empty');
-    fireEvent.click(screen.getByRole('button', { name: /next: prepare fields/i }));
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Please add at least one recipient.');
-    });
+
+    // The shell gates the step rather than accepting the click and answering
+    // with an error toast, which is how the documents step behaves too.
+    // `handleRecipientsNext` keeps its own zero-recipient guard as a backstop.
+    const next = screen.getByRole('button', { name: /next: prepare fields/i });
+    expect(next.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('Add at least one recipient to continue.')).toBeTruthy();
+
+    fireEvent.click(next);
     expect(screen.getByText('Add Recipients')).toBeTruthy();
     expect(spies.materialiseTemplateDraft).not.toHaveBeenCalled();
   });

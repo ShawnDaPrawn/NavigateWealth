@@ -524,6 +524,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
         primaryAction={{
           label: 'Next: Prepare Fields',
           onClick: handleRecipientsNext,
+          disabled: wizardData.signers.length === 0,
           busy: uploading,
           busyLabel: 'Creating envelope…',
           icon: ArrowRight,
