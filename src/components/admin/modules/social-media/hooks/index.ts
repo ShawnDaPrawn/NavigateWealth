@@ -33,6 +33,17 @@ export {
   describeJobReport,
 } from './useSocialAssets';
 
+// Media library (uploads used in posts)
+export {
+  useMediaLibrary,
+  useUploadMedia,
+  useDeleteMedia,
+  rejectionReasonFor,
+  describeUpload,
+  MAX_UPLOAD_BYTES,
+  ACCEPT_ATTRIBUTE,
+} from './useSocialMediaLibrary';
+
 // AI content generation hooks
 export { useSocialMediaAI } from './useSocialMediaAI';
 

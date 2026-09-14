@@ -36,6 +36,27 @@ Two hard facts shaped the design:
   Edge Function's hourly job renders it with DALL-E 3 into a **public** bucket so Buffer
   can fetch it later. Instagram candidates are only selectable once their image is `ready`.
 
+## Posting by hand: the media library
+
+The weekly routines are one way in; the other is **Social Media → Library**, which holds
+images an admin uploads, and **Compose**, which turns one into a post.
+
+- `POST /social-marketing/media` (multipart, admin) stores the file in the **same public
+  bucket** the render job writes to, under `uploads/<uuid>__<name>.<ext>`. Public, because
+  Buffer fetches a post's image from the URL it was given — for a scheduled post that can be
+  days later, which a signed URL would not survive.
+- The bucket is the library: `GET /social-marketing/media` lists the prefix. There is no
+  table, so storage and the UI cannot disagree about what exists. The original file name
+  rides along in the object path, which is where the picker's captions come from.
+- What counts as an image is decided by the **first bytes, not the file name** — PNG, JPEG
+  or WebP, up to 10MB. The bucket is world-readable, so a renamed file must not land in it.
+- `DELETE /social-marketing/media` only accepts paths under `uploads/`, so a request can
+  never reach the automation's rendered images in the same bucket.
+
+From Library, "Use in post" opens Compose with the image attached; from Compose, "Upload or
+choose image" opens the same library. Either way the post can go out now, join Buffer's
+queue, be scheduled for a chosen time, or be saved as a Buffer draft.
+
 ## The contract (migration `social_automation`)
 
 | Object                                                                                          | Purpose                                                                                                                                                                                                       |

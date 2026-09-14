@@ -4,7 +4,8 @@
  * Organised around the weekly pipeline rather than the calendar:
  * - Assets — what the routines generated and scheduled for each channel
  * - Calendar — Buffer's queue
- * - Compose — a manual post into Buffer (AI generator content flows in here)
+ * - Compose — a manual post into Buffer (uploads and AI content flow in here)
+ * - Library — images uploaded for posts, on our own storage
  * - AI Generator — text, image, bundle, repurpose, templates, history, analytics
  * - Channels — the Buffer connections
  *
@@ -37,6 +38,8 @@ import { ChannelsPanel } from './ChannelsPanel';
 import { PostCalendar, type CalendarViewMode } from './PostCalendar';
 import { covers, unionRange, visibleWindow } from './calendarModel';
 import { PostComposer } from './PostComposer';
+import { MediaLibraryPanel } from './media/MediaLibraryPanel';
+import { assetToMediaFile } from './composerModel';
 import { AIAnalyticsDashboard } from './components/AIAnalyticsDashboard';
 import { AIArticleRepurposer } from './components/AIArticleRepurposer';
 import { AIBrandTemplates } from './components/AIBrandTemplates';
@@ -48,7 +51,7 @@ import { useSocialAnalytics } from './hooks/useSocialAnalytics';
 import { useSocialBatches } from './hooks/useSocialAssets';
 import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
 import { useSocialProfiles } from './hooks/useSocialProfiles';
-import type { ComposeRequest, MediaFile, SocialAIPlatform } from './types';
+import type { ComposeRequest, MediaFile, SocialAIPlatform, SocialMediaAsset } from './types';
 
 interface StatCardProps {
   label: string;
@@ -191,6 +194,11 @@ export function SocialMediaTab() {
     setActiveTab('composer');
   }, []);
 
+  const handleUseLibraryImage = useCallback((asset: SocialMediaAsset) => {
+    setComposerInitialMedia([assetToMediaFile(asset)]);
+    setActiveTab('composer');
+  }, []);
+
   const handleUseBoth = useCallback(
     (
       _platform: SocialAIPlatform,
@@ -275,6 +283,10 @@ export function SocialMediaTab() {
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="composer">Compose</TabsTrigger>
+          <TabsTrigger value="library" className="flex items-center gap-1.5">
+            <ImageIcon className="h-3.5 w-3.5" />
+            Library
+          </TabsTrigger>
           <TabsTrigger value="ai-generator" className="flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
             AI Generator
@@ -314,6 +326,12 @@ export function SocialMediaTab() {
               initialMedia={composerInitialMedia}
               initialHashtags={composerInitialHashtags}
             />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="library" className="mt-6">
+          <div className="max-w-5xl">
+            <MediaLibraryPanel onUseInPost={handleUseLibraryImage} />
           </div>
         </TabsContent>
 

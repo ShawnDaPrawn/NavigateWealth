@@ -1,10 +1,11 @@
 /**
  * PostComposer — a manual post, straight into Buffer.
  *
- * One post per selected channel. Images come from the AI generator (a private
- * storage path the server publishes for Buffer) or a public URL; a link
- * becomes a LinkedIn link card, goes into the text on X, and is ignored on
- * Instagram. Nothing is stored locally — the calendar shows Buffer's answer.
+ * One post per selected channel. Images come from an upload (the library, on
+ * Navigate Wealth's own storage), from the AI generator (a private storage
+ * path the server publishes for Buffer), or from a public URL; a link becomes
+ * a LinkedIn link card, goes into the text on X, and is ignored on Instagram.
+ * Nothing is stored locally — the calendar shows Buffer's answer.
  */
 
 import { useEffect, useState } from 'react';
@@ -12,6 +13,7 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   Eye,
+  ImagePlus,
   Link as LinkIcon,
   Plus,
   Save,
@@ -38,12 +40,14 @@ import type { ComposeMode, ComposeRequest, ComposeResult, MediaFile, SocialProfi
 import { PLATFORM_LIMITS } from './types';
 import { buildUTMUrl } from './utils';
 import {
+  assetToMediaFile,
   buildComposeRequest,
   combineDateAndTime,
   composeBlocker,
   countForPlatform,
   effectiveTextFor,
 } from './composerModel';
+import { MediaPickerDialog } from './media/MediaPickerDialog';
 
 interface PostComposerProps {
   profiles: SocialProfile[];
@@ -79,6 +83,8 @@ export function PostComposer({
   const [scheduledTime, setScheduledTime] = useState('07:30');
   const [showSchedule, setShowSchedule] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [showUrlField, setShowUrlField] = useState(false);
 
   useEffect(() => {
     if (initialContent) {
@@ -228,44 +234,75 @@ export function PostComposer({
         </CardHeader>
         <CardContent className="space-y-4">
           {media.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {media.map((item) => (
-                <div key={item.id} className="relative">
-                  <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                    {item.type === 'image' && (
-                      <img
-                        src={item.url}
-                        alt={item.alt || item.filename}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
+                <div key={item.id} className="flex gap-3">
+                  <div className="relative shrink-0">
+                    <div className="h-24 w-24 rounded-lg overflow-hidden bg-muted border">
+                      {item.type === 'image' && (
+                        <img
+                          src={item.url}
+                          alt={item.alt || item.filename}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      aria-label={`Remove ${item.filename}`}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      onClick={() => setMedia((prev) => prev.filter((m) => m.id !== item.id))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    aria-label={`Remove ${item.filename}`}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                    onClick={() => setMedia((prev) => prev.filter((m) => m.id !== item.id))}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                  <div className="mt-1 text-xs text-muted-foreground truncate">{item.filename}</div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-xs text-muted-foreground truncate" title={item.filename}>
+                      {item.filename}
+                    </p>
+                    <Input
+                      aria-label={`Alt text for ${item.filename}`}
+                      placeholder="Alt text (describe the image)"
+                      value={item.alt ?? ''}
+                      className="h-8 text-xs"
+                      onChange={(e) =>
+                        setMedia((prev) =>
+                          prev.map((m) => (m.id === item.id ? { ...m, alt: e.target.value } : m)),
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               ))}
             </div>
           )}
-          <div className="flex gap-2">
-            <Input
-              aria-label="Image URL"
-              placeholder="Add an image by public URL (or use the AI generator)"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            <Button variant="outline" onClick={addImageUrl} disabled={!imageUrl.trim()}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setShowPicker(true)}>
+              <ImagePlus className="h-4 w-4 mr-2" />
+              Upload or choose image
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowUrlField((v) => !v)}>
+              {showUrlField ? 'Hide URL field' : 'Add by URL instead'}
             </Button>
           </div>
+
+          {showUrlField && (
+            <div className="flex gap-2">
+              <Input
+                aria-label="Image URL"
+                placeholder="https://… (an image already hosted somewhere)"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+              <Button variant="outline" onClick={addImageUrl} disabled={!imageUrl.trim()}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          )}
+
           <p className="text-xs text-muted-foreground">
             Instagram needs an image. LinkedIn shows a link card instead of the image when a link is
             set.
@@ -350,6 +387,21 @@ export function PostComposer({
           </div>
         </CardContent>
       </Card>
+
+      <MediaPickerDialog
+        open={showPicker}
+        onOpenChange={setShowPicker}
+        attachedPaths={media.map((m) => m.libraryPath).filter((p): p is string => Boolean(p))}
+        onConfirm={(assets) =>
+          setMedia((prev) => {
+            const have = new Set(prev.map((m) => m.libraryPath).filter(Boolean));
+            return [
+              ...prev,
+              ...assets.filter((a) => !have.has(a.storagePath)).map(assetToMediaFile),
+            ];
+          })
+        }
+      />
 
       <Dialog open={showSchedule} onOpenChange={setShowSchedule}>
         <DialogContent>

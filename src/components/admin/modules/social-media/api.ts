@@ -14,12 +14,21 @@
 
 import { profilesApi } from './api/profilesApi';
 import { postsApi } from './api/postsApi';
+import { mediaApi } from './api/mediaApi';
 import { analyticsApi } from './api/analyticsApi';
 import { socialAssetsApi } from './api/socialAssetsApi';
 import { socialMediaAIApi } from './api/socialMediaAIApi';
 import { linkedinApi } from './api/linkedinApi';
 
-export { profilesApi, postsApi, analyticsApi, socialAssetsApi, socialMediaAIApi, linkedinApi };
+export {
+  profilesApi,
+  postsApi,
+  mediaApi,
+  analyticsApi,
+  socialAssetsApi,
+  socialMediaAIApi,
+  linkedinApi,
+};
 export type { APIResponse, PaginatedResponse } from './api/apiBase';
 export type { CreatePostRequest, PostFilters } from './api/requests';
 export type { AssetListFilters } from './api/socialAssetsApi';
@@ -34,6 +43,7 @@ export type { LinkedInConnectionStatus, LinkedInShareResult } from './api/linked
 export default {
   profiles: profilesApi,
   posts: postsApi,
+  media: mediaApi,
   analytics: analyticsApi,
   assets: socialAssetsApi,
   ai: socialMediaAIApi,
