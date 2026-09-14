@@ -83,3 +83,16 @@ export interface SocialMarketingStatus {
   account?: { email: string; organizations: Array<{ id: string; name: string }> };
   error?: string;
 }
+
+/** One image in the media library (an object in the public assets bucket). */
+export interface MediaItem {
+  /** `uploads/<uuid>__<slug>.<ext>` in the public bucket. */
+  storagePath: string;
+  /** Stable public URL — this is what Buffer fetches. */
+  url: string;
+  /** The name the admin uploaded, recovered from the path. */
+  name: string;
+  size: number;
+  contentType: string | null;
+  uploadedAt: string | null;
+}

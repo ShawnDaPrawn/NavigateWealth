@@ -47,3 +47,21 @@ export const PostsQuerySchema = z.object({
 export const AnalyticsQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional().default(30),
 });
+
+/** The media library: one page of it. `offset` is how "Load more" reaches older uploads. */
+export const MediaListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional().default(60),
+  offset: z.coerce.number().int().min(0).max(100000).optional().default(0),
+});
+
+/**
+ * Deleting an upload. The path is validated again in the service against the
+ * `uploads/` prefix — this only rejects the obviously malformed early.
+ */
+export const MediaDeleteSchema = z.object({
+  storagePath: z
+    .string()
+    .min(1)
+    .max(500)
+    .regex(/^uploads\/[A-Za-z0-9._-]+$/, 'Not an uploaded image path'),
+});

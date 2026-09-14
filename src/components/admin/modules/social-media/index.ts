@@ -28,6 +28,7 @@ export { PostComposer } from './PostComposer';
 export { PostCalendar } from './PostCalendar';
 export { ChannelsPanel } from './ChannelsPanel';
 export { AssetsTab } from './assets/AssetsTab';
+export { MediaLibraryPanel } from './media/MediaLibraryPanel';
 export { SocialAnalytics } from './SocialAnalytics';
 
 // --- public API used by other modules and by code outside admin/modules ---
