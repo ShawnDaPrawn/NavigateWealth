@@ -9,7 +9,6 @@ export { EmptyState } from './EmptyState';
 export { UploadDocumentDialog } from './UploadDocumentDialog';
 export { EnvelopeDetailsDialog } from './EnvelopeDetailsDialog';
 export { SignerManager } from './SignerManager';
-export { CreateEnvelopeWizard } from './CreateEnvelopeWizard';
 export { FieldPalette } from './FieldPalette';
 export { PDFViewer } from './PDFViewer';
 export { DocumentEditor } from './DocumentEditor';
