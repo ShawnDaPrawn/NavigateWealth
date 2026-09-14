@@ -7,6 +7,9 @@
  *   POST   /social-marketing/posts         — manual Compose → Buffer
  *   DELETE /social-marketing/posts/:id     — delete a Buffer post
  *   GET    /social-marketing/analytics     — aggregated metrics (stat cards)
+ *   GET    /social-marketing/media         — the uploaded image library
+ *   POST   /social-marketing/media         — upload an image (multipart)
+ *   DELETE /social-marketing/media         — remove an uploaded image
  *
  * All admin. The weekly automation does not come through here — see
  * social-assets-routes.ts and docs/runbooks/social-automation.md.
@@ -20,8 +23,16 @@ import { formatZodError } from './shared-validation-utils.ts';
 import {
   AnalyticsQuerySchema,
   ComposePostSchema,
+  MediaDeleteSchema,
+  MediaListQuerySchema,
   PostsQuerySchema,
 } from './social-marketing-validation.ts';
+import {
+  deleteMedia,
+  isUploadedFile,
+  listMedia,
+  uploadMedia,
+} from './social-marketing-media-service.ts';
 import {
   composePost,
   deletePost,
@@ -114,6 +125,64 @@ app.get(
     }
     const analytics = await getAnalytics(parsed.data.days);
     return c.json({ success: true, data: analytics });
+  }),
+);
+
+// ── Media library ───────────────────────────────────────────────────────────
+// Uploads go to the PUBLIC assets bucket because Buffer fetches a post's image
+// from the URL it is given, which for a scheduled post may be days later.
+
+app.get(
+  '/media',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const parsed = MediaListQuerySchema.safeParse({ limit: c.req.query('limit') ?? undefined });
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+    const items = await listMedia(parsed.data.limit);
+    return c.json({ success: true, data: items });
+  }),
+);
+
+app.post(
+  '/media',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const form = await c.req.formData().catch(() => null);
+    const file = form?.get('file');
+    if (!isUploadedFile(file)) {
+      return c.json({ error: 'Attach an image as the "file" field.' }, 400);
+    }
+
+    const item = await uploadMedia({
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      filename: file.name || 'image',
+      declaredType: file.type || '',
+    });
+    log.info('Media uploaded', {
+      adminUserId: c.get('userId'),
+      storagePath: item.storagePath,
+      size: item.size,
+    });
+    return c.json({ success: true, data: item }, 201);
+  }),
+);
+
+app.delete(
+  '/media',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const parsed = MediaDeleteSchema.safeParse({ storagePath: c.req.query('storagePath') ?? '' });
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+    await deleteMedia(parsed.data.storagePath);
+    log.info('Media deleted', {
+      adminUserId: c.get('userId'),
+      storagePath: parsed.data.storagePath,
+    });
+    return c.json({ success: true });
   }),
 );
 

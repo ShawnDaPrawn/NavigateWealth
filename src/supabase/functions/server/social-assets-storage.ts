@@ -104,3 +104,63 @@ export async function publishPrivateImage(
   }
   return publicUrlFor(storagePath);
 }
+
+/**
+ * Store raw bytes (an admin's upload) in the public bucket.
+ *
+ * `upsert: false` so two uploads of the same picture never overwrite each
+ * other — the caller mints a unique path, and a collision is a bug worth
+ * hearing about rather than silently replacing an image a scheduled post may
+ * already point at.
+ */
+export async function uploadPublicBytes(
+  bytes: Uint8Array,
+  storagePath: string,
+  contentType: string,
+): Promise<string> {
+  await ensureSocialAssetsBucket();
+  const { error } = await getSocialSupabase()
+    .storage.from(SOCIAL_ASSETS_BUCKET)
+    .upload(storagePath, bytes, { contentType, upsert: false });
+  if (error) {
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
+  return publicUrlFor(storagePath);
+}
+
+export interface PublicObject {
+  name: string;
+  createdAt: string | null;
+  size: number;
+  contentType: string | null;
+}
+
+/** List a folder of the public bucket, newest first. */
+export async function listPublicObjects(prefix: string, limit: number): Promise<PublicObject[]> {
+  await ensureSocialAssetsBucket();
+  const { data, error } = await getSocialSupabase()
+    .storage.from(SOCIAL_ASSETS_BUCKET)
+    .list(prefix, { limit, sortBy: { column: 'created_at', order: 'desc' } });
+  if (error) {
+    throw new Error(`Storage list failed: ${error.message}`);
+  }
+  // A "folder" row has no id and no metadata; only real objects are returned.
+  return (data ?? [])
+    .filter((entry) => entry.id !== null && entry.name)
+    .map((entry) => ({
+      name: entry.name,
+      createdAt: entry.created_at ?? null,
+      size: Number(entry.metadata?.size ?? 0),
+      contentType: (entry.metadata?.mimetype as string | undefined) ?? null,
+    }));
+}
+
+/** Remove one object from the public bucket. */
+export async function removePublicObject(storagePath: string): Promise<void> {
+  const { error } = await getSocialSupabase()
+    .storage.from(SOCIAL_ASSETS_BUCKET)
+    .remove([storagePath]);
+  if (error) {
+    throw new Error(`Storage delete failed: ${error.message}`);
+  }
+}

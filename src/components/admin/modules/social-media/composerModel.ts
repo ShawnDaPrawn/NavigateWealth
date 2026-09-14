@@ -6,6 +6,7 @@ import type {
   ComposeMode,
   ComposeRequest,
   MediaFile,
+  SocialMediaAsset,
   SocialPlatform,
   SocialProfile,
 } from './types';
@@ -73,6 +74,23 @@ export function combineDateAndTime(date: Date, time: string): Date {
   const out = new Date(date);
   out.setHours(hours || 0, minutes || 0, 0, 0);
   return out;
+}
+
+/**
+ * A library image as the composer holds it. The public URL goes straight to
+ * Buffer, so `storagePath` (which means "copy this out of the private AI
+ * bucket") is deliberately left unset.
+ */
+export function assetToMediaFile(asset: SocialMediaAsset): MediaFile {
+  return {
+    id: `library_${asset.storagePath}`,
+    url: asset.url,
+    libraryPath: asset.storagePath,
+    type: 'image',
+    filename: asset.name,
+    size: asset.size,
+    alt: asset.name,
+  };
 }
 
 export interface ComposeDraft {

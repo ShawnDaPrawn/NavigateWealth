@@ -47,3 +47,20 @@ export const PostsQuerySchema = z.object({
 export const AnalyticsQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional().default(30),
 });
+
+/** The media library: how many images the picker asks for at a time. */
+export const MediaListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional().default(60),
+});
+
+/**
+ * Deleting an upload. The path is validated again in the service against the
+ * `uploads/` prefix — this only rejects the obviously malformed early.
+ */
+export const MediaDeleteSchema = z.object({
+  storagePath: z
+    .string()
+    .min(1)
+    .max(500)
+    .regex(/^uploads\/[A-Za-z0-9._-]+$/, 'Not an uploaded image path'),
+});

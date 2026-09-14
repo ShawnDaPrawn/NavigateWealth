@@ -1,7 +1,16 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { PostComposer } from '../PostComposer';
 import type { SocialProfile } from '../types';
+
+// The composer mounts the media picker, which reads the library through React
+// Query. The picker only fetches once opened, so no request is made here.
+function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
 
 const profiles: SocialProfile[] = [
   { id: 'li', platform: 'linkedin', name: 'Navigate Wealth', username: 'nw', isConnected: true },
@@ -25,6 +34,7 @@ function setup(selected: string[] = []) {
       onProfilesChange={onProfilesChange}
       onSubmit={onSubmit}
     />,
+    { wrapper },
   );
   return { onSubmit, onProfilesChange };
 }
@@ -48,6 +58,8 @@ describe('PostComposer', () => {
   it('submits a queue post with an image URL and a link', async () => {
     const { onSubmit } = setup(['li']);
     fireEvent.change(screen.getByLabelText('Post text'), { target: { value: 'Hello world' } });
+    // Uploading is the default now; the URL field is the fallback behind a toggle.
+    fireEvent.click(screen.getByText('Add by URL instead'));
     fireEvent.change(screen.getByLabelText('Image URL'), {
       target: { value: 'https://cdn/a.png' },
     });
@@ -66,6 +78,14 @@ describe('PostComposer', () => {
     await waitFor(() =>
       expect((screen.getByLabelText('Post text') as HTMLTextAreaElement).value).toBe(''),
     );
+  });
+
+  it('offers upload as the way in, not just a URL field', () => {
+    setup(['li']);
+    // The URL field was the ONLY way to attach an image, which is useless to
+    // anyone who does not already host images somewhere.
+    expect(screen.getByRole('button', { name: /upload or choose image/i })).toBeDefined();
+    expect(screen.queryByLabelText('Image URL')).toBeNull();
   });
 
   it('publishes now and flags an over-long X post', async () => {

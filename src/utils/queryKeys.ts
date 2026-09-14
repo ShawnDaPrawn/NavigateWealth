@@ -346,6 +346,11 @@ export const socialMediaKeys = {
     topPosts: (limit?: number) =>
       [...socialMediaKeys.analytics.all, 'top-posts', limit ?? 10] as const,
   },
+  /** Images uploaded for posts (the public assets bucket's `uploads/` folder). */
+  library: {
+    all: ['social-media', 'library'] as const,
+    list: (limit: number) => [...socialMediaKeys.library.all, 'list', limit] as const,
+  },
   ai: {
     all: ['social-media', 'ai'] as const,
     history: (limit?: number) => ['social-media', 'ai', 'history', limit ?? 20] as const,

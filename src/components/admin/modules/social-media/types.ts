@@ -54,10 +54,28 @@ export interface MediaFile {
   size: number;
   /** Path in the private AI-images bucket; the server copies it to the public bucket for Buffer. */
   storagePath?: string;
+  /**
+   * Path in the PUBLIC assets bucket (an upload from the library). Its `url` is
+   * already permanent, so compose sends the URL and the server copies nothing —
+   * which is why this is not `storagePath`.
+   */
+  libraryPath?: string;
   dimensions?: {
     width: number;
     height: number;
   };
+}
+
+/** An image in the media library — what `GET /social-marketing/media` returns. */
+export interface SocialMediaAsset {
+  /** `uploads/<uuid>__<slug>.<ext>` in the public assets bucket. */
+  storagePath: string;
+  /** Stable public URL; this is what Buffer fetches. */
+  url: string;
+  name: string;
+  size: number;
+  contentType: string | null;
+  uploadedAt: string | null;
 }
 
 export interface UTMParameters {
