@@ -41,7 +41,8 @@ export { QUERY_GC_TIME, QUERY_STALE_TIME } from './constants';
 // Standardised wizard chrome. Shared with the client drawer's E-Sign tab so
 // the send-for-signature flow is laid out identically wherever it is started.
 // Light enough to export eagerly: a header, a stepper and buttons.
-export { EsignWizardShell, EsignWizardSection } from './components/wizard';
+export { EsignWizardShell, EsignWizardSection, ExitWizardDialog } from './components/wizard';
+export { hasUnsavedWizardWork, canSaveWizardDraft } from './components/wizard';
 export type { EsignWizardStepId } from './components/wizard';
 export { documentStepBlocker } from './components/documentStepModel';
 export type { DocumentUploadValue } from './components/documentStepModel';

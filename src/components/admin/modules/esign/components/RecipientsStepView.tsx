@@ -43,29 +43,10 @@ export function RecipientsStepView({
   const expressAvailable = canExpressSend(templateContext, isTemplateBuilder);
 
   return (
-    <div className="space-y-6">
-      {/* P4.3 — Express-send banner. When the wizard is using a template that
-          already has a complete field layout, surface a clear shortcut so the
-          user can skip the studio. */}
-      {expressAvailable && templateContext && (
-        <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50 p-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
-            <Zap className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <div className="flex-1 text-sm">
-            <p className="font-medium text-gray-900">
-              Express send from "{templateContext.template.name}"
-            </p>
-            <p className="mt-0.5 text-xs text-gray-600">
-              This template already has {templateContext.template.fields.length} field
-              {templateContext.template.fields.length === 1 ? '' : 's'} placed. Fill in recipient
-              emails, then use <span className="font-medium">Send now</span> below to skip the field
-              studio.
-            </p>
-          </div>
-        </div>
-      )}
-
+    // Two columns from `xl`: the recipient list is the work, and the express
+    // banner and field setting are context that belongs beside it rather than
+    // stacked under it down the middle of a wide screen.
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] xl:items-start">
       <EsignWizardSection
         icon={Users}
         title="Recipients"
@@ -86,29 +67,53 @@ export function RecipientsStepView({
         />
       </EsignWizardSection>
 
-      <EsignWizardSection>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <Label
-              htmlFor="auto-populate-suggested-fields"
-              className="text-sm font-medium text-gray-900"
-            >
-              Auto-add suggested PDF fields
-            </Label>
-            <p className="max-w-2xl text-xs text-gray-500">
-              When Navigate detects fillable fields or signature anchors during upload, add those
-              suggestions automatically before the field studio opens. You can still move, edit, or
-              delete them afterwards.
-            </p>
+      <div className="space-y-6">
+        {/* P4.3 — Express-send banner. When the wizard is using a template that
+            already has a complete field layout, surface a clear shortcut so the
+            user can skip the studio. */}
+        {expressAvailable && templateContext && (
+          <div className="flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50 p-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
+              <Zap className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="flex-1 text-sm">
+              <p className="font-medium text-gray-900">
+                Express send from "{templateContext.template.name}"
+              </p>
+              <p className="mt-0.5 text-xs text-gray-600">
+                This template already has {templateContext.template.fields.length} field
+                {templateContext.template.fields.length === 1 ? '' : 's'} placed. Fill in recipient
+                emails, then use <span className="font-medium">Send now</span> below to skip the
+                field studio.
+              </p>
+            </div>
           </div>
-          <Switch
-            id="auto-populate-suggested-fields"
-            checked={autoPopulateSuggestedFields}
-            onCheckedChange={onAutoPopulateChange}
-            disabled={disabled}
-          />
-        </div>
-      </EsignWizardSection>
+        )}
+
+        <EsignWizardSection>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <Label
+                htmlFor="auto-populate-suggested-fields"
+                className="text-sm font-medium text-gray-900"
+              >
+                Auto-add suggested PDF fields
+              </Label>
+              <p className="max-w-2xl text-xs text-gray-500">
+                When Navigate detects fillable fields or signature anchors during upload, add those
+                suggestions automatically before the field studio opens. You can still move, edit,
+                or delete them afterwards.
+              </p>
+            </div>
+            <Switch
+              id="auto-populate-suggested-fields"
+              checked={autoPopulateSuggestedFields}
+              onCheckedChange={onAutoPopulateChange}
+              disabled={disabled}
+            />
+          </div>
+        </EsignWizardSection>
+      </div>
     </div>
   );
 }

@@ -50,6 +50,9 @@ import {
   EnvelopeManagementTableRow,
   EnvelopeDetailsDialog,
   EsignWizardShell,
+  ExitWizardDialog,
+  canSaveWizardDraft,
+  hasUnsavedWizardWork,
   DocumentUploadStep,
   RecipientsStepView,
   PrepareFormStudio,
@@ -126,6 +129,8 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [resumingEnvelopeId, setResumingEnvelopeId] = useState<string | null>(null);
   const [autoPopulateSuggestedFields, setAutoPopulateSuggestedFields] = useState(true);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
 
   // ==================== CLIENT CONTEXT ====================
   // Passed to RecipientsManager so the profile's client is auto-added as
@@ -185,17 +190,39 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     expiryDays: wizardData.expiryDays,
   });
 
-  const handleRecipientsNext = async () => {
-    if (wizardData.signers.length === 0) {
-      toast.error('Please add at least one recipient.');
-      return;
+  const persistDraftSigners = async (envelopeId: string) => {
+    try {
+      await esignApi.saveDraftSigners(
+        envelopeId,
+        wizardData.signers.map((s, idx) => ({
+          name: s.name,
+          email: s.email,
+          role: s.role || 'Signer',
+          order: s.order ?? idx + 1,
+          otpRequired: s.otpRequired,
+          accessCode: s.accessCode,
+          clientId: s.clientId,
+          isSystemClient: s.isSystemClient,
+        })),
+      );
+    } catch (draftErr) {
+      logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
     }
+  };
+
+  /**
+   * Upload the staged documents and create the draft envelope, persisting the
+   * recipients gathered so far. Shared by "Next: Prepare Fields" and by the
+   * save-as-draft path on exit, which is why it does not itself require
+   * recipients — only sending does.
+   */
+  const createDraftEnvelopeFromWizard = async (): Promise<EsignEnvelope | null> => {
     if (!wizardData.files || wizardData.files.length === 0) {
       toast.error('No documents found. Please go back and upload a document.');
-      return;
+      return null;
     }
 
-    try {
+    {
       const primarySystemSigner = wizardData.signers.find((s) => s.isSystemClient && s.clientId);
       const clientId = primarySystemSigner?.clientId || selectedClient.id;
 
@@ -220,30 +247,73 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       const url = result.document?.url || result.documentUrl;
       if (url) setDocumentUrl(url);
 
-      // Persist draft signers
-      try {
-        await esignApi.saveDraftSigners(
-          result.id,
-          wizardData.signers.map((s, idx) => ({
-            name: s.name,
-            email: s.email,
-            role: s.role || 'Signer',
-            order: s.order ?? idx + 1,
-            otpRequired: s.otpRequired,
-            accessCode: s.accessCode,
-            clientId: s.clientId,
-            isSystemClient: s.isSystemClient,
-          })),
-        );
-      } catch (draftErr) {
-        logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
-      }
+      await persistDraftSigners(result.id);
 
+      return result;
+    }
+  };
+
+  const handleRecipientsNext = async () => {
+    if (wizardData.signers.length === 0) {
+      toast.error('Please add at least one recipient.');
+      return;
+    }
+
+    try {
+      const result = await createDraftEnvelopeFromWizard();
+      if (!result) return;
       toast.success('Document uploaded! Now prepare the form fields.');
       setView('prepare');
     } catch (err: unknown) {
       logger.error('Failed to create envelope:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to upload document');
+    }
+  };
+
+  // ==================== EXIT GUARD ====================
+  // Nothing in the wizard exists on the server until the studio is reached, so
+  // closing it used to bin the documents, title and recipients silently.
+
+  const wizardExitState = {
+    files: wizardData.files,
+    title: wizardData.title,
+    message: wizardData.message,
+    signers: wizardData.signers,
+    hasDraftEnvelope: !!activeEnvelope?.id,
+  };
+
+  const requestExitWizard = () => {
+    if (hasUnsavedWizardWork(wizardExitState)) {
+      setExitDialogOpen(true);
+      return;
+    }
+    discardWizard();
+  };
+
+  const discardWizard = () => {
+    setExitDialogOpen(false);
+    setView('list');
+  };
+
+  const handleSaveDraftAndExit = async () => {
+    setSavingDraft(true);
+    try {
+      // An envelope already created for this session is a draft already; the
+      // recipients edited since are what still needs writing back.
+      if (activeEnvelope?.id) {
+        await persistDraftSigners(activeEnvelope.id);
+      } else if (!(await createDraftEnvelopeFromWizard())) {
+        return;
+      }
+      toast.success('Saved as a draft — continue it any time from this tab.');
+      setExitDialogOpen(false);
+      setView('list');
+      refetch();
+    } catch (err: unknown) {
+      logger.error('Failed to save wizard draft:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save draft');
+    } finally {
+      setSavingDraft(false);
     }
   };
 
@@ -482,7 +552,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
         title="Add Documents"
         description="Upload the PDFs you want signed, and name the envelope your recipients will see."
         contextLabel={`${selectedClient.firstName} ${selectedClient.lastName}`}
-        onExit={() => setView('list')}
+        onExit={requestExitWizard}
         footerHint={uploadBlocker}
         primaryAction={{
           label: 'Next: Add Recipients',
@@ -491,6 +561,14 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           icon: ArrowRight,
         }}
       >
+        <ExitWizardDialog
+          open={exitDialogOpen}
+          onOpenChange={setExitDialogOpen}
+          onSaveDraft={handleSaveDraftAndExit}
+          onDiscard={discardWizard}
+          canSaveDraft={canSaveWizardDraft(wizardExitState)}
+          saving={savingDraft || uploading}
+        />
         <Suspense fallback={<StepFallback />}>
           <DocumentUploadStep
             value={{
@@ -516,7 +594,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
         title="Add Recipients"
         description="Who needs to sign these documents, and in what order?"
         contextLabel={`${selectedClient.firstName} ${selectedClient.lastName}`}
-        onExit={() => setView('list')}
+        onExit={requestExitWizard}
         footerHint={
           wizardData.signers.length === 0 ? 'Add at least one recipient to continue.' : undefined
         }
@@ -530,6 +608,14 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           icon: ArrowRight,
         }}
       >
+        <ExitWizardDialog
+          open={exitDialogOpen}
+          onOpenChange={setExitDialogOpen}
+          onSaveDraft={handleSaveDraftAndExit}
+          onDiscard={discardWizard}
+          canSaveDraft={canSaveWizardDraft(wizardExitState)}
+          saving={savingDraft || uploading}
+        />
         <Suspense fallback={<StepFallback />}>
           <RecipientsStepView
             signers={wizardData.signers}

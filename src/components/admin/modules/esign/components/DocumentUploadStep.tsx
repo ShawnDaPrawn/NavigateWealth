@@ -130,7 +130,10 @@ export function DocumentUploadStep({ value, onChange, disabled = false }: Docume
   const expiryInvalid = !isValidExpiry(expiryDays);
 
   return (
-    <div className="space-y-6">
+    // One column on a laptop, two from `xl` up: the documents are the tall
+    // half and the settings the short one, so side by side fills an admin
+    // screen instead of leaving the form in a narrow ribbon down the middle.
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:items-start">
       <EsignWizardSection
         icon={Upload}
         title="Documents"
@@ -225,70 +228,73 @@ export function DocumentUploadStep({ value, onChange, disabled = false }: Docume
         )}
       </EsignWizardSection>
 
-      <EsignWizardSection
-        icon={FileText}
-        title="Envelope details"
-        description="What recipients see in the invitation email."
-      >
-        <div className="space-y-2">
-          <Label htmlFor="esign-envelope-title">Envelope title</Label>
-          <Input
-            id="esign-envelope-title"
-            placeholder="e.g. Discretionary mandate — M. Dlamini"
-            value={title}
-            disabled={disabled}
-            onChange={(e) => patch({ title: e.target.value })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <Label htmlFor="esign-envelope-message">Message to recipients</Label>
-            <span className="text-xs text-gray-400">Optional</span>
-          </div>
-          <Textarea
-            id="esign-envelope-message"
-            placeholder="Please review and sign by the end of the week. Reply here if anything looks off."
-            value={message}
-            rows={3}
-            maxLength={MAX_ENVELOPE_MESSAGE_LENGTH}
-            disabled={disabled}
-            onChange={(e) => patch({ message: e.target.value })}
-          />
-          <p className="text-right text-xs text-gray-400">
-            {message.length}/{MAX_ENVELOPE_MESSAGE_LENGTH}
-          </p>
-        </div>
-      </EsignWizardSection>
-
-      <EsignWizardSection
-        icon={Settings2}
-        title="Expiry"
-        description="After this, the signing link stops working and the envelope is marked expired."
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="space-y-2 sm:w-40">
-            <Label htmlFor="esign-envelope-expiry">Days to expire</Label>
+      {/* Right-hand stack: everything that is settings rather than content. */}
+      <div className="space-y-6">
+        <EsignWizardSection
+          icon={FileText}
+          title="Envelope details"
+          description="What recipients see in the invitation email."
+        >
+          <div className="space-y-2">
+            <Label htmlFor="esign-envelope-title">Envelope title</Label>
             <Input
-              id="esign-envelope-expiry"
-              type="number"
-              inputMode="numeric"
-              min={MIN_EXPIRY_DAYS}
-              max={MAX_EXPIRY_DAYS}
-              value={Number.isFinite(expiryDays) ? expiryDays : ''}
+              id="esign-envelope-title"
+              placeholder="e.g. Discretionary mandate — M. Dlamini"
+              value={title}
               disabled={disabled}
-              aria-invalid={expiryInvalid || undefined}
-              onChange={(e) => patch({ expiryDays: parseInt(e.target.value, 10) })}
-              className={cn(expiryInvalid && 'border-red-300 focus-visible:ring-red-200')}
+              onChange={(e) => patch({ title: e.target.value })}
             />
           </div>
-          <p className="pb-2 text-sm text-gray-500">
-            {expiryInvalid
-              ? `Choose between ${MIN_EXPIRY_DAYS} and ${MAX_EXPIRY_DAYS} days.`
-              : `Expires on ${expiryDate}.`}
-          </p>
-        </div>
-      </EsignWizardSection>
+
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <Label htmlFor="esign-envelope-message">Message to recipients</Label>
+              <span className="text-xs text-gray-400">Optional</span>
+            </div>
+            <Textarea
+              id="esign-envelope-message"
+              placeholder="Please review and sign by the end of the week. Reply here if anything looks off."
+              value={message}
+              rows={4}
+              maxLength={MAX_ENVELOPE_MESSAGE_LENGTH}
+              disabled={disabled}
+              onChange={(e) => patch({ message: e.target.value })}
+            />
+            <p className="text-right text-xs text-gray-400">
+              {message.length}/{MAX_ENVELOPE_MESSAGE_LENGTH}
+            </p>
+          </div>
+        </EsignWizardSection>
+
+        <EsignWizardSection
+          icon={Settings2}
+          title="Expiry"
+          description="After this, the signing link stops working and the envelope is marked expired."
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="space-y-2 sm:w-40">
+              <Label htmlFor="esign-envelope-expiry">Days to expire</Label>
+              <Input
+                id="esign-envelope-expiry"
+                type="number"
+                inputMode="numeric"
+                min={MIN_EXPIRY_DAYS}
+                max={MAX_EXPIRY_DAYS}
+                value={Number.isFinite(expiryDays) ? expiryDays : ''}
+                disabled={disabled}
+                aria-invalid={expiryInvalid || undefined}
+                onChange={(e) => patch({ expiryDays: parseInt(e.target.value, 10) })}
+                className={cn(expiryInvalid && 'border-red-300 focus-visible:ring-red-200')}
+              />
+            </div>
+            <p className="pb-2 text-sm text-gray-500">
+              {expiryInvalid
+                ? `Choose between ${MIN_EXPIRY_DAYS} and ${MAX_EXPIRY_DAYS} days.`
+                : `Expires on ${expiryDate}.`}
+            </p>
+          </div>
+        </EsignWizardSection>
+      </div>
     </div>
   );
 }

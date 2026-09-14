@@ -31,7 +31,12 @@ import { EsignDashboard } from './components/EsignDashboard';
 import { StepFallback } from './components/StepFallback';
 import { RecipientsStepView } from './components/RecipientsStepView';
 import { EsignModuleDialogs } from './components/EsignModuleDialogs';
-import { EsignWizardShell } from './components/wizard';
+import {
+  EsignWizardShell,
+  ExitWizardDialog,
+  canSaveWizardDraft,
+  hasUnsavedWizardWork,
+} from './components/wizard';
 import { documentStepBlocker } from './components/documentStepModel';
 import { esignApi } from './api';
 import {
@@ -79,6 +84,8 @@ export function EsignModule() {
   const [retentionOpen, setRetentionOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
   const [autoPopulateSuggestedFields, setAutoPopulateSuggestedFields] = useState(true);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const { canDo } = useCurrentUserPermissions();
 
   const canCreate = canDo('esign', 'create');
@@ -348,11 +355,14 @@ export function EsignModule() {
    * Also handles the idempotent re-use case: if `activeEnvelope` is
    * already a draft from this session, no new upload happens.
    */
-  const materialiseEnvelopeFromWizard = async (): Promise<{
+  const materialiseEnvelopeFromWizard = async (options?: {
+    /** Saving a draft on exit does not need recipients yet; sending does. */
+    requireSigners?: boolean;
+  }): Promise<{
     envelope: EsignEnvelope;
     fields: EsignField[];
   } | null> => {
-    if (wizardData.signers.length === 0) {
+    if ((options?.requireSigners ?? true) && wizardData.signers.length === 0) {
       toast.error('Please add at least one recipient.');
       return null;
     }
@@ -725,12 +735,56 @@ export function EsignModule() {
 
   // ==================== WIZARD CHROME ====================
 
-  /** Leave the flow entirely, from any step. */
-  const exitWizard = () => {
+  /**
+   * Leaving the wizard is guarded: until the studio is reached nothing here
+   * exists on the server, so a bare exit used to bin the documents, the title
+   * and the recipient list without asking. `requestExitWizard` opens the
+   * save/discard gate; only a genuinely empty wizard leaves silently.
+   */
+  const requestExitWizard = () => {
+    if (hasUnsavedWizardWork(wizardExitState)) {
+      setExitDialogOpen(true);
+      return;
+    }
+    discardWizard();
+  };
+
+  const discardWizard = () => {
+    setExitDialogOpen(false);
     resetWizardState();
     setView('dashboard');
   };
 
+  /**
+   * Persist whatever the wizard holds as a resumable draft envelope, then
+   * leave. The dashboard lists it under Drafts and "Continue Editing" picks it
+   * up with its documents, recipients and settings intact.
+   */
+  const handleSaveDraftAndExit = async () => {
+    setSavingDraft(true);
+    try {
+      const out = await materialiseEnvelopeFromWizard({ requireSigners: false });
+      if (!out) return;
+      toast.success('Saved as a draft — continue it any time from the dashboard.');
+      setExitDialogOpen(false);
+      resetWizardState();
+      setView('dashboard');
+      setRefreshTrigger((prev) => prev + 1);
+    } catch (error: unknown) {
+      logger.error('Failed to save wizard draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save draft');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const wizardExitState = {
+    files: wizardData.files,
+    title: wizardData.title,
+    message: wizardData.message,
+    signers: wizardData.signers,
+    hasDraftEnvelope: !!activeEnvelope?.id,
+  };
   const wizardFlowLabel = templateBuilder ? 'Build template' : 'Send for signature';
   const wizardContextLabel = templateBuilder
     ? templateBuilder.name
@@ -816,7 +870,7 @@ export function EsignModule() {
           description="Upload the PDFs you want signed, and name the envelope your recipients will see."
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
-          onExit={exitWizard}
+          onExit={requestExitWizard}
           footerHint={uploadBlocker}
           primaryAction={{
             label: 'Next: Add Recipients',
@@ -844,7 +898,7 @@ export function EsignModule() {
           description="Who needs to sign these documents, and in what order?"
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
-          onExit={exitWizard}
+          onExit={requestExitWizard}
           footerHint={noRecipients ? 'Add at least one recipient to continue.' : undefined}
           backAction={{
             label: 'Back',
@@ -921,6 +975,18 @@ export function EsignModule() {
           )}
         </div>
       )}
+
+      <ExitWizardDialog
+        open={exitDialogOpen}
+        onOpenChange={setExitDialogOpen}
+        onSaveDraft={handleSaveDraftAndExit}
+        onDiscard={discardWizard}
+        canSaveDraft={canSaveWizardDraft(wizardExitState, {
+          templateHasDocuments: templateHasSavedDocuments(templateContext?.template),
+        })}
+        saving={savingDraft || uploading}
+        isTemplateBuilder={!!templateBuilder}
+      />
 
       <EsignModuleDialogs
         templatePickerOpen={templatePickerOpen}
