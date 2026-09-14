@@ -2,18 +2,19 @@
  * Publications Feature - useScheduledPublishProcessor Hook
  *
  * Client-side poller that calls the server's process-scheduled endpoint
- * every 5 minutes while the Publications module is mounted. This handles
- * automatic publication of scheduled articles that have reached their
- * publish date/time.
+ * every 5 minutes while an admin has a visible admin tab open. This
+ * accelerates automatic publication of scheduled articles that have reached
+ * their publish date/time.
  *
- * Since this environment does not have a native cron scheduler, we use
- * a client-side interval as a practical alternative. The endpoint is
- * idempotent — calling it when no articles are due is a no-op.
+ * This accelerates the pg_cron job that is the authoritative driver, so it
+ * pauses while the tab is hidden. The endpoint is idempotent — calling it when
+ * no articles are due is a no-op.
  *
  * @module publications/hooks
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
+import { useVisibilityAwarePoll } from '../../../../../hooks/useVisibilityAwarePoll';
 import { PublicationsAPI } from '../api';
 import { createClient } from '../../../../../utils/supabase/client';
 import { logger } from '../../../../../utils/logger';
@@ -38,7 +39,6 @@ export function useScheduledPublishProcessor(options?: {
   onProcessed?: (count: number) => void;
 }) {
   const { enabled = true, onProcessed } = options || {};
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRunningRef = useRef(false);
 
   const processScheduled = useCallback(async () => {
@@ -72,25 +72,11 @@ export function useScheduledPublishProcessor(options?: {
     }
   }, [onProcessed]);
 
-  useEffect(() => {
-    if (!enabled) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
-
-    // Run after an initial delay to let the server warm up and auth settle
-    const initialTimeout = setTimeout(processScheduled, INITIAL_DELAY_MS);
-    intervalRef.current = setInterval(processScheduled, POLL_INTERVAL_MS);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [enabled, processScheduled]);
+  // Paused while the tab is hidden: this is an accelerator over a pg_cron
+  // job, so a backgrounded tab polling it only burns invocations.
+  useVisibilityAwarePoll(processScheduled, {
+    intervalMs: POLL_INTERVAL_MS,
+    initialDelayMs: INITIAL_DELAY_MS,
+    enabled,
+  });
 }

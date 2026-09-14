@@ -9,7 +9,7 @@ Use `supabase/cron/publications-jobs.sql` to create the production cron jobs for
   - Publishes due scheduled articles.
   - Also drains queued article notification work as part of the scheduled publish pass.
 - `publications-process-notification-jobs`
-  - Runs every 30 seconds.
+  - Runs every 2 minutes.
   - Advances queued article email delivery independently of the admin browser.
   - Processes up to 5 jobs and up to 4 send batches per job on each run.
 
@@ -99,7 +99,7 @@ Use `supabase/cron/newsletter-studio-jobs.sql` to create the campaign delivery j
 Newsletter Studio admin module.
 
 - `newsletter-studio-process-campaigns`
-  - Runs every 30 seconds.
+  - Runs every 2 minutes.
   - Promotes due scheduled campaigns and advances queued campaign delivery
     independently of the admin browser (which acts only as a best-effort accelerator).
   - Processes up to 3 campaigns and up to 4 send batches of 20 per run.
@@ -211,6 +211,21 @@ routine-driven weekly social pipeline (`docs/runbooks/social-automation.md`).
   service-role bearer reports what would be rendered without spending.
 - Run it only AFTER the Edge Function that carries `/social-assets` is deployed, and verify the
   same way as the other jobs: query A and query C in `docs/runbooks/scheduled-jobs.md`.
+
+## Why the delivery jobs tick every 2 minutes, not every 30 seconds
+
+Both email-delivery jobs ran every 30 seconds until 2026-09-14. Between them
+they were 5,752 of the project's 7,192 daily Edge Function invocations, and
+found nothing to send on almost every one. Two minutes is the accepted
+unattended delivery latency; an admin with the studio open still gets
+15-second ticks from the browser accelerator, so an attended send is
+unchanged. A large send is correspondingly slower when unattended, because
+the per-run batch budgets did not change.
+
+If you change the cadence again, re-check `SCHEDULER_STALE_AFTER_MS` in
+`src/components/admin/modules/newsletter/utils/scheduler.ts`. It is sized
+against this cadence plus the server's `IDLE_HEARTBEAT_INTERVAL_MS`, and the
+studio falsely reports "Scheduler stale" if the sum outgrows it.
 
 ## Database maintenance jobs (migration-managed)
 

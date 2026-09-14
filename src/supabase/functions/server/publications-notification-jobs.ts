@@ -66,7 +66,7 @@ function isIdleArticleNotificationProcessorState(
  * True when persisting `next` would change nothing a reader can act on: the
  * previous row already says "idle, no error, same mode and budgets", and its
  * heartbeat is younger than IDLE_HEARTBEAT_INTERVAL_MS. The processor then
- * leaves the row alone instead of rewriting a timestamp every 30 seconds.
+ * leaves the row alone instead of rewriting a timestamp on every tick.
  */
 export function canSkipIdleArticleNotificationProcessorStateWrite(
   previous: ArticleNotificationProcessorState | null,
@@ -96,9 +96,20 @@ export async function buildArticleNotificationProcessorState(
     | 'staleJobThresholdMs'
     | 'stuckJobs'
   >,
+  /**
+   * Job records to count from, when the caller already has them.
+   *
+   * The processor read this same namespace moments earlier to find its work,
+   * so re-reading it here made every tick scan the namespace twice
+   * (docs/INCIDENTS.md, 2026-09-13). Pass a snapshot ONLY while it is still
+   * accurate: a tick that advanced a job has changed statuses this list does
+   * not carry, and passing it then would report stale counts. Omit it and this
+   * re-reads, which is always correct and costs one namespace scan.
+   */
+  jobs?: ArticleNotificationJob[],
 ): Promise<ArticleNotificationProcessorState> {
   const allJobs = (
-    (await kv.getByPrefix(ARTICLE_NOTIFICATION_JOB_PREFIX)) as ArticleNotificationJob[]
+    jobs ?? ((await kv.getByPrefix(ARTICLE_NOTIFICATION_JOB_PREFIX)) as ArticleNotificationJob[])
   ).map(withArticleNotificationJobDefaults);
   const activeJobs = allJobs.filter(
     (job) => job.status === 'queued' || job.status === 'processing',

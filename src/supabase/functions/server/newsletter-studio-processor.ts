@@ -765,7 +765,7 @@ async function writeProcessorState(
     failedInLastRun: result.failed,
   };
   // An idle tick inside the heartbeat interval changes nothing but the
-  // timestamps; skipping the upsert is what keeps the 30-second cron from
+  // timestamps; skipping the upsert is what keeps the delivery cron from
   // being the KV table's busiest writer (see IDLE_HEARTBEAT_INTERVAL_MS).
   if (canSkipIdleNewsletterProcessorStateWrite(previous, state)) return;
   await newsletterProcessorState.put(NEWSLETTER_PROCESSOR_STATE_ID, state);

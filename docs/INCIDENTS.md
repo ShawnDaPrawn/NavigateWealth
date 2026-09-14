@@ -14,6 +14,55 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-09-14 - The Rest Of The Idle Polling, Found By Auditing After The Disk IO Incident
+
+- **Symptom:** None. This was a deliberate sweep of the other resource
+  dimensions after the entry below, asking what else cost money while doing
+  nothing. Three more instances of the same pattern turned up.
+- **What was found.**
+  (1) `publications-process-scheduled` ran every minute and called
+  `kv.getByPrefix('article:')`, reading all 165 article records and 660 kB of
+  JSONB to filter for the ones due in Deno. Zero were scheduled. That is ~950
+  MB a day out of Postgres, through PostgREST, into the Edge Function, and
+  discarded. In `pg_stat_statements` the prefix-scan statement had consumed
+  3,794 s of database time, the largest remaining consumer after the pg_net
+  cleanup below.
+  (2) `processArticleNotificationJobs` read its job namespace to find work and
+  then `buildArticleNotificationProcessorState` read the identical namespace
+  again to compute counts, so every tick scanned it twice.
+  (3) Five browser accelerators mount at `AdminDashboardPage` level for the
+  whole admin session, two of them every 15 seconds, and none checked
+  `document.hidden`. One backgrounded admin tab issued 480 Edge Function
+  invocations an hour to drain queues nobody was watching.
+  Taken together with the cron jobs, more than 99% of the project's Edge
+  Function invocations were idle polling: 7,192 in 24 hours, against roughly 60
+  for everything else including real user traffic.
+- **Why it hid:** Each piece was individually defensible. A prefix scan is the
+  obvious way to read a KV namespace and is genuinely fine for a one-off admin
+  read; the duplicate scan was two correct functions each doing their own job;
+  the pollers were deliberate accelerators, documented as such, and worked. The
+  cost only appears when you multiply by the schedule, and nothing in the
+  system reports invocations-that-did-nothing.
+- **Fix:** `kv.getByPrefixWhereFieldEquals` pushes the filter into Postgres, and
+  migration `20260914083818` adds a partial index on `(value->>'status')` so
+  the scheduled-publish tick is an index scan touching 2 buffers rather than a
+  660 kB read. `buildArticleNotificationProcessorState` accepts the caller's
+  snapshot, and reuses it only on a tick that advanced nothing, because a
+  working tick has changed statuses the snapshot does not carry. The three
+  frequent accelerators moved to `useVisibilityAwarePoll`, which pauses while
+  the tab is hidden and ticks immediately on return. The two email-delivery
+  crons went from 30 seconds to 2 minutes, an accepted latency the owner
+  agreed, which also required raising `SCHEDULER_STALE_AFTER_MS` from 5 to 10
+  minutes so a healthy job's skipped heartbeat cannot read as stale.
+- **Lesson:** After fixing a resource problem, audit for its siblings rather
+  than closing the ticket. The shape to search for is _work whose cost scales
+  with how much data exists rather than with how much work is pending_, and its
+  companion, _work that runs when nobody is there to benefit_. Two questions
+  find most of it: what does an idle tick of this read, and who is waiting for
+  the answer? Note also that the partial index predicate had to stay narrow:
+  adding the obvious `AND key LIKE 'article:%'` would have made the index
+  unusable, because Postgres cannot prove a range bound implies a LIKE.
+
 ### 2026-09-13 - Disk IO Budget Depleted By Unpurged pg_cron History And pg_net Bloat
 
 - **Symptom:** Supabase emailed that project `vpjmdsltwrnpefzcgdmz` was

@@ -154,12 +154,21 @@ tagsSchedulingRoutes.post('/cron/process-scheduled', async (c) => {
 
     log.info('CRON: Processing scheduled articles');
 
-    const articles = await kv.getByPrefix('article:');
+    // Only the scheduled ones, filtered in Postgres against the partial index
+    // from migration 20260914083818. Reading every article to find the handful
+    // that are due cost ~950 MB a day and found nothing on almost every tick
+    // (docs/INCIDENTS.md, 2026-09-13).
+    const articles = await kv.getByPrefixWhereFieldEquals('article:', 'status', 'scheduled');
     const now = new Date();
     let processedCount = 0;
     const published: string[] = [];
 
     for (const article of articles) {
+      // The query above already restricts this to scheduled articles. The
+      // status check stays anyway: publishing a draft to the public site is not
+      // something to leave resting on one filter expression being right. If you
+      // are tempted to drop the Postgres filter because this check makes it
+      // look redundant, read the incident note above first.
       if (article.status === 'scheduled' && article.scheduled_for) {
         const scheduledDate = new Date(article.scheduled_for);
 

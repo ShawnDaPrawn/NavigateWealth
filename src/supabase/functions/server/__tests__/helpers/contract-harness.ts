@@ -65,6 +65,21 @@ export function makeKvMock() {
       return out;
     }),
     /**
+     * Faithful to `kv_store.tsx`: the real one pushes the field match down to
+     * Postgres, so a caller only ever sees rows where `value[field]` equals the
+     * given value. A mock that ignored the filter would let a handler that
+     * dropped its own status check still pass.
+     */
+    getByPrefixWhereFieldEquals: vi.fn(async (prefix: string, field: string, equals: string) => {
+      const out: unknown[] = [];
+      kvStore.forEach((v, k) => {
+        if (!k.startsWith(prefix)) return;
+        if ((v as Record<string, unknown> | null)?.[field] !== equals) return;
+        out.push(clone(v));
+      });
+      return out;
+    }),
+    /**
      * Faithful to `kv_store.tsx`: rows come back sorted by key ascending,
      * `startAfter` is exclusive, and `limit` defaults to 100. Callers page with
      * `while (rows.length === PAGE_SIZE)`, so a mock that returned everything

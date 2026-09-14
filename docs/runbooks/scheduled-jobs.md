@@ -498,7 +498,7 @@ here so the next audit starts from a complete set.
 | job                                     | schedule (UTC) | target path                                          | setup SQL                                          |
 | --------------------------------------- | -------------- | ---------------------------------------------------- | -------------------------------------------------- |
 | `client-document-summaries-weekly-scan` | `0 4 * * 6`    | `/client-document-summaries/maintenance/weekly-scan` | `supabase/cron/client-document-summaries-jobs.sql` |
-| `newsletter-studio-process-campaigns`   | `30 seconds`   | `/newsletter-studio/cron/process`                    | `supabase/cron/newsletter-studio-jobs.sql`         |
+| `newsletter-studio-process-campaigns`   | `*/2 * * * *`  | `/newsletter-studio/cron/process`                    | `supabase/cron/newsletter-studio-jobs.sql`         |
 | `db-maintenance-purge-cron-history`     | `0 2 * * *`    | SQL only: 7-day retention on `cron.job_run_details`  | migration `20260913181044`                         |
 | `db-maintenance-vacuum-system-tables`   | `20 2 * * *`   | SQL only: `vacuum (analyze)` on the two tables below | migration `20260913181044`                         |
 
@@ -537,11 +537,16 @@ and scheduled sends could not fire unattended. The studio dashboard was saying s
 Installed from `supabase/cron/newsletter-studio-jobs.sql` with the anon key
 substituted; it authenticates with the same Vault-backed `x-nw-cron-auth` token
 as the weekly-scan job. Verified the way this runbook demands: query A green
-every 30 seconds AND the studio's processor state (`nlstudio:processor:state`
+on every tick AND the studio's processor state (`nlstudio:processor:state`
 in the KV table) flipped from `lastCronRunAt: null` to a live timestamp within a
 minute, which only a cron-mode tick writes. The studio header shows this as a
 "Scheduler live" pill; "Scheduler not installed" or "Scheduler stale" (no
-check-in for five minutes) means come back to this runbook.
+check-in for ten minutes) means come back to this runbook.
+
+Its cadence moved from 30 seconds to 2 minutes on 2026-09-14, along with
+`publications-process-notification-jobs`, for the reasons in
+`supabase/cron/README.md`. The ten-minute stale threshold is sized against that
+cadence; the two numbers move together.
 
 ### `social-automation-render-images` and `social-automation-sync-buffer` (to install after the social-assets deploy)
 
@@ -590,6 +595,14 @@ Three habits follow from this:
 net._http_response where id = ...` is a sequential scan of the whole table.
   Filter on `created` (indexed) with a narrow window, or read the Edge Function
   logs (query C), which is where the answer lives anyway.
+- **Do not scan a whole namespace to find out there is nothing to do.** The
+  every-minute scheduled-publish job read all 165 article records, 660 kB, to
+  find the zero that were due, roughly 950 MB a day. It now filters on
+  `value->>'status'` in Postgres against the partial index from migration
+  `20260914083818`, and an idle tick touches 2 buffers. `kv.getByPrefix` is
+  fine for a one-off admin read and ruinous on a schedule; reach for
+  `kv.getByPrefixWhereFieldEquals` and pair it with an index on the same
+  predicate.
 - **Do not add a heartbeat that writes every tick.** Both 30-second processors
   used to upsert their processor-state row on every idle run — ~5,800 writes a
   day whose only content was a timestamp. They now skip the write while the
