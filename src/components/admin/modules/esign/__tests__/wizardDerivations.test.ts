@@ -10,6 +10,7 @@ vi.mock('../../../../utils/logger', () => ({
 }));
 
 import {
+  canExpressSend,
   templateHasSavedDocuments,
   mapTemplateRecipientsToWizard,
   toDraftSignerPayload,
@@ -19,7 +20,13 @@ import {
   signersFromResumedEnvelope,
   deriveExpiryDays,
 } from '../wizardDerivations';
-import type { EsignEnvelope, EsignField, EsignTemplateRecord, SignerFormData } from '../types';
+import type {
+  EsignEnvelope,
+  EsignField,
+  EsignTemplateRecord,
+  SignerFormData,
+  TemplateField,
+} from '../types';
 
 const template = (over: Partial<EsignTemplateRecord>): EsignTemplateRecord => ({
   id: 'tpl-1',
@@ -53,6 +60,34 @@ const signer = (over: Partial<SignerFormData>): SignerFormData => ({
   email: 's@x.co',
   otpRequired: false,
   ...over,
+});
+
+describe('canExpressSend', () => {
+  const ctx = (fields: TemplateField[]) => ({ template: template({ fields }), version: 1 });
+  const field: TemplateField = {
+    type: 'signature',
+    page: 1,
+    x: 10,
+    y: 20,
+    width: 30,
+    height: 40,
+    required: true,
+    recipientIndex: 0,
+  };
+
+  it('is true for a send from a template that already has fields placed', () => {
+    expect(canExpressSend(ctx([field]), false)).toBe(true);
+  });
+
+  it('is false without a template, or with a template that has no fields', () => {
+    expect(canExpressSend(null, false)).toBe(false);
+    expect(canExpressSend(undefined, false)).toBe(false);
+    expect(canExpressSend(ctx([]), false)).toBe(false);
+  });
+
+  it('is false while building a template — there is nothing to send yet', () => {
+    expect(canExpressSend(ctx([field]), true)).toBe(false);
+  });
 });
 
 describe('templateHasSavedDocuments', () => {

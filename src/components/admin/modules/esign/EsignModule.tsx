@@ -13,9 +13,16 @@
  * template/envelope ↔ wizard mappings live in ./wizardDerivations; the
  * recipients step's markup in ./components/RecipientsStepView; the dialog
  * layer in ./components/EsignModuleDialogs.
+ *
+ * Every step of the creation flow renders inside ./components/wizard's
+ * `EsignWizardShell`, which owns the header, the progress rail and the action
+ * bar. Steps contribute content and declare their actions; they never lay out
+ * their own page, which is what used to make each step land somewhere
+ * different on screen.
  */
 
 import React, { useState, Suspense } from 'react';
+import { ArrowRight, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '../../../../utils/logger';
 
@@ -24,8 +31,11 @@ import { EsignDashboard } from './components/EsignDashboard';
 import { StepFallback } from './components/StepFallback';
 import { RecipientsStepView } from './components/RecipientsStepView';
 import { EsignModuleDialogs } from './components/EsignModuleDialogs';
+import { EsignWizardShell } from './components/wizard';
+import { documentStepBlocker } from './components/documentStepModel';
 import { esignApi } from './api';
 import {
+  canExpressSend,
   templateHasSavedDocuments,
   mapTemplateRecipientsToWizard,
   toDraftSignerPayload,
@@ -242,14 +252,10 @@ export function EsignModule() {
     setView(templateHasSavedDocuments(template) ? 'wizard-recipients' : 'wizard-upload');
   };
 
-  const handleUploadNext = (files: File[], title: string, message: string, expiryDays: number) => {
-    setWizardData((prev) => ({
-      ...prev,
-      files,
-      title,
-      message,
-      expiryDays,
-    }));
+  const handleUploadNext = () => {
+    // The documents step writes straight into wizardData, so there is nothing
+    // to collect here — the shell only enables Continue once
+    // `documentStepBlocker` is satisfied.
     setView('wizard-recipients');
   };
 
@@ -717,6 +723,26 @@ export function EsignModule() {
     }
   };
 
+  // ==================== WIZARD CHROME ====================
+
+  /** Leave the flow entirely, from any step. */
+  const exitWizard = () => {
+    resetWizardState();
+    setView('dashboard');
+  };
+
+  const wizardFlowLabel = templateBuilder ? 'Build template' : 'Send for signature';
+  const wizardContextLabel = templateBuilder
+    ? templateBuilder.name
+    : templateContext?.template.name;
+  /** Null once the documents step is complete; otherwise what is missing. */
+  const uploadBlocker = documentStepBlocker({
+    files: wizardData.files,
+    title: wizardData.title,
+    message: wizardData.message,
+    expiryDays: wizardData.expiryDays,
+  });
+
   // ==================== RENDER ====================
 
   return (
@@ -779,6 +805,87 @@ export function EsignModule() {
             documentUrl={documentUrl || undefined}
           />
         </Suspense>
+      ) : view === 'wizard-upload' ? (
+        <EsignWizardShell
+          step="upload"
+          title="Add Documents"
+          description="Upload the PDFs you want signed, and name the envelope your recipients will see."
+          flowLabel={wizardFlowLabel}
+          contextLabel={wizardContextLabel}
+          onExit={exitWizard}
+          footerHint={uploadBlocker}
+          primaryAction={{
+            label: 'Next: Add Recipients',
+            onClick: handleUploadNext,
+            disabled: !!uploadBlocker,
+            icon: ArrowRight,
+          }}
+        >
+          <Suspense fallback={<StepFallback />}>
+            <DocumentUploadStep
+              value={{
+                files: wizardData.files,
+                title: wizardData.title,
+                message: wizardData.message,
+                expiryDays: wizardData.expiryDays,
+              }}
+              onChange={(next) => setWizardData((prev) => ({ ...prev, ...next }))}
+            />
+          </Suspense>
+        </EsignWizardShell>
+      ) : view === 'wizard-recipients' ? (
+        <EsignWizardShell
+          step="recipients"
+          title="Add Recipients"
+          description="Who needs to sign these documents, and in what order?"
+          flowLabel={wizardFlowLabel}
+          contextLabel={wizardContextLabel}
+          onExit={exitWizard}
+          footerHint={
+            wizardData.signers.length === 0 ? 'Add at least one recipient to continue.' : undefined
+          }
+          backAction={{
+            label: 'Back',
+            onClick: () => {
+              if (
+                wizardData.files.length > 0 ||
+                (templateBuilder && !templateHasSavedDocuments(templateContext?.template))
+              ) {
+                setView('wizard-upload');
+              } else {
+                resetWizardState();
+                setView('dashboard');
+              }
+            },
+          }}
+          secondaryAction={
+            canSend && canExpressSend(templateContext, !!templateBuilder)
+              ? {
+                  label: 'Send now (express)',
+                  onClick: handleExpressSend,
+                  busy: uploading || sending,
+                  busyLabel: 'Sending…',
+                  icon: Send,
+                }
+              : undefined
+          }
+          primaryAction={{
+            label: 'Next: Prepare Fields',
+            onClick: handleRecipientsNext,
+            busy: uploading,
+            busyLabel: 'Creating envelope…',
+            icon: ArrowRight,
+          }}
+        >
+          <RecipientsStepView
+            signers={wizardData.signers}
+            onSignersChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
+            templateContext={templateContext}
+            isTemplateBuilder={!!templateBuilder}
+            autoPopulateSuggestedFields={autoPopulateSuggestedFields}
+            onAutoPopulateChange={setAutoPopulateSuggestedFields}
+          />
+        </EsignWizardShell>
       ) : (
         <div className="flex-1 overflow-auto p-6">
           {view === 'dashboard' && (
@@ -803,51 +910,6 @@ export function EsignModule() {
               onRetentionPolicy={canDelete ? () => setRetentionOpen(true) : undefined}
               onBranding={canCreate ? () => setBrandingOpen(true) : undefined}
               refreshTrigger={refreshTrigger}
-            />
-          )}
-
-          {view === 'wizard-upload' && (
-            <Suspense fallback={<StepFallback />}>
-              <DocumentUploadStep
-                onNext={handleUploadNext}
-                onCancel={() => {
-                  resetWizardState();
-                  setView('dashboard');
-                }}
-                initialData={{
-                  files: wizardData.files,
-                  title: wizardData.title,
-                  message: wizardData.message,
-                  expiryDays: wizardData.expiryDays,
-                }}
-              />
-            </Suspense>
-          )}
-
-          {view === 'wizard-recipients' && (
-            <RecipientsStepView
-              signers={wizardData.signers}
-              onSignersChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
-              templateContext={templateContext}
-              isTemplateBuilder={!!templateBuilder}
-              canSend={canSend}
-              autoPopulateSuggestedFields={autoPopulateSuggestedFields}
-              onAutoPopulateChange={setAutoPopulateSuggestedFields}
-              uploading={uploading}
-              sending={sending}
-              onBack={() => {
-                if (
-                  wizardData.files.length > 0 ||
-                  (templateBuilder && !templateHasSavedDocuments(templateContext?.template))
-                ) {
-                  setView('wizard-upload');
-                } else {
-                  resetWizardState();
-                  setView('dashboard');
-                }
-              }}
-              onExpressSend={handleExpressSend}
-              onNext={handleRecipientsNext}
             />
           )}
         </div>

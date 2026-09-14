@@ -368,13 +368,13 @@ export function RecipientsManager({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Recipients</h3>
-          <p className="text-sm text-gray-500">Select who needs to sign this document</p>
-        </div>
-        {canAddMore && !showAddForm && (
+      {/* No heading here: both callers already title this region — the wizard
+          step through `EsignWizardSection`, the studio through its sheet — so a
+          third "Recipients" inside them read as a nested page. The add button
+          is also hidden while the list is empty, where the empty state below
+          carries the same call to action. */}
+      {canAddMore && !showAddForm && signers.length > 0 && (
+        <div className="flex justify-end">
           <Button
             onClick={() => setShowAddForm(true)}
             disabled={disabled}
@@ -383,8 +383,8 @@ export function RecipientsManager({
             <UserPlus className="h-4 w-4 mr-2" />
             Add Recipient
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {/* Recipient List */}
