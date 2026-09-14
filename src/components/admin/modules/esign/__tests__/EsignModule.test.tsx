@@ -160,4 +160,17 @@ describe('EsignModule', () => {
       expect(screen.getByTestId('upload-step')).toBeTruthy();
     });
   });
+
+  it('leaves an untouched wizard immediately, without the exit gate', async () => {
+    render(<EsignModule />);
+    fireEvent.click(screen.getByRole('button', { name: /start new envelope/i }));
+    await waitFor(() => screen.getByTestId('start-blank'));
+    fireEvent.click(screen.getByTestId('start-blank'));
+    await waitFor(() => screen.getByTestId('upload-step'));
+
+    // Nothing staged, nothing typed: the gate would just be in the way.
+    fireEvent.click(screen.getByRole('button', { name: /exit/i }));
+    await waitFor(() => screen.getByTestId('esign-dashboard'));
+    expect(screen.queryByText(/leave without sending\?/i)).toBeNull();
+  });
 });

@@ -185,7 +185,13 @@ export function EsignModule() {
 
   const materialiseTemplateDraftForWizard = async (
     template: EsignTemplateRecord,
-    options?: { campaignId?: string; packetRunId?: string; packetStepIndex?: number },
+    options?: {
+      campaignId?: string;
+      packetRunId?: string;
+      packetStepIndex?: number;
+      /** See `materialiseEnvelopeFromWizard`: the exit path cannot swallow this. */
+      strict?: boolean;
+    },
   ): Promise<{
     envelope: EsignEnvelope;
     fields: EsignField[];
@@ -214,6 +220,7 @@ export function EsignModule() {
     try {
       await syncDraftSigners(result.envelope.id, wizardData.signers);
     } catch (draftErr) {
+      if (options?.strict) throw draftErr;
       logger.warn('Failed to persist draft signers on template draft (non-critical):', {
         error: draftErr,
       });
@@ -358,10 +365,19 @@ export function EsignModule() {
   const materialiseEnvelopeFromWizard = async (options?: {
     /** Saving a draft on exit does not need recipients yet; sending does. */
     requireSigners?: boolean;
+    /**
+     * Surface persistence failures instead of warning past them. The exit path
+     * throws away the local wizard once this resolves, so a swallowed failure
+     * there loses the recipients for real; the in-flow paths keep the state on
+     * screen and can afford to carry on.
+     */
+    strict?: boolean;
   }): Promise<{
     envelope: EsignEnvelope;
     fields: EsignField[];
   } | null> => {
+    const strict = options?.strict ?? false;
+
     if ((options?.requireSigners ?? true) && wizardData.signers.length === 0) {
       toast.error('Please add at least one recipient.');
       return null;
@@ -369,9 +385,18 @@ export function EsignModule() {
 
     if (activeEnvelope?.id && activeEnvelope.status === 'draft') {
       try {
+        // The title, message and expiry may have been edited since this draft
+        // was created (step 1 is one Back away from the studio), so write them
+        // back before the local copy is dropped.
+        await esignApi.updateDraftSettings(activeEnvelope.id, {
+          title: wizardData.title,
+          message: wizardData.message,
+          expiryDays: wizardData.expiryDays,
+        });
         await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
-        logger.warn('Failed to update draft signers on existing envelope (non-critical):', {
+        if (strict) throw draftErr;
+        logger.warn('Failed to update existing draft envelope (non-critical):', {
           error: draftErr,
         });
       }
@@ -379,7 +404,7 @@ export function EsignModule() {
     }
 
     if (templateContext && templateHasSavedDocuments(templateContext.template)) {
-      return materialiseTemplateDraftForWizard(templateContext.template);
+      return materialiseTemplateDraftForWizard(templateContext.template, { strict });
     }
 
     if (!wizardData.files || wizardData.files.length === 0) {
@@ -418,6 +443,7 @@ export function EsignModule() {
     try {
       await syncDraftSigners(result.id, wizardData.signers);
     } catch (draftErr) {
+      if (strict) throw draftErr;
       logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
     }
 
@@ -763,7 +789,7 @@ export function EsignModule() {
   const handleSaveDraftAndExit = async () => {
     setSavingDraft(true);
     try {
-      const out = await materialiseEnvelopeFromWizard({ requireSigners: false });
+      const out = await materialiseEnvelopeFromWizard({ requireSigners: false, strict: true });
       if (!out) return;
       toast.success('Saved as a draft — continue it any time from the dashboard.');
       setExitDialogOpen(false);
@@ -981,9 +1007,15 @@ export function EsignModule() {
         onOpenChange={setExitDialogOpen}
         onSaveDraft={handleSaveDraftAndExit}
         onDiscard={discardWizard}
-        canSaveDraft={canSaveWizardDraft(wizardExitState, {
-          templateHasDocuments: templateHasSavedDocuments(templateContext?.template),
-        })}
+        canSaveDraft={
+          // A saved draft carries no template-builder context — resuming it
+          // would offer Send, not Save Template, and lose the template's id,
+          // description and category. Better not to promise it.
+          !templateBuilder &&
+          canSaveWizardDraft(wizardExitState, {
+            templateHasDocuments: templateHasSavedDocuments(templateContext?.template),
+          })
+        }
         saving={savingDraft || uploading}
         isTemplateBuilder={!!templateBuilder}
       />

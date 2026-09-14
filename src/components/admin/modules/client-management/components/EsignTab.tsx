@@ -174,6 +174,11 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   const handleStartNew = () => {
     setWizardData({ files: [], title: '', message: '', expiryDays: 30, signers: [] });
+    // Clear the prepare state too. Without this a previously sent or resumed
+    // envelope stays active, and the new wizard's save-as-draft writes its
+    // recipients onto that old envelope instead of uploading these files.
+    setActiveEnvelope(null);
+    setDocumentUrl(null);
     setView('wizard-upload');
   };
 
@@ -190,7 +195,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     expiryDays: wizardData.expiryDays,
   });
 
-  const persistDraftSigners = async (envelopeId: string) => {
+  const persistDraftSigners = async (envelopeId: string, options?: { strict?: boolean }) => {
     try {
       await esignApi.saveDraftSigners(
         envelopeId,
@@ -206,6 +211,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
         })),
       );
     } catch (draftErr) {
+      // The exit path drops the local wizard once this resolves, so there a
+      // failure has to surface rather than quietly lose the recipients.
+      if (options?.strict) throw draftErr;
       logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
     }
   };
@@ -216,7 +224,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
    * save-as-draft path on exit, which is why it does not itself require
    * recipients — only sending does.
    */
-  const createDraftEnvelopeFromWizard = async (): Promise<EsignEnvelope | null> => {
+  const createDraftEnvelopeFromWizard = async (options?: {
+    strict?: boolean;
+  }): Promise<EsignEnvelope | null> => {
     if (!wizardData.files || wizardData.files.length === 0) {
       toast.error('No documents found. Please go back and upload a document.');
       return null;
@@ -247,7 +257,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       const url = result.document?.url || result.documentUrl;
       if (url) setDocumentUrl(url);
 
-      await persistDraftSigners(result.id);
+      await persistDraftSigners(result.id, { strict: options?.strict });
 
       return result;
     }
@@ -301,8 +311,15 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       // An envelope already created for this session is a draft already; the
       // recipients edited since are what still needs writing back.
       if (activeEnvelope?.id) {
-        await persistDraftSigners(activeEnvelope.id);
-      } else if (!(await createDraftEnvelopeFromWizard())) {
+        // Step 1 is one Back away from the studio, so the title, message and
+        // expiry may have changed since this draft was created.
+        await esignApi.updateDraftSettings(activeEnvelope.id, {
+          title: wizardData.title,
+          message: wizardData.message,
+          expiryDays: wizardData.expiryDays,
+        });
+        await persistDraftSigners(activeEnvelope.id, { strict: true });
+      } else if (!(await createDraftEnvelopeFromWizard({ strict: true }))) {
         return;
       }
       toast.success('Saved as a draft — continue it any time from this tab.');
