@@ -45,7 +45,46 @@ import {
   getArticleNotificationJobRecord,
   persistArticleNotificationJob,
   persistArticleNotificationCampaign,
+  IDLE_HEARTBEAT_INTERVAL_MS,
+  isHeartbeatWithin,
 } from './publications-notification-state.ts';
+
+function isIdleArticleNotificationProcessorState(
+  state: ArticleNotificationProcessorState,
+): boolean {
+  return (
+    state.lastError === null &&
+    state.processedJobs === 0 &&
+    state.advancedJobs === 0 &&
+    state.completedJobs === 0 &&
+    state.activeJobCount === 0 &&
+    state.stuckJobCount === 0
+  );
+}
+
+/**
+ * True when persisting `next` would change nothing a reader can act on: the
+ * previous row already says "idle, no error, same mode and budgets", and its
+ * heartbeat is younger than IDLE_HEARTBEAT_INTERVAL_MS. The processor then
+ * leaves the row alone instead of rewriting a timestamp every 30 seconds.
+ */
+export function canSkipIdleArticleNotificationProcessorStateWrite(
+  previous: ArticleNotificationProcessorState | null,
+  next: ArticleNotificationProcessorState,
+): boolean {
+  if (!previous) return false;
+  if (previous.mode !== next.mode) return false;
+  if (previous.maxJobs !== next.maxJobs || previous.maxBatchesPerJob !== next.maxBatchesPerJob) {
+    return false;
+  }
+  if (
+    !isIdleArticleNotificationProcessorState(previous) ||
+    !isIdleArticleNotificationProcessorState(next)
+  ) {
+    return false;
+  }
+  return isHeartbeatWithin(previous.lastHeartbeatAt, IDLE_HEARTBEAT_INTERVAL_MS);
+}
 
 export async function buildArticleNotificationProcessorState(
   input: Omit<

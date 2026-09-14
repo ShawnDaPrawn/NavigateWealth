@@ -1,7 +1,7 @@
 # Migrations — repo vs. production
 
 **Reconciled 2026-08-24 against project `vpjmdsltwrnpefzcgdmz`. The folder now
-tells the truth.** Last appended to 2026-09-10 (`20260910182003`, applied and
+tells the truth.** Last appended to 2026-09-13 (`20260913181044`, applied and
 verified against the same project).
 
 Before this reconciliation the repo held four migration files, production had
@@ -38,6 +38,7 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260906005533_calendar_client_fk_to_auth_users.sql`         | ✅ `20260906005533`  | Repo-authored, then applied and verified                                                                                                                                       |
 | `20260910160442_social_automation.sql`                        | ✅ `20260910160442`  | Repo-authored, applied via `apply_migration`, verified after (playbook/settings seed lengths and 9 functions checked against the file)                                         |
 | `20260910182003_social_automation_claims.sql`                 | ✅ `20260910182003`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (14 assertions), verified after (playbook v2 lengths and md5 match the file; 10 functions; grants) |
+| `20260913181044_cron_history_retention_and_pg_net_vacuum.sql` | ✅ `20260913181044`  | Repo-authored, applied via `apply_migration`, verified after (jobids 32 and 33 present in `cron.job`, owned by `postgres`; file matches the applied SQL)                       |
 
 `20260906005533` is stamped later than the day it was authored, and that is
 correct rather than drift: it had to be applied _after_ the Edge Function that

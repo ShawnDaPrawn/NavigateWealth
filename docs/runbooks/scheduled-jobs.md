@@ -499,6 +499,8 @@ here so the next audit starts from a complete set.
 | --------------------------------------- | -------------- | ---------------------------------------------------- | -------------------------------------------------- |
 | `client-document-summaries-weekly-scan` | `0 4 * * 6`    | `/client-document-summaries/maintenance/weekly-scan` | `supabase/cron/client-document-summaries-jobs.sql` |
 | `newsletter-studio-process-campaigns`   | `30 seconds`   | `/newsletter-studio/cron/process`                    | `supabase/cron/newsletter-studio-jobs.sql`         |
+| `db-maintenance-purge-cron-history`     | `0 2 * * *`    | SQL only: 7-day retention on `cron.job_run_details`  | migration `20260913181044`                         |
+| `db-maintenance-vacuum-system-tables`   | `20 2 * * *`   | SQL only: `vacuum (analyze)` on the two tables below | migration `20260913181044`                         |
 
 Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
 renders as its activity timeline, for every document batch uploaded in the last
@@ -550,6 +552,50 @@ guarded by the Vault cron token (or an admin session for the "Run now" buttons).
 only once the Edge Function carrying `/social-assets` is live — a job pointing at a 404 is
 finding 2 of the 2026-08-25 audit all over again — and confirm with query C that the paths
 answer 200.
+
+## What these queries cost, and the two jobs that keep them cheap
+
+Every query in this runbook reads `cron.job_run_details`, and the response
+checks read `net._http_response`. Neither table is application data, neither
+shows up in the dashboard's table list, and until 2026-09-13 neither had ever
+been trimmed: 1.3 GB of cron history (every run stores its full command,
+bearer token included) and 609 MB of pg_net bloat around ~1,100 live rows. On
+this compute tier that meant query A took ~10 s and pulled 1.3 GB from disk
+each time, the weekly `pg_dump` backup re-read all of it, and Supabase warned
+that the disk IO budget was depleted. `docs/INCIDENTS.md` has the full entry.
+
+Two pg_cron jobs installed by migration `20260913181044` keep it from
+recurring:
+
+- `db-maintenance-purge-cron-history` deletes `cron.job_run_details` rows whose
+  `end_time` is older than 7 days — the window query A reads, and the
+  retention Supabase's own docs recommend. Running rows (`end_time IS NULL`)
+  are never touched.
+- `db-maintenance-vacuum-system-tables` runs `vacuum (analyze)` on
+  `cron.job_run_details` and `net._http_response` so freed space is reused
+  rather than the files growing. It is a pg_cron job rather than a migration
+  statement because `VACUUM` cannot run inside a transaction.
+
+Both run as `postgres`, which holds `DELETE`, `TRUNCATE` and (Postgres 17)
+`MAINTAIN` on the two tables even though `supabase_admin` owns them. They
+appear in query A like any other job, and unlike the HTTP jobs their
+`succeeded` status is the whole story — there is no plane 2.
+
+Three habits follow from this:
+
+- **Never `count(*)` or otherwise sequentially scan these tables on production**
+  to see how big they are. Read `pg_class.relpages` /
+  `pg_total_relation_size` instead — a count over the bloated pair took 97 s.
+- **`net._http_response` has no index on `id`.** `select ... from
+net._http_response where id = ...` is a sequential scan of the whole table.
+  Filter on `created` (indexed) with a narrow window, or read the Edge Function
+  logs (query C), which is where the answer lives anyway.
+- **Do not add a heartbeat that writes every tick.** Both 30-second processors
+  used to upsert their processor-state row on every idle run — ~5,800 writes a
+  day whose only content was a timestamp. They now skip the write while the
+  stored heartbeat is younger than `IDLE_HEARTBEAT_INTERVAL_MS`
+  (`publications-notification-state.ts`), which stays under the Newsletter
+  dashboard's 5-minute stale threshold. A new processor should do the same.
 
 ## Do this after any change to a scheduled job
 

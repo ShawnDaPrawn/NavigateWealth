@@ -14,6 +14,54 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-09-13 - Disk IO Budget Depleted By Unpurged pg_cron History And pg_net Bloat
+
+- **Symptom:** Supabase emailed that project `vpjmdsltwrnpefzcgdmz` was
+  depleting its Disk IO budget. The database was 1,952 MB; the application's
+  own data was under 100 MB of it.
+- **Root cause:** Three compounding things, none of them application data.
+  (1) `cron.job_run_details` had never been purged. pg_cron appends a row per
+  run and each row stores the full job command (~1.5 kB, bearer token
+  included); eleven jobs, two of them every 30 seconds, had left ~800,000 rows
+  and 1.3 GB. (2) `net._http_response` is trimmed by pg_net's 6-hour TTL
+  delete, but the freed space was only ever pruned in place and never
+  vacuumed (opportunistic pruning kept `n_dead_tup` under the autovacuum
+  threshold), so the file grew to 609 MB for ~1,100 live rows and the TTL
+  delete — which runs every few seconds — walked 527 index pages to find
+  nothing. (3) Every 30-second tick of both background processors upserted its
+  processor-state KV row even when idle: ~5,800 writes a day, 771,000 since
+  April, whose only content was a fresh timestamp — the single largest writer
+  to the KV table.
+  The Sunday `weekly-backup` `pg_dump` reads the whole database, so 1.9 GB of
+  junk was pulled from disk every week on a compute tier whose baseline disk
+  throughput is a few tens of MB/s (a `count(*)` over the two tables took 97
+  s); the runbook's query A and every ad-hoc `cron.job_run_details` query did
+  the same at 10 s each. The warning arrived the morning of the third backup
+  run.
+- **Why it hid:** Both tables live in extension schemas that `list_tables` and
+  the dashboard's table view do not show by default, and the performance
+  advisor only flagged `net._http_response` as "bloat", not `cron.job_run_details`,
+  whose rows were all live. The heartbeat writes looked like health, and were
+  even asserted by tests ("records a processor heartbeat either way").
+- **Fix:** One-off reclaim by hand (TRUNCATE + reinsert of the last 7 days of
+  cron history: 1,294 MB → 51 MB; TRUNCATE of the 6-hour response table: 609
+  MB → 32 kB; the TTL delete now touches 1 buffer). Migration `20260913181044`
+  installs two nightly pg_cron jobs, `db-maintenance-purge-cron-history` (7-day
+  retention, as Supabase's docs recommend) and
+  `db-maintenance-vacuum-system-tables`. Both processors now skip the
+  processor-state write on an idle tick while the stored heartbeat is younger
+  than `IDLE_HEARTBEAT_INTERVAL_MS` (2 minutes, kept under the dashboard's
+  5-minute stale threshold), with contract tests for the skip, the refresh,
+  the mode change and the error-clear cases.
+- **Lesson:** Disk IO on a small Supabase tier is spent by whatever gets read
+  in full, and that is rarely the application's tables. Anything that appends
+  forever — cron history, HTTP responses, audit trails — needs a retention job
+  the day it is created, and a heartbeat that nobody reads more often than
+  every few minutes should not be written more often than that either. When a
+  disk or IO warning arrives, look at `pg_total_relation_size` across _all_
+  schemas first (`cron`, `net`, `auth`, `storage`), and never `count(*)` a
+  suspect table on production to find out — read `pg_class.relpages`.
+
 ### 2026-09-05 - Newsletter Studio Shipped Without Its Delivery Job, Audience Or A Working Composer
 
 - **Symptom:** The Newsletter Studio admin module looked live (206 reachable

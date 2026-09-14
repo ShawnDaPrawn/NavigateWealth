@@ -107,6 +107,16 @@ stated prerequisite has already caused a production outage once.
   enqueues asynchronously, so the job is green whether the eventual response is
   200, 401 or 404. `cron.job_run_details` alone cannot tell you a scheduled job
   is healthy — see [`runbooks/scheduled-jobs.md`](runbooks/scheduled-jobs.md).
+- **`cron.job_run_details` and `net._http_response` are kept small on purpose.**
+  Two migration-managed pg_cron jobs (`db-maintenance-*`, migration
+  `20260913181044`) purge cron history past 7 days and vacuum both tables
+  nightly. Before that, 1.9 GB of unpurged history and pg_net bloat was
+  re-read by every health query and the weekly backup and depleted the disk IO
+  budget — see [`INCIDENTS.md`](INCIDENTS.md) 2026-09-13. Do not `count(*)` or
+  otherwise sequentially scan either table on production, and do not let a
+  processor rewrite a KV row every tick just to move a timestamp: the two
+  30-second processors skip the write while idle
+  (`IDLE_HEARTBEAT_INTERVAL_MS`).
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.

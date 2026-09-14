@@ -27,6 +27,8 @@ import { listSubscribers } from './newsletter-service.ts';
 import {
   chunkArray,
   classifyDeliveryFailure,
+  IDLE_HEARTBEAT_INTERVAL_MS,
+  isHeartbeatWithin,
   isSenderConfigurationFailure,
   normalizeSendError,
   sleep,
@@ -762,5 +764,42 @@ async function writeProcessorState(
     sentInLastRun: result.sent,
     failedInLastRun: result.failed,
   };
+  // An idle tick inside the heartbeat interval changes nothing but the
+  // timestamps; skipping the upsert is what keeps the 30-second cron from
+  // being the KV table's busiest writer (see IDLE_HEARTBEAT_INTERVAL_MS).
+  if (canSkipIdleNewsletterProcessorStateWrite(previous, state)) return;
   await newsletterProcessorState.put(NEWSLETTER_PROCESSOR_STATE_ID, state);
+}
+
+function isIdleNewsletterProcessorState(state: NewsletterProcessorState): boolean {
+  return (
+    state.lastError === null &&
+    state.activeCampaignCount === 0 &&
+    state.processedInLastRun === 0 &&
+    state.sentInLastRun === 0 &&
+    state.failedInLastRun === 0
+  );
+}
+
+/**
+ * True when persisting `next` would change nothing a reader can act on: the
+ * previous row already says "idle, no error, same mode" and its heartbeat is
+ * younger than IDLE_HEARTBEAT_INTERVAL_MS. A cron tick additionally needs the
+ * stored `lastCronRunAt` to be that fresh, because the dashboard's live/stale
+ * verdict (SCHEDULER_STALE_AFTER_MS) reads that field, not the heartbeat.
+ */
+export function canSkipIdleNewsletterProcessorStateWrite(
+  previous: NewsletterProcessorState | null,
+  next: NewsletterProcessorState,
+): boolean {
+  if (!previous) return false;
+  if (previous.mode !== next.mode) return false;
+  if (!isIdleNewsletterProcessorState(previous) || !isIdleNewsletterProcessorState(next)) {
+    return false;
+  }
+  if (!isHeartbeatWithin(previous.lastHeartbeatAt, IDLE_HEARTBEAT_INTERVAL_MS)) return false;
+  if (next.mode === 'cron') {
+    return isHeartbeatWithin(previous.lastCronRunAt, IDLE_HEARTBEAT_INTERVAL_MS);
+  }
+  return true;
 }

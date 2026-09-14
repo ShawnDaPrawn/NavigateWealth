@@ -48,6 +48,38 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * How long an idle processor may leave its state row untouched.
+ *
+ * Both background processors (article notifications and Newsletter Studio)
+ * are driven by pg_cron every 30 seconds, and until 2026-09-13 each tick
+ * rewrote its processor-state row even when there was nothing to do. That was
+ * ~5,800 KV upserts a day whose only content was a fresh timestamp -- the
+ * single largest writer to the KV table, and part of the disk IO budget
+ * depletion recorded in docs/INCIDENTS.md. An idle tick now skips the write
+ * while the previous heartbeat is younger than this.
+ *
+ * Keep it well under `SCHEDULER_STALE_AFTER_MS` (5 minutes) in
+ * `src/components/admin/modules/newsletter/utils/scheduler.ts`: the Newsletter
+ * dashboard declares the scheduled job stale off `lastCronRunAt`, so the
+ * oldest heartbeat a healthy idle processor can show is this interval plus one
+ * tick. Ticks that did work, hit an error, or changed mode always write.
+ */
+export const IDLE_HEARTBEAT_INTERVAL_MS = 2 * 60_000;
+
+/** True when `iso` is a valid timestamp no older than `intervalMs` (and not in the future). */
+export function isHeartbeatWithin(
+  iso: string | null | undefined,
+  intervalMs: number,
+  now: number = Date.now(),
+): boolean {
+  if (!iso) return false;
+  const stamp = new Date(iso).getTime();
+  if (Number.isNaN(stamp)) return false;
+  const age = now - stamp;
+  return age >= 0 && age <= intervalMs;
+}
+
 export function chunkArray<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
