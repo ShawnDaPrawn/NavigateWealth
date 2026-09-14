@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../../../ui/table';
-import { Plus, AlertCircle, Loader2, Search, X, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, AlertCircle, Search, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '../../../../../utils/logger';
 
@@ -45,11 +45,13 @@ import {
   useEnvelopes,
   esignApi,
   useEnvelopeActions,
+  documentStepBlocker,
   EmptyState,
   EnvelopeManagementTableRow,
   EnvelopeDetailsDialog,
+  EsignWizardShell,
   DocumentUploadStep,
-  RecipientsManager,
+  RecipientsStepView,
   PrepareFormStudio,
 } from '../../esign';
 
@@ -63,7 +65,7 @@ import {
   type StatusFilter,
   type ViewMode,
 } from './esignTabModel';
-import { EsignTabSkeleton, StepFallback, WizardHeader } from './EsignTabChrome';
+import { EsignTabSkeleton, StepFallback } from './EsignTabChrome';
 import { EsignTabDialogs } from './EsignTabDialogs';
 
 // ==================== MAIN COMPONENT ====================
@@ -123,6 +125,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [resumingEnvelopeId, setResumingEnvelopeId] = useState<string | null>(null);
+  const [autoPopulateSuggestedFields, setAutoPopulateSuggestedFields] = useState(true);
 
   // ==================== CLIENT CONTEXT ====================
   // Passed to RecipientsManager so the profile's client is auto-added as
@@ -169,10 +172,18 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     setView('wizard-upload');
   };
 
-  const handleUploadNext = (files: File[], title: string, message: string, expiryDays: number) => {
-    setWizardData((prev) => ({ ...prev, files, title, message, expiryDays }));
-    setView('wizard-recipients');
-  };
+  // The documents step writes straight into wizardData; the shell only enables
+  // Continue once `documentStepBlocker` is satisfied, so there is nothing to
+  // validate or collect here.
+  const handleUploadNext = () => setView('wizard-recipients');
+
+  /** Null once the documents step is complete; otherwise what is still missing. */
+  const uploadBlocker = documentStepBlocker({
+    files: wizardData.files,
+    title: wizardData.title,
+    message: wizardData.message,
+    expiryDays: wizardData.expiryDays,
+  });
 
   const handleRecipientsNext = async () => {
     if (wizardData.signers.length === 0) {
@@ -433,25 +444,15 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   // ==================== PREPARE VIEW ====================
 
   if (view === 'prepare' && activeEnvelope) {
+    // The studio carries its own toolbar (with the step indicator), so it is
+    // rendered bare here — exactly as the standalone module renders it.
     return (
-      <div className="space-y-6">
-        <WizardHeader
-          currentStep={3}
-          title="Prepare Form Fields"
-          subtitle="Drag and drop fields onto the document for each signer."
-          onCancel={() => {
-            if (wizardData.files.length > 0) {
-              setView('wizard-recipients');
-            } else {
-              setView('list');
-              refetch();
-            }
-          }}
-        />
+      <div className="h-[70vh] min-h-[32rem] overflow-hidden rounded-xl border border-gray-200">
         <Suspense fallback={<StepFallback />}>
           <PrepareFormStudio
             envelope={activeEnvelope}
             signers={wizardData.signers}
+            autoPopulateSuggestedFields={autoPopulateSuggestedFields}
             onBack={() => {
               if (wizardData.files.length > 0) {
                 setView('wizard-recipients');
@@ -475,28 +476,33 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   if (view === 'wizard-upload') {
     return (
-      <div className="space-y-6">
-        <WizardHeader
-          currentStep={1}
-          title="Add Documents"
-          subtitle="Upload the PDF files you want to send for signature."
-          onCancel={() => setView('list')}
-        />
+      <EsignWizardShell
+        layout="inline"
+        step="upload"
+        title="Add Documents"
+        description="Upload the PDFs you want signed, and name the envelope your recipients will see."
+        contextLabel={`${selectedClient.firstName} ${selectedClient.lastName}`}
+        onExit={() => setView('list')}
+        footerHint={uploadBlocker}
+        primaryAction={{
+          label: 'Next: Add Recipients',
+          onClick: handleUploadNext,
+          disabled: !!uploadBlocker,
+          icon: ArrowRight,
+        }}
+      >
         <Suspense fallback={<StepFallback />}>
           <DocumentUploadStep
-            onNext={handleUploadNext}
-            onCancel={() => setView('list')}
-            initialData={{
+            value={{
               files: wizardData.files,
               title: wizardData.title,
               message: wizardData.message,
               expiryDays: wizardData.expiryDays,
             }}
-            containerClassName="space-y-6"
-            hideHeader
+            onChange={(next) => setWizardData((prev) => ({ ...prev, ...next }))}
           />
         </Suspense>
-      </div>
+      </EsignWizardShell>
     );
   }
 
@@ -504,50 +510,36 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   if (view === 'wizard-recipients') {
     return (
-      <div className="space-y-6">
-        <WizardHeader
-          currentStep={2}
-          title="Add Recipients"
-          subtitle="Who needs to sign this document?"
-          onCancel={() => setView('list')}
-        />
-
-        <Card>
-          <CardContent className="p-6">
-            <Suspense fallback={<StepFallback />}>
-              <RecipientsManager
-                signers={wizardData.signers}
-                onChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
-                clientContext={clientContext}
-              />
-            </Suspense>
-          </CardContent>
-        </Card>
-
-        <div className="flex items-center justify-between pt-2">
-          <Button variant="outline" onClick={() => setView('wizard-upload')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <Button
-            onClick={handleRecipientsNext}
-            disabled={uploading || wizardData.signers.length === 0}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            {uploading ? (
-              <div className="contents">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating Envelope...
-              </div>
-            ) : (
-              <div className="contents">
-                Next: Prepare Fields
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </div>
-            )}
-          </Button>
-        </div>
-      </div>
+      <EsignWizardShell
+        layout="inline"
+        step="recipients"
+        title="Add Recipients"
+        description="Who needs to sign these documents, and in what order?"
+        contextLabel={`${selectedClient.firstName} ${selectedClient.lastName}`}
+        onExit={() => setView('list')}
+        footerHint={
+          wizardData.signers.length === 0 ? 'Add at least one recipient to continue.' : undefined
+        }
+        backAction={{ label: 'Back', onClick: () => setView('wizard-upload') }}
+        primaryAction={{
+          label: 'Next: Prepare Fields',
+          onClick: handleRecipientsNext,
+          disabled: wizardData.signers.length === 0,
+          busy: uploading,
+          busyLabel: 'Creating envelope…',
+          icon: ArrowRight,
+        }}
+      >
+        <Suspense fallback={<StepFallback />}>
+          <RecipientsStepView
+            signers={wizardData.signers}
+            onSignersChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
+            autoPopulateSuggestedFields={autoPopulateSuggestedFields}
+            onAutoPopulateChange={setAutoPopulateSuggestedFields}
+            clientContext={clientContext}
+          />
+        </Suspense>
+      </EsignWizardShell>
     );
   }
 

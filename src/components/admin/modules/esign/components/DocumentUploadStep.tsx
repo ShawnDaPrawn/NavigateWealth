@@ -1,80 +1,99 @@
 /**
- * Document Upload Step
- * Step 1 of the Envelope Creation Wizard
- * Supports drag & drop, file validation, and metadata entry
+ * Documents step — step 1 of the send-for-signature flow.
+ *
+ * Content only: the heading, the progress rail and the Back/Continue bar all
+ * belong to `EsignWizardShell`, so this step renders the same way from the
+ * standalone module and from the client drawer's E-Sign tab.
+ *
+ * Controlled, because both callers already keep the same four values in their
+ * own wizard state. Holding a second copy here meant the parent could not tell
+ * whether Continue should be enabled, so it stayed enabled and failed loudly
+ * after the click. The parent now derives that from `documentStepBlocker`.
  */
 
-import React, { useState, useCallback } from 'react';
-import { Card, CardContent } from '../../../../ui/card';
+import React, { useCallback, useId, useMemo, useState } from 'react';
+import { AlertCircle, FileText, Settings2, Upload, XCircle } from 'lucide-react';
+
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { Textarea } from '../../../../ui/textarea';
 import { Button } from '../../../../ui/button';
-import { Upload, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
+import { cn } from '../../../../ui/utils';
+import { EsignWizardSection } from './wizard';
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '../constants';
+import {
+  MAX_ENVELOPE_MESSAGE_LENGTH,
+  MAX_EXPIRY_DAYS,
+  MIN_EXPIRY_DAYS,
+  isValidExpiry,
+  type DocumentUploadValue,
+} from './documentStepModel';
 
-interface DocumentUploadStepProps {
-  onNext: (files: File[], title: string, message: string, expiryDays: number) => void;
-  onCancel: () => void;
-  initialData?: {
-    files?: File[];
-    title?: string;
-    message?: string;
-    expiryDays?: number;
-  };
-  /** Override the outer container className (default: 'max-w-4xl mx-auto space-y-6') */
-  containerClassName?: string;
-  /** Hide the internal header (title + subtitle) when the parent provides its own */
-  hideHeader?: boolean;
-  /** Hide the bottom navigation buttons when the parent provides its own */
-  hideFooter?: boolean;
+function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function DocumentUploadStep({
-  onNext,
-  onCancel,
-  initialData,
-  containerClassName,
-  hideHeader,
-  hideFooter,
-}: DocumentUploadStepProps) {
-  const [files, setFiles] = useState<File[]>(initialData?.files || []);
-  const [title, setTitle] = useState(initialData?.title || '');
-  const [message, setMessage] = useState(initialData?.message || '');
-  const [expiryDays, setExpiryDays] = useState<number>(initialData?.expiryDays || 30);
+interface DocumentUploadStepProps {
+  value: DocumentUploadValue;
+  onChange: (next: DocumentUploadValue) => void;
+  disabled?: boolean;
+}
+
+export function DocumentUploadStep({ value, onChange, disabled = false }: DocumentUploadStepProps) {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inputId = useId();
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, []);
+  const { files, title, message, expiryDays } = value;
+
+  const patch = useCallback(
+    (next: Partial<DocumentUploadValue>) => onChange({ ...value, ...next }),
+    [onChange, value],
+  );
+
+  const handleDrag = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (disabled) return;
+      if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+      else if (e.type === 'dragleave') setDragActive(false);
+    },
+    [disabled],
+  );
 
   const processFiles = useCallback(
-    (newFiles: File[]) => {
-      const validFiles = newFiles.filter((file) => {
-        const isPdf = file.type === 'application/pdf';
-        return isPdf;
-      });
+    (incoming: File[]) => {
+      const rejected: string[] = [];
+      const accepted: File[] = [];
 
-      if (validFiles.length !== newFiles.length) {
-        setError('Only PDF files are currently supported.');
-      } else {
-        setError(null);
-      }
-
-      if (validFiles.length > 0) {
-        setFiles((prev) => [...prev, ...validFiles]);
-        // Auto-set title if empty
-        if (!title && validFiles[0]) {
-          setTitle(validFiles[0].name.replace(/\.pdf$/i, ''));
+      for (const file of incoming) {
+        if (!(ALLOWED_FILE_TYPES as readonly string[]).includes(file.type)) {
+          rejected.push(`${file.name} is not a PDF`);
+          continue;
         }
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          rejected.push(`${file.name} is larger than ${MAX_FILE_SIZE_MB}MB`);
+          continue;
+        }
+        if (files.some((existing) => existing.name === file.name && existing.size === file.size)) {
+          rejected.push(`${file.name} was already added`);
+          continue;
+        }
+        accepted.push(file);
       }
+
+      setError(rejected.length > 0 ? rejected.join(' · ') : null);
+
+      if (accepted.length === 0) return;
+
+      // First file names the envelope when the user has not titled it yet —
+      // one less thing to type for the common single-document send.
+      const nextTitle = title.trim() ? title : accepted[0].name.replace(/\.pdf$/i, '');
+      patch({ files: [...files, ...accepted], title: nextTitle });
     },
-    [title],
+    [files, patch, title],
   );
 
   const handleDrop = useCallback(
@@ -82,183 +101,194 @@ export function DocumentUploadStep({
       e.preventDefault();
       e.stopPropagation();
       setDragActive(false);
-
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        processFiles(Array.from(e.dataTransfer.files));
-      }
+      if (disabled) return;
+      if (e.dataTransfer.files?.length) processFiles(Array.from(e.dataTransfer.files));
     },
-    [processFiles],
+    [disabled, processFiles],
   );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processFiles(Array.from(e.target.files));
-    }
+    if (e.target.files?.length) processFiles(Array.from(e.target.files));
+    // Let the same file be re-picked after a removal.
+    e.target.value = '';
   };
 
   const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    patch({ files: files.filter((_, i) => i !== index) });
+    setError(null);
   };
 
-  const handleContinue = () => {
-    if (files.length === 0) {
-      setError('Please upload at least one document.');
-      return;
-    }
-    if (!title.trim()) {
-      setError('Please provide a title for the envelope.');
-      return;
-    }
-    onNext(files, title, message, expiryDays);
-  };
+  const expiryDate = useMemo(() => {
+    if (!Number.isFinite(expiryDays) || expiryDays < MIN_EXPIRY_DAYS) return null;
+    return new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-ZA', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [expiryDays]);
+
+  const expiryInvalid = !isValidExpiry(expiryDays);
 
   return (
-    <div className={containerClassName ?? 'max-w-4xl mx-auto space-y-6'}>
-      {!hideHeader && (
+    <div className="space-y-6">
+      <EsignWizardSection
+        icon={Upload}
+        title="Documents"
+        description={`PDF only, up to ${MAX_FILE_SIZE_MB}MB each. Add more than one and they are signed as a single envelope.`}
+        action={
+          files.length > 0 ? (
+            <span className="text-xs font-medium text-gray-500">
+              {files.length} file{files.length === 1 ? '' : 's'}
+            </span>
+          ) : undefined
+        }
+      >
+        <div
+          className={cn(
+            'relative rounded-xl border-2 border-dashed p-8 text-center transition-colors',
+            dragActive
+              ? 'border-purple-400 bg-purple-50'
+              : 'border-gray-200 bg-gray-50/60 hover:border-purple-300 hover:bg-purple-50/40',
+            disabled && 'pointer-events-none opacity-60',
+          )}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            onChange={handleFileSelect}
+            className="sr-only"
+            id={inputId}
+            disabled={disabled}
+          />
+          <label htmlFor={inputId} className="block cursor-pointer space-y-3">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+              <Upload className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="block text-sm font-medium text-gray-900">
+              Drop PDFs here, or <span className="text-purple-700 underline">browse</span>
+            </span>
+            <span className="block text-xs text-gray-500">
+              {files.length > 0
+                ? 'Everything you add is signed together, in the order listed below.'
+                : `One or more PDFs, each up to ${MAX_FILE_SIZE_MB}MB.`}
+            </span>
+          </label>
+        </div>
+
+        {files.length > 0 && (
+          <ul className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200">
+            {files.map((file, index) => (
+              <li
+                key={`${file.name}-${file.size}-${index}`}
+                className="flex items-center justify-between gap-3 bg-white p-3 transition-colors hover:bg-gray-50/70"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-50 text-[10px] font-bold text-red-600">
+                    PDF
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-gray-900">
+                      {file.name}
+                    </span>
+                    <span className="block text-xs text-gray-500">{formatSize(file.size)}</span>
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFile(index)}
+                  disabled={disabled}
+                  aria-label={`Remove ${file.name}`}
+                  className="shrink-0 text-gray-400 hover:text-red-600"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {error && (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            {error}
+          </p>
+        )}
+      </EsignWizardSection>
+
+      <EsignWizardSection
+        icon={FileText}
+        title="Envelope details"
+        description="What recipients see in the invitation email."
+      >
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-gray-900">Add Documents</h2>
-          <p className="text-sm text-gray-500">Upload the files you want to send for signature.</p>
+          <Label htmlFor="esign-envelope-title">Envelope title</Label>
+          <Input
+            id="esign-envelope-title"
+            placeholder="e.g. Discretionary mandate — M. Dlamini"
+            value={title}
+            disabled={disabled}
+            onChange={(e) => patch({ title: e.target.value })}
+          />
         </div>
-      )}
 
-      <Card>
-        <CardContent className="p-6 space-y-6">
-          {/* Upload Zone */}
-          <div
-            className={`relative border-2 border-dashed rounded-lg p-10 text-center transition-all ${
-              dragActive
-                ? 'border-purple-500 bg-purple-50 scale-[1.01]'
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <input
-              type="file"
-              accept=".pdf"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              id="file-upload"
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <Label htmlFor="esign-envelope-message">Message to recipients</Label>
+            <span className="text-xs text-gray-400">Optional</span>
+          </div>
+          <Textarea
+            id="esign-envelope-message"
+            placeholder="Please review and sign by the end of the week. Reply here if anything looks off."
+            value={message}
+            rows={3}
+            maxLength={MAX_ENVELOPE_MESSAGE_LENGTH}
+            disabled={disabled}
+            onChange={(e) => patch({ message: e.target.value })}
+          />
+          <p className="text-right text-xs text-gray-400">
+            {message.length}/{MAX_ENVELOPE_MESSAGE_LENGTH}
+          </p>
+        </div>
+      </EsignWizardSection>
+
+      <EsignWizardSection
+        icon={Settings2}
+        title="Expiry"
+        description="After this, the signing link stops working and the envelope is marked expired."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="space-y-2 sm:w-40">
+            <Label htmlFor="esign-envelope-expiry">Days to expire</Label>
+            <Input
+              id="esign-envelope-expiry"
+              type="number"
+              inputMode="numeric"
+              min={MIN_EXPIRY_DAYS}
+              max={MAX_EXPIRY_DAYS}
+              value={Number.isFinite(expiryDays) ? expiryDays : ''}
+              disabled={disabled}
+              aria-invalid={expiryInvalid || undefined}
+              onChange={(e) => patch({ expiryDays: parseInt(e.target.value, 10) })}
+              className={cn(expiryInvalid && 'border-red-300 focus-visible:ring-red-200')}
             />
-            <label htmlFor="file-upload" className="cursor-pointer block w-full h-full">
-              <div className="space-y-4">
-                <div className="h-16 w-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto">
-                  <Upload className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-lg">
-                    Drop files here or click to upload
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">PDF files only</p>
-                </div>
-              </div>
-            </label>
           </div>
-
-          {/* File List */}
-          {files.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Uploaded Documents</Label>
-                <span className="text-xs text-muted-foreground">
-                  {files.length} file{files.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="max-h-[30vh] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white">
-                <div className="grid gap-0 divide-y divide-gray-100">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 hover:bg-gray-50/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="h-10 w-10 bg-white border rounded flex items-center justify-center flex-shrink-0 text-red-500 font-bold text-xs">
-                          PDF
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{file.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                      >
-                        <XCircle className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Details Form */}
-          <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="title">Envelope Title *</Label>
-              <Input
-                id="title"
-                placeholder="e.g. Sales Contract - Acme Corp"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="message">Email Message (Optional)</Label>
-              <Input
-                id="message"
-                placeholder="Please review and sign..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="expiry">Days to expire</Label>
-              <Input
-                id="expiry"
-                type="number"
-                min="1"
-                max="365"
-                value={expiryDays}
-                onChange={(e) => setExpiryDays(parseInt(e.target.value) || 30)}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md flex items-center gap-2 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              {error}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {!hideFooter && (
-        <div className="flex justify-between">
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleContinue}
-            disabled={files.length === 0 || !title}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            Next: Add Recipients
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          <p className="pb-2 text-sm text-gray-500">
+            {expiryInvalid
+              ? `Choose between ${MIN_EXPIRY_DAYS} and ${MAX_EXPIRY_DAYS} days.`
+              : `Expires on ${expiryDate}.`}
+          </p>
         </div>
-      )}
+      </EsignWizardSection>
     </div>
   );
 }

@@ -36,6 +36,16 @@ export interface TemplateBuilderContext {
   category?: string;
 }
 
+/**
+ * True when the wizard can skip the field studio and send straight away: the
+ * chosen template already carries a complete field layout, and we are sending
+ * rather than building a template (a builder has nothing to send yet).
+ */
+export const canExpressSend = (
+  templateContext: TemplateContext | null | undefined,
+  isTemplateBuilder: boolean | undefined,
+): boolean => !isTemplateBuilder && !!templateContext && templateContext.template.fields.length > 0;
+
 export const templateHasSavedDocuments = (
   template: EsignTemplateRecord | null | undefined,
 ): boolean => Array.isArray(template?.documents) && template.documents.length > 0;

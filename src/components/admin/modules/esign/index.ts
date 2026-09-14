@@ -38,6 +38,14 @@ export {
 // Query tuning shared with consumers that prime the same cache
 export { QUERY_GC_TIME, QUERY_STALE_TIME } from './constants';
 
+// Standardised wizard chrome. Shared with the client drawer's E-Sign tab so
+// the send-for-signature flow is laid out identically wherever it is started.
+// Light enough to export eagerly: a header, a stepper and buttons.
+export { EsignWizardShell, EsignWizardSection } from './components/wizard';
+export type { EsignWizardStepId } from './components/wizard';
+export { documentStepBlocker } from './components/documentStepModel';
+export type { DocumentUploadValue } from './components/documentStepModel';
+
 // Presentational pieces reused by the client portal and the client e-sign tab
 export { EmptyState } from './components/EmptyState';
 export { EnvelopeManagementTableRow } from './components/EnvelopeManagementTableRow';
@@ -53,6 +61,9 @@ export const DocumentUploadStep = lazy(() =>
 );
 export const RecipientsManager = lazy(() =>
   import('./components/RecipientsManager').then((m) => ({ default: m.RecipientsManager })),
+);
+export const RecipientsStepView = lazy(() =>
+  import('./components/RecipientsStepView').then((m) => ({ default: m.RecipientsStepView })),
 );
 export const PrepareFormStudio = lazy(() =>
   import('./components/PrepareFormStudio').then((m) => ({ default: m.PrepareFormStudio })),

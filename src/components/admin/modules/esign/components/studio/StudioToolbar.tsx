@@ -24,6 +24,7 @@ import {
   Layers,
 } from 'lucide-react';
 import type { EsignEnvelope, SignerFormData } from '../../types';
+import { ESIGN_WIZARD_STEP_COUNT, esignWizardStepNumber } from '../wizard';
 
 interface StudioToolbarProps {
   autoSaving: boolean;
@@ -86,6 +87,11 @@ export function StudioToolbar({
           Back
         </Button>
         <div className="h-6 w-px bg-gray-200" />
+        {/* Keeps the studio attached to the wizard it is the last step of —
+            without it, step 3 reads as a different product than steps 1-2. */}
+        <span className="hidden lg:inline-flex shrink-0 items-center rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-medium text-purple-700">
+          Step {esignWizardStepNumber('prepare')} of {ESIGN_WIZARD_STEP_COUNT} · Fields
+        </span>
         <h2 className="font-semibold text-gray-900 truncate max-w-[260px]" title={envelope.title}>
           {envelope.title}
         </h2>
