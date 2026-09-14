@@ -111,6 +111,7 @@ const spies = vi.hoisted(() => ({
   deleteEnvelope: vi.fn(async () => ({ success: true })),
   downloadDocument: vi.fn(),
   saveDraftSigners: vi.fn(async () => ({ success: true })),
+  updateDraftSettings: vi.fn(async () => ({ success: true, changed: {} })),
   materialiseTemplateDraft: vi.fn(),
   getEnvelope: vi.fn(),
   getDocumentUrl: vi.fn(),
@@ -149,6 +150,7 @@ vi.mock('../../personnel/hooks/usePermissions', () => ({
 vi.mock('../api', () => ({
   esignApi: {
     saveDraftSigners: spies.saveDraftSigners,
+    updateDraftSettings: spies.updateDraftSettings,
     materialiseTemplateDraft: spies.materialiseTemplateDraft,
     getEnvelope: spies.getEnvelope,
     getDocumentUrl: spies.getDocumentUrl,
@@ -455,6 +457,40 @@ describe('EsignModule wizard flow', () => {
     // recipient's index rather than their email.
     expect(invitePayload.fields).toHaveLength(1);
     expect(toast.success).toHaveBeenCalledWith('Document sent for signature!');
+  });
+
+  it('Exit offers to keep the work, and saving it materialises a resumable draft', async () => {
+    await openTemplate('use-tpl-ready');
+
+    fireEvent.click(screen.getByRole('button', { name: /exit/i }));
+    // The gate, not a silent reset: this is where an upload used to vanish.
+    await waitFor(() => screen.getByText(/leave without sending\?/i));
+
+    fireEvent.click(screen.getByRole('button', { name: /save as draft/i }));
+
+    await waitFor(() => {
+      expect(spies.materialiseTemplateDraft).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => screen.getByTestId('esign-dashboard'));
+    expect(toast.success).toHaveBeenCalledWith(
+      'Saved as a draft — continue it any time from the dashboard.',
+    );
+  });
+
+  it('a failed draft save keeps the user in the wizard rather than dropping the work', async () => {
+    spies.saveDraftSigners.mockRejectedValueOnce(new Error('network died'));
+    await openTemplate('use-tpl-ready');
+
+    fireEvent.click(screen.getByRole('button', { name: /exit/i }));
+    await waitFor(() => screen.getByText(/leave without sending\?/i));
+    fireEvent.click(screen.getByRole('button', { name: /save as draft/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('network died');
+    });
+    // Still on the recipients step, with everything intact.
+    expect(screen.getByText('Add Recipients')).toBeTruthy();
+    expect(screen.queryByTestId('esign-dashboard')).toBeNull();
   });
 
   it('Back from recipients with no files and no builder resets to the dashboard', async () => {

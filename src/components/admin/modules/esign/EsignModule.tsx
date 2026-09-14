@@ -31,7 +31,12 @@ import { EsignDashboard } from './components/EsignDashboard';
 import { StepFallback } from './components/StepFallback';
 import { RecipientsStepView } from './components/RecipientsStepView';
 import { EsignModuleDialogs } from './components/EsignModuleDialogs';
-import { EsignWizardShell } from './components/wizard';
+import {
+  EsignWizardShell,
+  ExitWizardDialog,
+  canSaveWizardDraft,
+  hasUnsavedWizardWork,
+} from './components/wizard';
 import { documentStepBlocker } from './components/documentStepModel';
 import { esignApi } from './api';
 import {
@@ -79,6 +84,8 @@ export function EsignModule() {
   const [retentionOpen, setRetentionOpen] = useState(false);
   const [brandingOpen, setBrandingOpen] = useState(false);
   const [autoPopulateSuggestedFields, setAutoPopulateSuggestedFields] = useState(true);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const { canDo } = useCurrentUserPermissions();
 
   const canCreate = canDo('esign', 'create');
@@ -178,7 +185,13 @@ export function EsignModule() {
 
   const materialiseTemplateDraftForWizard = async (
     template: EsignTemplateRecord,
-    options?: { campaignId?: string; packetRunId?: string; packetStepIndex?: number },
+    options?: {
+      campaignId?: string;
+      packetRunId?: string;
+      packetStepIndex?: number;
+      /** See `materialiseEnvelopeFromWizard`: the exit path cannot swallow this. */
+      strict?: boolean;
+    },
   ): Promise<{
     envelope: EsignEnvelope;
     fields: EsignField[];
@@ -207,6 +220,7 @@ export function EsignModule() {
     try {
       await syncDraftSigners(result.envelope.id, wizardData.signers);
     } catch (draftErr) {
+      if (options?.strict) throw draftErr;
       logger.warn('Failed to persist draft signers on template draft (non-critical):', {
         error: draftErr,
       });
@@ -348,20 +362,41 @@ export function EsignModule() {
    * Also handles the idempotent re-use case: if `activeEnvelope` is
    * already a draft from this session, no new upload happens.
    */
-  const materialiseEnvelopeFromWizard = async (): Promise<{
+  const materialiseEnvelopeFromWizard = async (options?: {
+    /** Saving a draft on exit does not need recipients yet; sending does. */
+    requireSigners?: boolean;
+    /**
+     * Surface persistence failures instead of warning past them. The exit path
+     * throws away the local wizard once this resolves, so a swallowed failure
+     * there loses the recipients for real; the in-flow paths keep the state on
+     * screen and can afford to carry on.
+     */
+    strict?: boolean;
+  }): Promise<{
     envelope: EsignEnvelope;
     fields: EsignField[];
   } | null> => {
-    if (wizardData.signers.length === 0) {
+    const strict = options?.strict ?? false;
+
+    if ((options?.requireSigners ?? true) && wizardData.signers.length === 0) {
       toast.error('Please add at least one recipient.');
       return null;
     }
 
     if (activeEnvelope?.id && activeEnvelope.status === 'draft') {
       try {
+        // The title, message and expiry may have been edited since this draft
+        // was created (step 1 is one Back away from the studio), so write them
+        // back before the local copy is dropped.
+        await esignApi.updateDraftSettings(activeEnvelope.id, {
+          title: wizardData.title,
+          message: wizardData.message,
+          expiryDays: wizardData.expiryDays,
+        });
         await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
-        logger.warn('Failed to update draft signers on existing envelope (non-critical):', {
+        if (strict) throw draftErr;
+        logger.warn('Failed to update existing draft envelope (non-critical):', {
           error: draftErr,
         });
       }
@@ -369,7 +404,7 @@ export function EsignModule() {
     }
 
     if (templateContext && templateHasSavedDocuments(templateContext.template)) {
-      return materialiseTemplateDraftForWizard(templateContext.template);
+      return materialiseTemplateDraftForWizard(templateContext.template, { strict });
     }
 
     if (!wizardData.files || wizardData.files.length === 0) {
@@ -408,6 +443,7 @@ export function EsignModule() {
     try {
       await syncDraftSigners(result.id, wizardData.signers);
     } catch (draftErr) {
+      if (strict) throw draftErr;
       logger.warn('Failed to persist draft signers (non-critical):', { error: draftErr });
     }
 
@@ -725,12 +761,56 @@ export function EsignModule() {
 
   // ==================== WIZARD CHROME ====================
 
-  /** Leave the flow entirely, from any step. */
-  const exitWizard = () => {
+  /**
+   * Leaving the wizard is guarded: until the studio is reached nothing here
+   * exists on the server, so a bare exit used to bin the documents, the title
+   * and the recipient list without asking. `requestExitWizard` opens the
+   * save/discard gate; only a genuinely empty wizard leaves silently.
+   */
+  const requestExitWizard = () => {
+    if (hasUnsavedWizardWork(wizardExitState)) {
+      setExitDialogOpen(true);
+      return;
+    }
+    discardWizard();
+  };
+
+  const discardWizard = () => {
+    setExitDialogOpen(false);
     resetWizardState();
     setView('dashboard');
   };
 
+  /**
+   * Persist whatever the wizard holds as a resumable draft envelope, then
+   * leave. The dashboard lists it under Drafts and "Continue Editing" picks it
+   * up with its documents, recipients and settings intact.
+   */
+  const handleSaveDraftAndExit = async () => {
+    setSavingDraft(true);
+    try {
+      const out = await materialiseEnvelopeFromWizard({ requireSigners: false, strict: true });
+      if (!out) return;
+      toast.success('Saved as a draft — continue it any time from the dashboard.');
+      setExitDialogOpen(false);
+      resetWizardState();
+      setView('dashboard');
+      setRefreshTrigger((prev) => prev + 1);
+    } catch (error: unknown) {
+      logger.error('Failed to save wizard draft:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save draft');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const wizardExitState = {
+    files: wizardData.files,
+    title: wizardData.title,
+    message: wizardData.message,
+    signers: wizardData.signers,
+    hasDraftEnvelope: !!activeEnvelope?.id,
+  };
   const wizardFlowLabel = templateBuilder ? 'Build template' : 'Send for signature';
   const wizardContextLabel = templateBuilder
     ? templateBuilder.name
@@ -816,7 +896,7 @@ export function EsignModule() {
           description="Upload the PDFs you want signed, and name the envelope your recipients will see."
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
-          onExit={exitWizard}
+          onExit={requestExitWizard}
           footerHint={uploadBlocker}
           primaryAction={{
             label: 'Next: Add Recipients',
@@ -844,7 +924,7 @@ export function EsignModule() {
           description="Who needs to sign these documents, and in what order?"
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
-          onExit={exitWizard}
+          onExit={requestExitWizard}
           footerHint={noRecipients ? 'Add at least one recipient to continue.' : undefined}
           backAction={{
             label: 'Back',
@@ -921,6 +1001,24 @@ export function EsignModule() {
           )}
         </div>
       )}
+
+      <ExitWizardDialog
+        open={exitDialogOpen}
+        onOpenChange={setExitDialogOpen}
+        onSaveDraft={handleSaveDraftAndExit}
+        onDiscard={discardWizard}
+        canSaveDraft={
+          // A saved draft carries no template-builder context — resuming it
+          // would offer Send, not Save Template, and lose the template's id,
+          // description and category. Better not to promise it.
+          !templateBuilder &&
+          canSaveWizardDraft(wizardExitState, {
+            templateHasDocuments: templateHasSavedDocuments(templateContext?.template),
+          })
+        }
+        saving={savingDraft || uploading}
+        isTemplateBuilder={!!templateBuilder}
+      />
 
       <EsignModuleDialogs
         templatePickerOpen={templatePickerOpen}

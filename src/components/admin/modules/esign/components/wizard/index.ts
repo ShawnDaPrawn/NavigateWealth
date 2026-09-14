@@ -6,6 +6,8 @@
 export { EsignWizardShell, type EsignWizardAction } from './EsignWizardShell';
 export { EsignWizardStepper } from './EsignWizardStepper';
 export { EsignWizardSection } from './EsignWizardSection';
+export { ExitWizardDialog } from './ExitWizardDialog';
+export { hasUnsavedWizardWork, canSaveWizardDraft, type WizardExitState } from './wizardExitState';
 export {
   ESIGN_WIZARD_STEPS,
   ESIGN_WIZARD_STEP_COUNT,

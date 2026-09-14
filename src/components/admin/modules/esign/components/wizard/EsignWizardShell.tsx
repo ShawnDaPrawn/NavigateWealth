@@ -129,7 +129,12 @@ function WizardActionButton({
   );
 }
 
-const COLUMN = 'mx-auto w-full max-w-4xl px-4 sm:px-6';
+/**
+ * The flow's content column. Wide enough to actually use an admin-sized
+ * screen — the steps lay their own content out in two columns from `xl` up
+ * rather than stretching one column of form fields across it.
+ */
+const COLUMN = 'mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8';
 
 export function EsignWizardShell({
   step,
@@ -251,7 +256,7 @@ export function EsignWizardShell({
 
             <div className="order-1 flex flex-col gap-3 sm:order-2 sm:flex-row sm:items-center">
               {footerHint && (
-                <p id={hintId} className="text-xs text-gray-500 sm:max-w-xs sm:text-right">
+                <p id={hintId} className="text-xs text-gray-500 sm:max-w-sm sm:text-right">
                   {footerHint}
                 </p>
               )}
