@@ -9,13 +9,15 @@
  * @module social-media/hooks/useSocialMediaLibrary
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { mediaApi } from '../api';
 import type { SocialMediaAsset } from '../types';
 import { socialMediaKeys } from './queryKeys';
 
 const LIBRARY_STALE_TIME = 30 * 1000;
+/** One page of the library. "Load more" walks back through older uploads. */
+export const LIBRARY_PAGE_SIZE = 60;
 
 /** Mirrors the Edge Function's limit so the browser rejects an oversized file first. */
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -51,14 +53,30 @@ export function describeUpload(outcome: UploadOutcome): string {
   return parts.join(', ') || 'Nothing to upload';
 }
 
-/** `enabled` lets the composer's picker hold off until it is opened. */
-export function useMediaLibrary(limit = 60, enabled = true) {
-  return useQuery({
-    queryKey: socialMediaKeys.library.list(limit),
-    queryFn: () => mediaApi.list(limit),
+/**
+ * The library, a page at a time.
+ *
+ * Paged rather than capped: the bucket keeps every upload, so a fixed ceiling
+ * would leave older images in storage with no way to select or delete them.
+ * `enabled` lets the composer's picker hold off until it is opened.
+ */
+export function useMediaLibrary(enabled = true) {
+  const query = useInfiniteQuery({
+    queryKey: socialMediaKeys.library.list(LIBRARY_PAGE_SIZE),
+    queryFn: ({ pageParam }) => mediaApi.listPage(LIBRARY_PAGE_SIZE, pageParam),
+    initialPageParam: 0,
+    // A short page is the last one: storage has nothing older to return.
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < LIBRARY_PAGE_SIZE ? undefined : allPages.length * LIBRARY_PAGE_SIZE,
     staleTime: LIBRARY_STALE_TIME,
     enabled,
   });
+
+  return {
+    ...query,
+    /** Every page flattened, newest first. */
+    assets: query.data?.pages.flat() ?? [],
+  };
 }
 
 export function useUploadMedia() {

@@ -14,6 +14,13 @@ import { PLATFORM_LIMITS } from './types';
 
 /** X counts a link as 23 characters regardless of its length. */
 const X_LINK_LENGTH = 23;
+
+/**
+ * Images per post. Mirrors `ComposePostSchema`'s `images.max(4)` on the server:
+ * without this the picker would happily attach six and every publish, queue,
+ * schedule and draft attempt would come back a validation error.
+ */
+export const MAX_POST_IMAGES = 4;
 const URL_RE = /https?:\/\/\S+/g;
 
 /** Characters the strictest selected platform will accept. */
@@ -139,5 +146,9 @@ export function composeBlocker(draft: ComposeDraft, profiles: SocialProfile[]): 
   const needsImage =
     platforms.includes('instagram') && !draft.media.some((m) => m.type === 'image');
   if (needsImage) return 'Instagram posts need an image.';
+  const imageCount = draft.media.filter((m) => m.type === 'image').length;
+  if (imageCount > MAX_POST_IMAGES) {
+    return `A post can carry at most ${MAX_POST_IMAGES} images — remove ${imageCount - MAX_POST_IMAGES}.`;
+  }
   return null;
 }

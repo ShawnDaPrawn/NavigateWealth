@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 const api = vi.hoisted(() => ({
-  list: vi.fn(),
+  listPage: vi.fn(),
   upload: vi.fn(),
   remove: vi.fn(),
 }));
@@ -24,9 +24,11 @@ import { MediaPickerDialog } from '../MediaPickerDialog';
 import {
   describeUpload,
   rejectionReasonFor,
+  LIBRARY_PAGE_SIZE,
   MAX_UPLOAD_BYTES,
 } from '../../hooks/useSocialMediaLibrary';
-import { assetToMediaFile } from '../../composerModel';
+import { assetToMediaFile, composeBlocker, MAX_POST_IMAGES } from '../../composerModel';
+import type { MediaFile, SocialProfile } from '../../types';
 import type { SocialMediaAsset } from '../../types';
 
 const asset = (name: string, path = `uploads/id__${name}`): SocialMediaAsset => ({
@@ -51,7 +53,7 @@ function pngFile(name = 'chart.png', size = 1024): File {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  api.list.mockResolvedValue([asset('quarterly review')]);
+  api.listPage.mockResolvedValue([asset('quarterly review')]);
   api.upload.mockImplementation(async (f: File) => asset(f.name));
   api.remove.mockResolvedValue(undefined);
 });
@@ -105,7 +107,7 @@ describe('MediaLibraryPanel', () => {
   });
 
   it('says so when nothing has been uploaded yet', async () => {
-    api.list.mockResolvedValue([]);
+    api.listPage.mockResolvedValue([]);
     render(<MediaLibraryPanel onUseInPost={vi.fn()} />, { wrapper });
     await waitFor(() => expect(screen.getByText(/No images yet/i)).toBeDefined());
   });
@@ -143,12 +145,12 @@ describe('MediaPickerDialog', () => {
       />,
       { wrapper },
     );
-    expect(api.list).not.toHaveBeenCalled();
+    expect(api.listPage).not.toHaveBeenCalled();
 
     rerender(
       <MediaPickerDialog open onOpenChange={vi.fn()} attachedPaths={[]} onConfirm={vi.fn()} />,
     );
-    await waitFor(() => expect(api.list).toHaveBeenCalled());
+    await waitFor(() => expect(api.listPage).toHaveBeenCalled());
   });
 
   it('returns the chosen images and closes', async () => {
@@ -183,5 +185,84 @@ describe('MediaPickerDialog', () => {
       { wrapper },
     );
     await waitFor(() => expect(screen.getByText('Already added')).toBeDefined());
+  });
+});
+
+// ── The three things the Codex review caught ────────────────────────────────
+
+describe('a post cannot exceed the server’s image ceiling', () => {
+  const profiles: SocialProfile[] = [
+    { id: 'li', platform: 'linkedin', name: 'NW', username: 'nw', isConnected: true },
+  ];
+  const image = (n: number): MediaFile => ({
+    id: `i${n}`,
+    url: `https://cdn.test/${n}.png`,
+    type: 'image',
+    filename: `${n}.png`,
+    size: 1,
+  });
+
+  it('blocks composing when more images are attached than the server accepts', () => {
+    const over = {
+      text: 'Hello',
+      channelIds: ['li'],
+      linkUrl: '',
+      linkTitle: '',
+      media: Array.from({ length: MAX_POST_IMAGES + 1 }, (_, i) => image(i)),
+    };
+    expect(composeBlocker(over, profiles)).toMatch(/at most 4 images/);
+
+    const exactly = { ...over, media: over.media.slice(0, MAX_POST_IMAGES) };
+    expect(composeBlocker(exactly, profiles)).toBeNull();
+  });
+
+  it('stops the picker selecting past the ceiling', async () => {
+    api.listPage.mockResolvedValue([
+      asset('one', 'uploads/1'),
+      asset('two', 'uploads/2'),
+      asset('three', 'uploads/3'),
+    ]);
+    render(
+      <MediaPickerDialog
+        open
+        onOpenChange={vi.fn()}
+        // Three already on the draft leaves room for exactly one more.
+        attachedPaths={['uploads/a', 'uploads/b', 'uploads/c']}
+        onConfirm={vi.fn()}
+      />,
+      { wrapper },
+    );
+
+    await waitFor(() => expect(screen.getByLabelText(/select one/i)).toBeDefined());
+    fireEvent.click(screen.getByLabelText(/select one/i));
+    expect(screen.getByText(/remove one to choose another/i)).toBeDefined();
+
+    // The fourth fills the post; a fifth must not be selectable.
+    const second = screen.getByLabelText(/select two/i) as HTMLButtonElement;
+    expect(second.disabled).toBe(true);
+    fireEvent.click(second);
+    expect(screen.getByRole('button', { name: /add 1 image/i })).toBeDefined();
+  });
+});
+
+describe('the library pages rather than hiding older uploads', () => {
+  it('offers Load more when a full page comes back, and appends the next', async () => {
+    const full = Array.from({ length: LIBRARY_PAGE_SIZE }, (_, i) =>
+      asset(`image ${i}`, `uploads/p1-${i}`),
+    );
+    api.listPage.mockResolvedValueOnce(full).mockResolvedValueOnce([asset('older', 'uploads/p2')]);
+
+    render(<MediaLibraryPanel onUseInPost={vi.fn()} />, { wrapper });
+    await waitFor(() => expect(screen.getByText('image 0')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: /load older images/i }));
+    await waitFor(() => expect(screen.getByText('older')).toBeDefined());
+    expect(api.listPage).toHaveBeenLastCalledWith(LIBRARY_PAGE_SIZE, LIBRARY_PAGE_SIZE);
+  });
+
+  it('shows no Load more when the first page is short', async () => {
+    render(<MediaLibraryPanel onUseInPost={vi.fn()} />, { wrapper });
+    await waitFor(() => expect(screen.getByText('quarterly review')).toBeDefined());
+    expect(screen.queryByRole('button', { name: /load older images/i })).toBeNull();
   });
 });

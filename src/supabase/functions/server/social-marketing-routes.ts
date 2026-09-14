@@ -7,7 +7,7 @@
  *   POST   /social-marketing/posts         — manual Compose → Buffer
  *   DELETE /social-marketing/posts/:id     — delete a Buffer post
  *   GET    /social-marketing/analytics     — aggregated metrics (stat cards)
- *   GET    /social-marketing/media         — the uploaded image library
+ *   GET    /social-marketing/media         — the uploaded image library (limit/offset)
  *   POST   /social-marketing/media         — upload an image (multipart)
  *   DELETE /social-marketing/media         — remove an uploaded image
  *
@@ -136,11 +136,14 @@ app.get(
   '/media',
   requireAdmin,
   asyncHandler(async (c) => {
-    const parsed = MediaListQuerySchema.safeParse({ limit: c.req.query('limit') ?? undefined });
+    const parsed = MediaListQuerySchema.safeParse({
+      limit: c.req.query('limit') ?? undefined,
+      offset: c.req.query('offset') ?? undefined,
+    });
     if (!parsed.success) {
       return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
     }
-    const items = await listMedia(parsed.data.limit);
+    const items = await listMedia(parsed.data.limit, parsed.data.offset);
     return c.json({ success: true, data: items });
   }),
 );

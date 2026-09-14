@@ -135,12 +135,16 @@ export interface PublicObject {
   contentType: string | null;
 }
 
-/** List a folder of the public bucket, newest first. */
-export async function listPublicObjects(prefix: string, limit: number): Promise<PublicObject[]> {
+/** List a page of a public-bucket folder, newest first. */
+export async function listPublicObjects(
+  prefix: string,
+  limit: number,
+  offset = 0,
+): Promise<PublicObject[]> {
   await ensureSocialAssetsBucket();
   const { data, error } = await getSocialSupabase()
     .storage.from(SOCIAL_ASSETS_BUCKET)
-    .list(prefix, { limit, sortBy: { column: 'created_at', order: 'desc' } });
+    .list(prefix, { limit, offset, sortBy: { column: 'created_at', order: 'desc' } });
   if (error) {
     throw new Error(`Storage list failed: ${error.message}`);
   }

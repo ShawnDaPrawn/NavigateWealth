@@ -177,8 +177,8 @@ export async function uploadMedia(input: UploadMediaInput): Promise<MediaItem> {
   };
 }
 
-export async function listMedia(limit: number): Promise<MediaItem[]> {
-  const objects = await listPublicObjects(MEDIA_PREFIX, limit);
+export async function listMedia(limit: number, offset = 0): Promise<MediaItem[]> {
+  const objects = await listPublicObjects(MEDIA_PREFIX, limit, offset);
   return objects.map((o) => toMediaItem(o.name, o.size, o.contentType, o.createdAt));
 }
 

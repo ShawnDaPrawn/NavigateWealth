@@ -33,7 +33,8 @@ interface MediaLibraryPanelProps {
 }
 
 export function MediaLibraryPanel({ onUseInPost }: MediaLibraryPanelProps) {
-  const { data: assets, isLoading, error } = useMediaLibrary();
+  const { assets, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useMediaLibrary();
   const upload = useUploadMedia();
   const remove = useDeleteMedia();
   const [pendingDelete, setPendingDelete] = useState<SocialMediaAsset | null>(null);
@@ -69,9 +70,10 @@ export function MediaLibraryPanel({ onUseInPost }: MediaLibraryPanelProps) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Library</span>
-            {assets && assets.length > 0 && (
+            {assets.length > 0 && (
               <span className="text-sm font-normal text-muted-foreground">
-                {assets.length} image{assets.length === 1 ? '' : 's'}
+                {assets.length}
+                {hasNextPage ? '+' : ''} image{assets.length === 1 ? '' : 's'}
               </span>
             )}
           </CardTitle>
@@ -91,15 +93,15 @@ export function MediaLibraryPanel({ onUseInPost }: MediaLibraryPanelProps) {
             </p>
           )}
 
-          {!isLoading && !error && (assets?.length ?? 0) === 0 && (
+          {!isLoading && !error && assets.length === 0 && (
             <p className="text-sm text-muted-foreground">
               No images yet. Upload one above, then use it in a post.
             </p>
           )}
 
-          {!isLoading && (assets?.length ?? 0) > 0 && (
+          {!isLoading && assets.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {assets?.map((asset) => (
+              {assets.map((asset) => (
                 <div key={asset.storagePath} className="group space-y-2">
                   <div className="aspect-square rounded-lg overflow-hidden bg-muted border">
                     <img
@@ -144,6 +146,18 @@ export function MediaLibraryPanel({ onUseInPost }: MediaLibraryPanelProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {hasNextPage && (
+            <div className="flex justify-center pt-6">
+              <Button
+                variant="outline"
+                disabled={isFetchingNextPage}
+                onClick={() => void fetchNextPage()}
+              >
+                {isFetchingNextPage ? 'Loading…' : 'Load older images'}
+              </Button>
             </div>
           )}
         </CardContent>

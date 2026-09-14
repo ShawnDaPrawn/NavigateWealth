@@ -48,9 +48,10 @@ export const AnalyticsQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional().default(30),
 });
 
-/** The media library: how many images the picker asks for at a time. */
+/** The media library: one page of it. `offset` is how "Load more" reaches older uploads. */
 export const MediaListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).optional().default(60),
+  offset: z.coerce.number().int().min(0).max(100000).optional().default(0),
 });
 
 /**
