@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
+import { useVisibilityAwarePoll } from '../../../../../hooks/useVisibilityAwarePoll';
 import { PublicationsAPI } from '../api';
 import { createClient } from '../../../../../utils/supabase/client';
 
@@ -10,7 +11,6 @@ export function useArticleNotificationProcessor(options?: {
   onProcessed?: (count: number) => void;
 }) {
   const { enabled = true, onProcessed } = options || {};
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRunningRef = useRef(false);
 
   const processJobs = useCallback(async () => {
@@ -40,24 +40,11 @@ export function useArticleNotificationProcessor(options?: {
     }
   }, [onProcessed]);
 
-  useEffect(() => {
-    if (!enabled) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
-
-    const initialTimeout = setTimeout(processJobs, INITIAL_DELAY_MS);
-    intervalRef.current = setInterval(processJobs, POLL_INTERVAL_MS);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [enabled, processJobs]);
+  // Paused while the tab is hidden: this is an accelerator over a pg_cron
+  // job, so a backgrounded tab polling it only burns invocations.
+  useVisibilityAwarePoll(processJobs, {
+    intervalMs: POLL_INTERVAL_MS,
+    initialDelayMs: INITIAL_DELAY_MS,
+    enabled,
+  });
 }

@@ -7,8 +7,25 @@
  */
 import type { NewsletterProcessorState } from '../types';
 
-/** A cron job on a 30-second cadence that has been silent this long is stale. */
-export const SCHEDULER_STALE_AFTER_MS = 5 * 60_000;
+/**
+ * How long `lastCronRunAt` may go unrefreshed before delivery is called stale.
+ *
+ * This has to clear the worst-case age of an honest heartbeat, which is set by
+ * two server-side numbers together:
+ *
+ *   - the cron cadence, now every 2 minutes
+ *     (`supabase/cron/newsletter-studio-jobs.sql`), and
+ *   - `IDLE_HEARTBEAT_INTERVAL_MS` (2 minutes), the window inside which an
+ *     idle tick skips rewriting the row rather than burn a KV write on a fresh
+ *     timestamp.
+ *
+ * A write at T is therefore skipped at T+2min (age 2 min, inside the window)
+ * and made at T+4min, so a perfectly healthy job can show a 4-minute-old
+ * heartbeat. At the previous 5 minutes that left one minute of margin for
+ * delivery jitter and cold starts, which is not enough; 10 minutes leaves six.
+ * A genuinely dead job goes silent for hours, so nothing is lost by waiting.
+ */
+export const SCHEDULER_STALE_AFTER_MS = 10 * 60_000;
 
 export type SchedulerLevel = 'live' | 'stale' | 'missing' | 'unknown';
 

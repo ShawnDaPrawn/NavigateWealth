@@ -13,6 +13,15 @@
 --   - Per Supabase Cron docs, reusing the same job name overwrites the old job.
 --   - This script stores a dedicated publications cron auth token in Vault so the cron job does not
 --     expose the shared app-level credential inside the job definition.
+--   - Cadence is every 2 minutes, not every 30 seconds. At 30 seconds these
+--     jobs were 5,752 of the project's 7,192 daily Edge Function invocations
+--     and found nothing to send on almost all of them (docs/INCIDENTS.md,
+--     2026-09-13). Two minutes is the accepted unattended delivery latency;
+--     an admin with the studio open still gets 15-second ticks from the
+--     browser accelerator. If you change this, re-check
+--     SCHEDULER_STALE_AFTER_MS in
+--     src/components/admin/modules/newsletter/utils/scheduler.ts, which is
+--     sized against this cadence plus IDLE_HEARTBEAT_INTERVAL_MS.
 --   - Authorization keeps a valid Supabase JWT for Edge gateway access, while
 --     x-publications-cron-auth carries the shared publications cron token.
 
@@ -47,7 +56,7 @@ select
 select
   cron.schedule(
     'publications-process-notification-jobs',
-    '30 seconds',
+    '*/2 * * * *',
     $$
     select
       net.http_post(

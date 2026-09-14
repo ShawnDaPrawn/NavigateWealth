@@ -52,18 +52,21 @@ export function nowIso(): string {
  * How long an idle processor may leave its state row untouched.
  *
  * Both background processors (article notifications and Newsletter Studio)
- * are driven by pg_cron every 30 seconds, and until 2026-09-13 each tick
- * rewrote its processor-state row even when there was nothing to do. That was
- * ~5,800 KV upserts a day whose only content was a fresh timestamp -- the
- * single largest writer to the KV table, and part of the disk IO budget
- * depletion recorded in docs/INCIDENTS.md. An idle tick now skips the write
- * while the previous heartbeat is younger than this.
+ * are driven by pg_cron, and until 2026-09-13 each tick rewrote its
+ * processor-state row even when there was nothing to do. On the 30-second
+ * cadence of the time that was ~5,800 KV upserts a day whose only content was
+ * a fresh timestamp -- the single largest writer to the KV table, and part of
+ * the disk IO budget depletion recorded in docs/INCIDENTS.md. An idle tick now
+ * skips the write while the previous heartbeat is younger than this.
  *
- * Keep it well under `SCHEDULER_STALE_AFTER_MS` (5 minutes) in
- * `src/components/admin/modules/newsletter/utils/scheduler.ts`: the Newsletter
- * dashboard declares the scheduled job stale off `lastCronRunAt`, so the
- * oldest heartbeat a healthy idle processor can show is this interval plus one
- * tick. Ticks that did work, hit an error, or changed mode always write.
+ * This interval and the cron cadence together set how stale an honest
+ * heartbeat can look: a write at T is skipped until the first tick past T plus
+ * this interval, so at the current 2-minute cadence a healthy processor can
+ * show a 4-minute-old check-in. `SCHEDULER_STALE_AFTER_MS` in
+ * `src/components/admin/modules/newsletter/utils/scheduler.ts` is sized
+ * against that sum and is currently 10 minutes. Change either number and
+ * re-derive the other, or the Newsletter dashboard reports a healthy job as
+ * stale. Ticks that did work, hit an error, or changed mode always write.
  */
 export const IDLE_HEARTBEAT_INTERVAL_MS = 2 * 60_000;
 

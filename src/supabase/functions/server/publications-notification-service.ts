@@ -526,6 +526,9 @@ export async function processArticleNotificationJobs(
 
   try {
     const jobsToProcess: ArticleNotificationJob[] = [];
+    // Kept so the processor-state counts below can reuse this read instead of
+    // scanning the same namespace a second time on every tick.
+    let allJobsSnapshot: ArticleNotificationJob[] | undefined;
 
     if (options?.jobId) {
       const job = await getArticleNotificationJobRecord(options.jobId);
@@ -536,6 +539,7 @@ export async function processArticleNotificationJobs(
       const allJobs = (await kv.getByPrefix(
         ARTICLE_NOTIFICATION_JOB_PREFIX,
       )) as ArticleNotificationJob[];
+      allJobsSnapshot = allJobs;
       const queuedJobs = allJobs
         .filter((job) => job.status === 'queued' || job.status === 'processing')
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -742,20 +746,25 @@ export async function processArticleNotificationJobs(
       jobs: snapshots,
     };
 
-    const nextProcessorState = await buildArticleNotificationProcessorState({
-      mode,
-      lastHeartbeatAt: nowIso(),
-      lastRunAt: nowIso(),
-      lastSuccessAt: nowIso(),
-      lastError: null,
-      maxJobs,
-      maxBatchesPerJob,
-      processedJobs: result.processedJobs,
-      advancedJobs: result.advancedJobs,
-      completedJobs: result.completedJobs,
-    });
+    const nextProcessorState = await buildArticleNotificationProcessorState(
+      {
+        mode,
+        lastHeartbeatAt: nowIso(),
+        lastRunAt: nowIso(),
+        lastSuccessAt: nowIso(),
+        lastError: null,
+        maxJobs,
+        maxBatchesPerJob,
+        processedJobs: result.processedJobs,
+        advancedJobs: result.advancedJobs,
+        completedJobs: result.completedJobs,
+      },
+      // Only an untouched snapshot is safe to count from; a tick that advanced
+      // a job re-reads, because the statuses it changed are not in this list.
+      advancedJobs === 0 ? allJobsSnapshot : undefined,
+    );
     // An idle tick inside the heartbeat interval changes nothing but the
-    // timestamps; skipping the upsert is what keeps the 30-second cron from
+    // timestamps; skipping the upsert is what keeps the delivery cron from
     // being the KV table's busiest writer (see IDLE_HEARTBEAT_INTERVAL_MS).
     if (
       !canSkipIdleArticleNotificationProcessorStateWrite(previousProcessorState, nextProcessorState)

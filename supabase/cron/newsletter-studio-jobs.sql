@@ -15,16 +15,25 @@
 --     20260825085409_cron_auth_vault_token.sql (Vault secret
 --     navigatewealth_cron_auth_token, verified server-side through the
 --     public.verify_cron_auth_token SECURITY DEFINER oracle).
+--   - Cadence is every 2 minutes, not every 30 seconds. At 30 seconds these
+--     jobs were 5,752 of the project's 7,192 daily Edge Function invocations
+--     and found nothing to send on almost all of them (docs/INCIDENTS.md,
+--     2026-09-13). Two minutes is the accepted unattended delivery latency;
+--     an admin with the studio open still gets 15-second ticks from the
+--     browser accelerator. If you change this, re-check
+--     SCHEDULER_STALE_AFTER_MS in
+--     src/components/admin/modules/newsletter/utils/scheduler.ts, which is
+--     sized against this cadence plus IDLE_HEARTBEAT_INTERVAL_MS.
 --   - Authorization keeps a valid Supabase JWT for Edge gateway access, while
 --     x-nw-cron-auth carries the shared cron token, pulled from Vault at call
 --     time so rotation needs no job edits.
 --   - The cadence and budgets mirror publications-process-notification-jobs:
---     every 30 seconds, up to 3 campaigns and 4 delivery batches of 20 per run.
+--     every 2 minutes, up to 3 campaigns and 4 delivery batches of 20 per run.
 
 select
   cron.schedule(
     'newsletter-studio-process-campaigns',
-    '30 seconds',
+    '*/2 * * * *',
     $$
     select net.http_post(
       url:='https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/newsletter-studio/cron/process',

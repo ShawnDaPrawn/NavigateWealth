@@ -115,8 +115,25 @@ stated prerequisite has already caused a production outage once.
   budget — see [`INCIDENTS.md`](INCIDENTS.md) 2026-09-13. Do not `count(*)` or
   otherwise sequentially scan either table on production, and do not let a
   processor rewrite a KV row every tick just to move a timestamp: the two
-  30-second processors skip the write while idle
+  delivery processors skip the write while idle
   (`IDLE_HEARTBEAT_INTERVAL_MS`).
+- **Scheduled work must not scan a whole namespace to find nothing.** The
+  every-minute scheduled-publish job read all 165 article records to find the
+  zero that were due. It now filters in Postgres via
+  `kv.getByPrefixWhereFieldEquals` against the partial index from migration
+  `20260914083818`. `kv.getByPrefix` is for one-off admin reads, not for
+  anything on a timer.
+- **The browser accelerators pause when the tab is hidden.** Five background
+  pollers mount at `AdminDashboardPage` level for the whole admin session. The
+  three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded
+  tab issues nothing. pg_cron is the authoritative driver in every case, which
+  is what makes pausing safe. The two remaining ones carry once-per-period
+  logic and are left on plain intervals deliberately.
+- **The delivery cron cadence and the studio's stale threshold move
+  together.** The two email-delivery jobs tick every 2 minutes. With an idle
+  heartbeat skipped for up to 2 minutes, a healthy job can show a 4-minute-old
+  check-in, so `SCHEDULER_STALE_AFTER_MS` is 10 minutes. Change one and
+  re-derive the other or the Newsletter dashboard cries wolf.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.

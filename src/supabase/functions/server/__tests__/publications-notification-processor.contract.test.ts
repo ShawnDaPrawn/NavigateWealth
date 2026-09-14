@@ -40,6 +40,7 @@ import {
 } from '../publications-notification-service.ts';
 import { queueArticleNotificationJob } from '../publications-notification-helpers.ts';
 import {
+  ARTICLE_NOTIFICATION_JOB_PREFIX,
   ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY,
   DEFAULT_AUTOMATED_MAX_BATCHES_PER_JOB,
   DEFAULT_AUTOMATED_MAX_JOBS,
@@ -418,6 +419,40 @@ describe('processor state', () => {
     expect(stateWrites()).toBe(writesBefore + 1);
     const state = await getArticleNotificationProcessorState();
     expect(new Date(state!.lastHeartbeatAt).getTime()).toBeGreaterThan(new Date(stale).getTime());
+  });
+
+  const jobPrefixScans = () =>
+    vi
+      .mocked(kv.getByPrefix)
+      .mock.calls.filter(([prefix]) => prefix === ARTICLE_NOTIFICATION_JOB_PREFIX).length;
+
+  it('scans the job namespace once per idle tick, not twice', async () => {
+    // The processor read this namespace to find work and then read it again to
+    // count for the state row, so every 30-second tick scanned it twice
+    // (INCIDENTS 2026-09-13). The counts now reuse the first read.
+    // The suite's beforeEach does not reset the kv mocks, so clear explicitly.
+    vi.mocked(kv.getByPrefix).mockClear();
+
+    await processArticleNotificationJobs({ mode: 'cron' });
+
+    expect(jobPrefixScans()).toBe(1);
+  });
+
+  it('re-reads after a tick that advanced a job, so the counts are not stale', async () => {
+    // A snapshot taken before processing does not carry the statuses that
+    // processing just changed, so reusing it would report a finished job as
+    // still queued. Correctness wins over the saved scan on a working tick.
+    await queuePublishJob(1);
+    vi.mocked(kv.getByPrefix).mockClear();
+
+    await processArticleNotificationJobs({ mode: 'cron' });
+
+    expect(jobPrefixScans()).toBe(2);
+    expect(await getArticleNotificationProcessorState()).toMatchObject({
+      completedJobs: 1,
+      activeJobCount: 0,
+      queuedJobCount: 0,
+    });
   });
 
   it('still writes an idle tick when the mode changed or work was found', async () => {
