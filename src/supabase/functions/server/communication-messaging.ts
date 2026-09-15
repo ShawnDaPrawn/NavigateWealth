@@ -543,21 +543,35 @@ export async function getAllClients(): Promise<SimpleClient[]> {
     const clientsService = new ClientsService();
     const allClients = await clientsService.getAllClients();
 
-    // Filter out deleted/suspended clients and map to SimpleClient shape
+    let isOptedOut = (_opts: { clientId?: string | null; email?: string | null }) => false;
+    try {
+      const { getUnsubscribeIndex, isUnsubscribed } =
+        await import('./communication-unsubscribes.ts');
+      const unsubscribeIndex = await getUnsubscribeIndex();
+      isOptedOut = (opts) => isUnsubscribed(unsubscribeIndex, opts);
+    } catch (err) {
+      log.warn('Failed to load communication unsubscribe list', { error: String(err) });
+    }
+
     const activeClients: SimpleClient[] = allClients
       .filter((c) => !c.deleted && !c.suspended)
-      .map((c) => ({
-        id: (c.id || '') as string,
-        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || (c.email as string) || '',
-        firstName: (c.firstName || '') as string,
-        lastName: (c.lastName || '') as string,
-        surname: (c.lastName || '') as string,
-        email: (c.email || '') as string,
-        accountType: (c.accountType || 'Standard') as string,
-        status: c.deleted ? 'closed' : c.suspended ? 'suspended' : 'active',
-        hasEmailOptIn: true,
-        hasWhatsAppOptIn: false,
-      }));
+      .map((c) => {
+        const id = (c.id || '') as string;
+        const email = (c.email || '') as string;
+        const optedOut = isOptedOut({ clientId: id, email });
+        return {
+          id,
+          name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || email || '',
+          firstName: (c.firstName || '') as string,
+          lastName: (c.lastName || '') as string,
+          surname: (c.lastName || '') as string,
+          email,
+          accountType: (c.accountType || 'Standard') as string,
+          status: c.deleted ? 'closed' : c.suspended ? 'suspended' : 'active',
+          hasEmailOptIn: !optedOut,
+          hasWhatsAppOptIn: false,
+        };
+      });
 
     log.success('Fetched clients via ClientsService', {
       total: allClients.length,

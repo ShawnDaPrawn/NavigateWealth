@@ -15,6 +15,9 @@ export const ENDPOINTS = {
   CAMPAIGN_SEND: (id: string) => `communication/campaigns/${id}/send`,
   MESSAGE_BY_ID: (id: string) => `communication/inbox/${id}`,
   CLIENT_LOGS: (clientId: string) => `clients/${clientId}/communication`,
+  UNSUBSCRIBED: 'communication/unsubscribed',
+  UNSUBSCRIBE: 'communication/unsubscribe',
+  RESUBSCRIBE: 'communication/resubscribe',
 } as const;
 
 export const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;

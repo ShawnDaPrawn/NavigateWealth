@@ -188,3 +188,18 @@ export const CreateCampaignSchema = z
     createdAt: z.string().optional(),
   })
   .passthrough();
+
+export const UnsubscribeRequestSchema = z
+  .object({
+    email: z.string().email('A valid email is required'),
+    clientId: z.string().min(1).optional(),
+    name: z.string().max(200).optional(),
+  })
+  .passthrough();
+
+export const ResubscribeRequestSchema = z
+  .object({
+    email: z.string().email('A valid email is required'),
+    clientId: z.string().min(1).optional(),
+  })
+  .passthrough();
