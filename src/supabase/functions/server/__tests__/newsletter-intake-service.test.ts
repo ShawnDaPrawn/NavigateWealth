@@ -118,6 +118,10 @@ import { createDraftFromIntake, sweepNewsletterIntake } from '../newsletter-inta
 import { encodePdfBase64 } from '../newsletter-studio-storage.ts';
 import { parseReviewRecipients, buildReviewUrl } from '../newsletter-intake-notify.ts';
 import type { NewsletterCampaign } from '../newsletter-studio-types.ts';
+import {
+  NEWSLETTER_INTAKE_KEY_NAMESPACE,
+  type NewsletterIntakeReservation,
+} from '../repositories/newsletter-studio-repository.ts';
 
 const PDF = new TextEncoder().encode('%PDF-1.4\n%routine\n');
 
@@ -138,6 +142,15 @@ function campaigns(): NewsletterCampaign[] {
   const out: NewsletterCampaign[] = [];
   kvStore.forEach((value, key) => {
     if (key.startsWith('nlstudio:campaign:')) out.push(value as NewsletterCampaign);
+  });
+  return out;
+}
+
+function reservations(): NewsletterIntakeReservation[] {
+  const out: NewsletterIntakeReservation[] = [];
+  kvStore.forEach((value, key) => {
+    if (key.startsWith(NEWSLETTER_INTAKE_KEY_NAMESPACE))
+      out.push(value as NewsletterIntakeReservation);
   });
   return out;
 }
@@ -212,6 +225,31 @@ describe('createDraftFromIntake', () => {
     expect(email.sendEmail).toHaveBeenCalledTimes(1);
   });
 
+  it('creates exactly one draft when two hand-overs with one key overlap (review finding)', async () => {
+    // Both calls pass the "does a draft exist yet?" lookup before either
+    // draft is written; the reservation decides who wins.
+    const [a, b] = await Promise.all([
+      createDraftFromIntake(baseInput()),
+      createDraftFromIntake({ ...baseInput(), title: 'Overlapping copy' }),
+    ]);
+    const [winner, loser] = a.duplicate ? [b, a] : [a, b];
+    expect(winner.duplicate).toBe(false);
+    expect(loser).toMatchObject({ campaignId: winner.campaignId, duplicate: true });
+    expect(campaigns()).toHaveLength(1);
+    expect(email.sendEmail).toHaveBeenCalledTimes(1);
+    expect(reservations()).toEqual([
+      expect.objectContaining({ key: '2026-09', campaignId: winner.campaignId }),
+    ]);
+  });
+
+  it('replays through the reservation without scanning campaigns', async () => {
+    const first = await createDraftFromIntake(baseInput());
+    expect(reservations()[0]).toMatchObject({ key: '2026-09', campaignId: first.campaignId });
+    const second = await createDraftFromIntake(baseInput());
+    expect(second).toMatchObject({ campaignId: first.campaignId, duplicate: true });
+    expect(reservations()).toHaveLength(1);
+  });
+
   it('rejects an unknown audience with the valid ids and creates nothing', async () => {
     await expect(createDraftFromIntake({ ...baseInput(), listIds: ['nope'] })).rejects.toThrow(
       /Unknown audience id\(s\): nope\. Valid ids: sys_newsletter_contacts/,
@@ -220,12 +258,24 @@ describe('createDraftFromIntake', () => {
     expect(email.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('removes the draft again when the PDF is rejected', async () => {
+  it('removes the draft again when the PDF is rejected, and releases the key for a corrected hand-over', async () => {
     await expect(
       createDraftFromIntake({ ...baseInput(), bytes: new TextEncoder().encode('not a pdf') }),
     ).rejects.toThrow(/not a PDF/);
     expect(campaigns()).toHaveLength(0);
+    expect(reservations()).toHaveLength(0);
     expect(email.sendEmail).not.toHaveBeenCalled();
+
+    const retry = await createDraftFromIntake(baseInput());
+    expect(retry.duplicate).toBe(false);
+    expect(campaigns()).toHaveLength(1);
+  });
+
+  it('releases the key when the audience is unknown', async () => {
+    await expect(createDraftFromIntake({ ...baseInput(), listIds: ['nope'] })).rejects.toThrow(
+      /Unknown audience/,
+    );
+    expect(reservations()).toHaveLength(0);
   });
 
   it('keeps the draft when the review email fails, without stamping reviewNotifiedAt', async () => {

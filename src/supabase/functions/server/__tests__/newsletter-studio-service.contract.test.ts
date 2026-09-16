@@ -242,6 +242,53 @@ describe('campaign CRUD', () => {
     expect(drafts.statusCounts).toMatchObject({ draft: 1, queued: 1 });
   });
 
+  it('normalises a record written by the old studio (name/subject, no title) on every read path', async () => {
+    // The namespace is shared with the pre-PDF studio, whose records carried
+    // `name`/`subject`/`openCount` and no `title` — a bare `c.title.toLowerCase()`
+    // would 500 the list (review finding).
+    kvStore.set('nlstudio:campaign:legacy-1', {
+      id: 'legacy-1',
+      name: 'Old composer issue',
+      subject: 'Old subject line',
+      status: 'finished',
+      listIds: ['sys_newsletter_contacts'],
+      listNames: ['Newsletter Contacts'],
+      recipientCount: 3,
+      sentCount: 3,
+      failedCount: 0,
+      processedCount: 3,
+      progressPercent: 100,
+      openCount: 2,
+      createdBy: 'admin-1',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      completedAt: '2026-01-02T00:00:00.000Z',
+    });
+    const fresh = await makeDraft({ title: 'Brand new' });
+
+    const searched = await listCampaigns({ search: 'composer' });
+    expect(searched.campaigns.map((c) => c.id)).toEqual(['legacy-1']);
+    expect(searched.campaigns[0]).toMatchObject({
+      title: 'Old composer issue',
+      description: '',
+      pdf: null,
+      source: 'admin',
+      sourceRef: null,
+      readCount: 2,
+    });
+
+    const view = await getCampaignView('legacy-1');
+    expect(view.title).toBe('Old composer issue');
+    expect(await findCampaignBySourceRef('nothing')).toBeNull();
+
+    const summary = await getDashboardSummary();
+    expect(summary.campaigns.total).toBe(2);
+    expect(summary.delivery).toEqual({ totalSent: 3, totalFailed: 0, totalRead: 2 });
+    expect(summary.recentCampaigns.map((c) => c.id)).toEqual(
+      expect.arrayContaining(['legacy-1', fresh.id]),
+    );
+  });
+
   it('finds a routine draft by its idempotency key', async () => {
     seedGroup();
     const routine = await createCampaign(

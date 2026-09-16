@@ -66,10 +66,48 @@ export const nowIso = () => new Date().toISOString();
 
 // ── Campaign reads ───────────────────────────────────────────────────────────
 
+/**
+ * Fields a record written by the previous Newsletter Studio may still carry
+ * under the unchanged `nlstudio:campaign:` namespace. Production held none
+ * when the shape changed, but the namespace is shared, so every read maps
+ * them rather than letting a search call `toLowerCase()` on `undefined`
+ * (review finding).
+ */
+type LegacyCampaignFields = {
+  name?: string;
+  subject?: string;
+  openCount?: number;
+};
+
+export function normalizeCampaignRecord(
+  raw: NewsletterCampaign | (Partial<NewsletterCampaign> & LegacyCampaignFields),
+): NewsletterCampaign {
+  const record = raw as Partial<NewsletterCampaign> & LegacyCampaignFields;
+  return {
+    ...(record as NewsletterCampaign),
+    title: record.title ?? record.name ?? record.subject ?? 'Untitled newsletter',
+    description: record.description ?? '',
+    fromName: record.fromName ?? 'Navigate Wealth',
+    listIds: record.listIds ?? [],
+    listNames: record.listNames ?? [],
+    pdf: record.pdf ?? null,
+    source: record.source ?? 'admin',
+    sourceRef: record.sourceRef ?? null,
+    reviewNotifiedAt: record.reviewNotifiedAt ?? null,
+    readCount: record.readCount ?? record.openCount ?? 0,
+  };
+}
+
+/** Every campaign record, normalised — the one read path the processor and the studio share. */
+export async function listCampaignRecords(): Promise<NewsletterCampaign[]> {
+  const { items } = await newsletterCampaigns.list({ limit: 1000 });
+  return items.map(normalizeCampaignRecord);
+}
+
 async function getCampaignOrThrow(id: string): Promise<NewsletterCampaign> {
   const campaign = await newsletterCampaigns.get(id);
   if (!campaign) throw new NotFoundError(`Campaign ${id} not found`);
-  return campaign;
+  return normalizeCampaignRecord(campaign);
 }
 
 function isCampaignStuck(campaign: NewsletterCampaign): boolean {
@@ -129,8 +167,9 @@ export async function listCampaigns(
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(Math.max(1, filters.limit ?? 25), 100);
 
-  const { items } = await newsletterCampaigns.list({ limit: 1000 });
-  let campaigns = items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  let campaigns = (await listCampaignRecords()).sort((a, b) =>
+    a.createdAt < b.createdAt ? 1 : -1,
+  );
 
   if (filters.search?.trim()) {
     const needle = filters.search.trim().toLowerCase();
@@ -174,7 +213,7 @@ export async function getCampaignView(id: string): Promise<NewsletterCampaignVie
 export async function findCampaignBySourceRef(
   sourceRef: string,
 ): Promise<NewsletterCampaign | null> {
-  const { items } = await newsletterCampaigns.list({ limit: 1000 });
+  const items = await listCampaignRecords();
   return items.find((c) => c.source === 'routine' && c.sourceRef === sourceRef) ?? null;
 }
 
@@ -471,8 +510,8 @@ export async function cancelCampaign(id: string): Promise<NewsletterCampaignView
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 export async function getDashboardSummary(): Promise<NewsletterDashboardSummary> {
-  const [{ items: campaigns }, subscriberStats, processor, lists] = await Promise.all([
-    newsletterCampaigns.list({ limit: 1000 }),
+  const [campaigns, subscriberStats, processor, lists] = await Promise.all([
+    listCampaignRecords(),
     getSubscriberStats().catch(() => null),
     newsletterProcessorState.get(NEWSLETTER_PROCESSOR_STATE_ID),
     listAudienceLists().catch(() => [] as NewsletterListView[]),

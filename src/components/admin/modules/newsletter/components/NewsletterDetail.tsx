@@ -39,7 +39,6 @@ import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
-import { newsletterStudioApi } from '../api';
 import { DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH } from '../constants';
 import {
   useCancelCampaign,
@@ -57,6 +56,7 @@ import {
 import type { NewsletterCampaign, NewsletterCaps } from '../types';
 import { isCampaignDeletable } from '../utils/campaign';
 import { formatDateTime, formatNumber, formatRate, formatRelative } from '../utils/format';
+import { openPdf } from '../utils/openPdf';
 import { schedulerHealth } from '../utils/scheduler';
 import { AudiencePicker } from './AudiencePicker';
 import { CampaignProgressLine } from './CampaignProgressLine';
@@ -68,18 +68,6 @@ import { DetailRow, Notice, SectionHeader, StatTile } from './shared';
 
 const EDITABLE: NewsletterCampaign['status'][] = ['draft', 'scheduled'];
 const IN_FLIGHT: NewsletterCampaign['status'][] = ['queued', 'sending'];
-
-/** Opens the PDF in a new tab: the CSP blocks inline frames from storage, and this needs no fetch. */
-function openPdf(campaignId: string) {
-  const tab = window.open('', '_blank', 'noopener');
-  newsletterStudioApi
-    .getPdfUrl(campaignId)
-    .then(({ url }) => {
-      if (tab) tab.location.href = url;
-      else window.open(url, '_blank', 'noopener');
-    })
-    .catch(() => tab?.close());
-}
 
 export function NewsletterDetail({
   campaign,

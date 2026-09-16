@@ -26,7 +26,11 @@ import {
   findCampaignBySourceRef,
 } from './newsletter-studio-service.ts';
 import { listAudienceLists } from './newsletter-studio-audience.ts';
-import { newsletterCampaigns } from './repositories/newsletter-studio-repository.ts';
+import { sleep } from './publications-notification-state.ts';
+import {
+  newsletterCampaigns,
+  newsletterIntakeReservations,
+} from './repositories/newsletter-studio-repository.ts';
 import { decodePdfBase64 } from './newsletter-studio-storage.ts';
 import {
   buildReviewUrl,
@@ -74,28 +78,103 @@ export async function assertKnownLists(listIds: string[]): Promise<string[]> {
   return listIds.map((id) => lists.find((l) => l.id === id)?.name ?? id);
 }
 
+// ── Idempotency ──────────────────────────────────────────────────────────────
+
+/** Settle window after writing a reservation before reading it back (the lease's 80 ms). */
+export const RESERVATION_SETTLE_MS = 80;
+/** How long a losing concurrent hand-over waits for the winner to record its draft. */
+const RESERVATION_WAIT_MS = 250;
+const RESERVATION_WAIT_ATTEMPTS = 12;
+
+type Reservation = { owned: true } | { owned: false; campaignId: string | null };
+
+/**
+ * Claim an idempotency key, or learn who already holds it.
+ *
+ * KV has no unique constraint, so a plain "look up, then create" lets two
+ * overlapping submissions with the same key both pass the lookup and both
+ * create a draft (review finding). Instead the key is reserved with a nonce,
+ * settled, and read back — the same optimistic write → settle → read-back
+ * the campaign lease uses. Exactly one writer sees its own nonce.
+ */
+async function reserveIntakeKey(key: string): Promise<Reservation> {
+  const existing = await newsletterIntakeReservations.get(key);
+  if (existing) return { owned: false, campaignId: existing.campaignId };
+
+  const nonce = crypto.randomUUID();
+  await newsletterIntakeReservations.put(key, {
+    key,
+    nonce,
+    campaignId: null,
+    createdAt: new Date().toISOString(),
+  });
+  await sleep(RESERVATION_SETTLE_MS);
+
+  const settled = await newsletterIntakeReservations.get(key);
+  if (!settled || settled.nonce !== nonce) {
+    return { owned: false, campaignId: settled?.campaignId ?? null };
+  }
+  return { owned: true };
+}
+
+/** The draft an earlier hand-over with this key produced, once it has one. */
+async function awaitReservedCampaign(key: string, known: string | null): Promise<string | null> {
+  if (known) return known;
+  for (let attempt = 0; attempt < RESERVATION_WAIT_ATTEMPTS; attempt++) {
+    await sleep(RESERVATION_WAIT_MS);
+    const reservation = await newsletterIntakeReservations.get(key);
+    if (reservation?.campaignId) return reservation.campaignId;
+    // The winner gave up (its PDF was rejected) and released the key.
+    if (!reservation) return null;
+  }
+  // Drafts created before reservations existed carry the key on the campaign only.
+  return (await findCampaignBySourceRef(key))?.id ?? null;
+}
+
+async function duplicateOutcome(campaignId: string): Promise<IntakeDraftResult> {
+  const existing = await newsletterCampaigns.get(campaignId);
+  return {
+    campaignId,
+    duplicate: true,
+    reviewUrl: buildReviewUrl(campaignId),
+    notified: Boolean(existing?.reviewNotifiedAt),
+  };
+}
+
 /**
  * Create the draft, store the PDF and notify the admin. A repeated
- * idempotency key returns the existing draft and sends nothing.
+ * idempotency key returns the existing draft and sends nothing, even when
+ * the repeat overlaps the original.
  */
 export async function createDraftFromIntake(input: IntakeDraftInput): Promise<IntakeDraftResult> {
-  if (input.idempotencyKey) {
-    const existing = await findCampaignBySourceRef(input.idempotencyKey);
-    if (existing) {
-      log.info('Intake replay matched an existing draft', {
-        campaignId: existing.id,
-        idempotencyKey: input.idempotencyKey,
-      });
-      return {
-        campaignId: existing.id,
-        duplicate: true,
-        reviewUrl: buildReviewUrl(existing.id),
-        notified: Boolean(existing.reviewNotifiedAt),
-      };
+  const key = input.idempotencyKey;
+  if (key) {
+    // Drafts from before reservations existed: the key lives on the campaign only.
+    const legacy = await findCampaignBySourceRef(key);
+    if (legacy) {
+      log.info('Intake replay matched an existing draft', { campaignId: legacy.id, key });
+      return duplicateOutcome(legacy.id);
+    }
+    const reservation = await reserveIntakeKey(key);
+    if (!reservation.owned) {
+      const campaignId = await awaitReservedCampaign(key, reservation.campaignId);
+      if (!campaignId) {
+        throw new ValidationError(
+          `A hand-over with idempotency key "${key}" is already in progress; retry in a moment`,
+        );
+      }
+      log.info('Intake replay matched an existing draft', { campaignId, key });
+      return duplicateOutcome(campaignId);
     }
   }
 
-  const listNames = await assertKnownLists(input.listIds);
+  const listNames: string[] = [];
+  try {
+    listNames.push(...(await assertKnownLists(input.listIds)));
+  } catch (error) {
+    if (key) await newsletterIntakeReservations.remove(key).catch(() => {});
+    throw error;
+  }
 
   const draft = await createCampaign(
     {
@@ -112,9 +191,20 @@ export async function createDraftFromIntake(input: IntakeDraftInput): Promise<In
   try {
     withPdf = await attachCampaignPdf(draft.id, { bytes: input.bytes, fileName: input.fileName });
   } catch (error) {
-    // Never leave a PDF-less routine draft behind for the admin to trip over.
+    // Never leave a PDF-less routine draft behind for the admin to trip over,
+    // and release the key so a corrected hand-over can reuse it.
     await newsletterCampaigns.remove(draft.id).catch(() => {});
+    if (key) await newsletterIntakeReservations.remove(key).catch(() => {});
     throw error;
+  }
+  if (key) {
+    const reservation = await newsletterIntakeReservations.get(key);
+    await newsletterIntakeReservations.put(key, {
+      key,
+      nonce: reservation?.nonce ?? '',
+      campaignId: draft.id,
+      createdAt: reservation?.createdAt ?? new Date().toISOString(),
+    });
   }
 
   const notified = await sendNewsletterDraftReviewNotification({

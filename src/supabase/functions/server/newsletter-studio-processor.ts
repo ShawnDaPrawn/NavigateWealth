@@ -59,7 +59,11 @@ import {
   releaseCampaignSafely,
   withLeaseHeartbeat,
 } from './newsletter-studio-lease.ts';
-import { nowIso, promoteDueScheduledCampaign } from './newsletter-studio-service.ts';
+import {
+  listCampaignRecords,
+  nowIso,
+  promoteDueScheduledCampaign,
+} from './newsletter-studio-service.ts';
 import { RECIPIENT_FETCH_CHUNK } from './newsletter-studio-engagement.ts';
 import { sweepNewsletterIntake } from './newsletter-intake-service.ts';
 import {
@@ -552,7 +556,7 @@ export async function processNewsletterCampaigns(
       }
     }
 
-    const { items: campaigns } = await newsletterCampaigns.list({ limit: 1000 });
+    const campaigns = await listCampaignRecords();
     result.campaignsExamined = campaigns.length;
 
     // 1) Promote scheduled campaigns whose time has arrived.
@@ -575,11 +579,7 @@ export async function processNewsletterCampaigns(
     }
 
     // 2) Work active campaigns, oldest first, within budget.
-    const active = (
-      result.promotedScheduled > 0
-        ? (await newsletterCampaigns.list({ limit: 1000 })).items
-        : campaigns
-    )
+    const active = (result.promotedScheduled > 0 ? await listCampaignRecords() : campaigns)
       .filter((c) => ACTIVE_CAMPAIGN_STATUSES.includes(c.status))
       .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
       .slice(0, maxCampaigns);
