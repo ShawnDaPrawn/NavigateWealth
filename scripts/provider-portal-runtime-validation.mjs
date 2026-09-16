@@ -33,7 +33,21 @@ function hasCredentialProfile(flow) {
   );
 }
 
-export function getPortalRuntimeConfigurationIssues(flow) {
+/**
+ * `requireLoginSelectors` exists for the connection test, and for nothing else.
+ *
+ * A connection test runs at the one moment a provider is least configured: an
+ * adviser has just typed in a portal address and a password and wants to know
+ * whether they work. Demanding three CSS selectors first makes the diagnostic
+ * useless exactly when it is needed, so a connection test is allowed to start
+ * without them and the worker falls back to generic sign-in field guesses.
+ *
+ * A real run keeps the strict requirement. There a guessed field could be
+ * filled with something that does not belong in it, and unlike a connection
+ * test a real run goes on to write to the book.
+ */
+export function getPortalRuntimeConfigurationIssues(flow, options = {}) {
+  const requireLoginSelectors = options.requireLoginSelectors !== false;
   const issues = [];
 
   if (!isHttpUrl(flow?.loginUrl)) {
@@ -43,6 +57,8 @@ export function getPortalRuntimeConfigurationIssues(flow) {
   if (!hasCredentialProfile(flow)) {
     issues.push('Portal credential profile is not configured.');
   }
+
+  if (!requireLoginSelectors) return issues;
 
   if (!hasValue(flow?.login?.usernameSelector)) {
     issues.push('Portal username selector is not configured.');
@@ -59,8 +75,8 @@ export function getPortalRuntimeConfigurationIssues(flow) {
   return issues;
 }
 
-export function assertPortalRuntimeConfigured(flow) {
-  const issues = getPortalRuntimeConfigurationIssues(flow);
+export function assertPortalRuntimeConfigured(flow, options = {}) {
+  const issues = getPortalRuntimeConfigurationIssues(flow, options);
   if (issues.length === 0) return;
 
   throw new PortalConfigurationError(

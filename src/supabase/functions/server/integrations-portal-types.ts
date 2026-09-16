@@ -55,6 +55,51 @@ export interface PortalCredentialStatus {
   updatedBy?: string;
 }
 
+/**
+ * How a provider's sign-in stands, as far as anyone can tell.
+ *
+ * `untested` and `failed` are deliberately different: the first means nobody
+ * has tried, the second means somebody tried and it did not work. Collapsing
+ * them into "not connected" is what let a broken provider sit unnoticed.
+ */
+export type PortalConnectionState =
+  | 'no_login_url'
+  | 'no_credentials'
+  | 'untested'
+  | 'testing'
+  | 'connected'
+  | 'failed';
+
+/** The stored outcome of the last sign-in test for a provider + profile. */
+export interface PortalConnectionRecord {
+  providerId: string;
+  credentialProfileId: string;
+  /** The category whose flow supplied the login URL that was proven. */
+  categoryId: string;
+  state: 'connected' | 'failed';
+  checkedAt: string;
+  /** What the worker reported. Shown verbatim to the adviser on a failure. */
+  message?: string;
+  jobId?: string;
+}
+
+/** Everything the Connections screen needs for one provider, in one object. */
+export interface PortalProviderConnection {
+  providerId: string;
+  providerName: string;
+  state: PortalConnectionState;
+  /** The category whose flow this summary was derived from. */
+  categoryId: string;
+  credentialProfileId: string;
+  loginUrl?: string;
+  hasCredentials: boolean;
+  credentialsUpdatedAt?: string;
+  lastCheckedAt?: string;
+  message?: string;
+  /** The job currently proving the connection, when one is in flight. */
+  activeJobId?: string;
+}
+
 export interface PortalFlowField {
   sourceHeader: string;
   columnName?: string;
@@ -233,6 +278,13 @@ export interface PortalSyncJob {
    * rather than every eligible policy for the provider and category.
    */
   scopedPolicyIds?: string[];
+  /**
+   * Set when the run exists only to prove the stored credentials can sign in.
+   * Such a job carries an EMPTY policy queue on purpose, so it can be run
+   * before the provider has a single policy captured, and it stops at the
+   * first signed-in page rather than going on to extract anything.
+   */
+  connectionTest?: boolean;
   actionsRunId?: number;
   actionsRunUrl?: string;
   actionsDispatchError?: string;

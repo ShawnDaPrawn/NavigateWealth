@@ -15,6 +15,7 @@ import {
   UploadPreviewResponse,
   IntegrationSyncRun,
   PortalCredentialStatus,
+  PortalProviderConnection,
   PortalProviderFlow,
   PortalBrainMemorySummary,
   PortalDiscoveryReport,
@@ -458,6 +459,32 @@ export const productManagementApi = {
       credentials,
     );
     return response.status;
+  },
+
+  /** Sign-in state for every provider, for the Connections screen. */
+  fetchPortalConnections: async (): Promise<PortalProviderConnection[]> => {
+    const response = await api.get<{ success: boolean; connections: PortalProviderConnection[] }>(
+      'integrations/portal-connections',
+    );
+    return response.connections || [];
+  },
+
+  /**
+   * Start a run whose only purpose is to prove the stored credentials sign in.
+   *
+   * Queues no policies, reads no policy data and writes nothing to the book, so
+   * it is safe to run against a provider that has not been set up yet — which
+   * is the only moment it is useful.
+   */
+  startPortalConnectionTest: async (
+    providerId: string,
+    categoryId: string,
+    credentialProfileId: string,
+  ): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
+    return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>(
+      'integrations/portal-jobs',
+      { providerId, categoryId, credentialProfileId, connectionTest: true },
+    );
   },
 
   createPortalJob: async (

@@ -53,7 +53,10 @@ export async function runJob(jobId, requestedMode = mode) {
   let liveViewTicker;
   try {
     const { job, flow, config, items, credentials, brain } = await loadRuntime(jobId);
-    assertPortalRuntimeConfigured(flow);
+    // A connection test starts without configured login selectors on purpose —
+    // see getPortalRuntimeConfigurationIssues. Everything else still has to be
+    // fully configured before a browser is opened.
+    assertPortalRuntimeConfigured(flow, { requireLoginSelectors: !job.connectionTest });
     const providerAdapter = getProviderAdapter({ job, flow });
     flow.loginUrl = resolveProviderLoginUrl(flow, providerAdapter);
     const jobMode = job.runMode || requestedMode;
@@ -101,12 +104,14 @@ export async function runJob(jobId, requestedMode = mode) {
 
     await page.goto(flow.loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await publishLiveView(page, { force: true, note: 'Provider login page opened.' });
-    await submitProviderCredentials(page, flow, username, password);
+    const loginOptions = job.connectionTest ? { allowSelectorFallback: true } : {};
+    await submitProviderCredentials(page, flow, username, password, loginOptions);
 
     const otpCheckpoint = await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
     if (otpCheckpoint.requiresCredentialResubmit) {
       const providerLabel = getProviderLabel(flow);
       await submitProviderCredentials(page, flow, username, password, {
+        ...loginOptions,
         message: `Re-submitting provider credentials after ${providerLabel} registration redirect.`,
         note: `Provider credentials re-submitted after ${providerLabel} registration redirect.`,
       });
@@ -141,6 +146,22 @@ export async function runJob(jobId, requestedMode = mode) {
         throw new Error(`${checkpointError instanceof Error ? checkpointError.message : String(checkpointError)} The navigator could not clear it either: ${cleared.reason}`, { cause: checkpointError });
       }
       await assertPastAuthCheckpoint(page, flow, 'post-login navigation (after navigator)');
+    }
+
+    // A connection test has proven everything it set out to prove the moment
+    // the auth checkpoint is behind us: the credentials were accepted and any
+    // verification step was cleared. It stops here deliberately. Going on to
+    // post-login navigation or a discovery report would make the test fail for
+    // providers whose policy pages are not mapped yet — which is most of them
+    // at the moment somebody is testing a sign-in, and would report a working
+    // password as a broken connection.
+    if (job.connectionTest) {
+      await publishLiveView(page, { force: true, note: 'Signed in successfully.' });
+      await updateJob('discovery_ready', {
+        currentStep: 'connection_verified',
+        message: `Signed in to ${getProviderLabel(flow)} successfully.`,
+      });
+      return;
     }
 
     if (flow.navigation?.postLoginUrl) {

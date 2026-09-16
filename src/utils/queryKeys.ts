@@ -226,6 +226,8 @@ export const integrationsKeys = {
     [...integrationsKeys.all, 'portal-brain-memory', providerId, categoryId] as const,
   portalCredentialStatus: (providerId: string | null, profileId: string | null) =>
     [...integrationsKeys.all, 'portal-credential-status', providerId, profileId] as const,
+  /** Sign-in state for every provider at once — the Connections screen's list. */
+  portalConnections: () => [...integrationsKeys.all, 'portal-connections'] as const,
   portalJob: (jobId: string | null) => [...integrationsKeys.all, 'portal-job', jobId] as const,
   portalJobItems: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-job-items', jobId] as const,

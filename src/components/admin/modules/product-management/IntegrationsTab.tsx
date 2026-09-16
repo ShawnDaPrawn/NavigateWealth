@@ -5,12 +5,14 @@ import {
   PreviewData,
   IntegrationSyncRun,
   PortalBrainMemorySummary,
+  PortalProviderConnection,
   PortalSyncJob,
   ProductCategoryId,
   getPortalAutomationCategoryOptions,
 } from './types';
 import { productManagementApi } from './api';
-import { ProviderList } from './integrations/ProviderList';
+import { ProviderConnectionList } from './integrations/connections/ProviderConnectionList';
+import { GuidedSignInDialog } from './integrations/connections/GuidedSignInDialog';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
@@ -46,6 +48,8 @@ export function IntegrationsTab() {
   const [stagedRun, setStagedRun] = useState<IntegrationSyncRun | null>(null);
   const [portalJob, setPortalJob] = useState<PortalSyncJob | null>(null);
   const [selectedPortalCredentialProfileId, setSelectedPortalCredentialProfileId] = useState('');
+  /** The provider whose guided sign-in is open, or null when it is closed. */
+  const [guidedSignInProviderId, setGuidedSignInProviderId] = useState<string | null>(null);
 
   // Mapping Configuration State (Local Mutable)
   const [configBindings, setConfigBindings] = useState<IntegrationFieldBinding[]>([]);
@@ -64,6 +68,14 @@ export function IntegrationsTab() {
   const { data: providers = [], isLoading: isLoadingProviders } = useQuery({
     queryKey: integrationsKeys.providers(),
     queryFn: () => productManagementApi.fetchIntegrationProviders(),
+  });
+
+  // 1b. Sign-in state for every provider at once. This is the first thing an
+  // adviser looks at ("which of these actually work?"), so it is one request
+  // for the whole list rather than N requests assembled in the client.
+  const { data: portalConnections = [] } = useQuery<PortalProviderConnection[]>({
+    queryKey: integrationsKeys.portalConnections(),
+    queryFn: () => productManagementApi.fetchPortalConnections(),
   });
 
   // Select first provider automatically if needed
@@ -250,6 +262,24 @@ export function IntegrationsTab() {
         row.publishStatus !== 'skipped',
     ).length || 0;
 
+  // The guided sign-in dialog only ever talks about the selected provider —
+  // opening it selects that provider first — so everything it needs comes from
+  // the same queries the rest of the tab already runs.
+  const guidedSignInConnection =
+    portalConnections.find((entry) => entry.providerId === guidedSignInProviderId) || null;
+  const connectionTestJob = visiblePortalJobForSelection?.connectionTest
+    ? visiblePortalJobForSelection
+    : null;
+
+  // A finished sign-in test is the only thing that changes what the Connections
+  // list says, so the list is refreshed when one lands rather than polled.
+  const connectionTestJobId = connectionTestJob?.id;
+  const connectionTestSettled = connectionTestJob ? !isActivePortalJob(connectionTestJob) : false;
+  useEffect(() => {
+    if (!connectionTestJobId || !connectionTestSettled) return;
+    queryClient.invalidateQueries({ queryKey: integrationsKeys.portalConnections() });
+  }, [connectionTestJobId, connectionTestSettled, queryClient]);
+
   useEffect(() => {
     if (latestPortalJob === undefined) return;
 
@@ -341,6 +371,7 @@ export function IntegrationsTab() {
     publishRunMutation,
     downloadTemplateMutation,
     createPortalJobMutation,
+    startConnectionTestMutation,
     refreshPortalJobMutation,
     submitPortalOtpMutation,
     retryPortalJobItemMutation,
@@ -456,6 +487,56 @@ export function IntegrationsTab() {
     setSelectedCategoryId(categoryId);
   };
 
+  /**
+   * Open guided sign-in for a provider.
+   *
+   * Selecting the provider first is what makes the dialog work at all: every
+   * portal mutation in this tab is bound to the current selection, so the
+   * alternative would be a second, parallel set of them targeting a different
+   * provider — two ways to save the same credentials, which is exactly the kind
+   * of duplication that let setup completeness disagree with itself before.
+   */
+  const handleOpenGuidedSignIn = (connection: PortalProviderConnection) => {
+    if (connection.providerId !== selectedProviderId) {
+      setSelectedProviderId(connection.providerId);
+    }
+    setGuidedSignInProviderId(connection.providerId);
+  };
+
+  const handleSaveGuidedLoginUrl = async (loginUrl: string) => {
+    if (!portalFlow) {
+      // Throwing rather than returning is deliberate: the dialog awaits this
+      // before starting the test, and a silent return would run the test
+      // against the address the adviser has just corrected.
+      toast.error('The provider setup is still loading. Try again in a moment.');
+      throw new Error('Portal flow not loaded');
+    }
+    await savePortalFlowMutation.mutateAsync({ ...portalFlow, loginUrl });
+  };
+
+  const handleSaveGuidedCredentials = async (credentials: {
+    username: string;
+    password: string;
+  }) => {
+    const profileId =
+      guidedSignInConnection?.credentialProfileId || selectedPortalCredentialProfileId;
+    if (!profileId) {
+      toast.error('This provider has no credential profile to save sign-in details against.');
+      throw new Error('No credential profile');
+    }
+    await savePortalCredentialsMutation.mutateAsync({ profileId, ...credentials });
+  };
+
+  const handleStartConnectionTest = async () => {
+    const profileId =
+      guidedSignInConnection?.credentialProfileId || selectedPortalCredentialProfileId;
+    if (!profileId) {
+      toast.error('This provider has no credential profile to test.');
+      throw new Error('No credential profile');
+    }
+    await startConnectionTestMutation.mutateAsync(profileId);
+  };
+
   const isColumnMapped = (colName: string) =>
     configBindings.some(
       (binding) => binding.columnName === colName && binding.targetFieldId !== '',
@@ -467,11 +548,29 @@ export function IntegrationsTab() {
 
   return (
     <div className="flex h-[calc(100vh-200px)] min-h-[800px] gap-6">
-      {/* Left Panel: Provider List */}
-      <ProviderList
+      {/* Left Panel: Connections */}
+      <ProviderConnectionList
         providers={providers}
+        connections={portalConnections}
         selectedProviderId={selectedProviderId}
         onSelect={setSelectedProviderId}
+        onConnect={handleOpenGuidedSignIn}
+      />
+
+      <GuidedSignInDialog
+        connection={guidedSignInConnection}
+        open={!!guidedSignInConnection}
+        onOpenChange={(next) => setGuidedSignInProviderId(next ? guidedSignInProviderId : null)}
+        job={connectionTestJob}
+        onSaveLoginUrl={handleSaveGuidedLoginUrl}
+        onSaveCredentials={handleSaveGuidedCredentials}
+        onStartTest={handleStartConnectionTest}
+        onSubmitOtp={async (otp) => {
+          await submitPortalOtpMutation.mutateAsync(otp);
+        }}
+        isSaving={savePortalFlowMutation.isPending || savePortalCredentialsMutation.isPending}
+        isStartingTest={startConnectionTestMutation.isPending}
+        isSubmittingOtp={submitPortalOtpMutation.isPending}
       />
 
       {/* Right Panel: Details & Actions */}

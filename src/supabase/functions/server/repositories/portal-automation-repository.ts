@@ -13,7 +13,11 @@
  */
 
 import { createKvRepository } from './kv-repository.ts';
-import type { PortalAgentPlaybook, PortalSyncJob } from '../integrations-portal-types.ts';
+import type {
+  PortalAgentPlaybook,
+  PortalConnectionRecord,
+  PortalSyncJob,
+} from '../integrations-portal-types.ts';
 import type { KvProvider } from '../integrations-types.ts';
 
 /**
@@ -56,3 +60,33 @@ export interface PortalAgentBudget {
 export const portalAgentBudgets = createKvRepository<PortalAgentBudget>(
   PORTAL_AGENT_BUDGET_NAMESPACE,
 );
+
+/**
+ * The outcome of the last sign-in test, one record per provider + credential
+ * profile.
+ *
+ * Not per category, because credentials are not per category — the same
+ * username and password open the same front door whichever product the flow is
+ * configured for. The id is `${providerId}:${credentialProfileId}`.
+ */
+export const PORTAL_CONNECTION_NAMESPACE = 'portal-connection:';
+
+export const portalConnections = createKvRepository<PortalConnectionRecord>(
+  PORTAL_CONNECTION_NAMESPACE,
+);
+
+/**
+ * The "which job is current" pointer, one per provider + category.
+ *
+ * It lives inside the `portal-job:` namespace (`portal-job:latest:…`), so a
+ * plain `portalJobs.get` would return a pointer typed as a whole job. Giving
+ * the pointers their own repository keeps that shape honest.
+ */
+export const PORTAL_JOB_POINTER_NAMESPACE = 'portal-job:latest:';
+
+export interface PortalJobPointer {
+  jobId: string;
+  updatedAt: string;
+}
+
+export const portalJobPointers = createKvRepository<PortalJobPointer>(PORTAL_JOB_POINTER_NAMESPACE);
