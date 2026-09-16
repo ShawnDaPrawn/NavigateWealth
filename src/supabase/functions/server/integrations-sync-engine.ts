@@ -497,12 +497,13 @@ export async function buildSyncRun(params: {
 
     const diffs: SyncDiff[] = [];
     const lockedFields = new Set(matchedPolicy?.lockedFields || []);
-    const shouldRespectLockedFields = (params.source || 'spreadsheet') !== 'portal';
 
     if (matchedPolicy) {
       for (const [fieldId, newValue] of Object.entries(mappedData)) {
+        // A lock is a lock, whatever the source. Portal runs used to ignore
+        // locks, so a value an adviser had deliberately locked after reviewing
+        // a statement was silently overwritten by the next portal sweep.
         if (
-          shouldRespectLockedFields &&
           lockedFields.has(fieldId) &&
           valuesDiffer(matchedPolicy.data?.[fieldId], newValue)
         ) {
@@ -608,12 +609,12 @@ export async function publishSyncRun(
 
       const policy = policies[policyIndex];
       const lockedSet = new Set(policy.lockedFields || []);
-      const shouldRespectLockedFields = run.source !== 'portal';
       const updatedData = { ...policy.data };
       const appliedFields: string[] = [];
 
       for (const diff of row.diffs) {
-        if (shouldRespectLockedFields && lockedSet.has(diff.fieldId)) continue;
+        // Locks hold on publish for every source, portal included.
+        if (lockedSet.has(diff.fieldId)) continue;
         updatedData[diff.fieldId] = diff.newValue;
         appliedFields.push(diff.fieldId);
       }

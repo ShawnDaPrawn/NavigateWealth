@@ -62,13 +62,22 @@ export interface KvPolicy {
   lastFieldMappingsSnapshot?: FieldMappingSnapshot[];
   /** Schema field IDs that are locked from AI extraction overwrite */
   lockedFields?: string[];
-  /** Audit history for spreadsheet/provider sync publications */
+  /**
+   * Audit history for every automated change to this policy's data.
+   *
+   * 'document' entries come from AI extraction of an uploaded policy document.
+   * That path keeps its own field-by-field review (the adviser picks which
+   * extracted values to apply), so it is not routed through sync-run staging —
+   * that would mean reviewing the same values twice. What it lacked was
+   * provenance, so it records here alongside the other sources and a policy's
+   * history reads the same whatever moved the value.
+   */
   integrationSyncHistory?: Array<{
     runId: string;
     providerId: string;
     categoryId: string;
     publishedAt: string;
-    source: 'spreadsheet' | 'portal';
+    source: 'spreadsheet' | 'portal' | 'document';
     fieldsApplied: string[];
   }>;
 }

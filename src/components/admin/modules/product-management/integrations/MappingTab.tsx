@@ -252,8 +252,8 @@ export function MappingTab({
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="max-w-xs">
-                        Automatically publish clean matched portal fields. Document-extraction locks
-                        do not block provider portal updates.
+                        Automatically publish clean matched portal fields. Locked fields are never
+                        overwritten, whichever source proposed the change.
                       </p>
                     </TooltipContent>
                   </Tooltip>

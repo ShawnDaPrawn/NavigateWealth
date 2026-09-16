@@ -428,6 +428,23 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
       appliedFieldIds.push(fieldId);
     }
 
+    // Record the same provenance the spreadsheet and portal paths record, so a
+    // policy's history reads the same whatever source moved a value. This path
+    // keeps its own field-by-field review upstream, so it is deliberately NOT
+    // routed through sync-run staging — that would review the same values twice.
+    const appliedAt = new Date().toISOString();
+    const syncHistory = Array.isArray(policy.integrationSyncHistory)
+      ? policy.integrationSyncHistory
+      : [];
+    const historyEntry = {
+      runId: `document:${policy.extraction?.extractedAt || appliedAt}`,
+      providerId: String(policy.providerId || ''),
+      categoryId: String(policy.categoryId || ''),
+      publishedAt: appliedAt,
+      source: 'document' as const,
+      fieldsApplied: appliedFieldIds,
+    };
+
     // Update the policy with the new data and mark extraction as applied
     (policies as KvPolicy[])[policyIndex] = {
       ...policy,
@@ -435,11 +452,14 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
       extraction: policy.extraction
         ? {
             ...policy.extraction,
-            appliedAt: new Date().toISOString(),
+            appliedAt,
             appliedFields: appliedFieldIds,
           }
         : undefined,
-      updatedAt: new Date().toISOString(),
+      ...(appliedFieldIds.length > 0
+        ? { integrationSyncHistory: [...syncHistory, historyEntry].slice(-20) }
+        : {}),
+      updatedAt: appliedAt,
     };
 
     await kv.set(policiesKey, policies);

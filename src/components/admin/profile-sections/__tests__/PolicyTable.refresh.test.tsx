@@ -44,6 +44,122 @@ function makeProps(over: Partial<Parameters<typeof PolicyTable>[0]> = {}) {
   } as Parameters<typeof PolicyTable>[0];
 }
 
+describe('PolicyTable — provenance on the row', () => {
+  it('says nothing when the policy has never been updated by an automated source', () => {
+    render(<PolicyTable {...makeProps()} />);
+    expect(screen.queryByText(/Updated from the/)).toBeNull();
+  });
+
+  it('names the provider portal and the date of the last portal update', () => {
+    render(
+      <PolicyTable
+        {...makeProps({
+          policies: [
+            {
+              ...policy,
+              integrationSyncHistory: [
+                {
+                  runId: 'r1',
+                  providerId: 'allan-gray',
+                  categoryId: 'retirement_pre',
+                  publishedAt: '2026-09-05T10:52:58.410Z',
+                  source: 'portal',
+                  fieldsApplied: ['current_value'],
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/Updated from the provider portal on/)).toBeDefined();
+  });
+
+  it('distinguishes a value that came from a policy document', () => {
+    render(
+      <PolicyTable
+        {...makeProps({
+          policies: [
+            {
+              ...policy,
+              integrationSyncHistory: [
+                {
+                  runId: 'd1',
+                  providerId: 'allan-gray',
+                  categoryId: 'retirement_pre',
+                  publishedAt: '2026-09-05T10:52:58.410Z',
+                  source: 'document',
+                  fieldsApplied: ['current_value'],
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/Updated from the policy document on/)).toBeDefined();
+  });
+
+  it('reports the most recent entry when a policy has several', () => {
+    render(
+      <PolicyTable
+        {...makeProps({
+          policies: [
+            {
+              ...policy,
+              integrationSyncHistory: [
+                {
+                  runId: 'd1',
+                  providerId: 'allan-gray',
+                  categoryId: 'retirement_pre',
+                  publishedAt: '2026-01-01T00:00:00.000Z',
+                  source: 'document',
+                  fieldsApplied: [],
+                },
+                {
+                  runId: 'r2',
+                  providerId: 'allan-gray',
+                  categoryId: 'retirement_pre',
+                  publishedAt: '2026-09-05T10:52:58.410Z',
+                  source: 'portal',
+                  fieldsApplied: [],
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/Updated from the provider portal on/)).toBeDefined();
+    expect(screen.queryByText(/policy document/)).toBeNull();
+  });
+
+  it('ignores an unparseable timestamp rather than rendering "Invalid Date"', () => {
+    render(
+      <PolicyTable
+        {...makeProps({
+          policies: [
+            {
+              ...policy,
+              integrationSyncHistory: [
+                {
+                  runId: 'r1',
+                  providerId: 'allan-gray',
+                  categoryId: 'retirement_pre',
+                  publishedAt: 'not-a-date',
+                  source: 'portal',
+                  fieldsApplied: [],
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.queryByText(/Updated from the/)).toBeNull();
+  });
+});
+
 describe('PolicyTable — refresh from provider', () => {
   it('shows no refresh control when no handler is supplied', () => {
     render(<PolicyTable {...makeProps()} />);

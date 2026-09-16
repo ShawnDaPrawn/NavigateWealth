@@ -73,6 +73,31 @@ interface PolicyTableProps {
   linkedGoals?: Record<string, LinkedGoalStatus>;
 }
 
+/** Plain-language provenance for the most recent automated change, if any. */
+function describeLastSync(policy: PolicyRecord): string | null {
+  const history = (policy as Record<string, unknown>).integrationSyncHistory as
+    | Array<{ publishedAt?: string; source?: string }>
+    | undefined;
+  const latest = Array.isArray(history) && history.length > 0 ? history[history.length - 1] : null;
+  if (!latest?.publishedAt) return null;
+
+  const when = new Date(latest.publishedAt);
+  if (Number.isNaN(when.getTime())) return null;
+
+  const sourceLabel =
+    latest.source === 'portal'
+      ? 'provider portal'
+      : latest.source === 'document'
+        ? 'policy document'
+        : 'spreadsheet';
+
+  return `Updated from the ${sourceLabel} on ${when.toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })}`;
+}
+
 export function PolicyTable({
   title,
   policies,
@@ -222,6 +247,16 @@ export function PolicyTable({
                               </span>
                             )}
                         </div>
+
+                        {/* Where this policy's values last came from, and when.
+                            Previously a policy showed a value with no hint of
+                            whether it was hand-typed last year or refreshed
+                            from the provider this morning. */}
+                        {describeLastSync(policy) && (
+                          <div className="mt-1 text-[10px] text-gray-500">
+                            {describeLastSync(policy)}
+                          </div>
+                        )}
 
                         {/* Subtle Linked Goal Indicator */}
                         {linkedGoal && (
