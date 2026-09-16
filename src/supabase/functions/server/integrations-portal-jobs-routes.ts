@@ -118,6 +118,16 @@ app.post('/portal-jobs', requireAdmin, async (c) => {
       );
     }
 
+    // Optional scope: refresh ONE policy (or a few) instead of the provider's
+    // whole book for this category. Absent means every eligible policy, which
+    // is what every caller did before per-policy refresh existed.
+    const requestedPolicyIds = Array.isArray(body?.policyIds)
+      ? (body.policyIds as unknown[])
+          .map((id) => String(id || '').trim())
+          .filter(Boolean)
+          .slice(0, 200)
+      : [];
+
     const runMode = normaliseRunMode(body?.runMode);
     const requestedPolicySchedule = normalisePolicyScheduleConfig(
       body?.policySchedule,
@@ -145,21 +155,30 @@ app.post('/portal-jobs', requireAdmin, async (c) => {
       updatedAt: now,
       currentStep: 'queued',
       message: 'Portal sync job queued. Starting GitHub Actions worker.',
+      ...(requestedPolicyIds.length > 0 ? { scopedPolicyIds: requestedPolicyIds } : {}),
     };
 
     const schema = await getSchemaForCategory(categoryId);
-    const items = await buildPortalPolicyQueue(job, schema.fields || []);
+    const items = await buildPortalPolicyQueue(job, schema.fields || [], {
+      policyIds: requestedPolicyIds,
+    });
     if (items.length === 0) {
       return c.json(
         {
-          error: `No active ${provider.name || 'provider'} policies with policy numbers were found for this category. Add the policies in client profiles before starting portal automation.`,
+          error:
+            requestedPolicyIds.length > 0
+              ? `That policy could not be queued. It must be an active ${provider.name || 'provider'} policy in this category with a policy number on it.`
+              : `No active ${provider.name || 'provider'} policies with policy numbers were found for this category. Add the policies in client profiles before starting portal automation.`,
         },
         400,
       );
     }
 
     job.queueSummary = summarisePortalJobItems(items);
-    job.message = `Found ${items.length} active policy${items.length === 1 ? '' : 'ies'} to update. Starting GitHub Actions worker.`;
+    job.message =
+      requestedPolicyIds.length > 0
+        ? `Refreshing ${items.length} selected polic${items.length === 1 ? 'y' : 'ies'}. Starting GitHub Actions worker.`
+        : `Found ${items.length} active policy${items.length === 1 ? '' : 'ies'} to update. Starting GitHub Actions worker.`;
 
     await kv.set(`portal-job:${job.id}`, job);
     await kv.set(`portal-job-items:${job.id}`, items);

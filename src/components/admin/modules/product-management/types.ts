@@ -440,6 +440,8 @@ export interface PortalSyncJob {
   flowId: string;
   credentialProfileId: string;
   workerId?: string;
+  /** Set when the run was scoped to specific policies (a per-policy refresh). */
+  scopedPolicyIds?: string[];
   actionsRunId?: number;
   actionsRunUrl?: string;
   actionsDispatchError?: string;

@@ -465,7 +465,14 @@ export const productManagementApi = {
     categoryId: string,
     credentialProfileId: string,
     runMode: PortalJobRunMode,
-    options: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'> = {},
+    options: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'> & {
+      /**
+       * Scope the run to specific policies. Omitted (or empty) queues every
+       * eligible policy for the provider and category, which is what the
+       * provider-wide run has always done.
+       */
+      policyIds?: string[];
+    } = {},
   ): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
     return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>(
       'integrations/portal-jobs',
@@ -476,6 +483,9 @@ export const productManagementApi = {
         runMode,
         policySchedule: options.policySchedule,
         documentArtifacts: options.documentArtifacts,
+        ...(options.policyIds && options.policyIds.length > 0
+          ? { policyIds: options.policyIds }
+          : {}),
       },
     );
   },

@@ -153,7 +153,14 @@ export async function getClientDisplayName(clientId: string): Promise<string> {
 export async function buildPortalPolicyQueue(
   job: PortalSyncJob,
   fields: SchemaField[],
+  options: { policyIds?: string[] } = {},
 ): Promise<PortalJobPolicyItem[]> {
+  // An empty/absent policyIds means "every eligible policy", which is the
+  // original behaviour. A non-empty list scopes the run to those policies, so
+  // an adviser can refresh ONE policy instead of the provider's whole book.
+  const scopedPolicyIds = Array.isArray(options.policyIds) && options.policyIds.length > 0
+    ? new Set(options.policyIds.map((id) => String(id)))
+    : null;
   const policyNumberField = findPolicyNumberField(fields);
   if (!policyNumberField) {
     throw new Error(
@@ -176,6 +183,7 @@ export async function buildPortalPolicyQueue(
         policy.categoryId !== job.categoryId
       )
         continue;
+      if (scopedPolicyIds && !scopedPolicyIds.has(String(policy.id))) continue;
 
       const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
       const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);

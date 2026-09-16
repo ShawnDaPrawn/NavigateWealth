@@ -17,6 +17,7 @@ import {
   Target,
   CheckCircle,
   RotateCcw,
+  RefreshCw,
   FileText,
   Sparkles,
 } from 'lucide-react';
@@ -60,6 +61,13 @@ interface PolicyTableProps {
   onArchive: (policy: PolicyRecord) => void;
   onReinstate?: (policy: PolicyRecord) => void;
   onDelete: (policy: PolicyRecord) => void;
+  /**
+   * Refresh THIS policy's values from the provider portal. Optional so the
+   * table still renders for categories where portal automation does not apply.
+   */
+  onRefreshFromProvider?: (policy: PolicyRecord) => void;
+  /** Id of the policy whose refresh is currently being queued, if any. */
+  refreshingPolicyId?: string | null;
   formatFieldValue: (field: SchemaField, value: unknown) => React.ReactNode;
   colorTheme?: 'purple' | 'green' | 'blue' | 'indigo' | 'amber' | 'orange' | 'gray';
   linkedGoals?: Record<string, LinkedGoalStatus>;
@@ -74,6 +82,8 @@ export function PolicyTable({
   onArchive,
   onReinstate,
   onDelete,
+  onRefreshFromProvider,
+  refreshingPolicyId,
   formatFieldValue,
   colorTheme = 'purple',
   linkedGoals,
@@ -314,6 +324,24 @@ export function PolicyTable({
                             <Button variant="ghost" size="sm" onClick={() => onEdit(policy)}>
                               <Edit className="h-4 w-4" />
                             </Button>
+                            {onRefreshFromProvider && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => onRefreshFromProvider(policy)}
+                                disabled={refreshingPolicyId === policy.id}
+                                title="Refresh this policy's values from the provider portal"
+                              >
+                                <RefreshCw
+                                  className={
+                                    refreshingPolicyId === policy.id
+                                      ? 'h-4 w-4 animate-spin'
+                                      : 'h-4 w-4'
+                                  }
+                                />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"

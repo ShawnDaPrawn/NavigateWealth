@@ -189,6 +189,8 @@ export function useIntegrationsTabMutations({
       runMode: PortalJobRunMode;
       policySchedule?: PortalProviderFlow['policySchedule'];
       documentArtifacts?: PortalProviderFlow['documentArtifacts'];
+      /** Scope to specific policies; omitted means the whole provider book. */
+      policyIds?: string[];
     }) => {
       if (!selectedProviderId || !selectedCategoryId)
         throw new Error('Missing provider or category');
@@ -203,6 +205,7 @@ export function useIntegrationsTabMutations({
         {
           policySchedule: params.policySchedule,
           documentArtifacts: params.documentArtifacts,
+          policyIds: params.policyIds,
         },
       );
     },
@@ -210,6 +213,11 @@ export function useIntegrationsTabMutations({
       setPortalJob(job);
       if (job.actionsDispatchError) {
         toast.warning(job.actionsDispatchError);
+      } else if (job.scopedPolicyIds && job.scopedPolicyIds.length > 0) {
+        const count = job.scopedPolicyIds.length;
+        toast.success(
+          `Refreshing ${count} polic${count === 1 ? 'y' : 'ies'} from the provider portal.`,
+        );
       } else {
         toast.success('Portal job queued. GitHub Actions is starting the Playwright worker.');
       }
