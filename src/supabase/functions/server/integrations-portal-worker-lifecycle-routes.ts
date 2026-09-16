@@ -25,6 +25,7 @@ import type {
   PortalDiscoveryReport,
 } from './integrations-portal-types.ts';
 import { persistPortalLiveViewUpdate } from './integrations-portal-worker-shared.ts';
+import { recordPortalConnectionOutcome } from './integrations-portal-connection.ts';
 
 const log = createModuleLogger('integrations-portal-worker-routes');
 
@@ -80,6 +81,10 @@ app.post('/portal-worker/jobs/:jobId/status', async (c) => {
     };
 
     await kv.set(`portal-job:${jobId}`, updated);
+    // A finished connection test is the only thing that can change what the
+    // Connections screen says, so the record is written here rather than being
+    // derived by re-reading job history on every page load.
+    await recordPortalConnectionOutcome(updated);
     return c.json({ success: true, job: updated });
   } catch (e) {
     log.error('Portal worker status error:', e);

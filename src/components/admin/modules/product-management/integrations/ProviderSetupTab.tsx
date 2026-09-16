@@ -228,16 +228,28 @@ export function ProviderSetupTab({
       : '',
   ].filter(Boolean);
 
+  // ONE source of truth for "is this provider ready to run": the SAVED flow,
+  // because the saved flow is what a run actually uses. This previously counted
+  // the unsaved draft here while PortalConfigCard counted the saved flow, so the
+  // two screens could disagree about the same four steps — Setup saying "4 of 4
+  // complete" while Portal Automation said "finish the provider setup".
+  // Draft progress is reported separately, as unsaved changes.
   const setupSteps = computePortalSetupSteps({
-    loginUrl,
+    loginUrl: flow?.loginUrl || '',
     credentialsSaved,
-    searchLabels,
-    searchInputSelector,
+    searchLabels: flow?.search?.searchInputLabels || [],
+    searchInputSelector: flow?.search?.searchInputSelector || '',
     mappingBindingCount: mappingBindings.length,
     fieldSelectorCount: fieldSelectors.length,
   });
   const completedSteps = setupSteps.filter((step) => step.complete).length;
   const setupComplete = completedSteps === setupSteps.length;
+
+  const hasUnsavedSetupChanges =
+    Boolean(flow) &&
+    (loginUrl.trim() !== String(flow?.loginUrl || '').trim() ||
+      searchInputSelector.trim() !== String(flow?.search?.searchInputSelector || '').trim() ||
+      searchLabels.join('|') !== (flow?.search?.searchInputLabels || []).join('|'));
 
   const getBindingForPortalField = (field: PortalFlowField) =>
     mappingBindings.find(
@@ -361,6 +373,11 @@ export function ProviderSetupTab({
                 )}
               >
                 {completedSteps} of {setupSteps.length} steps complete
+              </Badge>
+            )}
+            {hasUnsavedSetupChanges && (
+              <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">
+                Unsaved changes
               </Badge>
             )}
           </div>

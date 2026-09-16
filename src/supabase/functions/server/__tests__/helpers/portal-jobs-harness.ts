@@ -86,6 +86,7 @@ export type Route = {
  */
 export const ROUTES: Route[] = [
   { name: 'create job', method: 'POST', path: '/portal-jobs', body: {} },
+  { name: 'connections', method: 'GET', path: '/portal-connections' },
   { name: 'latest job', method: 'GET', path: '/portal-jobs/latest' },
   { name: 'job history', method: 'GET', path: '/portal-jobs/history' },
   { name: 'get job', method: 'GET', path: `/portal-jobs/${JOB}` },

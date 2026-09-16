@@ -48,6 +48,10 @@ interface RenderPolicyTablesArgs {
   handleReinstatePolicy: (policy: Record<string, unknown>) => void;
   setArchivingPolicy: Dispatch<SetStateAction<PolicyRecord | null>>;
   setDeletingPolicy: Dispatch<SetStateAction<PolicyRecord | null>>;
+  /** Refresh one policy from the provider portal; absent hides the control. */
+  handleRefreshPolicy?: (policy: PolicyRecord) => void;
+  canRefreshPolicy?: (policy: PolicyRecord) => boolean;
+  refreshingPolicyId?: string | null;
 }
 
 export function renderPolicyTables({
@@ -62,6 +66,9 @@ export function renderPolicyTables({
   handleReinstatePolicy,
   setArchivingPolicy,
   setDeletingPolicy,
+  handleRefreshPolicy,
+  canRefreshPolicy,
+  refreshingPolicyId,
 }: RenderPolicyTablesArgs) {
   if (categoryId === 'retirement_planning') {
     const prePolicies = policies.filter(
@@ -88,6 +95,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="purple"
           />
@@ -103,6 +113,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="green"
           />
@@ -121,6 +134,9 @@ export function renderPolicyTables({
               onArchive={setArchivingPolicy}
               onReinstate={handleReinstatePolicy}
               onDelete={setDeletingPolicy}
+              onRefreshFromProvider={handleRefreshPolicy}
+              canRefreshPolicy={canRefreshPolicy}
+              refreshingPolicyId={refreshingPolicyId}
               formatFieldValue={formatFieldValue}
               colorTheme="purple"
             />
@@ -153,6 +169,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="blue"
             linkedGoals={linkedGoalsMap}
@@ -169,6 +188,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="indigo"
             linkedGoals={linkedGoalsMap}
@@ -185,6 +207,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="blue"
             linkedGoals={linkedGoalsMap}
@@ -220,6 +245,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="amber"
           />
@@ -235,6 +263,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="orange"
           />
@@ -250,6 +281,9 @@ export function renderPolicyTables({
             onArchive={setArchivingPolicy}
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="amber"
           />
@@ -269,6 +303,9 @@ export function renderPolicyTables({
       onArchive={setArchivingPolicy}
       onReinstate={handleReinstatePolicy}
       onDelete={setDeletingPolicy}
+      onRefreshFromProvider={handleRefreshPolicy}
+      canRefreshPolicy={canRefreshPolicy}
+      refreshingPolicyId={refreshingPolicyId}
       formatFieldValue={formatFieldValue}
     />
   );

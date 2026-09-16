@@ -434,6 +434,54 @@ describe('integrations.tsx policy-extraction route contracts', () => {
       expect(body.success).toBe(true);
       expect(Array.isArray(body.appliedFields)).toBe(true);
     });
+
+    /**
+     * Provenance. The spreadsheet and portal paths both record who moved a
+     * value; this one did not, so a policy's history depended on which source
+     * happened to touch it. It keeps its own field-by-field review upstream, so
+     * it is deliberately not routed through sync-run staging — only the audit
+     * trail is shared.
+     */
+    it('records a document-sourced entry in the shared sync history', async () => {
+      kvStore.set('policies:client:c1', [
+        { id: 'p1', clientId: 'c1', providerId: 'prov-1', categoryId: 'risk_planning', data: {} },
+      ]);
+      await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({
+          policyId: 'p1',
+          clientId: 'c1',
+          fieldsToApply: { field1: 'value1' },
+        }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      const stored = kvStore.get('policies:client:c1') as Array<Record<string, unknown>>;
+      const history = stored[0].integrationSyncHistory as Array<Record<string, unknown>>;
+      expect(history).toHaveLength(1);
+      expect(history[0].source).toBe('document');
+      expect(history[0].fieldsApplied).toEqual(['field1']);
+      expect(history[0].providerId).toBe('prov-1');
+    });
+
+    it('records nothing when every field was locked or empty', async () => {
+      kvStore.set('policies:client:c1', [
+        { id: 'p1', clientId: 'c1', data: { field1: 'kept' }, lockedFields: ['field1'] },
+      ]);
+      await integrationsApp.request('/policy-extraction/apply', {
+        method: 'POST',
+        body: JSON.stringify({
+          policyId: 'p1',
+          clientId: 'c1',
+          fieldsToApply: { field1: 'overwrite attempt' },
+        }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+
+      const stored = kvStore.get('policies:client:c1') as Array<Record<string, unknown>>;
+      expect(stored[0].integrationSyncHistory).toBeUndefined();
+      expect((stored[0].data as Record<string, unknown>).field1).toBe('kept');
+    });
   });
 
   // ── POST /policy-extraction/lock-fields ───────────────────────────────────

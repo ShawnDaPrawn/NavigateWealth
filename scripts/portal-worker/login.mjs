@@ -19,9 +19,24 @@ import {
   visibleLocator,
 } from './page-utils.mjs';
 
+/**
+ * Generic sign-in field guesses, used when a flow has no configured selectors.
+ *
+ * `isLoginFormVisible` has always guessed like this; the constants make the
+ * same guesses available to credential submission, which a connection test
+ * needs because it runs before anybody has configured selectors. The password
+ * guess is deliberately the narrowest of the three: a mis-guessed username
+ * lands in some harmless text box, a mis-guessed password field would not.
+ */
+export const FALLBACK_USERNAME_SELECTOR =
+  'input[type="email"], input[type="text"], input[name*="user" i]';
+export const FALLBACK_PASSWORD_SELECTOR = 'input[type="password"]';
+export const FALLBACK_SUBMIT_SELECTOR =
+  'button[type="submit"], input[type="submit"], button[name*="login" i], button[id*="login" i]';
+
 export async function isLoginFormVisible(page, flow) {
-  const username = page.locator(flow?.login?.usernameSelector || 'input[type="email"], input[type="text"], input[name*="user" i]').first();
-  const password = page.locator(flow?.login?.passwordSelector || 'input[type="password"]').first();
+  const username = page.locator(flow?.login?.usernameSelector || FALLBACK_USERNAME_SELECTOR).first();
+  const password = page.locator(flow?.login?.passwordSelector || FALLBACK_PASSWORD_SELECTOR).first();
   return (
     await username.isVisible({ timeout: 500 }).catch(() => false)
     && await password.isVisible({ timeout: 500 }).catch(() => false)
@@ -301,8 +316,20 @@ export async function submitProviderCredentials(page, flow, username, password, 
     );
   }
 
-  await (await visibleLocator(page, flow.login.usernameSelector, 10000)).fill(username);
-  await (await visibleLocator(page, flow.login.passwordSelector, 10000)).fill(password);
-  await (await visibleLocator(page, flow.login.submitSelector)).click();
+  // `allowSelectorFallback` is set only by a connection test, which runs before
+  // selectors have been configured. A real run passes nothing and keeps using
+  // exactly the selectors the flow was set up with.
+  const pick = (configured, fallback) =>
+    String(configured || '').trim() || (options.allowSelectorFallback ? fallback : configured);
+
+  await (
+    await visibleLocator(page, pick(flow.login.usernameSelector, FALLBACK_USERNAME_SELECTOR), 10000)
+  ).fill(username);
+  await (
+    await visibleLocator(page, pick(flow.login.passwordSelector, FALLBACK_PASSWORD_SELECTOR), 10000)
+  ).fill(password);
+  await (
+    await visibleLocator(page, pick(flow.login.submitSelector, FALLBACK_SUBMIT_SELECTOR))
+  ).click();
   await publishLiveView(page, { force: true, note });
 }
