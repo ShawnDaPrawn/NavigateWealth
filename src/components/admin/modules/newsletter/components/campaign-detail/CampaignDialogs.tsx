@@ -1,5 +1,5 @@
 /**
- * Newsletter Studio — lifecycle dialogs: test send, schedule, send-now.
+ * Newsletter — lifecycle dialogs: test send, schedule, send-now.
  * Each dialog validates locally and hands a clean payload to its mutation.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -70,8 +70,9 @@ export function TestSendDialog({
             <FlaskConical className="h-4 w-4 text-purple-600" aria-hidden /> Send a test
           </DialogTitle>
           <DialogDescription>
-            Up to {MAX_TEST_ADDRESSES} addresses, separated by commas. The subject is prefixed with
-            [TEST] and links keep their real destinations.
+            Up to {MAX_TEST_ADDRESSES} addresses, separated by commas. The test carries the PDF and
+            the Read button exactly as recipients will get them; the subject is prefixed with [TEST]
+            and a test never counts as a read.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -288,16 +289,17 @@ export function SendNowDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <Send className="h-4 w-4 text-purple-600" aria-hidden /> Send this campaign now?
+            <Send className="h-4 w-4 text-purple-600" aria-hidden /> Send this newsletter now?
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-sm text-muted-foreground">
               <p>
-                Delivery starts in the background and cannot be edited once it begins. You can pause
-                or cancel it while it runs.
+                Delivery starts in the background and the newsletter cannot be edited once it
+                begins. You can stop it while it runs.
               </p>
               <dl className="divide-y divide-border/60 rounded-xl border border-border/60 text-foreground">
-                <PreflightRow label="Subject">{campaign.subject}</PreflightRow>
+                <PreflightRow label="Subject">{campaign.title}</PreflightRow>
+                <PreflightRow label="PDF">{campaign.pdf?.fileName ?? '—'}</PreflightRow>
                 <PreflightRow label="From">{campaign.fromName}</PreflightRow>
                 <PreflightRow label="Audience">{campaign.listNames.join(', ') || '—'}</PreflightRow>
                 <PreflightRow label="Estimated recipients">

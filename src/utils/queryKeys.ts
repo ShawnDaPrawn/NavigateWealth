@@ -291,7 +291,6 @@ export const newsletterKeys = {
   campaignRecipients: (id: string, filters?: Record<string, unknown>) =>
     [...newsletterKeys.all, 'studio', 'campaign', id, 'recipients', filters ?? {}] as const,
   lists: () => [...newsletterKeys.all, 'studio', 'lists'] as const,
-  templates: () => [...newsletterKeys.all, 'studio', 'templates'] as const,
 } as const;
 
 // ============================================================================

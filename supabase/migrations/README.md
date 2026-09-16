@@ -40,6 +40,7 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260910182003_social_automation_claims.sql`                 | ✅ `20260910182003`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (14 assertions), verified after (playbook v2 lengths and md5 match the file; 10 functions; grants) |
 | `20260913181044_cron_history_retention_and_pg_net_vacuum.sql` | ✅ `20260913181044`  | Repo-authored, applied via `apply_migration`, verified after (jobids 32 and 33 present in `cron.job`, owned by `postgres`; file matches the applied SQL)                       |
 | `20260914083818_kv_scheduled_article_partial_index.sql`       | ✅ `20260914083818`  | Repo-authored, applied via `apply_migration`, verified after (`EXPLAIN (ANALYZE, BUFFERS)` on the handler's query shows an Index Scan using the new index, 2 shared buffers)   |
+| `20260916120000_newsletter_intake.sql`                        | ❌ **NOT APPLIED**   | Repo-authored (PDF-newsletter routine hand-over). Apply via `apply_migration`, then rename the file to the stamped version and update this row.                                |
 
 `20260906005533` is stamped later than the day it was authored, and that is
 correct rather than drift: it had to be applied _after_ the Edge Function that

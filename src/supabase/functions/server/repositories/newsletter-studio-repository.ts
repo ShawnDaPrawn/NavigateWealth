@@ -12,13 +12,11 @@ import type {
   NewsletterCampaignAudience,
   NewsletterCampaignRecipient,
   NewsletterProcessorState,
-  NewsletterStudioTemplate,
 } from '../newsletter-studio-types.ts';
 
 export const NEWSLETTER_CAMPAIGN_NAMESPACE = 'nlstudio:campaign:';
 export const NEWSLETTER_AUDIENCE_NAMESPACE = 'nlstudio:audience:';
 export const NEWSLETTER_RECIPIENT_NAMESPACE = 'nlstudio:recipient:';
-export const NEWSLETTER_TEMPLATE_NAMESPACE = 'nlstudio:template:';
 export const NEWSLETTER_PROCESSOR_NAMESPACE = 'nlstudio:processor:';
 
 /** Fixed id of the singleton processor-state record. */
@@ -36,10 +34,6 @@ export const newsletterAudiences = createKvRepository<NewsletterCampaignAudience
 /** Per-recipient delivery/engagement records — id is `${campaignId}:${token}`. */
 export const newsletterRecipients = createKvRepository<NewsletterCampaignRecipient>(
   NEWSLETTER_RECIPIENT_NAMESPACE,
-);
-
-export const newsletterTemplates = createKvRepository<NewsletterStudioTemplate>(
-  NEWSLETTER_TEMPLATE_NAMESPACE,
 );
 
 export const newsletterProcessorState = createKvRepository<NewsletterProcessorState>(

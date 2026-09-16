@@ -1,9 +1,11 @@
 /**
- * Newsletter Studio — API layer.
+ * Newsletter — API layer.
  *
  * All calls go through the shared api client (token refresh, retry,
  * APIError typing) — never raw fetch (raw-fetch ratchet) and never the
- * anon key as a bearer.
+ * anon key as a bearer. The PDF goes up as multipart FormData, which the
+ * client sends as-is (it drops the JSON content type so the browser sets
+ * the boundary).
  */
 import { api } from '../../../../utils/api/client';
 import { ENDPOINTS } from './constants';
@@ -14,10 +16,8 @@ import type {
   NewsletterCampaignStats,
   NewsletterDashboardSummary,
   NewsletterListView,
-  NewsletterStudioTemplate,
   ProcessResult,
   RecipientPageResult,
-  TemplateInput,
   TestSendResult,
   UpdateCampaignInput,
 } from './types';
@@ -81,11 +81,21 @@ export const newsletterStudioApi = {
     await api.delete(ENDPOINTS.CAMPAIGN(id));
   },
 
-  async duplicateCampaign(id: string): Promise<NewsletterCampaign> {
+  /** Upload or replace the newsletter PDF. */
+  async uploadPdf(id: string, file: File): Promise<NewsletterCampaign> {
+    const form = new FormData();
+    form.append('file', file, file.name);
     const response = await api.post<{ campaign: NewsletterCampaign }>(
-      ENDPOINTS.CAMPAIGN_DUPLICATE(id),
+      ENDPOINTS.CAMPAIGN_PDF(id),
+      form,
     );
     return response.campaign;
+  },
+
+  /** A short-lived signed URL for previewing the PDF (open it in a new tab). */
+  async getPdfUrl(id: string): Promise<{ url: string; fileName: string }> {
+    const response = await api.get<{ url: string; fileName: string }>(ENDPOINTS.CAMPAIGN_PDF(id));
+    return { url: response.url, fileName: response.fileName };
   },
 
   async sendTest(id: string, emails: string[]): Promise<TestSendResult[]> {
@@ -110,11 +120,7 @@ export const newsletterStudioApi = {
     return response.campaign;
   },
 
-  async pauseCampaign(id: string): Promise<NewsletterCampaign> {
-    const response = await api.post<{ campaign: NewsletterCampaign }>(ENDPOINTS.CAMPAIGN_PAUSE(id));
-    return response.campaign;
-  },
-
+  /** Retry a newsletter the processor stopped on a provider fault. */
   async resumeCampaign(id: string): Promise<NewsletterCampaign> {
     const response = await api.post<{ campaign: NewsletterCampaign }>(
       ENDPOINTS.CAMPAIGN_RESUME(id),
@@ -158,31 +164,6 @@ export const newsletterStudioApi = {
   async getLists(): Promise<NewsletterListView[]> {
     const response = await api.get<{ lists: NewsletterListView[] }>(ENDPOINTS.LISTS);
     return response.lists ?? [];
-  },
-
-  async getTemplates(): Promise<NewsletterStudioTemplate[]> {
-    const response = await api.get<{ templates: NewsletterStudioTemplate[] }>(ENDPOINTS.TEMPLATES);
-    return response.templates ?? [];
-  },
-
-  async createTemplate(input: TemplateInput): Promise<NewsletterStudioTemplate> {
-    const response = await api.post<{ template: NewsletterStudioTemplate }>(
-      ENDPOINTS.TEMPLATES,
-      input,
-    );
-    return response.template;
-  },
-
-  async updateTemplate(id: string, input: TemplateInput): Promise<NewsletterStudioTemplate> {
-    const response = await api.put<{ template: NewsletterStudioTemplate }>(
-      ENDPOINTS.TEMPLATE(id),
-      input,
-    );
-    return response.template;
-  },
-
-  async deleteTemplate(id: string): Promise<void> {
-    await api.delete(ENDPOINTS.TEMPLATE(id));
   },
 
   /** Best-effort accelerator tick; cron remains the authoritative driver. */

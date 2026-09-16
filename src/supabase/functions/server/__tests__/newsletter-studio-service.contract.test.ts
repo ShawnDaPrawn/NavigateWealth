@@ -8,18 +8,24 @@
  *      whose newsletter record says `active: false`, whatever group they sit
  *      in — a custom group edited by hand is exactly where a stale member
  *      lingers.
- *   2. **Lifecycle gates.** Editing/sending/deleting are status-gated so a
+ *   2. **No PDF, no send.** A newsletter cannot be scheduled or sent until
+ *      its PDF is stored; the PDF cannot change once delivery has begun.
+ *   3. **Lifecycle gates.** Editing/sending/deleting are status-gated so a
  *      campaign mid-delivery cannot be mutated under the processor, and a
  *      cancelled/finished campaign cannot quietly restart.
- *   3. **Click-through is capability-gated.** Unknown campaign/token/link ids
- *      resolve to null (the route 404s) and the returned URL is always the
- *      author-stored one.
+ *   4. **Click-through is capability-gated.** Unknown campaign/token/link ids
+ *      resolve to null (the route 404s) and the returned URL is always a
+ *      signed URL for the campaign's own PDF, minted after the token resolves.
  *
  * Real collaborators: the in-memory KV (through the real repository layer)
- * and the real link extractor. Groups, clients, subscribers and the email
- * barrel are stubbed at the module seam.
+ * and the real PDF validation. Groups, clients, subscribers, the email barrel
+ * and the storage bucket are stubbed at the module seam.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.hoisted(() => {
+  (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
+});
 
 const deps = vi.hoisted(() => ({
   getGroupById: vi.fn(),
@@ -36,6 +42,12 @@ const deps = vi.hoisted(() => ({
     lastBroadcastAt: null,
     lastBroadcastSubject: null,
   })),
+}));
+
+const storage = vi.hoisted(() => ({
+  uploaded: [] as { campaignId: string; size: number }[],
+  removed: [] as string[],
+  removedCampaigns: [] as string[],
 }));
 
 vi.mock('../kv_store.tsx', async () =>
@@ -62,23 +74,48 @@ vi.mock('../email-service.ts', () => ({
   getFooterSettings: async () => ({}),
   sendEmail: vi.fn(),
 }));
+// Keep validation/encoding real; only the bucket round-trips are stubbed.
+vi.mock('../newsletter-studio-storage.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../newsletter-studio-storage.ts')>();
+  return {
+    ...original,
+    storeNewsletterPdf: vi.fn(
+      async (input: { campaignId: string; bytes: Uint8Array; fileName: string }) => {
+        original.assertValidPdf(input.bytes);
+        storage.uploaded.push({ campaignId: input.campaignId, size: input.bytes.length });
+        return {
+          storagePath: `${input.campaignId}/${storage.uploaded.length}.pdf`,
+          fileName: original.safePdfFileName(input.fileName),
+          sizeBytes: input.bytes.length,
+          uploadedAt: '2026-09-01T00:00:00.000Z',
+        };
+      },
+    ),
+    signedNewsletterPdfUrl: vi.fn(async (path: string) => `https://signed.test/${path}?sig=1`),
+    removeNewsletterPdf: vi.fn(async (path: string) => {
+      storage.removed.push(path);
+    }),
+    removeNewsletterPdfs: vi.fn(async (campaignId: string) => {
+      storage.removedCampaigns.push(campaignId);
+    }),
+    downloadNewsletterPdf: vi.fn(async () => new TextEncoder().encode('%PDF-1.4 stored')),
+  };
+});
 
 import { kvStore } from './helpers/contract-harness.ts';
 import {
+  attachCampaignPdf,
   cancelCampaign,
   createCampaign,
-  createTemplate,
   deleteCampaign,
-  deleteTemplate,
-  duplicateCampaign,
+  findCampaignBySourceRef,
+  getCampaignPdfUrl,
   getCampaignRecipients,
   getCampaignStats,
   getCampaignView,
   getDashboardSummary,
   listAudienceLists,
   listCampaigns,
-  listTemplates,
-  pauseCampaign,
   promoteDueScheduledCampaign,
   recordCampaignClick,
   resolveAudience,
@@ -87,8 +124,9 @@ import {
   sendCampaignNow,
   unsubscribeByRecipientToken,
   updateCampaign,
-  updateTemplate,
 } from '../newsletter-studio-service.ts';
+
+const PDF = new TextEncoder().encode('%PDF-1.4\n%test newsletter\n');
 
 const GROUP = {
   id: 'sys_newsletter_contacts',
@@ -116,72 +154,82 @@ function seedGroup(overrides: Partial<typeof GROUP> = {}) {
   return group;
 }
 
-async function makeDraft(overrides: Record<string, unknown> = {}) {
+async function makeDraft(overrides: Record<string, unknown> = {}, withPdf = true) {
   seedGroup({
     externalContacts: [external('a@x.co', 'Ann A'), external('b@x.co', 'Ben B')],
   });
-  return createCampaign(
+  const draft = await createCampaign(
     {
-      name: 'August newsletter',
-      subject: 'August update',
+      title: 'August newsletter',
+      description: 'The one-minute version of what mattered in August.',
       listIds: ['sys_newsletter_contacts'],
-      bodyHtml: '<p>Hi {{firstName}}</p><a href="https://a.example/one">read</a>',
       ...overrides,
     },
     'admin-1',
   );
+  if (!withPdf) return draft;
+  return attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'August Newsletter.pdf' });
+}
+
+function seedRecipientRecord(campaignId: string, token: string, email: string) {
+  kvStore.set(`nlstudio:recipient:${campaignId}:${token}`, {
+    campaignId,
+    token,
+    email,
+    name: 'Ann A',
+    firstName: 'Ann',
+    deliveryStatus: 'sent',
+    deliveryError: null,
+    attemptCount: 1,
+    lastAttemptedAt: '2026-08-29T10:00:00.000Z',
+    sentAt: '2026-08-29T10:00:00.000Z',
+    openedAt: null,
+    clicks: [],
+  });
 }
 
 beforeEach(() => {
   kvStore.clear();
   vi.clearAllMocks();
+  storage.uploaded.length = 0;
+  storage.removed.length = 0;
+  storage.removedCampaigns.length = 0;
   deps.getGroups.mockResolvedValue({ data: [], total: 0, limit: 1000, offset: 0 });
   deps.getAllClients.mockResolvedValue([]);
   deps.listSubscribers.mockResolvedValue([]);
 });
 
 describe('campaign CRUD', () => {
-  it('creates a draft snapshotting the audience list names', async () => {
-    const campaign = await makeDraft();
+  it('creates a draft snapshotting the audience list names, with no PDF yet', async () => {
+    const campaign = await makeDraft({}, false);
     expect(campaign.status).toBe('draft');
     expect(campaign.listNames).toEqual(['Newsletter Contacts']);
-    expect(campaign.trackClicks).toBe(true);
+    expect(campaign.pdf).toBeNull();
+    expect(campaign.source).toBe('admin');
     expect(campaign.recipientCount).toBe(0);
   });
 
   it('rejects creation against an unknown list', async () => {
     deps.getGroupById.mockResolvedValue(null);
     await expect(
-      createCampaign(
-        { name: 'x', subject: 'y', listIds: ['nope'], bodyHtml: '<p>b</p>' },
-        'admin-1',
-      ),
+      createCampaign({ title: 'x', description: 'y', listIds: ['nope'] }, 'admin-1'),
     ).rejects.toThrow(/Unknown audience list/);
   });
 
   it('edits drafts but refuses once delivery has begun', async () => {
     const campaign = await makeDraft();
-    const updated = await updateCampaign(campaign.id, { subject: 'Better subject' });
-    expect(updated.subject).toBe('Better subject');
+    const updated = await updateCampaign(campaign.id, { title: 'Better title' });
+    expect(updated.title).toBe('Better title');
 
     await sendCampaignNow(campaign.id);
-    await expect(updateCampaign(campaign.id, { subject: 'Too late' })).rejects.toThrow(
+    await expect(updateCampaign(campaign.id, { title: 'Too late' })).rejects.toThrow(
       /no longer be edited/,
     );
   });
 
-  it('duplicates content into a fresh draft', async () => {
-    const campaign = await makeDraft();
-    const copy = await duplicateCampaign(campaign.id, 'admin-2');
-    expect(copy.id).not.toBe(campaign.id);
-    expect(copy.name).toBe('August newsletter (copy)');
-    expect(copy.status).toBe('draft');
-    expect(copy.createdBy).toBe('admin-2');
-  });
-
-  it('lists newest-first with status filter and search', async () => {
-    const a = await makeDraft({ name: 'Alpha news' });
-    await makeDraft({ name: 'Beta brief' });
+  it('lists newest-first with status filter and search on title/description', async () => {
+    const a = await makeDraft({ title: 'Alpha news' });
+    await makeDraft({ title: 'Beta brief', description: 'nothing alike' });
     const all = await listCampaigns();
     expect(all.total).toBe(2);
 
@@ -191,24 +239,75 @@ describe('campaign CRUD', () => {
     await sendCampaignNow(a.id);
     const drafts = await listCampaigns({ status: 'draft' });
     expect(drafts.total).toBe(1);
+    expect(drafts.statusCounts).toMatchObject({ draft: 1, queued: 1 });
   });
 
-  it('reports per-status counts over the whole set and accepts several statuses', async () => {
-    const a = await makeDraft({ name: 'Alpha news' });
-    await makeDraft({ name: 'Beta brief' });
-    await sendCampaignNow(a.id);
+  it('finds a routine draft by its idempotency key', async () => {
+    seedGroup();
+    const routine = await createCampaign(
+      {
+        title: 'Sept',
+        description: 'd',
+        listIds: ['sys_newsletter_contacts'],
+        source: 'routine',
+        sourceRef: '2026-09',
+      },
+      'routine:claude',
+    );
+    expect((await findCampaignBySourceRef('2026-09'))?.id).toBe(routine.id);
+    expect(await findCampaignBySourceRef('2026-10')).toBeNull();
+  });
+});
 
-    // Counts ignore the status filter and pagination, so chips stay right.
-    const queuedOnly = await listCampaigns({ status: 'queued', limit: 1 });
-    expect(queuedOnly.total).toBe(1);
-    expect(queuedOnly.statusCounts).toMatchObject({ draft: 1, queued: 1, finished: 0 });
+describe('the PDF', () => {
+  it('stores a valid PDF, then replaces it and removes the old object', async () => {
+    const campaign = await makeDraft();
+    expect(campaign.pdf).toMatchObject({
+      fileName: 'August-Newsletter.pdf',
+      sizeBytes: PDF.length,
+    });
+    const firstPath = campaign.pdf!.storagePath;
 
-    const inFlight = await listCampaigns({ status: 'queued,sending' });
-    expect(inFlight.campaigns.map((c) => c.id)).toEqual([a.id]);
+    const replaced = await attachCampaignPdf(campaign.id, { bytes: PDF, fileName: 'v2.pdf' });
+    expect(replaced.pdf!.storagePath).not.toBe(firstPath);
+    expect(storage.removed).toEqual([firstPath]);
+  });
 
-    // …but they do follow the search, so the chips describe what is listed.
-    const searched = await listCampaigns({ search: 'beta' });
-    expect(searched.statusCounts).toMatchObject({ draft: 1, queued: 0 });
+  it('rejects a file that is not a PDF, whatever it is called', async () => {
+    const campaign = await makeDraft({}, false);
+    await expect(
+      attachCampaignPdf(campaign.id, {
+        bytes: new TextEncoder().encode('MZ definitely not a pdf'),
+        fileName: 'looks-like.pdf',
+      }),
+    ).rejects.toThrow(/not a PDF/);
+    expect(storage.uploaded).toHaveLength(0);
+  });
+
+  it('refuses to schedule or send without a PDF', async () => {
+    const campaign = await makeDraft({}, false);
+    await expect(sendCampaignNow(campaign.id)).rejects.toThrow(/Upload the newsletter PDF/);
+    await expect(
+      scheduleCampaign(campaign.id, new Date(Date.now() + 3_600_000).toISOString()),
+    ).rejects.toThrow(/Upload the newsletter PDF/);
+  });
+
+  it('freezes the PDF once delivery has begun', async () => {
+    const campaign = await makeDraft();
+    await sendCampaignNow(campaign.id);
+    await expect(
+      attachCampaignPdf(campaign.id, { bytes: PDF, fileName: 'late.pdf' }),
+    ).rejects.toThrow(/can no longer be changed/);
+  });
+
+  it('signs a preview URL for the admin and 404s when there is no PDF', async () => {
+    const campaign = await makeDraft();
+    const preview = await getCampaignPdfUrl(campaign.id);
+    expect(preview.url).toContain(campaign.pdf!.storagePath);
+    expect(preview.fileName).toBe('August-Newsletter.pdf');
+
+    const bare = await makeDraft({}, false);
+    await expect(getCampaignPdfUrl(bare.id)).rejects.toThrow(/no PDF/);
   });
 });
 
@@ -269,7 +368,7 @@ describe('subscriber base as a first-class audience', () => {
     });
 
     const campaign = await createCampaign(
-      { name: 'x', subject: 'y', listIds: ['sys_newsletter_contacts'], bodyHtml: '<p>b</p>' },
+      { title: 'x', description: 'y', listIds: ['sys_newsletter_contacts'] },
       'admin-1',
     );
     expect(campaign.listNames).toEqual(['Newsletter Contacts']);
@@ -308,7 +407,7 @@ describe('subscriber base as a first-class audience', () => {
     deps.getGroupById.mockResolvedValue(null);
     await expect(
       createCampaign(
-        { name: 'x', subject: 'y', listIds: ['sys_newsletter_contacts', 'nope'], bodyHtml: 'b' },
+        { title: 'x', description: 'y', listIds: ['sys_newsletter_contacts', 'nope'] },
         'admin-1',
       ),
     ).rejects.toThrow(/Unknown audience list\(s\): nope/);
@@ -316,21 +415,24 @@ describe('subscriber base as a first-class audience', () => {
 });
 
 describe('lifecycle transitions', () => {
-  it('send-now freezes the audience, extracts links and queues', async () => {
+  it('send-now freezes the audience and queues', async () => {
     const campaign = await makeDraft();
     const queued = await sendCampaignNow(campaign.id);
     expect(queued.status).toBe('queued');
     expect(queued.recipientCount).toBe(2);
-    expect(queued.links).toEqual([{ id: 'l1', url: 'https://a.example/one' }]);
+    expect(kvStore.get(`nlstudio:audience:${campaign.id}`)).toMatchObject({
+      campaignId: campaign.id,
+    });
   });
 
   it('finishes immediately when no one is eligible', async () => {
     seedGroup({ externalContacts: [] });
-    const campaign = await createCampaign(
-      { name: 'empty', subject: 's', listIds: ['sys_newsletter_contacts'], bodyHtml: '<p>b</p>' },
+    const draft = await createCampaign(
+      { title: 'empty', description: 'd', listIds: ['sys_newsletter_contacts'] },
       'admin-1',
     );
-    const done = await sendCampaignNow(campaign.id);
+    await attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'e.pdf' });
+    const done = await sendCampaignNow(draft.id);
     expect(done.status).toBe('finished');
     expect(done.lastError).toMatch(/No eligible recipients/);
   });
@@ -347,30 +449,33 @@ describe('lifecycle transitions', () => {
     expect(scheduled.status).toBe('scheduled');
   });
 
-  it('pause → resume → cancel drive the expected states and reject nonsense', async () => {
+  it('retry (resume) only applies to a stopped campaign; cancel drives the terminal state', async () => {
     const campaign = await makeDraft();
-    await expect(pauseCampaign(campaign.id)).rejects.toThrow(/cannot be paused/);
+    await expect(resumeCampaign(campaign.id)).rejects.toThrow(/Only a stopped/);
 
     await sendCampaignNow(campaign.id);
-    const paused = await pauseCampaign(campaign.id);
-    expect(paused.status).toBe('paused');
-
+    // The processor parks a campaign here on a sender fault.
+    kvStore.set(`nlstudio:campaign:${campaign.id}`, {
+      ...(kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>),
+      status: 'paused',
+    });
     const resumed = await resumeCampaign(campaign.id);
     expect(resumed.status).toBe('queued');
 
     const cancelled = await cancelCampaign(campaign.id);
     expect(cancelled.status).toBe('cancelled');
-    await expect(resumeCampaign(campaign.id)).rejects.toThrow(/Only paused/);
+    await expect(resumeCampaign(campaign.id)).rejects.toThrow(/Only a stopped/);
   });
 
-  it('refuses to delete an active campaign, then deletes after cancel', async () => {
+  it('refuses to delete an active campaign, then deletes (and its PDFs) after cancel', async () => {
     const campaign = await makeDraft();
     await sendCampaignNow(campaign.id);
-    await expect(deleteCampaign(campaign.id)).rejects.toThrow(/Cancel the campaign/);
+    await expect(deleteCampaign(campaign.id)).rejects.toThrow(/Stop the newsletter/);
 
     await cancelCampaign(campaign.id);
     await deleteCampaign(campaign.id);
     await expect(getCampaignView(campaign.id)).rejects.toThrow(/not found/);
+    expect(storage.removedCampaigns).toEqual([campaign.id]);
   });
 });
 
@@ -402,12 +507,11 @@ describe('audience resolution races (review finding)', () => {
 
   it('abandons the queue write when the campaign is edited mid-resolve', async () => {
     const campaign = await makeDraft();
-    const before = kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>;
 
     deps.listSubscribers.mockImplementation(async () => {
       kvStore.set(`nlstudio:campaign:${campaign.id}`, {
         ...(kvStore.get(`nlstudio:campaign:${campaign.id}`) as Record<string, unknown>),
-        subject: 'Edited after send was clicked',
+        title: 'Edited after send was clicked',
         updatedAt: new Date(Date.now() + 1000).toISOString(),
       });
       return [];
@@ -417,20 +521,12 @@ describe('audience resolution races (review finding)', () => {
 
     // Pre-edit content is never queued against a pre-edit audience.
     expect(result.status).toBe('draft');
-    expect(result.subject).toBe('Edited after send was clicked');
+    expect(result.title).toBe('Edited after send was clicked');
     expect(kvStore.get(`nlstudio:audience:${campaign.id}`)).toBeUndefined();
-    expect(before.subject).toBe('August update');
-  });
-
-  it('still queues normally when nothing changes underneath it', async () => {
-    const campaign = await makeDraft();
-    const queued = await sendCampaignNow(campaign.id);
-    expect(queued.status).toBe('queued');
-    expect(queued.recipientCount).toBe(2);
   });
 });
 
-describe('recipients, clicks and stats', () => {
+describe('recipients, reads and stats', () => {
   it('reports queued members as pending before any delivery record exists', async () => {
     const campaign = await makeDraft();
     await sendCampaignNow(campaign.id);
@@ -439,44 +535,36 @@ describe('recipients, clicks and stats', () => {
     expect(page.recipients.every((r) => r.deliveryStatus === 'pending')).toBe(true);
   });
 
-  it('records clicks as engagement and returns only the stored destination', async () => {
+  it('records a read and returns a signed URL for the PDF only once the token resolves', async () => {
     const campaign = await makeDraft();
-    const queued = await sendCampaignNow(campaign.id);
+    await sendCampaignNow(campaign.id);
     const page = await getCampaignRecipients(campaign.id);
     const token = page.recipients[0].token;
+    const { signedNewsletterPdfUrl } = await import('../newsletter-studio-storage.ts');
 
-    // Unknown ids resolve to null — the route 404s, nothing leaks.
+    // Unknown ids resolve to null — the route 404s, nothing leaks, no URL minted.
     expect(await recordCampaignClick(campaign.id, token, 'wrong-link')).toBeNull();
-    expect(await recordCampaignClick(campaign.id, 'wrong-token', 'l1')).toBeNull();
-    expect(await recordCampaignClick('wrong-campaign', token, 'l1')).toBeNull();
+    expect(await recordCampaignClick(campaign.id, 'wrong-token', 'pdf')).toBeNull();
+    expect(await recordCampaignClick('wrong-campaign', token, 'pdf')).toBeNull();
     // No delivery record yet — the token is not live until first attempt.
-    expect(await recordCampaignClick(campaign.id, token, 'l1')).toBeNull();
+    expect(await recordCampaignClick(campaign.id, token, 'pdf')).toBeNull();
+    expect(signedNewsletterPdfUrl).not.toHaveBeenCalled();
 
-    // Simulate the processor having written the recipient record.
-    kvStore.set(`nlstudio:recipient:${campaign.id}:${token}`, {
-      campaignId: campaign.id,
-      token,
-      email: page.recipients[0].email,
-      name: page.recipients[0].name,
-      firstName: page.recipients[0].firstName,
-      deliveryStatus: 'sent',
-      deliveryError: null,
-      attemptCount: 1,
-      lastAttemptedAt: '2026-08-29T10:00:00.000Z',
-      sentAt: '2026-08-29T10:00:00.000Z',
-      openedAt: null,
-      clicks: [],
-    });
+    seedRecipientRecord(campaign.id, token, page.recipients[0].email);
 
-    const outcome = await recordCampaignClick(campaign.id, token, 'l1');
-    expect(outcome).toEqual({ url: 'https://a.example/one' });
+    const outcome = await recordCampaignClick(campaign.id, token, 'pdf');
+    expect(outcome?.url).toBe(`https://signed.test/${campaign.pdf!.storagePath}?sig=1`);
 
+    // A second click is another click, not another read.
+    await recordCampaignClick(campaign.id, token, 'pdf');
     const stats = await getCampaignStats(campaign.id);
-    expect(stats.sentCount).toBe(1);
-    expect(stats.openCount).toBe(1); // click-derived open
-    expect(stats.clickCount).toBe(1);
-    expect(stats.links).toEqual([{ id: 'l1', url: 'https://a.example/one', clickCount: 1 }]);
-    expect(queued.recipientCount).toBe(2);
+    expect(stats).toMatchObject({
+      recipientCount: 2,
+      sentCount: 1,
+      pendingCount: 1,
+      readCount: 1,
+      readRate: 100,
+    });
   });
 });
 
@@ -486,22 +574,7 @@ describe('one-click unsubscribe (RFC 8058)', () => {
     await sendCampaignNow(campaign.id);
     const page = await getCampaignRecipients(campaign.id);
     const { token, email } = page.recipients[0];
-
-    // The recipient record exists once delivery has started.
-    kvStore.set(`nlstudio:recipient:${campaign.id}:${token}`, {
-      campaignId: campaign.id,
-      token,
-      email,
-      name: 'Ann A',
-      firstName: 'Ann',
-      deliveryStatus: 'sent',
-      deliveryError: null,
-      attemptCount: 1,
-      lastAttemptedAt: '2026-08-29T10:00:00.000Z',
-      sentAt: '2026-08-29T10:00:00.000Z',
-      openedAt: null,
-      clicks: [],
-    });
+    seedRecipientRecord(campaign.id, token, email);
 
     const outcome = await unsubscribeByRecipientToken(campaign.id, token);
     expect(outcome).toEqual({ email });
@@ -519,20 +592,7 @@ describe('one-click unsubscribe (RFC 8058)', () => {
     await sendCampaignNow(campaign.id);
     const page = await getCampaignRecipients(campaign.id);
     const { token, email } = page.recipients[0];
-    kvStore.set(`nlstudio:recipient:${campaign.id}:${token}`, {
-      campaignId: campaign.id,
-      token,
-      email,
-      name: 'Ann A',
-      firstName: 'Ann',
-      deliveryStatus: 'sent',
-      deliveryError: null,
-      attemptCount: 1,
-      lastAttemptedAt: null,
-      sentAt: null,
-      openedAt: null,
-      clicks: [],
-    });
+    seedRecipientRecord(campaign.id, token, email);
     kvStore.set(`newsletter:${email}`, {
       email,
       firstName: 'Ann',
@@ -555,34 +615,29 @@ describe('one-click unsubscribe (RFC 8058)', () => {
   });
 });
 
-describe('templates', () => {
-  it('rounds a template through create/update/delete', async () => {
-    const template = await createTemplate(
-      { name: 'Monthly wrap', bodyHtml: '<p>{{firstName}}</p>' },
-      'admin-1',
-    );
-    expect((await listTemplates()).map((t) => t.id)).toContain(template.id);
-
-    const updated = await updateTemplate(template.id, {
-      name: 'Monthly wrap v2',
-      bodyHtml: '<p>hi</p>',
-    });
-    expect(updated.name).toBe('Monthly wrap v2');
-
-    await deleteTemplate(template.id);
-    expect((await listTemplates()).length).toBe(0);
-    await expect(deleteTemplate(template.id)).rejects.toThrow(/not found/);
-  });
-});
-
 describe('dashboard', () => {
-  it('aggregates subscribers, campaign states and delivery totals', async () => {
+  it('aggregates subscribers, campaign states, routine drafts and delivery totals', async () => {
     const campaign = await makeDraft();
     await sendCampaignNow(campaign.id);
+    await createCampaign(
+      {
+        title: 'From the routine',
+        description: 'd',
+        listIds: ['sys_newsletter_contacts'],
+        source: 'routine',
+        sourceRef: '2026-09',
+      },
+      'routine:claude',
+    );
     const summary = await getDashboardSummary();
     expect(summary.subscribers).toEqual({ total: 10, active: 6, pending: 2, unsubscribed: 2 });
-    expect(summary.campaigns.total).toBe(1);
-    expect(summary.campaigns.active).toBe(1);
-    expect(summary.recentCampaigns[0].id).toBe(campaign.id);
+    expect(summary.campaigns).toMatchObject({
+      total: 2,
+      active: 1,
+      draft: 1,
+      awaitingReview: 1,
+    });
+    expect(summary.delivery).toEqual({ totalSent: 0, totalFailed: 0, totalRead: 0 });
+    expect(summary.recentCampaigns.map((c) => c.id)).toContain(campaign.id);
   });
 });

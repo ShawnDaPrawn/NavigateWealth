@@ -3,9 +3,12 @@
  *
  * §4.2 — thin dispatchers: parse/validate input, call the service, return.
  * Admin surface is requireAdmin throughout; the cron tick uses the shared
- * Vault-backed requireCronAuth; the click-through ping is deliberately
- * public (recipients are not signed in) and is classified as such in
- * __tests__/route-auth-classification.ts.
+ * Vault-backed requireCronAuth; the click-through ping and the one-click
+ * unsubscribe are deliberately public (recipients are not signed in) and are
+ * classified as such in __tests__/route-auth-classification.ts.
+ *
+ * The routine's hand-over endpoint lives in newsletter-intake-routes.ts so
+ * its machine-token gate never touches this admin surface.
  */
 
 import { Hono } from 'npm:hono';
@@ -18,35 +21,31 @@ import { AdminAuditService } from './admin-audit-service.ts';
 import { PermissionsService } from './personnel-permissions-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
+  attachCampaignPdf,
   cancelCampaign,
   createCampaign,
-  createTemplate,
   deleteCampaign,
-  deleteTemplate,
-  duplicateCampaign,
+  getCampaignPdfUrl,
   getCampaignRecipients,
   getCampaignStats,
   getCampaignView,
   getDashboardSummary,
   listAudienceLists,
   listCampaigns,
-  listTemplates,
-  pauseCampaign,
   recordCampaignClick,
   resumeCampaign,
   scheduleCampaign,
   sendCampaignNow,
   unsubscribeByRecipientToken,
   updateCampaign,
-  updateTemplate,
 } from './newsletter-studio-service.ts';
 import {
   processNewsletterCampaigns,
   sendCampaignTestEmails,
 } from './newsletter-studio-processor.ts';
+import { MAX_NEWSLETTER_PDF_BYTES } from './newsletter-studio-storage.ts';
 import {
   CreateNewsletterCampaignSchema,
-  NewsletterTemplateSchema,
   NewsletterTrackClickSchema,
   OneClickUnsubscribeQuerySchema,
   ProcessNewsletterCampaignsSchema,
@@ -110,6 +109,14 @@ function audit(
   }).catch(() => {});
 }
 
+const isUploadedFile = (value: unknown): value is File =>
+  value instanceof File ||
+  (typeof value === 'object' &&
+    value !== null &&
+    typeof (value as File).arrayBuffer === 'function' &&
+    typeof (value as File).name === 'string' &&
+    typeof (value as File).size === 'number');
+
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 app.get(
@@ -148,7 +155,7 @@ app.post(
     const input = body(c, CreateNewsletterCampaignSchema);
     const adminUserId = (c.get('userId') as string) || 'unknown';
     const campaign = await createCampaign(input, adminUserId);
-    audit(c, 'newsletter_campaign_created', 'Newsletter campaign created', campaign.id);
+    audit(c, 'newsletter_campaign_created', 'Newsletter draft created', campaign.id);
     return c.json({ success: true, campaign }, 201);
   }),
 );
@@ -171,7 +178,7 @@ app.put(
   asyncHandler(async (c) => {
     const patch = body(c, UpdateNewsletterCampaignSchema);
     const campaign = await updateCampaign(c.req.param('id')!, patch);
-    audit(c, 'newsletter_campaign_updated', 'Newsletter campaign updated', campaign.id);
+    audit(c, 'newsletter_campaign_updated', 'Newsletter draft updated', campaign.id);
     return c.json({ success: true, campaign });
   }),
 );
@@ -183,22 +190,55 @@ app.delete(
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     await deleteCampaign(id);
-    audit(c, 'newsletter_campaign_deleted', 'Newsletter campaign deleted', id);
+    audit(c, 'newsletter_campaign_deleted', 'Newsletter deleted', id);
     return c.json({ success: true });
   }),
 );
 
+// ── The PDF ──────────────────────────────────────────────────────────────────
+
+/** Upload or replace the newsletter PDF (multipart `file`). */
 app.post(
-  '/campaigns/:id/duplicate',
+  '/campaigns/:id/pdf',
   requireAdmin,
   requireNewsletterCapability('create'),
   asyncHandler(async (c) => {
-    const adminUserId = (c.get('userId') as string) || 'unknown';
-    const campaign = await duplicateCampaign(c.req.param('id')!, adminUserId);
-    audit(c, 'newsletter_campaign_duplicated', 'Newsletter campaign duplicated', campaign.id);
-    return c.json({ success: true, campaign }, 201);
+    const form = await c.req.formData().catch(() => null);
+    const file = form?.get('file');
+    if (!isUploadedFile(file)) {
+      return c.json({ error: 'Attach the newsletter PDF as the "file" field.' }, 400);
+    }
+    if (file.size > MAX_NEWSLETTER_PDF_BYTES) {
+      return c.json(
+        {
+          error: `The PDF is too large; the limit is ${MAX_NEWSLETTER_PDF_BYTES / (1024 * 1024)} MB.`,
+        },
+        400,
+      );
+    }
+    const campaign = await attachCampaignPdf(c.req.param('id')!, {
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      fileName: file.name || 'newsletter.pdf',
+    });
+    audit(c, 'newsletter_campaign_pdf_uploaded', 'Newsletter PDF uploaded', campaign.id, {
+      sizeBytes: campaign.pdf?.sizeBytes,
+    });
+    return c.json({ success: true, campaign });
   }),
 );
+
+/** Short-lived signed URL for the admin's own preview of the PDF. */
+app.get(
+  '/campaigns/:id/pdf',
+  requireAdmin,
+  requireNewsletterCapability('view'),
+  asyncHandler(async (c) => {
+    const pdf = await getCampaignPdfUrl(c.req.param('id')!);
+    return c.json({ success: true, ...pdf });
+  }),
+);
+
+// ── Lifecycle ────────────────────────────────────────────────────────────────
 
 app.post(
   '/campaigns/:id/test',
@@ -208,7 +248,7 @@ app.post(
   asyncHandler(async (c) => {
     const { emails } = body(c, TestSendNewsletterCampaignSchema);
     const results = await sendCampaignTestEmails(c.req.param('id')!, emails);
-    audit(c, 'newsletter_campaign_test_sent', 'Newsletter campaign test send', c.req.param('id')!, {
+    audit(c, 'newsletter_campaign_test_sent', 'Newsletter test send', c.req.param('id')!, {
       recipients: emails.length,
       failures: results.filter((r) => !r.ok).length,
     });
@@ -224,7 +264,7 @@ app.post(
   asyncHandler(async (c) => {
     const { scheduledAt } = body(c, ScheduleNewsletterCampaignSchema);
     const campaign = await scheduleCampaign(c.req.param('id')!, scheduledAt);
-    audit(c, 'newsletter_campaign_scheduled', 'Newsletter campaign scheduled', campaign.id, {
+    audit(c, 'newsletter_campaign_scheduled', 'Newsletter scheduled', campaign.id, {
       scheduledAt,
     });
     return c.json({ success: true, campaign });
@@ -237,15 +277,9 @@ app.post(
   requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await sendCampaignNow(c.req.param('id')!);
-    audit(
-      c,
-      'newsletter_campaign_send_queued',
-      'Newsletter campaign queued for delivery',
-      campaign.id,
-      {
-        recipientCount: campaign.recipientCount,
-      },
-    );
+    audit(c, 'newsletter_campaign_send_queued', 'Newsletter queued for delivery', campaign.id, {
+      recipientCount: campaign.recipientCount,
+    });
     // Kick a first delivery pass immediately so small sends complete without
     // waiting for cron. Best-effort — cron remains the authoritative driver.
     processNewsletterCampaigns({ mode: 'manual' }).catch((error) => {
@@ -255,24 +289,14 @@ app.post(
   }),
 );
 
-app.post(
-  '/campaigns/:id/pause',
-  requireAdmin,
-  requireNewsletterCapability('send'),
-  asyncHandler(async (c) => {
-    const campaign = await pauseCampaign(c.req.param('id')!);
-    audit(c, 'newsletter_campaign_paused', 'Newsletter campaign paused', campaign.id);
-    return c.json({ success: true, campaign });
-  }),
-);
-
+/** Retry a newsletter the processor stopped on a sender/provider fault. */
 app.post(
   '/campaigns/:id/resume',
   requireAdmin,
   requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await resumeCampaign(c.req.param('id')!);
-    audit(c, 'newsletter_campaign_resumed', 'Newsletter campaign resumed', campaign.id);
+    audit(c, 'newsletter_campaign_resumed', 'Newsletter delivery retried', campaign.id);
     processNewsletterCampaigns({ mode: 'manual' }).catch((error) => {
       log.warn('Inline processor kick failed (cron will pick up)', { error: String(error) });
     });
@@ -286,7 +310,7 @@ app.post(
   requireNewsletterCapability('send'),
   asyncHandler(async (c) => {
     const campaign = await cancelCampaign(c.req.param('id')!);
-    audit(c, 'newsletter_campaign_cancelled', 'Newsletter campaign cancelled', campaign.id);
+    audit(c, 'newsletter_campaign_cancelled', 'Newsletter cancelled', campaign.id);
     return c.json({ success: true, campaign });
   }),
 );
@@ -327,57 +351,6 @@ app.get(
   }),
 );
 
-// ── Templates ────────────────────────────────────────────────────────────────
-
-app.get(
-  '/templates',
-  requireAdmin,
-  requireNewsletterCapability('view'),
-  asyncHandler(async (c) => {
-    const templates = await listTemplates();
-    return c.json({ success: true, templates });
-  }),
-);
-
-app.post(
-  '/templates',
-  requireAdmin,
-  requireNewsletterCapability('create'),
-  validateBody(NewsletterTemplateSchema),
-  asyncHandler(async (c) => {
-    const input = body(c, NewsletterTemplateSchema);
-    const adminUserId = (c.get('userId') as string) || 'unknown';
-    const template = await createTemplate(input, adminUserId);
-    audit(c, 'newsletter_template_created', 'Newsletter template created', template.id);
-    return c.json({ success: true, template }, 201);
-  }),
-);
-
-app.put(
-  '/templates/:id',
-  requireAdmin,
-  requireNewsletterCapability('create'),
-  validateBody(NewsletterTemplateSchema),
-  asyncHandler(async (c) => {
-    const input = body(c, NewsletterTemplateSchema);
-    const template = await updateTemplate(c.req.param('id')!, input);
-    audit(c, 'newsletter_template_updated', 'Newsletter template updated', template.id);
-    return c.json({ success: true, template });
-  }),
-);
-
-app.delete(
-  '/templates/:id',
-  requireAdmin,
-  requireNewsletterCapability('delete'),
-  asyncHandler(async (c) => {
-    const id = c.req.param('id')!;
-    await deleteTemplate(id);
-    audit(c, 'newsletter_template_deleted', 'Newsletter template deleted', id);
-    return c.json({ success: true });
-  }),
-);
-
 // ── Processor ────────────────────────────────────────────────────────────────
 
 /** Manual/accelerator tick from the admin UI. */
@@ -393,7 +366,10 @@ app.post(
   }),
 );
 
-/** Authoritative pg_cron tick — see supabase/cron/newsletter-studio-jobs.sql. */
+/**
+ * Authoritative pg_cron tick — see supabase/cron/newsletter-studio-jobs.sql.
+ * Also sweeps the SQL intake table for routine hand-overs.
+ */
 app.post(
   '/cron/process',
   requireCronAuth,
@@ -408,10 +384,11 @@ app.post(
 // ── Public click-through ─────────────────────────────────────────────────────
 
 /**
- * Records a recipient's click and returns the stored destination. Public by
- * design: email recipients hold no session. The destination is server-stored
- * at queue time, so this can never act as an open redirect; unknown ids
- * return 404 with no detail.
+ * Records a recipient's read and returns a short-lived signed URL for the
+ * campaign's own stored PDF. Public by design: email recipients hold no
+ * session. The only destination is the campaign's PDF object — never caller
+ * input, so this can never act as an open redirect; unknown ids return 404
+ * with no detail.
  */
 app.post(
   '/track/click',

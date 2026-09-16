@@ -38,7 +38,7 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   applications: { label: 'Applications', icon: ClipboardList },
   submissions: { label: 'Submissions', icon: Inbox },
   communication: { label: 'Communication', icon: Mail },
-  newsletter: { label: 'Newsletter Studio', icon: Newspaper },
+  newsletter: { label: 'Newsletters', icon: Newspaper },
   marketing: { label: 'Social & Marketing', icon: Share2 },
   reporting: { label: 'Reporting', icon: BarChart3 },
   calendar: { label: 'Calendar & Reminders', icon: Calendar },

@@ -335,7 +335,7 @@ export function AdminDashboardPage() {
       case 'newsletter':
         return (
           <Suspense fallback={<NewsletterSkeleton />}>
-            <ErrorBoundary fallbackTitle="Newsletter Studio Error">
+            <ErrorBoundary fallbackTitle="Newsletters Error">
               <NewsletterModule />
             </ErrorBoundary>
           </Suspense>

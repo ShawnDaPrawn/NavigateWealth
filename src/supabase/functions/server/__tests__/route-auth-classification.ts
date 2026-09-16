@@ -288,7 +288,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'analytics-ping',
     classification: 'public',
     reason:
-      'Analytics ping from a public article page or an email tracking pixel; carries no session by construction. Append-only counter/event write. The newsletter-studio click ping additionally returns the destination URL for the redirect — but only a URL the campaign author stored server-side at queue time (never caller input, so no open redirect), gated by an opaque per-recipient token; unknown ids 404 with no detail.',
+      'Analytics ping from a public article page or an email tracking pixel; carries no session by construction. Append-only counter/event write. The newsletter-studio click ping additionally returns the destination URL for the redirect — but only a short-lived signed URL for the campaign’s own stored PDF, minted server-side after the per-recipient token resolves (never caller input, so no open redirect); unknown ids 404 with no detail.',
     routes: [
       'newsletter-studio-routes.ts POST /track/click',
       'publications-lifecycle-routes.ts POST /articles/:id/increment-views',

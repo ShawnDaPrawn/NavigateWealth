@@ -100,9 +100,15 @@ Newsletter Studio admin module.
 
 - `newsletter-studio-process-campaigns`
   - Runs every 2 minutes.
-  - Promotes due scheduled campaigns and advances queued campaign delivery
-    independently of the admin browser (which acts only as a best-effort accelerator).
-  - Processes up to 3 campaigns and up to 4 send batches of 20 per run.
+  - Promotes due scheduled newsletters and advances queued delivery independently of the
+    admin browser (which acts only as a best-effort accelerator).
+  - Processes up to 3 newsletters and up to 4 send batches per run. Every newsletter carries
+    its PDF as an attachment, so the batch width follows the PDF's size (3–5 concurrent for
+    a 5 MB file, up to 20 for a tiny one) rather than being a fixed 20.
+  - Also sweeps `public.newsletter_intake` for one pending routine hand-over per run
+    (migration `newsletter_intake`, `docs/runbooks/newsletter-intake.md`) and turns it into
+    a draft awaiting admin approval. No new job or secret is needed for that; it rides this
+    tick.
 - Before you run it, replace `__SUPABASE_ANON_KEY__` with the project anon key. No new
   secret is needed: the job authenticates with the shared `x-nw-cron-auth` token already
   provisioned in Vault by migration `20260825085409_cron_auth_vault_token.sql` and verified

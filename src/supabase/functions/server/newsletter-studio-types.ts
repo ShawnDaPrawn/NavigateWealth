@@ -1,15 +1,18 @@
 /**
  * Newsletter Studio — Type Definitions
  *
- * A listmonk-style campaign engine embedded in the admin platform:
- * campaigns with a real lifecycle, batched background delivery, reusable
- * templates, and click-through engagement — built on the existing
- * communication groups (audiences) and newsletter subscriber records.
+ * A PDF-newsletter sender embedded in the admin platform: the newsletter is
+ * produced elsewhere as a finished PDF (by hand or by a monthly routine), and
+ * the studio's job is to attach it to a short branded email, send it to one
+ * or more communication groups with batched background delivery, and report
+ * delivery and read rate. It deliberately has no composer, no templates and
+ * no merge fields — those were removed when the module was simplified.
  *
  * Storage lives under the `nlstudio:` KV namespace (see
  * repositories/newsletter-studio-repository.ts). The `newsletter:` prefix is
  * deliberately NOT used: newsletter-service.ts scans that whole prefix as
- * subscriber records.
+ * subscriber records. The PDF itself lives in Supabase Storage
+ * (newsletter-studio-storage.ts), never in KV.
  */
 
 /**
@@ -17,9 +20,14 @@
  *
  * draft ──schedule──▶ scheduled ──due──▶ queued ──processor──▶ sending ──▶ finished
  *   │                     │                │                      │
- *   └──────send-now───────┴───────────────▶│      pause ◀──────── ┤
+ *   └──────send-now───────┴───────────────▶│      paused ◀─────── ┤ (sender fault only)
  *                                          │        │  resume     │
  *                                     cancelled ◀───┴─────────────┘
+ *
+ * `paused` is not an admin control any more: the processor parks a campaign
+ * there when the email provider rejects OUR sender (credentials, identity,
+ * quota), so the audience is not burned against a fault no retry can clear.
+ * The admin sees it as "stopped" with the provider's message and a Retry.
  */
 export type NewsletterCampaignStatus =
   | 'draft'
@@ -36,38 +44,44 @@ export const ACTIVE_CAMPAIGN_STATUSES: NewsletterCampaignStatus[] = ['queued', '
 /** Statuses in which the campaign content/audience may still be edited. */
 export const EDITABLE_CAMPAIGN_STATUSES: NewsletterCampaignStatus[] = ['draft', 'scheduled'];
 
-/** A tracked link inside a campaign body, stored so click-through never redirects to an attacker-supplied URL. */
-export interface NewsletterCampaignLink {
-  /** Short stable id referenced from rewritten hrefs (`l1`, `l2`, …). */
-  id: string;
-  /** The original destination URL, exactly as authored. */
-  url: string;
+/** The one tracked link every newsletter email carries: the "Read the newsletter" button. */
+export const PDF_LINK_ID = 'pdf';
+
+/** Where a campaign came from — an admin in the studio, or the monthly routine. */
+export type NewsletterCampaignSource = 'admin' | 'routine';
+
+/** The stored newsletter PDF. Bytes live in Storage; this is the pointer. */
+export interface NewsletterPdf {
+  /** Object path inside the newsletters bucket (`<campaignId>/<uuid>.pdf`). */
+  storagePath: string;
+  /** Original file name, shown to the admin and used as the attachment name. */
+  fileName: string;
+  sizeBytes: number;
+  uploadedAt: string;
 }
 
 export interface NewsletterCampaign {
   id: string;
-  name: string;
-  subject: string;
-  /** Hidden inbox-preview line injected at the top of the rendered body. */
-  preheader?: string;
+  /** Doubles as the email subject. */
+  title: string;
+  /** Short intro shown in the email above the "Read the newsletter" button. */
+  description: string;
   /** Display name on the from address (address itself is fixed per deliverability config). */
   fromName: string;
-  /** Communication group ids this campaign targets ("lists" in listmonk terms). */
+  /** Communication group ids this campaign targets. */
   listIds: string[];
   /** Names snapshot of the targeted groups, for history display after a group is renamed/deleted. */
   listNames: string[];
-  /** Rich HTML body authored in the studio editor. */
-  bodyHtml: string;
-  /** Optional studio template this campaign was started from. */
-  templateId?: string | null;
-  /** Rewrite links for click-through tracking. Defaults to true. */
-  trackClicks: boolean;
+  /** Required before the campaign can be scheduled or sent. */
+  pdf: NewsletterPdf | null;
+  source: NewsletterCampaignSource;
+  /** The routine's idempotency key, so a replayed hand-over never creates a second draft. */
+  sourceRef: string | null;
+  /** When the "a draft is waiting for review" admin email went out (routine drafts). */
+  reviewNotifiedAt: string | null;
   status: NewsletterCampaignStatus;
   /** ISO timestamp for scheduled sends; null when immediate/draft. */
   scheduledAt: string | null;
-
-  /** Links extracted from bodyHtml at queue time (empty until queued). */
-  links: NewsletterCampaignLink[];
 
   /** Audience size resolved at queue time. 0 until queued. */
   recipientCount: number;
@@ -80,10 +94,9 @@ export interface NewsletterCampaign {
   /** 0–100 with one decimal. */
   progressPercent: number;
 
-  /** Engagement counters, refreshed lazily from recipient records (see service). */
-  openCount: number;
-  clickCount: number;
-  /** When the engagement counters were last recomputed. */
+  /** Unique recipients who clicked through to the PDF (cached from recipient records). */
+  readCount: number;
+  /** When the engagement counter was last recomputed. */
   statsRefreshedAt: string | null;
 
   createdBy: string;
@@ -152,21 +165,9 @@ export interface NewsletterCampaignRecipient {
   attemptCount: number;
   lastAttemptedAt: string | null;
   sentAt: string | null;
-  /** First engagement (click-derived — this platform deliberately uses no tracking pixel). */
+  /** First read (click-derived — this platform deliberately uses no tracking pixel). */
   openedAt: string | null;
   clicks: NewsletterRecipientClick[];
-}
-
-/** Reusable starting content for campaigns. */
-export interface NewsletterStudioTemplate {
-  id: string;
-  name: string;
-  description: string;
-  subject: string;
-  bodyHtml: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 /** Heartbeat + last-run summary for the delivery processor. */
@@ -194,27 +195,19 @@ export interface NewsletterCampaignView extends NewsletterCampaign {
   stuck: boolean;
 }
 
-/** Compact per-link click stats, computed on demand. */
-export interface NewsletterCampaignLinkStats extends NewsletterCampaignLink {
-  clickCount: number;
-}
-
 export interface NewsletterCampaignStats {
   campaignId: string;
   recipientCount: number;
   sentCount: number;
   failedCount: number;
   pendingCount: number;
-  openCount: number;
-  clickCount: number;
-  /** Unique recipients with ≥1 click. */
-  clickedRecipientCount: number;
-  openRate: number;
-  clickRate: number;
-  links: NewsletterCampaignLinkStats[];
+  /** Unique recipients who clicked through to the PDF. */
+  readCount: number;
+  /** readCount / sentCount, as a percentage with one decimal. */
+  readRate: number;
 }
 
-/** A communication group projected as a listmonk-style "list" for the studio UI. */
+/** A communication group projected as an audience for the studio UI. */
 export interface NewsletterListView {
   id: string;
   name: string;
@@ -235,6 +228,8 @@ export interface NewsletterDashboardSummary {
   campaigns: {
     total: number;
     draft: number;
+    /** Routine-submitted drafts still waiting for an admin to send them. */
+    awaitingReview: number;
     scheduled: number;
     active: number;
     finished: number;
@@ -243,13 +238,11 @@ export interface NewsletterDashboardSummary {
   delivery: {
     totalSent: number;
     totalFailed: number;
-    totalOpens: number;
-    totalClicks: number;
+    totalRead: number;
   };
   recentCampaigns: NewsletterCampaignView[];
   processor: NewsletterProcessorState | null;
   listCount: number;
-  templateCount: number;
 }
 
 export interface ProcessNewsletterCampaignsResult {
@@ -257,6 +250,8 @@ export interface ProcessNewsletterCampaignsResult {
   campaignsExamined: number;
   campaignsProcessed: number;
   promotedScheduled: number;
+  /** Routine hand-overs promoted from the SQL intake table this tick (cron only). */
+  intakeProcessed: number;
   sent: number;
   failed: number;
   finished: string[];
