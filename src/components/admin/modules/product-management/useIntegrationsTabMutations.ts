@@ -183,12 +183,48 @@ export function useIntegrationsTabMutations({
     },
   });
 
+  /**
+   * Start a sign-in test.
+   *
+   * Separate from createPortalJobMutation rather than a flag on it, because
+   * everything around the call differs: it takes no run mode, no policy scope
+   * and no artifact options, and its success is "we got in", not "N policies
+   * queued". Folding it in would have meant a `connectionTest` branch in every
+   * one of those places.
+   */
+  const startConnectionTestMutation = useMutation({
+    mutationFn: async (credentialProfileId: string) => {
+      if (!selectedProviderId || !selectedCategoryId)
+        throw new Error('Missing provider or category');
+      return productManagementApi.startPortalConnectionTest(
+        selectedProviderId,
+        selectedCategoryId,
+        credentialProfileId,
+      );
+    },
+    onSuccess: ({ job }) => {
+      setPortalJob(job);
+      if (job.actionsDispatchError) {
+        toast.warning(job.actionsDispatchError);
+      }
+      queryClient.invalidateQueries({ queryKey: integrationsKeys.portalConnections() });
+      queryClient.invalidateQueries({
+        queryKey: integrationsKeys.latestPortalJob(selectedProviderId, selectedCategoryId),
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to start the sign-in test');
+    },
+  });
+
   const createPortalJobMutation = useMutation({
     mutationFn: async (params: {
       credentialProfileId: string;
       runMode: PortalJobRunMode;
       policySchedule?: PortalProviderFlow['policySchedule'];
       documentArtifacts?: PortalProviderFlow['documentArtifacts'];
+      /** Scope to specific policies; omitted means the whole provider book. */
+      policyIds?: string[];
     }) => {
       if (!selectedProviderId || !selectedCategoryId)
         throw new Error('Missing provider or category');
@@ -203,6 +239,7 @@ export function useIntegrationsTabMutations({
         {
           policySchedule: params.policySchedule,
           documentArtifacts: params.documentArtifacts,
+          policyIds: params.policyIds,
         },
       );
     },
@@ -210,6 +247,11 @@ export function useIntegrationsTabMutations({
       setPortalJob(job);
       if (job.actionsDispatchError) {
         toast.warning(job.actionsDispatchError);
+      } else if (job.scopedPolicyIds && job.scopedPolicyIds.length > 0) {
+        const count = job.scopedPolicyIds.length;
+        toast.success(
+          `Refreshing ${count} polic${count === 1 ? 'y' : 'ies'} from the provider portal.`,
+        );
       } else {
         toast.success('Portal job queued. GitHub Actions is starting the Playwright worker.');
       }
@@ -434,6 +476,7 @@ export function useIntegrationsTabMutations({
     publishRunMutation,
     downloadTemplateMutation,
     createPortalJobMutation,
+    startConnectionTestMutation,
     refreshPortalJobMutation,
     submitPortalOtpMutation,
     retryPortalJobItemMutation,

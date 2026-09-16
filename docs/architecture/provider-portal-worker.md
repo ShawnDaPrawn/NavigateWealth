@@ -370,3 +370,63 @@ so the Portal Automation screen shows the reasoning as the run moves. Failures
 carry the navigator's own stated reason rather than a selector timeout, which
 is the difference between "could not confidently find the provider search box"
 and "the page is asking to approve a sign-in in an authenticator app".
+
+## Connection tests
+
+### The question nobody could afford to ask
+
+"Do this provider's stored credentials still work?" had no cheap answer. The
+only way to find out was to start a real sync run, which needed the provider to
+already have policies captured and which wrote to the book if it succeeded. So
+the first question an adviser asks was the most expensive one, and in practice
+it went unasked — which is how a provider whose password expired sat broken
+without anyone noticing.
+
+A **connection test** is a job with `connectionTest: true`. It carries an empty
+policy queue by construction, is forced to `discover` whatever run mode is
+requested, and refuses a `policyIds` scope outright. The worker runs the normal
+login path — credentials, OTP checkpoint, navigator auth stage — and then
+**returns**, before post-login navigation and before any discovery report.
+
+Stopping there is the point. A provider whose policy pages are not mapped yet
+would fail at post-login navigation, and reporting that as a broken connection
+would send an adviser to reset a password that was never the problem.
+
+### What it is allowed to start without
+
+`assertPortalRuntimeConfigured` demands a login URL, a credential profile, and
+the three login selectors. A connection test passes `requireLoginSelectors:
+false`, because it runs at the one moment a provider is least configured. The
+worker then falls back to generic sign-in field guesses
+(`FALLBACK_USERNAME_SELECTOR` and friends in `login.mjs`).
+
+A real run keeps the strict gate. There a guessed field would be filled with
+something that may not belong in it, and the run goes on to write policy data.
+The password guess is deliberately the narrowest of the three.
+
+### Where the result lands
+
+A finished connection test writes
+`portal-connection:{providerId}:{credentialProfileId}` — provider and profile,
+not category, because credentials are not per category: the same username and
+password open the same front door whichever product the flow was set up for.
+
+`GET /portal-connections` folds that record together with the flow's login URL
+and the stored credential status into one state per provider:
+
+| State            | Means                              | Next action         |
+| ---------------- | ---------------------------------- | ------------------- |
+| `no_login_url`   | No portal address captured         | Set up              |
+| `no_credentials` | Address but no username/password   | Add sign-in details |
+| `untested`       | Stored, but nobody has tried       | Test sign-in        |
+| `testing`        | A test is in flight                | —                   |
+| `connected`      | Sign-in worked at `checkedAt`      | Test again          |
+| `failed`         | Somebody tried and it did not work | Fix and retry       |
+
+`untested` and `failed` stay distinct deliberately. Collapsing them into "not
+connected" is what let a broken provider look exactly like an unconfigured one.
+
+`connected` claims only that sign-in worked at `checkedAt`. It does not claim
+the policy pages are mapped or that a sync will find anything — those are
+separate failures with separate surfaces, and rolling them into one traffic
+light is how the module ended up unable to say what was wrong.

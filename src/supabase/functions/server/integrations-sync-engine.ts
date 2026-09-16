@@ -153,7 +153,14 @@ export async function getClientDisplayName(clientId: string): Promise<string> {
 export async function buildPortalPolicyQueue(
   job: PortalSyncJob,
   fields: SchemaField[],
+  options: { policyIds?: string[] } = {},
 ): Promise<PortalJobPolicyItem[]> {
+  // An empty/absent policyIds means "every eligible policy", which is the
+  // original behaviour. A non-empty list scopes the run to those policies, so
+  // an adviser can refresh ONE policy instead of the provider's whole book.
+  const scopedPolicyIds = Array.isArray(options.policyIds) && options.policyIds.length > 0
+    ? new Set(options.policyIds.map((id) => String(id)))
+    : null;
   const policyNumberField = findPolicyNumberField(fields);
   if (!policyNumberField) {
     throw new Error(
@@ -176,6 +183,7 @@ export async function buildPortalPolicyQueue(
         policy.categoryId !== job.categoryId
       )
         continue;
+      if (scopedPolicyIds && !scopedPolicyIds.has(String(policy.id))) continue;
 
       const policyNumber = await getPolicyNumberForPolicy(policy, fields, schemaCache);
       const normalizedPolicyNumber = normalisePolicyNumber(policyNumber);
@@ -489,12 +497,13 @@ export async function buildSyncRun(params: {
 
     const diffs: SyncDiff[] = [];
     const lockedFields = new Set(matchedPolicy?.lockedFields || []);
-    const shouldRespectLockedFields = (params.source || 'spreadsheet') !== 'portal';
 
     if (matchedPolicy) {
       for (const [fieldId, newValue] of Object.entries(mappedData)) {
+        // A lock is a lock, whatever the source. Portal runs used to ignore
+        // locks, so a value an adviser had deliberately locked after reviewing
+        // a statement was silently overwritten by the next portal sweep.
         if (
-          shouldRespectLockedFields &&
           lockedFields.has(fieldId) &&
           valuesDiffer(matchedPolicy.data?.[fieldId], newValue)
         ) {
@@ -600,12 +609,12 @@ export async function publishSyncRun(
 
       const policy = policies[policyIndex];
       const lockedSet = new Set(policy.lockedFields || []);
-      const shouldRespectLockedFields = run.source !== 'portal';
       const updatedData = { ...policy.data };
       const appliedFields: string[] = [];
 
       for (const diff of row.diffs) {
-        if (shouldRespectLockedFields && lockedSet.has(diff.fieldId)) continue;
+        // Locks hold on publish for every source, portal included.
+        if (lockedSet.has(diff.fieldId)) continue;
         updatedData[diff.fieldId] = diff.newValue;
         appliedFields.push(diff.fieldId);
       }

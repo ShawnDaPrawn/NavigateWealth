@@ -21,6 +21,10 @@ import {
   portalArtifactsMatchCategory,
 } from './integrations-portal-guards.ts';
 import {
+  listPortalProviderConnections,
+  recordPortalConnectionOutcome,
+} from './integrations-portal-connection.ts';
+import {
   getPortalJobScopeError,
   getPortalFlow,
   sanitisePortalFlow,
@@ -118,7 +122,54 @@ app.post('/portal-jobs', requireAdmin, async (c) => {
       );
     }
 
-    const runMode = normaliseRunMode(body?.runMode);
+    // Optional scope: refresh ONE policy (or a few) instead of the provider's
+    // whole book for this category. ABSENT means every eligible policy, which
+    // is what every caller did before per-policy refresh existed.
+    //
+    // Supplied-but-unusable must NOT fall back to "everything". A malformed
+    // single-policy refresh would otherwise sweep the provider's whole book,
+    // and with auto-publish on that writes to every matched policy. Fail closed.
+    const policyIdsSupplied = body?.policyIds !== undefined && body?.policyIds !== null;
+    const requestedPolicyIds = Array.isArray(body?.policyIds)
+      ? (body.policyIds as unknown[])
+          .map((id) => String(id || '').trim())
+          .filter(Boolean)
+          .slice(0, 200)
+      : [];
+
+    if (policyIdsSupplied && requestedPolicyIds.length === 0) {
+      return c.json(
+        {
+          error:
+            'policyIds was supplied but contained no usable policy id. Omit it to refresh every policy for this provider and category.',
+        },
+        400,
+      );
+    }
+
+    // A connection test is a run whose only job is to prove the stored
+    // credentials open the provider's front door. It is forced to `discover`
+    // (nothing it does may write to the book) and it deliberately carries an
+    // EMPTY policy queue, so it can be run against a provider that has no
+    // policies captured yet — which is precisely when an adviser is setting one
+    // up and most needs to know whether the password is right.
+    const connectionTest = body?.connectionTest === true;
+    const runMode = connectionTest ? 'discover' : normaliseRunMode(body?.runMode);
+
+    if (connectionTest && policyIdsSupplied) {
+      return c.json(
+        { error: 'A connection test does not take policyIds. It queues no policies at all.' },
+        400,
+      );
+    }
+    if (connectionTest && !String(flow.loginUrl || '').trim()) {
+      return c.json(
+        {
+          error: `Add the ${provider.name || 'provider'} portal sign-in address before testing the connection.`,
+        },
+        400,
+      );
+    }
     const requestedPolicySchedule = normalisePolicyScheduleConfig(
       body?.policySchedule,
       flow.policySchedule,
@@ -145,21 +196,34 @@ app.post('/portal-jobs', requireAdmin, async (c) => {
       updatedAt: now,
       currentStep: 'queued',
       message: 'Portal sync job queued. Starting GitHub Actions worker.',
+      ...(requestedPolicyIds.length > 0 ? { scopedPolicyIds: requestedPolicyIds } : {}),
+      ...(connectionTest ? { connectionTest: true } : {}),
     };
 
     const schema = await getSchemaForCategory(categoryId);
-    const items = await buildPortalPolicyQueue(job, schema.fields || []);
-    if (items.length === 0) {
+    const items = connectionTest
+      ? []
+      : await buildPortalPolicyQueue(job, schema.fields || [], {
+          policyIds: requestedPolicyIds,
+        });
+    if (!connectionTest && items.length === 0) {
       return c.json(
         {
-          error: `No active ${provider.name || 'provider'} policies with policy numbers were found for this category. Add the policies in client profiles before starting portal automation.`,
+          error:
+            requestedPolicyIds.length > 0
+              ? `That policy could not be queued. It must be an active ${provider.name || 'provider'} policy in this category with a policy number on it.`
+              : `No active ${provider.name || 'provider'} policies with policy numbers were found for this category. Add the policies in client profiles before starting portal automation.`,
         },
         400,
       );
     }
 
     job.queueSummary = summarisePortalJobItems(items);
-    job.message = `Found ${items.length} active policy${items.length === 1 ? '' : 'ies'} to update. Starting GitHub Actions worker.`;
+    job.message = connectionTest
+      ? `Testing the ${provider.name || 'provider'} sign-in. No policy data will be read or changed.`
+      : requestedPolicyIds.length > 0
+        ? `Refreshing ${items.length} selected polic${items.length === 1 ? 'y' : 'ies'}. Starting GitHub Actions worker.`
+        : `Found ${items.length} active policy${items.length === 1 ? '' : 'ies'} to update. Starting GitHub Actions worker.`;
 
     await kv.set(`portal-job:${job.id}`, job);
     await kv.set(`portal-job-items:${job.id}`, items);
@@ -188,6 +252,21 @@ app.post('/portal-jobs', requireAdmin, async (c) => {
   } catch (e) {
     log.error('Portal job create error:', e);
     return c.json({ error: `Failed to create portal job: ${getErrMsg(e)}` }, 500);
+  }
+});
+
+// GET /portal-connections
+//
+// One row per provider for the Connections screen. This is the read an adviser
+// makes before doing anything else ("which of my providers actually work?"), so
+// it answers for every provider in one call rather than making the client fan
+// out N requests and assemble the same picture itself.
+app.get('/portal-connections', requireAdmin, async (c) => {
+  try {
+    return c.json({ success: true, connections: await listPortalProviderConnections() });
+  } catch (e) {
+    log.error('Portal connections fetch error:', e);
+    return c.json({ error: `Failed to fetch portal connections: ${getErrMsg(e)}` }, 500);
   }
 });
 
@@ -434,6 +513,10 @@ app.post('/portal-jobs/:jobId/status', requireAdmin, async (c) => {
     };
 
     await kv.set(`portal-job:${jobId}`, updated);
+    // A finished connection test is the only thing that can change what the
+    // Connections screen says, so the record is written here rather than being
+    // derived by re-reading job history on every page load.
+    await recordPortalConnectionOutcome(updated);
     return c.json({ success: true, job: updated });
   } catch (e) {
     log.error('Portal job status update error:', e);

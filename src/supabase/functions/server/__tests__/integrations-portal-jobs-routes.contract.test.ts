@@ -107,7 +107,7 @@ beforeEach(() => {
 });
 
 // ============================================================================
-// THE ADMIN GATE — 13 routes, gated one at a time
+// THE ADMIN GATE — 14 routes, gated one at a time
 // ============================================================================
 
 describe('admin gate', () => {

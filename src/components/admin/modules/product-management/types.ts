@@ -308,6 +308,38 @@ export interface PortalCredentialStatus {
   updatedBy?: string;
 }
 
+/**
+ * How a provider's sign-in stands.
+ *
+ * `untested` and `failed` stay distinct on purpose: the first means nobody has
+ * tried, the second means somebody tried and it did not work. They call for
+ * different actions, and the old module could tell neither from the other.
+ * Mirrors PortalConnectionState on the server.
+ */
+export type PortalConnectionState =
+  | 'no_login_url'
+  | 'no_credentials'
+  | 'untested'
+  | 'testing'
+  | 'connected'
+  | 'failed';
+
+/** Everything the Connections screen shows for one provider. */
+export interface PortalProviderConnection {
+  providerId: string;
+  providerName: string;
+  state: PortalConnectionState;
+  categoryId: string;
+  credentialProfileId: string;
+  loginUrl?: string;
+  hasCredentials: boolean;
+  credentialsUpdatedAt?: string;
+  lastCheckedAt?: string;
+  message?: string;
+  /** The job currently proving the connection, when one is in flight. */
+  activeJobId?: string;
+}
+
 export interface PortalFlowField {
   sourceHeader: string;
   columnName?: string;
@@ -440,6 +472,13 @@ export interface PortalSyncJob {
   flowId: string;
   credentialProfileId: string;
   workerId?: string;
+  /** Set when the run was scoped to specific policies (a per-policy refresh). */
+  scopedPolicyIds?: string[];
+  /**
+   * Set when the run exists only to prove the stored credentials can sign in.
+   * Such a run carries no policy queue and stops at the first signed-in page.
+   */
+  connectionTest?: boolean;
   actionsRunId?: number;
   actionsRunUrl?: string;
   actionsDispatchError?: string;

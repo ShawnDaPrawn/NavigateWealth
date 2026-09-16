@@ -15,6 +15,7 @@ import {
   UploadPreviewResponse,
   IntegrationSyncRun,
   PortalCredentialStatus,
+  PortalProviderConnection,
   PortalProviderFlow,
   PortalBrainMemorySummary,
   PortalDiscoveryReport,
@@ -460,12 +461,45 @@ export const productManagementApi = {
     return response.status;
   },
 
+  /** Sign-in state for every provider, for the Connections screen. */
+  fetchPortalConnections: async (): Promise<PortalProviderConnection[]> => {
+    const response = await api.get<{ success: boolean; connections: PortalProviderConnection[] }>(
+      'integrations/portal-connections',
+    );
+    return response.connections || [];
+  },
+
+  /**
+   * Start a run whose only purpose is to prove the stored credentials sign in.
+   *
+   * Queues no policies, reads no policy data and writes nothing to the book, so
+   * it is safe to run against a provider that has not been set up yet — which
+   * is the only moment it is useful.
+   */
+  startPortalConnectionTest: async (
+    providerId: string,
+    categoryId: string,
+    credentialProfileId: string,
+  ): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
+    return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>(
+      'integrations/portal-jobs',
+      { providerId, categoryId, credentialProfileId, connectionTest: true },
+    );
+  },
+
   createPortalJob: async (
     providerId: string,
     categoryId: string,
     credentialProfileId: string,
     runMode: PortalJobRunMode,
-    options: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'> = {},
+    options: Pick<PortalProviderFlow, 'policySchedule' | 'documentArtifacts'> & {
+      /**
+       * Scope the run to specific policies. Omitted (or empty) queues every
+       * eligible policy for the provider and category, which is what the
+       * provider-wide run has always done.
+       */
+      policyIds?: string[];
+    } = {},
   ): Promise<{ job: PortalSyncJob; flow: PortalProviderFlow }> => {
     return api.post<{ success: boolean; job: PortalSyncJob; flow: PortalProviderFlow }>(
       'integrations/portal-jobs',
@@ -476,6 +510,9 @@ export const productManagementApi = {
         runMode,
         policySchedule: options.policySchedule,
         documentArtifacts: options.documentArtifacts,
+        ...(options.policyIds && options.policyIds.length > 0
+          ? { policyIds: options.policyIds }
+          : {}),
       },
     );
   },

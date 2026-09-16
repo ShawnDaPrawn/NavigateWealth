@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialo
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna';
 import { FNACard, PublishFNADialog, ViewPublishedFNADialog } from '../modules/fna';
+import { isPortalAutomationCategoryId } from '@/shared/integrations/portal-categories';
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
 
 import { renderPolicyTables as renderPolicyTablesView } from './policyTables';
@@ -74,6 +75,7 @@ export function PolicyCategoryTab({
   const [editingPolicy, setEditingPolicy] = useState<PolicyRecord | null>(null);
   const [deletingPolicy, setDeletingPolicy] = useState<PolicyRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshingPolicyId, setRefreshingPolicyId] = useState<string | null>(null);
   const [tableStructure, setTableStructure] = useState<SchemaField[]>([]);
   const [subCategorySchemas, setSubCategorySchemas] = useState<Record<string, SchemaField[]>>({});
 
@@ -348,6 +350,58 @@ export function PolicyCategoryTab({
     }
   };
 
+  /**
+   * Refresh ONE policy's values from the provider portal.
+   *
+   * Before this, the smallest unit of portal work was every policy the provider
+   * has in this category, which is why the module read as a batch tool rather
+   * than something you use on a client record. The job is scoped by policy id;
+   * the queued run still stages into the same review step, so nothing is written
+   * to the policy without review.
+   */
+  /**
+   * Portal automation only runs for specific product subcategories. Legacy
+   * records still carry the parent category ('retirement_planning',
+   * 'investments') while being displayed in a child table, and the server
+   * rejects those outright — so offering them the control would only ever
+   * produce an error.
+   */
+  const canRefreshPolicy = (policy: PolicyRecord) =>
+    Boolean((policy as Record<string, unknown>).providerId) &&
+    isPortalAutomationCategoryId(String(policy.categoryId || ''));
+
+  const handleRefreshPolicy = async (policy: PolicyRecord) => {
+    const providerId = String((policy as Record<string, unknown>).providerId || '');
+    const policyCategoryId = String(policy.categoryId || categoryId || '');
+
+    if (!providerId) {
+      toast.error('This policy has no provider linked, so it cannot be refreshed from a portal.');
+      return;
+    }
+
+    setRefreshingPolicyId(policy.id);
+    const toastId = toast.loading('Queueing a portal refresh for this policy...');
+    try {
+      await api.post('/integrations/portal-jobs', {
+        providerId,
+        categoryId: policyCategoryId,
+        runMode: 'run',
+        policyIds: [policy.id],
+      });
+      toast.success(
+        'Portal refresh queued. The updated value appears in Review once the run finishes.',
+        { id: toastId },
+      );
+    } catch (err: unknown) {
+      console.error('Error queueing policy refresh:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to queue the portal refresh', {
+        id: toastId,
+      });
+    } finally {
+      setRefreshingPolicyId(null);
+    }
+  };
+
   const getWizardProps = () => {
     if (!hasFNA || !fnaConfig) return {};
 
@@ -378,6 +432,9 @@ export function PolicyCategoryTab({
       handleReinstatePolicy,
       setArchivingPolicy,
       setDeletingPolicy,
+      handleRefreshPolicy,
+      canRefreshPolicy,
+      refreshingPolicyId,
     });
 
   return (

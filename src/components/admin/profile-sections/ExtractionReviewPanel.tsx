@@ -10,7 +10,8 @@
  * Allows attaching a single policy document (PDF) to a policy line item.
  * One-active-doc-per-policy: uploading a new file replaces the previous one.
  * Phase 2: AI-powered extraction with review panel and field application.
- * Field locking: fields can be locked to prevent AI extraction overwrite.
+ * Field locking: a locked field is never overwritten by ANY automated source
+ * — document extraction, provider portal runs or spreadsheet uploads alike.
  *
  * Only available when editing an existing policy (needs a saved policy ID).
  */
@@ -269,8 +270,8 @@ export function ExtractionReviewPanel({
                   }`}
                   title={
                     isLocked
-                      ? 'Unlock field — allow AI overwrite'
-                      : 'Lock field — protect from AI overwrite'
+                      ? 'Unlock field — allow automated sources to update it'
+                      : 'Lock field — no automated source may overwrite it'
                   }
                 >
                   {lockingField === mapping.schemaFieldId ? (
