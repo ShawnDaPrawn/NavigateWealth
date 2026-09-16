@@ -237,6 +237,19 @@ export function IntegrationsTab() {
   const visiblePortalJobForSelection = stagedRunForSelectionIsLoaded ? portalJobForSelection : null;
   const visibleStagedRunForSelection = stagedRunForSelectionIsLoaded ? stagedRunForSelection : null;
 
+  // Rows still awaiting a decision, by the same rule the Review panel publishes
+  // by. Surfaced on the Review tab so a queued refresh has a visible
+  // destination rather than an adviser having to go hunting for the result.
+  const pendingReviewCount =
+    visibleStagedRunForSelection?.rows.filter(
+      (row) =>
+        row.matchStatus === 'matched' &&
+        row.diffs.length > 0 &&
+        row.publishStatus !== 'published' &&
+        row.publishStatus !== 'failed' &&
+        row.publishStatus !== 'skipped',
+    ).length || 0;
+
   useEffect(() => {
     if (latestPortalJob === undefined) return;
 
@@ -470,9 +483,10 @@ export function IntegrationsTab() {
               selectedCategoryId={selectedCategoryId}
               stats={integrationStats}
               onCategoryChange={handleCategoryChange}
+              pendingReviewCount={pendingReviewCount}
             />
 
-            {/* Tab: Upload & Sync */}
+            {/* Tab: Review (proposed changes) and spreadsheet upload */}
             <TabsContent value="upload" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
               <input
                 type="file"

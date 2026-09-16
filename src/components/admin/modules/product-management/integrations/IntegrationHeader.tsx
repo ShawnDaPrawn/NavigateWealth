@@ -1,6 +1,6 @@
 import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Bot, KeyRound, UploadCloud, Settings2 } from 'lucide-react';
+import { Bot, ClipboardCheck, KeyRound, Settings2 } from 'lucide-react';
 import {
   IntegrationProvider,
   IntegrationStats,
@@ -13,6 +13,8 @@ interface IntegrationHeaderProps {
   selectedCategoryId: string;
   stats?: IntegrationStats;
   onCategoryChange: (id: string) => void;
+  /** Proposed changes waiting for a decision, shown as a count on the tab. */
+  pendingReviewCount?: number;
 }
 
 const formatCategorySync = (stats?: IntegrationStats) => {
@@ -26,7 +28,7 @@ const getCategoryStatus = (stats?: IntegrationStats) => {
   return 'Not synced';
 };
 
-export function IntegrationHeader({ provider, selectedCategoryId, stats, onCategoryChange }: IntegrationHeaderProps) {
+export function IntegrationHeader({ provider, selectedCategoryId, stats, onCategoryChange, pendingReviewCount = 0 }: IntegrationHeaderProps) {
   const automationCategoryIds = getPortalAutomationCategoryOptions(provider.categoryIds);
 
   return (
@@ -34,7 +36,7 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{provider.name} Integration</h2>
-          <p className="text-gray-500">Manage spreadsheet imports and field mapping for {provider.name}</p>
+          <p className="text-gray-500">Review proposed {provider.name} policy updates, and configure how they are collected</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-[250px]">
@@ -64,8 +66,13 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
           value="upload"
           className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
         >
-          <UploadCloud className="w-3.5 h-3.5" />
-          Upload & Sync
+          <ClipboardCheck className="w-3.5 h-3.5" />
+          Review
+          {pendingReviewCount > 0 && (
+            <span className="ml-1 rounded-full bg-purple-100 px-1.5 text-[11px] font-semibold text-purple-700">
+              {pendingReviewCount}
+            </span>
+          )}
         </TabsTrigger>
         <TabsTrigger
           value="setup"
