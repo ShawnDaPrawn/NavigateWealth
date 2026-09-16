@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialo
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna';
 import { FNACard, PublishFNADialog, ViewPublishedFNADialog } from '../modules/fna';
+import { isPortalAutomationCategoryId } from '@/shared/integrations/portal-categories';
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
 
 import { renderPolicyTables as renderPolicyTablesView } from './policyTables';
@@ -358,6 +359,17 @@ export function PolicyCategoryTab({
    * the queued run still stages into the same review step, so nothing is written
    * to the policy without review.
    */
+  /**
+   * Portal automation only runs for specific product subcategories. Legacy
+   * records still carry the parent category ('retirement_planning',
+   * 'investments') while being displayed in a child table, and the server
+   * rejects those outright — so offering them the control would only ever
+   * produce an error.
+   */
+  const canRefreshPolicy = (policy: PolicyRecord) =>
+    Boolean((policy as Record<string, unknown>).providerId) &&
+    isPortalAutomationCategoryId(String(policy.categoryId || ''));
+
   const handleRefreshPolicy = async (policy: PolicyRecord) => {
     const providerId = String((policy as Record<string, unknown>).providerId || '');
     const policyCategoryId = String(policy.categoryId || categoryId || '');
@@ -421,6 +433,7 @@ export function PolicyCategoryTab({
       setArchivingPolicy,
       setDeletingPolicy,
       handleRefreshPolicy,
+      canRefreshPolicy,
       refreshingPolicyId,
     });
 

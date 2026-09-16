@@ -50,6 +50,7 @@ interface RenderPolicyTablesArgs {
   setDeletingPolicy: Dispatch<SetStateAction<PolicyRecord | null>>;
   /** Refresh one policy from the provider portal; absent hides the control. */
   handleRefreshPolicy?: (policy: PolicyRecord) => void;
+  canRefreshPolicy?: (policy: PolicyRecord) => boolean;
   refreshingPolicyId?: string | null;
 }
 
@@ -66,6 +67,7 @@ export function renderPolicyTables({
   setArchivingPolicy,
   setDeletingPolicy,
   handleRefreshPolicy,
+  canRefreshPolicy,
   refreshingPolicyId,
 }: RenderPolicyTablesArgs) {
   if (categoryId === 'retirement_planning') {
@@ -94,6 +96,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="purple"
@@ -111,6 +114,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="green"
@@ -131,6 +135,7 @@ export function renderPolicyTables({
               onReinstate={handleReinstatePolicy}
               onDelete={setDeletingPolicy}
               onRefreshFromProvider={handleRefreshPolicy}
+              canRefreshPolicy={canRefreshPolicy}
               refreshingPolicyId={refreshingPolicyId}
               formatFieldValue={formatFieldValue}
               colorTheme="purple"
@@ -165,6 +170,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="blue"
@@ -183,6 +189,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="indigo"
@@ -201,6 +208,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="blue"
@@ -238,6 +246,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="amber"
@@ -255,6 +264,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="orange"
@@ -272,6 +282,7 @@ export function renderPolicyTables({
             onReinstate={handleReinstatePolicy}
             onDelete={setDeletingPolicy}
             onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
             refreshingPolicyId={refreshingPolicyId}
             formatFieldValue={formatFieldValue}
             colorTheme="amber"
@@ -293,6 +304,7 @@ export function renderPolicyTables({
       onReinstate={handleReinstatePolicy}
       onDelete={setDeletingPolicy}
       onRefreshFromProvider={handleRefreshPolicy}
+      canRefreshPolicy={canRefreshPolicy}
       refreshingPolicyId={refreshingPolicyId}
       formatFieldValue={formatFieldValue}
     />

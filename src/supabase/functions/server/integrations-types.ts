@@ -60,7 +60,7 @@ export interface KvPolicy {
   extractionHistory?: ExtractionHistoryEntry[];
   /** Compact snapshot of the most recent field mappings (for history comparison) */
   lastFieldMappingsSnapshot?: FieldMappingSnapshot[];
-  /** Schema field IDs that are locked from AI extraction overwrite */
+  /** Schema field IDs no automated source may overwrite (any source). */
   lockedFields?: string[];
   /**
    * Audit history for every automated change to this policy's data.

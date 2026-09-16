@@ -66,6 +66,12 @@ interface PolicyTableProps {
    * table still renders for categories where portal automation does not apply.
    */
   onRefreshFromProvider?: (policy: PolicyRecord) => void;
+  /**
+   * Whether THIS policy can be refreshed. Legacy records carry a parent
+   * category the portal cannot run for, so offering them the control would
+   * only ever produce an error.
+   */
+  canRefreshPolicy?: (policy: PolicyRecord) => boolean;
   /** Id of the policy whose refresh is currently being queued, if any. */
   refreshingPolicyId?: string | null;
   formatFieldValue: (field: SchemaField, value: unknown) => React.ReactNode;
@@ -108,6 +114,7 @@ export function PolicyTable({
   onReinstate,
   onDelete,
   onRefreshFromProvider,
+  canRefreshPolicy,
   refreshingPolicyId,
   formatFieldValue,
   colorTheme = 'purple',
@@ -359,24 +366,25 @@ export function PolicyTable({
                             <Button variant="ghost" size="sm" onClick={() => onEdit(policy)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            {onRefreshFromProvider && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                onClick={() => onRefreshFromProvider(policy)}
-                                disabled={refreshingPolicyId === policy.id}
-                                title="Refresh this policy's values from the provider portal"
-                              >
-                                <RefreshCw
-                                  className={
-                                    refreshingPolicyId === policy.id
-                                      ? 'h-4 w-4 animate-spin'
-                                      : 'h-4 w-4'
-                                  }
-                                />
-                              </Button>
-                            )}
+                            {onRefreshFromProvider &&
+                              (!canRefreshPolicy || canRefreshPolicy(policy)) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => onRefreshFromProvider(policy)}
+                                  disabled={refreshingPolicyId === policy.id}
+                                  title="Refresh this policy's values from the provider portal"
+                                >
+                                  <RefreshCw
+                                    className={
+                                      refreshingPolicyId === policy.id
+                                        ? 'h-4 w-4 animate-spin'
+                                        : 'h-4 w-4'
+                                    }
+                                  />
+                                </Button>
+                              )}
                             <Button
                               variant="ghost"
                               size="sm"

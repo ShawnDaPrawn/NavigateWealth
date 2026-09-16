@@ -119,14 +119,29 @@ app.post('/portal-jobs', requireAdmin, async (c) => {
     }
 
     // Optional scope: refresh ONE policy (or a few) instead of the provider's
-    // whole book for this category. Absent means every eligible policy, which
+    // whole book for this category. ABSENT means every eligible policy, which
     // is what every caller did before per-policy refresh existed.
+    //
+    // Supplied-but-unusable must NOT fall back to "everything". A malformed
+    // single-policy refresh would otherwise sweep the provider's whole book,
+    // and with auto-publish on that writes to every matched policy. Fail closed.
+    const policyIdsSupplied = body?.policyIds !== undefined && body?.policyIds !== null;
     const requestedPolicyIds = Array.isArray(body?.policyIds)
       ? (body.policyIds as unknown[])
           .map((id) => String(id || '').trim())
           .filter(Boolean)
           .slice(0, 200)
       : [];
+
+    if (policyIdsSupplied && requestedPolicyIds.length === 0) {
+      return c.json(
+        {
+          error:
+            'policyIds was supplied but contained no usable policy id. Omit it to refresh every policy for this provider and category.',
+        },
+        400,
+      );
+    }
 
     const runMode = normaliseRunMode(body?.runMode);
     const requestedPolicySchedule = normalisePolicyScheduleConfig(

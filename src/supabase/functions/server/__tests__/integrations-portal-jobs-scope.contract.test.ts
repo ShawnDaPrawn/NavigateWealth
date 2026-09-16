@@ -137,10 +137,32 @@ describe('portal job scope — absent policyIds keeps the old behaviour', () => 
     expect(runtime.dispatch).toHaveBeenCalledTimes(1);
   });
 
-  it('treats an empty array the same as no scope at all', async () => {
+  it('refuses a supplied-but-empty scope rather than widening it to everything', async () => {
+    // Failing closed matters here: an empty scope that fell back to "the whole
+    // book" would turn a malformed single-policy refresh into a sweep, and with
+    // auto-publish on that writes to every matched policy.
     seedThreePolicies();
-    const body = await (await createJob({ policyIds: [] })).json();
-    expect(body.job.queueSummary.total).toBe(3);
+    const response = await createJob({ policyIds: [] });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain('no usable policy id');
+    expect(runtime.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a scope of the wrong shape rather than widening it', async () => {
+    seedThreePolicies();
+    const response = await createJob({ policyIds: 'pol-1' });
+
+    expect(response.status).toBe(400);
+    expect(runtime.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a scope whose every entry normalises away', async () => {
+    seedThreePolicies();
+    const response = await createJob({ policyIds: ['', '   ', null] });
+
+    expect(response.status).toBe(400);
+    expect(runtime.dispatch).not.toHaveBeenCalled();
   });
 });
 

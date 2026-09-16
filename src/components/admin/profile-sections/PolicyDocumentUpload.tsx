@@ -4,7 +4,8 @@
  * Allows attaching a single policy document (PDF) to a policy line item.
  * One-active-doc-per-policy: uploading a new file replaces the previous one.
  * Phase 2: AI-powered extraction with review panel and field application.
- * Field locking: fields can be locked to prevent AI extraction overwrite.
+ * Field locking: a locked field is never overwritten by ANY automated source
+ * — document extraction, provider portal runs or spreadsheet uploads alike.
  *
  * Only available when editing an existing policy (needs a saved policy ID).
  */
@@ -386,7 +387,7 @@ export function PolicyDocumentUpload({
         toast.success(
           isCurrentlyLocked
             ? 'Field unlocked — AI extraction can now overwrite this value'
-            : 'Field locked — protected from AI extraction overwrite',
+            : 'Field locked — no automated source may overwrite it',
         );
       } catch (err: unknown) {
         console.error(`Error ${action}ing field:`, err);

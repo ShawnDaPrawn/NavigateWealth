@@ -485,7 +485,10 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
 
 /**
  * POST /policy-extraction/lock-fields
- * Lock or unlock schema fields to protect them from AI extraction overwrite.
+ * Lock or unlock schema fields. A locked field is never overwritten by any
+ * automated source — this route's own extraction, provider portal runs, or
+ * spreadsheet uploads. The scope is deliberately universal: a partial lock is
+ * worse than none, because an adviser cannot tell which sources it stopped.
  * Body: { policyId, clientId, fieldIds: string[], action: 'lock' | 'unlock' }
  */
 app.post('/policy-extraction/lock-fields', requireAuth, async (c) => {
