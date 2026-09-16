@@ -25,6 +25,7 @@ that change only when the design changes.
 - [`build-and-seo.md`](architecture/build-and-seo.md) — what `npm run build` does, the environment variable model, feature flags
 - [`provider-portal-worker.md`](architecture/provider-portal-worker.md) — the Playwright worker, its secrets, and debugging
 - [`provider-automation-golden-flows.md`](architecture/provider-automation-golden-flows.md) — protected regression flows for provider automation
+- [`provider-integration-reassessment.md`](architecture/provider-integration-reassessment.md) — why portal automation works only for Allan Gray, and the proposed rebuild (a proposal, with its open questions listed; not a decision record)
 - [`openclaw-gateway.md`](architecture/openclaw-gateway.md) — the OpenClaw gateway contract and capability model
 
 **`runbooks/`** — how to operate, verify or repair something that is running.

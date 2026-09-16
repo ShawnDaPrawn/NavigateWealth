@@ -24,6 +24,7 @@ import {
   normaliseDocumentArtifactConfigs,
   normalisePortalCredentialProfiles,
 } from './integrations-portal-flow-config.ts';
+import { normalisePortalAgentConfig } from './integrations-portal-agent.ts';
 import type { KvProvider } from './integrations-types.ts';
 import type { IntegrationSyncRun } from './integrations-core-types.ts';
 import type { PortalProviderFlow, PortalSyncJob } from './integrations-portal-types.ts';
@@ -110,6 +111,7 @@ export async function getPortalFlow(provider: KvProvider, providerId: string, ca
     },
     policySchedule: normalisePolicyScheduleConfig(configured.policySchedule, defaultFlow.policySchedule),
     documentArtifacts: normaliseDocumentArtifactConfigs(configured.documentArtifacts, defaultFlow.documentArtifacts || []),
+    agent: normalisePortalAgentConfig(configured.agent, defaultFlow.agent),
   };
 }
 

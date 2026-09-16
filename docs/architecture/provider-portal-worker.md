@@ -292,3 +292,81 @@ Supported policy list step actions are:
 ```
 
 Other supported actions: `goto`, `fill`, `press`, and `wait_for_url`.
+
+## The navigator agent
+
+The selector walk asks "which element matches my configured selector?". The
+navigator asks "given this page and this goal, what should I do next?", does
+one action, looks again, and repeats. It exists because the selector-driven
+engine only ever worked for the one provider that also had a hand-written
+adapter, and because there was nowhere to put provider knowledge except more
+selectors.
+
+It drives three post-login stages, each with its own goal:
+
+| Stage                  | Goal                                                      |
+| ---------------------- | --------------------------------------------------------- |
+| `pass_auth_checkpoint` | Get through the OTP or push-approval step into the portal |
+| `find_policy`          | Search by policy number and open that policy's page       |
+| `confirm_policy`       | Confirm the open page is the requested policy             |
+
+### Turning it on
+
+Off by default. A provider opts in through its portal flow:
+
+```json
+{
+  "agent": {
+    "enabled": true,
+    "maxStepsPerStage": 12,
+    "recordPlaybook": true,
+    "replayPlaybook": true
+  }
+}
+```
+
+The backend also needs a Google AI key — the same
+`NW_GOOGLE_AI_API_KEY` the existing smart assist uses. `NW_PORTAL_AGENT_MODEL`
+overrides the model for this feature alone, and `NW_PORTAL_AGENT_ENABLED=0` is
+the kill switch.
+
+Enabling the navigator can only add a way to succeed. If it gets stuck or
+exhausts its step budget, the run falls back to the configured selector walk,
+which is why Allan Gray is unaffected: its flow does not opt in, and even if it
+did, the existing path is still there underneath.
+
+### Playbooks
+
+A stage that succeeds is written to `portal-playbook:{providerId}:{categoryId}`
+as an ordered list of steps with durable selectors. The next run replays those
+directly, with no model calls, and hands back to the navigator from the first
+step that no longer matches. So the model is paid for once per provider rather
+than once per policy per month, and a portal redesign degrades to "the agent
+re-derives that step" instead of "the provider is broken".
+
+### What keeps it safe
+
+- **Credentials never reach the model.** An action carries a `valueRef`
+  (`username`, `password`, `policy_number`), not a value; the worker
+  substitutes locally. A model-authored literal aimed at a password field is
+  refused server-side.
+- **It cannot invent a target.** Observed elements are tagged in the DOM and
+  actions address those tags. A candidate id the worker did not report is
+  rejected before it reaches the browser.
+- **It cannot leave the provider's site.** A `goto` to another host is refused.
+- **It is read-only by construction.** The action set has no way to submit an
+  instruction or move money, and the prompt says so.
+- **It cannot spend without limit.** `maxStepsPerStage` bounds a stage;
+  `NW_PORTAL_AGENT_JOB_BUDGET` (default 200 decisions) bounds a whole job
+  across its queue. Decisions are counted before the call, since a failed paid
+  call still costs.
+- **Observations are redacted** with the same rules the existing brain uses,
+  and element values are never observed — only what a control is.
+
+### Watching it work
+
+Every navigator action is logged and published to the live view as it happens,
+so the Portal Automation screen shows the reasoning as the run moves. Failures
+carry the navigator's own stated reason rather than a selector timeout, which
+is the difference between "could not confidently find the provider search box"
+and "the page is asking to approve a sign-in in an authenticator app".

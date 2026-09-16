@@ -205,6 +205,13 @@ export interface PortalProviderFlow {
   };
   policySchedule?: PortalPolicyScheduleConfig;
   documentArtifacts?: PortalDocumentArtifactConfig[];
+  /**
+   * Navigator agent: when enabled, a goal-driven loop drives the post-login
+   * stages (auth checkpoint, policy search, policy confirmation) instead of
+   * the selector walk, and records what worked as a replayable playbook.
+   * Off by default so existing provider flows are unchanged.
+   */
+  agent?: PortalAgentConfig;
   notes: string[];
   needsDiscovery?: boolean;
   updatedAt: string;
@@ -410,4 +417,92 @@ export interface PortalDiscoveryReport {
     rowCount: number;
   }>;
   warnings: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Navigator agent (see integrations-portal-agent.ts)
+// ---------------------------------------------------------------------------
+
+/** Post-login stages the navigator can be asked to drive. */
+export type PortalAgentStage = 'pass_auth_checkpoint' | 'find_policy' | 'confirm_policy';
+
+/** Browser actions the navigator may emit. Read-only by construction. */
+export type PortalAgentActionKind =
+  | 'click'
+  | 'fill'
+  | 'select'
+  | 'press'
+  | 'goto'
+  | 'wait'
+  | 'await_otp'
+  | 'await_push_approval'
+  | 'done'
+  | 'stuck';
+
+/**
+ * What a `fill` should type. The model names a reference, never a value —
+ * the worker substitutes locally so credentials never reach the model.
+ */
+export type PortalAgentValueRef = 'policy_number' | 'username' | 'password' | 'literal' | 'none';
+
+export interface PortalAgentConfig {
+  enabled: boolean;
+  goal?: string;
+  maxStepsPerStage: number;
+  recordPlaybook: boolean;
+  replayPlaybook: boolean;
+}
+
+/** One interactive element the worker saw, described without its value. */
+export interface PortalAgentCandidate {
+  candidateId: string;
+  tag: string;
+  type?: string;
+  role?: string;
+  name?: string;
+  id?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+  text?: string;
+  nearbyText?: string;
+  disabled?: boolean;
+}
+
+export interface PortalAgentObservation {
+  url: string;
+  title: string;
+  heading: string;
+  pageTextSample: string;
+  candidates: PortalAgentCandidate[];
+}
+
+export interface PortalAgentAction {
+  action: PortalAgentActionKind;
+  candidateId: string | null;
+  valueRef: PortalAgentValueRef;
+  literalValue: string;
+  key: string;
+  url: string;
+  confidence: 'high' | 'medium' | 'low';
+  reason: string;
+}
+
+/** A step worth replaying on the next run for this provider. */
+export interface PortalAgentPlaybookStep {
+  action: PortalAgentActionKind;
+  selector: string;
+  valueRef: PortalAgentValueRef;
+  note: string;
+}
+
+export interface PortalAgentPlaybook {
+  providerId: string;
+  categoryId: string;
+  updatedAt: string;
+  stages: Partial<Record<PortalAgentStage, PortalAgentPlaybookStep[]>>;
+  stats: {
+    recordedRuns: number;
+    replayedRuns: number;
+    repairedSteps: number;
+  };
 }
