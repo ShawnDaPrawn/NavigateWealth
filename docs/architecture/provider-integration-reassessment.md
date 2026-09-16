@@ -32,7 +32,8 @@ for the search box and the result row. Allan Gray works because it has a
 407-line hand-written adapter that does pixel-geometry extraction. Nothing
 else has an equivalent, and the generic path has smart assist switched off.
 
-Three structural fixes, in order, will get provider updates working:
+Three structural fixes will get provider updates working. Section 6 puts them
+in a shippable order:
 
 1. **Make the brain drive the run.** Replace the selector walk with a
    goal-driven browser agent that observes the page, decides the next action,
@@ -45,9 +46,14 @@ Three structural fixes, in order, will get provider updates working:
    per-policy Refresh), and a Review queue. Retire flows, selectors, mappings,
    bindings, run modes and discovery reports from the adviser's view.
 
-Alongside this, evaluate a commercial data feed (Astute FSE in South Africa)
-for the large life and investment houses. If it covers most of the sixteen
-providers, portal scraping becomes the exception rather than the strategy.
+A commercial data feed was considered and ruled out. Portal automation is
+therefore the only channel, which raises the bar: the module has to become a
+provider **onboarding system**, not a scraper. Two consequences run through
+the plan below. Adding a provider must stop being an engineering task and
+become something an adviser does by logging in once while the agent watches.
+And every provider needs a defined path even when its portal cannot be
+automated, so the statement-upload fallback becomes load-bearing rather than
+a side feature.
 
 ---
 
@@ -225,7 +231,8 @@ replay deterministically for speed and cost. When a replay step fails (the
 portal changed), the agent takes over from that step, and the playbook is
 patched. This is the standard self-healing pattern in current browser-agent
 tooling and it is the only approach that scales to sixteen portals without
-sixteen adapters.
+sixteen adapters. With no data feed behind it, that scaling property is not
+an optimisation; it is the whole plan.
 
 Concretely, one run becomes:
 
@@ -263,6 +270,14 @@ Gemini wired in. Use one per-feature env override, as `ai-model-config.ts`
 already provides, so the agent model can be changed without touching the rest
 of the product.
 
+**Cost shape.** The playbook exists so that model spend is paid once per
+provider, not once per policy per month. A first (recording) run costs one
+model call per browser action across login, search and confirmation. A replay
+run costs none of those, and one extraction call per policy. Steady state is
+therefore roughly one call per policy refreshed, with agent calls only when a
+portal changes. If a provider's playbook keeps failing, that is a signal to
+re-tier it (Section 4), not to raise the budget.
+
 ### 3.2 Runtime: persistent worker and persistent sessions
 
 - Run the worker as a long-lived polling process on a small container host
@@ -284,15 +299,21 @@ of the product.
 - Respect locked fields for every source. Remove the `source !== 'portal'`
   exception.
 - Add an "observed values" record shape that every source produces (portal,
-  statement PDF, spreadsheet, future data feed) so the review queue is one
-  screen regardless of origin.
+  statement PDF, spreadsheet) so the review queue is one screen regardless of
+  origin. This is what lets a Tier C provider (Section 4) feel identical to a
+  Tier A one from the adviser's side: same review, same audit trail, only the
+  source label differs.
 
 ### 3.4 The adviser-facing model: three screens
 
-1. **Connections.** One card per provider: connected / needs sign-in /
-   needs OTP / error, last refresh, a Connect button that opens a guided
-   sign-in (the agent drives, the adviser only supplies an OTP or taps a
-   push approval when asked). No selectors, no flows, no run modes.
+1. **Connections.** One card per provider: how it updates (Section 4's tier,
+   in plain words: "updates on its own", "needs you to approve a sign-in",
+   "upload a statement"), connection state, last refresh, and a Connect
+   button that opens a guided sign-in. In that guided sign-in the agent
+   drives and records the playbook; the adviser only supplies an OTP or taps
+   a push approval when asked. No selectors, no flows, no run modes. This
+   screen is how a new provider gets onboarded, which is why it replaces the
+   Provider Setup tab rather than simplifying it.
 2. **Policies.** On every policy in the client profile and in a provider
    list: last refreshed, a Refresh button, and a schedule (weekly, monthly,
    off). Refresh queues a single-policy job.
@@ -320,48 +341,129 @@ flow keys the worker never reads (`otp.mode`, `search.mode`,
 
 ---
 
-## 4. The alternative to scraping: a data feed
+## 4. Coverage: every provider gets a defined path
 
-Several of the sixteen providers are large life and investment houses. In
-South Africa, Astute Financial Services Exchange sells adviser-facing policy
-and portfolio data feeds across many of them, licensed to an FSP. If the firm
-can subscribe, the majority of value refreshes become an API call, and portal
-automation is reserved for the providers a feed does not cover (the smaller
-risk and estate providers such as BrightRock and Capital Legacy). Coverage,
-cost and onboarding time must be confirmed commercially. This is a business
-decision, not an engineering one, but it should be made before the agent work
-is scoped, because it changes which providers the agent must handle first.
+With no feed, the honest position is that some of the sixteen portals will
+not be fully automatable. A plan that assumes all sixteen will work ends the
+same way the current module did: two providers running and the rest in a
+permanent "needs discovery" state. So each provider is assigned a **tier**,
+the tier is visible on its Connection card, and every tier delivers a working
+update path.
+
+| Tier               | How it updates                                                                          | Adviser effort                  |
+| ------------------ | --------------------------------------------------------------------------------------- | ------------------------------- |
+| **A — unattended** | Saved session plus playbook replay on a schedule                                        | None until the session expires  |
+| **B — attended**   | Adviser opens the connection, approves the OTP or push, the agent does the rest         | One approval per refresh cycle  |
+| **C — document**   | Adviser uploads the latest statement; AI extraction reads it into the same review queue | One upload per policy per cycle |
+
+A provider moves between tiers as evidence arrives. A provider whose portal
+presents a hard bot challenge on every login, or offers no policy-number
+search at all, is Tier C and that is a finished answer, not a backlog item.
+Capital Legacy is the live example: the worker already fails there on a
+Cloudflare challenge (`login.mjs:101-107`), and no amount of selector work
+changes that.
+
+**On being blocked.** The adviser has legitimate credentials for every one of
+these portals, and the work is reading their own clients' data. The posture
+should nonetheless be that of a well-behaved client rather than an arms race:
+run at human-like rates, reuse a stored session instead of hammering the
+login page, identify the traffic honestly, and stay within whatever each
+provider's portal terms allow. Where a provider blocks or forbids automated
+access, the answer is to re-tier that provider to C and, if the volume
+justifies it, to ask the provider for a proper feed. The answer is not
+CAPTCHA-solving services or fingerprint evasion. Those raise legal and FSP
+compliance exposure that is out of proportion to refreshing a policy value,
+and they break on the next portal change anyway.
+
+**Provider terms are worth one check.** Automated access under an adviser's
+own credentials may or may not be permitted by each portal's terms. That is
+a question for the firm, not for this document, but it should be answered
+before Tier A is switched on for a provider rather than after.
 
 ---
 
-## 5. Phased plan
+## 5. Risks this plan carries
 
-Each phase is shippable on its own and leaves Allan Gray working.
+Naming these now because a single-channel strategy has no fallback when one
+of them bites.
 
-| Phase | Deliverable                                                                                                                                                                                                      | Effort | What it proves                                            |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------- |
-| 0     | This document. Decide feed vs scrape per provider. Pick the first two non-Allan-Gray providers by policy count.                                                                                                  | S      | Scope                                                     |
-| 1     | Persistent worker on a container host. Encrypted `storageState` per provider. Resumable items. Re-readable OTP.                                                                                                  | M      | Allan Gray refreshes without a fresh OTP; no cold start   |
-| 2     | Promote `/page-extract` to primary extraction for non-adapter providers, behind a per-provider flag. Field-semantics validation unchanged.                                                                       | S      | Values come from page text, not `<td>` adjacency          |
-| 3     | Agent loop for login, checkpoint, search and confirm. Playbook record and replay. Generic providers get smart assist by default. Allan Gray stays on its adapter, compared against the agent on the golden flow. | L      | The two chosen providers stage correct rows               |
-| 4     | One pipeline: Document AI through staging; locked fields universal; observed-values record. Per-policy refresh job.                                                                                              | M      | Review queue is one screen                                |
-| 5     | New UI: Connections, Policies refresh, Review. Delete the four tabs and the delete list.                                                                                                                         | L      | Adviser path is under five clicks with no technical input |
-| 6     | Retire the Allan Gray adapter once the agent matches the golden flow. Add golden flows for each live provider.                                                                                                   | S      | One engine, no provider branches                          |
-
-Phases 1 and 2 are low risk and can start immediately; they do not touch the
-adviser UI and they make the current Allan Gray flow more reliable. Phase 3
-is where the module changes shape and where the first real BrightRock and
-Capital Legacy runs should be attempted.
+- **Credential custody.** Sixteen sets of adviser portal credentials, plus
+  sixteen saved browser sessions, at rest in Supabase. A saved session is a
+  bearer token: whoever holds it is logged in. These need encryption at rest
+  with a key the application holds rather than the database, per-provider
+  scoping, rotation on adviser departure, and an audit trail of every use.
+  Treat a session store leak as equivalent to a credential leak.
+- **The worker becomes a single point of failure.** One long-lived process
+  now owns every provider refresh. It needs health checks, automatic restart,
+  and an alert when the claim loop stops, or refreshes silently stop and
+  nobody notices. The current GitHub Actions design at least fails loudly.
+- **Silent staleness.** The worst outcome is a policy value that looks
+  current and is not. Every policy carries a "last verified" timestamp, the
+  Connections screen shows the oldest, and a failed refresh marks the
+  connection as needing attention rather than leaving the last-known value
+  looking fresh.
+- **Portal change.** Playbook replay fails, the agent repairs it, and if the
+  agent cannot, the connection is flagged and the provider falls back to its
+  next tier for that cycle. This is the designed failure mode and it should
+  be exercised deliberately before it happens by accident.
+- **Model dependence.** Extraction and navigation both depend on a third-party
+  model. The per-feature env override keeps the blast radius to this module,
+  and `field-semantics.mjs` stays as the deterministic guard on any value the
+  model proposes.
 
 ---
 
-## 6. Decisions needed
+## 6. Phased plan
 
-1. **Feed or scrape** for the large providers (Section 4). Worth one
-   conversation with Astute before scoping Phase 3.
-2. **Hosting for a persistent worker.** A small always-on container, roughly
-   the cost of a coffee a month, versus staying on GitHub Actions.
-3. **First two target providers** after Allan Gray. BrightRock and Capital
-   Legacy already have partial adapters, but policy count should decide.
-4. **Approval to remove the configuration UI** (Section 3.5) rather than
-   keep it alongside the new screens.
+Each phase is shippable on its own and leaves Allan Gray working. The order
+changed from the earlier draft: because there is no feed, the phases that
+give the thirteen currently-dead providers _some_ working path now come
+before the agent work.
+
+| Phase | Deliverable                                                                                                                      | Effort | What it proves                                                          |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| 0     | Assign every provider a starting tier from policy count and a single manual login attempt. No code.                              | S      | Where the value actually is                                             |
+| 1     | Persistent worker on a container host. Encrypted saved sessions per provider. Resumable items. Re-readable OTP. Health alerting. | M      | Allan Gray refreshes without a fresh OTP; no cold start                 |
+| 2     | Promote `/page-extract` to primary extraction behind a per-provider flag. Field semantics unchanged.                             | S      | Values come from page text, not `<td>` adjacency                        |
+| 3     | One pipeline: Document AI through staging, locked fields universal, observed-values record, per-policy refresh job.              | M      | **Every provider has a working path today**, via Tier C if nothing else |
+| 4     | Agent loop for login, checkpoint, search and confirm. Playbook record and replay. Guided Connect flow.                           | L      | A provider is onboarded without an engineer                             |
+| 5     | The three screens. Delete the four tabs and the delete list in 3.5.                                                              | L      | Adviser path is under five clicks with no technical input               |
+| 6     | Retire the Allan Gray adapter once the agent matches the golden flow. A golden flow per live provider.                           | S      | One engine, no provider branches                                        |
+
+Phase 3 is the one that changed position, and it is the most valuable early
+move now. The AI document-extraction path already works; it only bypasses
+staging and review (`integrations-policy-extraction-routes.ts:392-446`).
+Routing it through the same staging and review path turns it into a genuine
+fallback, which means every provider in the book has a supported way to be
+updated before any agent work ships.
+
+Phases 1 and 2 remain low risk, touch no adviser-facing screen, and can start
+immediately.
+
+### Success measures
+
+The plan is working if these move. They are worth recording before Phase 1 so
+there is a baseline.
+
+| Measure                                              | Today                        |
+| ---------------------------------------------------- | ---------------------------- |
+| Providers with a working update path                 | 1 of 16 (plus manual upload) |
+| Engineer time to onboard a new provider              | Days, if it works at all     |
+| Scheduled refreshes completing without a human touch | Effectively none             |
+| Logins (and OTPs) per refresh cycle per provider     | One per run                  |
+
+---
+
+## 7. Decisions needed
+
+1. **Hosting for a persistent worker.** A small always-on container versus
+   staying on GitHub Actions. This blocks Phase 1, which blocks everything
+   else.
+2. **Credential and session custody.** Where the sixteen credential sets and
+   saved sessions live, who may use them, and what the firm's compliance
+   position is on storing them. This is an FSP governance question as much as
+   an engineering one, and Phase 1 creates the session store.
+3. **First providers and their tiers.** Phase 0's output. Policy count should
+   decide, not which adapters happen to exist.
+4. **Approval to remove the configuration UI** (Section 3.5) rather than keep
+   it running alongside the new screens.
