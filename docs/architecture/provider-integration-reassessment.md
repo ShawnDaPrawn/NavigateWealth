@@ -4,13 +4,20 @@
 **Scope:** The product-integration module: the admin Integrations UI, the
 `integrations-*` server routes, the Playwright portal worker, and the sync
 engine that turns staged rows into policy updates.
-**Status:** Assessment and proposal. Nothing in this document is landed.
+**Status:** Assessment and proposal, not a decision record. Nothing in this
+document is landed, and the four questions in Section 6 are still open. When
+they close, the outcome gets its own file under `docs/decisions/`.
 
 **Method:** Every claim below is grounded in the code on `main` at the time
 of writing, with file references. Two full read-throughs were done: one of the
 worker pipeline (`scripts/portal-worker/`, `scripts/provider-adapters/`,
 `portal-default-flows.ts`, the brain and job routes) and one of the admin UI
-and the server route surface it calls.
+and the server route surface it calls. Where the text describes a provider's
+flow, it describes the **shipped default** from `portal-default-flows.ts`.
+Saved production flows in KV were not inspected; `getPortalFlow` merges a
+saved flow over the default, and the Setup tab can persist a different
+smart-assist setting and field mapping. Claims that depend on that are
+marked as such.
 
 ---
 
@@ -84,10 +91,16 @@ worker distinguishes exactly four cases (`portal-default-flows.ts:31-39`):
 | Allan Gray      | `allan-gray.mjs` (407 l.)     | on           | adapter pixel-geometry snapshot             | Works; protected golden                       |
 | BrightRock      | `brightrock.mjs` (243 l.)     | **off**      | adapter grid geometry, no fail-closed check | OTP choreography broken, lives in shared code |
 | Capital Legacy  | `capital-legacy.mjs` (403 l.) | on           | adapter tab navigation                      | Untested; no golden flow                      |
-| Everything else | none                          | **off**      | `extraction.fields: []`                     | Cannot pass search                            |
+| Everything else | none                          | **off**      | `extraction.fields: []`                     | Not runnable as shipped                       |
+
+"Smart assist" and "Extraction" describe the shipped defaults. An admin can
+turn smart assist on in the Setup tab (`ProviderSetupTab.tsx:300`) and a
+saved field mapping supplies extraction fields (`extraction.mjs:228-238`),
+so a configured provider may not match this row. The walls in Section 1.5
+do not depend on that configuration.
 
 The "generic provider" is therefore not a working default. It has no login
-URL, no fields, no adapter, and no AI.
+URL, no fields, no adapter, and no AI until someone configures each of them.
 
 ### 1.4 What the "brain" really does
 
@@ -97,8 +110,9 @@ from up to twenty sanitised candidates for exactly two decisions, "which input
 is the search box" and "which row is the result". The worker calls it **only in
 the catch block** after the deterministic selector walk has thrown
 (`search.mjs:776-783`), and only when the flow has `brain.enabled: true`,
-which is false for BrightRock and for the generic template
-(`portal-default-flows.ts:209,420`).
+which the shipped defaults set to false for BrightRock and for the generic
+template (`portal-default-flows.ts:209,420`). The Setup tab can persist it
+as true for a saved flow.
 
 Every other stage has no AI at all: login form detection, Cloudflare handling,
 the entire OTP and push-approval flow (regex over `body.innerText`,
@@ -127,9 +141,11 @@ The concrete walls, in the order a new provider hits them:
 3. **BrightRock's SMS choreography applies to everyone.**
    `waitForBrightRockOtpDeliveryProgress` and the delivery-choice logic run
    for every provider (`otp.mjs:528,751`). The module header admits this.
-4. **Search box ambiguity with the brain off.** `findInputByIntent` needs
-   exactly one candidate input (`search.mjs:617`). Two filters on a dashboard
-   is a hard failure, and for a generic provider the brain never gets asked.
+4. **Search box ambiguity.** `findInputByIntent` needs exactly one
+   candidate input (`search.mjs:617`). Two filters on a dashboard is a hard
+   failure. With the shipped default, a generic provider's brain is off and
+   never gets asked; with it on, the brain still only picks among the
+   candidates the same walk produced.
 5. **Policy-number-only search.** `openPolicySearchResult` requires the
    policy number to appear literally in a result row (`search.mjs:737`).
    Portals that search by client ID number or surname cannot pass.
@@ -218,16 +234,25 @@ goal: "Log in to {provider}. Find policy {number} for {client}. Read {fields}.
        Download the latest statement if one is offered."
 
 loop:
-  observe  = accessibility tree + screenshot + URL (redacted per current rules)
+  observe  = accessibility tree + visible text + URL, redacted with the
+             existing sanitiseBrainSnapshot / redactBrainText rules
   decision = model(goal, observe, playbook step if any, history)
            → { action: click|fill|select|press|goto|wait|ask_user_for_otp|done|stuck, target, value }
   act, record
 until done | stuck | budget
 ```
 
-The model sees the same redacted snapshot the brain already receives, so the
-privacy posture does not change. The existing `field-semantics.mjs` rules stay
-as the validator on extracted values. Allan Gray keeps its adapter until the
+**Privacy.** The observation is text-only by design, so the model receives
+the same class of redacted input the brain and the page-extract route already
+receive. Screenshots are **not** sent to the model in this proposal. Nothing
+in the current code redacts image pixels: `page.screenshot()` and the live
+view upload raw frames to Supabase Storage for the adviser's eyes, not to a
+model. If a later phase wants vision input (some portals render values in
+canvases or images), that is a change in data-processing posture and needs
+its own design: pixel-level masking of client identifiers and amounts before
+upload, a retention rule, and a note in the POPIA processing record. It is
+out of scope here. The existing `field-semantics.mjs` rules stay as the
+validator on extracted values. Allan Gray keeps its adapter until the
 agent path matches it on the golden flow, then the adapter is retired.
 
 Extraction becomes the existing `/page-extract` LLM route, promoted from
@@ -272,8 +297,9 @@ of the product.
    list: last refreshed, a Refresh button, and a schedule (weekly, monthly,
    off). Refresh queues a single-policy job.
 3. **Review.** One queue of proposed changes from all sources, showing
-   current value, proposed value, source and evidence (screenshot crop or
-   statement page). Approve, reject, or lock.
+   current value, proposed value, source and evidence (a page snapshot or
+   statement page, stored in Supabase Storage for the adviser and never sent
+   to a model). Approve, reject, or lock.
 
 Everything in the current four tabs that is not one of those three concepts
 becomes either automatic (playbooks, bindings inferred from schema semantics)
