@@ -4,10 +4,13 @@
  *   GET  /newsletter-intake/lists   — the audience ids a routine may name
  *   POST /newsletter-intake/submit  — multipart PDF + title + description → draft
  *
- * Auth: dedicated NW_NEWSLETTER_INTAKE_TOKEN (x-nw-newsletter-intake-token)
- * or the shared cron token / service-role fallback from cron-auth.ts — the
- * goaml-digest precedent. Kept in its own router so this machine gate can
- * never leak onto the admin studio routes.
+ * Auth, in order: the `x-nw-newsletter-intake-token` header against the
+ * NW_NEWSLETTER_INTAKE_TOKEN env var (local-development override), then the
+ * same header against the Vault-held token through the boolean oracle in
+ * newsletter-intake-auth.ts (the production path — Edge Function secrets
+ * cannot be set or read from here, Vault can), then the shared cron token /
+ * service-role fallback from cron-auth.ts. Kept in its own router so this
+ * machine gate can never leak onto the admin studio routes.
  *
  * The routine's own environment may not be able to reach this endpoint at
  * all (docs/runbooks/newsletter-intake.md); the SQL path in
@@ -19,6 +22,7 @@ import { Hono } from 'npm:hono';
 import { asyncHandler, ValidationError } from './error.middleware.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { isAuthorizedCronRequest } from './cron-auth.ts';
+import { verifyNewsletterIntakeToken } from './newsletter-intake-auth.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { listAudienceLists } from './newsletter-studio-audience.ts';
@@ -40,6 +44,7 @@ app.use('*', async (c, next) => {
   if (expected !== '' && dedicated !== '' && constantTimeEqual(dedicated, expected)) {
     return next();
   }
+  if (dedicated !== '' && (await verifyNewsletterIntakeToken(dedicated))) return next();
   if (await isAuthorizedCronRequest(c)) return next();
   return c.json(
     {
