@@ -153,6 +153,9 @@ export function ProviderCredentialsSection({
                   : credentialsSaved
                     ? 'Saved credentials are locked. Open update mode only when you need to replace a saved value.'
                     : 'The first save requires both fields.'}
+                {!showCredentialSaveSuccess && (!credentialsSaved || isEditingCredentials)
+                  ? ' Saving credentials also saves the provider setup on this tab, because credentials attach to the selected credential profile.'
+                  : ''}
               </p>
               <div className="flex flex-wrap gap-2 sm:justify-end">
                 {credentialsSaved && !isEditingCredentials ? (

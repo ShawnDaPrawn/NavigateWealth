@@ -5,7 +5,6 @@ import {
   PreviewData,
   IntegrationSyncRun,
   PortalBrainMemorySummary,
-  PortalJobPolicyItem,
   PortalSyncJob,
   ProductCategoryId,
   getPortalAutomationCategoryOptions,
@@ -26,58 +25,6 @@ import { integrationsKeys } from '../../../../utils/queryKeys';
 import { useProductSchema } from './hooks/useProductSchema';
 import { useIntegrationsTabMutations } from './useIntegrationsTabMutations';
 import { buildIntegrationBindingsForFields } from '@/shared/integrations/binding-utils';
-
-const normalisePortalCategoryProbe = (value: unknown) =>
-  String(value ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-
-const recordHasRetirementAnnuityMarker = (record?: Record<string, unknown>) => {
-  if (!record) return false;
-  return Object.entries(record).some(([key, value]) => {
-    const text = `${normalisePortalCategoryProbe(key)} ${normalisePortalCategoryProbe(value)}`;
-    return /\bretirement\s+annuit/.test(text) || /\bretirement\s+annuity\s+fund\b/.test(text);
-  });
-};
-
-const syncRunHasRetirementAnnuityMarker = (run?: IntegrationSyncRun | null) =>
-  Boolean(
-    run?.rows?.some(
-      (row) =>
-        recordHasRetirementAnnuityMarker(row.rawData) ||
-        recordHasRetirementAnnuityMarker(row.mappedData) ||
-        row.diffs.some((diff) =>
-          recordHasRetirementAnnuityMarker({
-            fieldName: diff.fieldName,
-            oldValue: diff.oldValue,
-            newValue: diff.newValue,
-          }),
-        ),
-    ),
-  );
-
-const jobItemsHaveRetirementAnnuityMarker = (items?: PortalJobPolicyItem[] | null) =>
-  Boolean(
-    items?.some(
-      (item) =>
-        recordHasRetirementAnnuityMarker(item.rawData) ||
-        recordHasRetirementAnnuityMarker(item.extractedData),
-    ),
-  );
-
-const portalArtifactsMatchSelectedCategory = (
-  categoryId: string,
-  stagedRun?: IntegrationSyncRun | null,
-  items?: PortalJobPolicyItem[] | null,
-) => {
-  if (categoryId.startsWith('investments')) {
-    return (
-      !syncRunHasRetirementAnnuityMarker(stagedRun) && !jobItemsHaveRetirementAnnuityMarker(items)
-    );
-  }
-  return true;
-};
 
 export function IntegrationsTab() {
   const queryClient = useQueryClient();
@@ -278,21 +225,17 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchIntegrationSyncRun(stagedRunId!),
   });
 
-  const portalArtifactsMatchSelection = portalArtifactsMatchSelectedCategory(
-    selectedCategoryId,
-    portalStagedRun || stagedRunForSelection,
-    portalJobItemsData?.items || [],
-  );
   const stagedRunForSelectionIsLoaded =
     !portalJobForSelection?.stagedRunId ||
     (portalStagedRun !== undefined &&
       portalStagedRun?.id === portalJobForSelection.stagedRunId &&
       portalStagedRun.providerId === selectedProviderId &&
       portalStagedRun.categoryId === selectedCategoryId);
-  const visiblePortalJobForSelection =
-    portalArtifactsMatchSelection && stagedRunForSelectionIsLoaded ? portalJobForSelection : null;
-  const visibleStagedRunForSelection =
-    portalArtifactsMatchSelection && stagedRunForSelectionIsLoaded ? stagedRunForSelection : null;
+  // Category mismatch is enforced server-side on both the read path
+  // (`/portal-jobs/latest` answers with no job) and the publish path, so the
+  // client only has to wait for the staged run that belongs to this selection.
+  const visiblePortalJobForSelection = stagedRunForSelectionIsLoaded ? portalJobForSelection : null;
+  const visibleStagedRunForSelection = stagedRunForSelectionIsLoaded ? stagedRunForSelection : null;
 
   useEffect(() => {
     if (latestPortalJob === undefined) return;
@@ -344,12 +287,6 @@ export function IntegrationsTab() {
       return currentRun.updatedAt === portalStagedRun.updatedAt ? currentRun : portalStagedRun;
     });
   }, [portalStagedRun, selectedCategoryId, selectedProviderId]);
-
-  useEffect(() => {
-    if (portalArtifactsMatchSelection) return;
-    setPortalJob(null);
-    setStagedRun(null);
-  }, [portalArtifactsMatchSelection]);
 
   useEffect(() => {
     setPortalJob((currentJob) =>

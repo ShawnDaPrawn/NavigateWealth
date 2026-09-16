@@ -1,7 +1,6 @@
-import { Button } from '../../../../ui/button';
 import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Bot, History, KeyRound, UploadCloud, Settings2 } from 'lucide-react';
+import { Bot, KeyRound, UploadCloud, Settings2 } from 'lucide-react';
 import {
   IntegrationProvider,
   IntegrationStats,
@@ -57,10 +56,6 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
                 : `${getCategoryStatus(stats)} - Last sync: ${formatCategorySync(stats)}`}
             </p>
           </div>
-          <Button variant="outline">
-            <History className="w-4 h-4 mr-2" />
-            History
-          </Button>
         </div>
       </div>
 
