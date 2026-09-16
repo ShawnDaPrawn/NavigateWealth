@@ -2,24 +2,25 @@
  * newsletter-studio-render.ts — rendering contracts
  * =================================================
  *
- * The two properties campaigns cannot ship without:
+ * The properties a PDF newsletter email cannot ship without:
  *
- *   1. **The click-through can never become an open redirect.** Only URLs the
- *      author wrote (captured at queue time into `links`) are ever rewritten,
- *      and the redirect endpoint resolves link ids back to those stored URLs —
- *      so the URL space reachable through /track/click is exactly the authored
- *      set. Unsubscribe links are never routed through the tracker, or
- *      one-click unsubscribe would break.
- *
- *   2. **Merge fields are data, not markup.** Recipient names come from public
- *      signup forms; `{{name}}` must land HTML-escaped.
+ *   1. **Title and description are data, not markup.** Both come from an
+ *      admin form or a routine hand-over; they must land HTML-escaped.
+ *   2. **The only tracked link is the Read button**, on the apex-origin
+ *      click page, carrying campaign, token and the fixed `pdf` link id.
+ *   3. **The deliverability envelope** points one-click unsubscribe at the
+ *      server POST endpoint, never the SPA page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const email = vi.hoisted(() => ({
   createEmailTemplate: vi.fn(
-    (content: string, options?: { unsubscribeLink?: string }) =>
-      `<wrapped unsub="${options?.unsubscribeLink ?? ''}">${content}</wrapped>`,
+    (
+      content: string,
+      options?: { unsubscribeLink?: string; buttonUrl?: string; greeting?: string },
+    ) =>
+      `<wrapped unsub="${options?.unsubscribeLink ?? ''}" button="${options?.buttonUrl ?? ''}">` +
+      `${options?.greeting ?? ''}${content}</wrapped>`,
   ),
   createPlainTextEmail: vi.fn(
     (content: string, unsubscribeLink?: string) => `${content}\n[unsub:${unsubscribeLink ?? ''}]`,
@@ -34,138 +35,89 @@ vi.mock('../stderr-logger.ts', async () =>
 );
 
 import {
-  applyMergeFields,
   buildCampaignEmailHeaders,
   buildClickThroughUrl,
   buildOneClickUnsubscribeUrl,
+  buildReadUrl,
   buildUnsubscribeUrl,
-  extractCampaignLinks,
-  renderCampaignEmail,
-  rewriteLinksForRecipient,
-  personalizeText,
+  escapeHtml,
+  renderNewsletterEmail,
 } from '../newsletter-studio-render.ts';
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('extractCampaignLinks', () => {
-  it('captures unique http(s) hrefs in order with stable ids', () => {
-    const links = extractCampaignLinks(
-      `<a href="https://a.example/one">1</a>
-       <a href='https://b.example/two'>2</a>
-       <a href="https://a.example/one">again</a>`,
-    );
-    expect(links).toEqual([
-      { id: 'l1', url: 'https://a.example/one' },
-      { id: 'l2', url: 'https://b.example/two' },
-    ]);
-  });
-
-  it('ignores mailto/tel/anchor hrefs', () => {
-    const links = extractCampaignLinks(
-      `<a href="mailto:x@y.z">m</a><a href="#top">t</a><a href="tel:+2712">p</a>`,
-    );
-    expect(links).toEqual([]);
-  });
-
-  it('never captures unsubscribe links — one-click unsubscribe must not run through the tracker', () => {
-    const links = extractCampaignLinks(
-      `<a href="https://www.navigatewealth.co/newsletter/unsubscribe?email=a%40b.c">u</a>
-       <a href="https://real.example/page">r</a>`,
-    );
-    expect(links).toEqual([{ id: 'l1', url: 'https://real.example/page' }]);
-  });
-});
-
-describe('rewriteLinksForRecipient', () => {
-  const links = [{ id: 'l1', url: 'https://a.example/one' }];
-
-  it('rewrites only stored links, leaving everything else untouched', () => {
-    const out = rewriteLinksForRecipient(
-      `<a href="https://a.example/one">go</a><a href="https://other.example/x">stay</a>`,
-      links,
-      'camp-1',
-      'tok-1',
-    );
-    expect(out).toContain('https://other.example/x');
-    expect(out).not.toContain('href="https://a.example/one"');
-    expect(out).toContain(buildClickThroughUrl('camp-1', 'tok-1', 'l1'));
-  });
-
-  it('is a no-op with no stored links', () => {
-    const html = `<a href="https://a.example/one">go</a>`;
-    expect(rewriteLinksForRecipient(html, [], 'c', 't')).toBe(html);
-  });
-});
-
-describe('applyMergeFields', () => {
-  it('substitutes fields and HTML-escapes recipient data', () => {
-    const out = applyMergeFields('Hi {{firstName}} — {{name}} <{{email}}>', {
-      firstName: 'Thandi',
-      name: '<script>alert(1)</script>',
-      email: 'thandi@example.co.za',
-      unsubscribeUrl: 'https://u.example',
-    });
-    expect(out).toContain('Hi Thandi');
-    expect(out).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-    expect(out).not.toContain('<script>');
-  });
-
-  it('passes the server-built unsubscribe URL through unescaped', () => {
-    const out = applyMergeFields('<a href="{{unsubscribeUrl}}">bye</a>', {
-      firstName: '',
-      name: '',
-      email: 'a@b.co',
-      unsubscribeUrl: 'https://www.navigatewealth.co/newsletter/unsubscribe?email=a%40b.co',
-    });
-    expect(out).toContain('unsubscribe?email=a%40b.co');
-  });
-});
-
-describe('personalizeText', () => {
-  it('fills subject-line merge fields without HTML escaping and drops the unsubscribe token', () => {
-    const recipient = { email: 'ann@x.co', name: 'Ann & Co', firstName: 'Ann' };
-    expect(personalizeText('Hi {{firstName}} — {{ name }} <{{email}}>', recipient)).toBe(
-      'Hi Ann — Ann & Co <ann@x.co>',
-    );
-    expect(personalizeText('x {{unsubscribeUrl}} y', recipient)).toBe('x  y');
-    expect(personalizeText('', recipient)).toBe('');
-  });
-});
-
-describe('renderCampaignEmail', () => {
+describe('renderNewsletterEmail', () => {
   const campaign = {
-    id: 'camp-9',
-    subject: 'August update',
-    preheader: 'The one-minute version',
-    bodyHtml: '<p>Hello {{firstName}}</p><a href="https://a.example/one">read</a>',
-    links: [{ id: 'l1', url: 'https://a.example/one' }],
-    trackClicks: true,
+    title: 'August update <2026>',
+    description: 'What mattered & why.\n\nSecond paragraph\nwith a line break.',
   };
-  const recipient = {
-    email: 'sam@example.co.za',
-    name: 'Sam Naidoo',
-    firstName: 'Sam',
-    token: 'tok9',
-  };
+  const recipient = { email: 'sam@example.co.za', firstName: 'Sam' };
+  const readUrl = buildReadUrl('camp-9', 'tok9');
+  const footerSettings = {} as never;
 
-  it('personalizes, rewrites links, injects the preheader and wraps with the branded template', async () => {
-    const { html, text } = await renderCampaignEmail({ campaign, recipient });
-    expect(html).toContain('Hello Sam');
-    expect(html).toContain(buildClickThroughUrl('camp-9', 'tok9', 'l1'));
-    expect(html).toContain('The one-minute version');
+  it('greets by first name, escapes the title and description, and wires the Read button', () => {
+    const { html, text } = renderNewsletterEmail({ campaign, recipient, readUrl, footerSettings });
+    expect(html).toContain('Hi Sam,');
+    expect(html).toContain('August update &lt;2026&gt;');
+    expect(html).toContain('What mattered &amp; why.');
+    expect(html).toContain('with a line break');
+    expect(html).toContain('<br>');
+    expect(html).not.toContain('<2026>');
+    expect(html).toContain(`button="${readUrl}"`);
     expect(html).toContain(`unsub="${buildUnsubscribeUrl('sam@example.co.za')}"`);
-    expect(text).toContain('Hello Sam');
-    // Text-mode readers keep the real destination, never the tracker URL.
-    expect(text).not.toContain('/newsletter/click');
-    expect(email.getFooterSettings).toHaveBeenCalled();
+    expect(html).toContain('also attached');
+
+    expect(text).toContain('Hi Sam,');
+    expect(text).toContain('August update <2026>');
+    expect(text).toContain(`Read the newsletter: ${readUrl}`);
+    expect(text).toContain('[unsub:');
   });
 
-  it('keeps original destinations when click tracking is disabled (test sends)', async () => {
-    const { html } = await renderCampaignEmail({ campaign, recipient, disableClickTracking: true });
-    expect(html).toContain('https://a.example/one');
-    expect(html).not.toContain('/newsletter/click');
+  it('falls back to a neutral greeting when there is no first name', () => {
+    const { html, text } = renderNewsletterEmail({
+      campaign,
+      recipient: { email: 'x@y.co', firstName: '' },
+      readUrl,
+      footerSettings,
+    });
+    expect(html).toContain('Hello,');
+    expect(text).toContain('Hello,');
+  });
+
+  it('escapes a first name that carries markup', () => {
+    const { html } = renderNewsletterEmail({
+      campaign,
+      recipient: { email: 'x@y.co', firstName: '<b>Bold</b>' },
+      readUrl,
+      footerSettings,
+    });
+    expect(html).toContain('&lt;b&gt;Bold&lt;/b&gt;');
+    expect(html).not.toContain('<b>Bold</b>');
+  });
+
+  it('never loads footer settings itself — the caller loads them once per tick', () => {
+    renderNewsletterEmail({ campaign, recipient, readUrl, footerSettings });
+    expect(email.getFooterSettings).not.toHaveBeenCalled();
+  });
+});
+
+describe('escapeHtml', () => {
+  it('escapes the four characters that matter', () => {
+    expect(escapeHtml(`<a href="x">&</a>`)).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;');
+  });
+});
+
+describe('buildReadUrl / buildClickThroughUrl', () => {
+  it('targets the apex-origin click page with campaign, token and the pdf link id', () => {
+    const url = new URL(buildReadUrl('c1', 't1'));
+    expect(url.origin).toBe('https://navigatewealth.co');
+    expect(url.pathname).toBe('/newsletter/click');
+    expect(url.searchParams.get('c')).toBe('c1');
+    expect(url.searchParams.get('t')).toBe('t1');
+    expect(url.searchParams.get('l')).toBe('pdf');
+    expect(buildReadUrl('c1', 't1')).toBe(buildClickThroughUrl('c1', 't1', 'pdf'));
   });
 });
 
@@ -194,16 +146,5 @@ describe('buildOneClickUnsubscribeUrl', () => {
     );
     expect(url.searchParams.get('c')).toBe('c1');
     expect(url.searchParams.get('t')).toBe('t1');
-  });
-});
-
-describe('buildClickThroughUrl', () => {
-  it('targets the apex-origin click page with campaign, token and link ids', () => {
-    const url = new URL(buildClickThroughUrl('c1', 't1', 'l1'));
-    expect(url.origin).toBe('https://navigatewealth.co');
-    expect(url.pathname).toBe('/newsletter/click');
-    expect(url.searchParams.get('c')).toBe('c1');
-    expect(url.searchParams.get('t')).toBe('t1');
-    expect(url.searchParams.get('l')).toBe('l1');
   });
 });

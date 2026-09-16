@@ -1,5 +1,5 @@
 /**
- * Newsletter Studio — public barrel.
+ * Newsletter — public barrel.
  *
  * Explicit named exports only. Outside consumers (AdminDashboardPage, tests)
  * import from here, never from module internals (§3.1 / depcruise
@@ -14,5 +14,4 @@ export type {
   NewsletterCampaignStats,
   NewsletterDashboardSummary,
   NewsletterListView,
-  NewsletterStudioTemplate,
 } from './types';

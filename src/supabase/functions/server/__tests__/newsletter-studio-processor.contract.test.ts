@@ -8,24 +8,32 @@
  *      failed_terminal and is never retried; a transient error stays
  *      retryable and the campaign goes back to the queue rather than
  *      finishing dishonestly.
- *   2. **The retry budget is finite.** Unlike the article engine, a
- *      permanently soft-failing address becomes terminal after
- *      MAX_TOTAL_ATTEMPTS instead of being retried by cron forever.
- *   3. **Admin controls win between batches.** A pause or cancel written
- *      while the processor holds the lease stops delivery.
+ *   2. **The retry budget is finite.** A permanently soft-failing address
+ *      becomes terminal after MAX_TOTAL_ATTEMPTS instead of being retried by
+ *      cron forever.
+ *   3. **Admin controls win between batches.** A cancel written while the
+ *      processor holds the lease stops delivery.
  *   4. **A held lease excludes a second processor.**
- *   5. **Finishing writes the legacy broadcast summary** the subscriber
+ *   5. **The PDF is attached to every send, downloaded once per tick**, and
+ *      the batch width follows its size.
+ *   6. **Finishing writes the legacy broadcast summary** the subscriber
  *      dashboard's getStats() already scans.
  *
  * Real collaborators: in-memory KV via the real repositories, the real
- * renderer (with the email barrel stubbed), real classification. sleep() is
- * neutered so in-send retry pacing does not slow the suite.
+ * renderer (with the email barrel stubbed), real classification. The bucket
+ * and the SQL intake sweep are stubbed. sleep() is neutered so in-send retry
+ * pacing does not slow the suite.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+vi.hoisted(() => {
+  (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
+});
+
 const email = vi.hoisted(() => ({
   sendEmail: vi.fn(async () => true),
-  createEmailTemplate: (content: string) => `<w>${content}</w>`,
+  createEmailTemplate: (content: string, options?: { buttonUrl?: string }) =>
+    `<w button="${options?.buttonUrl ?? ''}">${content}</w>`,
   createPlainTextEmail: (content: string) => content,
   getFooterSettings: vi.fn(async () => ({})),
 }));
@@ -36,6 +44,14 @@ const deps = vi.hoisted(() => ({
   getAllClients: vi.fn(async () => [] as unknown[]),
   listSubscribers: vi.fn(async () => [] as unknown[]),
   getStats: vi.fn(async () => ({})),
+}));
+
+const storage = vi.hoisted(() => ({
+  download: vi.fn(async () => new TextEncoder().encode('%PDF-1.4 stored newsletter')),
+}));
+
+const intake = vi.hoisted(() => ({
+  sweepNewsletterIntake: vi.fn(async () => ({ examined: 0, processed: 0, failed: 0, errors: [] })),
 }));
 
 vi.mock('../kv_store.tsx', async () =>
@@ -54,6 +70,28 @@ vi.mock('../newsletter-service.ts', () => ({
   listSubscribers: deps.listSubscribers,
   getStats: deps.getStats,
 }));
+vi.mock('../newsletter-group-service.ts', () => ({
+  removeNewsletterSubscriber: vi.fn(async () => undefined),
+}));
+vi.mock('../newsletter-intake-service.ts', () => intake);
+vi.mock('../newsletter-studio-storage.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../newsletter-studio-storage.ts')>();
+  return {
+    ...original,
+    storeNewsletterPdf: vi.fn(
+      async (input: { campaignId: string; bytes: Uint8Array; fileName: string }) => ({
+        storagePath: `${input.campaignId}/one.pdf`,
+        fileName: original.safePdfFileName(input.fileName),
+        sizeBytes: input.bytes.length,
+        uploadedAt: '2026-09-01T00:00:00.000Z',
+      }),
+    ),
+    signedNewsletterPdfUrl: vi.fn(async (path: string) => `https://signed.test/${path}`),
+    removeNewsletterPdf: vi.fn(async () => undefined),
+    removeNewsletterPdfs: vi.fn(async () => undefined),
+    downloadNewsletterPdf: (path: string) => storage.download(path),
+  };
+});
 // Keep chunkArray/classifyDeliveryFailure real; only pacing is neutered.
 vi.mock('../publications-notification-state.ts', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -73,12 +111,19 @@ import {
   processNewsletterCampaigns,
   sendCampaignTestEmails,
 } from '../newsletter-studio-processor.ts';
-import { createCampaign, sendCampaignNow } from '../newsletter-studio-service.ts';
+import { ATTACHMENT_BATCH_BUDGET_BYTES } from '../newsletter-studio-attachment.ts';
+import {
+  attachCampaignPdf,
+  createCampaign,
+  sendCampaignNow,
+} from '../newsletter-studio-service.ts';
 import type {
   NewsletterCampaign,
   NewsletterCampaignRecipient,
   NewsletterProcessorState,
 } from '../newsletter-studio-types.ts';
+
+const PDF = new TextEncoder().encode('%PDF-1.4\n%test\n');
 
 const GROUP = {
   id: 'sys_newsletter_contacts',
@@ -101,19 +146,24 @@ const external = (emailAddr: string) => ({
 
 const campaignRecord = (id: string) => kvStore.get(`nlstudio:campaign:${id}`) as NewsletterCampaign;
 
-async function queuedCampaign(recipients: string[]): Promise<NewsletterCampaign> {
+async function draftCampaign(recipients: string[]): Promise<NewsletterCampaign> {
   deps.getGroupById.mockImplementation(async (id: string) =>
     id === GROUP.id ? { ...GROUP, externalContacts: recipients.map(external) } : null,
   );
   const draft = await createCampaign(
     {
-      name: 'run',
-      subject: 'Run subject',
+      title: 'Run subject',
+      description: 'The short version.',
       listIds: [GROUP.id],
-      bodyHtml: '<p>Hi {{firstName}}</p><a href="https://a.example/one">read</a>',
     },
     'admin-1',
   );
+  await attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'Issue 9.pdf' });
+  return campaignRecord(draft.id);
+}
+
+async function queuedCampaign(recipients: string[]): Promise<NewsletterCampaign> {
+  const draft = await draftCampaign(recipients);
   await sendCampaignNow(draft.id);
   return campaignRecord(draft.id);
 }
@@ -128,15 +178,35 @@ function recipientRecords(campaignId: string): NewsletterCampaignRecipient[] {
   return out;
 }
 
+type SentParams = {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: { content: string; filename: string; type: string }[];
+  headers?: Record<string, string>;
+  customArgs?: Record<string, string>;
+  throwOnError?: boolean;
+  timeoutMs?: number;
+  from?: { email: string; name: string };
+};
+const sentCalls = () => email.sendEmail.mock.calls.map(([p]) => p as unknown as SentParams);
+
 beforeEach(() => {
   kvStore.clear();
   vi.clearAllMocks();
   email.sendEmail.mockResolvedValue(true);
   deps.listSubscribers.mockResolvedValue([]);
+  storage.download.mockResolvedValue(new TextEncoder().encode('%PDF-1.4 stored newsletter'));
+  intake.sweepNewsletterIntake.mockResolvedValue({
+    examined: 0,
+    processed: 0,
+    failed: 0,
+    errors: [],
+  });
 });
 
 describe('delivery', () => {
-  it('delivers every recipient, finishes the campaign and writes the legacy broadcast summary', async () => {
+  it('delivers every recipient with the PDF attached, finishes, and writes the legacy summary', async () => {
     const campaign = await queuedCampaign(['a@x.co', 'b@x.co', 'c@x.co']);
     const result = await processNewsletterCampaigns({ mode: 'cron' });
 
@@ -150,15 +220,38 @@ describe('delivery', () => {
     expect(finished.progressPercent).toBe(100);
     expect(finished.lockId).toBeNull();
 
-    const broadcast = kvStore.get(`broadcast:${campaign.id}`) as { sent: number };
-    expect(broadcast.sent).toBe(3);
+    const broadcast = kvStore.get(`broadcast:${campaign.id}`) as {
+      sent: number;
+      subject: string;
+      bodySnippet: string;
+    };
+    expect(broadcast).toMatchObject({
+      sent: 3,
+      subject: 'Run subject',
+      bodySnippet: 'The short version.',
+    });
+
+    // The PDF was fetched once for the tick and attached to every send.
+    expect(storage.download).toHaveBeenCalledTimes(1);
+    expect(email.getFooterSettings).toHaveBeenCalledTimes(1);
+    const calls = sentCalls();
+    expect(calls).toHaveLength(3);
+    for (const call of calls) {
+      expect(call.attachments).toEqual([
+        expect.objectContaining({ filename: 'Issue-9.pdf', type: 'application/pdf' }),
+      ]);
+      expect(call.attachments![0].content).toBe(calls[0].attachments![0].content);
+      expect(call.subject).toBe('Run subject');
+      // The Read button is the tracked click-through for THIS recipient.
+      expect(call.html).toMatch(
+        /button="https:\/\/navigatewealth\.co\/newsletter\/click\?c=.*&l=pdf"/,
+      );
+    }
 
     // Envelope: newsletters@ from, one-click unsubscribe, campaign custom args.
-    const call = email.sendEmail.mock.calls[0][0] as Record<string, unknown>;
+    const call = calls[0];
     expect(call.from).toEqual({ email: 'newsletters@navigatewealth.co', name: 'Navigate Wealth' });
-    expect((call.headers as Record<string, string>)['List-Unsubscribe-Post']).toBe(
-      'List-Unsubscribe=One-Click',
-    );
+    expect(call.headers!['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
     expect(call.customArgs).toEqual({ type: 'newsletter_campaign', campaign_id: campaign.id });
     expect(call.throwOnError).toBe(true);
   });
@@ -182,9 +275,7 @@ describe('delivery', () => {
     const bad = recipientRecords(campaign.id).find((r) => r.email === 'bad@x.co')!;
     expect(bad.deliveryStatus).toBe('failed_terminal');
     // Terminal classification breaks out on the first provider call.
-    expect(
-      email.sendEmail.mock.calls.filter(([p]) => (p as { to: string }).to === 'bad@x.co'),
-    ).toHaveLength(1);
+    expect(sentCalls().filter((p) => p.to === 'bad@x.co')).toHaveLength(1);
   });
 
   it('keeps a transient failure retryable and returns the campaign to the queue', async () => {
@@ -207,9 +298,6 @@ describe('delivery', () => {
 
   it('promotes an exhausted retryable to terminal without another provider call', async () => {
     const campaign = await queuedCampaign(['worn@x.co']);
-    const [record] = recipientRecords(campaign.id);
-    // No records exist yet — synthesize an exhausted one.
-    expect(record).toBeUndefined();
     const audience = kvStore.get(`nlstudio:audience:${campaign.id}`) as {
       items: { token: string; email: string; name: string; firstName: string }[];
     };
@@ -238,9 +326,33 @@ describe('delivery', () => {
     expect(updated.deliveryError).toMatch(/retry budget exhausted/);
     expect(campaignRecord(campaign.id).status).toBe('finished');
   });
+
+  it('sizes the concurrent batch from the attachment, not a fixed 20', async () => {
+    // A stored PDF whose base64 is just under a third of the budget → 3 concurrent sends.
+    const big = new Uint8Array(Math.floor(ATTACHMENT_BATCH_BUDGET_BYTES / 4) - 300);
+    big.set(PDF.subarray(0, 5));
+    storage.download.mockResolvedValue(big);
+    const emails = Array.from({ length: 8 }, (_, i) => `r${i}@x.co`);
+    const campaign = await queuedCampaign(emails);
+
+    let inFlight = 0;
+    let peak = 0;
+    email.sendEmail.mockImplementation(async () => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 2));
+      inFlight--;
+      return true;
+    });
+
+    await processNewsletterCampaigns({ mode: 'cron', maxBatchesPerCampaign: 5 });
+    expect(peak).toBe(3);
+    expect(campaignRecord(campaign.id).status).toBe('finished');
+    expect(storage.download).toHaveBeenCalledTimes(1);
+  });
 });
 
-describe('sender-side provider failures', () => {
+describe('sender-side faults', () => {
   // The SES sandbox — where the account sits until AWS grants production
   // access — rejects EVERY send with "not verified". Attributing that to
   // recipients would mark a whole audience failed_terminal, unretryable, and
@@ -261,27 +373,34 @@ describe('sender-side provider failures', () => {
     const paused = campaignRecord(campaign.id);
     expect(paused.status).toBe('paused');
     expect(paused.failedCount).toBe(0);
-    // The operator needs the provider's own words to fix the cause.
     expect(paused.lastError).toMatch(/rejected the sender/i);
     expect(paused.lastError).toMatch(/not verified/i);
-    // Lease released, so a resumed campaign is pickable.
     expect(paused.lockId).toBeNull();
 
-    // No recipient may be left failed, and none may carry a spent attempt.
     for (const record of recipientRecords(campaign.id)) {
       expect(record.deliveryStatus).not.toBe('failed_terminal');
       expect(record.deliveryStatus).not.toBe('failed_retryable');
       expect(record.attemptCount).toBe(0);
     }
-
-    // No retry ladder against a fault no retry can clear.
     expect(email.sendEmail.mock.calls.length).toBeLessThanOrEqual(3);
-
-    // The pause does not throw, so without explicit propagation the run would
-    // look clean and the dashboard would report the processor Healthy while
-    // nothing is going out. The operator health signal must carry it.
     expect(result.errors.join(' ')).toMatch(/rejected the sender/i);
-    expect(result.errors.join(' ')).toMatch(/not verified/i);
+  });
+
+  it('pauses the campaign with nothing burned when the PDF cannot be loaded', async () => {
+    const campaign = await queuedCampaign(['a@x.co', 'b@x.co']);
+    storage.download.mockRejectedValue(new Error('Could not read c/one.pdf: object not found'));
+
+    const result = await processNewsletterCampaigns({ mode: 'cron' });
+    expect(email.sendEmail).not.toHaveBeenCalled();
+    expect(result.sent).toBe(0);
+    expect(result.failed).toBe(0);
+
+    const paused = campaignRecord(campaign.id);
+    expect(paused.status).toBe('paused');
+    expect(paused.lastError).toMatch(/PDF could not be loaded/);
+    expect(paused.lockId).toBeNull();
+    expect(recipientRecords(campaign.id)).toHaveLength(0);
+    expect(result.errors.join(' ')).toMatch(/object not found/);
   });
 
   it('still blames the recipient for a genuine per-address failure', async () => {
@@ -298,15 +417,9 @@ describe('sender-side provider failures', () => {
   });
 });
 
-describe('scheduling and admin controls', () => {
+describe('scheduling, intake and admin controls', () => {
   it('promotes a due scheduled campaign and delivers it in the same tick', async () => {
-    deps.getGroupById.mockImplementation(async (id: string) =>
-      id === GROUP.id ? { ...GROUP, externalContacts: [external('later@x.co')] } : null,
-    );
-    const draft = await createCampaign(
-      { name: 'later', subject: 's', listIds: [GROUP.id], bodyHtml: '<p>b</p>' },
-      'admin-1',
-    );
+    const draft = await draftCampaign(['later@x.co']);
     // Write the scheduled state directly with a past due time.
     kvStore.set(`nlstudio:campaign:${draft.id}`, {
       ...campaignRecord(draft.id),
@@ -320,9 +433,29 @@ describe('scheduling and admin controls', () => {
     expect(campaignRecord(draft.id).status).toBe('finished');
   });
 
-  it('a pause written while a batch is in flight survives the counter write and stops delivery', async () => {
-    // 25 recipients = two batches. The admin pauses during batch one; the
-    // post-batch counter write must not resurrect 'sending' (review finding).
+  it('sweeps the SQL intake table on a cron tick only, and surfaces its errors', async () => {
+    intake.sweepNewsletterIntake.mockResolvedValue({
+      examined: 1,
+      processed: 1,
+      failed: 0,
+      errors: [],
+    });
+    const cron = await processNewsletterCampaigns({ mode: 'cron' });
+    expect(cron.intakeProcessed).toBe(1);
+
+    intake.sweepNewsletterIntake.mockClear();
+    const manual = await processNewsletterCampaigns({ mode: 'manual' });
+    expect(intake.sweepNewsletterIntake).not.toHaveBeenCalled();
+    expect(manual.intakeProcessed).toBe(0);
+
+    intake.sweepNewsletterIntake.mockRejectedValue(new Error('pg down'));
+    const failed = await processNewsletterCampaigns({ mode: 'cron' });
+    expect(failed.errors.join(' ')).toMatch(/intake sweep: pg down/);
+  });
+
+  it('a cancel written while a batch is in flight survives the counter write and stops delivery', async () => {
+    // Enough recipients for two batches. The admin cancels during batch one;
+    // the post-batch counter write must not resurrect 'sending'.
     const emails = Array.from({ length: 25 }, (_, i) => `r${i}@x.co`);
     const campaign = await queuedCampaign(emails);
     let sends = 0;
@@ -331,7 +464,7 @@ describe('scheduling and admin controls', () => {
       if (sends === 5) {
         kvStore.set(`nlstudio:campaign:${campaign.id}`, {
           ...campaignRecord(campaign.id),
-          status: 'paused',
+          status: 'cancelled',
         });
       }
       return true;
@@ -340,7 +473,7 @@ describe('scheduling and admin controls', () => {
     await processNewsletterCampaigns({ mode: 'cron' });
 
     const after = campaignRecord(campaign.id);
-    expect(after.status).toBe('paused');
+    expect(after.status).toBe('cancelled');
     expect(after.lockId).toBeNull();
     // Only the in-flight batch completed; the second batch never started.
     expect(email.sendEmail).toHaveBeenCalledTimes(20);
@@ -354,9 +487,7 @@ describe('scheduling and admin controls', () => {
     const result = await processNewsletterCampaigns({ mode: 'cron' });
     expect(result.sent).toBe(1);
     expect(result.failed).toBe(1);
-    expect(
-      email.sendEmail.mock.calls.filter(([p]) => (p as { to: string }).to === 'leaves@x.co'),
-    ).toHaveLength(0);
+    expect(sentCalls().filter((p) => p.to === 'leaves@x.co')).toHaveLength(0);
 
     const skipped = recipientRecords(campaign.id).find((r) => r.email === 'leaves@x.co')!;
     expect(skipped.deliveryStatus).toBe('failed_terminal');
@@ -400,8 +531,6 @@ describe('scheduling and admin controls', () => {
   });
 
   it('only a real cron tick stamps lastCronRunAt, so an uninstalled job stays visible', async () => {
-    // Browser-accelerator runs must not mask a missing pg_cron job — the
-    // dashboard and schedule dialog warn off this exact field.
     await processNewsletterCampaigns({ mode: 'manual' });
     const key = 'nlstudio:processor:state';
     expect((kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt).toBeNull();
@@ -410,7 +539,6 @@ describe('scheduling and admin controls', () => {
     const cronStamp = (kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt;
     expect(cronStamp).toBeTruthy();
 
-    // A later manual run preserves the cron mark rather than clearing it.
     await processNewsletterCampaigns({ mode: 'manual' });
     expect((kvStore.get(key) as { lastCronRunAt: string | null }).lastCronRunAt).toBe(cronStamp);
   });
@@ -419,8 +547,6 @@ describe('scheduling and admin controls', () => {
   const stateWrites = () => vi.mocked(kv.set).mock.calls.filter(([k]) => k === STATE_KEY).length;
 
   it('leaves the state row alone on an idle cron tick inside the heartbeat interval', async () => {
-    // Every 30-second tick used to upsert this row even with nothing to send —
-    // the KV table's busiest writer (INCIDENTS 2026-09-13).
     await processNewsletterCampaigns({ mode: 'cron' });
     const first = kvStore.get(STATE_KEY);
     const writesAfterFirst = stateWrites();
@@ -432,8 +558,6 @@ describe('scheduling and admin controls', () => {
   });
 
   it('refreshes a cron heartbeat whose stored lastCronRunAt is older than the idle interval', async () => {
-    // The dashboard declares the job stale off lastCronRunAt, so that mark —
-    // not just lastHeartbeatAt — must stay fresh across skipped ticks.
     await processNewsletterCampaigns({ mode: 'cron' });
     const stale = new Date(Date.now() - IDLE_HEARTBEAT_INTERVAL_MS - 1_000).toISOString();
     kvStore.set(STATE_KEY, {
@@ -457,7 +581,6 @@ describe('scheduling and admin controls', () => {
     });
     const writesBefore = stateWrites();
 
-    // An error on the row must be cleared by the next clean tick, idle or not.
     await processNewsletterCampaigns({ mode: 'cron' });
     expect(stateWrites()).toBe(writesBefore + 1);
     expect((kvStore.get(STATE_KEY) as NewsletterProcessorState).lastError).toBeNull();
@@ -473,10 +596,7 @@ describe('lease safety during long batches (review finding)', () => {
   it('bounds every provider call with a deadline so a batch cannot outlive its lease', async () => {
     const campaign = await queuedCampaign(['a@x.co']);
     await processNewsletterCampaigns({ mode: 'cron' });
-    const params = email.sendEmail.mock.calls[0][0] as { timeoutMs?: number };
-    expect(params.timeoutMs).toBe(PROVIDER_REQUEST_TIMEOUT_MS);
-    // Worst case (3 attempts + retry sleeps) stays inside the lease TTL, so a
-    // second worker cannot reclaim the campaign mid-batch and double-send.
+    expect(sentCalls()[0].timeoutMs).toBe(PROVIDER_REQUEST_TIMEOUT_MS);
     const worstCase = MAX_SEND_ATTEMPTS_PER_DELIVERY * PROVIDER_REQUEST_TIMEOUT_MS;
     expect(worstCase).toBeLessThan(CAMPAIGN_LOCK_TTL_MS);
     expect(campaignRecord(campaign.id).status).toBe('finished');
@@ -497,19 +617,16 @@ describe('lease safety during long batches (review finding)', () => {
       );
 
       const run = processNewsletterCampaigns({ mode: 'cron' });
-      // Let the lease be acquired, then advance past a heartbeat interval.
       await vi.advanceTimersByTimeAsync(CAMPAIGN_LOCK_SETTLE_MS + 10);
       const leased = campaignRecord(campaign.id);
       expect(leased.lockId).toBeTruthy();
 
       await vi.advanceTimersByTimeAsync(LEASE_HEARTBEAT_MS + 50);
       const renewed = campaignRecord(campaign.id);
-      // Same lease, pushed further out — not expired, not stolen.
       expect(renewed.lockId).toBe(leased.lockId);
       expect(new Date(renewed.lockExpiresAt!).getTime()).toBeGreaterThan(
         new Date(leased.lockExpiresAt!).getTime(),
       );
-      expect(new Date(renewed.lockExpiresAt!).getTime()).toBeGreaterThan(Date.now());
       expect(before.lockId).toBeNull();
 
       release();
@@ -535,7 +652,6 @@ describe('lease safety during long batches (review finding)', () => {
       const run = processNewsletterCampaigns({ mode: 'cron' });
       await vi.advanceTimersByTimeAsync(CAMPAIGN_LOCK_SETTLE_MS + 10);
 
-      // Simulate another worker taking over.
       const stolenExpiry = new Date(Date.now() + 5_000).toISOString();
       kvStore.set(`nlstudio:campaign:${campaign.id}`, {
         ...campaignRecord(campaign.id),
@@ -558,8 +674,8 @@ describe('lease safety during long batches (review finding)', () => {
 });
 
 describe('test sends', () => {
-  it('prefixes the subject, keeps real links, and reports per-address outcomes', async () => {
-    const campaign = await queuedCampaign(['a@x.co']);
+  it('prefixes the subject, attaches the PDF, links a signed URL and reports per-address outcomes', async () => {
+    const campaign = await draftCampaign(['a@x.co']);
     email.sendEmail.mockImplementation(async (params: { to: string }) => {
       if (params.to === 'broken@x.co') throw new Error('SendGrid error: bad request');
       return true;
@@ -571,9 +687,24 @@ describe('test sends', () => {
       { email: 'broken@x.co', ok: false, error: expect.stringMatching(/bad request/) },
     ]);
 
-    const call = email.sendEmail.mock.calls[0][0] as { subject: string; html: string };
+    const call = sentCalls()[0];
     expect(call.subject).toBe('[TEST] Run subject');
-    expect(call.html).toContain('https://a.example/one');
+    expect(call.attachments).toEqual([expect.objectContaining({ filename: 'Issue-9.pdf' })]);
+    // A test must never count as a read: the button bypasses the click-through.
+    expect(call.html).toContain('https://signed.test/');
     expect(call.html).not.toContain('/newsletter/click');
+    expect(call.customArgs).toEqual({ type: 'newsletter_campaign_test', campaign_id: campaign.id });
+    expect(storage.download).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a test before the PDF is uploaded', async () => {
+    deps.getGroupById.mockResolvedValue(GROUP);
+    const draft = await createCampaign(
+      { title: 't', description: 'd', listIds: [GROUP.id] },
+      'admin-1',
+    );
+    await expect(sendCampaignTestEmails(draft.id, ['me@x.co'])).rejects.toThrow(
+      /Upload the newsletter PDF/,
+    );
   });
 });

@@ -12,14 +12,13 @@ import type {
   NewsletterCampaignAudience,
   NewsletterCampaignRecipient,
   NewsletterProcessorState,
-  NewsletterStudioTemplate,
 } from '../newsletter-studio-types.ts';
 
 export const NEWSLETTER_CAMPAIGN_NAMESPACE = 'nlstudio:campaign:';
 export const NEWSLETTER_AUDIENCE_NAMESPACE = 'nlstudio:audience:';
 export const NEWSLETTER_RECIPIENT_NAMESPACE = 'nlstudio:recipient:';
-export const NEWSLETTER_TEMPLATE_NAMESPACE = 'nlstudio:template:';
 export const NEWSLETTER_PROCESSOR_NAMESPACE = 'nlstudio:processor:';
+export const NEWSLETTER_INTAKE_KEY_NAMESPACE = 'nlstudio:intakekey:';
 
 /** Fixed id of the singleton processor-state record. */
 export const NEWSLETTER_PROCESSOR_STATE_ID = 'state';
@@ -38,12 +37,27 @@ export const newsletterRecipients = createKvRepository<NewsletterCampaignRecipie
   NEWSLETTER_RECIPIENT_NAMESPACE,
 );
 
-export const newsletterTemplates = createKvRepository<NewsletterStudioTemplate>(
-  NEWSLETTER_TEMPLATE_NAMESPACE,
-);
-
 export const newsletterProcessorState = createKvRepository<NewsletterProcessorState>(
   NEWSLETTER_PROCESSOR_NAMESPACE,
+);
+
+/**
+ * One row per routine idempotency key (id = the key). Written BEFORE the
+ * draft exists, with a nonce, so two overlapping hand-overs with the same key
+ * can settle which of them owns it (write → settle → read-back, the same
+ * optimistic pattern as the campaign lease). `campaignId` is filled in once
+ * the draft and its PDF are stored, which also makes a replay an O(1) read
+ * rather than a scan of every campaign.
+ */
+export interface NewsletterIntakeReservation {
+  key: string;
+  nonce: string;
+  campaignId: string | null;
+  createdAt: string;
+}
+
+export const newsletterIntakeReservations = createKvRepository<NewsletterIntakeReservation>(
+  NEWSLETTER_INTAKE_KEY_NAMESPACE,
 );
 
 /**

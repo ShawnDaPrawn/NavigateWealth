@@ -1,24 +1,21 @@
 /**
- * Newsletter Studio — campaign rendering.
+ * Newsletter Studio — email rendering.
  *
- * Pure-ish helpers that turn an authored campaign body into the exact
- * per-recipient email: merge fields, click-through link rewriting,
- * preheader injection, branded wrapper, plain-text alternative, and the
- * deliverability envelope (List-Unsubscribe et al.).
+ * The email around a PDF newsletter is short and fixed: greeting, title,
+ * description, a "Read the newsletter" button, a note that the PDF is also
+ * attached, and the unsubscribe footer. There are no merge fields and no
+ * authored HTML — the title and description are data and are escaped.
  *
- * Click-through tracking follows the platform's engagement doctrine
- * (no tracking pixel — see ArticleEmailEngagementPanel): destinations are
- * stored server-side at queue time and clicks are recorded when the
- * recipient actually follows a link, which also counts as the "open".
+ * The button is the only tracked link. It goes through the click-through
+ * page (SPA, apex origin) which asks the server for a short-lived signed URL
+ * to the campaign's own PDF and records the read — no tracking pixel.
  */
 
 import { SITE_ORIGIN, SITE_ORIGIN_APEX } from '../../../utils/siteOrigin.ts';
-import { createEmailTemplate, createPlainTextEmail, getFooterSettings } from './email-service.ts';
-import type {
-  NewsletterAudienceItem,
-  NewsletterCampaign,
-  NewsletterCampaignLink,
-} from './newsletter-studio-types.ts';
+import { createEmailTemplate, createPlainTextEmail } from './email-service.ts';
+import type { EmailFooterSettings } from './email-core.ts';
+import { PDF_LINK_ID } from './newsletter-studio-types.ts';
+import type { NewsletterAudienceItem, NewsletterCampaign } from './newsletter-studio-types.ts';
 
 /** Sender identity for campaign mail — matches the double-opt-in flow's address. */
 export const NEWSLETTER_FROM_EMAIL = 'newsletters@navigatewealth.co';
@@ -29,34 +26,11 @@ export const NEWSLETTER_REPLY_TO = {
 };
 
 /**
- * SPA page that records the click and forwards to the stored destination.
+ * SPA page that records the click and forwards to the signed PDF URL.
  * Apex origin on purpose: links in emails must open in the browser, not get
  * captured into the installed portal PWA (see SITE_ORIGIN_APEX docs).
  */
 export const CLICK_THROUGH_PATH = '/newsletter/click';
-
-const HREF_RE = /href\s*=\s*(["'])(https?:\/\/[^"']+)\1/gi;
-
-/**
- * Extract the unique http(s) destinations from a campaign body, in first-seen
- * order, and assign short stable link ids. Mailto/tel/anchor hrefs are left
- * alone. Unsubscribe links are excluded — rewriting those through a tracker
- * would break one-click unsubscribe.
- */
-export function extractCampaignLinks(bodyHtml: string): NewsletterCampaignLink[] {
-  const seen = new Map<string, NewsletterCampaignLink>();
-  for (const match of bodyHtml.matchAll(HREF_RE)) {
-    const url = match[2];
-    if (seen.has(url)) continue;
-    if (isUnsubscribeUrl(url)) continue;
-    seen.set(url, { id: `l${seen.size + 1}`, url });
-  }
-  return [...seen.values()];
-}
-
-function isUnsubscribeUrl(url: string): boolean {
-  return url.includes('/newsletter/unsubscribe');
-}
 
 export function buildUnsubscribeUrl(email: string): string {
   return `${SITE_ORIGIN}/newsletter/unsubscribe?email=${encodeURIComponent(email)}`;
@@ -67,38 +41,13 @@ export function buildClickThroughUrl(campaignId: string, token: string, linkId: 
   return `${SITE_ORIGIN_APEX}${CLICK_THROUGH_PATH}?${params.toString()}`;
 }
 
-/**
- * Rewrite tracked hrefs to the click-through URL for one recipient.
- * Only URLs captured in `links` are rewritten, so the redirect endpoint can
- * only ever forward to a destination the author actually wrote.
- */
-export function rewriteLinksForRecipient(
-  bodyHtml: string,
-  links: NewsletterCampaignLink[],
-  campaignId: string,
-  token: string,
-): string {
-  if (links.length === 0) return bodyHtml;
-  const byUrl = new Map(links.map((link) => [link.url, link]));
-  return bodyHtml.replace(HREF_RE, (full, quote: string, url: string) => {
-    const link = byUrl.get(url);
-    if (!link) return full;
-    return `href=${quote}${buildClickThroughUrl(campaignId, token, link.id)}${quote}`;
-  });
+/** The tracked read link for one recipient. */
+export function buildReadUrl(campaignId: string, token: string): string {
+  return buildClickThroughUrl(campaignId, token, PDF_LINK_ID);
 }
 
-/** Escape a string for literal use inside a RegExp — none needed here, kept for merge fields. */
-const MERGE_FIELD_RE = /\{\{\s*(firstName|name|email|unsubscribeUrl)\s*\}\}/g;
-
-export interface MergeContext {
-  firstName: string;
-  name: string;
-  email: string;
-  unsubscribeUrl: string;
-}
-
-/** HTML-escape a merge value — recipient names are data, never markup. */
-function escapeHtml(value: string): string {
+/** HTML-escape a value — titles, descriptions and names are data, never markup. */
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -106,103 +55,61 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/**
- * Substitute `{{firstName}}`, `{{name}}`, `{{email}}` and `{{unsubscribeUrl}}`
- * placeholders. Values are HTML-escaped except the unsubscribe URL, which is
- * server-built and URL-encoded already.
- */
-export function applyMergeFields(bodyHtml: string, ctx: MergeContext): string {
-  return bodyHtml.replace(MERGE_FIELD_RE, (_full, field: keyof MergeContext) => {
-    if (field === 'unsubscribeUrl') return ctx.unsubscribeUrl;
-    return escapeHtml(ctx[field] ?? '');
-  });
+/** Description paragraphs: blank-line separated, single newlines become <br>. */
+function descriptionHtml(description: string): string {
+  return description
+    .trim()
+    .split(/\n\s*\n/)
+    .map((para) => `<p style="margin:0 0 16px 0;">${escapeHtml(para).replace(/\n/g, '<br>')}</p>`)
+    .join('');
 }
 
-/**
- * Merge fields for plain-text envelope fields (subject, preheader). No HTML
- * escaping — these are never rendered as markup — and `{{unsubscribeUrl}}`
- * is dropped, since a URL has no place in a subject line.
- */
-export function personalizeText(
-  text: string,
-  recipient: Pick<NewsletterAudienceItem, 'email' | 'name' | 'firstName'>,
-): string {
-  if (!text) return text;
-  return text.replace(MERGE_FIELD_RE, (_full, field: keyof MergeContext) => {
-    if (field === 'unsubscribeUrl') return '';
-    return recipient[field] ?? '';
-  });
-}
-
-/** Inbox-preview text: visually hidden, read by mail clients as the snippet. */
-function preheaderHtml(preheader: string): string {
-  return (
-    `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">` +
-    `${escapeHtml(preheader)}</div>`
-  );
-}
-
-export interface RenderedCampaignEmail {
+export interface RenderedNewsletterEmail {
   html: string;
   text: string;
 }
 
-export interface RenderCampaignEmailInput {
-  campaign: Pick<
-    NewsletterCampaign,
-    'id' | 'subject' | 'preheader' | 'bodyHtml' | 'links' | 'trackClicks'
-  >;
-  recipient: Pick<NewsletterAudienceItem, 'email' | 'name' | 'firstName' | 'token'>;
-  /** Disable link rewriting (test sends keep original destinations). */
-  disableClickTracking?: boolean;
+export interface RenderNewsletterEmailInput {
+  campaign: Pick<NewsletterCampaign, 'title' | 'description'>;
+  recipient: Pick<NewsletterAudienceItem, 'email' | 'firstName'>;
+  /** Where the "Read the newsletter" button goes (tracked for real sends, signed for tests). */
+  readUrl: string;
+  /** Loaded once per campaign per tick by the caller — not per recipient. */
+  footerSettings: EmailFooterSettings;
 }
 
-/**
- * Produce the final personalized email for one recipient: merge fields →
- * link rewriting → preheader → branded wrapper → plain-text alternative.
- */
-export async function renderCampaignEmail(
-  input: RenderCampaignEmailInput,
-): Promise<RenderedCampaignEmail> {
-  const { campaign, recipient } = input;
+/** Produce the final email for one recipient. */
+export function renderNewsletterEmail(input: RenderNewsletterEmailInput): RenderedNewsletterEmail {
+  const { campaign, recipient, readUrl, footerSettings } = input;
   const unsubscribeUrl = buildUnsubscribeUrl(recipient.email);
+  const greeting = recipient.firstName ? `Hi ${escapeHtml(recipient.firstName)},` : 'Hello,';
 
-  let content = applyMergeFields(campaign.bodyHtml, {
-    firstName: recipient.firstName,
-    name: recipient.name,
-    email: recipient.email,
-    unsubscribeUrl,
-  });
+  const content =
+    `<h1 style="font-size:22px;line-height:1.3;margin:0 0 16px 0;">${escapeHtml(campaign.title)}</h1>` +
+    descriptionHtml(campaign.description) +
+    `<p style="margin:24px 0 8px 0;font-size:13px;color:#6b7280;">The newsletter is also attached to this email as a PDF.</p>`;
 
-  // The plain-text alternative comes from the personalized content but keeps
-  // original destinations — text-mode readers get real URLs, not tracker ones.
-  const textSource = content;
-
-  if (campaign.trackClicks && !input.disableClickTracking) {
-    content = rewriteLinksForRecipient(content, campaign.links, campaign.id, recipient.token);
-  }
-
-  if (campaign.preheader) {
-    content = preheaderHtml(personalizeText(campaign.preheader, recipient)) + content;
-  }
-
-  const footerSettings = await getFooterSettings();
   const html = createEmailTemplate(content, {
-    greeting: '',
+    title: escapeHtml(campaign.title),
+    greeting,
+    buttonUrl: readUrl,
+    buttonLabel: 'Read the newsletter',
     unsubscribeLink: unsubscribeUrl,
     footerSettings,
   });
 
   const text = createPlainTextEmail(
-    textSource
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/(p|div|h[1-6]|li|tr)>/gi, '\n')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n\s+/g, '\n')
-      .trim(),
+    [
+      recipient.firstName ? `Hi ${recipient.firstName},` : 'Hello,',
+      '',
+      campaign.title,
+      '',
+      campaign.description.trim(),
+      '',
+      `Read the newsletter: ${readUrl}`,
+      '',
+      'The newsletter is also attached to this email as a PDF.',
+    ].join('\n'),
     unsubscribeUrl,
   );
 

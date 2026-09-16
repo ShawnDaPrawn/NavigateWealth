@@ -548,6 +548,17 @@ Its cadence moved from 30 seconds to 2 minutes on 2026-09-14, along with
 `supabase/cron/README.md`. The ten-minute stale threshold is sized against that
 cadence; the two numbers move together.
 
+Since the module became a PDF-newsletter sender (2026-09-16) the same tick does
+one more thing first, in cron mode only: it sweeps `public.newsletter_intake`
+for a pending routine hand-over (at most one per tick, found through the
+partial index on `status = 'pending'`, so an idle tick costs one index probe),
+stores the PDF, creates the draft and emails the admin. The result's
+`intakeProcessed` counts those. A tick before the `newsletter_intake` migration
+is applied logs one warning and carries on. Delivery itself now attaches the
+PDF to every email and sizes each concurrent batch from the encoded PDF, which
+is why a 5 MB issue goes out three to five at a time rather than twenty. The
+contract for the hand-over is `newsletter-intake.md`.
+
 ### `social-automation-render-images` and `social-automation-sync-buffer` (to install after the social-assets deploy)
 
 Two hourly jobs from `supabase/cron/social-automation-jobs.sql` supporting the routine-driven
@@ -608,7 +619,7 @@ net._http_response where id = ...` is a sequential scan of the whole table.
   day whose only content was a timestamp. They now skip the write while the
   stored heartbeat is younger than `IDLE_HEARTBEAT_INTERVAL_MS`
   (`publications-notification-state.ts`), which stays under the Newsletter
-  dashboard's 5-minute stale threshold. A new processor should do the same.
+  module's ten-minute stale threshold. A new processor should do the same.
 
 ## Do this after any change to a scheduled job
 

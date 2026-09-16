@@ -1,9 +1,10 @@
 /**
  * newsletterStudioApi — transport contracts.
  *
- * Pins the endpoint paths, the query-string building, and the response
- * unwrapping (every handler returns `{ success, <entity> }` — the api layer
- * must unwrap and null-guard). All traffic goes through the shared client.
+ * Pins the endpoint paths, the query-string building, the multipart PDF
+ * upload, and the response unwrapping (every handler returns
+ * `{ success, <entity> }` — the api layer must unwrap and null-guard). All
+ * traffic goes through the shared client.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { newsletterStudioApi } from '../api';
@@ -42,8 +43,7 @@ describe('campaigns', () => {
     expect(url).toContain('status=draft');
     expect(url).toContain('search=wrap');
     expect(result).toMatchObject({ campaigns: [], total: 0, page: 1, limit: 100 });
-    // Per-status counts default to zeros when the server omits them.
-    expect(result.statusCounts).toMatchObject({ draft: 0, finished: 0 });
+    expect(result.statusCounts).toMatchObject({ draft: 0, finished: 0, paused: 0 });
   });
 
   it('omits the all-status filter', async () => {
@@ -52,30 +52,30 @@ describe('campaigns', () => {
     expect(mockApiGet.mock.calls[0][0]).not.toContain('status=');
   });
 
-  it('unwraps the campaign envelope on create', async () => {
-    const campaign = { id: 'c1', name: 'n' };
+  it('unwraps the campaign envelope on create and update', async () => {
+    const campaign = { id: 'c1', title: 't' };
     mockApiPost.mockResolvedValue({ success: true, campaign });
-    const input = { name: 'n', subject: 's', listIds: ['g'], bodyHtml: '<p>b</p>' };
-    const result = await newsletterStudioApi.createCampaign(input);
+    mockApiPut.mockResolvedValue({ success: true, campaign });
+    const input = { title: 't', description: 'd', listIds: ['g'] };
+    expect(await newsletterStudioApi.createCampaign(input)).toBe(campaign);
     expect(mockApiPost).toHaveBeenCalledWith('newsletter-studio/campaigns', input);
-    expect(result).toBe(campaign);
+    expect(await newsletterStudioApi.updateCampaign('c1', { title: 't2' })).toBe(campaign);
+    expect(mockApiPut).toHaveBeenCalledWith('newsletter-studio/campaigns/c1', { title: 't2' });
   });
 
   it('routes lifecycle actions to their endpoints', async () => {
     mockApiPost.mockResolvedValue({ campaign: { id: 'c1' } });
     await newsletterStudioApi.sendCampaignNow('c1');
-    await newsletterStudioApi.pauseCampaign('c1');
     await newsletterStudioApi.resumeCampaign('c1');
     await newsletterStudioApi.cancelCampaign('c1');
     await newsletterStudioApi.scheduleCampaign('c1', '2027-01-01T09:00:00.000Z');
     expect(mockApiPost.mock.calls.map((c) => c[0])).toEqual([
       'newsletter-studio/campaigns/c1/send-now',
-      'newsletter-studio/campaigns/c1/pause',
       'newsletter-studio/campaigns/c1/resume',
       'newsletter-studio/campaigns/c1/cancel',
       'newsletter-studio/campaigns/c1/schedule',
     ]);
-    expect(mockApiPost.mock.calls[4][1]).toEqual({ scheduledAt: '2027-01-01T09:00:00.000Z' });
+    expect(mockApiPost.mock.calls[3][1]).toEqual({ scheduledAt: '2027-01-01T09:00:00.000Z' });
   });
 
   it('sends tests and null-guards the results array', async () => {
@@ -94,6 +94,29 @@ describe('campaigns', () => {
   });
 });
 
+describe('the PDF', () => {
+  it('uploads as multipart FormData under the "file" field, keeping the file name', async () => {
+    mockApiPost.mockResolvedValue({ success: true, campaign: { id: 'c1' } });
+    const file = new File(['%PDF-1.4'], 'September issue.pdf', { type: 'application/pdf' });
+    const campaign = await newsletterStudioApi.uploadPdf('c1', file);
+    expect(campaign).toEqual({ id: 'c1' });
+    const [endpoint, body] = mockApiPost.mock.calls[0];
+    expect(endpoint).toBe('newsletter-studio/campaigns/c1/pdf');
+    expect(body).toBeInstanceOf(FormData);
+    const sent = (body as FormData).get('file') as File;
+    expect(sent.name).toBe('September issue.pdf');
+  });
+
+  it('fetches a signed preview URL', async () => {
+    mockApiGet.mockResolvedValue({ success: true, url: 'https://signed/x', fileName: 'x.pdf' });
+    expect(await newsletterStudioApi.getPdfUrl('c1')).toEqual({
+      url: 'https://signed/x',
+      fileName: 'x.pdf',
+    });
+    expect(mockApiGet).toHaveBeenCalledWith('newsletter-studio/campaigns/c1/pdf');
+  });
+});
+
 describe('recipients and stats', () => {
   it('builds the recipients query with a status filter', async () => {
     mockApiGet.mockResolvedValue({ recipients: [], total: 0, page: 1, limit: 50 });
@@ -105,27 +128,16 @@ describe('recipients and stats', () => {
   });
 
   it('unwraps stats', async () => {
-    const stats = { campaignId: 'c1', sentCount: 5 };
+    const stats = { campaignId: 'c1', sentCount: 5, readCount: 2, readRate: 40 };
     mockApiGet.mockResolvedValue({ success: true, stats });
     expect(await newsletterStudioApi.getStats('c1')).toBe(stats);
   });
 });
 
-describe('lists, templates, dashboard, processor', () => {
-  it('null-guards list and template payloads', async () => {
+describe('lists, dashboard, processor, click-through', () => {
+  it('null-guards the lists payload', async () => {
     mockApiGet.mockResolvedValue({});
     expect(await newsletterStudioApi.getLists()).toEqual([]);
-    expect(await newsletterStudioApi.getTemplates()).toEqual([]);
-  });
-
-  it('creates and updates templates on the right endpoints', async () => {
-    mockApiPost.mockResolvedValue({ template: { id: 't1' } });
-    mockApiPut.mockResolvedValue({ template: { id: 't1' } });
-    const input = { name: 't', bodyHtml: '<p>b</p>' };
-    await newsletterStudioApi.createTemplate(input);
-    await newsletterStudioApi.updateTemplate('t1', input);
-    expect(mockApiPost).toHaveBeenCalledWith('newsletter-studio/templates', input);
-    expect(mockApiPut).toHaveBeenCalledWith('newsletter-studio/templates/t1', input);
   });
 
   it('unwraps the dashboard envelope', async () => {
@@ -142,14 +154,14 @@ describe('lists, templates, dashboard, processor', () => {
     expect(mockApiPost).toHaveBeenCalledWith('newsletter-studio/process', {});
   });
 
-  it('tracks clicks with the public ping and returns the stored URL', async () => {
-    mockApiPost.mockResolvedValue({ success: true, url: 'https://a.example/one' });
-    const url = await newsletterStudioApi.trackClick('c1', 'tok', 'l1');
+  it('tracks a read with the public ping and returns the signed URL', async () => {
+    mockApiPost.mockResolvedValue({ success: true, url: 'https://signed/c1.pdf' });
+    const url = await newsletterStudioApi.trackClick('c1', 'tok', 'pdf');
     expect(mockApiPost).toHaveBeenCalledWith('newsletter-studio/track/click', {
       campaignId: 'c1',
       token: 'tok',
-      linkId: 'l1',
+      linkId: 'pdf',
     });
-    expect(url).toBe('https://a.example/one');
+    expect(url).toBe('https://signed/c1.pdf');
   });
 });

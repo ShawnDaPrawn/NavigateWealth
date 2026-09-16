@@ -7,50 +7,36 @@
 
 import { z } from 'npm:zod';
 
-/** Generous but bounded: a full HTML newsletter body. */
-const BodyHtmlSchema = z
-  .string()
-  .min(1, 'Body is required')
-  .max(500_000, 'Body exceeds the 500KB limit');
-
-const CampaignNameSchema = z
+export const TitleSchema = z
   .string()
   .trim()
-  .min(1, 'Campaign name is required')
-  .max(200, 'Campaign name is too long');
+  .min(1, 'Title is required')
+  .max(150, 'Title is too long (150 characters max)');
 
-const SubjectSchema = z
+export const DescriptionSchema = z
   .string()
   .trim()
-  .min(1, 'Subject is required')
-  .max(300, 'Subject is too long');
+  .min(1, 'Description is required')
+  .max(1000, 'Description is too long (1000 characters max)');
+
+export const ListIdsSchema = z
+  .array(z.string().trim().min(1).max(120))
+  .min(1, 'Select at least one audience')
+  .max(20, 'Too many audiences');
 
 export const CreateNewsletterCampaignSchema = z
   .object({
-    name: CampaignNameSchema,
-    subject: SubjectSchema,
-    preheader: z.string().trim().max(300).optional(),
-    fromName: z.string().trim().max(120).optional(),
-    listIds: z
-      .array(z.string().trim().min(1).max(120))
-      .min(1, 'Select at least one audience list')
-      .max(20, 'Too many audience lists'),
-    bodyHtml: BodyHtmlSchema,
-    templateId: z.string().trim().max(120).nullish(),
-    trackClicks: z.boolean().optional(),
+    title: TitleSchema,
+    description: DescriptionSchema,
+    listIds: ListIdsSchema,
   })
   .passthrough();
 
 export const UpdateNewsletterCampaignSchema = z
   .object({
-    name: CampaignNameSchema.optional(),
-    subject: SubjectSchema.optional(),
-    preheader: z.string().trim().max(300).nullish(),
-    fromName: z.string().trim().max(120).optional(),
-    listIds: z.array(z.string().trim().min(1).max(120)).min(1).max(20).optional(),
-    bodyHtml: BodyHtmlSchema.optional(),
-    templateId: z.string().trim().max(120).nullish(),
-    trackClicks: z.boolean().optional(),
+    title: TitleSchema.optional(),
+    description: DescriptionSchema.optional(),
+    listIds: ListIdsSchema.optional(),
   })
   .passthrough();
 
@@ -68,15 +54,6 @@ export const TestSendNewsletterCampaignSchema = z
       .array(z.string().email('Invalid test recipient address'))
       .min(1, 'Provide at least one test address')
       .max(5, 'At most 5 test addresses per send'),
-  })
-  .passthrough();
-
-export const NewsletterTemplateSchema = z
-  .object({
-    name: z.string().trim().min(1, 'Template name is required').max(200),
-    description: z.string().trim().max(500).optional(),
-    subject: z.string().trim().max(300).optional(),
-    bodyHtml: BodyHtmlSchema,
   })
   .passthrough();
 

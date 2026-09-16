@@ -1,5 +1,5 @@
 /**
- * Newsletter Studio — frontend types.
+ * Newsletter — frontend types.
  *
  * Mirrors src/supabase/functions/server/newsletter-studio-types.ts view
  * shapes 1:1. Shared over HTTP, never imported across the SPA/edge boundary.
@@ -14,32 +14,34 @@ export type NewsletterCampaignStatus =
   | 'finished'
   | 'cancelled';
 
-export interface NewsletterCampaignLink {
-  id: string;
-  url: string;
+export type NewsletterCampaignSource = 'admin' | 'routine';
+
+export interface NewsletterPdf {
+  storagePath: string;
+  fileName: string;
+  sizeBytes: number;
+  uploadedAt: string;
 }
 
 export interface NewsletterCampaign {
   id: string;
-  name: string;
-  subject: string;
-  preheader?: string;
+  title: string;
+  description: string;
   fromName: string;
   listIds: string[];
   listNames: string[];
-  bodyHtml: string;
-  templateId?: string | null;
-  trackClicks: boolean;
+  pdf: NewsletterPdf | null;
+  source: NewsletterCampaignSource;
+  sourceRef: string | null;
+  reviewNotifiedAt: string | null;
   status: NewsletterCampaignStatus;
   scheduledAt: string | null;
-  links: NewsletterCampaignLink[];
   recipientCount: number;
   sentCount: number;
   failedCount: number;
   processedCount: number;
   progressPercent: number;
-  openCount: number;
-  clickCount: number;
+  readCount: number;
   statsRefreshedAt: string | null;
   createdBy: string;
   createdAt: string;
@@ -74,22 +76,14 @@ export interface NewsletterCampaignRecipient {
   clicks: { linkId: string; at: string }[];
 }
 
-export interface NewsletterCampaignLinkStats extends NewsletterCampaignLink {
-  clickCount: number;
-}
-
 export interface NewsletterCampaignStats {
   campaignId: string;
   recipientCount: number;
   sentCount: number;
   failedCount: number;
   pendingCount: number;
-  openCount: number;
-  clickCount: number;
-  clickedRecipientCount: number;
-  openRate: number;
-  clickRate: number;
-  links: NewsletterCampaignLinkStats[];
+  readCount: number;
+  readRate: number;
 }
 
 export interface NewsletterListView {
@@ -102,21 +96,10 @@ export interface NewsletterListView {
   clientCount: number;
 }
 
-export interface NewsletterStudioTemplate {
-  id: string;
-  name: string;
-  description: string;
-  subject: string;
-  bodyHtml: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface NewsletterProcessorState {
   mode: 'manual' | 'cron';
   lastRunAt: string | null;
-  /** Null when the pg_cron job has never checked in — see the dashboard warning. */
+  /** Null when the pg_cron job has never checked in — see the delivery panel warning. */
   lastCronRunAt: string | null;
   lastSuccessAt: string | null;
   lastError: string | null;
@@ -132,16 +115,16 @@ export interface NewsletterDashboardSummary {
   campaigns: {
     total: number;
     draft: number;
+    awaitingReview: number;
     scheduled: number;
     active: number;
     finished: number;
     cancelled: number;
   };
-  delivery: { totalSent: number; totalFailed: number; totalOpens: number; totalClicks: number };
+  delivery: { totalSent: number; totalFailed: number; totalRead: number };
   recentCampaigns: NewsletterCampaign[];
   processor: NewsletterProcessorState | null;
   listCount: number;
-  templateCount: number;
 }
 
 export type CampaignStatusCounts = Record<NewsletterCampaignStatus, number>;
@@ -163,24 +146,12 @@ export interface RecipientPageResult {
 }
 
 export interface CreateCampaignInput {
-  name: string;
-  subject: string;
-  preheader?: string;
-  fromName?: string;
+  title: string;
+  description: string;
   listIds: string[];
-  bodyHtml: string;
-  templateId?: string | null;
-  trackClicks?: boolean;
 }
 
 export type UpdateCampaignInput = Partial<CreateCampaignInput>;
-
-export interface TemplateInput {
-  name: string;
-  description?: string;
-  subject?: string;
-  bodyHtml: string;
-}
 
 export interface TestSendResult {
   email: string;
@@ -193,6 +164,7 @@ export interface ProcessResult {
   campaignsExamined: number;
   campaignsProcessed: number;
   promotedScheduled: number;
+  intakeProcessed: number;
   sent: number;
   failed: number;
   finished: string[];

@@ -1,5 +1,5 @@
 /**
- * Newsletter Studio — React Query hooks.
+ * Newsletter — React Query hooks.
  *
  * Queries poll only where delivery is live: the campaign detail refetches on
  * a short interval while its status is active, everything else relies on
@@ -9,12 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { newsletterStudioApi } from '../api';
 import { newsletterKeys } from './queryKeys';
-import type {
-  CreateCampaignInput,
-  NewsletterCampaign,
-  TemplateInput,
-  UpdateCampaignInput,
-} from '../types';
+import type { CreateCampaignInput, NewsletterCampaign, UpdateCampaignInput } from '../types';
 
 const ACTIVE_STATUSES: NewsletterCampaign['status'][] = ['queued', 'sending'];
 
@@ -81,14 +76,6 @@ export function useStudioLists() {
   });
 }
 
-export function useStudioTemplates() {
-  return useQuery({
-    queryKey: newsletterKeys.templates(),
-    queryFn: () => newsletterStudioApi.getTemplates(),
-    staleTime: 60_000,
-  });
-}
-
 // ── Mutations ────────────────────────────────────────────────────────────────
 
 function useInvalidateCampaigns() {
@@ -111,11 +98,8 @@ export function useCreateCampaign() {
   const invalidate = useInvalidateCampaigns();
   return useMutation({
     mutationFn: (input: CreateCampaignInput) => newsletterStudioApi.createCampaign(input),
-    onSuccess: (campaign) => {
-      invalidate(campaign.id);
-      toast.success('Campaign draft created');
-    },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to create campaign')),
+    onSuccess: (campaign) => invalidate(campaign.id),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to create the newsletter')),
   });
 }
 
@@ -126,9 +110,22 @@ export function useUpdateCampaign() {
       newsletterStudioApi.updateCampaign(id, patch),
     onSuccess: (campaign) => {
       invalidate(campaign.id);
-      toast.success('Campaign saved');
+      toast.success('Newsletter saved');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to save campaign')),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to save the newsletter')),
+  });
+}
+
+export function useUploadCampaignPdf() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      newsletterStudioApi.uploadPdf(id, file),
+    onSuccess: (campaign) => {
+      invalidate(campaign.id);
+      toast.success('PDF uploaded');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to upload the PDF')),
   });
 }
 
@@ -138,21 +135,9 @@ export function useDeleteCampaign() {
     mutationFn: (id: string) => newsletterStudioApi.deleteCampaign(id),
     onSuccess: () => {
       invalidate();
-      toast.success('Campaign deleted');
+      toast.success('Newsletter deleted');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to delete campaign')),
-  });
-}
-
-export function useDuplicateCampaign() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({
-    mutationFn: (id: string) => newsletterStudioApi.duplicateCampaign(id),
-    onSuccess: (campaign) => {
-      invalidate(campaign.id);
-      toast.success('Campaign duplicated as a new draft');
-    },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to duplicate campaign')),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to delete the newsletter')),
   });
 }
 
@@ -179,9 +164,9 @@ export function useScheduleCampaign() {
       newsletterStudioApi.scheduleCampaign(id, scheduledAt),
     onSuccess: (campaign) => {
       invalidate(campaign.id);
-      toast.success('Campaign scheduled');
+      toast.success('Newsletter scheduled');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to schedule campaign')),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to schedule the newsletter')),
   });
 }
 
@@ -194,22 +179,10 @@ export function useSendCampaignNow() {
       toast.success(
         campaign.recipientCount > 0
           ? `Delivery started to ${campaign.recipientCount} recipient(s)`
-          : 'Campaign finished — no eligible recipients',
+          : 'Nothing to send — no eligible recipients',
       );
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to start delivery')),
-  });
-}
-
-export function usePauseCampaign() {
-  const invalidate = useInvalidateCampaigns();
-  return useMutation({
-    mutationFn: (id: string) => newsletterStudioApi.pauseCampaign(id),
-    onSuccess: (campaign) => {
-      invalidate(campaign.id);
-      toast.success('Campaign paused');
-    },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to pause campaign')),
   });
 }
 
@@ -219,9 +192,9 @@ export function useResumeCampaign() {
     mutationFn: (id: string) => newsletterStudioApi.resumeCampaign(id),
     onSuccess: (campaign) => {
       invalidate(campaign.id);
-      toast.success('Campaign resumed');
+      toast.success('Delivery retried');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to resume campaign')),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to retry delivery')),
   });
 }
 
@@ -231,43 +204,15 @@ export function useCancelCampaign() {
     mutationFn: (id: string) => newsletterStudioApi.cancelCampaign(id),
     onSuccess: (campaign) => {
       invalidate(campaign.id);
-      toast.success('Campaign cancelled');
+      toast.success('Newsletter cancelled');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to cancel campaign')),
-  });
-}
-
-export function useSaveTemplate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, input }: { id?: string; input: TemplateInput }) =>
-      id
-        ? newsletterStudioApi.updateTemplate(id, input)
-        : newsletterStudioApi.createTemplate(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.templates() });
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.studioDashboard() });
-      toast.success('Template saved');
-    },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to save template')),
-  });
-}
-
-export function useDeleteTemplate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => newsletterStudioApi.deleteTemplate(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: newsletterKeys.templates() });
-      toast.success('Template deleted');
-    },
-    onError: (error) => toast.error(errorMessage(error, 'Failed to delete template')),
+    onError: (error) => toast.error(errorMessage(error, 'Failed to cancel the newsletter')),
   });
 }
 
 /**
  * Manual delivery pass from the UI — the same tick the scheduler runs, so an
- * admin can nudge a stalled or freshly resumed campaign without waiting.
+ * admin can nudge a stalled or freshly retried newsletter without waiting.
  */
 export function useRunProcessorNow() {
   const invalidate = useInvalidateCampaigns();

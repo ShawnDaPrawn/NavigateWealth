@@ -14,15 +14,23 @@
  *      crashed tick can never leave the campaign's numbers drifted from
  *      reality.
  *
+ * Every newsletter carries its PDF as an attachment, so the attachment is
+ * built once per campaign per tick and the concurrent batch is sized from
+ * its encoded length (newsletter-studio-attachment.ts).
+ *
  * Invoked from three places, mirroring the platform doctrine "cron is the
  * authoritative driver, the admin browser is a best-effort accelerator":
  *   - POST /newsletter-studio/cron/process        (pg_cron, requireCronAuth)
  *   - POST /newsletter-studio/process             (admin manual/accelerator)
  *   - after send-now/resume, opportunistically inline (fire-and-forget).
+ *
+ * The cron tick additionally sweeps the SQL intake table for routine
+ * hand-overs (newsletter-intake-service.ts) before delivering anything.
  */
 
 import { createModuleLogger } from './stderr-logger.ts';
-import { sendEmail } from './email-service.ts';
+import { getFooterSettings, sendEmail } from './email-service.ts';
+import type { EmailFooterSettings } from './email-core.ts';
 import { listSubscribers } from './newsletter-service.ts';
 import {
   chunkArray,
@@ -35,17 +43,29 @@ import {
 } from './publications-notification-state.ts';
 import {
   buildCampaignEmailHeaders,
+  buildReadUrl,
   NEWSLETTER_DEFAULT_FROM_NAME,
   NEWSLETTER_FROM_EMAIL,
   NEWSLETTER_REPLY_TO,
-  personalizeText,
-  renderCampaignEmail,
+  renderNewsletterEmail,
 } from './newsletter-studio-render.ts';
+import { buildPdfAttachment, deliveryBatchSize } from './newsletter-studio-attachment.ts';
+import type { PdfAttachment } from './newsletter-studio-attachment.ts';
 import {
+  acquireCampaignLease,
+  CAMPAIGN_LOCK_TTL_MS,
+  persistProgress,
+  releaseCampaignLease,
+  releaseCampaignSafely,
+  withLeaseHeartbeat,
+} from './newsletter-studio-lease.ts';
+import {
+  listCampaignRecords,
   nowIso,
   promoteDueScheduledCampaign,
-  RECIPIENT_FETCH_CHUNK,
 } from './newsletter-studio-service.ts';
+import { RECIPIENT_FETCH_CHUNK } from './newsletter-studio-engagement.ts';
+import { sweepNewsletterIntake } from './newsletter-intake-service.ts';
 import {
   legacyBroadcasts,
   newsletterAudiences,
@@ -64,17 +84,23 @@ import type {
   ProcessNewsletterCampaignsResult,
 } from './newsletter-studio-types.ts';
 
+export {
+  CAMPAIGN_LOCK_SETTLE_MS,
+  CAMPAIGN_LOCK_TTL_MS,
+  LEASE_HEARTBEAT_MS,
+} from './newsletter-studio-lease.ts';
+export { DELIVERY_BATCH_SIZE } from './newsletter-studio-attachment.ts';
+export { sendCampaignTestEmails } from './newsletter-studio-test-send.ts';
+export type { TestSendOutcome } from './newsletter-studio-test-send.ts';
+
 const log = createModuleLogger('newsletter-studio-processor');
 
 // Budgets and pacing — aligned with the article-notification engine.
-export const DELIVERY_BATCH_SIZE = 20;
 export const MAX_SEND_ATTEMPTS_PER_DELIVERY = 3;
 export const RETRY_DELAYS_MS = [750, 1500];
 export const RETRYABLE_REQUEUE_DELAY_MS = 30_000;
 /** Total attempts across ticks before a retryable failure becomes terminal. */
 export const MAX_TOTAL_ATTEMPTS = 5;
-export const CAMPAIGN_LOCK_TTL_MS = 60_000;
-export const CAMPAIGN_LOCK_SETTLE_MS = 80;
 /**
  * Deadline on a single provider call. Without one a hung SendGrid/SES request
  * has no upper bound, so a batch could outlive its lease and be reclaimed by
@@ -83,8 +109,6 @@ export const CAMPAIGN_LOCK_SETTLE_MS = 80;
  * sleeps stay under CAMPAIGN_LOCK_TTL_MS at this value.
  */
 export const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
-/** How often an in-flight batch renews the lease it holds. */
-export const LEASE_HEARTBEAT_MS = 20_000;
 export const DEFAULT_MANUAL_MAX_CAMPAIGNS = 2;
 export const DEFAULT_MANUAL_MAX_BATCHES = 3;
 export const DEFAULT_CRON_MAX_CAMPAIGNS = 3;
@@ -95,127 +119,6 @@ export interface ProcessOptions {
   mode?: 'manual' | 'cron';
   maxCampaigns?: number;
   maxBatchesPerCampaign?: number;
-}
-
-// ── Lease ────────────────────────────────────────────────────────────────────
-
-/** Optimistic write→settle→read-back lease, identical in spirit to the jobs engine. */
-async function acquireCampaignLease(
-  campaign: NewsletterCampaign,
-): Promise<NewsletterCampaign | null> {
-  const expiresAt = campaign.lockExpiresAt ? new Date(campaign.lockExpiresAt).getTime() : 0;
-  if (campaign.lockId && expiresAt > Date.now()) return null;
-
-  const claimed: NewsletterCampaign = {
-    ...campaign,
-    status: campaign.status === 'queued' ? 'sending' : campaign.status,
-    startedAt: campaign.startedAt || nowIso(),
-    updatedAt: nowIso(),
-    lockId: crypto.randomUUID(),
-    lockExpiresAt: new Date(Date.now() + CAMPAIGN_LOCK_TTL_MS).toISOString(),
-  };
-  await newsletterCampaigns.put(campaign.id, claimed);
-  await sleep(CAMPAIGN_LOCK_SETTLE_MS);
-
-  const latest = await newsletterCampaigns.get(campaign.id);
-  if (!latest || latest.lockId !== claimed.lockId) return null;
-  return latest;
-}
-
-async function releaseCampaignLease(
-  campaign: NewsletterCampaign,
-  updates: Partial<NewsletterCampaign> = {},
-): Promise<void> {
-  await newsletterCampaigns.put(campaign.id, {
-    ...campaign,
-    ...updates,
-    updatedAt: nowIso(),
-    lockId: null,
-    lockExpiresAt: null,
-  });
-}
-
-/**
- * Release built on the LATEST stored record, never this tick's copy: an
- * admin pause/cancel written while the processor held the lease must
- * survive the write (review finding). An admin-written non-active status
- * always wins over `fallbackStatus`.
- */
-async function releaseCampaignSafely(
-  campaign: NewsletterCampaign,
-  fallbackStatus: NewsletterCampaign['status'],
-  updates: Partial<NewsletterCampaign> = {},
-): Promise<void> {
-  const latest = (await newsletterCampaigns.get(campaign.id)) ?? campaign;
-  const adminHalted = !ACTIVE_CAMPAIGN_STATUSES.includes(latest.status);
-  await releaseCampaignLease(latest, {
-    ...updates,
-    status: adminHalted ? latest.status : fallbackStatus,
-  });
-}
-
-/**
- * Persist delivery counters onto the LATEST record for the same reason.
- * Returns the merged record and whether the admin halted the campaign while
- * the batch was in flight — the caller must stop delivering when it did.
- */
-async function persistProgress(
-  campaign: NewsletterCampaign,
-  counters: Pick<
-    NewsletterCampaign,
-    'sentCount' | 'failedCount' | 'processedCount' | 'progressPercent'
-  >,
-): Promise<{ campaign: NewsletterCampaign; halted: boolean }> {
-  const latest = (await newsletterCampaigns.get(campaign.id)) ?? campaign;
-  const halted = !ACTIVE_CAMPAIGN_STATUSES.includes(latest.status);
-  const merged: NewsletterCampaign = {
-    ...latest,
-    ...counters,
-    lastProgressAt: nowIso(),
-    updatedAt: nowIso(),
-    lockId: halted ? null : campaign.lockId,
-    lockExpiresAt: halted ? null : new Date(Date.now() + CAMPAIGN_LOCK_TTL_MS).toISOString(),
-  };
-  await newsletterCampaigns.put(campaign.id, merged);
-  return { campaign: merged, halted };
-}
-
-/**
- * Run `work` while renewing the campaign's lease in the background, so a batch
- * that runs long cannot have its lease expire underneath it and be reclaimed
- * by a second worker (review finding). The heartbeat only ever extends
- * `lockExpiresAt` for the lease we still hold: if another worker has taken it,
- * or an admin halted the campaign, it stops renewing and leaves the record
- * alone.
- */
-async function withLeaseHeartbeat<T>(
-  campaign: NewsletterCampaign,
-  work: () => Promise<T>,
-): Promise<T> {
-  const timer = setInterval(() => {
-    void (async () => {
-      try {
-        const latest = await newsletterCampaigns.get(campaign.id);
-        if (!latest || latest.lockId !== campaign.lockId) return;
-        if (!ACTIVE_CAMPAIGN_STATUSES.includes(latest.status)) return;
-        await newsletterCampaigns.put(campaign.id, {
-          ...latest,
-          lockExpiresAt: new Date(Date.now() + CAMPAIGN_LOCK_TTL_MS).toISOString(),
-        });
-      } catch (error) {
-        log.warn('Lease heartbeat failed', {
-          campaignId: campaign.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    })();
-  }, LEASE_HEARTBEAT_MS);
-
-  try {
-    return await work();
-  } finally {
-    clearInterval(timer);
-  }
 }
 
 /**
@@ -262,6 +165,12 @@ function recipientReadiness(record: NewsletterCampaignRecipient | null): Readine
 
 // ── Delivery ─────────────────────────────────────────────────────────────────
 
+/** Everything a tick loads once for a campaign and shares across its recipients. */
+interface CampaignSendContext {
+  attachment: PdfAttachment;
+  footerSettings: EmailFooterSettings;
+}
+
 /**
  * `sender_fault` means the send failed for a reason that is ours, not the
  * recipient's, and carries the operator-facing message. Its recipient record is
@@ -272,11 +181,32 @@ type DeliveryOutcome =
   | { kind: 'sent' | 'retryable' | 'terminal' }
   | { kind: 'sender_fault'; message: string };
 
+function blankRecord(
+  campaign: NewsletterCampaign,
+  item: NewsletterAudienceItem,
+): NewsletterCampaignRecipient {
+  return {
+    campaignId: campaign.id,
+    token: item.token,
+    email: item.email,
+    name: item.name,
+    firstName: item.firstName,
+    deliveryStatus: 'pending',
+    deliveryError: null,
+    attemptCount: 0,
+    lastAttemptedAt: null,
+    sentAt: null,
+    openedAt: null,
+    clicks: [],
+  };
+}
+
 async function deliverToRecipient(
   campaign: NewsletterCampaign,
   item: NewsletterAudienceItem,
   existing: NewsletterCampaignRecipient | null,
   optedOut: Set<string>,
+  ctx: CampaignSendContext,
 ): Promise<DeliveryOutcome> {
   const recordId = recipientRecordId(campaign.id, item.token);
   const priorAttempts = existing?.attemptCount ?? 0;
@@ -284,18 +214,7 @@ async function deliverToRecipient(
   // POPIA: an opt-out recorded after the audience was frozen still wins.
   if (optedOut.has(item.email.toLowerCase())) {
     await newsletterRecipients.put(recordId, {
-      ...(existing ?? {
-        campaignId: campaign.id,
-        token: item.token,
-        email: item.email,
-        name: item.name,
-        firstName: item.firstName,
-        attemptCount: 0,
-        lastAttemptedAt: null,
-        sentAt: null,
-        openedAt: null,
-        clicks: [],
-      }),
+      ...(existing ?? blankRecord(campaign, item)),
       deliveryStatus: 'failed_terminal',
       deliveryError: 'Recipient opted out after the campaign was queued — skipped (POPIA)',
     });
@@ -313,37 +232,27 @@ async function deliverToRecipient(
     return { kind: 'terminal' };
   }
 
-  const base: NewsletterCampaignRecipient = existing ?? {
-    campaignId: campaign.id,
-    token: item.token,
-    email: item.email,
-    name: item.name,
-    firstName: item.firstName,
-    deliveryStatus: 'pending',
-    deliveryError: null,
-    attemptCount: 0,
-    lastAttemptedAt: null,
-    sentAt: null,
-    openedAt: null,
-    clicks: [],
-  };
-
   const attemptStarted: NewsletterCampaignRecipient = {
-    ...base,
+    ...(existing ?? blankRecord(campaign, item)),
     deliveryStatus: 'sending',
     attemptCount: priorAttempts + 1,
     lastAttemptedAt: nowIso(),
   };
   await newsletterRecipients.put(recordId, attemptStarted);
 
-  const { html, text } = await renderCampaignEmail({ campaign, recipient: item });
+  const { html, text } = renderNewsletterEmail({
+    campaign,
+    recipient: item,
+    readUrl: buildReadUrl(campaign.id, item.token),
+    footerSettings: ctx.footerSettings,
+  });
 
   let lastFailure: { message: string; disposition: 'retryable' | 'terminal' } | null = null;
   for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS_PER_DELIVERY; attempt++) {
     try {
       await sendEmail({
         to: item.email,
-        subject: personalizeText(campaign.subject, item),
+        subject: campaign.title,
         html,
         text,
         from: {
@@ -352,6 +261,7 @@ async function deliverToRecipient(
         },
         replyTo: NEWSLETTER_REPLY_TO,
         headers: buildCampaignEmailHeaders(campaign.id, item.token),
+        attachments: [ctx.attachment],
         customArgs: { type: 'newsletter_campaign', campaign_id: campaign.id },
         throwOnError: true,
         timeoutMs: PROVIDER_REQUEST_TIMEOUT_MS,
@@ -400,6 +310,24 @@ interface CampaignTickTally {
   senderFault?: string;
 }
 
+function progressPercent(processed: number, total: number): number {
+  return total > 0 ? Math.round((processed / total) * 1000) / 10 : 100;
+}
+
+/**
+ * Load the PDF and footer once for the tick. A PDF that cannot be read is a
+ * fault on our side — the campaign is parked the same way a rejected sender
+ * is, with no recipient burned.
+ */
+async function loadSendContext(campaign: NewsletterCampaign): Promise<CampaignSendContext> {
+  if (!campaign.pdf) throw new Error('The newsletter has no PDF to attach');
+  const [attachment, footerSettings] = await Promise.all([
+    buildPdfAttachment(campaign.pdf),
+    getFooterSettings(),
+  ]);
+  return { attachment, footerSettings };
+}
+
 async function processOneCampaign(
   leased: NewsletterCampaign,
   maxBatches: number,
@@ -417,10 +345,27 @@ async function processOneCampaign(
     return tally;
   }
 
+  let ctx: CampaignSendContext;
+  try {
+    ctx = await loadSendContext(leased);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log.error('Campaign paused — the newsletter PDF could not be loaded', {
+      campaignId: leased.id,
+      error: message,
+    });
+    await releaseCampaignSafely(leased, 'paused', {
+      lastError: `Paused — the newsletter PDF could not be loaded, not a recipient problem: ${message}`,
+    });
+    tally.senderFault = message;
+    return tally;
+  }
+  const batchSize = deliveryBatchSize(ctx.attachment.content.length);
+
   let campaign = leased;
 
   for (let batchIndex = 0; batchIndex < maxBatches; batchIndex++) {
-    // Respect pause/cancel written by the admin between batches.
+    // Respect a cancel written by the admin between batches.
     const fresh = await newsletterCampaigns.get(campaign.id);
     if (!fresh || !ACTIVE_CAMPAIGN_STATUSES.includes(fresh.status)) {
       if (fresh) await releaseCampaignLease(fresh);
@@ -462,11 +407,11 @@ async function processOneCampaign(
       return tally;
     }
 
-    const batch = readyIndexes.slice(0, DELIVERY_BATCH_SIZE);
+    const batch = readyIndexes.slice(0, batchSize);
     const outcomes = await withLeaseHeartbeat(campaign, () =>
       Promise.allSettled(
         batch.map((index) =>
-          deliverToRecipient(campaign, audience.items[index], records[index], optedOut),
+          deliverToRecipient(campaign, audience.items[index], records[index], optedOut, ctx),
         ),
       ),
     );
@@ -489,7 +434,7 @@ async function processOneCampaign(
 
     // Our identity, credentials, account standing or quota — every remaining
     // recipient would fail identically. Pause with the provider's own words so
-    // an operator can fix the cause and resume, rather than grinding the
+    // an operator can fix the cause and retry, rather than grinding the
     // audience down against a problem no retry can clear.
     if (senderFault) {
       log.error('Campaign paused — email provider rejected the sender', {
@@ -501,10 +446,7 @@ async function processOneCampaign(
         sentCount,
         failedCount,
         processedCount: halted,
-        progressPercent:
-          audience.items.length > 0
-            ? Math.round((halted / audience.items.length) * 1000) / 10
-            : 100,
+        progressPercent: progressPercent(halted, audience.items.length),
       });
       await releaseCampaignSafely(campaign, 'paused', {
         lastError: `Paused — the email provider rejected the sender, not the recipients: ${senderFault}`,
@@ -518,13 +460,10 @@ async function processOneCampaign(
       sentCount,
       failedCount,
       processedCount: processed,
-      progressPercent:
-        audience.items.length > 0
-          ? Math.round((processed / audience.items.length) * 1000) / 10
-          : 100,
+      progressPercent: progressPercent(processed, audience.items.length),
     });
     campaign = progress.campaign;
-    // An admin paused/cancelled while the batch was in flight — their status
+    // An admin cancelled while the batch was in flight — their status
     // stands (persistProgress kept it) and delivery stops here.
     if (progress.halted) return tally;
 
@@ -562,15 +501,10 @@ async function finalizeCampaign(
   });
 
   // Light up the legacy subscriber-dashboard KPIs (getStats scans broadcast:).
-  const snippet = campaign.bodyHtml
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 280);
   await legacyBroadcasts.put(campaign.id, {
     id: campaign.id,
-    subject: campaign.subject,
-    bodySnippet: snippet,
+    subject: campaign.title,
+    bodySnippet: campaign.description.replace(/\s+/g, ' ').trim().slice(0, 280),
     recipientCount,
     sent: sentCount,
     failed: failedCount,
@@ -578,69 +512,6 @@ async function finalizeCampaign(
   });
 
   log.info('Campaign finished', { campaignId: campaign.id, sentCount, failedCount });
-}
-
-// ── Test sends ───────────────────────────────────────────────────────────────
-
-export interface TestSendOutcome {
-  email: string;
-  ok: boolean;
-  error?: string;
-}
-
-/**
- * Deliver the campaign to up to five test addresses. Subject is prefixed,
- * click tracking is disabled (links keep their real destinations), and
- * failures are reported per-address rather than thrown.
- */
-export async function sendCampaignTestEmails(
-  campaignId: string,
-  emails: string[],
-): Promise<TestSendOutcome[]> {
-  const campaign = await newsletterCampaigns.get(campaignId);
-  if (!campaign) throw new Error(`Campaign ${campaignId} not found`);
-
-  const links = campaign.links.length > 0 ? campaign.links : [];
-  const outcomes: TestSendOutcome[] = [];
-  for (const email of emails) {
-    // Same shape resolveAudience gives a real recipient without a stored
-    // name, so a test send exercises the exact merge output.
-    const recipient = {
-      email,
-      name: email,
-      firstName: email.split('@')[0] || '',
-      token: `test-${crypto.randomUUID().slice(0, 8)}`,
-    };
-    try {
-      const { html, text } = await renderCampaignEmail({
-        campaign: { ...campaign, links },
-        recipient,
-        disableClickTracking: true,
-      });
-      await sendEmail({
-        to: email,
-        subject: `[TEST] ${personalizeText(campaign.subject, recipient)}`,
-        html,
-        text,
-        from: {
-          email: NEWSLETTER_FROM_EMAIL,
-          name: campaign.fromName || NEWSLETTER_DEFAULT_FROM_NAME,
-        },
-        replyTo: NEWSLETTER_REPLY_TO,
-        customArgs: { type: 'newsletter_campaign_test', campaign_id: campaign.id },
-        throwOnError: true,
-        timeoutMs: PROVIDER_REQUEST_TIMEOUT_MS,
-      });
-      outcomes.push({ email, ok: true });
-    } catch (error) {
-      outcomes.push({
-        email,
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-  return outcomes;
 }
 
 // ── The tick ─────────────────────────────────────────────────────────────────
@@ -663,6 +534,7 @@ export async function processNewsletterCampaigns(
     campaignsExamined: 0,
     campaignsProcessed: 0,
     promotedScheduled: 0,
+    intakeProcessed: 0,
     sent: 0,
     failed: 0,
     finished: [],
@@ -670,7 +542,21 @@ export async function processNewsletterCampaigns(
   };
 
   try {
-    const { items: campaigns } = await newsletterCampaigns.list({ limit: 1000 });
+    // 0) Routine hand-overs waiting in the SQL intake table (cron only — the
+    //    browser accelerator must not be what makes drafts appear).
+    if (mode === 'cron') {
+      try {
+        const swept = await sweepNewsletterIntake();
+        result.intakeProcessed = swept.processed;
+        result.errors.push(...swept.errors);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        result.errors.push(`intake sweep: ${message}`);
+        log.error('Intake sweep failed', { message });
+      }
+    }
+
+    const campaigns = await listCampaignRecords();
     result.campaignsExamined = campaigns.length;
 
     // 1) Promote scheduled campaigns whose time has arrived.
@@ -693,11 +579,7 @@ export async function processNewsletterCampaigns(
     }
 
     // 2) Work active campaigns, oldest first, within budget.
-    const active = (
-      result.promotedScheduled > 0
-        ? (await newsletterCampaigns.list({ limit: 1000 })).items
-        : campaigns
-    )
+    const active = (result.promotedScheduled > 0 ? await listCampaignRecords() : campaigns)
       .filter((c) => ACTIVE_CAMPAIGN_STATUSES.includes(c.status))
       .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
       .slice(0, maxCampaigns);

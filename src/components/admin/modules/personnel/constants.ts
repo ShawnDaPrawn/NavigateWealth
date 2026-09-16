@@ -309,9 +309,9 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
     { key: 'delete', label: 'Delete', description: 'Delete templates or history' },
   ],
   newsletter: [
-    { key: 'create', label: 'Compose', description: 'Create and edit newsletter campaigns' },
-    { key: 'send', label: 'Send', description: 'Schedule, send, pause and cancel campaigns' },
-    { key: 'delete', label: 'Delete', description: 'Delete campaigns and templates' },
+    { key: 'create', label: 'Upload', description: 'Upload newsletter PDFs and edit drafts' },
+    { key: 'send', label: 'Send', description: 'Test, schedule, send, stop and retry newsletters' },
+    { key: 'delete', label: 'Delete', description: 'Delete newsletters' },
   ],
   marketing: [
     { key: 'create', label: 'Create', description: 'Create social media posts' },
