@@ -18,6 +18,7 @@ import { itemWarnings } from './state.mjs';
 import { publishLiveView } from './live-view.mjs';
 import { writeDebugArtifact } from './debug-artifacts.mjs';
 import { searchPolicyByNumber } from './search.mjs';
+import { runAgentStage } from './agent.mjs';
 import { buildExtractionFieldList, countVisibleValues, extractPolicyRecord } from './extraction.mjs';
 import { buildDocumentArtifacts, processDocumentArtifacts } from './documents.mjs';
 import {
@@ -25,7 +26,42 @@ import {
   runShadowExtractionComparison,
 } from './shadow-extraction.mjs';
 
-export async function processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter) {
+/**
+ * Find and open one policy's page.
+ *
+ * When the navigator is enabled for this provider it drives the search and
+ * confirmation stages; the configured selector walk stays as the fallback, so
+ * turning the agent on can only add a way to succeed, never remove one.
+ */
+async function locatePolicyPage(page, flow, item, brain, agentRuntime) {
+  if (!agentRuntime?.config?.enabled) {
+    await searchPolicyByNumber(page, flow, item, brain);
+    return 'selectors';
+  }
+
+  const stageOptions = {
+    flow,
+    item,
+    secrets: agentRuntime.secrets,
+    playbook: agentRuntime.playbook,
+    agentConfig: agentRuntime.config,
+    maxSteps: agentRuntime.config.maxStepsPerStage,
+  };
+
+  const found = await runAgentStage(page, { ...stageOptions, stage: 'find_policy' });
+  if (found.status === 'done') {
+    const confirmed = await runAgentStage(page, { ...stageOptions, stage: 'confirm_policy' });
+    if (confirmed.status === 'done') return 'navigator';
+    console.warn(`Navigator could not confirm the policy page (${confirmed.reason}); falling back to configured selectors.`);
+  } else {
+    console.warn(`Navigator could not find the policy (${found.reason}); falling back to configured selectors.`);
+  }
+
+  await searchPolicyByNumber(page, flow, item, brain);
+  return 'selectors-after-navigator';
+}
+
+export async function processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter, agentRuntime = null) {
   let completed = 0;
   let failed = 0;
   const failureSummaries = [];
@@ -45,10 +81,10 @@ export async function processPolicyQueue(page, flow, config, jobMode, brain, pro
         note: `Searching provider portal for ${item.clientName} / ${item.policyNumber}.`,
       });
 
-      await searchPolicyByNumber(page, flow, item, brain);
+      const locatedBy = await locatePolicyPage(page, flow, item, brain, agentRuntime);
       await publishLiveView(page, {
         force: true,
-        note: `Policy search landed on ${item.clientName} / ${item.policyNumber}.`,
+        note: `Policy search landed on ${item.clientName} / ${item.policyNumber} (${locatedBy}).`,
       });
 
       await updatePolicyItem(item.id, 'in_progress', {

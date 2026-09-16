@@ -4,9 +4,11 @@
 **Scope:** The product-integration module: the admin Integrations UI, the
 `integrations-*` server routes, the Playwright portal worker, and the sync
 engine that turns staged rows into policy updates.
-**Status:** Assessment and proposal, not a decision record. Nothing in this
-document is landed, and the four questions in Section 6 are still open. When
-they close, the outcome gets its own file under `docs/decisions/`.
+**Status:** Assessment and plan. The navigator agent (Section 3.1) is now
+BUILT and in the tree — see `docs/architecture/provider-portal-worker.md` for
+how to switch it on per provider. Everything else here is still proposal, and
+the questions in Section 7 are still open. When they close, the outcome gets
+its own file under `docs/decisions/`.
 
 **Method:** Every claim below is grounded in the code on `main` at the time
 of writing, with file references. Two full read-throughs were done: one of the
@@ -426,7 +428,7 @@ before the agent work.
 | 1     | Persistent worker on a container host. Encrypted saved sessions per provider. Resumable items. Re-readable OTP. Health alerting. | M      | Allan Gray refreshes without a fresh OTP; no cold start                 |
 | 2     | Promote `/page-extract` to primary extraction behind a per-provider flag. Field semantics unchanged.                             | S      | Values come from page text, not `<td>` adjacency                        |
 | 3     | One pipeline: Document AI through staging, locked fields universal, observed-values record, per-policy refresh job.              | M      | **Every provider has a working path today**, via Tier C if nothing else |
-| 4     | Agent loop for login, checkpoint, search and confirm. Playbook record and replay. Guided Connect flow.                           | L      | A provider is onboarded without an engineer                             |
+| 4     | **Agent loop for checkpoint, search and confirm, with playbook record and replay — LANDED.** Guided Connect flow still to build. | L      | A provider is onboarded without an engineer                             |
 | 5     | The three screens. Delete the four tabs and the delete list in 3.5.                                                              | L      | Adviser path is under five clicks with no technical input               |
 | 6     | Retire the Allan Gray adapter once the agent matches the golden flow. A golden flow per live provider.                           | S      | One engine, no provider branches                                        |
 
@@ -439,6 +441,13 @@ updated before any agent work ships.
 
 Phases 1 and 2 remain low risk, touch no adviser-facing screen, and can start
 immediately.
+
+**Phase 4 was brought forward and its engine is built**, because it is the part
+the whole module was missing: a brain that leads the run rather than a
+selector list that hopes. The navigator drives the three post-login stages,
+records a playbook, and falls back to the old selector walk when it cannot
+proceed — so it can only add a way to succeed. What remains of Phase 4 is the
+adviser-facing guided Connect flow, which belongs with the Phase 5 screens.
 
 ### Success measures
 

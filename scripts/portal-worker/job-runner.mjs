@@ -39,6 +39,7 @@ import {
 import { assertPastAuthCheckpoint, waitForManualOtpCheckpointIfPresent } from './otp.mjs';
 import { captureDiscoveryReport, postDiscoveryReport } from './discovery.mjs';
 import { processPolicyQueue } from './queue.mjs';
+import { loadAgentPlaybook, runAgentStage } from './agent.mjs';
 import { extractRows } from './extraction.mjs';
 
 export async function runJob(jobId, requestedMode = mode) {
@@ -111,7 +112,36 @@ export async function runJob(jobId, requestedMode = mode) {
       });
       await waitForManualOtpCheckpointIfPresent(page, flow, 12000);
     }
-    await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
+    // The navigator is loaded once per job: the playbook is per provider, and
+    // the credentials stay here so they never travel to the decision model.
+    const agentPlaybook = await loadAgentPlaybook();
+    const agentRuntime = agentPlaybook?.agent?.enabled
+      ? { config: agentPlaybook.agent, playbook: agentPlaybook.playbook, secrets: { username, password } }
+      : null;
+
+    try {
+      await assertPastAuthCheckpoint(page, flow, 'post-login navigation');
+    } catch (checkpointError) {
+      // A checkpoint the selector heuristics cannot clear is the single most
+      // common place a new provider dies. Give the navigator a chance before
+      // failing the job.
+      if (!agentRuntime) throw checkpointError;
+      console.warn(`Auth checkpoint not cleared by configuration (${checkpointError instanceof Error ? checkpointError.message : String(checkpointError)}); handing to the navigator.`);
+      await updateJob('running', { currentStep: 'navigator_auth_checkpoint', message: 'Working through the provider sign-in verification step.' });
+      const cleared = await runAgentStage(page, {
+        stage: 'pass_auth_checkpoint',
+        flow,
+        item: null,
+        secrets: agentRuntime.secrets,
+        playbook: agentRuntime.playbook,
+        agentConfig: agentRuntime.config,
+        maxSteps: agentRuntime.config.maxStepsPerStage,
+      });
+      if (cleared.status !== 'done') {
+        throw new Error(`${checkpointError instanceof Error ? checkpointError.message : String(checkpointError)} The navigator could not clear it either: ${cleared.reason}`, { cause: checkpointError });
+      }
+      await assertPastAuthCheckpoint(page, flow, 'post-login navigation (after navigator)');
+    }
 
     if (flow.navigation?.postLoginUrl) {
       const postLoginNavigation = await attemptConfiguredNavigation(page, {
@@ -146,7 +176,7 @@ export async function runJob(jobId, requestedMode = mode) {
         message: `Processing ${items.length} Navigate Wealth polic${items.length === 1 ? 'y' : 'ies'} one by one.`,
       });
       await publishLiveView(page, { force: true, note: 'Processing policy queue.' });
-      await processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter);
+      await processPolicyQueue(page, flow, config, jobMode, brain, providerAdapter, agentRuntime);
       return;
     }
 
