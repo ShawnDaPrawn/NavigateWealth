@@ -30,9 +30,13 @@
 #                  retention back off the stored object.
 #                  (secret: NW_BACKUP_S3_BUCKET, plus credentials)
 #
-# Each leg is independently gated. A missing secret skips ONLY its own leg,
-# with a warning and a row in the job summary, rather than failing the run — a
-# red cross every Sunday teaches people to ignore the workflow. What a skip must
+# Each leg is independent in both directions. A missing secret skips ONLY its
+# own leg, with a warning and a row in the job summary, rather than failing the
+# run — a red cross every Sunday teaches people to ignore the workflow. And a
+# leg that FAILS does not suppress the others: the later steps carry
+# `!cancelled()`, without which GitHub's implicit `success()` would discard an
+# already restore-verified database dump because the Storage leg went wrong.
+# What a skip must
 # never do is look like a backup: this workflow's first three runs were green
 # while performing no work at all, because the one secret it needed was unset
 # and every step skipped. The job summary now states which legs ran.
@@ -364,7 +368,13 @@ jobs:
       # no soft delete. Until this step existed they had no backup at all.
       # ----------------------------------------------------------------------
       - name: Back up Supabase Storage objects
-        if: steps.guard.outputs.storage == 'true'
+        # `!cancelled()` rather than a bare guard. A step condition with no
+        # status function carries an implicit `success()`, so a failed database
+        # leg would skip this one — and these are independent legs by design: a
+        # database that will not dump says nothing about whether the Storage
+        # objects can be saved. Not `always()`, which would also run this after
+        # somebody cancels the job.
+        if: ${{ !cancelled() && steps.guard.outputs.storage == 'true' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -409,7 +419,10 @@ jobs:
       # root — can delete before it expires.
       # ----------------------------------------------------------------------
       - name: Copy the backups off-site into locked object storage
-        if: steps.guard.outputs.offsite == 'true'
+        # Same reasoning: one leg failing must not strand the other's artifact
+        # outside the locked bucket. The script uploads whichever artifacts
+        # exist and fails only when there are none.
+        if: ${{ !cancelled() && steps.guard.outputs.offsite == 'true' }}
         env:
           NW_BACKUP_S3_BUCKET: ${{ secrets.NW_BACKUP_S3_BUCKET }}
           NW_BACKUP_S3_ENDPOINT: ${{ secrets.NW_BACKUP_S3_ENDPOINT }}
@@ -436,7 +449,11 @@ jobs:
           bash scripts/ops/upload-offsite.sh "${files[@]}"
 
       - name: Upload
-        if: steps.guard.outputs.configured == 'true' || steps.guard.outputs.storage == 'true'
+        # The most consequential of the three. Without `!cancelled()` a failure
+        # in the Storage leg would discard an already dumped, decoded and
+        # restore-verified database — throwing away a good backup because a
+        # different backup went wrong.
+        if: ${{ !cancelled() && (steps.guard.outputs.configured == 'true' || steps.guard.outputs.storage == 'true') }}
         uses: actions/upload-artifact@v7
         with:
           name: db-backup-${{ github.run_id }}

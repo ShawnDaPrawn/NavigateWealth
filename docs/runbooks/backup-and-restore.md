@@ -14,7 +14,10 @@ which runs 03:17 UTC on Sundays and can be dispatched by hand.
 | 3. Off-site | Both artifacts, in a bucket nobody can delete | `NW_BACKUP_S3_BUCKET` + credentials         | Object Lock mode and retain-until read back off the stored object            |
 
 Each leg is gated on its own secrets. A missing secret skips **only** that leg,
-warns, and records a row in the run's job summary. That last part matters: this
+warns, and records a row in the run's job summary, and a leg that _fails_ does
+not suppress the ones after it — a database that will not dump says nothing
+about whether the Storage objects can be saved, and a failed Storage leg must
+not discard an already restore-verified dump. That last part matters: this
 workflow's first three scheduled runs were green while doing no work at all,
 because the single secret it needed was unset and every step skipped. A skip is
 still not a failure — a red cross every Sunday teaches people to ignore the
@@ -122,31 +125,64 @@ costing anything.
     {
       "Sid": "WriteAndVerifyBackups",
       "Effect": "Allow",
-      "Action": ["s3:PutObject", "s3:GetObject", "s3:GetObjectRetention", "s3:ListBucket"],
+      "Action": [
+        "s3:PutObject",
+        "s3:PutObjectRetention",
+        "s3:GetObject",
+        "s3:GetObjectRetention",
+        "s3:ListBucket"
+      ],
       "Resource": ["arn:aws:s3:::navigatewealth-backups", "arn:aws:s3:::navigatewealth-backups/*"]
     },
     {
-      "Sid": "NeverDeleteOrWeaken",
+      "Sid": "NeverDeleteOrWeakenAnObject",
       "Effect": "Deny",
       "Action": [
         "s3:DeleteObject",
         "s3:DeleteObjectVersion",
-        "s3:PutObjectRetention",
         "s3:PutObjectLegalHold",
-        "s3:PutBucketVersioning",
-        "s3:PutObjectLockConfiguration",
         "s3:BypassGovernanceRetention"
       ],
       "Resource": "arn:aws:s3:::navigatewealth-backups/*"
+    },
+    {
+      "Sid": "NeverWeakenTheBucket",
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutBucketObjectLockConfiguration",
+        "s3:PutBucketVersioning",
+        "s3:PutLifecycleConfiguration",
+        "s3:PutBucketPolicy",
+        "s3:DeleteBucket"
+      ],
+      "Resource": "arn:aws:s3:::navigatewealth-backups"
     }
   ]
 }
 ```
 
-`s3:GetObject` is granted because the upload verifies what it wrote by reading
-it back, and an unverified upload is how a bucket without Object Lock goes
-unnoticed. Read access is a confidentiality cost, not a resilience one: an
+Three of these need justifying, because each looks wrong at a glance.
+
+**`s3:PutObjectRetention` is granted, and it is not a hole.** Setting
+`x-amz-object-lock-mode` on an upload is a retention write, so a policy that
+denies this action fails every put with `AccessDenied` — the leg never runs and
+there is no off-site copy at all. An earlier draft of this runbook denied it and
+would have done exactly that. Granting it does not let the holder weaken
+anything: compliance retention can only be **extended**, never shortened or
+removed, and shortening governance retention needs
+`s3:BypassGovernanceRetention`, which is denied above. The alternative — relying
+on the bucket's default retention and omitting the per-object flags — also
+works, but it is weaker: default retention can be changed later, whereas an
+explicit per-object retention is fixed at write time.
+
+**`s3:GetObject` is granted** because the upload verifies what it wrote by
+reading it back, and an unverified upload is how a bucket without Object Lock
+goes unnoticed. Read access is a confidentiality cost, not a resilience one: an
 attacker in CI already holds the live data these backups are made from.
+
+**The deny statements are split by resource.** Object actions only match an
+object ARN and bucket actions only match the bucket ARN, so a bucket-level
+action listed against `…/*` matches nothing and silently protects nothing.
 
 Then set the secrets:
 

@@ -339,6 +339,34 @@ describe('weekly-backup workflow wiring', () => {
   it('uploads the storage archive alongside the dump', () => {
     expect(workflow).toContain('env.STORAGE_FILE');
   });
+
+  it('does not let a failed leg suppress the ones after it', () => {
+    // A step condition with no status function carries an implicit
+    // `success()`, so a bare `if: steps.guard.outputs.storage == 'true'` skips
+    // the Storage leg whenever the database leg failed — and, worse, skips the
+    // artifact upload, discarding a database dump that was already decoded and
+    // restore-verified because a different backup went wrong. Pinned because
+    // "simplifying" these conditions back to a bare guard reintroduces it
+    // silently: the workflow still looks correct and still passes.
+    for (const step of [
+      'Back up Supabase Storage objects',
+      'Copy the backups off-site into locked object storage',
+      'Upload',
+    ]) {
+      const at = workflow.indexOf(`- name: ${step}`);
+      expect(at, `step "${step}" is missing`).toBeGreaterThan(-1);
+      // The `if:` LINE only. Slicing from the step name would swallow the
+      // comment above the condition, which explains `!cancelled()` and so
+      // satisfies the assertion whether or not the condition still carries it —
+      // this test passed against a deliberately reverted workflow before the
+      // slice was narrowed.
+      const ifAt = workflow.indexOf('\n        if:', at) + 1;
+      const condition = workflow.slice(ifAt, workflow.indexOf('\n', ifAt));
+      expect(condition, `"${step}" must survive an earlier leg's failure`).toContain(
+        '!cancelled()',
+      );
+    }
+  });
 });
 
 describe('off-site upload', () => {
@@ -365,5 +393,29 @@ describe('off-site upload', () => {
   it('skips cleanly when the bucket is not configured, rather than failing every Sunday', () => {
     expect(upload).toContain('NW_BACKUP_S3_BUCKET is not set');
     expect(upload).toMatch(/NW_BACKUP_S3_BUCKET is not set[\s\S]{0,300}exit 0/);
+  });
+
+  it('is documented with an IAM policy that permits the retention write it performs', () => {
+    // Setting `x-amz-object-lock-mode` on a put IS a retention write, so a
+    // policy denying `s3:PutObjectRetention` fails every upload with
+    // AccessDenied and there is no off-site copy at all. The first draft of the
+    // runbook denied it while the script sent the flags, which would have
+    // broken leg 3 on its first run — the runbook and the script have no import
+    // relationship, so nothing else stops them drifting apart again.
+    const runbook = readFileSync(resolve(repoRoot, 'docs/runbooks/backup-and-restore.md'), 'utf8');
+    expect(upload).toContain('--object-lock-mode');
+
+    const denyAt = runbook.indexOf('NeverDeleteOrWeakenAnObject');
+    const allowAt = runbook.indexOf('WriteAndVerifyBackups');
+    expect(allowAt, 'the runbook must document an allow statement').toBeGreaterThan(-1);
+    expect(denyAt).toBeGreaterThan(allowAt);
+
+    const allow = runbook.slice(allowAt, denyAt);
+    expect(allow, 'the CI principal must be allowed to write retention').toContain(
+      's3:PutObjectRetention',
+    );
+    // Granting it is safe only because the bypass stays denied: compliance
+    // retention can then only be extended, never shortened or removed.
+    expect(runbook.slice(denyAt)).toContain('s3:BypassGovernanceRetention');
   });
 });
