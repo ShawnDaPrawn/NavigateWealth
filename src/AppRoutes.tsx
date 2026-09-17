@@ -76,6 +76,7 @@ const ArticleDetailPage = React.lazy(() => import('./components/pages/ArticleDet
 const DesignSystemPage = React.lazy(() => import('./components/pages/DesignSystemPage'));
 const LegalPage = React.lazy(() => import('./components/pages/LegalPage'));
 const LegalDocumentPage = React.lazy(() => import('./components/pages/LegalDocumentPage'));
+const NewsletterDetailPage = React.lazy(() => import('./components/pages/NewsletterDetailPage'));
 const LegalPdfQaPage = React.lazy(() => import('./components/pages/LegalPdfQaPage'));
 const ForgotPasswordPage = React.lazy(() => import('./components/pages/ForgotPasswordPage'));
 const ResetPasswordPage = React.lazy(() => import('./components/pages/ResetPasswordPage'));
@@ -266,6 +267,16 @@ export function AppRoutes() {
             <FlexibleRoute>
               <AppLayout forcePublicLayout>
                 <ArticleDetailPage />
+              </AppLayout>
+            </FlexibleRoute>
+          }
+        />
+        <Route
+          path="/resources/newsletter/:slug"
+          element={
+            <FlexibleRoute>
+              <AppLayout forcePublicLayout>
+                <NewsletterDetailPage />
               </AppLayout>
             </FlexibleRoute>
           }

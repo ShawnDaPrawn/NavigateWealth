@@ -199,6 +199,39 @@ Prompt: run the `newsletter-monthly-intake` skill
 (`.claude/skills/newsletter-monthly-intake/SKILL.md`), which spells out the
 hand-over above. The routine's job ends at the hand-over; it never sends.
 
+## The website archive
+
+Every published newsletter also appears on the public site, at
+**Resources → Newsletters** (`/resources?section=newsletters`), with its own
+page at `/resources/newsletter/<slug>`.
+
+**How a newsletter gets there.** A campaign carries an **issue month**
+(`YYYY-MM`, defaulting to the month it was created) and a **Publish on the
+website** switch, on by default. When a send finishes, the delivery tick
+publishes it; a failure there is logged and never turns a delivered campaign
+into a failed one. An admin can also press **Publish on the website** on the
+newsletter itself at any time — including on a draft that was never emailed.
+
+**Publishing without emailing anyone.** Leave the audience empty. "Send now"
+stays disabled and says why; "Publish on the website" does not. This is the
+path for an issue that belongs in the archive but should not go out by email.
+
+**Where it files.** By its issue month, not its publish date — so September's
+issue published on 2 October still files under September. The tab shows the
+current year and the three before it, with the five years before those behind
+an "Older" dropdown; the strip is derived from the clock, so it shifts by
+itself every 1 January. Only months that actually have an issue are listed.
+
+**The PDF.** Publishing copies the PDF from the private bucket into the public
+one (`make-91ed8379-newsletters-public`, created on the first publish), so the
+page can embed it and the link can be shared and indexed. Removing a
+newsletter from the website deletes that copy; the private original and the
+campaign are untouched.
+
+**Editing.** A title, description or issue-month change on a live newsletter
+reaches the site on save. The slug never moves, so a link already in
+circulation keeps working.
+
 ## What the admin sees
 
 1. The review email: "Newsletter draft ready for review: <title>", with the

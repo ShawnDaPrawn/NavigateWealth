@@ -32,10 +32,12 @@ import {
   getDashboardSummary,
   listAudienceLists,
   listCampaigns,
+  publishCampaign,
   recordCampaignClick,
   resumeCampaign,
   scheduleCampaign,
   sendCampaignNow,
+  unpublishCampaign,
   unsubscribeByRecipientToken,
   updateCampaign,
 } from './newsletter-studio-service.ts';
@@ -51,6 +53,7 @@ import {
   ProcessNewsletterCampaignsSchema,
   ScheduleNewsletterCampaignSchema,
   TestSendNewsletterCampaignSchema,
+  PublishNewsletterSchema,
   UpdateNewsletterCampaignSchema,
 } from './newsletter-studio-validation.ts';
 
@@ -285,6 +288,51 @@ app.post(
     processNewsletterCampaigns({ mode: 'manual' }).catch((error) => {
       log.warn('Inline processor kick failed (cron will pick up)', { error: String(error) });
     });
+    return c.json({ success: true, campaign });
+  }),
+);
+
+/**
+ * Put this newsletter on the public website, or take it off again.
+ *
+ * Send-grade capability: publishing is an outward-facing act, the same class
+ * of action as emailing it. It is deliberately available in every status —
+ * a draft can go to the website without ever being emailed, which is the
+ * whole point of the website-only path.
+ */
+app.post(
+  '/campaigns/:id/publish',
+  requireAdmin,
+  requireNewsletterCapability('send'),
+  validateOptionalBody(PublishNewsletterSchema),
+  asyncHandler(async (c) => {
+    const patch = body(c, PublishNewsletterSchema) ?? {};
+    const campaign = await publishCampaign(c.req.param('id')!, patch);
+    audit(
+      c,
+      'newsletter_published_to_website',
+      'Newsletter published to the website',
+      campaign.id,
+      {
+        slug: campaign.website?.slug,
+      },
+    );
+    return c.json({ success: true, campaign });
+  }),
+);
+
+app.delete(
+  '/campaigns/:id/publish',
+  requireAdmin,
+  requireNewsletterCapability('send'),
+  asyncHandler(async (c) => {
+    const campaign = await unpublishCampaign(c.req.param('id')!);
+    audit(
+      c,
+      'newsletter_unpublished_from_website',
+      'Newsletter removed from the website',
+      campaign.id,
+    );
     return c.json({ success: true, campaign });
   }),
 );

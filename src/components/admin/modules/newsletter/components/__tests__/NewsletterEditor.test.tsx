@@ -48,15 +48,30 @@ beforeEach(() => {
 });
 
 describe('NewsletterEditor', () => {
-  it('needs a title, a description and an audience before it can save', () => {
+  it('needs a title and a description, but not an audience', () => {
     render(<NewsletterEditor onCreated={vi.fn()} onCancel={vi.fn()} />);
     const save = screen.getByRole('button', { name: /save draft/i }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'T' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'D' } });
     expect(save.disabled).toBe(false);
+
+    // Clearing the audience must NOT block the draft: a newsletter can go to
+    // the website without being emailed to anyone.
     fireEvent.click(screen.getByRole('checkbox', { name: 'Newsletter Contacts' }));
-    expect(save.disabled).toBe(true);
+    expect(save.disabled).toBe(false);
+  });
+
+  it('defaults the issue month to this month and offers the website switch', () => {
+    render(<NewsletterEditor onCreated={vi.fn()} onCancel={vi.fn()} />);
+    const now = new Date();
+    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    expect((screen.getByLabelText('Issue month') as HTMLInputElement).value).toBe(expected);
+    expect(
+      (screen.getByLabelText('Publish on the website') as HTMLInputElement).getAttribute(
+        'data-state',
+      ),
+    ).toBe('checked');
   });
 
   it('creates the draft, uploads the PDF, then hands the id on', async () => {
@@ -71,6 +86,8 @@ describe('NewsletterEditor', () => {
       title: 'September issue',
       description: 'What mattered in September.',
       listIds: ['sys_newsletter_contacts'],
+      issueMonth: expect.stringMatching(/^\d{4}-\d{2}$/),
+      publishToWebsite: true,
     });
     expect(hooks.upload.mutateAsync).toHaveBeenCalledWith({
       id: 'new-1',

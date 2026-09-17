@@ -21,6 +21,8 @@ const hooks = vi.hoisted(() => {
     resume: mutation(),
     cancel: mutation(),
     remove: mutation(),
+    publish: mutation(),
+    unpublish: mutation(),
   };
 });
 
@@ -37,6 +39,8 @@ vi.mock('../../hooks/useNewsletterStudio', () => ({
   useResumeCampaign: () => hooks.resume,
   useCancelCampaign: () => hooks.cancel,
   useDeleteCampaign: () => hooks.remove,
+  usePublishToWebsite: () => hooks.publish,
+  useUnpublishFromWebsite: () => hooks.unpublish,
 }));
 vi.mock('../../api', () => ({
   newsletterStudioApi: {
@@ -57,6 +61,9 @@ const campaign = (overrides: Partial<NewsletterCampaign> = {}): NewsletterCampai
   source: 'admin',
   sourceRef: null,
   reviewNotifiedAt: null,
+  issueMonth: '2026-09',
+  publishToWebsite: true,
+  website: null,
   status: 'draft',
   scheduledAt: null,
   recipientCount: 0,

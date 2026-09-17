@@ -1,5 +1,5 @@
 /**
- * Newsletter Studio — the PRIVATE newsletters bucket.
+ * Newsletter Studio — the newsletters buckets, private and public.
  *
  * WHY A PRIVATE BUCKET AND SIGNED URLS
  * ------------------------------------
@@ -19,6 +19,16 @@
  * processor.ts), but the cap here is what keeps a whole tick inside the Edge
  * isolate's memory. The UI and both intake paths state it up front.
  *
+ * WHY THERE IS ALSO A PUBLIC BUCKET
+ * ---------------------------------
+ * A newsletter published on the website needs a permanent URL: the page is
+ * meant to be indexed and shared, and a viewer embedded on it cannot hang off
+ * a URL that expires in an hour. Publishing therefore COPIES the object into
+ * a second, public bucket; the private one stays the system of record for
+ * drafts, for the attachment, and for the tracked click-through. Nothing is
+ * disclosed by the copy that the email did not already send to every
+ * subscriber, and unpublishing removes it again.
+ *
  * PDFs only, decided by the first bytes rather than the file name: a browser
  * sets `type` from the extension, so a renamed file arrives claiming to be a
  * PDF. Nothing sensitive is ever written here — only marketing newsletters.
@@ -31,6 +41,9 @@ import type { NewsletterPdf } from './newsletter-studio-types.ts';
 const log = createModuleLogger('newsletter-studio-storage');
 
 export const NEWSLETTER_PDF_BUCKET = 'make-91ed8379-newsletters';
+
+/** Public mirror, holding only newsletters live on the website. */
+export const NEWSLETTER_PUBLIC_BUCKET = 'make-91ed8379-newsletters-public';
 
 /** The bucket's `fileSizeLimit`, checked here so callers get a 400, not a storage 413. */
 export const MAX_NEWSLETTER_PDF_BYTES = 5 * 1024 * 1024;
@@ -64,9 +77,32 @@ export async function ensureNewsletterBucket(): Promise<void> {
   bucketEnsured = true;
 }
 
+let publicBucketEnsured = false;
+
+/** Create the public bucket once per isolate (idempotent against the API). */
+export async function ensureNewsletterPublicBucket(): Promise<void> {
+  if (publicBucketEnsured) return;
+  const supabase = getSupabase();
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const exists = buckets?.some((b: { name: string }) => b.name === NEWSLETTER_PUBLIC_BUCKET);
+  if (!exists) {
+    const { error } = await supabase.storage.createBucket(NEWSLETTER_PUBLIC_BUCKET, {
+      public: true,
+      fileSizeLimit: '5MB',
+      allowedMimeTypes: ['application/pdf'],
+    });
+    if (error && !/already exists/i.test(error.message)) {
+      throw new Error(`Failed to create public newsletters bucket: ${error.message}`);
+    }
+    log.info('Created public newsletters bucket', { bucket: NEWSLETTER_PUBLIC_BUCKET });
+  }
+  publicBucketEnsured = true;
+}
+
 /** Test hook. */
 export function resetNewsletterBucketCache(): void {
   bucketEnsured = false;
+  publicBucketEnsured = false;
 }
 
 /** Does the byte signature say PDF? (`%PDF-`) */
@@ -189,6 +225,48 @@ export async function removeNewsletterPdfs(campaignId: string): Promise<void> {
   const { error: removeError } = await supabase.storage.from(NEWSLETTER_PDF_BUCKET).remove(paths);
   if (removeError) {
     log.warn('Could not remove newsletter PDFs', { campaignId, error: removeError.message });
+  }
+}
+
+/**
+ * Copy a stored PDF into the public bucket and return its permanent URL.
+ *
+ * `upsert: true` on purpose, unlike the private upload: the path is derived
+ * from the slug, so re-publishing the same newsletter after an edit must
+ * replace the object rather than fail — the URL already in circulation has to
+ * keep working.
+ */
+export async function publishNewsletterPdf(input: {
+  storagePath: string;
+  slug: string;
+  year: number;
+}): Promise<{ url: string; publicPath: string }> {
+  const bytes = await downloadNewsletterPdf(input.storagePath);
+  await ensureNewsletterPublicBucket();
+  const publicPath = `${input.year}/${input.slug}.pdf`;
+  const supabase = getSupabase();
+  const { error } = await supabase.storage
+    .from(NEWSLETTER_PUBLIC_BUCKET)
+    .upload(publicPath, bytes, {
+      contentType: 'application/pdf',
+      upsert: true,
+      cacheControl: '3600',
+    });
+  if (error) {
+    throw new Error(`Public storage upload failed: ${error.message}`);
+  }
+  const { data } = supabase.storage.from(NEWSLETTER_PUBLIC_BUCKET).getPublicUrl(publicPath);
+  if (!data?.publicUrl) {
+    throw new Error(`Could not resolve a public URL for ${publicPath}`);
+  }
+  return { url: data.publicUrl, publicPath };
+}
+
+/** Take a newsletter off the public bucket; a missing object is not an error. */
+export async function unpublishNewsletterPdf(publicPath: string): Promise<void> {
+  const { error } = await getSupabase().storage.from(NEWSLETTER_PUBLIC_BUCKET).remove([publicPath]);
+  if (error) {
+    log.warn('Could not remove public newsletter PDF', { publicPath, error: error.message });
   }
 }
 

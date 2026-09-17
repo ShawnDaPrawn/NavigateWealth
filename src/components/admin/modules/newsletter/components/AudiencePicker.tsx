@@ -100,7 +100,7 @@ export function AudiencePicker({
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Users className="h-3.5 w-3.5" aria-hidden />
         {value.length === 0
-          ? 'Choose at least one audience.'
+          ? 'No audience chosen — this newsletter can still be published on the website without being emailed.'
           : `About ${formatNumber(reach)} recipients before de-duplication and opt-outs. Manage membership in Communication → Groups.`}
       </p>
     </div>

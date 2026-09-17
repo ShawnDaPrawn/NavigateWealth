@@ -16,6 +16,16 @@ export type NewsletterCampaignStatus =
 
 export type NewsletterCampaignSource = 'admin' | 'routine';
 
+/** A campaign's live presence on the public website. */
+export interface NewsletterWebsitePublication {
+  slug: string;
+  publishedAt: string;
+  pdfUrl: string;
+  publicPath: string;
+  pdfFileName: string;
+  pdfSizeBytes: number;
+}
+
 export interface NewsletterPdf {
   storagePath: string;
   fileName: string;
@@ -34,6 +44,12 @@ export interface NewsletterCampaign {
   source: NewsletterCampaignSource;
   sourceRef: string | null;
   reviewNotifiedAt: string | null;
+  /** 'YYYY-MM' — which issue this is, and where it files on the website. */
+  issueMonth: string;
+  /** Publish on the website when the send finishes. */
+  publishToWebsite: boolean;
+  /** Set once live on the website. */
+  website: NewsletterWebsitePublication | null;
   status: NewsletterCampaignStatus;
   scheduledAt: string | null;
   recipientCount: number;
@@ -148,7 +164,10 @@ export interface RecipientPageResult {
 export interface CreateCampaignInput {
   title: string;
   description: string;
+  /** May be empty: a newsletter can go to the website without being emailed. */
   listIds: string[];
+  issueMonth?: string;
+  publishToWebsite?: boolean;
 }
 
 export type UpdateCampaignInput = Partial<CreateCampaignInput>;

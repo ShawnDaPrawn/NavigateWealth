@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Eye,
   FlaskConical,
+  Globe,
   Loader2,
   MailCheck,
   MailX,
@@ -43,6 +44,8 @@ import { DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH } from '../constants';
 import {
   useCancelCampaign,
   useDeleteCampaign,
+  usePublishToWebsite,
+  useUnpublishFromWebsite,
   useResumeCampaign,
   useScheduleCampaign,
   useSendCampaignNow,
@@ -55,6 +58,7 @@ import {
 } from '../hooks/useNewsletterStudio';
 import type { NewsletterCampaign, NewsletterCaps } from '../types';
 import { isCampaignDeletable } from '../utils/campaign';
+import { formatIssueMonth } from '../utils/issueMonth';
 import { formatDateTime, formatNumber, formatRate, formatRelative } from '../utils/format';
 import { openPdf } from '../utils/openPdf';
 import { schedulerHealth } from '../utils/scheduler';
@@ -310,10 +314,14 @@ function ActionsCard({
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
   const remove = useDeleteCampaign();
+  const publish = usePublishToWebsite();
+  const unpublish = useUnpublishFromWebsite();
 
   const editable = EDITABLE.includes(campaign.status);
   const inFlight = IN_FLIGHT.includes(campaign.status);
   const hasPdf = Boolean(campaign.pdf);
+  const hasAudience = campaign.listIds.length > 0;
+  const live = campaign.website;
   const schedulerLive = schedulerHealth(dashboard.data?.processor).level === 'live';
 
   return (
@@ -362,7 +370,10 @@ function ActionsCard({
               <CalendarClock className="h-4 w-4" aria-hidden />
               {campaign.status === 'scheduled' ? 'Change the time' : 'Schedule…'}
             </Button>
-            <Button onClick={() => setSendOpen(true)} disabled={!hasPdf || sendNow.isPending}>
+            <Button
+              onClick={() => setSendOpen(true)}
+              disabled={!hasPdf || !hasAudience || sendNow.isPending}
+            >
               {sendNow.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
@@ -370,6 +381,12 @@ function ActionsCard({
               )}
               Send now
             </Button>
+            {!hasAudience ? (
+              <p className="text-xs text-muted-foreground">
+                No audience chosen, so there is nobody to email. You can still publish it on the
+                website below.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -402,6 +419,61 @@ function ActionsCard({
             <CheckCircle2 className="h-4 w-4" aria-hidden /> Delivery finished{' '}
             {formatRelative(campaign.completedAt)}.
           </p>
+        ) : null}
+
+        {caps.send ? (
+          <div className="space-y-2 border-t border-border/60 pt-3">
+            <SectionHeader icon={Globe} title="Website" />
+            {live ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Live under {formatIssueMonth(campaign.issueMonth)} since{' '}
+                  {formatRelative(live.publishedAt)}.{' '}
+                  <a
+                    href={`/resources/newsletter/${live.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-700 underline-offset-2 hover:underline dark:text-purple-300"
+                  >
+                    View the page
+                  </a>
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => unpublish.mutate(campaign.id)}
+                  disabled={unpublish.isPending}
+                >
+                  {unpublish.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Globe className="h-4 w-4" aria-hidden />
+                  )}
+                  Remove from the website
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Publishing adds it to Resources → Newsletters under{' '}
+                  {formatIssueMonth(campaign.issueMonth)}. No email is sent.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => publish.mutate({ id: campaign.id })}
+                  disabled={!hasPdf || publish.isPending}
+                >
+                  {publish.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Globe className="h-4 w-4" aria-hidden />
+                  )}
+                  Publish on the website
+                </Button>
+              </>
+            )}
+          </div>
         ) : null}
 
         {caps.delete && isCampaignDeletable(campaign) ? (

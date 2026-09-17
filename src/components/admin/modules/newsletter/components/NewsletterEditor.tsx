@@ -12,6 +12,7 @@ import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import { DESCRIPTION_MAX_LENGTH, SUBSCRIBER_LIST_ID, TITLE_MAX_LENGTH } from '../constants';
 import {
@@ -19,6 +20,7 @@ import {
   useStudioLists,
   useUploadCampaignPdf,
 } from '../hooks/useNewsletterStudio';
+import { currentIssueMonth } from '../utils/issueMonth';
 import { AudiencePicker } from './AudiencePicker';
 import { PdfDropzone } from './PdfDropzone';
 import { SectionHeader } from './shared';
@@ -35,6 +37,8 @@ export function NewsletterEditor({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [listIds, setListIds] = useState<string[]>([SUBSCRIBER_LIST_ID]);
+  const [issueMonth, setIssueMonth] = useState(currentIssueMonth);
+  const [publishToWebsite, setPublishToWebsite] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
@@ -46,7 +50,9 @@ export function NewsletterEditor({
   const titleOk = title.trim().length > 0 && title.trim().length <= TITLE_MAX_LENGTH;
   const descriptionOk =
     description.trim().length > 0 && description.trim().length <= DESCRIPTION_MAX_LENGTH;
-  const canSave = titleOk && descriptionOk && listIds.length > 0 && !pending;
+  // No audience requirement: a newsletter may be published on the website
+  // without being emailed to anyone. The send actions enforce their own rule.
+  const canSave = titleOk && descriptionOk && !pending;
 
   const save = async () => {
     setUploadError(null);
@@ -56,6 +62,8 @@ export function NewsletterEditor({
         title: title.trim(),
         description: description.trim(),
         listIds,
+        issueMonth,
+        publishToWebsite,
       });
       id = draft.id;
       setCreatedId(id);
@@ -139,12 +147,42 @@ export function NewsletterEditor({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="nl-issue-month">Issue month</Label>
+          <Input
+            id="nl-issue-month"
+            type="month"
+            value={issueMonth}
+            onChange={(e) => setIssueMonth(e.target.value || currentIssueMonth())}
+            className="sm:max-w-[200px]"
+          />
+          <p className="text-xs text-muted-foreground">
+            Which issue this is. Decides the year and month it files under on the website, so
+            publishing September&rsquo;s issue in October still files it under September.
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <Label>Audience</Label>
           <AudiencePicker
             lists={lists.data ?? []}
             loading={lists.isLoading}
             value={listIds}
             onChange={setListIds}
+          />
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 p-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="nl-publish-website">Publish on the website</Label>
+            <p className="text-xs text-muted-foreground">
+              Add it to Resources → Newsletters once it has been sent. You can also publish it from
+              the newsletter itself without emailing anyone.
+            </p>
+          </div>
+          <Switch
+            id="nl-publish-website"
+            checked={publishToWebsite}
+            onCheckedChange={setPublishToWebsite}
           />
         </div>
 

@@ -46,6 +46,11 @@ const svc = vi.hoisted(() => {
     sendCampaignNow: vi.fn(async () => ({ ...campaign, status: 'queued' })),
     resumeCampaign: vi.fn(async () => ({ ...campaign, status: 'queued' })),
     cancelCampaign: vi.fn(async () => ({ ...campaign, status: 'cancelled' })),
+    publishCampaign: vi.fn(async () => ({
+      ...campaign,
+      website: { slug: '2026-09-x', publishedAt: 't', pdfUrl: 'https://cdn/x.pdf' },
+    })),
+    unpublishCampaign: vi.fn(async () => ({ ...campaign, website: null })),
     getCampaignRecipients: vi.fn(async () => ({ recipients: [], total: 0, page: 1, limit: 50 })),
     getCampaignStats: vi.fn(async () => ({ campaignId: 'c1' })),
     getDashboardSummary: vi.fn(async () => ({ campaigns: { total: 0 } })),
@@ -140,6 +145,8 @@ const ROUTE_TABLE: {
   { method: 'POST', path: '/campaigns/c1/cancel', tier: 'admin' },
   { method: 'GET', path: '/campaigns/c1/recipients', tier: 'admin' },
   { method: 'GET', path: '/campaigns/c1/stats', tier: 'admin' },
+  { method: 'POST', path: '/campaigns/c1/publish', tier: 'admin', body: {} },
+  { method: 'DELETE', path: '/campaigns/c1/publish', tier: 'admin' },
   { method: 'GET', path: '/lists', tier: 'admin' },
   { method: 'POST', path: '/process', tier: 'admin', body: {} },
   { method: 'POST', path: '/cron/process', tier: 'cron', body: {} },
@@ -345,20 +352,33 @@ describe('one-click unsubscribe (RFC 8058)', () => {
 });
 
 describe('validation is real', () => {
-  it('rejects a newsletter without audiences or without a description', async () => {
-    const noLists = await request(app, '/campaigns', {
+  it('accepts a newsletter with no audience — website-only is a real choice', async () => {
+    const res = await request(app, '/campaigns', {
       method: 'POST',
       as: 'admin',
       body: { title: 'n', description: 'd', listIds: [] },
     });
-    expect(noLists.status).toBe(400);
+    expect(res.status).toBe(201);
+    expect(svc.createCampaign).toHaveBeenCalledWith(
+      expect.objectContaining({ listIds: [] }),
+      expect.any(String),
+    );
+  });
 
+  it('still rejects a newsletter without a description, and a bad issue month', async () => {
     const noDescription = await request(app, '/campaigns', {
       method: 'POST',
       as: 'admin',
       body: { title: 'n', listIds: ['g1'] },
     });
     expect(noDescription.status).toBe(400);
+
+    const badMonth = await request(app, '/campaigns', {
+      method: 'POST',
+      as: 'admin',
+      body: { title: 'n', description: 'd', listIds: ['g1'], issueMonth: '2026-13' },
+    });
+    expect(badMonth.status).toBe(400);
     expect(svc.createCampaign).not.toHaveBeenCalled();
   });
 

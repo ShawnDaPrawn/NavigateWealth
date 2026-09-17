@@ -51,6 +51,8 @@ const PUBLIC_ROUTERS: Record<string, string> = {
     'Public RSS proxy for the marketing site; target hosts are exact-match allow-listed and SSRF-guarded (H-2).',
   'fna-routes.ts':
     'Static FNA directory/health listing only — registry metadata, no client data, no mutations.',
+  'newsletter-site-routes.ts':
+    'Two read-only GETs serving newsletters already published on the website — the same content that was emailed to every subscriber. Writes (publish/unpublish) live in newsletter-studio-routes.ts behind requireAdmin + the send capability.',
   'consultation.ts': 'Public lead-gen — anonymous visitors book a consultation.',
   'contact-form-routes.ts': 'Public lead-gen — anonymous visitors submit the contact form.',
   'quote-request-routes.ts': 'Public lead-gen — anonymous visitors request a quote.',
