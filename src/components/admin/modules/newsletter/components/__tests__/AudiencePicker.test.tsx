@@ -51,9 +51,9 @@ describe('AudiencePicker', () => {
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it('asks for at least one audience when nothing is selected', () => {
+  it('says an empty audience is allowed, because website-only is a real choice', () => {
     render(<AudiencePicker lists={lists} value={[]} onChange={vi.fn()} />);
-    expect(screen.getByText('Choose at least one audience.')).toBeTruthy();
+    expect(screen.getByText(/published on the website without being emailed/)).toBeTruthy();
   });
 
   it('points to Communication when there are no groups', () => {

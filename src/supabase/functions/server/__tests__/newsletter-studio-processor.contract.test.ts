@@ -90,6 +90,11 @@ vi.mock('../newsletter-studio-storage.ts', async (importOriginal) => {
     removeNewsletterPdf: vi.fn(async () => undefined),
     removeNewsletterPdfs: vi.fn(async () => undefined),
     downloadNewsletterPdf: (path: string) => storage.download(path),
+    publishNewsletterPdf: vi.fn(async (input: { slug: string; year: number }) => ({
+      url: `https://cdn.test/${input.year}/${input.slug}.pdf`,
+      publicPath: `${input.year}/${input.slug}.pdf`,
+    })),
+    unpublishNewsletterPdf: vi.fn(async () => undefined),
   };
 });
 // Keep chunkArray/classifyDeliveryFailure real; only pacing is neutered.
@@ -202,6 +207,49 @@ beforeEach(() => {
     processed: 0,
     failed: 0,
     errors: [],
+  });
+});
+
+describe('publishing a finished campaign to the website', () => {
+  it('publishes it once the send completes, when the admin asked for that', async () => {
+    const campaign = await queuedCampaign(['a@x.co']);
+    await processNewsletterCampaigns({ mode: 'cron' });
+
+    const finished = campaignRecord(campaign.id);
+    expect(finished.status).toBe('finished');
+    expect(finished.website).toMatchObject({
+      pdfUrl: expect.stringContaining('https://cdn.test/'),
+    });
+
+    const published = [...kvStore.keys()].filter((k) => k.startsWith('nlstudio:published:'));
+    expect(published).toHaveLength(1);
+  });
+
+  it('leaves the website alone when the admin turned publishing off', async () => {
+    const campaign = await queuedCampaign(['a@x.co']);
+    const record = campaignRecord(campaign.id);
+    kvStore.set(`nlstudio:campaign:${campaign.id}`, { ...record, publishToWebsite: false });
+
+    await processNewsletterCampaigns({ mode: 'cron' });
+
+    expect(campaignRecord(campaign.id).status).toBe('finished');
+    expect(campaignRecord(campaign.id).website).toBeNull();
+    expect([...kvStore.keys()].filter((k) => k.startsWith('nlstudio:published:'))).toHaveLength(0);
+  });
+
+  it('still reports the send as finished when publishing fails', async () => {
+    const storageModule = await import('../newsletter-studio-storage.ts');
+    vi.mocked(storageModule.publishNewsletterPdf).mockRejectedValueOnce(
+      new Error('bucket unreachable'),
+    );
+
+    const campaign = await queuedCampaign(['a@x.co']);
+    const result = await processNewsletterCampaigns({ mode: 'cron' });
+
+    // The delivery happened; a website fault must not rewrite that as a failure.
+    expect(result.sent).toBe(1);
+    expect(campaignRecord(campaign.id).status).toBe('finished');
+    expect(campaignRecord(campaign.id).website).toBeNull();
   });
 });
 

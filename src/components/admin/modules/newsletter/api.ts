@@ -135,6 +135,21 @@ export const newsletterStudioApi = {
     return response.campaign;
   },
 
+  /** Put this newsletter on the public website, or refresh what is already there. */
+  async publishToWebsite(id: string, issueMonth?: string): Promise<NewsletterCampaign> {
+    const data = await api.post<{ campaign: NewsletterCampaign }>(
+      ENDPOINTS.CAMPAIGN_PUBLISH(id),
+      issueMonth ? { issueMonth } : {},
+    );
+    return data.campaign;
+  },
+
+  /** Take this newsletter off the public website. The campaign itself is untouched. */
+  async unpublishFromWebsite(id: string): Promise<NewsletterCampaign> {
+    const data = await api.delete<{ campaign: NewsletterCampaign }>(ENDPOINTS.CAMPAIGN_PUBLISH(id));
+    return data.campaign;
+  },
+
   async getRecipients(
     id: string,
     params: { page?: number; limit?: number; status?: string } = {},

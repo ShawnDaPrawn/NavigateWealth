@@ -21,6 +21,8 @@ const hooks = vi.hoisted(() => {
     resume: mutation(),
     cancel: mutation(),
     remove: mutation(),
+    publish: mutation(),
+    unpublish: mutation(),
   };
 });
 
@@ -37,6 +39,8 @@ vi.mock('../../hooks/useNewsletterStudio', () => ({
   useResumeCampaign: () => hooks.resume,
   useCancelCampaign: () => hooks.cancel,
   useDeleteCampaign: () => hooks.remove,
+  usePublishToWebsite: () => hooks.publish,
+  useUnpublishFromWebsite: () => hooks.unpublish,
 }));
 vi.mock('../../api', () => ({
   newsletterStudioApi: {
@@ -57,6 +61,9 @@ const campaign = (overrides: Partial<NewsletterCampaign> = {}): NewsletterCampai
   source: 'admin',
   sourceRef: null,
   reviewNotifiedAt: null,
+  issueMonth: '2026-09',
+  publishToWebsite: true,
+  website: null,
   status: 'draft',
   scheduledAt: null,
   recipientCount: 0,
@@ -85,6 +92,19 @@ beforeEach(() => {
 });
 
 describe('NewsletterDetail', () => {
+  it('lets a website-only draft save an edit with no audience (review finding)', () => {
+    render(
+      <NewsletterDetail
+        campaign={campaign({ listIds: [], listNames: [] })}
+        caps={caps}
+        onDeleted={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Corrected title' } });
+    const save = screen.getByRole('button', { name: /save changes/i }) as HTMLButtonElement;
+    expect(save.disabled).toBe(false);
+  });
+
   it('blocks every send action until a PDF is uploaded', () => {
     render(<NewsletterDetail campaign={campaign({ pdf: null })} caps={caps} onDeleted={vi.fn()} />);
     expect(screen.getByText('Upload the PDF first')).toBeTruthy();
