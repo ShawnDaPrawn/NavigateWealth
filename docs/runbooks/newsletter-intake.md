@@ -113,15 +113,16 @@ Auth (any one of):
 
 Fields (multipart/form-data):
 
-| Field            | Required | Notes                                                              |
-| ---------------- | -------- | ------------------------------------------------------------------ |
-| `file`           | yes      | the PDF                                                            |
-| `title`          | yes      |                                                                    |
-| `description`    | yes      |                                                                    |
-| `listIds`        | no       | JSON array (`["sys_all","g2"]`) or comma list; default subscribers |
-| `idempotencyKey` | no       | recommended, e.g. `2026-09`                                        |
-| `submittedBy`    | no       | shown in the review email, e.g. `github-action`                    |
-| `dryRun`         | no       | `true` validates everything and writes nothing                     |
+| Field            | Required | Notes                                                                                 |
+| ---------------- | -------- | ------------------------------------------------------------------------------------- |
+| `file`           | yes      | the PDF                                                                               |
+| `title`          | yes      |                                                                                       |
+| `description`    | yes      |                                                                                       |
+| `listIds`        | no       | JSON array (`["sys_all","g2"]`) or comma list; default subscribers                    |
+| `idempotencyKey` | no       | recommended, e.g. `2026-09`; a `YYYY-MM` key also sets the issue month                |
+| `issueMonth`     | no       | `YYYY-MM` — which issue this is, and where it files on the website. Overrides the key |
+| `submittedBy`    | no       | shown in the review email, e.g. `github-action`                                       |
+| `dryRun`         | no       | `true` validates everything and writes nothing                                        |
 
 ```bash
 curl -sS -X POST "$BASE/newsletter-intake/submit" \
@@ -215,6 +216,11 @@ newsletter itself at any time — including on a draft that was never emailed.
 **Publishing without emailing anyone.** Leave the audience empty. "Send now"
 stays disabled and says why; "Publish on the website" does not. This is the
 path for an issue that belongs in the archive but should not go out by email.
+
+**Where a routine's hand-over files.** From `issueMonth` when it sends one, else
+from the idempotency key when that is a `YYYY-MM` month, else the month it was
+processed. So a September hand-over swept on 1 October still files under
+September, which is the whole reason the key is documented as the issue month.
 
 **Where it files.** By its issue month, not its publish date — so September's
 issue published on 2 October still files under September. The tab shows the

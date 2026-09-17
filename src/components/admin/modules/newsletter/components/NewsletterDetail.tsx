@@ -147,8 +147,10 @@ function DraftEditor({ campaign, caps }: { campaign: NewsletterCampaign; caps: N
     title.trim().length > 0 &&
     title.trim().length <= TITLE_MAX_LENGTH &&
     description.trim().length > 0 &&
-    description.trim().length <= DESCRIPTION_MAX_LENGTH &&
-    listIds.length > 0;
+    description.trim().length <= DESCRIPTION_MAX_LENGTH;
+  // No audience requirement, matching NewsletterEditor: a website-only draft
+  // must still be able to save a title or description correction without
+  // first being given an audience it will never email (review finding).
 
   return (
     <Card className="gap-0">

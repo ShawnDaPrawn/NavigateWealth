@@ -262,11 +262,20 @@ export async function publishNewsletterPdf(input: {
   return { url: data.publicUrl, publicPath };
 }
 
-/** Take a newsletter off the public bucket; a missing object is not an error. */
+/**
+ * Take a newsletter off the public bucket.
+ *
+ * Throws, unlike its private counterpart: this object is world-readable, so a
+ * failure that only got logged would tell the admin the newsletter was
+ * withdrawn while its permanent URL kept serving (review finding). Removing an
+ * object that is already gone is not an error in Supabase Storage, so a retry
+ * after a partial failure is safe.
+ */
 export async function unpublishNewsletterPdf(publicPath: string): Promise<void> {
   const { error } = await getSupabase().storage.from(NEWSLETTER_PUBLIC_BUCKET).remove([publicPath]);
   if (error) {
-    log.warn('Could not remove public newsletter PDF', { publicPath, error: error.message });
+    log.error('Could not remove public newsletter PDF', { publicPath, error: error.message });
+    throw new Error(`Could not remove the public newsletter PDF: ${error.message}`);
   }
 }
 

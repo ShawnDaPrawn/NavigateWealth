@@ -350,9 +350,33 @@ export async function attachCampaignPdf(
     throw error;
   }
   const previous = campaign.pdf;
-  const updated: NewsletterCampaign = { ...campaign, pdf, updatedAt: nowIso() };
+  let updated: NewsletterCampaign = { ...campaign, pdf, updatedAt: nowIso() };
   await newsletterCampaigns.put(id, updated);
   if (previous) await removeNewsletterPdf(previous.storagePath);
+
+  // A published newsletter must not keep serving the document that was just
+  // replaced. Re-publishing upserts the public object at the same path and
+  // rebuilds the record from the new PDF, so the file, its name and its size
+  // all move together and the slug does not (review finding).
+  if (updated.website) {
+    try {
+      const website = await publishCampaignToWebsite(updated);
+      updated = { ...updated, website, updatedAt: nowIso() };
+      await newsletterCampaigns.put(id, updated);
+    } catch (error) {
+      log.error('Replaced the PDF but could not refresh the website copy', {
+        campaignId: id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Deliberately loud: the upload succeeded, so silence here would leave
+      // visitors downloading the old document with nothing to act on.
+      throw new ValidationError(
+        'The PDF was replaced, but the copy on the website could not be refreshed. ' +
+          'Press "Publish on the website" to try again.',
+      );
+    }
+  }
+
   log.info('Campaign PDF stored', { campaignId: id, sizeBytes: pdf.sizeBytes });
   return toCampaignView(updated);
 }

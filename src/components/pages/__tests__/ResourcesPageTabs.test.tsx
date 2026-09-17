@@ -57,11 +57,28 @@ describe('Resources page tabs', () => {
 
   it('opens the Newsletters tab from ?section=newsletters', () => {
     renderPage('?section=newsletters');
-    expect(screen.getByTestId('newsletters-tab')).toBeTruthy();
+    // Both the mobile block and the desktop tab render it now.
+    expect(screen.getAllByTestId('newsletters-tab').length).toBeGreaterThan(0);
     const selected = screen
       .getAllByRole('tab')
       .find((t) => t.getAttribute('aria-selected') === 'true');
     expect(selected?.textContent?.trim()).toBe('Newsletters');
+  });
+
+  it('renders the archive on a phone when the deep link asks for it (review finding)', () => {
+    // Mobile deliberately has no tab strip, but the footer and sitemap point
+    // straight at ?section=newsletters — that link must not land on Insights.
+    renderPage('?section=newsletters');
+    const mobile = document.querySelector('.sm\\:hidden.mt-5');
+    expect(mobile).toBeTruthy();
+    expect(mobile!.querySelector('[data-testid="newsletters-tab"]')).toBeTruthy();
+  });
+
+  it('still shows Insights on a phone for every other section', () => {
+    renderPage();
+    const mobile = document.querySelector('.sm\\:hidden.mt-5');
+    expect(mobile!.querySelector('[data-testid="insights-tab"]')).toBeTruthy();
+    expect(mobile!.querySelector('[data-testid="newsletters-tab"]')).toBeNull();
   });
 
   it('does not fetch newsletters while another tab is open', () => {

@@ -529,9 +529,15 @@ export function ResourcesPage() {
 
       {/* Main Content */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8 -mt-4">
-        {/* Mobile: Show Insights & Education directly (no confusing tab navigation) */}
+        {/* Mobile: Insights directly, with no tab navigation — except that the
+            footer, the sitemap and any shared link can point straight at the
+            newsletter archive, and landing on Insights instead would make that
+            link a dead end on a phone. So the one deep link mobile can receive
+            is honoured here. */}
         <div className="sm:hidden mt-5 mb-4">
-          {categoriesLoading ? (
+          {activeTab === 'newsletters' ? (
+            <NewslettersTab newsletters={newsletters} isLoading={newslettersLoading} />
+          ) : categoriesLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />

@@ -143,12 +143,21 @@ export async function publishCampaignToWebsite(
   };
 }
 
-/** Take a campaign off the website. A campaign that was never live is a no-op. */
+/**
+ * Take a campaign off the website. A campaign that was never live is a no-op.
+ *
+ * The public object goes FIRST, and a failure there propagates: the index
+ * record and the campaign's `website` pointer are what a retry needs, so
+ * losing them while the file is still served would strand it (review
+ * finding). Removing the record after the file means the worst interleaving
+ * is a listed newsletter whose file is already gone, which the next attempt
+ * finishes cleanly.
+ */
 export async function unpublishCampaignFromWebsite(campaign: NewsletterCampaign): Promise<void> {
   const live = campaign.website;
   if (!live) return;
-  await newsletterPublications.remove(live.slug);
   await unpublishNewsletterPdf(live.publicPath);
+  await newsletterPublications.remove(live.slug);
   log.info('Newsletter removed from the website', { campaignId: campaign.id, slug: live.slug });
 }
 

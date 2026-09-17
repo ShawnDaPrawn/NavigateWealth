@@ -769,6 +769,69 @@ describe('the website', () => {
     expect(await listPublishedNewsletters()).toHaveLength(0);
   });
 
+  it('refreshes the public copy when a published draft gets a replacement PDF (review finding)', async () => {
+    seedGroup();
+    const draft = await createCampaign(
+      { title: 'September', description: 'd', listIds: [], issueMonth: '2026-09' },
+      'admin-1',
+    );
+    await attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'first.pdf' });
+    const published = await publishCampaign(draft.id);
+    expect(published.website?.pdfFileName).toBe('first.pdf');
+
+    const bigger = new TextEncoder().encode('%PDF-1.4\n%a much longer second document\n');
+    const replaced = await attachCampaignPdf(draft.id, { bytes: bigger, fileName: 'second.pdf' });
+
+    // Same slug, new file: a link already in circulation keeps working and
+    // stops serving the superseded document.
+    expect(replaced.website?.slug).toBe(published.website?.slug);
+    expect(replaced.website?.pdfFileName).toBe('second.pdf');
+    expect(replaced.website?.pdfSizeBytes).toBe(bigger.length);
+
+    const [live] = await listPublishedNewsletters();
+    expect(live.pdfFileName).toBe('second.pdf');
+    expect(live.pdfSizeBytes).toBe(bigger.length);
+  });
+
+  it('says so loudly when the replacement cannot reach the website', async () => {
+    seedGroup();
+    const draft = await createCampaign(
+      { title: 'September', description: 'd', listIds: [], issueMonth: '2026-09' },
+      'admin-1',
+    );
+    await attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'first.pdf' });
+    await publishCampaign(draft.id);
+
+    const storageModule = await import('../newsletter-studio-storage.ts');
+    vi.mocked(storageModule.publishNewsletterPdf).mockRejectedValueOnce(new Error('bucket down'));
+
+    await expect(
+      attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'second.pdf' }),
+    ).rejects.toThrow(/copy on the website could not be refreshed/);
+  });
+
+  it('does not report a withdrawal it could not carry out (review finding)', async () => {
+    seedGroup();
+    const draft = await createCampaign(
+      { title: 'Temporary', description: 'd', listIds: [], issueMonth: '2026-09' },
+      'admin-1',
+    );
+    await attachCampaignPdf(draft.id, { bytes: PDF, fileName: 'x.pdf' });
+    const published = await publishCampaign(draft.id);
+
+    const storageModule = await import('../newsletter-studio-storage.ts');
+    vi.mocked(storageModule.unpublishNewsletterPdf).mockRejectedValueOnce(
+      new Error('storage unreachable'),
+    );
+
+    await expect(unpublishCampaign(draft.id)).rejects.toThrow(/storage unreachable/);
+
+    // The record and the pointer survive, so the admin can retry — and the
+    // newsletter is not shown as withdrawn while its URL still serves.
+    expect(await listPublishedNewsletters()).toHaveLength(1);
+    expect((await getCampaignView(draft.id)).website?.slug).toBe(published.website?.slug);
+  });
+
   it('normalises a record written before newsletters had a website', async () => {
     kvStore.set('nlstudio:campaign:legacy-2', {
       id: 'legacy-2',
