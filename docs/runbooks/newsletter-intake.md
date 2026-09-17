@@ -84,10 +84,10 @@ Action's authentication or the task's stored header).
 Optional Edge Function secrets (Project → Edge Functions → Secrets), neither
 required:
 
-| Secret                       | Purpose                                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `NW_NEWSLETTER_INTAKE_TOKEN` | Local-development override: a header equal to this value is accepted before the Vault oracle is consulted |
-| `NW_NEWSLETTER_REVIEW_TO`    | Comma list of admin recipients for the review email (default `info@navigatewealth.co`)                    |
+| Secret                       | Purpose                                                                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NW_NEWSLETTER_INTAKE_TOKEN` | Local-development override, honoured only when `DENO_ENV=development` (never set in deployment); production checks Vault alone, so rotating the Vault secret revokes everything |
+| `NW_NEWSLETTER_REVIEW_TO`    | Comma list of admin recipients for the review email (default `info@navigatewealth.co`)                                                                                          |
 
 The SQL path needs no secret: the Supabase connector runs as the service role,
 which is the only role granted execute on the intake functions.
@@ -107,7 +107,7 @@ https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379
 
 Auth (any one of):
 
-- Header `x-nw-newsletter-intake-token: <Vault token>` (see "The intake token" above; a matching `NW_NEWSLETTER_INTAKE_TOKEN` env value is also accepted)
+- Header `x-nw-newsletter-intake-token: <Vault token>` (see "The intake token" above; under `DENO_ENV=development` only, a matching `NW_NEWSLETTER_INTAKE_TOKEN` env value is also accepted)
 - Shared cron header `x-nw-cron-auth` (Vault cron token)
 - `Authorization: Bearer <service-role or SUPER_ADMIN_PASSWORD>` (manual)
 

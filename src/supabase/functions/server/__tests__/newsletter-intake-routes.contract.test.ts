@@ -13,6 +13,9 @@ import { multipart } from './helpers/contract-harness.ts';
 
 const env = vi.hoisted(() => ({
   NW_NEWSLETTER_INTAKE_TOKEN: 'intake-token',
+  // The env override is honoured only under DENO_ENV=development; the suite
+  // opts in per case so the production shape (unset) is the default.
+  DENO_ENV: '',
   SUPABASE_URL: 'https://test',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role',
 }));
@@ -91,6 +94,7 @@ beforeEach(() => {
   isAuthorizedCronRequest.mockResolvedValue(false);
   verifyNewsletterIntakeToken.mockResolvedValue(false);
   env.NW_NEWSLETTER_INTAKE_TOKEN = 'intake-token';
+  env.DENO_ENV = 'development';
 });
 
 describe('auth', () => {
@@ -113,7 +117,24 @@ describe('auth', () => {
     expect(verifyNewsletterIntakeToken).not.toHaveBeenCalled();
   });
 
+  it('ignores the env override outside development, so a stale env token is not a second credential', async () => {
+    env.DENO_ENV = '';
+    verifyNewsletterIntakeToken.mockResolvedValue(false);
+    const res = await submit(TOKEN, FIELDS);
+    expect(res.status).toBe(401);
+    // The header still reached the oracle — Vault is the only production check.
+    expect(verifyNewsletterIntakeToken).toHaveBeenCalledWith('intake-token');
+    expect(svc.createDraftFromIntake).not.toHaveBeenCalled();
+  });
+
+  it('honours the env override under DENO_ENV=development without consulting the oracle', async () => {
+    env.DENO_ENV = 'development';
+    expect((await submit(TOKEN, FIELDS)).status).toBe(201);
+    expect(verifyNewsletterIntakeToken).not.toHaveBeenCalled();
+  });
+
   it('accepts the Vault-verified token with no env override configured (production path)', async () => {
+    env.DENO_ENV = '';
     env.NW_NEWSLETTER_INTAKE_TOKEN = '';
     verifyNewsletterIntakeToken.mockImplementation(async (c: string) => c === 'vault-token');
 
