@@ -137,6 +137,35 @@ describe('issue months and slugs', () => {
     );
   });
 
+  it('truncates a long title on a word boundary, never mid-word', () => {
+    // The real September 2026 issue: the naive 60-character cut landed inside
+    // "what", giving `...compass-protect-wh` in a permanent public URL.
+    const slug = newsletterSlug(
+      'Navigate Wealth | September 2026 | The Wealth Compass: Protect what matters',
+      '2026-09',
+    );
+    expect(slug).toBe('2026-09-navigate-wealth-september-2026-the-wealth-compass-protect');
+    expect(slug.endsWith('-')).toBe(false);
+    // Every segment after the month prefix is a whole word from the title.
+    const title = 'navigate wealth september 2026 the wealth compass protect what matters';
+    for (const part of slug.replace(/^\d{4}-\d{2}-/, '').split('-')) {
+      expect(title.split(' ')).toContain(part);
+    }
+  });
+
+  it('keeps a word that ends exactly at the limit (review finding)', () => {
+    // "a" + separator + a 58-character word fills the 60 exactly, with the
+    // next separator sitting just past it. Backtracking there would discard a
+    // word that fitted, leaving a uselessly short URL.
+    const long = 'b'.repeat(58);
+    expect(newsletterSlug(`a ${long} c`, '2026-09')).toBe(`2026-09-a-${long}`);
+  });
+
+  it('still produces something usable from one very long unbroken word', () => {
+    const slug = newsletterSlug('A'.repeat(90), '2026-09');
+    expect(slug).toBe(`2026-09-${'a'.repeat(60)}`);
+  });
+
   it('survives a title with nothing usable in it', () => {
     expect(newsletterSlug('!!!', '2026-09')).toBe('2026-09-newsletter');
   });
