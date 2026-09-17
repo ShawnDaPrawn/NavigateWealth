@@ -1,4 +1,5 @@
-# Weekly logical backup of the production Postgres, with an integrity check.
+# Weekly backup of the production Supabase project: Postgres, Storage objects,
+# and an off-site copy that nobody can delete.
 #
 # WHY THIS EXISTS WHEN SUPABASE ALREADY BACKS UP
 # ----------------------------------------------
@@ -8,27 +9,48 @@
 #
 #   • a backup that lives OUTSIDE the vendor, so a billing lapse, an account
 #     lockout or an accidental project deletion is survivable;
-#   • proof each week that the dump is READABLE, not merely produced. A backup
-#     nobody has ever restored is a hope, not a control. `pg_restore --list`
-#     parses the archive's table of contents and fails on a truncated or
-#     corrupt file — the cheap end of a restore test, run every time.
+#   • a copy under Object Lock, which survives an attacker who holds every
+#     credential this project has. Supabase's managed backups live inside the
+#     account being attacked, and the GitHub artifact below is deletable by any
+#     repository admin — neither survives the account compromise it is meant to;
+#   • Storage objects, which NO other backup covers. `pg_dump` carries
+#     `storage.objects` (metadata rows) and not one byte of the files;
+#   • proof each week that every artifact is readable and, for the database,
+#     that it loads. A backup nobody has ever restored is a hope, not a control.
 #
-# WHAT IT DOES NOT DO YET
-# -----------------------
-# It does not restore into a scratch database and diff the result. That needs a
-# throwaway Postgres and a few minutes of runner time; the TOC parse is the
-# honest 80% until someone decides that is worth adding.
+# THE THREE LEGS, AND WHAT EACH ONE PROVES
+# ----------------------------------------
+#   1. Database  — dump, decode every block, restore into a scratch Postgres,
+#                  and diff row counts, indexes, constraints and RLS flags
+#                  against the source.      (secret: SUPABASE_DB_URL)
+#   2. Storage   — download every object, verify each against its listed size,
+#                  and check the archive's file count against its manifest.
+#                  (secrets: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)
+#   3. Off-site  — put both artifacts into an Object Lock bucket and read the
+#                  retention back off the stored object.
+#                  (secret: NW_BACKUP_S3_BUCKET, plus credentials)
 #
-# SETUP (one secret, and the job no-ops safely without it)
-# -------------------------------------------------------
-#   Settings → Secrets and variables → Actions → New repository secret
-#     Name:  SUPABASE_DB_URL
-#     Value: the Session-pooler connection string from
-#            Supabase → Project Settings → Database → Connection string → URI
-#            (include the password; prefer a read-only role if one exists)
+# Each leg is independent in both directions. A missing secret skips ONLY its
+# own leg, with a warning and a row in the job summary, rather than failing the
+# run — a red cross every Sunday teaches people to ignore the workflow. And a
+# leg that FAILS does not suppress the others: the later steps carry
+# `!cancelled()`, without which GitHub's implicit `success()` would discard an
+# already restore-verified database dump because the Storage leg went wrong.
+# What a skip must
+# never do is look like a backup: this workflow's first three runs were green
+# while performing no work at all, because the one secret it needed was unset
+# and every step skipped. The job summary now states which legs ran.
 #
-# Until that secret is set, every run SKIPS with a clear message rather than
-# failing — a red cross every Sunday teaches people to ignore the workflow.
+# SETUP: docs/runbooks/backup-and-restore.md has the click-path for all three,
+# including the connection-string trap that will otherwise fail leg 1.
+#
+# A NOTE ON THE SERVICE-ROLE KEY. Leg 2 needs it, because Supabase Storage has
+# no scoped credential — there is no read-only key that can list and download
+# objects. That widens what a GitHub compromise yields, and it is a real cost,
+# accepted because the alternative is leaving the least reproducible data in
+# the platform with no backup whatsoever. It argues for leg 3: once the locked
+# copy exists, an attacker holding every one of these secrets still cannot
+# destroy the backups.
 #
 # The client is pinned to major 17 to match the server (PostgreSQL 17.6);
 # pg_dump refuses to dump from a server newer than itself.
@@ -58,9 +80,13 @@ jobs:
     # row still there — without a second project, and it runs every week instead
     # of once when somebody remembers.
     #
-    # What it does NOT test: Supabase's own platform restore, Storage objects
-    # (the dump holds only their metadata), or auth users. See
-    # docs/archive/production-readiness-ledger-2026.md § DR for the residual risk that leaves.
+    # What it does NOT test: Supabase's own platform restore, or restoring the
+    # Storage archive back INTO a project — leg 2 proves the objects are
+    # downloaded and the archive is intact, not that a re-upload reproduces
+    # them. `auth` IS covered: the shape comparison spans `public` and `auth`,
+    # so `auth.users`, `auth.identities` and `auth.sessions` are diffed like any
+    # other table. See docs/runbooks/backup-and-restore.md for the residual risk
+    # that leaves, and docs/archive/production-readiness-ledger-2026.md § DR.
     services:
       scratch:
         image: postgres:17
@@ -75,16 +101,72 @@ jobs:
           - 5432:5432
 
     steps:
-      - name: Check the database secret is configured
+      # Not optional, and its absence was invisible. Four steps below run
+      # scripts out of `scripts/ops/`, and without a checkout the runner has an
+      # empty workspace — the first real run would have died on
+      # `capture-db-shape.sh: No such file or directory`. Nothing caught it
+      # because every run so far skipped every step that touches the repo, so
+      # the workflow has never once needed a file it did not have.
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check which backup legs are configured
         id: guard
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          STORAGE_URL: ${{ secrets.SUPABASE_URL }}
+          STORAGE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OFFSITE_BUCKET: ${{ secrets.NW_BACKUP_S3_BUCKET }}
         run: |
-          if [ -z "$DB_URL" ]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::SUPABASE_DB_URL is not set — skipping. See the header of this workflow for setup."
-          else
-            echo "configured=true" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          # Three independent legs, each gated on its own secrets, so a missing
+          # one cannot silently disable the others.
+          configured=false
+          storage=false
+          offsite=false
+          if [ -n "$DB_URL" ]; then configured=true; fi
+          if [ -n "$STORAGE_URL" ] && [ -n "$STORAGE_KEY" ]; then storage=true; fi
+          if [ -n "$OFFSITE_BUCKET" ]; then offsite=true; fi
+
+          {
+            echo "configured=$configured"
+            echo "storage=$storage"
+            echo "offsite=$offsite"
+          } >> "$GITHUB_OUTPUT"
+
+          # EVERY run writes what it actually did to the job summary.
+          #
+          # This workflow's first three scheduled runs were green while doing
+          # nothing whatsoever: `SUPABASE_DB_URL` was never set, the guard
+          # skipped all eight real steps, and the run reported success. Three
+          # weeks of ticks said the disaster-recovery rehearsal was running. It
+          # had never run once. A skip is still not a failure — a red cross
+          # every Sunday teaches people to ignore the workflow — but it must
+          # never again be indistinguishable from a backup, and the run page is
+          # where somebody looks.
+          {
+            echo "### Weekly backup"
+            echo ""
+            echo "| Leg | Configured | Secret |"
+            echo "| --- | --- | --- |"
+            echo "| Database dump + restore rehearsal | $configured | \`SUPABASE_DB_URL\` |"
+            echo "| Storage objects | $storage | \`SUPABASE_URL\` + \`SUPABASE_SERVICE_ROLE_KEY\` |"
+            echo "| Off-site locked copy | $offsite | \`NW_BACKUP_S3_BUCKET\` |"
+            echo ""
+            if [ "$configured" = false ] || [ "$storage" = false ] || [ "$offsite" = false ]; then
+              echo "> This run did **not** perform every leg. Setup: \`docs/runbooks/backup-and-restore.md\`."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$configured" = false ]; then
+            echo "::warning::SUPABASE_DB_URL is not set — skipping the dump and the restore rehearsal. See docs/runbooks/backup-and-restore.md."
+          fi
+          if [ "$storage" = false ]; then
+            echo "::warning::SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set — skipping the Storage backup. Storage objects are NOT in the database dump."
+          fi
+          if [ "$offsite" = false ]; then
+            echo "::warning::NW_BACKUP_S3_BUCKET is not set — skipping the off-site locked copy. The only copy will be a 90-day GitHub artifact, deletable by any repository admin."
           fi
 
       - name: Install PostgreSQL 17 client
@@ -278,12 +360,106 @@ jobs:
           # THE SECOND GATE: every row, index, constraint and row-security flag.
           python3 scripts/ops/compare-restore.py source-before.csv source-after.csv restored.csv
 
+      # ----------------------------------------------------------------------
+      # STORAGE. Everything above this line backs up Postgres, which carries
+      # `storage.objects` — the metadata rows — and not one byte of the files.
+      # Signed e-sign PDFs, client documents, policy documents and the e-sign
+      # certificates live only in Supabase Storage, which has no versioning and
+      # no soft delete. Until this step existed they had no backup at all.
+      # ----------------------------------------------------------------------
+      - name: Back up Supabase Storage objects
+        # `!cancelled()` rather than a bare guard. A step condition with no
+        # status function carries an implicit `success()`, so a failed database
+        # leg would skip this one — and these are independent legs by design: a
+        # database that will not dump says nothing about whether the Storage
+        # objects can be saved. Not `always()`, which would also run this after
+        # somebody cancels the job.
+        if: ${{ !cancelled() && steps.guard.outputs.storage == 'true' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # A total of zero objects means the credential can list buckets but
+          # cannot see their contents, which produces an empty archive that
+          # exits 0. Same class of false confidence as a TOC-only dump check.
+          NW_BACKUP_MIN_OBJECTS: '1'
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          archive="navigatewealth-storage-$stamp.tar.gz"
+          echo "STORAGE_FILE=$archive" >> "$GITHUB_ENV"
+
+          node scripts/ops/backup-storage.mjs storage-backup
+          tar -czf "$archive" -C storage-backup .
+
+          # `tar -tzf` streams and decompresses the entire archive, so a
+          # truncated or corrupt tarball fails here rather than on the day of
+          # the restore. The object count and the file count must then agree: a
+          # tarball holding fewer files than the backup claims to have written
+          # is a partial backup wearing a complete backup's inventory.
+          #
+          # The count is read from `object-count.txt` rather than by counting
+          # manifest lines, because an object key may contain a newline. The
+          # manifest quotes that correctly and `wc -l` would over-count it,
+          # failing a backup that is perfectly good.
+          expected=$(cat storage-backup/object-count.txt)
+          archived=$(tar -tzf "$archive" | grep -c '^\./objects/.*[^/]$' || true)
+          echo "objects backed up: $expected, files in archive: $archived"
+          if [ "$expected" -ne "$archived" ]; then
+            echo "::error::The backup wrote $expected objects but the archive holds $archived."
+            exit 1
+          fi
+          echo "storage archive: $archive ($(stat -c%s "$archive") bytes)"
+          cat storage-backup/buckets.csv
+
+      # ----------------------------------------------------------------------
+      # OFF-SITE. The GitHub artifact below is off-VENDOR but not off-ACCOUNT:
+      # any repository admin can delete it, which is precisely the principal
+      # whose compromise the copy exists to survive. Object Lock in COMPLIANCE
+      # mode is the copy nobody — not the CI credential, not the cloud account
+      # root — can delete before it expires.
+      # ----------------------------------------------------------------------
+      - name: Copy the backups off-site into locked object storage
+        # Same reasoning: one leg failing must not strand the other's artifact
+        # outside the locked bucket. The script uploads whichever artifacts
+        # exist and fails only when there are none.
+        if: ${{ !cancelled() && steps.guard.outputs.offsite == 'true' }}
+        env:
+          NW_BACKUP_S3_BUCKET: ${{ secrets.NW_BACKUP_S3_BUCKET }}
+          NW_BACKUP_S3_ENDPOINT: ${{ secrets.NW_BACKUP_S3_ENDPOINT }}
+          NW_BACKUP_S3_REGION: ${{ vars.NW_BACKUP_S3_REGION }}
+          NW_BACKUP_S3_PREFIX: ${{ vars.NW_BACKUP_S3_PREFIX }}
+          NW_BACKUP_RETENTION_DAYS: ${{ vars.NW_BACKUP_RETENTION_DAYS }}
+          NW_BACKUP_LOCK_MODE: ${{ vars.NW_BACKUP_LOCK_MODE }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.NW_BACKUP_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.NW_BACKUP_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          files=()
+          if [ -n "${BACKUP_FILE:-}" ] && [ -f "${BACKUP_FILE:-}" ]; then files+=("$BACKUP_FILE"); fi
+          if [ -n "${STORAGE_FILE:-}" ] && [ -f "${STORAGE_FILE:-}" ]; then files+=("$STORAGE_FILE"); fi
+
+          # Reaching an off-site step with nothing to send means a leg above was
+          # skipped or produced nothing. Uploading zero files and reporting
+          # success is the failure this workflow keeps re-learning.
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::The off-site copy is configured but no backup artifact was produced. Check the guard table in the job summary."
+            exit 1
+          fi
+
+          bash scripts/ops/upload-offsite.sh "${files[@]}"
+
       - name: Upload
-        if: steps.guard.outputs.configured == 'true'
+        # The most consequential of the three. Without `!cancelled()` a failure
+        # in the Storage leg would discard an already dumped, decoded and
+        # restore-verified database — throwing away a good backup because a
+        # different backup went wrong.
+        if: ${{ !cancelled() && (steps.guard.outputs.configured == 'true' || steps.guard.outputs.storage == 'true') }}
         uses: actions/upload-artifact@v7
         with:
           name: db-backup-${{ github.run_id }}
-          path: ${{ env.BACKUP_FILE }}
+          path: |
+            ${{ env.BACKUP_FILE }}
+            ${{ env.STORAGE_FILE }}
           # GitHub's maximum. The dump holds client PII, so it is deliberately
           # NOT kept indefinitely here — this is a rolling off-vendor copy, and
           # longer-term retention belongs in encrypted object storage with a
