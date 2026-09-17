@@ -32,6 +32,18 @@ const svc = vi.hoisted(() => ({
     notified: true,
   })),
   assertKnownLists: vi.fn(async (ids: string[]) => ids.map((id) => `Name of ${id}`)),
+  // Real implementation: the dry-run response reports the month a hand-over
+  // would file under, and the shape of that answer is part of the contract.
+  resolveIntakeIssueMonth: (input: {
+    issueMonth?: string | null;
+    idempotencyKey: string | null;
+  }) => {
+    const month = /^\d{4}-(0[1-9]|1[0-2])$/;
+    const explicit = (input.issueMonth ?? '').trim();
+    if (month.test(explicit)) return explicit;
+    const key = (input.idempotencyKey ?? '').trim();
+    return month.test(key) ? key : undefined;
+  },
 }));
 const isAuthorizedCronRequest = vi.hoisted(() => vi.fn(async () => false));
 const verifyNewsletterIntakeToken = vi.hoisted(() => vi.fn(async (_c: string) => false));
@@ -214,6 +226,33 @@ describe('payload', () => {
       'sys_all',
       'g3',
     ]);
+  });
+
+  it('reports the issue month a hand-over would file under (review finding)', async () => {
+    const res = await submit(TOKEN, { ...FIELDS, idempotencyKey: '2026-09', dryRun: 'true' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).wouldCreate).toMatchObject({ issueMonth: '2026-09' });
+
+    const explicit = await submit(TOKEN, {
+      ...FIELDS,
+      idempotencyKey: '2026-09',
+      issueMonth: '2026-08',
+      dryRun: 'true',
+    });
+    expect((await explicit.json()).wouldCreate).toMatchObject({ issueMonth: '2026-08' });
+  });
+
+  it('passes an explicit issue month to the service', async () => {
+    await submit(TOKEN, { ...FIELDS, issueMonth: '2026-08' });
+    expect(svc.createDraftFromIntake).toHaveBeenCalledWith(
+      expect.objectContaining({ issueMonth: '2026-08' }),
+    );
+  });
+
+  it('rejects an issue month that is not a real month', async () => {
+    const res = await submit(TOKEN, { ...FIELDS, issueMonth: '2026-13' });
+    expect(res.status).toBe(400);
+    expect(svc.createDraftFromIntake).not.toHaveBeenCalled();
   });
 
   it('reports a replayed idempotency key as 200 duplicate', async () => {

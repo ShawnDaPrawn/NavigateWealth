@@ -12,6 +12,7 @@ import type {
   NewsletterCampaignAudience,
   NewsletterCampaignRecipient,
   NewsletterProcessorState,
+  PublishedNewsletter,
 } from '../newsletter-studio-types.ts';
 
 export const NEWSLETTER_CAMPAIGN_NAMESPACE = 'nlstudio:campaign:';
@@ -19,6 +20,7 @@ export const NEWSLETTER_AUDIENCE_NAMESPACE = 'nlstudio:audience:';
 export const NEWSLETTER_RECIPIENT_NAMESPACE = 'nlstudio:recipient:';
 export const NEWSLETTER_PROCESSOR_NAMESPACE = 'nlstudio:processor:';
 export const NEWSLETTER_INTAKE_KEY_NAMESPACE = 'nlstudio:intakekey:';
+export const NEWSLETTER_PUBLISHED_NAMESPACE = 'nlstudio:published:';
 
 /** Fixed id of the singleton processor-state record. */
 export const NEWSLETTER_PROCESSOR_STATE_ID = 'state';
@@ -39,6 +41,19 @@ export const newsletterRecipients = createKvRepository<NewsletterCampaignRecipie
 
 export const newsletterProcessorState = createKvRepository<NewsletterProcessorState>(
   NEWSLETTER_PROCESSOR_NAMESPACE,
+);
+
+/**
+ * Newsletters live on the public website — id is the slug.
+ *
+ * A separate index rather than a filter over campaigns: the Resources page is
+ * an unauthenticated route that anyone can hit, and this keeps it to one
+ * prefix scan of about twelve records a year instead of reading every
+ * campaign and stripping its internals on each request. It also means the
+ * public payload cannot accidentally grow a field that belongs to delivery.
+ */
+export const newsletterPublications = createKvRepository<PublishedNewsletter>(
+  NEWSLETTER_PUBLISHED_NAMESPACE,
 );
 
 /**

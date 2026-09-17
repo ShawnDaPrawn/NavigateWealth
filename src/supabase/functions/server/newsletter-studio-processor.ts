@@ -61,9 +61,11 @@ import {
 } from './newsletter-studio-lease.ts';
 import {
   listCampaignRecords,
+  normalizeCampaignRecord,
   nowIso,
   promoteDueScheduledCampaign,
 } from './newsletter-studio-service.ts';
+import { publishCampaignToWebsite } from './newsletter-studio-publish.ts';
 import { RECIPIENT_FETCH_CHUNK } from './newsletter-studio-engagement.ts';
 import { sweepNewsletterIntake } from './newsletter-intake-service.ts';
 import {
@@ -510,6 +512,31 @@ async function finalizeCampaign(
     failed: failedCount,
     sentAt: timestamp,
   });
+
+  // A finished send goes to the website too, unless the admin turned that off.
+  // Wrapped: a storage or index fault here must not turn a campaign that was
+  // genuinely delivered into a failed one. The admin can retry from the module.
+  const finished = (await newsletterCampaigns.get(campaign.id)) ?? latest;
+  const normalized = normalizeCampaignRecord(finished);
+  if (normalized.status === 'finished' && normalized.publishToWebsite && !normalized.website) {
+    try {
+      const website = await publishCampaignToWebsite(normalized);
+      await newsletterCampaigns.put(campaign.id, {
+        ...normalized,
+        website,
+        updatedAt: nowIso(),
+      });
+      log.info('Finished campaign published to the website', {
+        campaignId: campaign.id,
+        slug: website.slug,
+      });
+    } catch (error) {
+      log.error('Could not publish the finished campaign to the website', {
+        campaignId: campaign.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   log.info('Campaign finished', { campaignId: campaign.id, sentCount, failedCount });
 }

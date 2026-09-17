@@ -113,15 +113,16 @@ Auth (any one of):
 
 Fields (multipart/form-data):
 
-| Field            | Required | Notes                                                              |
-| ---------------- | -------- | ------------------------------------------------------------------ |
-| `file`           | yes      | the PDF                                                            |
-| `title`          | yes      |                                                                    |
-| `description`    | yes      |                                                                    |
-| `listIds`        | no       | JSON array (`["sys_all","g2"]`) or comma list; default subscribers |
-| `idempotencyKey` | no       | recommended, e.g. `2026-09`                                        |
-| `submittedBy`    | no       | shown in the review email, e.g. `github-action`                    |
-| `dryRun`         | no       | `true` validates everything and writes nothing                     |
+| Field            | Required | Notes                                                                                 |
+| ---------------- | -------- | ------------------------------------------------------------------------------------- |
+| `file`           | yes      | the PDF                                                                               |
+| `title`          | yes      |                                                                                       |
+| `description`    | yes      |                                                                                       |
+| `listIds`        | no       | JSON array (`["sys_all","g2"]`) or comma list; default subscribers                    |
+| `idempotencyKey` | no       | recommended, e.g. `2026-09`; a `YYYY-MM` key also sets the issue month                |
+| `issueMonth`     | no       | `YYYY-MM` — which issue this is, and where it files on the website. Overrides the key |
+| `submittedBy`    | no       | shown in the review email, e.g. `github-action`                                       |
+| `dryRun`         | no       | `true` validates everything and writes nothing                                        |
 
 ```bash
 curl -sS -X POST "$BASE/newsletter-intake/submit" \
@@ -198,6 +199,44 @@ connector **Supabase** (plus whatever the routine needs to produce the PDF).
 Prompt: run the `newsletter-monthly-intake` skill
 (`.claude/skills/newsletter-monthly-intake/SKILL.md`), which spells out the
 hand-over above. The routine's job ends at the hand-over; it never sends.
+
+## The website archive
+
+Every published newsletter also appears on the public site, at
+**Resources → Newsletters** (`/resources?section=newsletters`), with its own
+page at `/resources/newsletter/<slug>`.
+
+**How a newsletter gets there.** A campaign carries an **issue month**
+(`YYYY-MM`, defaulting to the month it was created) and a **Publish on the
+website** switch, on by default. When a send finishes, the delivery tick
+publishes it; a failure there is logged and never turns a delivered campaign
+into a failed one. An admin can also press **Publish on the website** on the
+newsletter itself at any time — including on a draft that was never emailed.
+
+**Publishing without emailing anyone.** Leave the audience empty. "Send now"
+stays disabled and says why; "Publish on the website" does not. This is the
+path for an issue that belongs in the archive but should not go out by email.
+
+**Where a routine's hand-over files.** From `issueMonth` when it sends one, else
+from the idempotency key when that is a `YYYY-MM` month, else the month it was
+processed. So a September hand-over swept on 1 October still files under
+September, which is the whole reason the key is documented as the issue month.
+
+**Where it files.** By its issue month, not its publish date — so September's
+issue published on 2 October still files under September. The tab shows the
+current year and the three before it, with the five years before those behind
+an "Older" dropdown; the strip is derived from the clock, so it shifts by
+itself every 1 January. Only months that actually have an issue are listed.
+
+**The PDF.** Publishing copies the PDF from the private bucket into the public
+one (`make-91ed8379-newsletters-public`, created on the first publish), so the
+page can embed it and the link can be shared and indexed. Removing a
+newsletter from the website deletes that copy; the private original and the
+campaign are untouched.
+
+**Editing.** A title, description or issue-month change on a live newsletter
+reaches the site on save. The slug never moves, so a link already in
+circulation keeps working.
 
 ## What the admin sees
 

@@ -35,7 +35,11 @@ import {
   NewsletterPdfValidationError,
 } from './newsletter-studio-storage.ts';
 import { NewsletterIntakeFieldsSchema } from './newsletter-intake-validation.ts';
-import { assertKnownLists, createDraftFromIntake } from './newsletter-intake-service.ts';
+import {
+  assertKnownLists,
+  createDraftFromIntake,
+  resolveIntakeIssueMonth,
+} from './newsletter-intake-service.ts';
 import { NEWSLETTER_INTAKE_TOKEN_HEADER } from './newsletter-intake-types.ts';
 
 const app = new Hono();
@@ -108,6 +112,7 @@ app.post(
       title: form.get('title') ?? undefined,
       description: form.get('description') ?? undefined,
       listIds: form.get('listIds') ?? undefined,
+      issueMonth: form.get('issueMonth') ?? undefined,
       idempotencyKey: form.get('idempotencyKey') ?? undefined,
       submittedBy: form.get('submittedBy') ?? undefined,
       dryRun: form.get('dryRun') ?? undefined,
@@ -150,6 +155,10 @@ app.post(
           fileName: file.name || 'newsletter.pdf',
           sizeBytes: bytes.length,
           idempotencyKey: fields.idempotencyKey ?? null,
+          issueMonth: resolveIntakeIssueMonth({
+            issueMonth: fields.issueMonth,
+            idempotencyKey: fields.idempotencyKey ?? null,
+          }),
           submittedBy,
         },
       });
@@ -164,6 +173,7 @@ app.post(
         fileName: file.name || 'newsletter.pdf',
         bytes,
         idempotencyKey: fields.idempotencyKey ?? null,
+        issueMonth: fields.issueMonth ?? null,
         submittedBy,
       });
     } catch (error) {

@@ -60,6 +60,48 @@ export interface NewsletterPdf {
   uploadedAt: string;
 }
 
+/**
+ * A campaign's live presence on the public website.
+ *
+ * The PDF is copied into a PUBLIC bucket on publish and served from a
+ * permanent URL: an indexable page cannot hang off a signed URL that expires,
+ * and a published newsletter has already been emailed to every subscriber, so
+ * there is nothing left to gate. The private bucket stays the system of record
+ * for drafts and for the tracked click-through.
+ */
+export interface NewsletterWebsitePublication {
+  /** URL segment under /resources/newsletter/. Stable once published. */
+  slug: string;
+  publishedAt: string;
+  /** Permanent public URL of the copied PDF. */
+  pdfUrl: string;
+  /** Object path inside the public bucket, kept so unpublish can remove it. */
+  publicPath: string;
+  pdfFileName: string;
+  pdfSizeBytes: number;
+}
+
+/**
+ * What the public website reads. Deliberately NOT the campaign record: an
+ * unauthenticated endpoint must never carry recipient counts, audience names,
+ * delivery errors or lease state.
+ */
+export interface PublishedNewsletter {
+  slug: string;
+  campaignId: string;
+  title: string;
+  description: string;
+  /** 'YYYY-MM' — the issue this is, not the day it was sent. */
+  issueMonth: string;
+  year: number;
+  /** 1–12. */
+  month: number;
+  pdfUrl: string;
+  pdfFileName: string;
+  pdfSizeBytes: number;
+  publishedAt: string;
+}
+
 export interface NewsletterCampaign {
   id: string;
   /** Doubles as the email subject. */
@@ -68,7 +110,11 @@ export interface NewsletterCampaign {
   description: string;
   /** Display name on the from address (address itself is fixed per deliverability config). */
   fromName: string;
-  /** Communication group ids this campaign targets. */
+  /**
+   * Communication group ids this campaign targets. May be empty: a newsletter
+   * can be published on the website without being emailed to anyone. An
+   * audience is required at send time, not at create time.
+   */
   listIds: string[];
   /** Names snapshot of the targeted groups, for history display after a group is renamed/deleted. */
   listNames: string[];
@@ -79,6 +125,18 @@ export interface NewsletterCampaign {
   sourceRef: string | null;
   /** When the "a draft is waiting for review" admin email went out (routine drafts). */
   reviewNotifiedAt: string | null;
+
+  /**
+   * Which issue this is, as 'YYYY-MM'. Decides the year/month it files under
+   * on the website, so the September issue published on 2 October still files
+   * under September. Defaults to the month the campaign was created.
+   */
+  issueMonth: string;
+  /** Intent: publish on the website when the send finishes. Default true. */
+  publishToWebsite: boolean;
+  /** Set once live on the website; null otherwise. */
+  website: NewsletterWebsitePublication | null;
+
   status: NewsletterCampaignStatus;
   /** ISO timestamp for scheduled sends; null when immediate/draft. */
   scheduledAt: string | null;

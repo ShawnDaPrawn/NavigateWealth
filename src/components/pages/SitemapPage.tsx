@@ -243,6 +243,12 @@ const sitemapSections: SitemapSection[] = [
         description: 'Financial news, market updates, and investment opportunities.',
         status: 'public',
       },
+      {
+        title: 'Newsletters',
+        path: '/resources?section=newsletters',
+        description: 'Every published Navigate Wealth newsletter, by year and month.',
+        status: 'public',
+      },
     ],
   },
   {

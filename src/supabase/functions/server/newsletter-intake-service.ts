@@ -65,6 +65,26 @@ export function resetIntakeClient(): void {
   _client = null;
 }
 
+/**
+ * Which issue a hand-over is for.
+ *
+ * A routine's idempotency key is documented as the issue month (`2026-09`),
+ * so when it looks like one it IS one — without this, a September hand-over
+ * swept on 1 October files under October and publishes into the wrong month
+ * of the website archive (review finding). An explicit field still wins, and
+ * a key in any other shape falls through to the create-time default.
+ */
+export function resolveIntakeIssueMonth(input: {
+  issueMonth?: string | null;
+  idempotencyKey: string | null;
+}): string | undefined {
+  const explicit = (input.issueMonth ?? '').trim();
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(explicit)) return explicit;
+  const key = (input.idempotencyKey ?? '').trim();
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) return key;
+  return undefined;
+}
+
 /** The audiences a routine may name, so an unknown id gets a helpful 400. */
 export async function assertKnownLists(listIds: string[]): Promise<string[]> {
   const lists = await listAudienceLists();
@@ -181,6 +201,7 @@ export async function createDraftFromIntake(input: IntakeDraftInput): Promise<In
       title: input.title,
       description: input.description,
       listIds: input.listIds,
+      issueMonth: resolveIntakeIssueMonth(input),
       source: 'routine',
       sourceRef: input.idempotencyKey,
     },

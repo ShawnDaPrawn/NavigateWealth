@@ -16,6 +16,7 @@ export const ENDPOINTS = {
   CAMPAIGN_CANCEL: (id: string) => `newsletter-studio/campaigns/${id}/cancel`,
   CAMPAIGN_RECIPIENTS: (id: string) => `newsletter-studio/campaigns/${id}/recipients`,
   CAMPAIGN_STATS: (id: string) => `newsletter-studio/campaigns/${id}/stats`,
+  CAMPAIGN_PUBLISH: (id: string) => `newsletter-studio/campaigns/${id}/publish`,
   LISTS: 'newsletter-studio/lists',
   PROCESS: 'newsletter-studio/process',
   TRACK_CLICK: 'newsletter-studio/track/click',

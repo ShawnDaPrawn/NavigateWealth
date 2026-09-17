@@ -3,6 +3,8 @@ import { useSearchParams, Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { NewslettersTab } from './resources/NewslettersTab';
+import { usePublishedNewsletters } from './resources/useNewsletters';
 import { Badge } from '../ui/badge';
 import {
   Search,
@@ -19,6 +21,7 @@ import {
   Globe,
   Users,
   LayoutGrid,
+  Mail,
 } from 'lucide-react';
 
 // Module Imports
@@ -83,12 +86,16 @@ export function ResourcesPage() {
   // Tab States
   const [activeTab, setActiveTab] = useState(() => {
     const section = searchParams.get('section');
-    return section && ['insights', 'market-watch', 'market-updates'].includes(section)
+    return section &&
+      ['insights', 'market-watch', 'market-updates', 'newsletters'].includes(section)
       ? section
       : 'insights';
   });
 
-  const validTabs = useMemo(() => ['insights', 'market-watch', 'market-updates'], []);
+  const validTabs = useMemo(
+    () => ['insights', 'market-watch', 'market-updates', 'newsletters'],
+    [],
+  );
 
   useEffect(() => {
     const section = searchParams.get('section');
@@ -120,6 +127,9 @@ export function ResourcesPage() {
     refetch: refetchNews,
     dataUpdatedAt,
   } = useMarketNews(activeTab === 'market-updates');
+  const { data: newsletters = [], isLoading: newslettersLoading } = usePublishedNewsletters(
+    activeTab === 'newsletters',
+  );
 
   // Constants
   const defaultNewsData = useMemo(
@@ -519,9 +529,15 @@ export function ResourcesPage() {
 
       {/* Main Content */}
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-8 -mt-4">
-        {/* Mobile: Show Insights & Education directly (no confusing tab navigation) */}
+        {/* Mobile: Insights directly, with no tab navigation — except that the
+            footer, the sitemap and any shared link can point straight at the
+            newsletter archive, and landing on Insights instead would make that
+            link a dead end on a phone. So the one deep link mobile can receive
+            is honoured here. */}
         <div className="sm:hidden mt-5 mb-4">
-          {categoriesLoading ? (
+          {activeTab === 'newsletters' ? (
+            <NewslettersTab newsletters={newsletters} isLoading={newslettersLoading} />
+          ) : categoriesLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600" />
@@ -564,6 +580,13 @@ export function ResourcesPage() {
                 >
                   <Activity className="h-4 w-4 mr-2 flex-shrink-0" />
                   Market News
+                </TabsTrigger>
+                <TabsTrigger
+                  value="newsletters"
+                  className="rounded-xl sm:rounded-full px-4 sm:px-6 py-2.5 text-sm font-medium data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all w-full sm:w-auto justify-center"
+                >
+                  <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
+                  Newsletters
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -608,6 +631,12 @@ export function ResourcesPage() {
                   onRefresh={() => refetchNews()}
                   lastRefreshTime={dataUpdatedAt ? new Date(dataUpdatedAt) : null}
                 />
+              )}
+            </TabsContent>
+
+            <TabsContent value="newsletters" className="focus:outline-none">
+              {activeTab === 'newsletters' && (
+                <NewslettersTab newsletters={newsletters} isLoading={newslettersLoading} />
               )}
             </TabsContent>
           </Tabs>

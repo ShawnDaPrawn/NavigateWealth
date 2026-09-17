@@ -6,7 +6,11 @@
  */
 
 import { z } from 'npm:zod';
-import { DescriptionSchema, TitleSchema } from './newsletter-studio-validation.ts';
+import {
+  DescriptionSchema,
+  IssueMonthSchema,
+  TitleSchema,
+} from './newsletter-studio-validation.ts';
 import { SUBSCRIBER_LIST_ID } from './newsletter-studio-audience.ts';
 
 const ListIdSchema = z.string().trim().min(1).max(120);
@@ -57,6 +61,7 @@ export const NewsletterIntakeFieldsSchema = z.object({
       'idempotencyKey: 1–64 letters, digits, dot, dash or underscore',
     )
     .optional(),
+  issueMonth: IssueMonthSchema.optional(),
   submittedBy: z.string().trim().min(1).max(64).optional(),
   dryRun: BoolishSchema,
 });

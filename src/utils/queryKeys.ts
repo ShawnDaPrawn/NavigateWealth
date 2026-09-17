@@ -490,3 +490,13 @@ export const noteKeys = {
   detail: (id: string) => [...noteKeys.details(), id] as const,
   clientNotes: (clientId: string) => [...noteKeys.all, 'client', clientId] as const,
 } as const;
+
+// ============================================================================
+// PUBLIC NEWSLETTERS (website Resources tab)
+// ============================================================================
+
+export const publicNewsletterKeys = {
+  all: ['public-newsletters'] as const,
+  list: () => [...publicNewsletterKeys.all, 'list'] as const,
+  detail: (slug: string) => [...publicNewsletterKeys.all, 'detail', slug] as const,
+} as const;
