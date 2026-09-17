@@ -1,7 +1,7 @@
 # Migrations — repo vs. production
 
 **Reconciled 2026-08-24 against project `vpjmdsltwrnpefzcgdmz`. The folder now
-tells the truth.** Last appended to 2026-09-14 (`20260914083818`, applied and
+tells the truth.** Last appended to 2026-09-17 (`20260917194649`, applied and
 verified against the same project).
 
 Before this reconciliation the repo held four migration files, production had
@@ -42,6 +42,7 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260914083818_kv_scheduled_article_partial_index.sql`       | ✅ `20260914083818`  | Repo-authored, applied via `apply_migration`, verified after (`EXPLAIN (ANALYZE, BUFFERS)` on the handler's query shows an Index Scan using the new index, 2 shared buffers)                                                          |
 | `20260916211847_newsletter_intake.sql`                        | ✅ `20260916211847`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke (submit, replay, status, three rejections), verified after (RLS on, table grants postgres/service_role only, both functions `proacl = postgres, service_role`) |
 | `20260916212029_newsletter_intake_token_vault.sql`            | ✅ `20260916212029`  | Repo-authored, applied via `apply_migration`, verified after (Vault secret present, oracle true for the real secret and false for wrong/empty/null, `proacl = postgres, service_role`, `search_path = ''`)                            |
+| `20260917194649_social_channel_assets.sql`                    | ✅ `20260917194649`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (12 assertion groups), verified after (4 functions, RLS on, anon denied, the Vault token oracle answers only for the real secret)                         |
 
 `20260906005533` is stamped later than the day it was authored, and that is
 correct rather than drift: it had to be applied _after_ the Edge Function that

@@ -80,11 +80,12 @@ describe('PostComposer', () => {
     );
   });
 
-  it('offers upload as the way in, not just a URL field', () => {
+  it('offers the Assets library as the way in, not just a URL field', () => {
     setup(['li']);
-    // The URL field was the ONLY way to attach an image, which is useless to
-    // anyone who does not already host images somewhere.
-    expect(screen.getByRole('button', { name: /upload or choose image/i })).toBeDefined();
+    // The URL field was once the ONLY way to attach an image, which is useless
+    // to anyone who does not already host images somewhere. Media now comes
+    // from the Assets tab.
+    expect(screen.getByRole('button', { name: /choose an image/i })).toBeDefined();
     expect(screen.queryByLabelText('Image URL')).toBeNull();
   });
 

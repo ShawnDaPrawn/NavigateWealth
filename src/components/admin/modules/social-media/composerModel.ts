@@ -3,10 +3,10 @@
  */
 
 import type {
+  ChannelAsset,
   ComposeMode,
   ComposeRequest,
   MediaFile,
-  SocialMediaAsset,
   SocialPlatform,
   SocialProfile,
 } from './types';
@@ -84,19 +84,23 @@ export function combineDateAndTime(date: Date, time: string): Date {
 }
 
 /**
- * A library image as the composer holds it. The public URL goes straight to
- * Buffer, so `storagePath` (which means "copy this out of the private AI
- * bucket") is deliberately left unset.
+ * A channel asset as the composer holds it.
+ *
+ * Its URL is already public and permanent, so it goes straight to Buffer;
+ * `storagePath` (which means "copy this out of the private AI bucket") is
+ * deliberately left unset, and the library path rides along separately so the
+ * picker can tell what the draft already carries.
  */
-export function assetToMediaFile(asset: SocialMediaAsset): MediaFile {
+export function assetToMediaFile(asset: ChannelAsset): MediaFile {
+  const name = asset.file_name ?? 'Asset';
   return {
-    id: `library_${asset.storagePath}`,
+    id: `asset_${asset.id}`,
     url: asset.url,
-    libraryPath: asset.storagePath,
+    libraryPath: asset.storage_path,
     type: 'image',
-    filename: asset.name,
-    size: asset.size,
-    alt: asset.name,
+    filename: name,
+    size: asset.byte_size,
+    alt: asset.alt_text ?? name,
   };
 }
 

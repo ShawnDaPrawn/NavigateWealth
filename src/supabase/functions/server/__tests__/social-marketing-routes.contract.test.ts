@@ -7,27 +7,11 @@
  * stubbed.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  multipart,
-  request,
-  routeRegistrations,
-  DEFAULT_TEST_USER,
-} from './helpers/contract-harness.ts';
+import { request, routeRegistrations, DEFAULT_TEST_USER } from './helpers/contract-harness.ts';
 
 vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
 });
-
-const media = vi.hoisted(() => ({
-  listMedia: vi.fn(async () => [{ storagePath: 'uploads/a.png', url: 'https://cdn/a.png' }]),
-  uploadMedia: vi.fn(async () => ({ storagePath: 'uploads/a.png', url: 'https://cdn/a.png' })),
-  deleteMedia: vi.fn(async () => undefined),
-  // The real guard is a shape check; the route needs it to see the multipart part.
-  isUploadedFile: (v: unknown) =>
-    typeof v === 'object' && v !== null && typeof (v as File).arrayBuffer === 'function',
-}));
-
-vi.mock('../social-marketing-media-service.ts', () => media);
 
 const svc = vi.hoisted(() => ({
   getStatus: vi.fn(async () => ({ configured: true })),
@@ -59,30 +43,13 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-/** A one-pixel PNG, so the upload route's byte-signature check passes. */
-const PNG_BYTES = String.fromCharCode(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a) + 'pixel';
-
-const ROUTE_TABLE: {
-  method: 'GET' | 'POST' | 'DELETE';
-  path: string;
-  body?: unknown;
-  /** Appended when the request is sent; not part of the registered path. */
-  query?: string;
-  form?: { body: string; contentType: string };
-}[] = [
+const ROUTE_TABLE: { method: 'GET' | 'POST' | 'DELETE'; path: string; body?: unknown }[] = [
   { method: 'GET', path: '/status' },
   { method: 'GET', path: '/channels' },
   { method: 'GET', path: '/posts' },
   { method: 'POST', path: '/posts', body: { channelIds: [CHANNEL], text: 'hello' } },
   { method: 'DELETE', path: `/posts/${POST}` },
   { method: 'GET', path: '/analytics' },
-  { method: 'GET', path: '/media' },
-  {
-    method: 'POST',
-    path: '/media',
-    form: multipart([{ name: 'file', value: PNG_BYTES, filename: 'team.png', type: 'image/png' }]),
-  },
-  { method: 'DELETE', path: '/media', query: '?storagePath=uploads/a.png' },
 ];
 
 describe('route inventory and auth', () => {
@@ -102,11 +69,10 @@ describe('route inventory and auth', () => {
 
   for (const route of ROUTE_TABLE) {
     it(`${route.method} ${route.path} is admin-only`, async () => {
-      const path = `${route.path}${route.query ?? ''}`;
-      const send = { method: route.method, body: route.body, form: route.form };
-      expect((await request(app, path, { ...send, auth: false })).status).toBe(401);
-      expect((await request(app, path, { ...send, as: 'client' })).status).toBe(403);
-      const ok = await request(app, path, { ...send, as: 'admin' });
+      const send = { method: route.method, body: route.body };
+      expect((await request(app, route.path, { ...send, auth: false })).status).toBe(401);
+      expect((await request(app, route.path, { ...send, as: 'client' })).status).toBe(403);
+      const ok = await request(app, route.path, { ...send, as: 'admin' });
       expect([200, 201]).toContain(ok.status);
     });
   }

@@ -44,6 +44,7 @@ Written for someone acting under time pressure.
 - [`seo.md`](runbooks/seo.md) — the SEO build pipeline and its recurring operational steps
 - [`vercel-deployment-storage.md`](runbooks/vercel-deployment-storage.md) — why the Vercel storage allowance fills, and how to reclaim it
 - [`social-automation.md`](runbooks/social-automation.md) — the routine-driven weekly social pipeline: the database contract a Claude/ChatGPT routine works through, Buffer as the publishing rail, setup, monitoring and failure modes
+- [`social-channel-assets.md`](runbooks/social-channel-assets.md) — the Assets tab's media per channel: the `/social-library` endpoint an outside agent (ChatGPT) fills it through, the token in Vault, what is accepted, and the SQL a publishing routine uses
 - [`newsletter-intake.md`](runbooks/newsletter-intake.md) — how the monthly routine hands over the newsletter PDF (HTTPS endpoint or the Supabase-connector SQL function), what the admin then sees, limits and failure modes
   - Claude skill for the monthly hand-over, for a session with the repository checked out: [`newsletter-monthly-intake`](../.claude/skills/newsletter-monthly-intake/SKILL.md)
   - Claude skills for the two halves of that pipeline, for a session with the repository checked out: [`social-weekly-generate`](../.claude/skills/social-weekly-generate/SKILL.md) and [`social-weekly-schedule`](../.claude/skills/social-weekly-schedule/SKILL.md)

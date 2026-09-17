@@ -14,7 +14,7 @@
 
 import { profilesApi } from './api/profilesApi';
 import { postsApi } from './api/postsApi';
-import { mediaApi } from './api/mediaApi';
+import { channelAssetsApi } from './api/channelAssetsApi';
 import { analyticsApi } from './api/analyticsApi';
 import { socialAssetsApi } from './api/socialAssetsApi';
 import { socialMediaAIApi } from './api/socialMediaAIApi';
@@ -23,7 +23,7 @@ import { linkedinApi } from './api/linkedinApi';
 export {
   profilesApi,
   postsApi,
-  mediaApi,
+  channelAssetsApi,
   analyticsApi,
   socialAssetsApi,
   socialMediaAIApi,
@@ -43,7 +43,7 @@ export type { LinkedInConnectionStatus, LinkedInShareResult } from './api/linked
 export default {
   profiles: profilesApi,
   posts: postsApi,
-  media: mediaApi,
+  channelAssets: channelAssetsApi,
   analytics: analyticsApi,
   assets: socialAssetsApi,
   ai: socialMediaAIApi,

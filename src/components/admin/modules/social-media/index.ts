@@ -27,8 +27,8 @@ export { LinktreeTab } from './LinktreeTab';
 export { PostComposer } from './PostComposer';
 export { PostCalendar } from './PostCalendar';
 export { ChannelsPanel } from './ChannelsPanel';
-export { AssetsTab } from './assets/AssetsTab';
-export { MediaLibraryPanel } from './media/MediaLibraryPanel';
+export { WeeklyPipelineTab } from './assets/WeeklyPipelineTab';
+export { ChannelAssetsTab } from './channel-assets/ChannelAssetsTab';
 export { SocialAnalytics } from './SocialAnalytics';
 
 // --- public API used by other modules and by code outside admin/modules ---

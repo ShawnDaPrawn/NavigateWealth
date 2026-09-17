@@ -34,7 +34,12 @@ vi.mock('../hooks/useSocialAnalytics', () => ({
     error: null,
   }),
 }));
-vi.mock('../assets/AssetsTab', () => ({ AssetsTab: () => <div>Assets tab body</div> }));
+vi.mock('../channel-assets/ChannelAssetsTab', () => ({
+  ChannelAssetsTab: () => <div>Assets tab body</div>,
+}));
+vi.mock('../assets/WeeklyPipelineTab', () => ({
+  WeeklyPipelineTab: () => <div>Weekly pipeline body</div>,
+}));
 
 import { SocialMediaTab } from '../SocialMediaTab';
 

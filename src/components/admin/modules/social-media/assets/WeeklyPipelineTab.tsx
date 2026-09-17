@@ -1,9 +1,13 @@
 /**
- * AssetsTab — the weekly pipeline, one column per channel.
+ * WeeklyPipelineTab — what the weekly routines generated, one column per channel.
  *
- * What the routines generated for a posting week, which of it was selected
- * and scheduled, and the context they worked from. Read-mostly: the human's
- * levers are the kill switch, removing a candidate, and the settings dialog.
+ * Candidate POSTS for a posting week: body text, hashtags and an image brief,
+ * with which of them were selected and scheduled and the context the routines
+ * worked from. Read-mostly: the human's levers are the kill switch, removing a
+ * candidate, and the settings dialog.
+ *
+ * Not to be confused with the Assets tab, which holds the finished pictures
+ * and videos themselves (`social_channel_assets`). This one is `social_assets`.
  */
 
 import { useMemo, useState } from 'react';
@@ -50,7 +54,7 @@ const CHANNEL_ICON: Record<SocialChannel, typeof Linkedin> = {
   x: Twitter,
 };
 
-export function AssetsTab() {
+export function WeeklyPipelineTab() {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);

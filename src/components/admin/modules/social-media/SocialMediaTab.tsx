@@ -2,10 +2,10 @@
  * Social Media Tab
  *
  * Organised around the weekly pipeline rather than the calendar:
- * - Assets — what the routines generated and scheduled for each channel
+ * - Assets — finished images and videos per channel, ready to post
+ * - Weekly pipeline — the post candidates the weekly routines generated
  * - Calendar — Buffer's queue
- * - Compose — a manual post into Buffer (uploads and AI content flow in here)
- * - Library — images uploaded for posts, on our own storage
+ * - Compose — a manual post into Buffer (assets and AI content flow in here)
  * - AI Generator — text, image, bundle, repurpose, templates, history, analytics
  * - Channels — the Buffer connections
  *
@@ -32,14 +32,13 @@ import {
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { AssetsTab } from './assets/AssetsTab';
+import { ChannelAssetsTab } from './channel-assets/ChannelAssetsTab';
+import { WeeklyPipelineTab } from './assets/WeeklyPipelineTab';
 import { postingWeekKey } from './assets/assetsModel';
 import { ChannelsPanel } from './ChannelsPanel';
 import { PostCalendar, type CalendarViewMode } from './PostCalendar';
 import { covers, unionRange, visibleWindow } from './calendarModel';
 import { PostComposer } from './PostComposer';
-import { MediaLibraryPanel } from './media/MediaLibraryPanel';
-import { assetToMediaFile } from './composerModel';
 import { AIAnalyticsDashboard } from './components/AIAnalyticsDashboard';
 import { AIArticleRepurposer } from './components/AIArticleRepurposer';
 import { AIBrandTemplates } from './components/AIBrandTemplates';
@@ -51,7 +50,7 @@ import { useSocialAnalytics } from './hooks/useSocialAnalytics';
 import { useSocialBatches } from './hooks/useSocialAssets';
 import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
 import { useSocialProfiles } from './hooks/useSocialProfiles';
-import type { ComposeRequest, MediaFile, SocialAIPlatform, SocialMediaAsset } from './types';
+import type { ComposeRequest, MediaFile, SocialAIPlatform } from './types';
 
 interface StatCardProps {
   label: string;
@@ -194,11 +193,6 @@ export function SocialMediaTab() {
     setActiveTab('composer');
   }, []);
 
-  const handleUseLibraryImage = useCallback((asset: SocialMediaAsset) => {
-    setComposerInitialMedia([assetToMediaFile(asset)]);
-    setActiveTab('composer');
-  }, []);
-
   const handleUseBoth = useCallback(
     (
       _platform: SocialAIPlatform,
@@ -281,12 +275,9 @@ export function SocialMediaTab() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="assets">Assets</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly pipeline</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="composer">Compose</TabsTrigger>
-          <TabsTrigger value="library" className="flex items-center gap-1.5">
-            <ImageIcon className="h-3.5 w-3.5" />
-            Library
-          </TabsTrigger>
           <TabsTrigger value="ai-generator" className="flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
             AI Generator
@@ -295,7 +286,11 @@ export function SocialMediaTab() {
         </TabsList>
 
         <TabsContent value="assets" className="mt-6">
-          <AssetsTab />
+          <ChannelAssetsTab />
+        </TabsContent>
+
+        <TabsContent value="weekly" className="mt-6">
+          <WeeklyPipelineTab />
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">
@@ -326,12 +321,6 @@ export function SocialMediaTab() {
               initialMedia={composerInitialMedia}
               initialHashtags={composerInitialHashtags}
             />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="library" className="mt-6">
-          <div className="max-w-5xl">
-            <MediaLibraryPanel onUseInPost={handleUseLibraryImage} />
           </div>
         </TabsContent>
 
