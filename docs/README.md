@@ -32,6 +32,7 @@ that change only when the design changes.
 Written for someone acting under time pressure.
 
 - [`deployment.md`](runbooks/deployment.md) — how each part reaches production, and the manual paths that exist for recovery
+- [`backup-and-restore.md`](runbooks/backup-and-restore.md) — what is backed up (database, Storage objects, the locked off-site copy), how to finish configuring each leg, and how to get the platform back
 - [`troubleshooting.md`](runbooks/troubleshooting.md) — first things to check for symptoms that have come up before
 - [`scheduled-jobs.md`](runbooks/scheduled-jobs.md) — every `pg_cron` job, the green-when-broken trap, and repair procedure
 - [`edge-function-latency.md`](runbooks/edge-function-latency.md) — diagnosing slow Edge Function responses
