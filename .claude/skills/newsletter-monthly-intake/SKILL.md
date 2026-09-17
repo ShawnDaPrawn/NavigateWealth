@@ -47,9 +47,16 @@ admin **Newsletters** module and sends it from there. The full contract is
 4. Finish with a short report: the title, the file size, the idempotency key,
    the final `status`, and the `campaign_id` if there is one.
 
+## If you can reach the app over HTTPS
+
+A runner that can make HTTPS requests (a ChatGPT scheduled task or Action, a
+GitHub Action) uses `POST /newsletter-intake/submit` instead of the SQL above;
+the runbook's "Path 1" section has the fields, the `dryRun` check and the
+token, which lives in Supabase Vault as `navigatewealth_newsletter_intake_token`.
+
 ## Do not
 
-- Do not call the app's REST API from a Routine environment; it cannot reach it.
+- Do not call the app's REST API from a Claude Routine environment; it cannot reach it.
 - Do not send anything to subscribers, and do not try to approve the draft.
 - Do not reuse an idempotency key for a different PDF; use a new one (e.g.
   `2026-09-v2`) if the first hand-over failed.

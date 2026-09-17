@@ -29,10 +29,11 @@ is sent to subscribers until an admin approves it in the admin.
 ```
 
 **Which one to use.** A routine that can reach the Edge Function over HTTPS
-(a GitHub Action, n8n, Make, a Cursor Automation) uses the endpoint. A Claude
-or ChatGPT Routine cannot: their environments block egress to the Edge
-Function (see `social-automation.md`) but do have the **Supabase connector**,
-so they use the SQL function. This sandbox confirmed the block (proxy 403).
+(a ChatGPT scheduled task or Action, a GitHub Action, n8n, Make, a Cursor
+Automation) uses the endpoint. A Claude Routine cannot: its environment blocks
+egress to the Edge Function (see `social-automation.md`) but does have the
+**Supabase connector**, so it uses the SQL function. This sandbox confirmed the
+block (proxy 403). A ChatGPT routine with a Supabase connector may use either.
 
 ## Limits, both paths
 
@@ -49,14 +50,44 @@ Why 5 MB and not more: the PDF is attached to every email as base64 and the
 delivery tick sizes its concurrent batch from that; larger files would exhaust
 the Edge isolate. See the header of `newsletter-studio-storage.ts`.
 
-## Operator secrets (never commit these)
+## The intake token (HTTPS path)
 
-Set as **Supabase Edge Function secrets** (Project → Edge Functions → Secrets):
+The token the routine sends as `x-nw-newsletter-intake-token` lives in
+**Supabase Vault** as `navigatewealth_newsletter_intake_token` (migration
+`20260916212029_newsletter_intake_token_vault.sql`), the same mechanism as the
+cron token: the Edge Function verifies a candidate through the boolean oracle
+`public.verify_newsletter_intake_token(candidate)` (service_role only), so the
+secret never leaves Postgres and no Edge Function secret has to be kept in
+step with it. Edge Function secrets cannot be read or set from the Management
+API or MCP, which is why the env-var design was dropped (`scheduled-jobs.md`).
 
-| Secret                       | Purpose                                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| `NW_NEWSLETTER_INTAKE_TOKEN` | Shared secret the routine sends as `x-nw-newsletter-intake-token` (HTTPS path only)             |
-| `NW_NEWSLETTER_REVIEW_TO`    | Optional comma list of admin recipients for the review email (default `info@navigatewealth.co`) |
+Read it (dashboard SQL editor, or the Supabase MCP as the service role):
+
+```sql
+select decrypted_secret
+from vault.decrypted_secrets
+where name = 'navigatewealth_newsletter_intake_token';
+```
+
+Rotate it — takes effect on the next request, no redeploy, no job edits:
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'navigatewealth_newsletter_intake_token'),
+  encode(extensions.gen_random_bytes(32), 'base64')
+);
+```
+
+Then paste the new value into the routine's configuration (ChatGPT: the
+Action's authentication or the task's stored header).
+
+Optional Edge Function secrets (Project → Edge Functions → Secrets), neither
+required:
+
+| Secret                       | Purpose                                                                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NW_NEWSLETTER_INTAKE_TOKEN` | Local-development override, honoured only when `DENO_ENV=development` (never set in deployment); production checks Vault alone, so rotating the Vault secret revokes everything |
+| `NW_NEWSLETTER_REVIEW_TO`    | Comma list of admin recipients for the review email (default `info@navigatewealth.co`)                                                                                          |
 
 The SQL path needs no secret: the Supabase connector runs as the service role,
 which is the only role granted execute on the intake functions.
@@ -76,8 +107,8 @@ https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379
 
 Auth (any one of):
 
-- Header `x-nw-newsletter-intake-token: <NW_NEWSLETTER_INTAKE_TOKEN>`
-- Shared cron header `x-nw-cron-auth` (Vault token)
+- Header `x-nw-newsletter-intake-token: <Vault token>` (see "The intake token" above; under `DENO_ENV=development` only, a matching `NW_NEWSLETTER_INTAKE_TOKEN` env value is also accepted)
+- Shared cron header `x-nw-cron-auth` (Vault cron token)
 - `Authorization: Bearer <service-role or SUPER_ADMIN_PASSWORD>` (manual)
 
 Fields (multipart/form-data):
@@ -94,7 +125,7 @@ Fields (multipart/form-data):
 
 ```bash
 curl -sS -X POST "$BASE/newsletter-intake/submit" \
-  -H "x-nw-newsletter-intake-token: $NW_NEWSLETTER_INTAKE_TOKEN" \
+  -H "x-nw-newsletter-intake-token: $NEWSLETTER_INTAKE_TOKEN" \
   -F "file=@september-2026.pdf" \
   -F "title=September 2026 newsletter" \
   -F "description=Rates, retirement annuities and the two-pot changes explained." \
@@ -108,6 +139,22 @@ Responses:
 - `200 { …, duplicate: true }` — the idempotency key was already used; nothing new was created or mailed.
 - `400 { error }` — not a PDF, over 5 MB, missing title/description, or an unknown audience id (the message lists the valid ids).
 - `401` — no valid token.
+
+### Running the routine from ChatGPT
+
+A ChatGPT scheduled task (or a custom GPT Action) uses this path. Give it the
+base URL, the header name and the token from Vault, and this order of work:
+
+1. `GET /newsletter-intake/lists` with the header → the audience ids it may
+   name (`sys_newsletter_contacts` is the default and usually the right one).
+2. `POST /newsletter-intake/submit` with `dryRun=true` first → `200` with
+   `wouldCreate` means the PDF, fields and audience all validate.
+3. The same request without `dryRun` → `201` with `reviewUrl`. Report the
+   title, file size, idempotency key (`YYYY-MM` of the issue) and `reviewUrl`.
+4. A re-run for the same issue returns `200 { duplicate: true }`; do not
+   change the key to force a second draft.
+
+The routine's job ends there: the admin approves and sends from the module.
 
 ## Path 2 — SQL through the Supabase connector
 
@@ -166,7 +213,7 @@ hand-over above. The routine's job ends at the hand-over; it never sends.
 
 | Symptom                                              | Cause and fix                                                                                                                                                      |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `401` from the endpoint                              | `NW_NEWSLETTER_INTAKE_TOKEN` is unset or differs from what the routine sends. Empty on either side never matches.                                                  |
+| `401` from the endpoint                              | The header differs from the Vault token (was it rotated?) — read it back with the SQL above and update the routine. An empty header never matches.                 |
 | `400 … not a PDF`                                    | The bytes do not start with `%PDF-`. A renamed file, an HTML error page saved as `.pdf`, or a base64 of something else.                                            |
 | `400 … limit is 5 MB`                                | Compress images in the PDF; the cap is deliberate (see above).                                                                                                     |
 | SQL row stays `pending` for more than a few minutes  | The newsletter cron tick is not running: check `newsletter-studio-process-campaigns` in `scheduled-jobs.md` (the module header shows "Scheduler live" when it is). |

@@ -3,15 +3,19 @@
  *
  * The detector-visible guard is constantTimeEqual on app.use('*') (the goaml
  * precedent). These tests pin the runtime: a missing/wrong token is 401, the
- * dedicated token or the shared cron path reaches the service, the PDF is
- * judged by its bytes, dry runs write nothing, and a replay reports the
- * existing draft with a 200 rather than creating a second one.
+ * dedicated header reaches the service through the env override or the Vault
+ * oracle, the shared cron path still works, the PDF is judged by its bytes,
+ * dry runs write nothing, and a replay reports the existing draft with a 200
+ * rather than creating a second one.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { multipart } from './helpers/contract-harness.ts';
 
 const env = vi.hoisted(() => ({
   NW_NEWSLETTER_INTAKE_TOKEN: 'intake-token',
+  // The env override is honoured only under DENO_ENV=development; the suite
+  // opts in per case so the production shape (unset) is the default.
+  DENO_ENV: '',
   SUPABASE_URL: 'https://test',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role',
 }));
@@ -30,6 +34,7 @@ const svc = vi.hoisted(() => ({
   assertKnownLists: vi.fn(async (ids: string[]) => ids.map((id) => `Name of ${id}`)),
 }));
 const isAuthorizedCronRequest = vi.hoisted(() => vi.fn(async () => false));
+const verifyNewsletterIntakeToken = vi.hoisted(() => vi.fn(async (_c: string) => false));
 const listAudienceLists = vi.hoisted(() =>
   vi.fn(async () => [
     {
@@ -45,6 +50,10 @@ vi.mock('../newsletter-intake-service.ts', () => svc);
 vi.mock('../newsletter-studio-audience.ts', () => ({
   listAudienceLists,
   SUBSCRIBER_LIST_ID: 'sys_newsletter_contacts',
+}));
+vi.mock('../newsletter-intake-auth.ts', () => ({
+  verifyNewsletterIntakeToken: (c: string) => verifyNewsletterIntakeToken(c),
+  NEWSLETTER_INTAKE_VAULT_SECRET: 'navigatewealth_newsletter_intake_token',
 }));
 vi.mock('../cron-auth.ts', () => ({
   isAuthorizedCronRequest: (...a: unknown[]) => isAuthorizedCronRequest(...a),
@@ -83,7 +92,9 @@ const FIELDS = { title: 'September issue', description: 'What mattered in Septem
 beforeEach(() => {
   vi.clearAllMocks();
   isAuthorizedCronRequest.mockResolvedValue(false);
+  verifyNewsletterIntakeToken.mockResolvedValue(false);
   env.NW_NEWSLETTER_INTAKE_TOKEN = 'intake-token';
+  env.DENO_ENV = 'development';
 });
 
 describe('auth', () => {
@@ -102,6 +113,45 @@ describe('auth', () => {
     env.NW_NEWSLETTER_INTAKE_TOKEN = '';
     const res = await submit({ 'x-nw-newsletter-intake-token': '' }, FIELDS);
     expect(res.status).toBe(401);
+    // An empty header never reaches the oracle.
+    expect(verifyNewsletterIntakeToken).not.toHaveBeenCalled();
+  });
+
+  it('ignores the env override outside development, so a stale env token is not a second credential', async () => {
+    env.DENO_ENV = '';
+    verifyNewsletterIntakeToken.mockResolvedValue(false);
+    const res = await submit(TOKEN, FIELDS);
+    expect(res.status).toBe(401);
+    // The header still reached the oracle — Vault is the only production check.
+    expect(verifyNewsletterIntakeToken).toHaveBeenCalledWith('intake-token');
+    expect(svc.createDraftFromIntake).not.toHaveBeenCalled();
+  });
+
+  it('honours the env override under DENO_ENV=development without consulting the oracle', async () => {
+    env.DENO_ENV = 'development';
+    expect((await submit(TOKEN, FIELDS)).status).toBe(201);
+    expect(verifyNewsletterIntakeToken).not.toHaveBeenCalled();
+  });
+
+  it('accepts the Vault-verified token with no env override configured (production path)', async () => {
+    env.DENO_ENV = '';
+    env.NW_NEWSLETTER_INTAKE_TOKEN = '';
+    verifyNewsletterIntakeToken.mockImplementation(async (c: string) => c === 'vault-token');
+
+    expect((await submit({ 'x-nw-newsletter-intake-token': 'vault-token' }, FIELDS)).status).toBe(
+      201,
+    );
+    expect(verifyNewsletterIntakeToken).toHaveBeenCalledWith('vault-token');
+
+    expect((await submit({ 'x-nw-newsletter-intake-token': 'stale' }, FIELDS)).status).toBe(401);
+    expect(svc.createDraftFromIntake).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a header that neither the env override nor the oracle accepts', async () => {
+    verifyNewsletterIntakeToken.mockResolvedValue(false);
+    const res = await submit({ 'x-nw-newsletter-intake-token': 'nope' }, FIELDS);
+    expect(res.status).toBe(401);
+    expect(verifyNewsletterIntakeToken).toHaveBeenCalledWith('nope');
   });
 
   it('accepts the dedicated token and the shared cron path', async () => {
