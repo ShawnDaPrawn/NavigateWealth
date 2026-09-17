@@ -34,12 +34,12 @@ buys nothing a reader of this table does not already get.
 A script nothing else calls is not necessarily dead — an entry point is
 _defined_ by having no inbound reference. These are run by a person:
 
-| Script                                              | How it is reached                                                                                                                                                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start-provider-worker.cmd`                         | Double-clicked on Windows; prompts for a mode and calls `run-provider-discovery.ps1`                                                                                   |
-| `run-provider-discovery.ps1`                        | Directly, or via the `.cmd` above                                                                                                                                      |
-| `ops/dedupe-kv-key-indexes.sql`                     | Pasted into the Supabase SQL editor. **Still current** — `supabase/migrations/README.md` and migration `20260824223052` both name it as the tool for the manual dedupe |
-| `ops/capture-db-shape.sh`, `ops/compare-restore.py` | Called by `.github/workflows/weekly-backup.yml`                                                                                                                        |
+| Script                                                                                                 | How it is reached                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start-provider-worker.cmd`                                                                            | Double-clicked on Windows; prompts for a mode and calls `run-provider-discovery.ps1`                                                                                                                                          |
+| `run-provider-discovery.ps1`                                                                           | Directly, or via the `.cmd` above                                                                                                                                                                                             |
+| `ops/dedupe-kv-key-indexes.sql`                                                                        | Pasted into the Supabase SQL editor. **Still current** — `supabase/migrations/README.md` and migration `20260824223052` both name it as the tool for the manual dedupe                                                        |
+| `ops/capture-db-shape.sh`, `ops/compare-restore.py`, `ops/backup-storage.mjs`, `ops/upload-offsite.sh` | Called by `.github/workflows/weekly-backup.yml`. `backup-storage.mjs` and `upload-offsite.sh` also run by hand for an out-of-band backup; see [`docs/runbooks/backup-and-restore.md`](../docs/runbooks/backup-and-restore.md) |
 
 ## Scripts with no automated caller
 
