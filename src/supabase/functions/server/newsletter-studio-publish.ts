@@ -69,8 +69,15 @@ export function newsletterSlug(title: string, issueMonth: string, taken: string[
   let stem = words;
   if (stem.length > SLUG_STEM_MAX) {
     const cut = stem.slice(0, SLUG_STEM_MAX);
-    const lastBoundary = cut.lastIndexOf('-');
-    stem = lastBoundary > 0 ? cut.slice(0, lastBoundary) : cut;
+    // When the character just past the limit is the separator, `cut` already
+    // ends on a whole word, and backtracking would throw that word away
+    // (review finding: a 58-character word that fitted exactly was lost).
+    if (words[SLUG_STEM_MAX] === '-') {
+      stem = cut;
+    } else {
+      const lastBoundary = cut.lastIndexOf('-');
+      stem = lastBoundary > 0 ? cut.slice(0, lastBoundary) : cut;
+    }
   }
   stem = stem.replace(/-+$/g, '');
   const base = `${year}-${String(month).padStart(2, '0')}-${stem || 'newsletter'}`;
