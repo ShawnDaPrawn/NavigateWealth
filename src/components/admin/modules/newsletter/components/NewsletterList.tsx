@@ -11,6 +11,7 @@ import {
   Bot,
   ChevronRight,
   FileText,
+  Globe,
   Loader2,
   Search,
   Sparkles,
@@ -218,6 +219,14 @@ export function NewsletterList({
                           {campaign.source === 'routine' && campaign.status === 'draft' ? (
                             <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
                               <Bot className="h-3 w-3" aria-hidden /> awaiting review
+                            </span>
+                          ) : null}
+                          {campaign.website ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300"
+                              title="Live on the public website"
+                            >
+                              <Globe className="h-3 w-3" aria-hidden /> on the website
                             </span>
                           ) : null}
                           {campaign.stuck ? (

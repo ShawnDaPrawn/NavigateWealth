@@ -248,6 +248,8 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     routes: [
       'linktree-routes.ts GET /public',
       'linktree-routes.ts POST /click/:id',
+      'newsletter-site-routes.ts GET /newsletters',
+      'newsletter-site-routes.ts GET /newsletters/:slug',
       'publications-articles-read-routes.ts GET /articles',
       'publications-articles-read-routes.ts GET /articles/:id',
       'publications-articles-read-routes.ts GET /articles/by-slug/:slug',

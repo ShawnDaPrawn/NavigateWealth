@@ -91,6 +91,7 @@ export function Footer() {
       { label: 'Insights', path: '/resources' },
       { label: 'Sitemap', path: '/sitemap' },
       { label: 'Market Updates', path: '/resources?section=market-updates' },
+      { label: 'Newsletters', path: '/resources?section=newsletters' },
       { label: 'Design System', path: '/design-system' },
     ],
     legal: [

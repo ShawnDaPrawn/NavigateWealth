@@ -41,6 +41,12 @@ import type {
   NewsletterListView,
 } from './newsletter-studio-types.ts';
 import { EDITABLE_CAMPAIGN_STATUSES } from './newsletter-studio-types.ts';
+import {
+  currentIssueMonth,
+  publishCampaignToWebsite,
+  refreshPublishedNewsletter,
+  unpublishCampaignFromWebsite,
+} from './newsletter-studio-publish.ts';
 
 // Routes import the whole studio surface from here; the audience and
 // engagement modules are implementation splits, not separate public APIs.
@@ -49,6 +55,13 @@ export {
   resolveAudience,
   SUBSCRIBER_LIST_ID,
 } from './newsletter-studio-audience.ts';
+export {
+  currentIssueMonth,
+  getPublishedNewsletter,
+  listPublishedNewsletters,
+  newsletterSlug,
+  parseIssueMonth,
+} from './newsletter-studio-publish.ts';
 export {
   getCampaignRecipients,
   getCampaignStats,
@@ -95,6 +108,11 @@ export function normalizeCampaignRecord(
     sourceRef: record.sourceRef ?? null,
     reviewNotifiedAt: record.reviewNotifiedAt ?? null,
     readCount: record.readCount ?? record.openCount ?? 0,
+    // Added when newsletters gained a website presence; records written before
+    // that carry none of the three.
+    issueMonth: record.issueMonth ?? currentIssueMonth(new Date(record.createdAt ?? Date.now())),
+    publishToWebsite: record.publishToWebsite ?? true,
+    website: record.website ?? null,
   };
 }
 
@@ -222,7 +240,11 @@ export async function findCampaignBySourceRef(
 export interface CreateCampaignInput {
   title: string;
   description: string;
+  /** May be empty: a newsletter can go to the website without being emailed. */
   listIds: string[];
+  /** 'YYYY-MM'; defaults to the current month. */
+  issueMonth?: string;
+  publishToWebsite?: boolean;
   source?: NewsletterCampaignSource;
   sourceRef?: string | null;
 }
@@ -244,6 +266,9 @@ export async function createCampaign(
     source: input.source ?? 'admin',
     sourceRef: input.sourceRef ?? null,
     reviewNotifiedAt: null,
+    issueMonth: input.issueMonth ?? currentIssueMonth(),
+    publishToWebsite: input.publishToWebsite ?? true,
+    website: null,
     status: 'draft',
     scheduledAt: null,
     recipientCount: 0,
@@ -272,6 +297,8 @@ export interface UpdateCampaignInput {
   title?: string;
   description?: string;
   listIds?: string[];
+  issueMonth?: string;
+  publishToWebsite?: boolean;
 }
 
 export async function updateCampaign(
@@ -292,9 +319,13 @@ export async function updateCampaign(
     description: patch.description ?? campaign.description,
     listIds,
     listNames,
+    issueMonth: patch.issueMonth ?? campaign.issueMonth,
+    publishToWebsite: patch.publishToWebsite ?? campaign.publishToWebsite,
     updatedAt: nowIso(),
   };
   await newsletterCampaigns.put(id, updated);
+  // An edit to a newsletter already on the website has to reach the website.
+  await refreshPublishedNewsletter(updated);
   return toCampaignView(updated);
 }
 
@@ -319,9 +350,33 @@ export async function attachCampaignPdf(
     throw error;
   }
   const previous = campaign.pdf;
-  const updated: NewsletterCampaign = { ...campaign, pdf, updatedAt: nowIso() };
+  let updated: NewsletterCampaign = { ...campaign, pdf, updatedAt: nowIso() };
   await newsletterCampaigns.put(id, updated);
   if (previous) await removeNewsletterPdf(previous.storagePath);
+
+  // A published newsletter must not keep serving the document that was just
+  // replaced. Re-publishing upserts the public object at the same path and
+  // rebuilds the record from the new PDF, so the file, its name and its size
+  // all move together and the slug does not (review finding).
+  if (updated.website) {
+    try {
+      const website = await publishCampaignToWebsite(updated);
+      updated = { ...updated, website, updatedAt: nowIso() };
+      await newsletterCampaigns.put(id, updated);
+    } catch (error) {
+      log.error('Replaced the PDF but could not refresh the website copy', {
+        campaignId: id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Deliberately loud: the upload succeeded, so silence here would leave
+      // visitors downloading the old document with nothing to act on.
+      throw new ValidationError(
+        'The PDF was replaced, but the copy on the website could not be refreshed. ' +
+          'Press "Publish on the website" to try again.',
+      );
+    }
+  }
+
   log.info('Campaign PDF stored', { campaignId: id, sizeBytes: pdf.sizeBytes });
   return toCampaignView(updated);
 }
@@ -334,6 +389,45 @@ export async function getCampaignPdfUrl(id: string): Promise<{ url: string; file
     url: await signedNewsletterPdfUrl(campaign.pdf.storagePath),
     fileName: campaign.pdf.fileName,
   };
+}
+
+/**
+ * Put this newsletter on the public website (or refresh it there).
+ *
+ * Available in every status: a draft can go to the website without ever being
+ * emailed, and a finished campaign can be published after the fact.
+ */
+export async function publishCampaign(
+  id: string,
+  patch: { issueMonth?: string } = {},
+): Promise<NewsletterCampaignView> {
+  const campaign = await getCampaignOrThrow(id);
+  const withIssue: NewsletterCampaign = patch.issueMonth
+    ? { ...campaign, issueMonth: patch.issueMonth }
+    : campaign;
+  const website = await publishCampaignToWebsite(withIssue);
+  const updated: NewsletterCampaign = {
+    ...withIssue,
+    website,
+    publishToWebsite: true,
+    updatedAt: nowIso(),
+  };
+  await newsletterCampaigns.put(id, updated);
+  return toCampaignView(updated);
+}
+
+/** Take this newsletter off the public website; the campaign itself is untouched. */
+export async function unpublishCampaign(id: string): Promise<NewsletterCampaignView> {
+  const campaign = await getCampaignOrThrow(id);
+  await unpublishCampaignFromWebsite(campaign);
+  const updated: NewsletterCampaign = {
+    ...campaign,
+    website: null,
+    publishToWebsite: false,
+    updatedAt: nowIso(),
+  };
+  await newsletterCampaigns.put(id, updated);
+  return toCampaignView(updated);
 }
 
 /** Draft/finished/cancelled campaigns can be deleted; active ones must be cancelled first. */
@@ -355,6 +449,7 @@ export async function deleteCampaign(id: string): Promise<void> {
     }
     await newsletterAudiences.remove(id);
   }
+  await unpublishCampaignFromWebsite(campaign);
   await newsletterCampaigns.remove(id);
   if (campaign.pdf) await removeNewsletterPdfs(id);
   log.info('Campaign deleted', { campaignId: id });
@@ -368,6 +463,11 @@ function assertSendable(campaign: NewsletterCampaign, verb: string): void {
   }
   if (!campaign.pdf) {
     throw new ValidationError('Upload the newsletter PDF before sending');
+  }
+  // Deliberately checked here rather than at create time: a newsletter may be
+  // created and published on the website without ever being emailed.
+  if (campaign.listIds.length === 0) {
+    throw new ValidationError('Pick an audience, or publish to the website only');
   }
 }
 

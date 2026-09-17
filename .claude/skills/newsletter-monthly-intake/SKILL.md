@@ -35,6 +35,10 @@ admin **Newsletters** module and sends it from there. The full contract is
    `existed = true` means this month's key was already used — do not hand over
    again; report the existing state instead.
 
+   Use the issue's own month as the key (`2026-09`). It decides the year and
+   month the newsletter files under in the website archive, so a hand-over
+   processed late still lands in the right month.
+
 3. The newsletter cron tick sweeps the row within about two minutes. Confirm with:
 
    ```sql

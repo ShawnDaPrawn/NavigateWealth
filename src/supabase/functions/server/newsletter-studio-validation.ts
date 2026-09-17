@@ -19,16 +19,28 @@ export const DescriptionSchema = z
   .min(1, 'Description is required')
   .max(1000, 'Description is too long (1000 characters max)');
 
+/**
+ * Audiences are optional at create/update time and required only at send time
+ * (newsletter-studio-service.ts `assertSendable`): a newsletter may be
+ * published on the website without being emailed to anyone.
+ */
 export const ListIdsSchema = z
   .array(z.string().trim().min(1).max(120))
-  .min(1, 'Select at least one audience')
   .max(20, 'Too many audiences');
+
+/** Which issue a newsletter is, as `YYYY-MM`. Decides where it files on the website. */
+export const IssueMonthSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'issueMonth must look like 2026-09');
 
 export const CreateNewsletterCampaignSchema = z
   .object({
     title: TitleSchema,
     description: DescriptionSchema,
     listIds: ListIdsSchema,
+    issueMonth: IssueMonthSchema.optional(),
+    publishToWebsite: z.boolean().optional(),
   })
   .passthrough();
 
@@ -37,7 +49,14 @@ export const UpdateNewsletterCampaignSchema = z
     title: TitleSchema.optional(),
     description: DescriptionSchema.optional(),
     listIds: ListIdsSchema.optional(),
+    issueMonth: IssueMonthSchema.optional(),
+    publishToWebsite: z.boolean().optional(),
   })
+  .passthrough();
+
+/** Publishing to the website may correct the issue month in the same call. */
+export const PublishNewsletterSchema = z
+  .object({ issueMonth: IssueMonthSchema.optional() })
   .passthrough();
 
 export const ScheduleNewsletterCampaignSchema = z

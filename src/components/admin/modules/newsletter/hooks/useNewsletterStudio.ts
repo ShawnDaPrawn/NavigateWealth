@@ -129,6 +129,32 @@ export function useUploadCampaignPdf() {
   });
 }
 
+/** Publish on the website — available whether or not the newsletter was ever emailed. */
+export function usePublishToWebsite() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({
+    mutationFn: ({ id, issueMonth }: { id: string; issueMonth?: string }) =>
+      newsletterStudioApi.publishToWebsite(id, issueMonth),
+    onSuccess: (campaign) => {
+      invalidate(campaign.id);
+      toast.success('Published on the website');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to publish on the website')),
+  });
+}
+
+export function useUnpublishFromWebsite() {
+  const invalidate = useInvalidateCampaigns();
+  return useMutation({
+    mutationFn: (id: string) => newsletterStudioApi.unpublishFromWebsite(id),
+    onSuccess: (campaign) => {
+      invalidate(campaign.id);
+      toast.success('Removed from the website');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Failed to remove it from the website')),
+  });
+}
+
 export function useDeleteCampaign() {
   const invalidate = useInvalidateCampaigns();
   return useMutation({

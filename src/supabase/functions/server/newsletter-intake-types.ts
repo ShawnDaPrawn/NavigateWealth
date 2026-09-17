@@ -51,6 +51,8 @@ export interface IntakeDraftInput {
   fileName: string;
   bytes: Uint8Array;
   idempotencyKey: string | null;
+  /** 'YYYY-MM'. Falls back to the idempotency key when that is itself a month. */
+  issueMonth?: string | null;
   submittedBy: string;
 }
 

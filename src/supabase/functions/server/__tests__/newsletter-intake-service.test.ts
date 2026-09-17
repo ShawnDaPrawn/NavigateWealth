@@ -114,7 +114,11 @@ vi.mock('../newsletter-studio-storage.ts', async (importOriginal) => {
 });
 
 import { kvStore } from './helpers/contract-harness.ts';
-import { createDraftFromIntake, sweepNewsletterIntake } from '../newsletter-intake-service.ts';
+import {
+  createDraftFromIntake,
+  resolveIntakeIssueMonth,
+  sweepNewsletterIntake,
+} from '../newsletter-intake-service.ts';
 import { encodePdfBase64 } from '../newsletter-studio-storage.ts';
 import { parseReviewRecipients, buildReviewUrl } from '../newsletter-intake-notify.ts';
 import type { NewsletterCampaign } from '../newsletter-studio-types.ts';
@@ -283,6 +287,31 @@ describe('createDraftFromIntake', () => {
     const outcome = await createDraftFromIntake(baseInput());
     expect(outcome.notified).toBe(false);
     expect(campaigns()[0].reviewNotifiedAt).toBeNull();
+  });
+});
+
+describe('the issue month a hand-over files under (review finding)', () => {
+  it('reads the documented YYYY-MM idempotency key as the issue month', () => {
+    expect(resolveIntakeIssueMonth({ idempotencyKey: '2026-09' })).toBe('2026-09');
+    expect(resolveIntakeIssueMonth({ idempotencyKey: '2026-12' })).toBe('2026-12');
+  });
+
+  it('prefers an explicit field over the key', () => {
+    expect(resolveIntakeIssueMonth({ issueMonth: '2026-08', idempotencyKey: '2026-09' })).toBe(
+      '2026-08',
+    );
+  });
+
+  it('falls through to the create-time default for a key that is not a month', () => {
+    expect(resolveIntakeIssueMonth({ idempotencyKey: 'sept-final' })).toBeUndefined();
+    expect(resolveIntakeIssueMonth({ idempotencyKey: '2026-13' })).toBeUndefined();
+    expect(resolveIntakeIssueMonth({ idempotencyKey: null })).toBeUndefined();
+  });
+
+  it('files a September hand-over under September however late it is processed', async () => {
+    const outcome = await createDraftFromIntake({ ...baseInput(), idempotencyKey: '2026-09' });
+    const draft = campaigns().find((c) => c.id === outcome.campaignId);
+    expect(draft?.issueMonth).toBe('2026-09');
   });
 });
 
