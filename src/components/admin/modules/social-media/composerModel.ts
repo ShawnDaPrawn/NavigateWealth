@@ -3,10 +3,10 @@
  */
 
 import type {
+  ChannelAsset,
   ComposeMode,
   ComposeRequest,
   MediaFile,
-  SocialMediaAsset,
   SocialPlatform,
   SocialProfile,
 } from './types';
@@ -83,20 +83,27 @@ export function combineDateAndTime(date: Date, time: string): Date {
   return out;
 }
 
+/** The prefix `assetToMediaFile` stamps on a library asset's media id. */
+const ASSET_MEDIA_PREFIX = 'asset_';
+
 /**
- * A library image as the composer holds it. The public URL goes straight to
- * Buffer, so `storagePath` (which means "copy this out of the private AI
- * bucket") is deliberately left unset.
+ * A channel asset as the composer holds it.
+ *
+ * Its URL is already public and permanent, so it goes straight to Buffer;
+ * `storagePath` (which means "copy this out of the private AI bucket") is
+ * deliberately left unset, and the library path rides along separately so the
+ * picker can tell what the draft already carries.
  */
-export function assetToMediaFile(asset: SocialMediaAsset): MediaFile {
+export function assetToMediaFile(asset: ChannelAsset): MediaFile {
+  const name = asset.file_name ?? 'Asset';
   return {
-    id: `library_${asset.storagePath}`,
+    id: `${ASSET_MEDIA_PREFIX}${asset.id}`,
     url: asset.url,
-    libraryPath: asset.storagePath,
+    libraryPath: asset.storage_path,
     type: 'image',
-    filename: asset.name,
-    size: asset.size,
-    alt: asset.name,
+    filename: name,
+    size: asset.byte_size,
+    alt: asset.alt_text ?? name,
   };
 }
 
@@ -106,6 +113,22 @@ export interface ComposeDraft {
   media: MediaFile[];
   linkUrl: string;
   linkTitle: string;
+}
+
+/**
+ * The library assets a draft is carrying, by id.
+ *
+ * The compose request itself only needs a URL, so the asset's identity would
+ * otherwise stop here — and an asset nobody marks used stays in the queue a
+ * publishing routine draws from, which is how the same picture goes out twice.
+ * The id rides in the media id rather than in the request because the request
+ * is the Edge Function's contract and Buffer has no use for our row ids.
+ */
+export function assetIdsInDraft(draft: ComposeDraft): string[] {
+  return draft.media
+    .filter((m) => m.id.startsWith(ASSET_MEDIA_PREFIX))
+    .map((m) => m.id.slice(ASSET_MEDIA_PREFIX.length))
+    .filter((id) => id.length > 0);
 }
 
 /** Turn the composer's state into the request the Edge Function validates. */

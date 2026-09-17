@@ -33,16 +33,18 @@ export {
   describeJobReport,
 } from './useSocialAssets';
 
-// Media library (uploads used in posts)
+// Channel assets (the Assets tab's media)
 export {
-  useMediaLibrary,
-  useUploadMedia,
-  useDeleteMedia,
+  useChannelAssets,
+  useChannelAssetSummary,
+  useUploadChannelAssets,
+  useUpdateChannelAsset,
+  useDeleteChannelAsset,
+  useMarkChannelAssetsUsed,
   rejectionReasonFor,
   describeUpload,
-  MAX_UPLOAD_BYTES,
   ACCEPT_ATTRIBUTE,
-} from './useSocialMediaLibrary';
+} from './useChannelAssets';
 
 // AI content generation hooks
 export { useSocialMediaAI } from './useSocialMediaAI';

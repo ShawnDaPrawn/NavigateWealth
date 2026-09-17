@@ -110,7 +110,7 @@ vi.mock('../../hooks/useSocialAssets', () => ({
   useRunSocialJob: () => hooks.runJob,
 }));
 
-import { AssetsTab } from '../AssetsTab';
+import { WeeklyPipelineTab } from '../WeeklyPipelineTab';
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -124,9 +124,9 @@ beforeEach(() => {
   hooks.state.batchesError = null;
 });
 
-describe('AssetsTab', () => {
+describe('WeeklyPipelineTab', () => {
   it('renders the week, its report, and one column per channel', () => {
-    render(<AssetsTab />, { wrapper });
+    render(<WeeklyPipelineTab />, { wrapper });
     expect(screen.getByText('Weekly automation on')).toBeDefined();
     expect(screen.getAllByText('Articles: 6 used of 30 considered').length).toBeGreaterThan(0);
     expect(screen.getByText('Title a1')).toBeDefined();
@@ -137,7 +137,7 @@ describe('AssetsTab', () => {
   });
 
   it('reveals the context brief and wires the kill switch and jobs', () => {
-    render(<AssetsTab />, { wrapper });
+    render(<WeeklyPipelineTab />, { wrapper });
     fireEvent.click(screen.getByText('Context the routine worked from'));
     expect(screen.getByText('Repo rate held at 7.00%.')).toBeDefined();
     fireEvent.click(screen.getByLabelText('Weekly automation'));
@@ -153,12 +153,12 @@ describe('AssetsTab', () => {
 
   it('shows the empty state before the first batch', () => {
     hooks.state.batchesData = [];
-    render(<AssetsTab />, { wrapper });
+    render(<WeeklyPipelineTab />, { wrapper });
     expect(screen.getByText('No weekly batches yet')).toBeDefined();
   });
 
   it('opens the settings dialog', async () => {
-    render(<AssetsTab />, { wrapper });
+    render(<WeeklyPipelineTab />, { wrapper });
     fireEvent.click(screen.getByText('Settings & playbooks'));
     expect(await screen.findByText('Automation settings & playbooks')).toBeDefined();
   });
