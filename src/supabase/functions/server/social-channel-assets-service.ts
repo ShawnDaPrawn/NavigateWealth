@@ -56,9 +56,21 @@ const VIDEO_TYPES: Record<string, string> = {
   'video/webm': 'webm',
 };
 
-/** Images are small; video is not. Both sit under the bucket's own ceiling. */
+/**
+ * Images are small; video is not. Both sit under the bucket's own ceiling.
+ *
+ * The video figure is what this endpoint can actually deliver, not what the
+ * bucket would hold. `bodyLimitMiddleware` in create-app.ts refuses a multipart
+ * body over 55MB before any route sees it, and both intake paths — the uploaded
+ * file and the fetched `sourceUrl` — hold the whole thing in memory to sniff its
+ * first bytes, so an isolate has no way to take a 200MB reel however generous
+ * the bucket is. Advertising 200MB here would only move the refusal from a
+ * clear message to a 413 nobody can act on. 50MB leaves room for the multipart
+ * boundary under that ceiling; the bucket stays at 200MB so a future
+ * direct-to-storage upload needs no migration to use it.
+ */
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
-export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 export interface SniffedMedia {
   mediaType: 'image' | 'video';

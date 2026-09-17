@@ -18,6 +18,7 @@ vi.mock('../../api', () => ({ channelAssetsApi: api }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { ChannelAssetsTab } from '../ChannelAssetsTab';
+import { ChannelAssetPickerDialog } from '../ChannelAssetPickerDialog';
 import {
   describeUpload,
   rejectionReasonFor,
@@ -87,7 +88,7 @@ describe('rejectionReasonFor', () => {
     expect(rejectionReasonFor(file('a.pdf', 'application/pdf', 10))).toMatch(/PNG, JPEG or WebP/);
     // A 50MB file is fine as video and far too big as an image.
     expect(rejectionReasonFor(file('a.png', 'image/png', MAX_IMAGE_BYTES + 1))).toMatch(/15MB/);
-    expect(rejectionReasonFor(file('a.mp4', 'video/mp4', MAX_VIDEO_BYTES + 1))).toMatch(/200MB/);
+    expect(rejectionReasonFor(file('a.mp4', 'video/mp4', MAX_VIDEO_BYTES + 1))).toMatch(/50MB/);
     expect(rejectionReasonFor(file('a.png', 'image/png', 0))).toMatch(/empty/i);
   });
 });
@@ -202,5 +203,38 @@ describe('ChannelAssetsTab', () => {
     render(<ChannelAssetsTab />, { wrapper });
     await waitFor(() => expect(screen.getByLabelText('reel.mp4')).toBeDefined());
     expect(screen.getByLabelText('reel.mp4').tagName.toLowerCase()).toBe('video');
+  });
+});
+
+describe('the composer picker', () => {
+  it('offers only what is still on the shelf', async () => {
+    // Archiving an asset means "take it out of circulation" and `used` means it
+    // has already gone out. Asking without a status would list all three, and
+    // the picker would happily re-attach a retired picture to a new post.
+    render(
+      <ChannelAssetPickerDialog
+        open
+        onOpenChange={() => {}}
+        attachedPaths={[]}
+        onConfirm={() => {}}
+      />,
+      { wrapper },
+    );
+    await waitFor(() => expect(api.list).toHaveBeenCalled());
+    expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ status: 'available' }));
+  });
+
+  it('asks for images only, since a post carries no video yet', async () => {
+    render(
+      <ChannelAssetPickerDialog
+        open
+        onOpenChange={() => {}}
+        attachedPaths={[]}
+        onConfirm={() => {}}
+      />,
+      { wrapper },
+    );
+    await waitFor(() => expect(api.list).toHaveBeenCalled());
+    expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ mediaType: 'image' }));
   });
 });

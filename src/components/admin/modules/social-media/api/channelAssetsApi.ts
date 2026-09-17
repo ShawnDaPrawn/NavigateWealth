@@ -55,6 +55,21 @@ export const channelAssetsApi = {
     return res.data;
   },
 
+  /**
+   * Record that an asset has gone out, and which Buffer post took it.
+   *
+   * This is what stops the same picture being published twice: an asset stays
+   * in the `available` queue a publishing routine draws from until something
+   * says otherwise, and composing by hand is one of the ways it goes out.
+   */
+  async markUsed(id: string, bufferPostId?: string): Promise<ChannelAsset> {
+    const res = await api.post<{ success: boolean; data: ChannelAsset }>(
+      `${BASE}/assets/${id}/used`,
+      bufferPostId ? { bufferPostId } : {},
+    );
+    return res.data;
+  },
+
   async update(id: string, patch: ChannelAssetPatch): Promise<ChannelAsset> {
     const res = await api.patch<{ success: boolean; data: ChannelAsset }>(
       `${BASE}/assets/${id}`,

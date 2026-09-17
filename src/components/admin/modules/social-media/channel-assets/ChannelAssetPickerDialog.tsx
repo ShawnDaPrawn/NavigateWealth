@@ -45,9 +45,13 @@ export function ChannelAssetPickerDialog({
   const [channel, setChannel] = useState<ChannelAssetChannel>('instagram');
   const [selected, setSelected] = useState<Record<string, ChannelAsset>>({});
 
+  // Only what is still on the shelf. Archiving means "take this out of
+  // circulation" and `used` means it has already gone out, so neither belongs
+  // in a picker for a new post — an omitted status would list all three.
   const { data, isLoading } = useChannelAssets({
     channel,
     mediaType: 'image',
+    status: 'available',
     limit: 100,
   });
   const assets = data ?? [];

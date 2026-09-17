@@ -42,6 +42,12 @@ are worth keeping straight.
 Marking an asset `used` is what stops it going out twice, so a routine must do
 it immediately after Buffer accepts the post — not at the end of a batch.
 
+Composing by hand counts as going out. Picking an asset in **Compose** and
+publishing or scheduling it marks that asset `used` against the Buffer post
+that took it, exactly as a routine would, so the two paths cannot disagree
+about what is still on the shelf. The picker only offers `available` media for
+the same reason. Nothing is marked when Buffer accepts nothing.
+
 ## The endpoint
 
 Base URL: `https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/social-library`
@@ -101,12 +107,19 @@ will fetch at publish time.
 | Kind  | Formats         | Limit |
 | ----- | --------------- | ----- |
 | Image | PNG, JPEG, WebP | 15MB  |
-| Video | MP4, MOV, WebM  | 200MB |
+| Video | MP4, MOV, WebM  | 50MB  |
 
 **The first bytes decide, not the file name or the content type.** The bucket is
 world-readable, so a file renamed to `.png` must not be able to land in it; a
 declared type that disagrees with the signature is rejected rather than
 trusted. `channel` is required and must be `linkedin`, `instagram` or `x`.
+
+The video limit is the endpoint's, not the bucket's. A multipart body over 55MB
+is refused by `bodyLimitMiddleware` before any route runs, and both intake paths
+hold the file in memory to read its signature, so an isolate cannot take a
+200MB reel whatever the bucket allows. The bucket itself stays at 200MB, which
+costs nothing and leaves room for a direct-to-storage upload later. A reel that
+will not fit has to be compressed — there is no larger door round the back.
 
 ### Optional fields worth sending
 
@@ -159,6 +172,6 @@ touch paths under `channels/`.
 | `401 Unauthorized`                                  | Missing or stale token.                                                                | Re-read the Vault secret; check the header name.               |
 | `400 … not a supported image … or video`            | The bytes are not one of the six formats — often an HTML error page saved as an image. | Check what the `sourceUrl` actually returns.                   |
 | `400 … says it is X but its contents are Y`         | The file was renamed, or the content type is wrong.                                    | Send the real type, or leave it off and let the bytes speak.   |
-| `400 Images must be 15MB or smaller`                | An image over the image limit (video gets 200MB).                                      | Compress, or send it as video if that is what it is.           |
+| `400 Images must be 15MB or smaller`                | An image over the image limit (video gets 50MB).                                       | Compress, or send it as video if that is what it is.           |
 | Asset never leaves `available`                      | The publishing routine is not marking it used.                                         | It must call `mark_used` right after Buffer accepts the post.  |
 | An asset shows in the tab but its preview is broken | The row outlived its file (a storage delete that failed half way).                     | Delete the asset and re-add it; the tab's delete removes both. |

@@ -40,22 +40,47 @@ export const SOCIAL_ASSETS_BUCKET_LIMIT = '200MB';
 
 let bucketEnsured = false;
 
-/** Create the public bucket once per isolate (idempotent against the API). */
+/**
+ * Create the public bucket once per isolate, or widen it if it already exists.
+ *
+ * The update matters as much as the create. An earlier version of this module
+ * made the bucket image-only with a 10MB ceiling, and a bucket's limits are
+ * fixed at creation — so anywhere that version ran first, every video and every
+ * image over 10MB would be refused by Storage after passing our own checks,
+ * and no amount of deploying this file would fix it. Reconciling on each cold
+ * start costs one API call and makes the bucket's shape a fact of the code
+ * rather than an accident of which version created it.
+ */
 export async function ensureSocialAssetsBucket(): Promise<void> {
   if (bucketEnsured) return;
   const supabase = getSocialSupabase();
+  const config = {
+    public: true,
+    fileSizeLimit: SOCIAL_ASSETS_BUCKET_LIMIT,
+    allowedMimeTypes: [...SOCIAL_ASSETS_IMAGE_TYPES, ...SOCIAL_ASSETS_VIDEO_TYPES],
+  };
   const { data: buckets } = await supabase.storage.listBuckets();
   const exists = buckets?.some((b: { name: string }) => b.name === SOCIAL_ASSETS_BUCKET);
+
   if (!exists) {
-    const { error } = await supabase.storage.createBucket(SOCIAL_ASSETS_BUCKET, {
-      public: true,
-      fileSizeLimit: SOCIAL_ASSETS_BUCKET_LIMIT,
-      allowedMimeTypes: [...SOCIAL_ASSETS_IMAGE_TYPES, ...SOCIAL_ASSETS_VIDEO_TYPES],
-    });
+    const { error } = await supabase.storage.createBucket(SOCIAL_ASSETS_BUCKET, config);
     if (error && !/already exists/i.test(error.message)) {
       throw new Error(`Failed to create social assets bucket: ${error.message}`);
     }
     log.info('Created public social assets bucket', { bucket: SOCIAL_ASSETS_BUCKET });
+    bucketEnsured = true;
+    return;
+  }
+
+  // Already there: bring its limits up to what this version accepts. A failure
+  // here is not fatal — uploads within the old limits still work, and the error
+  // is more useful in the log than as a 500 on someone's upload.
+  const { error } = await supabase.storage.updateBucket(SOCIAL_ASSETS_BUCKET, config);
+  if (error) {
+    log.warn('Could not widen the social assets bucket; large or video uploads may be refused', {
+      bucket: SOCIAL_ASSETS_BUCKET,
+      error: error.message,
+    });
   }
   bucketEnsured = true;
 }

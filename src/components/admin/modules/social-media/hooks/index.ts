@@ -40,6 +40,7 @@ export {
   useUploadChannelAssets,
   useUpdateChannelAsset,
   useDeleteChannelAsset,
+  useMarkChannelAssetsUsed,
   rejectionReasonFor,
   describeUpload,
   ACCEPT_ATTRIBUTE,

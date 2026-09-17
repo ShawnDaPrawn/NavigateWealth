@@ -83,6 +83,9 @@ export function combineDateAndTime(date: Date, time: string): Date {
   return out;
 }
 
+/** The prefix `assetToMediaFile` stamps on a library asset's media id. */
+const ASSET_MEDIA_PREFIX = 'asset_';
+
 /**
  * A channel asset as the composer holds it.
  *
@@ -94,7 +97,7 @@ export function combineDateAndTime(date: Date, time: string): Date {
 export function assetToMediaFile(asset: ChannelAsset): MediaFile {
   const name = asset.file_name ?? 'Asset';
   return {
-    id: `asset_${asset.id}`,
+    id: `${ASSET_MEDIA_PREFIX}${asset.id}`,
     url: asset.url,
     libraryPath: asset.storage_path,
     type: 'image',
@@ -110,6 +113,22 @@ export interface ComposeDraft {
   media: MediaFile[];
   linkUrl: string;
   linkTitle: string;
+}
+
+/**
+ * The library assets a draft is carrying, by id.
+ *
+ * The compose request itself only needs a URL, so the asset's identity would
+ * otherwise stop here — and an asset nobody marks used stays in the queue a
+ * publishing routine draws from, which is how the same picture goes out twice.
+ * The id rides in the media id rather than in the request because the request
+ * is the Edge Function's contract and Buffer has no use for our row ids.
+ */
+export function assetIdsInDraft(draft: ComposeDraft): string[] {
+  return draft.media
+    .filter((m) => m.id.startsWith(ASSET_MEDIA_PREFIX))
+    .map((m) => m.id.slice(ASSET_MEDIA_PREFIX.length))
+    .filter((id) => id.length > 0);
 }
 
 /** Turn the composer's state into the request the Edge Function validates. */

@@ -21,9 +21,15 @@ import { socialMediaKeys } from './queryKeys';
 
 const STALE_TIME = 30 * 1000;
 
-/** The bucket's own ceiling, mirrored so the browser refuses first. */
+/**
+ * The endpoint's ceiling, mirrored so the browser refuses first.
+ *
+ * Kept in step with `social-channel-assets-service.ts`. The video figure is
+ * bounded by the server's 55MB multipart body limit, not by the bucket, so a
+ * larger file has to be refused here rather than after the upload.
+ */
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
-export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 export const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
@@ -148,6 +154,30 @@ export function useDeleteChannelAsset() {
     },
     onError: (error: unknown) => {
       toast.error(error instanceof Error ? error.message : 'Could not delete the asset');
+    },
+  });
+}
+
+/**
+ * Mark assets published, after Buffer has accepted the post that carried them.
+ *
+ * Takes the whole set at once because one composed post can carry several
+ * pictures, and they all leave the shelf together. Failure is deliberately
+ * quiet in the UI: the post is already away, and a toast saying otherwise
+ * would be alarming and useless. It is logged so the shelf can be reconciled.
+ */
+export function useMarkChannelAssetsUsed() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids, bufferPostId }: { ids: string[]; bufferPostId?: string }) => {
+      await Promise.all(ids.map((id) => channelAssetsApi.markUsed(id, bufferPostId)));
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: socialMediaKeys.channelAssets.all });
+    },
+    onError: (error: unknown) => {
+      console.error('Could not mark composed assets as used', error);
     },
   });
 }

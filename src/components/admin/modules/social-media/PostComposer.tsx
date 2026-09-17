@@ -42,6 +42,7 @@ import { PLATFORM_LIMITS } from './types';
 import { buildUTMUrl } from './utils';
 import {
   assetToMediaFile,
+  assetIdsInDraft,
   buildComposeRequest,
   combineDateAndTime,
   composeBlocker,
@@ -54,7 +55,13 @@ interface PostComposerProps {
   profiles: SocialProfile[];
   selectedProfiles: string[];
   onProfilesChange: (profileIds: string[]) => void;
-  onSubmit: (request: ComposeRequest) => Promise<ComposeResult | null>;
+  /**
+   * `assetIds` are the library assets the draft carried. They are passed
+   * separately because the compose request is the Edge Function's contract
+   * and has no room for our row ids — the caller needs them to mark those
+   * assets used once Buffer has taken the post.
+   */
+  onSubmit: (request: ComposeRequest, assetIds: string[]) => Promise<ComposeResult | null>;
   isSubmitting?: boolean;
   /** Pre-populate content from the AI generator */
   initialContent?: string;
@@ -141,7 +148,7 @@ export function PostComposer({
   };
 
   const submit = async (mode: ComposeMode, at?: Date) => {
-    const result = await onSubmit(buildComposeRequest(draft, mode, at));
+    const result = await onSubmit(buildComposeRequest(draft, mode, at), assetIdsInDraft(draft));
     if (result && result.created.length > 0 && result.failed.length === 0) reset();
     return result;
   };

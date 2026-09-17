@@ -46,6 +46,7 @@ import { AIBundleGenerator } from './components/AIBundleGenerator';
 import { AIContentGenerator } from './components/AIContentGenerator';
 import { AIGenerationHistory } from './components/AIGenerationHistory';
 import { AIImageGenerator } from './components/AIImageGenerator';
+import { useMarkChannelAssetsUsed } from './hooks/useChannelAssets';
 import { useSocialAnalytics } from './hooks/useSocialAnalytics';
 import { useSocialBatches } from './hooks/useSocialAssets';
 import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
@@ -102,6 +103,7 @@ export function SocialMediaTab() {
   const { profiles } = useSocialProfiles();
   const { posts, range, setRange, createPost, isCreating, deletePost, getPostsByStatus } =
     useSocialPosts();
+  const { mutate: markAssetsUsed } = useMarkChannelAssetsUsed();
 
   // The query window follows the calendar: whatever month/week/day is on screen is
   // unioned into the fetched range, so navigating past the default window still
@@ -159,15 +161,22 @@ export function SocialMediaTab() {
   }, []);
 
   const handleCompose = useCallback(
-    async (request: ComposeRequest) => {
+    async (request: ComposeRequest, assetIds: string[]) => {
       const result = await createPost(request);
       if (result && result.created.length > 0) {
+        // The picture has gone out, so take it off the shelf. Without this an
+        // asset stays `available` and the publishing routine would queue it a
+        // second time. Buffer creates one post per channel; the first id is
+        // enough to trace the asset back to what carried it.
+        if (assetIds.length > 0) {
+          markAssetsUsed({ ids: assetIds, bufferPostId: result.created[0]?.postId });
+        }
         clearComposerInitials();
         setActiveTab('calendar');
       }
       return result;
     },
-    [createPost, clearComposerInitials],
+    [createPost, clearComposerInitials, markAssetsUsed],
   );
 
   const handleUseTextContent = useCallback(
