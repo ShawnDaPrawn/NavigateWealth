@@ -67,24 +67,30 @@ describe('PostComposer', () => {
     fireEvent.change(screen.getByLabelText('Link URL'), { target: { value: 'https://nw/a' } });
     fireEvent.click(screen.getByText('Add to queue'));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith({
-      channelIds: ['li'],
-      text: 'Hello world',
-      mode: 'queue',
-      images: [{ url: 'https://cdn/a.png', altText: 'a.png' }],
-      link: { url: 'https://nw/a' },
-    });
+    expect(onSubmit).toHaveBeenCalledWith(
+      {
+        channelIds: ['li'],
+        text: 'Hello world',
+        mode: 'queue',
+        images: [{ url: 'https://cdn/a.png', altText: 'a.png' }],
+        link: { url: 'https://nw/a' },
+      },
+      // An image added by URL is not a library asset, so there is nothing to
+      // mark used.
+      [],
+    );
     // Full success resets the form
     await waitFor(() =>
       expect((screen.getByLabelText('Post text') as HTMLTextAreaElement).value).toBe(''),
     );
   });
 
-  it('offers upload as the way in, not just a URL field', () => {
+  it('offers the Assets library as the way in, not just a URL field', () => {
     setup(['li']);
-    // The URL field was the ONLY way to attach an image, which is useless to
-    // anyone who does not already host images somewhere.
-    expect(screen.getByRole('button', { name: /upload or choose image/i })).toBeDefined();
+    // The URL field was once the ONLY way to attach an image, which is useless
+    // to anyone who does not already host images somewhere. Media now comes
+    // from the Assets tab.
+    expect(screen.getByRole('button', { name: /choose an image/i })).toBeDefined();
     expect(screen.queryByLabelText('Image URL')).toBeNull();
   });
 
@@ -93,7 +99,7 @@ describe('PostComposer', () => {
     fireEvent.change(screen.getByLabelText('Post text'), { target: { value: 'Short' } });
     fireEvent.click(screen.getByText('Publish now'));
     await waitFor(() =>
-      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ mode: 'now' })),
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ mode: 'now' }), []),
     );
   });
 });

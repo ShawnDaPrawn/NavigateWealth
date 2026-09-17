@@ -26,24 +26,61 @@ export const SOCIAL_ASSETS_BUCKET = 'make-91ed8379-social-assets';
 export const getSocialSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '');
 
+/**
+ * What the bucket accepts.
+ *
+ * The automation writes DALL-E PNGs and the Assets tab writes finished channel
+ * media, which includes video — a 40MB reel is ordinary. Bucket limits are the
+ * real enforcement (a route check is only the polite early refusal), so they
+ * are set for the largest thing that legitimately belongs here.
+ */
+export const SOCIAL_ASSETS_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+export const SOCIAL_ASSETS_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
+export const SOCIAL_ASSETS_BUCKET_LIMIT = '200MB';
+
 let bucketEnsured = false;
 
-/** Create the public bucket once per isolate (idempotent against the API). */
+/**
+ * Create the public bucket once per isolate, or widen it if it already exists.
+ *
+ * The update matters as much as the create. An earlier version of this module
+ * made the bucket image-only with a 10MB ceiling, and a bucket's limits are
+ * fixed at creation — so anywhere that version ran first, every video and every
+ * image over 10MB would be refused by Storage after passing our own checks,
+ * and no amount of deploying this file would fix it. Reconciling on each cold
+ * start costs one API call and makes the bucket's shape a fact of the code
+ * rather than an accident of which version created it.
+ */
 export async function ensureSocialAssetsBucket(): Promise<void> {
   if (bucketEnsured) return;
   const supabase = getSocialSupabase();
+  const config = {
+    public: true,
+    fileSizeLimit: SOCIAL_ASSETS_BUCKET_LIMIT,
+    allowedMimeTypes: [...SOCIAL_ASSETS_IMAGE_TYPES, ...SOCIAL_ASSETS_VIDEO_TYPES],
+  };
   const { data: buckets } = await supabase.storage.listBuckets();
   const exists = buckets?.some((b: { name: string }) => b.name === SOCIAL_ASSETS_BUCKET);
+
   if (!exists) {
-    const { error } = await supabase.storage.createBucket(SOCIAL_ASSETS_BUCKET, {
-      public: true,
-      fileSizeLimit: '10MB',
-      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
-    });
+    const { error } = await supabase.storage.createBucket(SOCIAL_ASSETS_BUCKET, config);
     if (error && !/already exists/i.test(error.message)) {
       throw new Error(`Failed to create social assets bucket: ${error.message}`);
     }
     log.info('Created public social assets bucket', { bucket: SOCIAL_ASSETS_BUCKET });
+    bucketEnsured = true;
+    return;
+  }
+
+  // Already there: bring its limits up to what this version accepts. A failure
+  // here is not fatal — uploads within the old limits still work, and the error
+  // is more useful in the log than as a 500 on someone's upload.
+  const { error } = await supabase.storage.updateBucket(SOCIAL_ASSETS_BUCKET, config);
+  if (error) {
+    log.warn('Could not widen the social assets bucket; large or video uploads may be refused', {
+      bucket: SOCIAL_ASSETS_BUCKET,
+      error: error.message,
+    });
   }
   bucketEnsured = true;
 }
@@ -167,4 +204,35 @@ export async function removePublicObject(storagePath: string): Promise<void> {
   if (error) {
     throw new Error(`Storage delete failed: ${error.message}`);
   }
+}
+
+/**
+ * Fetch a remote file so its bytes can be checked before they are stored.
+ *
+ * The `sourceUrl` path exists for agents that produce a file somewhere else
+ * (ChatGPT hands over a link rather than a multipart body). The bytes are
+ * validated exactly like an upload — the caller does the sniffing — so a URL
+ * is not a way around the type and size rules.
+ */
+export async function downloadForUpload(
+  sourceUrl: string,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; contentType: string }> {
+  const response = await fetch(sourceUrl);
+  if (!response.ok) {
+    throw new Error(`Could not fetch ${sourceUrl}: HTTP ${response.status}`);
+  }
+  // Trust the header only as an early refusal; the byte signature decides.
+  const declaredLength = Number(response.headers.get('content-length') ?? '0');
+  if (declaredLength > maxBytes) {
+    throw new Error(`The file at ${sourceUrl} is larger than the limit.`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length > maxBytes) {
+    throw new Error(`The file at ${sourceUrl} is larger than the limit.`);
+  }
+  return {
+    bytes,
+    contentType: (response.headers.get('content-type') || '').split(';')[0].trim(),
+  };
 }

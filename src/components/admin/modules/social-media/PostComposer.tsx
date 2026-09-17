@@ -1,11 +1,12 @@
 /**
  * PostComposer — a manual post, straight into Buffer.
  *
- * One post per selected channel. Images come from an upload (the library, on
- * Navigate Wealth's own storage), from the AI generator (a private storage
- * path the server publishes for Buffer), or from a public URL; a link becomes
- * a LinkedIn link card, goes into the text on X, and is ignored on Instagram.
- * Nothing is stored locally — the calendar shows Buffer's answer.
+ * One post per selected channel. Images come from the Assets tab (media an
+ * agent or an admin put there, on Navigate Wealth's own storage), from the AI
+ * generator (a private storage path the server publishes for Buffer), or from
+ * a public URL; a link becomes a LinkedIn link card, goes into the text on X,
+ * and is ignored on Instagram. Nothing is stored locally — the calendar shows
+ * Buffer's answer.
  */
 
 import { useEffect, useState } from 'react';
@@ -41,19 +42,26 @@ import { PLATFORM_LIMITS } from './types';
 import { buildUTMUrl } from './utils';
 import {
   assetToMediaFile,
+  assetIdsInDraft,
   buildComposeRequest,
   combineDateAndTime,
   composeBlocker,
   countForPlatform,
   effectiveTextFor,
 } from './composerModel';
-import { MediaPickerDialog } from './media/MediaPickerDialog';
+import { ChannelAssetPickerDialog } from './channel-assets/ChannelAssetPickerDialog';
 
 interface PostComposerProps {
   profiles: SocialProfile[];
   selectedProfiles: string[];
   onProfilesChange: (profileIds: string[]) => void;
-  onSubmit: (request: ComposeRequest) => Promise<ComposeResult | null>;
+  /**
+   * `assetIds` are the library assets the draft carried. They are passed
+   * separately because the compose request is the Edge Function's contract
+   * and has no room for our row ids — the caller needs them to mark those
+   * assets used once Buffer has taken the post.
+   */
+  onSubmit: (request: ComposeRequest, assetIds: string[]) => Promise<ComposeResult | null>;
   isSubmitting?: boolean;
   /** Pre-populate content from the AI generator */
   initialContent?: string;
@@ -140,7 +148,7 @@ export function PostComposer({
   };
 
   const submit = async (mode: ComposeMode, at?: Date) => {
-    const result = await onSubmit(buildComposeRequest(draft, mode, at));
+    const result = await onSubmit(buildComposeRequest(draft, mode, at), assetIdsInDraft(draft));
     if (result && result.created.length > 0 && result.failed.length === 0) reset();
     return result;
   };
@@ -281,7 +289,7 @@ export function PostComposer({
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setShowPicker(true)}>
               <ImagePlus className="h-4 w-4 mr-2" />
-              Upload or choose image
+              Choose an image
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowUrlField((v) => !v)}>
               {showUrlField ? 'Hide URL field' : 'Add by URL instead'}
@@ -388,7 +396,7 @@ export function PostComposer({
         </CardContent>
       </Card>
 
-      <MediaPickerDialog
+      <ChannelAssetPickerDialog
         open={showPicker}
         onOpenChange={setShowPicker}
         attachedPaths={media.map((m) => m.libraryPath).filter((p): p is string => Boolean(p))}
@@ -397,7 +405,7 @@ export function PostComposer({
             const have = new Set(prev.map((m) => m.libraryPath).filter(Boolean));
             return [
               ...prev,
-              ...assets.filter((a) => !have.has(a.storagePath)).map(assetToMediaFile),
+              ...assets.filter((a) => !have.has(a.storage_path)).map(assetToMediaFile),
             ];
           })
         }
