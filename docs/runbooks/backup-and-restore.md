@@ -213,7 +213,7 @@ Then read the run, not the tick:
 1. The **job summary** table must show `true` for every leg you configured.
 2. Leg 1 prints `Backup verified: TOC complete AND every data block decoded.`
    and then `restore errors: N total, N attributable to missing extensions`.
-3. Leg 2 prints a per-bucket object count and `manifest rows: N, files in
+3. Leg 2 prints a per-bucket object count and `objects backed up: N, files in
 archive: N` with the two numbers equal.
 4. Leg 3 prints `verified: <bytes> bytes, COMPLIANCE until <date>` per artifact.
 
