@@ -46,12 +46,13 @@ import { AIBundleGenerator } from './components/AIBundleGenerator';
 import { AIContentGenerator } from './components/AIContentGenerator';
 import { AIGenerationHistory } from './components/AIGenerationHistory';
 import { AIImageGenerator } from './components/AIImageGenerator';
+import { assetToMediaFile } from './composerModel';
 import { useMarkChannelAssetsUsed } from './hooks/useChannelAssets';
 import { useSocialAnalytics } from './hooks/useSocialAnalytics';
 import { useSocialBatches } from './hooks/useSocialAssets';
 import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
 import { useSocialProfiles } from './hooks/useSocialProfiles';
-import type { ComposeRequest, MediaFile, SocialAIPlatform } from './types';
+import type { ChannelAsset, ComposeRequest, MediaFile, SocialAIPlatform } from './types';
 
 interface StatCardProps {
   label: string;
@@ -179,6 +180,26 @@ export function SocialMediaTab() {
     [createPost, clearComposerInitials, markAssetsUsed],
   );
 
+  const handleCreatePostFromAsset = useCallback(
+    (asset: ChannelAsset) => {
+      // Everything the asset already knows, carried into the draft so the post
+      // starts written rather than blank: the picture, the caption an agent
+      // wrote for it, and the channel it was made for. All of it stays
+      // editable — this is a starting point, not a commitment.
+      setComposerInitialMedia([assetToMediaFile(asset)]);
+      setComposerInitialContent(asset.caption ?? '');
+      setComposerInitialHashtags(undefined);
+
+      const forChannel = profiles
+        .filter((p) => p.isConnected && p.platform === asset.channel)
+        .map((p) => p.id);
+      if (forChannel.length > 0) setSelectedProfiles(forChannel);
+
+      setActiveTab('composer');
+    },
+    [profiles],
+  );
+
   const handleUseTextContent = useCallback(
     (_platform: SocialAIPlatform, content: string, hashtags: string[]) => {
       setComposerInitialContent(content);
@@ -295,7 +316,7 @@ export function SocialMediaTab() {
         </TabsList>
 
         <TabsContent value="assets" className="mt-6">
-          <ChannelAssetsTab />
+          <ChannelAssetsTab onCreatePost={handleCreatePostFromAsset} />
         </TabsContent>
 
         <TabsContent value="weekly" className="mt-6">

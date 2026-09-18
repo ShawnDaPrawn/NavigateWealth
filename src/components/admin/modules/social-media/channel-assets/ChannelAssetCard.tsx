@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Archive, Check, ExternalLink, RotateCcw, Trash2 } from 'lucide-react';
+import { Archive, Check, ExternalLink, RotateCcw, Send, Trash2 } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -26,10 +26,18 @@ interface ChannelAssetCardProps {
   asset: ChannelAsset;
   onPatch: (patch: ChannelAssetPatch) => void;
   onDelete: () => void;
+  /** Open Compose with this asset attached. Absent when there is nowhere to go. */
+  onCreatePost?: () => void;
   isSaving?: boolean;
 }
 
-export function ChannelAssetCard({ asset, onPatch, onDelete, isSaving }: ChannelAssetCardProps) {
+export function ChannelAssetCard({
+  asset,
+  onPatch,
+  onDelete,
+  onCreatePost,
+  isSaving,
+}: ChannelAssetCardProps) {
   const [caption, setCaption] = useState(asset.caption ?? '');
   const [altText, setAltText] = useState(asset.alt_text ?? '');
 
@@ -43,6 +51,15 @@ export function ChannelAssetCard({ asset, onPatch, onDelete, isSaving }: Channel
   const warnings = assetWarnings(asset);
   const dimensions = formatDimensions(asset);
   const duration = formatDuration(asset.duration_seconds);
+  // Compose sends Buffer an image URL; video needs Buffer's own upload path and
+  // arrives with the publishing routine. Better to say so on a disabled button
+  // than to let the post fail at Buffer.
+  const postBlocker =
+    asset.media_type === 'video'
+      ? 'Video cannot be posted from Compose yet — it needs Buffer\u2019s upload path.'
+      : asset.status === 'used'
+        ? 'This asset has already been published. Requeue it first to post it again.'
+        : null;
 
   return (
     <div className="border rounded-lg overflow-hidden bg-white">
@@ -115,8 +132,22 @@ export function ChannelAssetCard({ asset, onPatch, onDelete, isSaving }: Channel
         </div>
 
         <div className="flex flex-wrap gap-1">
+          {onCreatePost && (
+            <Button
+              size="sm"
+              variant={postBlocker ? 'outline' : 'default'}
+              disabled={Boolean(postBlocker)}
+              title={postBlocker ?? undefined}
+              aria-label={`Create a post from ${asset.file_name ?? 'asset'}`}
+              onClick={onCreatePost}
+            >
+              <Send className="h-3.5 w-3.5 mr-1" />
+              Create post
+            </Button>
+          )}
           <Button
             size="sm"
+            variant="outline"
             disabled={!dirty || isSaving}
             onClick={() => onPatch({ caption: caption || null, altText: altText || null })}
           >

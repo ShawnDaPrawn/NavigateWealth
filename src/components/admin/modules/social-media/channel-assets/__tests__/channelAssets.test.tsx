@@ -238,3 +238,40 @@ describe('the composer picker', () => {
     expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ mediaType: 'image' }));
   });
 });
+
+describe('turning an asset into a post', () => {
+  it('offers the action on every asset card', async () => {
+    // Without this the only route to a post ran backwards: open Compose, then
+    // hunt for the asset in a picker.
+    const onCreatePost = vi.fn();
+    render(<ChannelAssetsTab onCreatePost={onCreatePost} />, { wrapper });
+    const button = await screen.findByRole('button', { name: /create a post from chart\.png/i });
+    fireEvent.click(button);
+    expect(onCreatePost).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
+  });
+
+  it('will not start a post from a video, and says why', async () => {
+    // Compose hands Buffer an image URL; a video would fail there instead.
+    api.list.mockResolvedValue([
+      asset({ media_type: 'video', file_name: 'reel.mp4', content_type: 'video/mp4' }),
+    ]);
+    render(<ChannelAssetsTab onCreatePost={vi.fn()} />, { wrapper });
+    const button = await screen.findByRole('button', { name: /create a post from reel\.mp4/i });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(button.getAttribute('title')).toMatch(/video cannot be posted from compose yet/i);
+  });
+
+  it('will not re-post something already published without requeueing it', async () => {
+    api.list.mockResolvedValue([asset({ status: 'used' })]);
+    render(<ChannelAssetsTab onCreatePost={vi.fn()} />, { wrapper });
+    const button = await screen.findByRole('button', { name: /create a post from chart\.png/i });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(button.getAttribute('title')).toMatch(/already been published/i);
+  });
+
+  it('leaves the action out entirely when there is nowhere to send it', async () => {
+    render(<ChannelAssetsTab />, { wrapper });
+    await screen.findByText('chart.png');
+    expect(screen.queryByRole('button', { name: /create a post from/i })).toBeNull();
+  });
+});

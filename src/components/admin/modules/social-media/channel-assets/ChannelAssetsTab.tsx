@@ -51,7 +51,15 @@ const STATUS_FILTERS: Array<{ value: ChannelAssetStatus | 'all'; label: string }
   { value: 'all', label: 'All' },
 ];
 
-export function ChannelAssetsTab() {
+interface ChannelAssetsTabProps {
+  /**
+   * Start a post from this asset. Optional so the tab still renders on its own
+   * (in tests, or anywhere without a composer to hand it to).
+   */
+  onCreatePost?: (asset: ChannelAsset) => void;
+}
+
+export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
   const [channel, setChannel] = useState<ChannelAssetChannel>('instagram');
   const [status, setStatus] = useState<ChannelAssetStatus | 'all'>('available');
   const [pendingDelete, setPendingDelete] = useState<ChannelAsset | null>(null);
@@ -173,6 +181,7 @@ export function ChannelAssetsTab() {
                   isSaving={update.isPending}
                   onPatch={(patch) => update.mutate({ id: asset.id, patch })}
                   onDelete={() => setPendingDelete(asset)}
+                  onCreatePost={onCreatePost ? () => onCreatePost(asset) : undefined}
                 />
               ))}
             </div>
