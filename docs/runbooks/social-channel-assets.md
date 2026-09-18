@@ -50,14 +50,15 @@ the same reason. Nothing is marked when Buffer accepts nothing.
 
 ## Posting one by hand
 
-**Create post** on an asset card opens Compose carrying that asset, the caption
-an agent wrote for it, and the channel it was filed under already selected. All
+**Create post** on an asset card opens Compose carrying that asset, its caption
+as the fields currently read (an unsaved edit comes across too), and the channel
+it was filed under already selected. All
 three are a starting point, not a commitment — edit the text, add channels,
 attach up to four pictures in total, then publish, queue or schedule as usual.
 Scheduling is the same Compose control it always was; the asset is just already
 in the draft.
 
-The action is refused, with the reason on the button, in two cases:
+The action is refused, with the reason written in the card, in two cases:
 
 | State   | Why                                                                      |
 | ------- | ------------------------------------------------------------------------ |

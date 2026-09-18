@@ -181,7 +181,16 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
                   isSaving={update.isPending}
                   onPatch={(patch) => update.mutate({ id: asset.id, patch })}
                   onDelete={() => setPendingDelete(asset)}
-                  onCreatePost={onCreatePost ? () => onCreatePost(asset) : undefined}
+                  onCreatePost={
+                    onCreatePost
+                      ? (edits) =>
+                          onCreatePost({
+                            ...asset,
+                            caption: edits.caption,
+                            alt_text: edits.altText,
+                          })
+                      : undefined
+                  }
                 />
               ))}
             </div>

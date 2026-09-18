@@ -250,15 +250,35 @@ describe('turning an asset into a post', () => {
     expect(onCreatePost).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }));
   });
 
-  it('will not start a post from a video, and says why', async () => {
-    // Compose hands Buffer an image URL; a video would fail there instead.
+  it('carries an unsaved caption edit into the post', async () => {
+    // Someone who fixes a caption and goes straight to Compose means the fix.
+    // The card holds it locally until Save, so the callback has to read the
+    // field rather than the asset the server last sent.
+    const onCreatePost = vi.fn();
+    render(<ChannelAssetsTab onCreatePost={onCreatePost} />, { wrapper });
+    await screen.findByText('chart.png');
+
+    fireEvent.change(screen.getByLabelText('Suggested caption'), {
+      target: { value: 'A better line about the two-pot system' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /create a post from chart\.png/i }));
+
+    expect(onCreatePost).toHaveBeenCalledWith(
+      expect.objectContaining({ caption: 'A better line about the two-pot system' }),
+    );
+  });
+
+  it('will not start a post from a video, and says why in the card', async () => {
+    // Compose hands Buffer an image URL; a video would fail there instead. The
+    // reason is rendered, not hung on `title` — the shared Button disables
+    // pointer events, so a disabled one never shows a tooltip.
     api.list.mockResolvedValue([
       asset({ media_type: 'video', file_name: 'reel.mp4', content_type: 'video/mp4' }),
     ]);
     render(<ChannelAssetsTab onCreatePost={vi.fn()} />, { wrapper });
     const button = await screen.findByRole('button', { name: /create a post from reel\.mp4/i });
     expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(button.getAttribute('title')).toMatch(/video cannot be posted from compose yet/i);
+    expect(screen.getByText(/video cannot be posted from compose yet/i)).toBeDefined();
   });
 
   it('will not re-post something already published without requeueing it', async () => {
@@ -266,7 +286,13 @@ describe('turning an asset into a post', () => {
     render(<ChannelAssetsTab onCreatePost={vi.fn()} />, { wrapper });
     const button = await screen.findByRole('button', { name: /create a post from chart\.png/i });
     expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(button.getAttribute('title')).toMatch(/already been published/i);
+    expect(screen.getByText(/already been published/i)).toBeDefined();
+  });
+
+  it('says nothing about blockers when the action is available', async () => {
+    render(<ChannelAssetsTab onCreatePost={vi.fn()} />, { wrapper });
+    await screen.findByText('chart.png');
+    expect(screen.queryByText(/cannot be posted|already been published/i)).toBeNull();
   });
 
   it('leaves the action out entirely when there is nowhere to send it', async () => {

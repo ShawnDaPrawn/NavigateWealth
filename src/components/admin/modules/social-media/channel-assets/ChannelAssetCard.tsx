@@ -26,8 +26,15 @@ interface ChannelAssetCardProps {
   asset: ChannelAsset;
   onPatch: (patch: ChannelAssetPatch) => void;
   onDelete: () => void;
-  /** Open Compose with this asset attached. Absent when there is nowhere to go. */
-  onCreatePost?: () => void;
+  /**
+   * Open Compose with this asset attached. Absent when there is nowhere to go.
+   *
+   * Takes the caption and alt text as they stand in the fields, which may not
+   * be what the server holds: someone who fixes a caption and goes straight to
+   * Compose means the fix, and silently posting the old wording would be a
+   * poor reward for editing it.
+   */
+  onCreatePost?: (edits: { caption: string | null; altText: string | null }) => void;
   isSaving?: boolean;
 }
 
@@ -52,8 +59,10 @@ export function ChannelAssetCard({
   const dimensions = formatDimensions(asset);
   const duration = formatDuration(asset.duration_seconds);
   // Compose sends Buffer an image URL; video needs Buffer's own upload path and
-  // arrives with the publishing routine. Better to say so on a disabled button
-  // than to let the post fail at Buffer.
+  // arrives with the publishing routine. Saying so beats letting the post fail
+  // at Buffer — but it has to be said in the card, not in a `title`: the shared
+  // Button carries `disabled:pointer-events-none`, so a disabled one never
+  // fires hover, and it takes no keyboard focus either.
   const postBlocker =
     asset.media_type === 'video'
       ? 'Video cannot be posted from Compose yet — it needs Buffer\u2019s upload path.'
@@ -131,6 +140,8 @@ export function ChannelAssetCard({
           </div>
         </div>
 
+        {postBlocker && <p className="text-xs text-muted-foreground">{postBlocker}</p>}
+
         <div className="flex flex-wrap gap-1">
           {onCreatePost && (
             <Button
@@ -139,7 +150,7 @@ export function ChannelAssetCard({
               disabled={Boolean(postBlocker)}
               title={postBlocker ?? undefined}
               aria-label={`Create a post from ${asset.file_name ?? 'asset'}`}
-              onClick={onCreatePost}
+              onClick={() => onCreatePost({ caption: caption || null, altText: altText || null })}
             >
               <Send className="h-3.5 w-3.5 mr-1" />
               Create post
