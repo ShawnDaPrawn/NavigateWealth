@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  assetIdsInDraft,
+  assetToMediaFile,
   buildComposeRequest,
   characterLimitFor,
   combineDateAndTime,
@@ -9,7 +11,7 @@ import {
   isOverLimit,
   toIsoWithOffset,
 } from '../composerModel';
-import type { SocialProfile } from '../types';
+import type { ChannelAsset, SocialProfile } from '../types';
 
 const profile = (id: string, platform: SocialProfile['platform']): SocialProfile => ({
   id,
@@ -145,5 +147,64 @@ describe('composeBlocker', () => {
         profiles,
       ),
     ).toBeNull();
+  });
+});
+
+describe('carrying a library asset through compose', () => {
+  const asset = (id: string): ChannelAsset =>
+    ({
+      id,
+      channel: 'instagram',
+      media_type: 'image',
+      storage_path: `channels/instagram/${id}.png`,
+      url: `https://cdn.test/${id}.png`,
+      file_name: `${id}.png`,
+      content_type: 'image/png',
+      byte_size: 1024,
+      alt_text: 'A chart',
+      status: 'available',
+    }) as ChannelAsset;
+
+  it('keeps the asset id recoverable from the draft', () => {
+    // The compose request has no room for a row id, so the id rides in the
+    // media id. If this breaks, nothing marks the asset used and the
+    // publishing routine posts the same picture again.
+    const draft = {
+      text: 'x',
+      channelIds: ['ig'],
+      media: [assetToMediaFile(asset('11111111-2222-3333-4444-555555555555'))],
+      linkUrl: '',
+      linkTitle: '',
+    };
+    expect(assetIdsInDraft(draft)).toEqual(['11111111-2222-3333-4444-555555555555']);
+  });
+
+  it('ignores media that did not come from the library', () => {
+    const draft = {
+      text: 'x',
+      channelIds: ['ig'],
+      media: [
+        { id: 'ai_img_2026-W38/gen.png', url: 'u', type: 'image' as const, filename: 'f', size: 0 },
+        { id: 'manual', url: 'u', type: 'image' as const, filename: 'f', size: 0 },
+        assetToMediaFile(asset('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')),
+      ],
+      linkUrl: '',
+      linkTitle: '',
+    };
+    expect(assetIdsInDraft(draft)).toEqual(['aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee']);
+  });
+
+  it('sends the asset by URL, because the bucket copy is already public', () => {
+    // storagePath means "copy this out of the private AI bucket" — an asset
+    // must not take that path or it would be duplicated into the post.
+    const media = assetToMediaFile(asset('cafe0000-0000-4000-8000-000000000001'));
+    expect(media.storagePath).toBeUndefined();
+    const request = buildComposeRequest(
+      { text: 'x', channelIds: ['ig'], media: [media], linkUrl: '', linkTitle: '' },
+      'now',
+    );
+    expect(request.images).toEqual([
+      { url: 'https://cdn.test/cafe0000-0000-4000-8000-000000000001.png', altText: 'A chart' },
+    ]);
   });
 });

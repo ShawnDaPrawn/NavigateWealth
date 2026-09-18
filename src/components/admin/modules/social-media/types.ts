@@ -66,16 +66,71 @@ export interface MediaFile {
   };
 }
 
-/** An image in the media library — what `GET /social-marketing/media` returns. */
-export interface SocialMediaAsset {
-  /** `uploads/<uuid>__<slug>.<ext>` in the public assets bucket. */
-  storagePath: string;
-  /** Stable public URL; this is what Buffer fetches. */
+// ============================================================================
+// Channel assets (the Assets tab)
+// ============================================================================
+
+export type ChannelAssetChannel = 'linkedin' | 'instagram' | 'x';
+export type ChannelAssetMediaType = 'image' | 'video';
+export type ChannelAssetStatus = 'available' | 'used' | 'archived';
+
+/**
+ * One finished picture or video, made for a channel.
+ *
+ * snake_case because it is returned verbatim by `/social-library`, which an
+ * outside agent also calls — renaming keys here would make the admin UI and
+ * the integration disagree about the same record.
+ */
+export interface ChannelAsset {
+  id: string;
+  channel: ChannelAssetChannel;
+  media_type: ChannelAssetMediaType;
+  storage_path: string;
+  /** Permanent public link; this is what Buffer fetches at publish time. */
   url: string;
-  name: string;
-  size: number;
-  contentType: string | null;
-  uploadedAt: string | null;
+  file_name: string | null;
+  content_type: string;
+  byte_size: number;
+  width: number | null;
+  height: number | null;
+  duration_seconds: number | null;
+  caption: string | null;
+  alt_text: string | null;
+  tags: string[];
+  notes: string | null;
+  status: ChannelAssetStatus;
+  used_at: string | null;
+  buffer_post_id: string | null;
+  published_at: string | null;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChannelAssetSummary {
+  id: ChannelAssetChannel;
+  label: string;
+  available: number;
+  used: number;
+  archived: number;
+  total: number;
+}
+
+export interface ChannelAssetFilters {
+  channel?: ChannelAssetChannel;
+  status?: ChannelAssetStatus;
+  mediaType?: ChannelAssetMediaType;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ChannelAssetPatch {
+  channel?: ChannelAssetChannel;
+  caption?: string | null;
+  altText?: string | null;
+  notes?: string | null;
+  tags?: string[];
+  status?: ChannelAssetStatus;
 }
 
 export interface UTMParameters {

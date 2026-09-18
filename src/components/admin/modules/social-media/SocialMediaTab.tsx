@@ -2,10 +2,10 @@
  * Social Media Tab
  *
  * Organised around the weekly pipeline rather than the calendar:
- * - Assets — what the routines generated and scheduled for each channel
+ * - Assets — finished images and videos per channel, ready to post
+ * - Weekly pipeline — the post candidates the weekly routines generated
  * - Calendar — Buffer's queue
- * - Compose — a manual post into Buffer (uploads and AI content flow in here)
- * - Library — images uploaded for posts, on our own storage
+ * - Compose — a manual post into Buffer (assets and AI content flow in here)
  * - AI Generator — text, image, bundle, repurpose, templates, history, analytics
  * - Channels — the Buffer connections
  *
@@ -32,14 +32,13 @@ import {
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { AssetsTab } from './assets/AssetsTab';
+import { ChannelAssetsTab } from './channel-assets/ChannelAssetsTab';
+import { WeeklyPipelineTab } from './assets/WeeklyPipelineTab';
 import { postingWeekKey } from './assets/assetsModel';
 import { ChannelsPanel } from './ChannelsPanel';
 import { PostCalendar, type CalendarViewMode } from './PostCalendar';
 import { covers, unionRange, visibleWindow } from './calendarModel';
 import { PostComposer } from './PostComposer';
-import { MediaLibraryPanel } from './media/MediaLibraryPanel';
-import { assetToMediaFile } from './composerModel';
 import { AIAnalyticsDashboard } from './components/AIAnalyticsDashboard';
 import { AIArticleRepurposer } from './components/AIArticleRepurposer';
 import { AIBrandTemplates } from './components/AIBrandTemplates';
@@ -47,11 +46,13 @@ import { AIBundleGenerator } from './components/AIBundleGenerator';
 import { AIContentGenerator } from './components/AIContentGenerator';
 import { AIGenerationHistory } from './components/AIGenerationHistory';
 import { AIImageGenerator } from './components/AIImageGenerator';
+import { assetToMediaFile } from './composerModel';
+import { useMarkChannelAssetsUsed } from './hooks/useChannelAssets';
 import { useSocialAnalytics } from './hooks/useSocialAnalytics';
 import { useSocialBatches } from './hooks/useSocialAssets';
 import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
 import { useSocialProfiles } from './hooks/useSocialProfiles';
-import type { ComposeRequest, MediaFile, SocialAIPlatform, SocialMediaAsset } from './types';
+import type { ChannelAsset, ComposeRequest, MediaFile, SocialAIPlatform } from './types';
 
 interface StatCardProps {
   label: string;
@@ -103,6 +104,7 @@ export function SocialMediaTab() {
   const { profiles } = useSocialProfiles();
   const { posts, range, setRange, createPost, isCreating, deletePost, getPostsByStatus } =
     useSocialPosts();
+  const { mutate: markAssetsUsed } = useMarkChannelAssetsUsed();
 
   // The query window follows the calendar: whatever month/week/day is on screen is
   // unioned into the fetched range, so navigating past the default window still
@@ -160,15 +162,42 @@ export function SocialMediaTab() {
   }, []);
 
   const handleCompose = useCallback(
-    async (request: ComposeRequest) => {
+    async (request: ComposeRequest, assetIds: string[]) => {
       const result = await createPost(request);
       if (result && result.created.length > 0) {
+        // The picture has gone out, so take it off the shelf. Without this an
+        // asset stays `available` and the publishing routine would queue it a
+        // second time. Buffer creates one post per channel; the first id is
+        // enough to trace the asset back to what carried it.
+        if (assetIds.length > 0) {
+          markAssetsUsed({ ids: assetIds, bufferPostId: result.created[0]?.postId });
+        }
         clearComposerInitials();
         setActiveTab('calendar');
       }
       return result;
     },
-    [createPost, clearComposerInitials],
+    [createPost, clearComposerInitials, markAssetsUsed],
+  );
+
+  const handleCreatePostFromAsset = useCallback(
+    (asset: ChannelAsset) => {
+      // Everything the asset already knows, carried into the draft so the post
+      // starts written rather than blank: the picture, the caption an agent
+      // wrote for it, and the channel it was made for. All of it stays
+      // editable — this is a starting point, not a commitment.
+      setComposerInitialMedia([assetToMediaFile(asset)]);
+      setComposerInitialContent(asset.caption ?? '');
+      setComposerInitialHashtags(undefined);
+
+      const forChannel = profiles
+        .filter((p) => p.isConnected && p.platform === asset.channel)
+        .map((p) => p.id);
+      if (forChannel.length > 0) setSelectedProfiles(forChannel);
+
+      setActiveTab('composer');
+    },
+    [profiles],
   );
 
   const handleUseTextContent = useCallback(
@@ -191,11 +220,6 @@ export function SocialMediaTab() {
         size: 0,
       },
     ]);
-    setActiveTab('composer');
-  }, []);
-
-  const handleUseLibraryImage = useCallback((asset: SocialMediaAsset) => {
-    setComposerInitialMedia([assetToMediaFile(asset)]);
     setActiveTab('composer');
   }, []);
 
@@ -281,12 +305,9 @@ export function SocialMediaTab() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="assets">Assets</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly pipeline</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="composer">Compose</TabsTrigger>
-          <TabsTrigger value="library" className="flex items-center gap-1.5">
-            <ImageIcon className="h-3.5 w-3.5" />
-            Library
-          </TabsTrigger>
           <TabsTrigger value="ai-generator" className="flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
             AI Generator
@@ -295,7 +316,11 @@ export function SocialMediaTab() {
         </TabsList>
 
         <TabsContent value="assets" className="mt-6">
-          <AssetsTab />
+          <ChannelAssetsTab onCreatePost={handleCreatePostFromAsset} />
+        </TabsContent>
+
+        <TabsContent value="weekly" className="mt-6">
+          <WeeklyPipelineTab />
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">
@@ -326,12 +351,6 @@ export function SocialMediaTab() {
               initialMedia={composerInitialMedia}
               initialHashtags={composerInitialHashtags}
             />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="library" className="mt-6">
-          <div className="max-w-5xl">
-            <MediaLibraryPanel onUseInPost={handleUseLibraryImage} />
           </div>
         </TabsContent>
 

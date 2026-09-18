@@ -48,6 +48,9 @@ export function currentIssueMonth(now: Date = new Date()): string {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+/** Longest title stem a slug carries, before the word-boundary trim. */
+const SLUG_STEM_MAX = 60;
+
 /**
  * URL segment for a newsletter: the issue month, then the title.
  *
@@ -57,12 +60,26 @@ export function currentIssueMonth(now: Date = new Date()): string {
  */
 export function newsletterSlug(title: string, issueMonth: string, taken: string[] = []): string {
   const { year, month } = parseIssueMonth(issueMonth);
-  const stem = (title || '')
+  const words = (title || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
-    .replace(/-+$/g, '');
+    .replace(/^-+|-+$/g, '');
+  // Truncate on a word boundary, not mid-word: this ends up in a permanent,
+  // indexable, shared URL, and `...compass-protect-wh` reads like a mistake.
+  let stem = words;
+  if (stem.length > SLUG_STEM_MAX) {
+    const cut = stem.slice(0, SLUG_STEM_MAX);
+    // When the character just past the limit is the separator, `cut` already
+    // ends on a whole word, and backtracking would throw that word away
+    // (review finding: a 58-character word that fitted exactly was lost).
+    if (words[SLUG_STEM_MAX] === '-') {
+      stem = cut;
+    } else {
+      const lastBoundary = cut.lastIndexOf('-');
+      stem = lastBoundary > 0 ? cut.slice(0, lastBoundary) : cut;
+    }
+  }
+  stem = stem.replace(/-+$/g, '');
   const base = `${year}-${String(month).padStart(2, '0')}-${stem || 'newsletter'}`;
   if (!taken.includes(base)) return base;
   for (let n = 2; n < 100; n++) {
