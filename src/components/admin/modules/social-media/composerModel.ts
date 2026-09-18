@@ -93,6 +93,11 @@ const ASSET_MEDIA_PREFIX = 'asset_';
  * `storagePath` (which means "copy this out of the private AI bucket") is
  * deliberately left unset, and the library path rides along separately so the
  * picker can tell what the draft already carries.
+ *
+ * The type is the asset's own, not a flat `'image'`. A video carried as an
+ * image would be handed to Buffer as an image URL and fail there; typed
+ * honestly, `buildComposeRequest` leaves it out and the caller can see that
+ * Compose has no path for it yet.
  */
 export function assetToMediaFile(asset: ChannelAsset): MediaFile {
   const name = asset.file_name ?? 'Asset';
@@ -100,7 +105,7 @@ export function assetToMediaFile(asset: ChannelAsset): MediaFile {
     id: `${ASSET_MEDIA_PREFIX}${asset.id}`,
     url: asset.url,
     libraryPath: asset.storage_path,
-    type: 'image',
+    type: asset.media_type,
     filename: name,
     size: asset.byte_size,
     alt: asset.alt_text ?? name,

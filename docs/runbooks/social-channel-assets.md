@@ -48,6 +48,23 @@ that took it, exactly as a routine would, so the two paths cannot disagree
 about what is still on the shelf. The picker only offers `available` media for
 the same reason. Nothing is marked when Buffer accepts nothing.
 
+## Posting one by hand
+
+**Create post** on an asset card opens Compose carrying that asset, its caption
+as the fields currently read (an unsaved edit comes across too), and the channel
+it was filed under already selected. All
+three are a starting point, not a commitment — edit the text, add channels,
+attach up to four pictures in total, then publish, queue or schedule as usual.
+Scheduling is the same Compose control it always was; the asset is just already
+in the draft.
+
+The action is refused, with the reason written in the card, in two cases:
+
+| State   | Why                                                                      |
+| ------- | ------------------------------------------------------------------------ |
+| a video | Compose hands Buffer an image URL. Video needs Buffer's own upload path. |
+| `used`  | It has already been published. **Requeue** it first to send it again.    |
+
 ## The endpoint
 
 Base URL: `https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/social-library`
