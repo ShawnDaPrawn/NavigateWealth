@@ -30,6 +30,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog';
@@ -412,7 +413,7 @@ export function PostComposer({
       />
 
       <Dialog open={showSchedule} onOpenChange={setShowSchedule}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Schedule in Buffer</DialogTitle>
             <DialogDescription>
@@ -420,14 +421,18 @@ export function PostComposer({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Calendar
-              mode="single"
-              selected={scheduledDate}
-              onSelect={setScheduledDate}
-              disabled={(date) => date < new Date(new Date().toDateString())}
-              className="rounded-md border"
-            />
-            <div>
+            {/* The calendar sizes itself; centring it stops it sitting against
+                the left edge of a dialog that is wider than the grid. */}
+            <div className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={scheduledDate}
+                onSelect={setScheduledDate}
+                disabled={(date) => date < new Date(new Date().toDateString())}
+                className="rounded-md border"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="compose-time">Time</Label>
               <Input
                 id="compose-time"
@@ -436,10 +441,15 @@ export function PostComposer({
                 onChange={(e) => setScheduledTime(e.target.value)}
               />
             </div>
-            <Button onClick={handleSchedule} className="w-full" disabled={!scheduledDate || busy}>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSchedule(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button onClick={handleSchedule} disabled={!scheduledDate || busy}>
               Schedule
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
