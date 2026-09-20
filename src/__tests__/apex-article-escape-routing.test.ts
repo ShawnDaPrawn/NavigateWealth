@@ -92,3 +92,20 @@ describe('apex host redirects', () => {
     expect(catchAll?.source).toContain('(?!resources/article/)');
   });
 });
+
+describe('vercel.json routing format', () => {
+  it('never carries a legacy "routes" array, which would silently disable redirects', () => {
+    // Vercel treats the legacy `routes` key as mutually exclusive with
+    // `redirects`, `headers` and `rewrites`. When both were present
+    // (2026-09-05 → 2026-09-20) the build succeeded and production ran on
+    // `routes` alone: every apex redirect above was dead configuration.
+    // See docs/INCIDENTS.md (2026-09-20).
+    expect(vercelConfig).not.toHaveProperty('routes');
+  });
+
+  it('keeps the SPA fallback as a rewrite so it composes with the redirects', () => {
+    const rewrites = (vercelConfig as { rewrites?: { source: string; destination: string }[] })
+      .rewrites;
+    expect(rewrites?.some((r) => r.destination === '/index.html')).toBe(true);
+  });
+});

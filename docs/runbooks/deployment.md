@@ -20,6 +20,16 @@ The frontend is built by Vite and deployed from `dist/`. `vercel.json` configure
 - SPA rewrites to `index.html`.
 - `X-Robots-Tag: noindex, nofollow` for app/admin/auth/dashboard-style routes that should not be indexed.
 
+**`vercel.json` must never contain a legacy `routes` array.** `routes` is the
+pre-2020 routing format and Vercel treats it as mutually exclusive with
+`redirects`, `headers`, `rewrites`, `cleanUrls` and `trailingSlash`. From
+2026-09-05 to 2026-09-20 the file carried both, the build did not fail, and
+production silently ran on the `routes` block alone: every `redirects` entry
+(the apex→www canonical redirect, the duplicate-article redirect) and every
+security header in `headers` was dead configuration for those two weeks. See
+`docs/INCIDENTS.md` (2026-09-20). The SPA fallback and the per-path headers now
+live in `rewrites` and `headers`, which compose with `redirects`.
+
 ### The apex host serves articles on purpose
 
 Article notification emails link to `https://navigatewealth.co/resources/article/…`
@@ -43,14 +53,49 @@ to redirect. It does _not_ work if the apex is configured as a Vercel
 level — those happen before the deployment is reached, so the exclusion never
 runs and the loop returns.
 
+**As of 2026-09-20 neither half of that is in place**, and it is the reason
+Search Console reports the home page variants as "Page with redirect" from a
+redirect the repository does not control:
+
+- The `navigate-wealth` Vercel project serves only `www.navigatewealth.co`
+  (plus the `*.vercel.app` alias). `navigatewealth.co` is registered on the
+  Vercel team as an external domain but is **not attached to the project**.
+- DNS for `navigatewealth.co` is hosted at the registrar
+  (`ns1–ns4.digisource.net.za`), not Vercel. `www` is a CNAME into
+  `vercel-dns.com` and works. The apex `A` record points at `204.69.207.1`, a
+  registrar web-forwarding host, so every apex request is answered by the
+  registrar's forwarder — with whatever status code and target it chooses —
+  and never reaches Vercel or `vercel.json`.
+
+To make the apex behave as designed, both steps are needed and both are
+dashboard/registrar changes, not code:
+
+1. Vercel → Project `navigate-wealth` → **Settings → Domains → Add**
+   `navigatewealth.co`. When Vercel asks, choose **"Add navigatewealth.co"**
+   (serve it), _not_ "Redirect to www.navigatewealth.co". Vercel then shows the
+   `A` record it expects.
+2. At the registrar's DNS panel for `navigatewealth.co`, delete the web
+   forwarding rule and replace the apex `A` record with the address Vercel shows
+   (`76.76.21.21` at the time of writing). Leave the `www` CNAME alone.
+
+Once DNS has propagated, Vercel issues the apex certificate automatically and
+`vercel.json` takes over: `/` and every non-article path 301 to `www`, article
+paths are served on the apex.
+
 To check the apex is set up correctly:
 
 ```bash
+# The apex must resolve to Vercel, not to the registrar's forwarder.
+dig +short navigatewealth.co A
+
 # Article path: must be 200 on the apex, with NO redirect to www.
 curl -sSI "https://navigatewealth.co/resources/article/<a-published-slug>" | head -1
 
-# Everything else: must still be a 301 to the canonical www host.
-curl -sSI "https://navigatewealth.co/about" | grep -i "^location:"
+# Everything else: must be a single 301 straight to the canonical www host.
+curl -sSI "https://navigatewealth.co/about" | grep -iE "^(HTTP|location:)"
+
+# The redirects block is live at all (this one is served by Vercel today):
+curl -sSI "https://www.navigatewealth.co/resources/article/holiday-scams-fake-deals-and-banking-fraud-how-to-protect-yourself-this-easter" | grep -iE "^(HTTP|location:)"
 ```
 
 Article pages served from the apex carry a canonical tag pointing at the `www`
