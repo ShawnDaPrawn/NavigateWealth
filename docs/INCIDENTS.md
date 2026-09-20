@@ -14,6 +14,64 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-09-20 - Search Console "Page With Redirect" On The Home Page; vercel.json Redirects Were Never Live
+
+- **Symptom:** Search Console listed `http://navigatewealth.co/`,
+  `https://navigatewealth.co/`, `http://www.navigatewealth.co/` and several
+  apex article and service URLs under _Page with redirect_, and the owner read
+  it as the home page not being indexed.
+- **What was found.** Two independent faults.
+  (1) `vercel.json` had carried a legacy `routes` array _and_ the modern
+  `redirects` / `headers` arrays since 2026-09-05 (#285). Vercel treats
+  `routes` as mutually exclusive with the modern keys; the build did not fail,
+  it just deployed the `routes` block and dropped the rest. Verified on the
+  live site: the `…-this-easter` article URL that `redirects` sends to its
+  canonical twin returned `200`, and none of the configured security headers
+  (`X-Frame-Options`, CSP, `Permissions-Policy`) were present, while the
+  `X-Robots-Tag` headers that lived in `routes` were. The apex→www redirect
+  with the article carve-out from #319 had therefore never executed either.
+  (2) The apex domain never reaches Vercel at all. `navigatewealth.co` is not
+  attached to the `navigate-wealth` project (only `www` is), and its DNS is
+  hosted at the registrar with the apex `A` record pointing at a registrar
+  web-forwarding host (`204.69.207.1`), not at Vercel. Every apex request is
+  answered by that forwarder, so the redirect Google records for the apex is
+  one the repository does not configure, with a status code it does not choose.
+- **Why it hid:** The `www` host, which the sitemap and every canonical tag
+  name, was serving correctly with a `200` and the right canonical, so nothing
+  user-visible broke. The `routes` block still produced the noindex headers
+  and the SPA fallback, so the routing looked alive. The apex routing test
+  (`src/__tests__/apex-article-escape-routing.test.ts`) reads the `redirects`
+  array and passed, because it proves what the config _says_, not what Vercel
+  deploys; the runbook's curl check that would have caught both faults was
+  never run after #319 merged.
+- **Fix:** `vercel.json` rewritten without `routes`: the SPA fallback is a
+  `rewrites` entry, the asset caching and noindex headers are `headers`
+  entries, and `redirects` is unchanged, so all three now compose. The test
+  suite pins that no `routes` key returns. Because the `headers` block goes
+  live for the first time with this change, it was re-read against the app:
+  `Permissions-Policy` had `microphone=()`, which would have disabled the admin
+  notes voice recorder (`useVoiceRecorder` calls `getUserMedia`); it is now
+  `microphone=(self)`. The enforced CSP had `object-src 'none'`, which would
+  have blanked the public newsletter page: `NewsletterDetailPage` embeds the
+  issue with a plain `<object>` whose `data` is the Supabase storage public
+  URL. It is now `object-src 'self' https://*.supabase.co`, in the enforced
+  and the report-only policy alike. Nothing uses camera, geolocation or the
+  Payment Request API, and no `<form action>` or `<embed>` exists. HSTS was
+  declared as `includeSubDomains; preload`; once the apex is served by Vercel
+  that would pin every `navigatewealth.co` subdomain to HTTPS in visitors'
+  browsers, and the registrar-hosted DNS may still carry HTTP-only hosts
+  (webmail, forwarding). It ships as `max-age=31536000` only; add
+  `includeSubDomains` deliberately after auditing the zone, and `preload`
+  only when submitting to the HSTS preload list. The apex attachment and the DNS
+  `A` record are dashboard and registrar changes documented in
+  `docs/runbooks/deployment.md`; the Vercel token available to agents cannot
+  modify project domains, so the owner does those two steps.
+- **Lesson:** A config key that Vercel _ignores_ is worse than one it rejects,
+  so any change to `vercel.json` is verified against the deployed host with
+  `curl -I`, never by reading the file. And "Page with redirect" on a
+  non-canonical host variant is only correct when _we_ serve that redirect:
+  check `dig` before assuming the platform is the thing answering.
+
 ### 2026-09-14 - The Rest Of The Idle Polling, Found By Auditing After The Disk IO Incident
 
 - **Symptom:** None. This was a deliberate sweep of the other resource
