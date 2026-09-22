@@ -23,6 +23,8 @@ import {
   UpdateTemplateSchema,
   EmailFooterSettingsSchema,
   CreateCampaignSchema,
+  UnsubscribeRequestSchema,
+  ResubscribeRequestSchema,
 } from './communication-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import type {
@@ -782,6 +784,102 @@ app.delete(
     }).catch(() => {});
 
     return c.json({ success: true });
+  }),
+);
+
+// ============================================================================
+// UNSUBSCRIBES
+// ============================================================================
+
+/**
+ * GET /communication/unsubscribed
+ * List contacts manually unsubscribed from communication campaigns
+ */
+app.get(
+  '/unsubscribed',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const contacts = await service.listUnsubscribed();
+    return c.json({ contacts });
+  }),
+);
+
+/**
+ * POST /communication/unsubscribe
+ * Manually unsubscribe a contact from communication campaigns
+ */
+app.post(
+  '/unsubscribe',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const body = await c.req.json();
+    const parsed = UnsubscribeRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    const result = await service.unsubscribeContact({
+      email: parsed.data.email,
+      clientId: parsed.data.clientId,
+      name: parsed.data.name,
+      adminUserId,
+    });
+
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
+      category: 'communication',
+      action: 'contact_unsubscribed',
+      summary: result.alreadyUnsubscribed
+        ? 'Communication unsubscribe already in place'
+        : 'Contact unsubscribed from communication',
+      severity: 'warning',
+      entityType: 'communication_unsubscribe',
+      entityId: parsed.data.clientId,
+    }).catch(() => {});
+
+    return c.json({
+      success: true,
+      alreadyUnsubscribed: result.alreadyUnsubscribed,
+      contact: result.contact,
+    });
+  }),
+);
+
+/**
+ * POST /communication/resubscribe
+ * Restore a previously unsubscribed contact to the campaign audience
+ */
+app.post(
+  '/resubscribe',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const adminUserId = c.get('userId') as string;
+    const body = await c.req.json();
+    const parsed = ResubscribeRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    const result = await service.resubscribeContact({
+      email: parsed.data.email,
+      clientId: parsed.data.clientId,
+      adminUserId,
+    });
+
+    AdminAuditService.record({
+      actorId: adminUserId,
+      actorRole: (c.get('userRole') as string | undefined) || 'admin',
+      category: 'communication',
+      action: 'contact_resubscribed',
+      summary: 'Contact re-subscribed to communication',
+      severity: 'info',
+      entityType: 'communication_unsubscribe',
+      entityId: parsed.data.clientId,
+    }).catch(() => {});
+
+    return c.json({ success: true, alreadySubscribed: result.alreadySubscribed });
   }),
 );
 

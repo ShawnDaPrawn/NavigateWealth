@@ -354,6 +354,14 @@ export interface SendCampaignResponse {
   status?: CommunicationStatus;
 }
 
+export interface UnsubscribedContact {
+  email: string;
+  clientId?: string | null;
+  name?: string;
+  unsubscribedAt: string;
+  unsubscribedBy: 'admin';
+}
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];

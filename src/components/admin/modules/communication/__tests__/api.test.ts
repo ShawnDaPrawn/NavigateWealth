@@ -74,6 +74,48 @@ describe('communicationApi clients', () => {
   });
 });
 
+describe('communicationApi unsubscribes', () => {
+  it('getUnsubscribed returns contacts from API', async () => {
+    const contacts = [{ email: 'alex@example.com', unsubscribedAt: '2026-08-31T00:00:00Z' }];
+    mockApiGet.mockResolvedValue({ contacts });
+    const result = await communicationApi.getUnsubscribed();
+    expect(mockApiGet).toHaveBeenCalledWith('communication/unsubscribed');
+    expect(result).toEqual(contacts);
+  });
+
+  it('getUnsubscribed returns an empty list when contacts are absent', async () => {
+    mockApiGet.mockResolvedValue({});
+    const result = await communicationApi.getUnsubscribed();
+    expect(result).toEqual([]);
+  });
+
+  it('unsubscribeContact posts email and client id', async () => {
+    mockApiPost.mockResolvedValue({ success: true, alreadyUnsubscribed: false });
+    await communicationApi.unsubscribeContact({
+      email: 'alex@example.com',
+      clientId: 'client-001',
+      name: 'Alex Example',
+    });
+    expect(mockApiPost).toHaveBeenCalledWith('communication/unsubscribe', {
+      email: 'alex@example.com',
+      clientId: 'client-001',
+      name: 'Alex Example',
+    });
+  });
+
+  it('resubscribeContact posts email and client id', async () => {
+    mockApiPost.mockResolvedValue({ success: true, alreadySubscribed: false });
+    await communicationApi.resubscribeContact({
+      email: 'alex@example.com',
+      clientId: 'client-001',
+    });
+    expect(mockApiPost).toHaveBeenCalledWith('communication/resubscribe', {
+      email: 'alex@example.com',
+      clientId: 'client-001',
+    });
+  });
+});
+
 describe('communicationApi groups', () => {
   it('getGroups returns groups with default pagination', async () => {
     mockApiGet.mockResolvedValue({ data: [MOCK_GROUP] });
