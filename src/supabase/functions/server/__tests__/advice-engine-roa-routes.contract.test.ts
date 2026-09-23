@@ -126,6 +126,18 @@ vi.mock('../stderr-logger.ts', () => ({
 vi.mock('../quality-issues-runtime-server.ts', () => ({ scheduleRuntimeServerIssue: vi.fn() }));
 
 /**
+ * Who each client's assigned adviser is. The client-context and files routes
+ * scope an ADVISER to assigned clients through `client-access.ts`, which asks
+ * this resolver; everything else in client-access runs for real.
+ */
+const assignedAdviser = vi.hoisted(() => new Map<string, string>());
+vi.mock('../fna-intake-adviser-resolver.ts', () => ({
+  resolveClientAdviserUserId: vi.fn(
+    async (clientId: string) => assignedAdviser.get(clientId) ?? null,
+  ),
+}));
+
+/**
  * Role-aware auth. Driven by headers so a single mount can be exercised as any
  * role — the point of the file. A header-only mock that always returned one
  * role would make every authz assertion below vacuous.
@@ -688,16 +700,44 @@ describe('canAccessRoADraft is enforced at every call site, not just one', () =>
 });
 
 describe('client context and files', () => {
-  it('GET /roa/client/:clientId/context builds context for an advice role', async () => {
-    const res = await req(`/roa/client/${CLIENT_ID}/context`, { as: 'adviser' });
+  beforeEach(() => {
+    assignedAdviser.clear();
+    assignedAdviser.set(CLIENT_ID, 'adviser-1');
+  });
+
+  it('GET /roa/client/:clientId/context builds context for the assigned adviser', async () => {
+    const res = await req(`/roa/client/${CLIENT_ID}/context`, { as: 'adviser', user: 'adviser-1' });
     expect(res.status).toBe(200);
     expect(svc.buildClientContext).toHaveBeenCalled();
   });
 
-  it('GET /roa/client/:clientId/files lists files for an advice role', async () => {
-    const res = await req(`/roa/client/${CLIENT_ID}/files`, { as: 'adviser' });
+  it('GET /roa/client/:clientId/files lists files for the assigned adviser', async () => {
+    const res = await req(`/roa/client/${CLIENT_ID}/files`, { as: 'adviser', user: 'adviser-1' });
     expect(res.status).toBe(200);
     expect(svc.listClientFiles).toHaveBeenCalledWith(CLIENT_ID);
+  });
+
+  it.each(['context', 'files'])(
+    'refuses an adviser the %s of a client who is not theirs',
+    async (leaf) => {
+      // The context is the client's whole financial profile — ID and tax
+      // numbers, income, assets, policies. Any adviser used to be able to pull
+      // it for any client id.
+      svc.buildClientContext.mockClear();
+      svc.listClientFiles.mockClear();
+      const res = await req(`/roa/client/${CLIENT_ID}/${leaf}`, {
+        as: 'adviser',
+        user: 'adviser-2',
+      });
+      expect(res.status).toBe(403);
+      expect(svc.buildClientContext).not.toHaveBeenCalled();
+      expect(svc.listClientFiles).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['admin', 'compliance'])('keeps cross-client access for %s', async (role) => {
+    const res = await req(`/roa/client/${CLIENT_ID}/context`, { as: role, user: 'staff-9' });
+    expect(res.status).toBe(200);
   });
 });
 

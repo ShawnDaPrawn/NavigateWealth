@@ -159,36 +159,15 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
   try {
     const clientId = c.req.param('clientId')!;
 
-    // Optional authentication - allow both authenticated clients and anon key access
-    const authHeader = c.req.header('Authorization');
-    if (authHeader) {
-      try {
-        const user = await authenticateUser(authHeader);
-        // Check authorization: admins can access all data, regular users only their own
-        const isAdmin =
-          user.role === 'admin' ||
-          user.role === 'super_admin' ||
-          user.role === 'super-admin' ||
-          user.id === 'admin';
-        const isOwnData = user.id === clientId;
-
-        if (!isAdmin && !isOwnData) {
-          log.warn(
-            `⚠️ User ${user.id} (role: ${user.role}) attempting to access Investment INA for client ${clientId}`,
-          );
-          return c.json({ error: 'Unauthorized access to client data' }, 403);
-        }
-      } catch (_authError) {
-        // WORKAROUND: Auth bypass for backward compatibility with client portal
-        // Problem: Client portal accesses published INA data using the anon key without a user session.
-        // Why chosen: Removing this would break client-facing INA display until portal auth is refactored.
-        // Proper fix: Require authentication on all INA reads; update client portal to pass user session token.
-        // Revisit: When client portal auth is unified (tracked in Tier B backlog).
-        log.info(
-          'Authentication failed, allowing unauthenticated access to published Investment INA',
-        );
-      }
-    }
+    // Authenticated, and scoped to the client — the same gate as the retirement
+    // and tax equivalents. This used to be OPTIONAL: no Authorization header
+    // skipped every check, and an invalid token was caught and waved through
+    // ("WORKAROUND: Auth bypass for backward compatibility with client
+    // portal"), so anyone holding a client id could read that client's
+    // published Investment INA without signing in. Every SPA caller already goes
+    // through the shared API client, which sends the session token.
+    const user = await authenticateUser(c.req.header('Authorization'));
+    await assertClientAccess(user, clientId, 'investment-ina:latest-published');
 
     const sessions = await kv.getByPrefix(`investment-ina:client:${clientId}:`);
 

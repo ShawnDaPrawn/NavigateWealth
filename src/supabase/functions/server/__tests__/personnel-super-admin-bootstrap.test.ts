@@ -13,7 +13,7 @@
  *
  * Run: npx vitest run src/supabase/functions/server/__tests__/personnel-super-admin-bootstrap.test.ts
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const PREFIX = 'personnel:profile:';
 let store = new Map<string, unknown>();
@@ -41,7 +41,8 @@ vi.mock('../email-service.tsx', () => ({ sendEmail: vi.fn(async () => true) }));
 import { PersonnelService } from '../client-management-personnel-service.ts';
 
 const PRIMARY = 'shawn@navigatewealth.co';
-const RECOVERY = 'shawn.africantreasures@gmail.com';
+/** A recovery super-admin, allowlisted the supported way: the SUPER_ADMIN_EMAILS secret. */
+const RECOVERY = 'recovery-admin@example.com';
 
 /** Seed a profile as if that account had already been bootstrapped. */
 function seedProfile(id: string, email: string) {
@@ -61,6 +62,13 @@ const profileEmails = () =>
 
 beforeEach(() => {
   store = new Map();
+  vi.stubGlobal('Deno', {
+    env: { get: (k: string) => (k === 'SUPER_ADMIN_EMAILS' ? RECOVERY : undefined) },
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('super-admin auto-bootstrap', () => {

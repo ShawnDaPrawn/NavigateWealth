@@ -84,6 +84,12 @@ describe('secret-key denylist', () => {
       'api_credentials:sendgrid',
       'integration_secrets:momentum',
       'provider_portal_credentials:discovery',
+      // The names the credentials are really stored under.
+      'portal-credential:allan-gray:allan-gray-env',
+      'linkedin:token:admin-1',
+      'system:publications:cron_auth_token',
+      '2fa:user-1:code',
+      'esign:apikey:key-1',
     ]) {
       const response = await call(key);
       expect(response.status, `expected ${key} to be refused`).toBe(403);

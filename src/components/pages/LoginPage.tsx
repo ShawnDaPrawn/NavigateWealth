@@ -12,6 +12,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { TwoFactorModal } from '../auth/TwoFactorModal';
+import { safeInternalPath } from '../../utils/auth/safeRedirect';
 import { projectId } from '../../utils/supabase/info';
 import { LOGIN_BRAND_FEATURES } from './auth/authConstants';
 import { AuthBrandPanel } from './auth/AuthBrandPanel';
@@ -46,12 +47,9 @@ export function LoginPage() {
   // Read returnUrl from query parameters (set by session-expiry redirect)
   const returnUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    const url = params.get('returnUrl');
-    // Validate: only allow relative paths to prevent open redirect attacks
-    if (url && url.startsWith('/') && !url.startsWith('//')) {
-      return url;
-    }
-    return null;
+    // Same-origin paths only. A prefix check let `/\evil.example` through,
+    // which the browser resolves to another site — see safeInternalPath.
+    return safeInternalPath(params.get('returnUrl'), window.location.origin);
   }, []);
 
   // Handle redirect when user becomes authenticated
@@ -159,18 +157,15 @@ export function LoginPage() {
             }
 
             if (securityData.success && securityData.status?.twoFactorEnabled) {
-              // ── 3-hour grace period ────────────────────────────────
-              // If the user verified 2FA within the last 3 hours, skip
-              // the challenge to avoid friction on short-lived sessions.
-              const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
-              const last2fa = securityData.status?.last2faVerifiedAt;
-              if (last2fa) {
-                const elapsed = Date.now() - new Date(last2fa).getTime();
-                if (elapsed < THREE_HOURS_MS) {
-                  // Grace period active — allow login without 2FA
-                  setIsSubmitting(false);
-                  return; // useEffect handles redirect
-                }
+              // Skip the challenge only if THIS session has already passed it.
+              // The server records verification per sign-in and refuses every
+              // other API call until this session verifies, so skipping on the
+              // account-wide `last2faVerifiedAt` (as this used to) would leave
+              // a fresh sign-in stranded — and was the gap that let a second
+              // sign-in with a stolen password ride on the owner's code.
+              if (securityData.status?.sessionTwoFactorVerified === true) {
+                setIsSubmitting(false);
+                return; // useEffect handles redirect
               }
 
               // Send 2FA code
@@ -182,7 +177,7 @@ export function LoginPage() {
                     Authorization: `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify({ email: email }),
+                  body: JSON.stringify({}),
                 },
               );
 
@@ -505,7 +500,7 @@ export function LoginPage() {
                 Authorization: `Bearer ${tempAccessToken}`,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ email: tempUserEmail }),
+              body: JSON.stringify({}),
             },
           );
           const data = await response.json();

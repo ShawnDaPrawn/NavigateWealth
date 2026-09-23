@@ -11,7 +11,11 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { logger } from './stderr-logger.ts';
 import { resolveTrustedRole } from './constants.ts';
 import * as kv from './kv_store.tsx';
-import { readTokenIssuedAt } from './jwt-claims.ts';
+import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
+import {
+  TWO_FACTOR_GRACE_MS,
+  sessionTwoFactorVerifiedAt,
+} from './repositories/two-factor-session-repository.ts';
 
 declare module 'npm:hono' {
   interface ContextVariableMap {
@@ -41,8 +45,6 @@ export class AuthError extends Error {
     this.name = 'AuthError';
   }
 }
-
-const TWO_FACTOR_GRACE_MS = 3 * 60 * 60 * 1000;
 
 /**
  * The ONE account-security policy: reject deleted, suspended, stale-2FA and
@@ -86,6 +88,16 @@ const TWO_FACTOR_GRACE_MS = 3 * 60 * 60 * 1000;
  * password change anyone performs. It is not a licence to omit it — if you are
  * holding a token, pass `readTokenIssuedAt(token)`.
  *
+ * TWO-FACTOR IS CHECKED PER SIGN-IN (`sessionId`)
+ * -----------------------------------------------
+ * For an account with 2FA on, THIS session must have passed 2FA within the
+ * grace window. It used to be enough that the ACCOUNT had — one
+ * `last2faVerifiedAt` on `security:{userId}` — so a second sign-in with a
+ * stolen password inherited the owner's verification and was never asked for
+ * a code. `sessionId` is GoTrue's `session_id` claim (`readTokenSessionId`).
+ * Unlike `iat`, a missing one fails CLOSED for 2FA accounts: failing open here
+ * would be the bypass this parameter exists to remove.
+ *
  * Naming the two role guards adjacently in prose is deliberately avoided here:
  * `auth-middleware-cost.test.ts` greps this source for the redundant
  * `requireAuth`-then-role-guard pairing, and a comment containing that literal
@@ -94,6 +106,7 @@ const TWO_FACTOR_GRACE_MS = 3 * 60 * 60 * 1000;
 export async function enforceAccountSecurity(
   userId: string,
   issuedAtSeconds?: number | null,
+  sessionId?: string | null,
 ): Promise<void> {
   let status: Record<string, unknown> | null;
   try {
@@ -135,11 +148,20 @@ export async function enforceAccountSecurity(
   }
 
   if (status.twoFactorEnabled === true) {
-    const verifiedAt =
-      typeof status.last2faVerifiedAt === 'string'
-        ? new Date(status.last2faVerifiedAt).getTime()
-        : Number.NaN;
-    if (!Number.isFinite(verifiedAt) || Date.now() - verifiedAt >= TWO_FACTOR_GRACE_MS) {
+    let verifiedAt: number | null = null;
+    if (typeof sessionId === 'string' && sessionId) {
+      try {
+        verifiedAt = await sessionTwoFactorVerifiedAt(userId, sessionId);
+      } catch (error) {
+        logger.error('Two-factor session lookup failed', error);
+        throw new AuthError(
+          'Security status is temporarily unavailable',
+          503,
+          'SECURITY_STATE_UNAVAILABLE',
+        );
+      }
+    }
+    if (verifiedAt === null || Date.now() - verifiedAt >= TWO_FACTOR_GRACE_MS) {
       throw new AuthError('Two-factor verification required', 403, 'TWO_FACTOR_REQUIRED');
     }
   }
@@ -167,7 +189,7 @@ export async function getAuthContext(c: Context) {
     throw new AuthError('Invalid or expired session', 401, 'AUTH_INVALID');
   }
 
-  await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
+  await enforceAccountSecurity(user.id, readTokenIssuedAt(token), readTokenSessionId(token));
 
   // Resolve role from trusted sources only (super-admin allowlist,
   // app_metadata, NW_ADMIN_EMAILS) — privileged values in client-editable
@@ -223,7 +245,7 @@ async function resolveAuthUser(
 
   if (enforceSecurityState) {
     try {
-      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token), readTokenSessionId(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(

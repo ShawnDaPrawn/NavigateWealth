@@ -34,11 +34,7 @@ vi.mock('../../api/client', () => ({
 
 import {
   validateSignupData,
-  validateLoginAttempt,
-  logLoginSuccess,
-  logLoginFailure,
   logLogout,
-  logPasswordResetRequest,
   logPasswordChange,
   securityService,
 } from '../securityService';
@@ -103,69 +99,22 @@ describe('validateSignupData', () => {
   });
 });
 
-describe('validateLoginAttempt', () => {
-  it('allows the attempt on a 200', async () => {
-    fetchResolving({});
-    expect(await validateLoginAttempt('a@b.co')).toEqual({ allowed: true });
-  });
-
-  it('blocks with reset time on a 429', async () => {
-    fetchResolving(
-      { blocked: true, error: 'too many', resetAt: '2026-01-01T00:00:00.000Z' },
-      { ok: false, status: 429 },
-    );
-    const res = await validateLoginAttempt('a@b.co');
-    expect(res.allowed).toBe(false);
-    expect(res.blocked).toBe(true);
-    expect(res.resetAt).toBeInstanceOf(Date);
-  });
-
-  it('fails closed on a non-429 error response', async () => {
-    fetchResolving({}, { ok: false, status: 500 });
-    expect(await validateLoginAttempt('a@b.co')).toMatchObject({ allowed: false });
-  });
-
-  it('fails closed on a network error', async () => {
-    fetchRejecting(new Error('Failed to fetch'));
-    expect(await validateLoginAttempt('a@b.co')).toMatchObject({ allowed: false });
-  });
-});
-
 describe('audit loggers (fire-and-forget)', () => {
-  it('logLoginSuccess posts email + userId and never throws on failure', async () => {
+  it('logLogout posts to /logout with the session token, never an identity in the body', async () => {
     fetchResolving({});
-    await logLoginSuccess('a@b.co', 'uid');
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/login-success'),
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ email: 'a@b.co', userId: 'uid' }),
-      }),
-    );
-    fetchRejecting(new Error('down'));
-    await expect(logLoginSuccess('a@b.co', 'uid')).resolves.toBeUndefined();
-  });
-
-  it('logLoginFailure posts the reason and swallows errors', async () => {
-    fetchResolving({});
-    await logLoginFailure('a@b.co', 'bad password');
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/login-failure'),
-      expect.objectContaining({
-        body: JSON.stringify({ email: 'a@b.co', reason: 'bad password' }),
-      }),
-    );
-    fetchRejecting(new Error('down'));
-    await expect(logLoginFailure('a@b.co', 'x')).resolves.toBeUndefined();
-  });
-
-  it('logLogout posts to /logout', async () => {
-    fetchResolving({});
-    await logLogout('a@b.co', 'uid');
+    await logLogout('user-token');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/logout'),
-      expect.objectContaining({ body: JSON.stringify({ email: 'a@b.co', userId: 'uid' }) }),
+      expect.objectContaining({ method: 'POST' }),
     );
+    // The server takes the account from the token. Naming an email or user id
+    // in the body is what let anyone forge sign-out entries for a stranger.
+    const [, init] = vi.mocked(global.fetch).mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer user-token');
+    expect(JSON.parse(String(init.body))).toEqual({});
+
+    fetchRejecting(new Error('down'));
+    await expect(logLogout('user-token')).resolves.toBeUndefined();
   });
 
   it('logPasswordChange posts to /password-change with the session token and swallows errors', async () => {
@@ -194,16 +143,6 @@ describe('audit loggers (fire-and-forget)', () => {
     fetchResolving({});
     await expect(logPasswordChange('a@b.co', 'uid')).resolves.toBeUndefined();
     expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('logPasswordResetRequest always returns a generic success message (anti-enumeration)', async () => {
-    fetchResolving({ message: 'custom' });
-    expect(await logPasswordResetRequest('a@b.co')).toEqual({ success: true, message: 'custom' });
-
-    fetchRejecting(new Error('down'));
-    const res = await logPasswordResetRequest('a@b.co');
-    expect(res.success).toBe(true);
-    expect(res.message).toMatch(/if an account exists/i);
   });
 });
 

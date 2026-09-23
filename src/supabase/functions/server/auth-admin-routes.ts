@@ -1,253 +1,72 @@
 /**
- * auth-admin-routes.ts — super-admin / dev-only auth utilities (Phase 7 max-lines).
+ * auth-admin-routes.ts — super-admin auth utilities (Phase 7 max-lines).
  * ============================================================================
  *
- * create-superadmin, clear-rate-limit, ensure-dev-user — extracted verbatim from
- * auth-routes.ts; mounted via `authRoutes.route('/', adminAuthRoutes)`. Defines
- * its own lazy Supabase client + client-IP helper (the repo's per-module
- * pattern). Behaviour-preserving; deno check guards the move.
+ * Mounted via `authRoutes.route('/', adminAuthRoutes)`.
+ *
+ * WHAT USED TO LIVE HERE, AND WHY IT IS GONE
+ * ------------------------------------------
+ * Three routes — `create-superadmin`, `ensure-dev-user` and `clear-rate-limit` —
+ * were gated by nothing but the static `SUPER_ADMIN_PASSWORD` secret in the
+ * request body. No session, no rate limit on guesses, no audit record.
+ * `ensure-dev-user` reset the password of ANY existing account, the owner's
+ * included, and `create-superadmin` minted a new super-admin. Whoever held (or
+ * guessed) one string could take over the platform in a single request and
+ * leave no trace in the admin audit trail. Neither had a caller: the owner
+ * account exists, and the dev helper was never meant for production.
+ *
+ * `clear-rate-limit` is the one with a real support use — unlocking a client
+ * who locked themselves out — so it stays, behind a super-admin SESSION rather
+ * than a shared secret, and every use is written to the admin audit trail.
+ * The shared secret still guards server-to-server cron calls (cron-auth.ts);
+ * it just no longer opens account-level doors.
  */
 import { Hono } from 'npm:hono';
-import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import type { Context } from 'npm:hono';
-import * as kv from './kv_store.tsx';
-import { clearRateLimit } from './rateLimiter.ts';
-import { validatePassword, validateEmail } from './passwordValidator.ts';
-import { constantTimeEqual } from './crypto-utils.ts';
-import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
+import { clearRateLimit, normalizeRateLimitEmail } from './rateLimiter.ts';
+import { requireSuperAdmin } from './auth-mw.ts';
 import { validateBody } from './validate.ts';
-import {
-  CreateSuperAdminSchema,
-  ClearRateLimitSchema,
-  EnsureDevUserSchema,
-} from './auth-validation.ts';
-
-const getSupabase = () =>
-  createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-
-function getClientIP(c: Context): string {
-  return extractClientIp((headerName) => c.req.header(headerName)) || 'unknown';
-}
+import { ClearRateLimitSchema } from './auth-validation.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
+import { createModuleLogger } from './stderr-logger.ts';
 
 const adminAuthRoutes = new Hono();
-
-adminAuthRoutes.post('/create-superadmin', validateBody(CreateSuperAdminSchema), async (c) => {
-  try {
-    const { secretKey, email, password } = await c.req.json();
-
-    // Verify secret key matches environment variable
-    const expectedSecretKey = Deno.env.get('SUPER_ADMIN_PASSWORD');
-    if (!expectedSecretKey) {
-      return c.json({ error: 'Server configuration error' }, 500);
-    }
-
-    // Constant-time, matching /ensure-dev-user below. A plain `!==` on strings
-    // short-circuits at the first differing byte, so the comparison time
-    // correlates with how much of the secret the caller already guessed. The
-    // correct helper was already imported in this file and used by one of the
-    // three routes guarding this same secret — the other two had drifted.
-    if (!constantTimeEqual(String(secretKey || ''), expectedSecretKey)) {
-      return c.json({ error: 'Invalid secret key' }, 403);
-    }
-
-    // Validate email and password
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      return c.json({ error: emailValidation.error }, 400);
-    }
-
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
-      return c.json(
-        {
-          error: 'Password does not meet security requirements',
-          errors: passwordValidation.errors,
-        },
-        400,
-      );
-    }
-
-    // Check if user already exists
-    const { data: existingUsers } = await getSupabase().auth.admin.listUsers();
-    const userExists = existingUsers?.users?.some((u) => u.email === email);
-
-    if (userExists) {
-      return c.json({ error: 'User already exists' }, 409);
-    }
-
-    // Create the super admin user
-    const { data, error } = await getSupabase().auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        firstName: 'Shawn',
-        surname: 'Admin',
-        role: 'super_admin', // Changed from 'admin' to 'super_admin'
-        display_name: 'Shawn Admin',
-        first_name: 'Shawn',
-      },
-      // Authoritative role source — auth middleware only trusts app_metadata
-      // (user_metadata is client-editable). See resolveTrustedRole.
-      app_metadata: { role: 'super_admin' },
-    });
-
-    if (error) {
-      return c.json({ error: error.message }, 400);
-    }
-
-    // Store admin profile in KV store
-    await kv.set(`user_profile:${data.user.id}:personal_info`, {
-      firstName: 'Shawn',
-      surname: 'Admin',
-      role: 'super_admin', // Changed from 'admin' to 'super_admin'
-      email,
-      createdAt: new Date().toISOString(),
-    });
-
-    return c.json(
-      {
-        success: true,
-        message: 'Super admin created successfully',
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-        },
-      },
-      201,
-    );
-  } catch (_error) {
-    return c.json({ error: 'Internal server error' }, 500);
-  }
-});
+const log = createModuleLogger('auth-admin-routes');
 
 /**
  * POST /auth/clear-rate-limit
- * Clear rate limits for a specific email (admin utility)
- * Requires secret key for access
+ * Lift the login lockout on one account (super-admin support utility).
+ *
+ * Clears the per-ACCOUNT bucket only. The per-IP bucket belongs to whoever is
+ * calling from that address, and the super-admin's own IP is not the locked-out
+ * client's, so clearing it here only ever handed the caller extra guesses.
  */
-adminAuthRoutes.post('/clear-rate-limit', validateBody(ClearRateLimitSchema), async (c) => {
-  try {
-    const { email, secretKey } = await c.req.json();
+adminAuthRoutes.post(
+  '/clear-rate-limit',
+  requireSuperAdmin,
+  validateBody(ClearRateLimitSchema),
+  async (c) => {
+    try {
+      const { email } = await c.req.json();
+      const accountKey = normalizeRateLimitEmail(email);
 
-    // Verify secret key matches environment variable
-    const expectedSecretKey = Deno.env.get('SUPER_ADMIN_PASSWORD');
-    if (!expectedSecretKey) {
-      return c.json({ error: 'Server configuration error' }, 500);
-    }
+      await clearRateLimit(accountKey, 'login');
 
-    // Constant-time, matching /ensure-dev-user below. A plain `!==` on strings
-    // short-circuits at the first differing byte, so the comparison time
-    // correlates with how much of the secret the caller already guessed. The
-    // correct helper was already imported in this file and used by one of the
-    // three routes guarding this same secret — the other two had drifted.
-    if (!constantTimeEqual(String(secretKey || ''), expectedSecretKey)) {
-      return c.json({ error: 'Invalid secret key' }, 403);
-    }
-
-    // Clear rate limits for this email
-    await clearRateLimit(email, 'login');
-
-    // Get IP address if available and clear that too
-    const ip = getClientIP(c);
-    if (ip && ip !== 'unknown') {
-      await clearRateLimit(ip, 'login');
-    }
-
-    return c.json(
-      {
-        success: true,
-        message: 'Rate limits cleared successfully',
-        email,
-      },
-      200,
-    );
-  } catch (_error) {
-    return c.json({ error: 'Internal server error' }, 500);
-  }
-});
-
-/**
- * POST /auth/ensure-dev-user
- * Development helper: Ensures a user exists and has the correct password
- * This allows "auto-fixing" of login issues in development
- */
-adminAuthRoutes.post('/ensure-dev-user', validateBody(EnsureDevUserSchema), async (c) => {
-  try {
-    const { email, password, secretKey } = await c.req.json();
-
-    // SECURITY: this endpoint can create-or-reset ANY account's password
-    // (including the super-admin's). It MUST be gated by the shared
-    // SUPER_ADMIN_PASSWORD secret — without it, the route is a one-request
-    // account-takeover backdoor. Fail closed if the secret is unset.
-    const expectedSecretKey = Deno.env.get('SUPER_ADMIN_PASSWORD');
-    if (!expectedSecretKey || !constantTimeEqual(String(secretKey || ''), expectedSecretKey)) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    // Check if user exists
-    const {
-      data: { users },
-      error: listError,
-    } = await getSupabase().auth.admin.listUsers();
-
-    if (listError) {
-      return c.json({ error: listError.message }, 500);
-    }
-
-    const existingUser = users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-
-    if (existingUser) {
-      // User exists, update password
-      const { error: updateError } = await getSupabase().auth.admin.updateUserById(
-        existingUser.id,
-        {
-          password: password,
-          email_confirm: true,
-        },
-      );
-
-      if (updateError) {
-        return c.json({ error: updateError.message }, 400);
-      }
-
-      return c.json({ success: true, message: 'User password updated', userId: existingUser.id });
-    } else {
-      // User does not exist, create new user
-      const { data, error: createError } = await getSupabase().auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          firstName: 'Dev',
-          surname: 'User',
-          role: 'admin', // Default to admin for dev
-        },
-        // Authoritative role source — auth middleware only trusts app_metadata
-        // (user_metadata is client-editable). See resolveTrustedRole.
-        app_metadata: { role: 'admin' },
+      await AdminAuditService.record({
+        actorId: c.get('userId') as string,
+        actorRole: c.get('userRole') as string,
+        category: 'security',
+        action: 'login_rate_limit_cleared',
+        summary: 'Cleared the login lockout on an account',
+        severity: 'warning',
+        entityType: 'rate_limit',
       });
 
-      if (createError) {
-        return c.json({ error: createError.message }, 400);
-      }
-
-      // Create profile
-      if (data.user) {
-        await kv.set(`user_profile:${data.user.id}:personal_info`, {
-          firstName: 'Dev',
-          surname: 'User',
-          role: 'admin',
-          email,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      return c.json({ success: true, message: 'User created', userId: data.user?.id });
+      return c.json({ success: true, message: 'Rate limits cleared successfully' }, 200);
+    } catch (error) {
+      log.error('clear-rate-limit failed', error);
+      return c.json({ error: 'Internal server error' }, 500);
     }
-  } catch (_error) {
-    return c.json({ error: 'Internal server error' }, 500);
-  }
-});
+  },
+);
 
 export default adminAuthRoutes;

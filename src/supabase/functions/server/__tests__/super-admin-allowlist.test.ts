@@ -14,8 +14,14 @@ describe('SUPER_ADMIN_EMAILS allowlist', () => {
     vi.unstubAllGlobals();
   });
 
-  it('contains at least two recovery admins (no single point of failure)', () => {
-    expect(SUPER_ADMIN_EMAILS.size).toBeGreaterThanOrEqual(2);
+  it('hardcodes only the owner — recovery admins come from the env override', () => {
+    // Super-admin is granted by EMAIL, so an allowlisted address with no
+    // account behind it is a seat for whoever registers it first. A second
+    // hardcoded "recovery" address sat here with no account while an
+    // unauthenticated route created pre-verified accounts for any address.
+    // Recovery admins are added through the SUPER_ADMIN_EMAILS secret, after
+    // their account exists — tested below.
+    expect([...SUPER_ADMIN_EMAILS]).toEqual(['shawn@navigatewealth.co']);
   });
 
   it('matches every hardcoded entry case-insensitively', () => {

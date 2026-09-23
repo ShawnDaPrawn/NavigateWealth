@@ -18,11 +18,12 @@ import { requireAuth, requirePrimaryAuth } from './auth-mw.ts';
 import { revokeSessionsAfterCredentialChange } from './session-revocation.ts';
 import { isTrustedRedirectOrigin } from './cors-origin.ts';
 import { ChangePasswordSchema } from './security-validation.ts';
-import { formatZodError } from './shared-validation-utils.ts';
+import { escapeHtml, formatZodError } from './shared-validation-utils.ts';
 import {
   getSupabase,
   logSafeError,
   ensureSelfOrAdmin,
+  ensureCanAdministerTarget,
   isAdminRole,
   verifyCurrentPassword,
   getPendingEmailChange,
@@ -30,6 +31,12 @@ import {
   resolveSecurityContact,
   type UserSecurityStatus,
 } from './security-shared.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
+import { readTokenSessionId } from './jwt-claims.ts';
+import {
+  TWO_FACTOR_GRACE_MS,
+  sessionTwoFactorVerifiedAt,
+} from './repositories/two-factor-session-repository.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
@@ -45,6 +52,10 @@ app.post('/:userId/password', requireAuth, async (c) => {
     const userRole = c.get('userRole') as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
+    // An admin reset needs no current password, so without this any admin could
+    // set the owner's password and sign in as the owner.
+    const deniedTarget = await ensureCanAdministerTarget(c, userId);
+    if (deniedTarget) return deniedTarget;
     const body = await c.req.json();
 
     const parsed = ChangePasswordSchema.safeParse(body);
@@ -229,6 +240,53 @@ Didn't expect this? Contact us immediately.
         // Log but don't fail the request since password was already changed
         log.error('⚠️ Failed to send password reset email:', emailError);
       }
+    } else if (isAdminReset && user.user.email) {
+      // An administrator set this password and chose not to email a reset link.
+      // The account holder is told anyway — the admin now knows a working
+      // password for their account, and that must never happen silently.
+      try {
+        const { email: deliverTo, firstName } = await resolveSecurityContact(
+          userId,
+          user.user.email,
+          user.user.user_metadata,
+        );
+        const footerSettings = await getFooterSettings();
+        await sendEmail({
+          to: deliverTo,
+          subject: 'Your Navigate Wealth password was reset',
+          html: createEmailTemplate(
+            `
+              <p>Your Navigate Wealth password was reset by an administrator, and every session that was signed in has been ended.</p>
+              <p style="color: #d97706; background-color: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fcd34d;">
+                <strong>Didn't expect this?</strong> Contact Navigate Wealth support immediately.
+              </p>
+            `,
+            {
+              title: 'Security Notice',
+              subtitle: 'Your password was reset by an administrator',
+              greeting: `Hello ${escapeHtml(firstName)},`,
+              footerSettings,
+            },
+          ),
+          text: 'Your Navigate Wealth password was reset by an administrator, and every signed-in session was ended. If you did not expect this, contact Navigate Wealth support immediately.',
+        });
+      } catch (noticeError) {
+        log.error('⚠️ Failed to send the admin-reset notice:', noticeError);
+      }
+    }
+
+    if (isAdminReset) {
+      await AdminAuditService.record({
+        actorId: authUserId as string,
+        actorRole: userRole as string,
+        category: 'security',
+        action: 'password_reset_by_admin',
+        summary: "Reset another account's password",
+        severity: 'warning',
+        entityType: 'user',
+        entityId: userId,
+        metadata: { emailedResetLink: Boolean(emailPassword), sessionsRevoked: revocation.stamped },
+      });
     }
 
     // `passwordLastChanged` is written by `stampSessionsValidFrom` above, in
@@ -279,6 +337,19 @@ app.get('/:userId/status', requirePrimaryAuth, async (c) => {
     };
     const pendingEmailChange = getEmailChangeSummary(await getPendingEmailChange(userId));
 
+    // Whether THIS sign-in has passed 2FA — the thing the rest of the API now
+    // checks. The login page used to skip the challenge on the account-wide
+    // `last2faVerifiedAt`, which would now strand a fresh sign-in: skipped
+    // here, refused everywhere else. Only meaningful for the caller's own
+    // account; an admin reading someone else's status has a different session.
+    let sessionTwoFactorVerified = false;
+    const sessionId = readTokenSessionId(c.req.header('Authorization')?.replace(/^Bearer\s+/i, ''));
+    if (c.get('userId') === userId && sessionId) {
+      const verifiedAt = await sessionTwoFactorVerifiedAt(userId, sessionId);
+      sessionTwoFactorVerified =
+        verifiedAt !== null && Date.now() - verifiedAt < TWO_FACTOR_GRACE_MS;
+    }
+
     log.info(`✅ Security status retrieved for user ${userId}`);
 
     return c.json({
@@ -286,6 +357,7 @@ app.get('/:userId/status', requirePrimaryAuth, async (c) => {
       status: {
         ...securityStatus,
         pendingEmailChange,
+        sessionTwoFactorVerified,
       },
     });
   } catch (error) {

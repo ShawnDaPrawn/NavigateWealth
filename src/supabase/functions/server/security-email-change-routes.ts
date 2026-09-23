@@ -25,6 +25,7 @@ import {
   getSupabase,
   logSafeError,
   ensureSelfOrAdmin,
+  ensureCanAdministerTarget,
   isAdminRole,
   verifyCurrentPassword,
   normalizeEmail,
@@ -57,6 +58,10 @@ app.post('/:userId/email-change/request', requireAuth, async (c) => {
     const userRole = c.get('userRole') as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
+    // An admin-initiated change skips the current-address code, so it must not
+    // reach a super-admin: moving the owner's sign-in address is a takeover.
+    const deniedTarget = await ensureCanAdministerTarget(c, userId);
+    if (deniedTarget) return deniedTarget;
 
     const body = await c.req.json();
     const parsed = RequestEmailChangeSchema.safeParse(body);
@@ -169,6 +174,10 @@ app.post('/:userId/email-change/resend', requireAuth, async (c) => {
     const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
+    // An admin-initiated change skips the current-address code, so it must not
+    // reach a super-admin: moving the owner's sign-in address is a takeover.
+    const deniedTarget = await ensureCanAdministerTarget(c, userId);
+    if (deniedTarget) return deniedTarget;
 
     const body = await c.req.json();
     const parsed = ResendEmailChangeCodeSchema.safeParse(body);
@@ -239,6 +248,10 @@ app.post('/:userId/email-change/verify', requireAuth, async (c) => {
     const authUserId = c.get('userId') as string | undefined;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
+    // An admin-initiated change skips the current-address code, so it must not
+    // reach a super-admin: moving the owner's sign-in address is a takeover.
+    const deniedTarget = await ensureCanAdministerTarget(c, userId);
+    if (deniedTarget) return deniedTarget;
 
     const body = await c.req.json();
     const parsed = VerifyEmailChangeSchema.safeParse(body);

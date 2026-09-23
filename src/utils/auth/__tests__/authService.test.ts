@@ -34,15 +34,7 @@ vi.mock('../securityService', () => ({
       sanitized: { firstName: 'Ann', surname: 'Bee' },
     }),
   ),
-  validateLoginAttempt: vi.fn(
-    async (): Promise<{ allowed: boolean; error?: string; blocked?: boolean; resetAt?: Date }> => ({
-      allowed: true,
-    }),
-  ),
-  logLoginSuccess: vi.fn(async () => {}),
-  logLoginFailure: vi.fn(async () => {}),
   logLogout: vi.fn(async () => {}),
-  logPasswordResetRequest: vi.fn(async () => {}),
   logPasswordChange: vi.fn(async () => {}),
 }));
 
@@ -217,15 +209,34 @@ describe('signUp', () => {
 });
 
 describe('signOut', () => {
-  it('signs out and logs the logout event', async () => {
-    h.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'a@b.co' } } });
-    h.auth.signOut.mockResolvedValue({ error: null });
+  it('logs the logout with the session token BEFORE ending the session', async () => {
+    const order: string[] = [];
+    h.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    vi.mocked(security.logLogout).mockImplementationOnce(async () => {
+      order.push('log');
+    });
+    h.auth.signOut.mockImplementationOnce(async () => {
+      order.push('signOut');
+      return { error: null };
+    });
     await authService.signOut();
-    expect(security.logLogout).toHaveBeenCalledWith('a@b.co', 'u1');
+    // The server derives the account from this token, so it must still be
+    // valid when the log call arrives — i.e. sent before signOut() ends it.
+    expect(security.logLogout).toHaveBeenCalledWith('tok');
+    expect(order).toEqual(['log', 'signOut']);
+  });
+
+  it('still signs out when there is no session to log', async () => {
+    h.auth.getSession.mockResolvedValue({ data: { session: null } });
+    h.auth.signOut.mockResolvedValue({ error: null });
+    vi.mocked(security.logLogout).mockClear();
+    await authService.signOut();
+    expect(security.logLogout).not.toHaveBeenCalled();
+    expect(h.auth.signOut).toHaveBeenCalled();
   });
 
   it('throws on a Supabase sign-out error', async () => {
-    h.auth.getUser.mockResolvedValue({ data: { user: null } });
+    h.auth.getSession.mockResolvedValue({ data: { session: null } });
     h.auth.signOut.mockResolvedValue({ error: { message: 'fail' } });
     await expect(authService.signOut()).rejects.toBeInstanceOf(AuthError);
   });

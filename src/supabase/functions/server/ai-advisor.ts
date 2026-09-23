@@ -10,7 +10,7 @@ import * as kv from './kv_store.tsx';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getAuthContext, AuthError, enforceAccountSecurity } from './auth-mw.ts';
 import { aiUsageLimit } from './ai-usage-limit.ts';
-import { readTokenIssuedAt } from './jwt-claims.ts';
+import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import { PERSONNEL_ROLES } from './constants.ts';
 import { PROFILE_KEY, getOpenAIKey, getSupabase } from './ai-advisor-shared.ts';
 import {
@@ -68,7 +68,7 @@ async function requireAuth(c: Context, next: Next) {
     // ai-intelligence.tsx. Without it a suspended account keeps talking to the
     // advisor until its token expires on its own.
     try {
-      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token), readTokenSessionId(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(

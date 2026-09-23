@@ -13,6 +13,7 @@
  * @module server/security-2fa-routes
  */
 import { Hono } from 'npm:hono';
+import type { Context } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
@@ -23,20 +24,103 @@ import {
 } from './email-service.ts';
 import { requireAuth, requirePrimaryAuth } from './auth-mw.ts';
 import { SuspendUserSchema, Toggle2FASchema, Verify2FACodeSchema } from './security-validation.ts';
-import { formatZodError } from './shared-validation-utils.ts';
+import { escapeHtml, formatZodError } from './shared-validation-utils.ts';
 import {
   getSupabase,
   logSafeError,
   ensureSelfOrAdmin,
   ensureAdmin,
+  ensureCanAdministerTarget,
   resolveDeliveryEmail,
   resolveSecurityContact,
   type UserSecurityStatus,
 } from './security-shared.ts';
 import { secureRandomDigits, constantTimeEqual } from './crypto-utils.ts';
+import { readTokenSessionId } from './jwt-claims.ts';
+import {
+  clearSessionTwoFactor,
+  recordSessionTwoFactor,
+} from './repositories/two-factor-session-repository.ts';
+import { checkRateLimit } from './rateLimiter.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
+
+/**
+ * Atomic ceiling on 2FA code guesses per account, in front of the per-code
+ * (3) and cumulative (15) counters below. Those counters are read-modify-write
+ * on KV, so a burst of concurrent requests all read the same count and every
+ * one of them got to guess; the Postgres limiter serialises on an advisory lock
+ * and cannot be raced. Generous enough that a person mistyping never meets it.
+ */
+const TWO_FACTOR_VERIFY_LIMIT = {
+  maxAttempts: 10,
+  windowMs: 15 * 60 * 1000,
+  blockDurationMs: 30 * 60 * 1000,
+};
+
+/** The Bearer token on this request — already verified by the route's guard. */
+function bearerToken(c: Context): string | undefined {
+  return c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+}
+
+/**
+ * Only the account holder may request or answer their own 2FA challenge.
+ *
+ * These used `ensureSelfOrAdmin`, which let an admin trigger codes to a
+ * client's inbox and submit guesses against them. A verification only means
+ * something for the session that performed it, and an admin's session is not
+ * the client's.
+ */
+function ensureSelf(c: Context, targetUserId: string): Response | null {
+  return c.get('userId') === targetUserId
+    ? null
+    : c.json({ success: false, error: 'Forbidden' }, 403);
+}
+
+/**
+ * Tell the account holder their second factor was switched off. Best-effort:
+ * the change has already been made, and a mail outage must not undo it or
+ * report it as failed. The notice is the account holder's one chance to learn
+ * that somebody with their session did this.
+ */
+async function sendTwoFactorDisabledNotice(userId: string, byAdmin: boolean): Promise<void> {
+  try {
+    const { data } = await getSupabase().auth.admin.getUserById(userId);
+    const { email, firstName } = await resolveSecurityContact(
+      userId,
+      data?.user?.email,
+      data?.user?.user_metadata,
+    );
+    if (!email) return;
+    const footerSettings = await getFooterSettings();
+    const source = byAdmin ? 'by a Navigate Wealth administrator' : 'from your account';
+    const html = createEmailTemplate(
+      `
+        <p>Hello ${escapeHtml(firstName)},</p>
+        <p>Two-factor authentication was just <strong>turned off</strong> ${source}.</p>
+        <p style="color: #d97706; background-color: #fffbeb; padding: 12px; border-radius: 6px; border: 1px solid #fcd34d;">
+          <strong>Didn't do this?</strong> Change your password and contact Navigate Wealth support immediately.
+        </p>
+      `,
+      {
+        title: 'Security Notice',
+        subtitle: 'Two-factor authentication disabled',
+        greeting: '',
+        footerSettings,
+      },
+    );
+    await sendEmail({
+      to: email,
+      subject: 'Navigate Wealth security notice: two-factor authentication turned off',
+      html,
+      text: `Two-factor authentication was just turned off ${source}. If this wasn't you, change your password and contact Navigate Wealth support immediately.`,
+    });
+  } catch (error) {
+    log.error('Could not send the 2FA-disabled notice', { error: String(error) });
+  }
+}
 
 /**
  * POST /security/:userId/suspend
@@ -47,6 +131,9 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
     const userId = c.req.param('userId')!;
     const denied = ensureAdmin(c);
     if (denied) return denied;
+    // An admin cannot suspend a super-admin (or lift a super-admin's suspension).
+    const deniedTarget = await ensureCanAdministerTarget(c, userId);
+    if (deniedTarget) return deniedTarget;
     const body = await c.req.json();
 
     const parsed = SuspendUserSchema.safeParse(body);
@@ -56,7 +143,11 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
         400,
       );
     }
-    const { suspended, reason, adminId } = parsed.data;
+    const { suspended, reason } = parsed.data;
+    // Attributed to the VERIFIED caller. The body's `adminId` is still accepted
+    // for compatibility but no longer recorded: a request that said who made it
+    // could say anyone.
+    const adminId = c.get('userId') as string;
 
     log.info(
       `${suspended ? '🔒' : '🔓'} ${suspended ? 'Suspending' : 'Unsuspending'} user: ${userId}`,
@@ -98,6 +189,17 @@ app.post('/:userId/suspend', requireAuth, async (c) => {
       metadata: { adminId, reason },
     });
 
+    await AdminAuditService.record({
+      actorId: adminId,
+      actorRole: c.get('userRole') as string,
+      category: 'security',
+      action: suspended ? 'account_suspended' : 'account_unsuspended',
+      summary: suspended ? 'Suspended an account' : 'Lifted an account suspension',
+      severity: 'warning',
+      entityType: 'user',
+      entityId: userId,
+    });
+
     log.info(`✅ User ${suspended ? 'suspended' : 'unsuspended'} successfully`);
 
     return c.json({
@@ -120,6 +222,10 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
     const userId = c.req.param('userId')!;
     const denied = ensureSelfOrAdmin(c, userId);
     if (denied) return denied;
+    // An admin switching off a super-admin's second factor is the first step of
+    // taking the account over.
+    const deniedTarget = await ensureCanAdministerTarget(c, userId);
+    if (deniedTarget) return deniedTarget;
     const body = await c.req.json();
 
     const parsed = Toggle2FASchema.safeParse(body);
@@ -139,8 +245,32 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
       twoFactorEnabled: false,
     };
 
+    const wasEnabled = securityStatus.twoFactorEnabled === true;
     securityStatus.twoFactorEnabled = enabled;
     await kv.set(`security:${userId}`, securityStatus);
+
+    const actorId = c.get('userId') as string;
+    const byAdmin = actorId !== userId;
+    if (!enabled) {
+      // Verified sessions are meaningless once the factor is off; clearing them
+      // means switching it back on starts every session unverified.
+      await clearSessionTwoFactor(userId).catch((error) =>
+        log.warn('Could not clear 2FA sessions', { error: String(error) }),
+      );
+      if (wasEnabled) await sendTwoFactorDisabledNotice(userId, byAdmin);
+    }
+    if (byAdmin) {
+      await AdminAuditService.record({
+        actorId,
+        actorRole: c.get('userRole') as string,
+        category: 'security',
+        action: enabled ? 'two_factor_enabled_by_admin' : 'two_factor_disabled_by_admin',
+        summary: `${enabled ? 'Enabled' : 'Disabled'} two-factor authentication on another account`,
+        severity: enabled ? 'info' : 'warning',
+        entityType: 'user',
+        entityId: userId,
+      });
+    }
 
     // Log activity
     const timestamp = new Date().toISOString();
@@ -173,19 +303,8 @@ app.post('/:userId/2fa', requireAuth, async (c) => {
 app.post('/:userId/2fa/send-code', requirePrimaryAuth, async (c) => {
   try {
     const userId = c.req.param('userId')!;
-    const denied = ensureSelfOrAdmin(c, userId);
+    const denied = ensureSelf(c, userId);
     if (denied) return denied;
-    let email = '';
-
-    // Try to get email from body
-    try {
-      const body = await c.req.json();
-      if (body && body.email) {
-        email = body.email;
-      }
-    } catch (_e) {
-      // Body might be empty, ignore
-    }
 
     log.info(`📧 Generating 2FA code for user: ${userId}`);
 
@@ -200,7 +319,11 @@ app.post('/:userId/2fa/send-code', requirePrimaryAuth, async (c) => {
     // Deliver to the client's contact inbox, not necessarily their sign-in
     // address: a client enrolled on a household mailbox signs in with a derived
     // alias, and a login code that never arrives is a lockout.
-    const targetEmail = (await resolveDeliveryEmail(userId, user.user?.email)) || email;
+    //
+    // Never to an address named in the request. This used to fall back to a
+    // body-supplied `email`, and a second factor delivered wherever the caller
+    // asks is no second factor.
+    const targetEmail = await resolveDeliveryEmail(userId, user.user?.email);
 
     if (!targetEmail) {
       log.error('❌ No email address found for user');
@@ -267,14 +390,14 @@ app.post('/:userId/2fa/send-code', requirePrimaryAuth, async (c) => {
  * failures the account is automatically suspended and alert emails are
  * sent to both the client and the admin team.
  *
- * On success the `last2faVerifiedAt` timestamp is written to the
- * security KV entry so the frontend can implement a grace-period
- * (e.g. skip 2FA if verified within the last 3 hours).
+ * On success the verifying SESSION is recorded (see
+ * repositories/two-factor-session-repository.ts); that, not the account-wide
+ * `last2faVerifiedAt` timestamp, is what unlocks the rest of the API.
  */
 app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
   try {
     const userId = c.req.param('userId')!;
-    const denied = ensureSelfOrAdmin(c, userId);
+    const denied = ensureSelf(c, userId);
     if (denied) return denied;
     const body = await c.req.json();
 
@@ -303,6 +426,18 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
           error: 'Your account has been suspended. Please contact Navigate Wealth support.',
         },
         403,
+      );
+    }
+
+    // ── Atomic guess ceiling (fails closed) ──────────────────────
+    const limit = await checkRateLimit(userId, '2fa_verify', TWO_FACTOR_VERIFY_LIMIT);
+    if (!limit.allowed) {
+      return c.json(
+        {
+          success: false,
+          error: 'Too many verification attempts. Please wait and request a new code.',
+        },
+        429,
       );
     }
 
@@ -527,7 +662,17 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
     // Reset cumulative failure counter on success
     await kv.del(`2fa_failures:${userId}`);
 
-    // Record last2faVerifiedAt in the security KV entry (grace-period support)
+    // Unlock THIS sign-in — the one whose token presented the code. The gate in
+    // auth-mw checks the verification against the session, so another sign-in
+    // (an attacker's, with a stolen password) still has to pass its own.
+    const sessionId = readTokenSessionId(bearerToken(c));
+    if (sessionId) {
+      await recordSessionTwoFactor(userId, sessionId);
+    } else {
+      log.warn('2FA verified on a token with no session id; nothing to unlock');
+    }
+
+    // Kept for display ("last verified") only; it no longer grants access.
     securityStatus.last2faVerifiedAt = new Date().toISOString();
     await kv.set(`security:${userId}`, securityStatus);
 

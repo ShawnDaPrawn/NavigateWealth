@@ -219,35 +219,15 @@ medicalFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
     log.info('ðŸ“¥ GET /medical-fna/client/:clientId/latest-published');
     const clientId = c.req.param('clientId')!;
 
-    // Optional authentication - allow both authenticated clients and anon key access
-    const authHeader = c.req.header('Authorization');
-    if (authHeader) {
-      try {
-        const user = await authenticateUser(authHeader);
-        // If authenticated as a specific user (not admin), verify they're accessing their own data
-        // Check authorization: admins can access all data, regular users only their own
-        const isAdmin =
-          user.role === 'admin' ||
-          user.role === 'super_admin' ||
-          user.role === 'super-admin' ||
-          user.id === 'admin';
-        const isOwnData = user.id === clientId;
-
-        if (!isAdmin && !isOwnData) {
-          log.warn(
-            `⚠️ User ${user.id} (role: ${user.role}) attempting to access Medical FNA for client ${clientId}`,
-          );
-          return c.json({ success: false, error: 'Unauthorized access to client data' }, 403);
-        }
-      } catch (_authError) {
-        // WORKAROUND: Auth bypass for backward compatibility with client portal
-        // Problem: Client portal accesses published FNA data using the anon key without a user session.
-        // Why chosen: Removing this would break client-facing FNA display until portal auth is refactored.
-        // Proper fix: Require authentication on all FNA reads; update client portal to pass user session token.
-        // Revisit: When client portal auth is unified (tracked in Tier B backlog).
-        log.info('Authentication failed, allowing unauthenticated access to published Medical FNA');
-      }
-    }
+    // Authenticated, and scoped to the client — the same gate as the retirement
+    // and tax equivalents. This used to be OPTIONAL: no Authorization header
+    // skipped every check, and an invalid token was caught and waved through
+    // ("WORKAROUND: Auth bypass for backward compatibility with client
+    // portal"), so anyone holding a client id could read that client's
+    // published Medical FNA without signing in. Every SPA caller already goes
+    // through the shared API client, which sends the session token.
+    const user = await authenticateUser(c.req.header('Authorization'));
+    await assertClientAccess(user, clientId, 'medical-fna:latest-published');
 
     // Support both legacy (colon) and new (underscore) ID formats
     const legacyFnas = (await kv.getByPrefix(`medical-fna:client:${clientId}:`)) || [];

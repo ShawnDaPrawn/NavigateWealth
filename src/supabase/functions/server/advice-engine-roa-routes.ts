@@ -10,6 +10,7 @@ import {
 } from './advice-engine-roa-conversation.ts';
 import { buildClientContext } from './advice-engine-roa-service-helpers.ts';
 import { ClientIdParamSchema } from './advice-engine-validation.ts';
+import { requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
 const roaService = new AdviceEngineRoAService();
@@ -40,6 +41,19 @@ function canAccessRoADraft(
   return draft.adviserId === userId || draft.createdBy === userId || draft.updatedBy === userId;
 }
 
+/**
+ * Advisers reach a client's RoA context and evidence only for clients assigned
+ * to them — the same rule every FNA module applies (`client-access.ts`).
+ * Platform admins and the RoA review roles (compliance, paraplanner) keep
+ * cross-client access; those roles can only be granted through `app_metadata`
+ * now that `resolveTrustedRole` ignores user_metadata. Returns a 403 response,
+ * or null to proceed.
+ */
+async function requireAdviserClientScope(c: any, clientId: string): Promise<Response | null> {
+  if ((c.get('userRole') as string | undefined) !== 'adviser') return null;
+  return requireClientAccess(c, clientId);
+}
+
 function forbiddenRoADraftResponse(c: any) {
   return c.json(
     { error: 'Forbidden: RoA draft is not visible to this user', code: 'FORBIDDEN_ROA_DRAFT' },
@@ -61,6 +75,8 @@ app.get(
     }
 
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const outOfScope = await requireAdviserClientScope(c, clientId);
+    if (outOfScope) return outOfScope;
     const context = await buildClientContext(
       clientId,
       c.get('user') as { id: string; email?: string },
@@ -252,7 +268,10 @@ app.get(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const files = await roaService.listClientFiles(c.req.param('clientId')!);
+    const clientId = c.req.param('clientId')!;
+    const outOfScope = await requireAdviserClientScope(c, clientId);
+    if (outOfScope) return outOfScope;
+    const files = await roaService.listClientFiles(clientId);
     return c.json({ files });
   }),
 );

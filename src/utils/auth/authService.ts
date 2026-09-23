@@ -199,21 +199,21 @@ export async function signOut(): Promise<void> {
   try {
     logger.info('Signing out...');
 
-    // Get current user before signing out
+    // Record the sign-out BEFORE ending the session: the server now takes the
+    // identity from this access token (it used to accept any email/userId from
+    // an anonymous body), so the token has to still be valid when it arrives.
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      await logLogout(session.access_token);
+    }
 
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       console.error('❌ Sign out error:', error);
       throw parseAuthError(error);
-    }
-
-    // Log logout event
-    if (user) {
-      await logLogout(user.email || '', user.id);
     }
 
     logger.info('Sign out successful');

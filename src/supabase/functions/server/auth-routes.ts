@@ -3,8 +3,12 @@
 
 import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import * as kv from './kv_store.tsx';
-import { checkRateLimit, clearRateLimit, RATE_LIMITS } from './rateLimiter.ts';
+import {
+  checkRateLimit,
+  clearRateLimit,
+  normalizeRateLimitEmail,
+  RATE_LIMITS,
+} from './rateLimiter.ts';
 import { logAuthEvent } from './authLogger.ts';
 import {
   validatePassword,
@@ -22,20 +26,10 @@ import {
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import adminAuthRoutes from './auth-admin-routes.ts';
 import { isTrustedRedirectOrigin } from './cors-origin.ts';
-import { readTokenIssuedAt } from './jwt-claims.ts';
-import {
-  requireSuperAdmin,
-  requirePrimaryAuth,
-  enforceAccountSecurity,
-  AuthError,
-} from './auth-mw.ts';
+import { requireAdmin, requireSuperAdmin, requirePrimaryAuth } from './auth-mw.ts';
 import { validateBody } from './validate.ts';
 import {
   SignupValidateSchema,
-  SignupSchema,
-  EmailOnlySchema,
-  EmailAndUserIdSchema,
-  LoginFailureSchema,
   ConfirmEmailSchema,
   LoginSchema,
   PasswordResetSchema,
@@ -45,7 +39,7 @@ import { AdminAuditService } from './admin-audit-service.ts';
 const authRoutes = new Hono();
 const log = createModuleLogger('auth-routes');
 
-// Super-admin / dev-only auth utilities (Phase 7 max-lines split).
+// Super-admin auth utilities (Phase 7 max-lines split).
 authRoutes.route('/', adminAuthRoutes);
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
@@ -142,7 +136,11 @@ authRoutes.post('/signup-validate', validateBody(SignupValidateSchema), async (c
       );
     }
 
-    const emailRateLimit = await checkRateLimit(email, 'signup', RATE_LIMITS.SIGNUP);
+    const emailRateLimit = await checkRateLimit(
+      normalizeRateLimitEmail(email),
+      'signup',
+      RATE_LIMITS.SIGNUP,
+    );
     if (!emailRateLimit.allowed) {
       await logAuthEvent('signup_attempt', email, false, {
         ip,
@@ -247,83 +245,6 @@ authRoutes.post('/signup-validate', validateBody(SignupValidateSchema), async (c
 });
 
 /**
- * POST /auth/signup
- * Create a new user with admin privileges (auto-confirm email)
- * Use this for manual signup/seeding when email service is not available
- */
-authRoutes.post('/signup', validateBody(SignupSchema), async (c) => {
-  const ip = getClientIP(c);
-  const userAgent = getUserAgent(c);
-  const blockedIpAddress = getBlockedIpAddress(ip);
-
-  if (blockedIpAddress) {
-    await logAuthEvent('signup_attempt', undefined, false, {
-      ip,
-      userAgent,
-      errorMessage: getBlockedIpAddressWarning(blockedIpAddress),
-    });
-
-    return c.json(
-      {
-        error: getBlockedIpAddressWarning(blockedIpAddress),
-        blocked: true,
-        warning: true,
-        blockedIpAddress,
-      },
-      403,
-    );
-  }
-
-  try {
-    const { email, password, metadata } = await c.req.json();
-
-    // SECURITY: never let the client set privileged fields via signup metadata.
-    // The auth middleware derives role from user_metadata.role, so accepting a
-    // caller-supplied `role` (or status flags) here is a privilege-escalation
-    // vector (an attacker could self-provision a super_admin). Strip them.
-    const safeMetadata: Record<string, unknown> = { ...(metadata || {}) };
-    for (const privileged of ['role', 'accountStatus', 'adviserAssigned', 'suspended']) {
-      delete safeMetadata[privileged];
-    }
-
-    // Create user with admin client (bypasses email verification if email_confirm is true)
-    const { data, error } = await getSupabase().auth.admin.createUser({
-      email,
-      password,
-      user_metadata: safeMetadata,
-      email_confirm: true,
-    });
-
-    if (error) {
-      return c.json({ error: error.message }, 400);
-    }
-
-    if (!data.user) {
-      return c.json({ error: 'Failed to create user' }, 500);
-    }
-
-    await logAuthEvent('signup_success', email, true, {
-      userId: data.user.id,
-      ip,
-      userAgent,
-      method: 'admin_create_user',
-    });
-
-    return c.json(
-      {
-        success: true,
-        user: data.user,
-        message: 'User created and verified successfully',
-      },
-      200,
-    );
-  } catch (error) {
-    log.error('Signup error', error);
-    return c.json({ error: 'Internal server error during signup' }, 500);
-  }
-});
-
-/**
  * POST /auth/login  — authentication with the rate limit IN the path
  * ==================================================================
  *
@@ -380,43 +301,53 @@ authRoutes.post('/login', validateBody(LoginSchema), async (c) => {
     email = body.email;
     const { password } = body;
 
-    // Super-admin exemption, kept deliberately narrow — see the long note on
-    // the same check in /login-validate. It exempts ONE hardcoded address from
-    // rate limiting and nothing else; the password is still verified below.
-    const isSuperAdmin = email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+    // The per-ACCOUNT bucket is keyed on the normalised address. GoTrue matches
+    // addresses case-insensitively, so a raw key gave every spelling of one
+    // account a fresh budget of guesses.
+    const accountKey = normalizeRateLimitEmail(email);
 
-    if (!isSuperAdmin) {
-      // Two dimensions, both enforced. IP first so a single attacker cannot
-      // walk a dictionary of addresses to get a fresh bucket per guess.
-      for (const [identifier, label] of [
-        [ip, 'ip'],
-        [email, 'email'],
-      ] as const) {
-        const limit = await checkRateLimit(identifier, 'login', RATE_LIMITS.LOGIN);
-        if (!limit.allowed) {
-          await logAuthEvent('login_attempt', email, false, {
+    // The owner address keeps ONE exemption, and it is narrower than it was:
+    // it skips the per-account lockout, so a stranger cannot lock the owner out
+    // by failing on purpose, but it no longer skips the per-IP limit. It used
+    // to skip both, which gave anyone unlimited password guesses against the
+    // single most privileged account on the platform. See SECURITY-AUDIT A10
+    // for why this stays the single hardcoded address and not the allowlist.
+    const isOwnerAddress = accountKey === SUPER_ADMIN_EMAIL.toLowerCase();
+
+    // IP first, so a single attacker cannot walk a dictionary of addresses to
+    // get a fresh bucket per guess.
+    const dimensions: ReadonlyArray<readonly [string, 'ip' | 'email']> = isOwnerAddress
+      ? [[ip, 'ip']]
+      : [
+          [ip, 'ip'],
+          [accountKey, 'email'],
+        ];
+
+    for (const [identifier, label] of dimensions) {
+      const limit = await checkRateLimit(identifier, 'login', RATE_LIMITS.LOGIN);
+      if (!limit.allowed) {
+        await logAuthEvent('login_attempt', email, false, {
+          ip,
+          userAgent,
+          errorMessage: `Rate limit exceeded (${label})`,
+        });
+        if (limit.blocked) {
+          await logAuthEvent('account_locked', email, false, {
             ip,
             userAgent,
-            errorMessage: `Rate limit exceeded (${label})`,
+            errorMessage: limit.reason,
           });
-          if (limit.blocked) {
-            await logAuthEvent('account_locked', email, false, {
-              ip,
-              userAgent,
-              errorMessage: limit.reason,
-            });
-          }
-          const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
-          c.header('Retry-After', String(retryAfter));
-          return c.json(
-            {
-              error: 'Too many login attempts. Please try again later.',
-              blocked: true,
-              resetAt: limit.resetAt,
-            },
-            429,
-          );
         }
+        const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
+        c.header('Retry-After', String(retryAfter));
+        return c.json(
+          {
+            error: 'Too many login attempts. Please try again later.',
+            blocked: true,
+            resetAt: limit.resetAt,
+          },
+          429,
+        );
       }
     }
 
@@ -437,7 +368,7 @@ authRoutes.post('/login', validateBody(LoginSchema), async (c) => {
     // Correct credentials clear the counters, so a user who mistyped four
     // times and then succeeded is not one slip away from a 30-minute lockout.
     await clearRateLimit(ip, 'login');
-    await clearRateLimit(email, 'login');
+    await clearRateLimit(accountKey, 'login');
 
     await logAuthEvent('login_success', email, true, { userId: data.user.id, ip, userAgent });
 
@@ -457,11 +388,11 @@ authRoutes.post('/login', validateBody(LoginSchema), async (c) => {
  * POST /auth/password-reset — reset email with the rate limit IN the path
  * =======================================================================
  *
- * The sibling of `/login` above, and it exists for the same reason.
- * `/password-reset-request` (below) is called by the client AFTER it has
- * already asked GoTrue to send the email, so the 3-per-hour limit it applies
- * has nothing left to prevent — the message is gone by the time the counter
- * moves. This route sends the email itself, on the far side of the limit.
+ * The sibling of `/login` above, and it exists for the same reason. The
+ * retired `/password-reset-request` was called by the client AFTER it had
+ * already asked GoTrue to send the email, so the 3-per-hour limit it applied
+ * had nothing left to prevent — the message was gone by the time the counter
+ * moved. This route sends the email itself, on the far side of the limit.
  *
  * ALWAYS 200, ALWAYS THE SAME BODY
  * --------------------------------
@@ -492,7 +423,7 @@ authRoutes.post('/password-reset', validateBody(PasswordResetSchema), async (c) 
 
     for (const [identifier, label] of [
       [ip, 'ip'],
-      [email, 'email'],
+      [normalizeRateLimitEmail(email), 'email'],
     ] as const) {
       const limit = await checkRateLimit(identifier, 'password_reset', RATE_LIMITS.PASSWORD_RESET);
       if (!limit.allowed) {
@@ -555,296 +486,30 @@ authRoutes.post('/password-reset', validateBody(PasswordResetSchema), async (c) 
 });
 
 /**
- * POST /auth/login-validate
- * Server-side login validation with rate limiting
- * Returns whether credentials are valid and logs the attempt
+ * POST /auth/logout — record a sign-out for the CALLER's own account.
+ *
+ * Authenticated, with the identity taken from the verified token. It used to
+ * take `email` and `userId` from an anonymous request body, which let anyone
+ * write "logout" entries into any account's security log. The SPA now calls it
+ * with the session it is about to end, before signing out, so the token is
+ * still valid when it arrives.
+ *
+ * `requirePrimaryAuth` rather than `requireAuth`: a user stopped at the 2FA
+ * prompt, or whose account was just suspended, must still be able to leave
+ * cleanly, and recording their own sign-out grants nothing.
  */
-authRoutes.post('/login-validate', validateBody(EmailOnlySchema), async (c) => {
+authRoutes.post('/logout', requirePrimaryAuth, async (c) => {
   const ip = getClientIP(c);
   const userAgent = getUserAgent(c);
+  const userId = c.get('userId') as string;
+  const email = c.get('userEmail') as string | undefined;
 
   try {
-    const { email } = await c.req.json();
-
-    // Super admin email - exempt from rate limiting.
-    //
-    // SECURITY-AUDIT A10: deliberately NOT widened to `isSuperAdminEmail()`.
-    // Every other super-admin check moved to the allowlist, but this one runs
-    // BEFORE authentication on an address taken straight from the request body,
-    // and what it grants is exemption from login rate limiting. Widening it
-    // would hand unlimited login attempts to more addresses — and, through the
-    // SUPER_ADMIN_EMAILS env override, to whatever that variable happens to
-    // contain. A brute-force bypass is the one place where the narrower rule is
-    // the safer one, so this keeps the single owner identity on purpose.
-    const isSuperAdmin = email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-
-    if (isSuperAdmin) {
-      // Skip rate limiting for super admin
-      await logAuthEvent('login_attempt', email, true, {
-        ip,
-        userAgent,
-        metadata: { validation: 'passed', superAdmin: true },
-      });
-
-      return c.json({ success: true, superAdmin: true }, 200);
-    }
-
-    // Rate limiting - check by IP and email (only for non-super-admin users)
-    const ipRateLimit = await checkRateLimit(ip, 'login', RATE_LIMITS.LOGIN);
-    if (!ipRateLimit.allowed) {
-      await logAuthEvent('login_attempt', email, false, {
-        ip,
-        userAgent,
-        errorMessage: 'Rate limit exceeded',
-      });
-
-      // Log account locked event
-      if (ipRateLimit.blocked) {
-        await logAuthEvent('account_locked', email, false, {
-          ip,
-          userAgent,
-          errorMessage: ipRateLimit.reason,
-        });
-      }
-
-      // Generic message to prevent account enumeration
-      return c.json(
-        {
-          error: 'Too many login attempts. Please try again later.',
-          blocked: true,
-          resetAt: ipRateLimit.resetAt,
-        },
-        429,
-      );
-    }
-
-    const emailRateLimit = await checkRateLimit(email, 'login', RATE_LIMITS.LOGIN);
-    if (!emailRateLimit.allowed) {
-      await logAuthEvent('login_attempt', email, false, {
-        ip,
-        userAgent,
-        errorMessage: 'Rate limit exceeded for email',
-      });
-
-      if (emailRateLimit.blocked) {
-        await logAuthEvent('account_locked', email, false, {
-          ip,
-          userAgent,
-          errorMessage: emailRateLimit.reason,
-        });
-      }
-
-      return c.json(
-        {
-          error: 'Too many login attempts. Please try again later.',
-          blocked: true,
-          resetAt: emailRateLimit.resetAt,
-        },
-        429,
-      );
-    }
-
-    // Validate email format
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      await logAuthEvent('login_attempt', email, false, {
-        ip,
-        userAgent,
-        errorMessage: 'Invalid email format',
-      });
-
-      // Generic error message (no account enumeration)
-      return c.json({ error: 'Invalid credentials' }, 401);
-    }
-
-    await logAuthEvent('login_attempt', email, true, {
-      ip,
-      userAgent,
-      metadata: { validation: 'passed' },
-    });
-
-    return c.json({ valid: true }, 200);
-  } catch (error) {
-    await logAuthEvent('login_attempt', undefined, false, {
-      ip,
-      userAgent,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-    });
-
-    // Generic error message
-    return c.json({ error: 'Invalid credentials' }, 401);
-  }
-});
-
-/**
- * POST /auth/login-success
- * Called after successful login to clear rate limits and log success
- */
-authRoutes.post('/login-success', validateBody(EmailAndUserIdSchema), async (c) => {
-  const ip = getClientIP(c);
-  const userAgent = getUserAgent(c);
-
-  try {
-    const { email, userId } = await c.req.json();
-
-    // Clear rate limits for successful login
-    await clearRateLimit(ip, 'login');
-    await clearRateLimit(email, 'login');
-
-    // Log successful login
-    await logAuthEvent('login_success', email, true, {
-      userId,
-      ip,
-      userAgent,
-    });
-
-    return c.json({ success: true }, 200);
-  } catch (error) {
-    log.error('Login success log error', error);
-    return c.json({ error: 'Failed to log login success' }, 500);
-  }
-});
-
-/**
- * POST /auth/login-failure
- * Called after failed login to log the failure
- */
-authRoutes.post('/login-failure', validateBody(LoginFailureSchema), async (c) => {
-  const ip = getClientIP(c);
-  const userAgent = getUserAgent(c);
-
-  try {
-    const { email, reason } = await c.req.json();
-
-    // Log failed login
-    await logAuthEvent('login_failure', email, false, {
-      ip,
-      userAgent,
-      errorMessage: reason || 'Invalid credentials',
-    });
-
-    // Generic response (no account enumeration)
-    return c.json({ error: 'Invalid credentials' }, 401);
-  } catch (_error) {
-    return c.json({ error: 'Invalid credentials' }, 401);
-  }
-});
-
-/**
- * POST /auth/logout
- * Log user logout event
- */
-authRoutes.post('/logout', validateBody(EmailAndUserIdSchema), async (c) => {
-  const ip = getClientIP(c);
-  const userAgent = getUserAgent(c);
-
-  try {
-    const { email, userId } = await c.req.json();
-
-    await logAuthEvent('logout', email, true, {
-      userId,
-      ip,
-      userAgent,
-    });
-
-    return c.json({ success: true }, 200);
+    await logAuthEvent('logout', email, true, { userId, ip, userAgent });
   } catch (error) {
     log.error('Logout error', error);
-    return c.json({ success: true }, 200); // Don't fail logout on logging error
   }
-});
-
-/**
- * POST /auth/password-reset-request
- * Handle password reset request with rate limiting
- */
-authRoutes.post('/password-reset-request', validateBody(EmailOnlySchema), async (c) => {
-  const ip = getClientIP(c);
-  const userAgent = getUserAgent(c);
-
-  try {
-    const { email } = await c.req.json();
-
-    // Rate limiting
-    const ipRateLimit = await checkRateLimit(ip, 'password_reset', RATE_LIMITS.PASSWORD_RESET);
-    if (!ipRateLimit.allowed) {
-      await logAuthEvent('password_reset_request', email, false, {
-        ip,
-        userAgent,
-        errorMessage: 'Rate limit exceeded',
-      });
-
-      // Generic message (no account enumeration)
-      return c.json(
-        {
-          message: 'If an account exists with this email, a password reset link has been sent.',
-        },
-        200,
-      );
-    }
-
-    const emailRateLimit = await checkRateLimit(
-      email,
-      'password_reset',
-      RATE_LIMITS.PASSWORD_RESET,
-    );
-    if (!emailRateLimit.allowed) {
-      await logAuthEvent('password_reset_request', email, false, {
-        ip,
-        userAgent,
-        errorMessage: 'Rate limit exceeded for email',
-      });
-
-      // Generic message (no account enumeration)
-      return c.json(
-        {
-          message: 'If an account exists with this email, a password reset link has been sent.',
-        },
-        200,
-      );
-    }
-
-    // Validate email
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      await logAuthEvent('password_reset_request', email, false, {
-        ip,
-        userAgent,
-        errorMessage: 'Invalid email format',
-      });
-
-      // Generic message (no account enumeration)
-      return c.json(
-        {
-          message: 'If an account exists with this email, a password reset link has been sent.',
-        },
-        200,
-      );
-    }
-
-    // Log the request (success, but we don't reveal if account exists)
-    await logAuthEvent('password_reset_request', email, true, {
-      ip,
-      userAgent,
-    });
-
-    // Generic success message (no account enumeration)
-    return c.json(
-      {
-        message: 'If an account exists with this email, a password reset link has been sent.',
-        success: true,
-      },
-      200,
-    );
-  } catch (_error) {
-    // Generic message even on error (no account enumeration)
-    return c.json(
-      {
-        message: 'If an account exists with this email, a password reset link has been sent.',
-      },
-      200,
-    );
-  }
+  return c.json({ success: true }, 200); // Don't fail logout on logging error
 });
 
 /**
@@ -916,54 +581,16 @@ authRoutes.post('/password-change', requirePrimaryAuth, async (c) => {
 
 /**
  * GET /auth/security-status
- * Get security status for admin dashboard
- * Requires admin authentication
+ * Auth-log statistics for the admin dashboard.
+ *
+ * `requireAdmin` resolves the role from trusted sources only (see
+ * `resolveTrustedRole`) and applies the shared account-security policy. This
+ * route used to verify the token by hand and then authorise on the `role`
+ * field of the caller's KV profile — a second, weaker role source that no
+ * other guard trusts.
  */
-authRoutes.get('/security-status', async (c) => {
+authRoutes.get('/security-status', requireAdmin, async (c) => {
   try {
-    // Check authorization
-    const authHeader = c.req.header('Authorization');
-    if (!authHeader) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    const token = authHeader.split(' ')[1];
-    const {
-      data: { user },
-      error,
-    } = await getSupabase().auth.getUser(token);
-
-    if (error || !user) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    // Same account-security policy as auth-mw (P1.2). This handler verifies the
-    // token itself rather than going through requireAdmin, and so had skipped
-    // the suspended/deleted/stale-2FA check entirely.
-    try {
-      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
-    } catch (securityError) {
-      if (securityError instanceof AuthError) {
-        return c.json(
-          { error: securityError.message, code: securityError.code },
-          securityError.statusCode as 403,
-        );
-      }
-      throw securityError;
-    }
-
-    // Check if user is admin
-    const userProfile = await kv.get(`user_profile:${user.id}:personal_info`);
-    if (
-      !userProfile ||
-      (userProfile.role !== 'admin' &&
-        userProfile.role !== 'super_admin' &&
-        userProfile.role !== 'super-admin')
-    ) {
-      return c.json({ error: 'Forbidden - Admin access required' }, 403);
-    }
-
-    // Get security statistics
     const authLogger = await import('./authLogger.ts');
     const stats = await authLogger.getSecurityStats();
 
@@ -985,7 +612,9 @@ authRoutes.get('/security-status', async (c) => {
  * WORKAROUND: Legacy users created with email_confirm:false cannot sign in
  * because Supabase returns "Invalid login credentials" for unconfirmed emails.
  * This endpoint auto-confirms the email so the frontend can retry signInWithPassword.
- * Proper fix: all new signups now use email_confirm:true (see auth-signup.ts).
+ * New signups deliberately use email_confirm:false (see auth-signup.ts), so this
+ * super-admin override is the last resort for a client whose confirmation mail
+ * never arrives — not a routine step.
  * Searchable tag: // WORKAROUND: unconfirmed-email-login-fix
  */
 authRoutes.post(

@@ -2,10 +2,11 @@
  * Auth route validation schemas (Stage B / B2)
  * ============================================
  *
- * `auth-routes.ts` has 9 routes that accept a body and, before this, zero zod
+ * `auth-routes.ts` had 9 routes that accept a body and, before this, zero zod
  * parses — on the endpoints that handle credentials, password resets and
  * session events. Every one read `await c.req.json()` and used whatever came
- * back; only `/confirm-email` guarded a missing field.
+ * back; only `/confirm-email` guarded a missing field. (Several of those routes
+ * have since been removed as dead, unauthenticated surface.)
  *
  * DERIVED FROM THE HANDLERS, NOT FROM AN IDEA OF THE API
  * -----------------------------------------------------
@@ -38,25 +39,13 @@ export const SignupValidateSchema = z
   })
   .passthrough();
 
-/** POST /signup */
-export const SignupSchema = z
-  .object({
-    email,
-    password: z.string().min(1, 'Password is required'),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-  })
-  .passthrough();
-
-/** POST /login-validate and POST /password-reset-request — email only. */
-export const EmailOnlySchema = z.object({ email }).passthrough();
-
 /**
  * POST /login — the ENFORCING login endpoint.
  *
- * Unlike `/login-validate` (which only ever saw an address) this one carries
- * the password, because it performs the authentication itself rather than
- * advising a browser that is about to perform it elsewhere. See the route for
- * why that distinction is the whole point.
+ * Unlike the retired `/login-validate` (which only ever saw an address) this
+ * one carries the password, because it performs the authentication itself
+ * rather than advising a browser that is about to perform it elsewhere. See
+ * the route for why that distinction is the whole point.
  *
  * No `.max()` on the password beyond a sanity bound: a length rule here would
  * reject long passphrases that the account may legitimately have been created
@@ -78,16 +67,6 @@ export const PasswordResetSchema = z
   })
   .passthrough();
 
-/** POST /login-success, POST /logout, POST /password-change. */
-export const EmailAndUserIdSchema = z
-  .object({ email, userId: z.string().optional() })
-  .passthrough();
-
-/** POST /login-failure — `reason` is recorded on the auth event. */
-export const LoginFailureSchema = z
-  .object({ email, reason: z.string().max(2000).optional() })
-  .passthrough();
-
 /**
  * POST /confirm-email — the one route that already guarded its input
  * (`if (!email) return 400`), so this schema is a like-for-like replacement
@@ -96,60 +75,28 @@ export const LoginFailureSchema = z
 export const ConfirmEmailSchema = z.object({ email }).passthrough();
 
 // ============================================================================
-// auth-admin-routes.ts — the three super-admin utilities
+// auth-admin-routes.ts — the super-admin utility
 // ============================================================================
-//
-// All three are gated by the shared SUPER_ADMIN_PASSWORD secret, so `secretKey`
-// is the field whose absence makes the rest meaningless — the same rule the
-// schemas above apply to `email`.
-//
-// ONE DELIBERATE BEHAVIOUR DELTA, worth stating rather than discovering: a
-// request that is BOTH malformed and unauthorised now returns 400 where it
-// previously returned 403, because the gate runs before the handler's secret
-// check. That leaks nothing — neither response says anything about the secret,
-// and a request with no secret at all is not valid under any reading.
 
-/** POST /create-superadmin — `email`/`password` stay optional because the
- *  handler runs `validateEmail`/`validatePassword` on them and returns its own
- *  field-level errors, which are better than anything a schema would say. */
-export const CreateSuperAdminSchema = z
-  .object({
-    secretKey: z.string().min(1, 'secretKey is required'),
-    email: z.string().max(320).optional(),
-    password: z.string().optional(),
-  })
-  .passthrough();
-
-/** POST /clear-rate-limit — `email` is required: the handler passes it straight
- *  to `clearRateLimit(email, 'login')`, and an undefined bucket key clears
- *  nothing while reporting success. */
-export const ClearRateLimitSchema = z
-  .object({ secretKey: z.string().min(1, 'secretKey is required'), email })
-  .passthrough();
-
-/** POST /ensure-dev-user — `email` and `password` are required for a stronger
- *  reason than tidiness: the handler calls `email.toLowerCase()` and passes
- *  `password` to `updateUserById`. A missing email currently throws inside the
- *  handler and surfaces as a 500; this turns that into a 400. */
-export const EnsureDevUserSchema = z
-  .object({
-    secretKey: z.string().min(1, 'secretKey is required'),
-    email,
-    password: z.string().min(1, 'Password is required'),
-  })
-  .passthrough();
+/** POST /clear-rate-limit — super-admin session required (see the route).
+ *  `email` is required: an undefined bucket key clears nothing while reporting
+ *  success. */
+export const ClearRateLimitSchema = z.object({ email }).passthrough();
 
 // ============================================================================
 // auth-signup.ts — POST /auth-signup/signup
 // ============================================================================
 //
-// NOT the same route as `POST /auth/signup` above, despite the name. This one
-// is mounted at `/auth-signup` (mount-core.ts) and is **the endpoint the SPA
-// actually calls** — `authService.ts` and `SignupPage.tsx` both target
-// `/auth-signup/signup`. `POST /auth/signup` has no caller in the SPA.
+// This is the ONLY signup route. It is mounted at `/auth-signup`
+// (mount-core.ts) and is the endpoint the SPA calls — `authService.ts` and
+// `SignupPage.tsx` both target `/auth-signup/signup`.
 //
-// So the signup route that got a schema in B2 was the one nobody uses, and the
-// live one had none. The gate was on the wrong door.
+// A second one, `POST /auth/signup` in auth-routes.ts, had no caller and was
+// removed: it created accounts with `email_confirm: true` for any address, with
+// no rate limit, so anyone could hold a pre-verified account on an address they
+// did not own — including a super-admin allowlist address with no account yet,
+// which made it a one-request route to super-admin. Do not bring it back; an
+// account must prove ownership of its address before it can sign in.
 //
 // The four required fields mirror the handler's own guard exactly
 // (`if (!email || !password || !firstName || !surname) return 400`), so this is

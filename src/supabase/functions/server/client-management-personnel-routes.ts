@@ -245,9 +245,13 @@ app.get('/:id/clients', async (c) => {
     const ctx = await getAuthContext(c);
     const targetId = c.req.param('id')!;
 
-    // Security: can only view own clients unless Admin/Compliance
-    if (ctx.role === 'adviser' && ctx.userId !== targetId) {
-      throw new Error('Forbidden: Unauthorized to view other adviser clients');
+    // POSITIVE allow-list: platform admins and compliance may view any
+    // adviser's book; an adviser may view only their own. The guard used to
+    // refuse only a MISMATCHED ADVISER, so every other caller — a plain client
+    // included — could list any adviser's clients (names, emails, statuses),
+    // and a refused adviser got a 500 rather than a 403.
+    if (!(ctx.role === 'adviser' && ctx.userId === targetId)) {
+      requireRole(ctx, ['super_admin', 'super-admin', 'admin', 'compliance']);
     }
 
     log.info('Fetching assigned clients', { userId: ctx.userId, targetId });

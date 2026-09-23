@@ -182,8 +182,8 @@ describe('public-surface inventory', () => {
     // Account creation: the SPA posts here before any JWT exists. A flip that
     // forgets it breaks signup outright while every health probe stays green.
     expect(all).toContain('POST /make-server-91ed8379/auth-signup/signup');
-    // Login validation: same bootstrap paradox.
-    expect(all.some((u) => u.includes('/auth/login-validate'))).toBe(true);
+    // Login: same bootstrap paradox.
+    expect(all).toContain('POST /make-server-91ed8379/auth/login');
     // Lead generation — the revenue path.
     expect(all.some((u) => u.includes('/contact-form/'))).toBe(true);
     expect(all.some((u) => u.includes('/quote-request/'))).toBe(true);
