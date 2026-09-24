@@ -287,6 +287,11 @@ function ModuleConversationPanel({
     setUploadingId(uploadId);
     try {
       await uploadFile(uploadId, file);
+    } catch {
+      // uploadFileMutation's onError already shows a toast; swallow here so
+      // the rejection doesn't reach window as an unhandled promise rejection
+      // (the caller is a fire-and-forget onChange handler, not an awaited
+      // call). Mirrors handleSend's rationale above.
     } finally {
       setUploadingId(null);
     }
