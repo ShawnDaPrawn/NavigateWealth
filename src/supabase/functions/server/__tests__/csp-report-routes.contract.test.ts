@@ -281,6 +281,17 @@ describe('extension noise is discarded', () => {
     expect(stored()).toHaveLength(0);
   });
 
+  it('drops a violation whose source-file is the bare scheme name, no "://"', async () => {
+    // Captured in production (2026-09-24): a browser reported `source-file` as
+    // literally "chrome-extension" with no "://<id>/path" suffix. The
+    // colon-suffixed `startsWith` check never matches a bare name like that,
+    // so this exact shape reached the Issue Manager as an open finding before
+    // this test existed.
+    await post(legacy({ 'blocked-uri': 'wasm-eval', 'source-file': 'chrome-extension' }));
+
+    expect(stored()).toHaveLength(0);
+  });
+
   it('still records a real violation from the same batch', async () => {
     await post(
       [
