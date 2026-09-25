@@ -14,6 +14,7 @@ import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { runKvCleanup, getLastCleanupRun } from './kv-cleanup-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('kv-cleanup');
@@ -132,10 +133,11 @@ app.post(
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
 
-    if (
-      (!serviceRoleKey || token !== serviceRoleKey) &&
-      (!superAdminPw || token !== superAdminPw)
-    ) {
+    // Constant-time, matching cron-auth.ts (M-1).
+    const authorized =
+      (serviceRoleKey !== '' && constantTimeEqual(token, serviceRoleKey)) ||
+      (superAdminPw !== '' && constantTimeEqual(token, superAdminPw));
+    if (!authorized) {
       return c.json({ error: 'Unauthorized — cron auth required' }, 401);
     }
 

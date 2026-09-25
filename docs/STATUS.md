@@ -170,7 +170,7 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it.                                     |
 | H-3 / H-4      | **Closed.** The limiter is atomic (RPC, migration 20260821210412) and fails closed, and OTP brute-force is bounded by `esign-rate-limit.ts`. The remaining half — that the login and password-reset limits sat BESIDE the auth path rather than in it, so a caller could skip them entirely — is closed by `POST /auth/login` and `POST /auth/password-reset`. |
-| H-6 / H-9      | E-sign download and attachment ownership checks                                                                                                                                                                                                                                                                                                                |
+| H-6 / H-9      | **Closed.** Download, audit, document and certificate reads use `requireOwnedEnvelope` (S6); the attachment LIST (`GET /esign/envelopes/:id/attachments`) was the last one that authenticated and then ignored the answer, and now checks envelope ownership too.                                                                                              |
 | H-11           | **Closed.** Content-type-aware body ceiling in `create-app.ts` (2 MB JSON / 55 MB upload, with a named exception for transcription's base64 audio), enforced ahead of every route.                                                                                                                                                                             |
 | M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                                                             |
 | M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                                                       |
@@ -212,6 +212,71 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
   the namespaces that actually hold credentials (`portal-credential:` was
   readable while the reserved name guarded nothing); the login `returnUrl`
   accepted `/\host`, an open redirect.
+- **E-sign signing without any credential.** `POST /esign/envelopes/:id/sign`,
+  `/reject`, `/signers/:id/verify` and `/signers/:id/otp/send` took a signer id
+  with no session and no signer token, and `/sign` skipped every check the
+  token flow makes (state, expiry, OTP/KBA, order, field ownership) before
+  triggering the platform-sealed completion. Nothing called them; they are
+  deleted, with their dead SPA wrappers.
+- **Staff-only routers any client could use.** Honeycomb KYC/AML (paid checks
+  and the raw `/proxy` under the firm's API key, plus every client's results),
+  the compliance registers (every client's AML/FICA record, complaints — one
+  editable — POPIA, PAIA, statutory), website submissions (every lead, plus
+  firm-branded `/invite` email to any address), newsletter subscriber admin,
+  policy extraction (other clients' extracted policies, paid bulk
+  re-extraction) and saved retirement scenarios were `requireAuth`. All are
+  `requireAdmin`; every caller is in the admin panel.
+- **Ownership:** policy documents (signed URL, replace, delete) take the
+  caller's `clientId` through `requireClientAccess`, like the sibling
+  `/policies` routes.
+- **2FA sign-in order.** The login page installed the session before the
+  challenge, so AuthContext hydrated with an unverified session, got
+  `TWO_FACTOR_REQUIRED` and signed out mid-challenge. It now holds the tokens
+  and installs only after the code passes; abandoned sign-ins are revoked.
+- **Timing.** The portal-worker secret (which gates plaintext insurer-portal
+  credentials), the quality-issues ingest token and the KV-cleanup,
+  publications and e-sign reminder cron checks compared with `===`; all use
+  `constantTimeEqual`, pinned tree-wide by `shared-secret-compare.test.ts`.
+
+### Found by the September 2026 auth review, still open
+
+Server-side guard fixes still to land (verified by read, not yet changed):
+the e-sign SENDER side is open to any signed-in user (a client can upload a
+PDF, send platform-emailed signing requests to anyone, mint v1 API keys and
+webhooks; invites, fields, recall, remind, reminder-config, signing-mode and
+draft-settings skip the envelope-ownership check; templates, campaigns and
+packets are global; bulk void/remind, consent-text publishing and the sweeps
+have no role check); `GET/POST /integrations/template` and `/config` expose
+every client's policies for a provider; `POST /medical-fna/create` never checks
+`body.clientId`; `PATCH /documents/:userId/:documentId` accepts any field, so
+a client can repoint `filePath` at another client's file;
+`POST /documents/:userId/email` sends firm-branded mail to any address;
+`fna-intake-routes.ts` shadows the canonical `assertClientAccess`; RoA draft
+create/update, `/ai-advisor/admin/*` and `/ai-intelligence` are wider than
+`client-access.ts`; resource-library writes need only a session;
+`GET /publications/articles` serves drafts to anyone.
+
+Larger or operator work:
+
+- **Custom 2FA does not cover GoTrue itself.** Anyone holding a password can
+  still call GoTrue directly — password sign-in with the public anon key
+  (skipping `/auth/login`'s lockout; only GoTrue's own per-IP limit applies, and
+  there is no CAPTCHA) and `updateUser({ password })` from an unverified
+  session. The Edge Function refuses that session everything until its code
+  passes, but the account's password can be changed. The fix is Supabase's
+  native MFA (AAL2) plus Auth CAPTCHA, an operator and design change.
+- Per-module admin permissions are enforced only in the SPA (the server checks
+  them for personnel and newsletter-studio); the Locked module's access code is
+  checked only in the browser; the POPIA/FAIS terms flag and the approved-client
+  gate are client-editable or browser-only; `detectSessionInUrl` accepts tokens
+  on any page.
+- Database: `anon`/`authenticated` still hold table grants on six legacy
+  tables the SPA never uses (PostgREST writes), default privileges leave new
+  functions executable by those roles, and the message-attachment bucket
+  `make-91ed8379-communication` is public. Each is a production write that
+  needs owner confirmation.
+- The weekly social routines connect as `postgres` while reading web content;
+  give them a narrow role.
 
 ### Closed by the pre-launch security pass
 

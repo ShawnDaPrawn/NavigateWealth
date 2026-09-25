@@ -6,9 +6,6 @@ import {
   useSendInvites,
   useVoidEnvelope,
   useSaveAsTemplate,
-  useSendOTP,
-  useSubmitSignature,
-  useRejectSigning,
 } from '../useEnvelopeMutations';
 
 // ============================================================================
@@ -51,9 +48,6 @@ const mockEsignApi = {
   sendInvites: vi.fn(),
   voidEnvelope: vi.fn(),
   saveAsTemplate: vi.fn(),
-  sendOTP: vi.fn(),
-  submitSignature: vi.fn(),
-  rejectSigning: vi.fn(),
 };
 
 vi.mock('../../api', () => ({
@@ -63,9 +57,6 @@ vi.mock('../../api', () => ({
     sendInvites: (...args: unknown[]) => mockEsignApi.sendInvites(...args),
     voidEnvelope: (...args: unknown[]) => mockEsignApi.voidEnvelope(...args),
     saveAsTemplate: (...args: unknown[]) => mockEsignApi.saveAsTemplate(...args),
-    sendOTP: (...args: unknown[]) => mockEsignApi.sendOTP(...args),
-    submitSignature: (...args: unknown[]) => mockEsignApi.submitSignature(...args),
-    rejectSigning: (...args: unknown[]) => mockEsignApi.rejectSigning(...args),
   },
 }));
 
@@ -359,123 +350,5 @@ describe('useSaveAsTemplate', () => {
     const error = new Error('Template save failed');
     await onError(error, undefined, undefined);
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Template save failed'));
-  });
-});
-
-describe('useSendOTP', () => {
-  it('returns a mutation object with mutate and isPending', () => {
-    const { result } = renderHook(() => useSendOTP());
-    expect(typeof result.current.mutate).toBe('function');
-    expect(result.current.isPending).toBe(false);
-  });
-
-  it('mutationFn calls esignApi.sendOTP with envelopeId and signerId', async () => {
-    mockEsignApi.sendOTP.mockResolvedValue({});
-    const { mutationFn } = getOptions(() => useSendOTP());
-    await mutationFn({ envelopeId: 'env-6', signerId: 'signer-1' });
-    expect(mockEsignApi.sendOTP).toHaveBeenCalledWith('env-6', 'signer-1');
-  });
-
-  it('onSuccess shows OTP-sent toast', async () => {
-    const { toast } = await import('sonner');
-    const { onSuccess } = getOptions(() => useSendOTP());
-    await onSuccess(undefined, undefined, undefined);
-    expect(toast.success).toHaveBeenCalledWith('OTP sent successfully');
-  });
-
-  it('onError shows error toast with message', async () => {
-    const { toast } = await import('sonner');
-    const { onError } = getOptions(() => useSendOTP());
-    const error = new Error('OTP send failed');
-    await onError(error, undefined, undefined);
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('OTP send failed'));
-  });
-});
-
-describe('useSubmitSignature', () => {
-  it('returns a mutation object with mutate and isPending', () => {
-    const { result } = renderHook(() => useSubmitSignature());
-    expect(typeof result.current.mutate).toBe('function');
-    expect(result.current.isPending).toBe(false);
-  });
-
-  it('mutationFn calls esignApi.submitSignature with envelopeId and request', async () => {
-    mockEsignApi.submitSignature.mockResolvedValue({});
-    const { mutationFn } = getOptions(() => useSubmitSignature());
-    const req = {
-      signerId: 'signer-1',
-      signatureDataUrl: 'data:image/png;base64,abc',
-      consentAccepted: true,
-    };
-    await mutationFn({ envelopeId: 'env-7', request: req });
-    expect(mockEsignApi.submitSignature).toHaveBeenCalledWith('env-7', req);
-  });
-
-  it('onSuccess invalidates envelopes and specific envelope', async () => {
-    const { onSuccess } = getOptions(() => useSubmitSignature());
-    const req = { signerId: 'signer-1', signatureDataUrl: '', consentAccepted: true };
-    await onSuccess(undefined, { envelopeId: 'env-7', request: req }, undefined);
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['esign', 'envelopes'] });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['esign', 'envelope', 'env-7'],
-    });
-  });
-
-  it('onSuccess shows signature-submitted toast', async () => {
-    const { toast } = await import('sonner');
-    const { onSuccess } = getOptions(() => useSubmitSignature());
-    const req = { signerId: 'signer-1', signatureDataUrl: '', consentAccepted: true };
-    await onSuccess(undefined, { envelopeId: 'env-7', request: req }, undefined);
-    expect(toast.success).toHaveBeenCalledWith('Signature submitted successfully');
-  });
-
-  it('onError shows error toast with message', async () => {
-    const { toast } = await import('sonner');
-    const { onError } = getOptions(() => useSubmitSignature());
-    const error = new Error('Submission failed');
-    await onError(error, undefined, undefined);
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Submission failed'));
-  });
-});
-
-describe('useRejectSigning', () => {
-  it('returns a mutation object with mutate and isPending', () => {
-    const { result } = renderHook(() => useRejectSigning());
-    expect(typeof result.current.mutate).toBe('function');
-    expect(result.current.isPending).toBe(false);
-  });
-
-  it('mutationFn calls esignApi.rejectSigning with envelopeId and request', async () => {
-    mockEsignApi.rejectSigning.mockResolvedValue({});
-    const { mutationFn } = getOptions(() => useRejectSigning());
-    const req = { signerId: 'signer-1', reason: 'Terms not acceptable' };
-    await mutationFn({ envelopeId: 'env-8', request: req });
-    expect(mockEsignApi.rejectSigning).toHaveBeenCalledWith('env-8', req);
-  });
-
-  it('onSuccess invalidates envelopes and specific envelope', async () => {
-    const { onSuccess } = getOptions(() => useRejectSigning());
-    const req = { signerId: 'signer-1', reason: 'Terms not acceptable' };
-    await onSuccess(undefined, { envelopeId: 'env-8', request: req }, undefined);
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['esign', 'envelopes'] });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['esign', 'envelope', 'env-8'],
-    });
-  });
-
-  it('onSuccess shows toast.info for rejection', async () => {
-    const { toast } = await import('sonner');
-    const { onSuccess } = getOptions(() => useRejectSigning());
-    const req = { signerId: 'signer-1', reason: 'Terms not acceptable' };
-    await onSuccess(undefined, { envelopeId: 'env-8', request: req }, undefined);
-    expect(toast.info).toHaveBeenCalledWith('Signing rejected');
-  });
-
-  it('onError shows error toast with message', async () => {
-    const { toast } = await import('sonner');
-    const { onError } = getOptions(() => useRejectSigning());
-    const error = new Error('Rejection failed');
-    await onError(error, undefined, undefined);
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Rejection failed'));
   });
 });
