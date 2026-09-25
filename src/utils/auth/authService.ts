@@ -94,8 +94,15 @@ export async function signUp(
   }
 }
 
+/** Tokens from a verified password, not yet installed as the app's session. */
+export interface PendingSession {
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
 /**
- * Sign in existing user with email and password.
+ * Check a password and obtain a session WITHOUT installing it.
  *
  * WHY THIS GOES THROUGH THE EDGE FUNCTION
  * ---------------------------------------
@@ -106,13 +113,20 @@ export async function signUp(
  * check and the credential check in the same handler, so attempt six cannot
  * reach GoTrue at all.
  *
- * The endpoint returns the GoTrue session unchanged; `setSession` installs it
- * so every downstream consumer (`onAuthStateChange`, the token refresh loop,
- * `getSession`) behaves exactly as it did when the browser signed in itself.
+ * WHY IT DOES NOT INSTALL THE SESSION
+ * -----------------------------------
+ * Installing fires `onAuthStateChange`, and AuthContext hydrates the profile
+ * from it. For an account with two-factor on, a fresh sign-in has not passed
+ * its factor yet, so every API call refuses it with `TWO_FACTOR_REQUIRED` —
+ * hydration included, and AuthContext answers that by signing out, which
+ * revokes the session the login page is still using to verify the code. The
+ * caller therefore holds these tokens, completes any challenge with them, and
+ * only then calls {@link installSession}.
  */
-export async function signIn(email: string, password: string): Promise<SignInResult> {
-  const supabase = getSupabaseClient();
-
+export async function authenticateWithPassword(
+  email: string,
+  password: string,
+): Promise<PendingSession> {
   try {
     logger.info('Starting sign in process...', { email });
 
@@ -161,15 +175,35 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       throw new AuthError(result.error || AUTH_ERRORS.INVALID_CREDENTIALS, 'invalid_credentials');
     }
 
-    if (!result.session?.access_token || !result.session?.refresh_token || !result.user) {
+    if (!result.session?.access_token || !result.session?.refresh_token || !result.user?.id) {
       throw new AuthError(AUTH_ERRORS.INVALID_CREDENTIALS, 'invalid_credentials');
     }
 
-    // Install the session the server obtained. This is what makes the rest of
-    // the app — which reads `supabase.auth.getSession()` — see a normal login.
+    return {
+      userId: result.user.id,
+      accessToken: result.session.access_token,
+      refreshToken: result.session.refresh_token,
+    };
+  } catch (error) {
+    console.error('❌ Exception in signIn:', error);
+    if (error instanceof AuthError) throw error;
+    throw parseAuthError(error);
+  }
+}
+
+/**
+ * Install a session obtained by {@link authenticateWithPassword}.
+ *
+ * This is what makes the rest of the app — which reads
+ * `supabase.auth.getSession()` — see a normal login: `setSession` fires
+ * `onAuthStateChange`, the single hydration pipeline AuthContext relies on.
+ */
+export async function installSession(pending: PendingSession): Promise<SignInResult> {
+  const supabase = getSupabaseClient();
+  try {
     const { data, error: setSessionError } = await supabase.auth.setSession({
-      access_token: result.session.access_token,
-      refresh_token: result.session.refresh_token,
+      access_token: pending.accessToken,
+      refresh_token: pending.refreshToken,
     });
 
     if (setSessionError || !data.user) {
@@ -184,10 +218,40 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       session: data.session,
     };
   } catch (error) {
-    console.error('❌ Exception in signIn:', error);
+    console.error('❌ Exception in installSession:', error);
     if (error instanceof AuthError) throw error;
     throw parseAuthError(error);
   }
+}
+
+/**
+ * End a session from {@link authenticateWithPassword} that will never be
+ * installed: a cancelled two-factor challenge, a closed or suspended account.
+ *
+ * `auth.signOut()` cannot do this — the session was never installed, so the
+ * client has nothing to sign out. `auth.admin.signOut` is the library's
+ * per-token logout (it is what `auth.signOut()` calls underneath) and is
+ * authenticated by the token passed to it, not by any service key. Local
+ * scope ends this one sign-in and leaves the user's other devices alone.
+ *
+ * Best effort: failing to revoke must not turn into a failed page, and the
+ * server refuses the session anyway until its checks pass.
+ */
+export async function discardPendingSession(pending: PendingSession): Promise<void> {
+  try {
+    const { error } = await getSupabaseClient().auth.admin.signOut(pending.accessToken, 'local');
+    if (error) logger.warn('Could not revoke a discarded sign-in', { error });
+  } catch (error) {
+    logger.warn('Could not revoke a discarded sign-in', { error });
+  }
+}
+
+/**
+ * Sign in and install the session in one step — for flows with no second
+ * factor to complete in between. The login page uses the two halves.
+ */
+export async function signIn(email: string, password: string): Promise<SignInResult> {
+  return installSession(await authenticateWithPassword(email, password));
 }
 
 /**

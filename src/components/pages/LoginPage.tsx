@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { signIn, resendVerificationEmail } from '../../utils/auth/authService';
-import { signOut } from '../../utils/auth/authService';
+import {
+  authenticateWithPassword,
+  discardPendingSession,
+  installSession,
+  resendVerificationEmail,
+  type PendingSession,
+} from '../../utils/auth/authService';
 import { AuthError } from '../../utils/auth/errorHandler';
 import { useAuth } from '../auth/AuthContext';
 import { getAuthenticatedRedirectPath } from '../auth/RouteGuards';
@@ -36,10 +41,15 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [verificationEmailSent, setVerificationEmailSent] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
-  const [tempUserId, setTempUserId] = useState<string | null>(null);
+  /**
+   * A sign-in whose password checked out but whose second factor has not.
+   * It is held here, NOT installed in the Supabase client, until the code is
+   * verified: installing it starts AuthContext hydration, every API call
+   * refuses an unverified session, and AuthContext answers that by signing
+   * out — revoking the very session this page is verifying the code with.
+   */
+  const [pendingSession, setPendingSession] = useState<PendingSession | null>(null);
   const [tempUserEmail, setTempUserEmail] = useState<string>('');
-  /** Primary-session token used only to complete the pending 2FA challenge. */
-  const [tempAccessToken, setTempAccessToken] = useState<string>('');
 
   // Get success message from location state (e.g., from email verification)
   const successMessage = location.state?.message;
@@ -107,107 +117,93 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // Proceed with normal sign in
-      const result = await signIn(email, password);
-      const accessToken = result.session?.access_token;
-      if (!accessToken) {
-        await signOut();
-        throw new Error('Sign-in did not return a valid session');
-      }
+      // Check the password without installing the session yet — see
+      // `pendingSession` above for why it waits for the second factor.
+      const pending = await authenticateWithPassword(email, password);
+      const { userId, accessToken } = pending;
 
-      // Check if 2FA is enabled for this user
-      if (result.user?.id) {
-        try {
-          const securityResponse = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${result.user.id}/status`,
+      try {
+        const securityResponse = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${userId}/status`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          },
+        );
+
+        if (!securityResponse.ok) {
+          throw new Error('Security status request failed');
+        }
+        const securityData = await securityResponse.json();
+        if (!securityData.success) {
+          throw new Error('Security status response was invalid');
+        }
+
+        // -- Account lifecycle gate --
+        // A closed (soft-deleted) account never gets a session. All data
+        // remains visible to admin.
+        if (securityData.status?.deleted) {
+          await discardPendingSession(pending);
+          setError(
+            'Your account has been closed. If you believe this is an error, please contact Navigate Wealth support.',
+          );
+          return;
+        }
+
+        if (securityData.status?.suspended) {
+          await discardPendingSession(pending);
+          setError(
+            'Your account has been suspended. Please contact Navigate Wealth support for assistance.',
+          );
+          return;
+        }
+
+        // The challenge is skipped only if THIS session has already passed it.
+        // The server records verification per sign-in and refuses every other
+        // API call until this session verifies, so skipping on the account-wide
+        // `last2faVerifiedAt` (as this used to) would leave a fresh sign-in
+        // stranded — and was the gap that let a second sign-in with a stolen
+        // password ride on the owner's code.
+        if (
+          securityData.status?.twoFactorEnabled &&
+          securityData.status?.sessionTwoFactorVerified !== true
+        ) {
+          const sendCodeResponse = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${userId}/2fa/send-code`,
             {
-              headers: { Authorization: `Bearer ${accessToken}` },
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({}),
             },
           );
 
-          if (!securityResponse.ok) {
-            throw new Error('Security status request failed');
+          if (!sendCodeResponse.ok) {
+            throw new Error('Failed to send 2FA code');
           }
-          {
-            const securityData = await securityResponse.json();
-            if (!securityData.success) {
-              throw new Error('Security status response was invalid');
-            }
 
-            // -- Account lifecycle gate --
-            // If the account is closed (soft-deleted), sign out immediately
-            // and inform the user. All data remains visible to admin.
-            if (securityData.success && securityData.status?.deleted) {
-              await signOut();
-              setIsSubmitting(false);
-              setError(
-                'Your account has been closed. If you believe this is an error, please contact Navigate Wealth support.',
-              );
-              return;
-            }
-
-            // If the account is suspended, sign out and inform
-            if (securityData.success && securityData.status?.suspended) {
-              await signOut();
-              setIsSubmitting(false);
-              setError(
-                'Your account has been suspended. Please contact Navigate Wealth support for assistance.',
-              );
-              return;
-            }
-
-            if (securityData.success && securityData.status?.twoFactorEnabled) {
-              // Skip the challenge only if THIS session has already passed it.
-              // The server records verification per sign-in and refuses every
-              // other API call until this session verifies, so skipping on the
-              // account-wide `last2faVerifiedAt` (as this used to) would leave
-              // a fresh sign-in stranded — and was the gap that let a second
-              // sign-in with a stolen password ride on the owner's code.
-              if (securityData.status?.sessionTwoFactorVerified === true) {
-                setIsSubmitting(false);
-                return; // useEffect handles redirect
-              }
-
-              // Send 2FA code
-              const sendCodeResponse = await fetch(
-                `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${result.user.id}/2fa/send-code`,
-                {
-                  method: 'POST',
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({}),
-                },
-              );
-
-              if (!sendCodeResponse.ok) {
-                throw new Error('Failed to send 2FA code');
-              }
-
-              // Keep the primary session only long enough to complete the server-enforced factor.
-              setTempUserId(result.user.id);
-              setTempUserEmail(email);
-              setTempAccessToken(accessToken);
-              setShow2FAModal(true);
-              setIsSubmitting(false);
-              return; // Don't proceed with login until 2FA is verified
-            }
-
-            // 2FA is not enabled — flag this so the dashboard can prompt the user
-            if (securityData.success && !securityData.status?.twoFactorEnabled) {
-              sessionStorage.setItem('nw_show_2fa_prompt', 'true');
-            }
-          }
-        } catch (twoFAError: unknown) {
-          await signOut().catch(() => undefined);
-          throw new Error('Unable to verify account security status. Please try again.', {
-            cause: twoFAError,
-          });
+          // Hold the session, uninstalled, until handle2FAVerified.
+          setPendingSession(pending);
+          setTempUserEmail(email);
+          setShow2FAModal(true);
+          return;
         }
+
+        // 2FA is not enabled — flag this so the dashboard can prompt the user
+        if (!securityData.status?.twoFactorEnabled) {
+          sessionStorage.setItem('nw_show_2fa_prompt', 'true');
+        }
+      } catch (twoFAError: unknown) {
+        await discardPendingSession(pending);
+        throw new Error('Unable to verify account security status. Please try again.', {
+          cause: twoFAError,
+        });
       }
 
-      // Don't redirect here - let the useEffect handle all redirects after user is loaded
+      // Every check passed: install the session. Don't redirect here — the
+      // useEffect above does, once AuthContext has hydrated from it.
+      await installSession(pending);
     } catch (error: unknown) {
       // AuthError carries a `code` property for reliable classification
       if (error instanceof AuthError) {
@@ -246,23 +242,34 @@ export function LoginPage() {
   };
 
   const handle2FAVerified = async () => {
+    const verified = pendingSession;
     setShow2FAModal(false);
     setError('');
-    setIsSubmitting(false);
-
-    // Clear temporary credentials
-    setTempUserId(null);
+    setPendingSession(null);
     setTempUserEmail('');
-    setTempAccessToken('');
+    if (!verified) return;
+
+    // The session has passed its factor, so hydration can now use it. The
+    // useEffect above redirects once AuthContext has the user.
+    setIsSubmitting(true);
+    try {
+      await installSession(verified);
+    } catch {
+      setError(
+        'Your code was accepted, but we could not start your session. Please sign in again.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handle2FACancel = async () => {
+    const abandoned = pendingSession;
     setShow2FAModal(false);
-    setTempUserId(null);
+    setPendingSession(null);
     setTempUserEmail('');
-    setTempAccessToken('');
-    await signOut().catch(() => undefined);
     setError('Login cancelled. Two-factor authentication is required.');
+    if (abandoned) await discardPendingSession(abandoned);
   };
 
   const formContent = (
@@ -455,18 +462,18 @@ export function LoginPage() {
   );
 
   const twoFactorModal =
-    show2FAModal && tempUserId ? (
+    show2FAModal && pendingSession ? (
       <TwoFactorModal
         email={tempUserEmail}
         onVerified={handle2FAVerified}
         onCancel={handle2FACancel}
         verifyCode={async (code: string) => {
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${tempUserId}/2fa/verify-code`,
+            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${pendingSession.userId}/2fa/verify-code`,
             {
               method: 'POST',
               headers: {
-                Authorization: `Bearer ${tempAccessToken}`,
+                Authorization: `Bearer ${pendingSession.accessToken}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ code }),
@@ -477,10 +484,11 @@ export function LoginPage() {
             // If the account was suspended due to too many failures,
             // close the modal and show the suspension error on the login page.
             if (data.suspended) {
+              const suspended = pendingSession;
               setShow2FAModal(false);
-              setTempUserId(null);
+              setPendingSession(null);
               setTempUserEmail('');
-              setTempAccessToken('');
+              void discardPendingSession(suspended);
               setError(
                 data.error ||
                   'Your account has been suspended. Please contact Navigate Wealth support.',
@@ -493,11 +501,11 @@ export function LoginPage() {
         }}
         resendCode={async () => {
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${tempUserId}/2fa/send-code`,
+            `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/security/${pendingSession.userId}/2fa/send-code`,
             {
               method: 'POST',
               headers: {
-                Authorization: `Bearer ${tempAccessToken}`,
+                Authorization: `Bearer ${pendingSession.accessToken}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({}),

@@ -24,8 +24,11 @@ const h = vi.hoisted(() => ({
     updateUser: vi.fn(),
     onAuthStateChange: vi.fn(),
   },
+  admin: { signOut: vi.fn() },
 }));
-vi.mock('../../supabase/client', () => ({ getSupabaseClient: () => ({ auth: h.auth }) }));
+vi.mock('../../supabase/client', () => ({
+  getSupabaseClient: () => ({ auth: { ...h.auth, admin: h.admin } }),
+}));
 
 vi.mock('../securityService', () => ({
   validateSignupData: vi.fn(
@@ -69,6 +72,7 @@ function fetchResolving(body: unknown, { ok = true, status = 200 } = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   Object.values(h.auth).forEach((fn) => fn.mockReset());
+  h.admin.signOut.mockReset();
 });
 
 describe('signIn', () => {
@@ -171,6 +175,91 @@ describe('signIn', () => {
       code: 'network_error',
     });
     expect(h.auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+});
+
+describe('the two halves of signIn', () => {
+  /**
+   * The login page cannot use `signIn` for a 2FA account: installing the
+   * session fires `onAuthStateChange`, AuthContext hydrates with a session the
+   * server refuses until its factor passes, and signs it out mid-challenge. So
+   * it checks the password first and installs only once the code is verified.
+   */
+  const LOGIN_OK = {
+    success: true,
+    session: { access_token: 't', refresh_token: 'r' },
+    user: { id: 'u1' },
+  };
+
+  it('authenticateWithPassword returns the tokens and installs nothing', async () => {
+    fetchResolving(LOGIN_OK);
+
+    const pending = await authService.authenticateWithPassword('a@b.co', 'pw');
+
+    expect(pending).toEqual({ userId: 'u1', accessToken: 't', refreshToken: 'r' });
+    expect(h.auth.setSession).not.toHaveBeenCalled();
+    expect(h.auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('authenticateWithPassword refuses a 200 with no user id', async () => {
+    fetchResolving({ success: true, session: { access_token: 't', refresh_token: 'r' } });
+    await expect(authService.authenticateWithPassword('a@b.co', 'pw')).rejects.toMatchObject({
+      code: 'invalid_credentials',
+    });
+  });
+
+  it('installSession installs exactly the tokens it is given', async () => {
+    h.auth.setSession.mockResolvedValue({
+      data: { user: supaUser, session: { access_token: 't' } },
+      error: null,
+    });
+
+    const res = await authService.installSession({
+      userId: 'u1',
+      accessToken: 't',
+      refreshToken: 'r',
+    });
+
+    expect(h.auth.setSession).toHaveBeenCalledWith({ access_token: 't', refresh_token: 'r' });
+    expect(res.user?.id).toBe('u1');
+  });
+
+  it('installSession surfaces a setSession failure', async () => {
+    h.auth.setSession.mockResolvedValue({
+      data: { user: null, session: null },
+      error: new Error('Invalid Refresh Token'),
+    });
+    await expect(
+      authService.installSession({ userId: 'u1', accessToken: 't', refreshToken: 'r' }),
+    ).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it('discardPendingSession revokes only that sign-in, by its own token', async () => {
+    h.admin.signOut.mockResolvedValue({ data: null, error: null });
+
+    await authService.discardPendingSession({
+      userId: 'u1',
+      accessToken: 't',
+      refreshToken: 'r',
+    });
+
+    // Local scope: a cancelled challenge on one device must not sign the
+    // owner out everywhere else.
+    expect(h.admin.signOut).toHaveBeenCalledWith('t', 'local');
+    // Nothing was installed, so there is nothing for the client to sign out.
+    expect(h.auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it('discardPendingSession never throws — a failed revoke must not break the page', async () => {
+    h.admin.signOut.mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(
+      authService.discardPendingSession({ userId: 'u1', accessToken: 't', refreshToken: 'r' }),
+    ).resolves.toBeUndefined();
+
+    h.admin.signOut.mockResolvedValue({ data: null, error: new Error('session_not_found') });
+    await expect(
+      authService.discardPendingSession({ userId: 'u1', accessToken: 't', refreshToken: 'r' }),
+    ).resolves.toBeUndefined();
   });
 });
 
