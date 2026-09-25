@@ -177,9 +177,22 @@ function normalize(payload: unknown): NormalizedViolation[] {
 }
 
 function isExtensionNoise(v: NormalizedViolation): boolean {
-  return EXTENSION_SCHEMES.some(
-    (scheme) => v.blockedUrl.startsWith(scheme) || v.sourceFile.startsWith(scheme),
-  );
+  return EXTENSION_SCHEMES.some((scheme) => {
+    // Most browsers report the full `scheme://id/path` form, which the
+    // `startsWith(scheme)` check below catches. At least one real report
+    // (2026-09-24, `audit:security:csp:script-src:chrome-extension:wasm-eval`)
+    // arrived with `source-file` as the bare scheme name and no `://` at all —
+    // stripUrl's catch branch passes that straight through — so the colon-
+    // suffixed check never matched and the noise was stored as a real,
+    // open finding. Match the bare name too.
+    const bareName = scheme.slice(0, -1);
+    return (
+      v.blockedUrl.startsWith(scheme) ||
+      v.sourceFile.startsWith(scheme) ||
+      v.blockedUrl === bareName ||
+      v.sourceFile === bareName
+    );
+  });
 }
 
 /**
