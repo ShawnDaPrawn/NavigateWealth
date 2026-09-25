@@ -1,200 +1,154 @@
 /**
- * Super-admin secret comparison + body validation (B2 burn-down).
- * ===============================================================
+ * auth-admin-routes.ts — no shared-secret account doors.
+ * ======================================================
  *
- * `auth-admin-routes.ts` has three routes, all gated by the same
- * `SUPER_ADMIN_PASSWORD` secret. One of them — `/ensure-dev-user` — compared it
- * with `constantTimeEqual` and carried a comment explaining why. The other two,
- * including the one that CREATES A SUPER-ADMIN ACCOUNT, used a plain `!==`.
+ * This file used to pin that the three super-admin utilities compared the
+ * `SUPER_ADMIN_PASSWORD` secret in constant time. That was the right fix for
+ * the wrong problem. Two of those routes — `create-superadmin` and
+ * `ensure-dev-user` — could mint a super-admin or reset ANY account's password
+ * (the owner's included) with nothing but that one static string in the body:
+ * no session, no rate limit on guesses, no audit record. A timing-safe compare
+ * does not make a single shared string an acceptable key to every account.
  *
- * `!==` on strings short-circuits at the first differing byte, so how long the
- * comparison takes correlates with how much of the secret the caller already
- * guessed. Practical exploitation across a network is hard and noisy; that is
- * an argument about difficulty, not about correctness, and the correct helper
- * was already imported at the top of the same file. Two of three siblings had
- * simply drifted from it.
+ * Both are gone. `clear-rate-limit` has a genuine support use and survives
+ * behind a super-admin SESSION. What is pinned here:
+ *   1. Structurally: the module no longer reads the shared secret, and no
+ *      longer touches account creation or passwords at all.
+ *   2. Behaviourally: the removed paths 404, and `clear-rate-limit` is refused
+ *      without a super-admin session, validates its body, and clears the
+ *      NORMALISED account bucket.
  *
- * The second half of this file is the body validation those three routes never
- * had, plus `/auth-signup/signup` — which turned out to be the signup endpoint
- * the SPA actually calls, while the schema added in B2 sat on `/auth/signup`,
- * which nothing calls.
+ * `auth-routes-privilege.contract.test.ts` exercises the same route through
+ * the real auth middleware; this file stubs it to keep the checks focused.
  */
-import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const SOURCE = readFileSync(join(SERVER_DIR, 'auth-admin-routes.ts'), 'utf8');
 
-const listUsers = vi.hoisted(() => vi.fn());
-const createUser = vi.hoisted(() => vi.fn());
-const updateUserById = vi.hoisted(() => vi.fn());
 const clearRateLimit = vi.hoisted(() => vi.fn());
+const auditRecord = vi.hoisted(() => vi.fn(async () => undefined));
 
-beforeAll(() => {
-  vi.stubGlobal('Deno', {
-    env: {
-      get: (name: string) =>
-        ({
-          SUPER_ADMIN_PASSWORD: 'the-real-secret',
-          SUPABASE_URL: 'https://test',
-          SUPABASE_SERVICE_ROLE_KEY: 'service-role',
-        })[name] ?? '',
-    },
-  });
+vi.mock('../rateLimiter.ts', async () => {
+  const actual = await vi.importActual<typeof import('../rateLimiter.ts')>('../rateLimiter.ts');
+  return { ...actual, clearRateLimit: (...a: unknown[]) => clearRateLimit(...a) };
 });
 
-vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
-  createClient: () => ({
-    auth: {
-      admin: {
-        listUsers: (...a: unknown[]) => listUsers(...a),
-        createUser: (...a: unknown[]) => createUser(...a),
-        updateUserById: (...a: unknown[]) => updateUserById(...a),
-      },
+vi.mock('../auth-mw.ts', () => ({
+  // Stand-in for the real guard: the caller's role arrives on a test header.
+  requireSuperAdmin: async (
+    c: {
+      req: { header: (n: string) => string | undefined };
+      json: (b: unknown, s: number) => Response;
+      set: (k: string, v: string) => void;
     },
-  }),
+    next: () => Promise<void>,
+  ) => {
+    const role = c.req.header('x-test-role');
+    if (!role) return c.json({ error: 'Unauthorized' }, 401);
+    if (role !== 'super_admin') return c.json({ error: 'Forbidden' }, 403);
+    c.set('userId', 'sa-1');
+    c.set('userRole', role);
+    await next();
+  },
 }));
 
-vi.mock('../kv_store.tsx', () => ({
-  get: vi.fn(async () => null),
-  set: vi.fn(),
-  del: vi.fn(),
-  getByPrefix: vi.fn(async () => []),
-  mget: vi.fn(),
-  mset: vi.fn(),
-  mdel: vi.fn(),
-}));
+vi.mock('../admin-audit-service.ts', () => ({ AdminAuditService: { record: auditRecord } }));
 
-vi.mock('../rateLimiter.ts', () => ({ clearRateLimit: (...a: unknown[]) => clearRateLimit(...a) }));
+vi.mock('../stderr-logger.ts', async () =>
+  (await import('./helpers/contract-harness.ts')).makeLoggerMock(),
+);
 
 import adminAuthRoutes from '../auth-admin-routes.ts';
 
-const json = (body: unknown) => ({
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
+const post = (path: string, body: unknown, role?: string) =>
+  adminAuthRoutes.request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(role ? { 'x-test-role': role } : {}) },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  listUsers.mockResolvedValue({ data: { users: [] } });
 });
 
-describe('the secret is compared in constant time on every route that checks it', () => {
-  it('leaves no plain-equality comparison of the secret in the file', () => {
-    // Structural, because a timing property cannot be measured reliably in a
-    // test runner. What CAN be pinned is that the correct helper is used at
-    // every site — which is the thing that had drifted.
-    const src = readFileSync(join(SERVER_DIR, 'auth-admin-routes.ts'), 'utf8');
-
-    const plainComparisons = src
-      .split('\n')
-      .map((line, i) => ({ line: line.trim(), n: i + 1 }))
-      .filter(({ line }) => !line.startsWith('*') && !line.startsWith('//'))
-      .filter(({ line }) => /secretKey\s*(!==|===|!=|==)\s*expectedSecretKey/.test(line));
-
-    expect(
-      plainComparisons.map((p) => `${p.n}: ${p.line}`),
-      'compare the super-admin secret with constantTimeEqual, as /ensure-dev-user does',
-    ).toEqual([]);
+describe('no shared-secret account doors', () => {
+  it('no longer reads the shared super-admin secret', () => {
+    const code = SOURCE.split('\n')
+      .filter((line) => {
+        const t = line.trim();
+        return !(t.startsWith('*') || t.startsWith('//') || t.startsWith('/*'));
+      })
+      .join('\n');
+    expect(code).not.toMatch(/SUPER_ADMIN_PASSWORD|secretKey/);
   });
 
-  it('uses constantTimeEqual once per secret-checking route', () => {
-    const src = readFileSync(join(SERVER_DIR, 'auth-admin-routes.ts'), 'utf8');
-    const calls = src.match(/constantTimeEqual\(/g) ?? [];
-
-    // Three routes check the secret; the fourth match is the import.
-    expect(calls).toHaveLength(3);
+  it('never creates accounts or sets passwords', () => {
+    expect(SOURCE).not.toMatch(/createUser|updateUserById|listUsers/);
   });
 
-  it.each([
-    ['/create-superadmin', { secretKey: 'wrong', email: 'a@b.com', password: 'Passw0rd!x' }],
-    ['/clear-rate-limit', { secretKey: 'wrong', email: 'a@b.com' }],
-    ['/ensure-dev-user', { secretKey: 'wrong', email: 'a@b.com', password: 'Passw0rd!x' }],
-  ])('still refuses %s with a wrong secret', async (path, body) => {
-    const res = await adminAuthRoutes.request(path, json(body));
+  it('registers exactly one route, behind a super-admin session', () => {
+    const routes = [...SOURCE.matchAll(/adminAuthRoutes\.(get|post|put|patch|delete)\(/g)];
+    expect(routes).toHaveLength(1);
+    expect(SOURCE).toMatch(/'\/clear-rate-limit',\s*requireSuperAdmin/);
+  });
 
+  it.each(['/create-superadmin', '/ensure-dev-user'])(
+    '%s 404s even for a super-admin session',
+    async (path) => {
+      const res = await post(
+        path,
+        { email: 'a@b.com', password: 'Passw0rd!x', secretKey: 'the-real-secret' },
+        'super_admin',
+      );
+      expect(res.status).toBe(404);
+    },
+  );
+});
+
+describe('clear-rate-limit', () => {
+  it('refuses a caller with no session, even with the old secret', async () => {
+    const res = await post('/clear-rate-limit', { secretKey: 'the-real-secret', email: 'a@b.com' });
+    expect(res.status).toBe(401);
+    expect(clearRateLimit).not.toHaveBeenCalled();
+  });
+
+  it('refuses an admin who is not a super-admin', async () => {
+    const res = await post('/clear-rate-limit', { email: 'a@b.com' }, 'admin');
     expect(res.status).toBe(403);
     expect(clearRateLimit).not.toHaveBeenCalled();
-    expect(createUser).not.toHaveBeenCalled();
-    expect(updateUserById).not.toHaveBeenCalled();
   });
 
-  it('accepts the correct secret — the fix did not break the door it guards', async () => {
-    const res = await adminAuthRoutes.request(
-      '/clear-rate-limit',
-      json({ secretKey: 'the-real-secret', email: 'a@b.com' }),
-    );
-
+  it('clears the normalised account bucket and records who did it', async () => {
+    const res = await post('/clear-rate-limit', { email: '  A@B.com ' }, 'super_admin');
     expect(res.status).toBe(200);
+    expect(clearRateLimit).toHaveBeenCalledTimes(1);
     expect(clearRateLimit).toHaveBeenCalledWith('a@b.com', 'login');
-  });
-
-  it('refuses a secret that is a prefix of the real one', async () => {
-    // constantTimeEqual returns false on a length mismatch before comparing
-    // bytes. Worth pinning: a helper that padded instead would be a different,
-    // subtler bug.
-    const res = await adminAuthRoutes.request(
-      '/clear-rate-limit',
-      json({ secretKey: 'the-real', email: 'a@b.com' }),
+    expect(auditRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: 'sa-1', action: 'login_rate_limit_cleared' }),
     );
-
-    expect(res.status).toBe(403);
-  });
-});
-
-describe('body validation on the super-admin utilities', () => {
-  it.each([
-    ['/create-superadmin', { email: 'a@b.com', password: 'x' }],
-    ['/clear-rate-limit', { email: 'a@b.com' }],
-    ['/ensure-dev-user', { email: 'a@b.com', password: 'x' }],
-  ])('rejects %s with no secretKey as 400', async (path, body) => {
-    const res = await adminAuthRoutes.request(path, json(body));
-
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toMatchObject({ error: 'Validation failed' });
   });
 
-  it('rejects /clear-rate-limit with no email, which would clear an undefined bucket', async () => {
-    const res = await adminAuthRoutes.request(
-      '/clear-rate-limit',
-      json({ secretKey: 'the-real-secret' }),
-    );
-
+  it('rejects a body with no email, which would clear an undefined bucket', async () => {
+    const res = await post('/clear-rate-limit', {}, 'super_admin');
     expect(res.status).toBe(400);
     expect(clearRateLimit).not.toHaveBeenCalled();
-  });
-
-  it('turns /ensure-dev-user with no email into a 400 rather than a 500', async () => {
-    // The handler calls `email.toLowerCase()`. Before the schema, a missing
-    // email threw inside the handler and surfaced as an opaque server error.
-    const res = await adminAuthRoutes.request(
-      '/ensure-dev-user',
-      json({ secretKey: 'the-real-secret', password: 'x' }),
-    );
-
-    expect(res.status).toBe(400);
   });
 
   it('rejects a body that is not JSON at all as 400', async () => {
-    const res = await adminAuthRoutes.request('/clear-rate-limit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: 'not json',
-    });
-
+    const res = await post('/clear-rate-limit', 'not json', 'super_admin');
     expect(res.status).toBe(400);
   });
 
   it('never rejects an unknown extra field', async () => {
-    // Every schema is `.passthrough()`. A caller sending more than the schema
-    // knows about must not start failing because of this change.
-    const res = await adminAuthRoutes.request(
+    const res = await post(
       '/clear-rate-limit',
-      json({ secretKey: 'the-real-secret', email: 'a@b.com', somethingNew: 'ok' }),
+      { email: 'a@b.com', somethingNew: 'ok' },
+      'super_admin',
     );
-
     expect(res.status).toBe(200);
   });
 });

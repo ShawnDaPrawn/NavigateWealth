@@ -2,7 +2,14 @@
  * Policy-extraction and provider-terminology routes (Phase 5 Slice F).
  * =====================================================================
  *
- * Extracted verbatim from integrations.tsx. No logic changes.
+ * Extracted verbatim from integrations.tsx.
+ *
+ * ACCESS: every route is requireAdmin. They were requireAuth, which any
+ * self-registered client passes, and they take a clientId from the caller:
+ * read any client's extracted policy data (sums assured, premiums,
+ * beneficiaries), apply or lock fields on it, run paid AI extraction on
+ * another client's document or a provider-wide bulk re-extraction, and rewrite
+ * the firm's provider terminology. Every caller is in the admin panel.
  *
  * Routes owned here:
  *   POST /policy-extraction/extract         — trigger AI extraction on a policy document
@@ -23,7 +30,7 @@ import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { aiUsageLimit } from './ai-usage-limit.ts';
 import type { KvPolicy } from './integrations-types.ts';
 import {
@@ -52,7 +59,7 @@ const log = createModuleLogger('integrations-policy-extraction');
  */
 app.post(
   '/policy-extraction/extract',
-  requireAuth,
+  requireAdmin,
   aiUsageLimit({ surface: 'policy-extraction' }),
   async (c) => {
     try {
@@ -192,7 +199,7 @@ app.post(
  * Get the latest extraction result and field mappings for a policy.
  * Query params: policyId, clientId
  */
-app.get('/policy-extraction/result', requireAuth, async (c) => {
+app.get('/policy-extraction/result', requireAdmin, async (c) => {
   try {
     const policyId = c.req.query('policyId');
     const clientId = c.req.query('clientId');
@@ -228,7 +235,7 @@ app.get('/policy-extraction/result', requireAuth, async (c) => {
  * Get the extraction history for a policy.
  * Query params: policyId, clientId
  */
-app.get('/policy-extraction/history', requireAuth, async (c) => {
+app.get('/policy-extraction/history', requireAdmin, async (c) => {
   try {
     const policyId = c.req.query('policyId');
     const clientId = c.req.query('clientId');
@@ -264,7 +271,7 @@ app.get('/policy-extraction/history', requireAuth, async (c) => {
  *
  * If rightId is 'current', compares against the live extraction.
  */
-app.get('/policy-extraction/compare', requireAuth, async (c) => {
+app.get('/policy-extraction/compare', requireAdmin, async (c) => {
   try {
     const policyId = c.req.query('policyId');
     const clientId = c.req.query('clientId');
@@ -389,7 +396,7 @@ function hasExtractedPolicyValue(value: unknown): boolean {
  * Apply selected extracted fields to the policy's data.
  * Body: { policyId, clientId, fieldsToApply: { schemaFieldId: value }[] }
  */
-app.post('/policy-extraction/apply', requireAuth, async (c) => {
+app.post('/policy-extraction/apply', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const { policyId, clientId, fieldsToApply } = body;
@@ -491,7 +498,7 @@ app.post('/policy-extraction/apply', requireAuth, async (c) => {
  * worse than none, because an adviser cannot tell which sources it stopped.
  * Body: { policyId, clientId, fieldIds: string[], action: 'lock' | 'unlock' }
  */
-app.post('/policy-extraction/lock-fields', requireAuth, async (c) => {
+app.post('/policy-extraction/lock-fields', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const { policyId, clientId, fieldIds, action } = body;
@@ -563,7 +570,7 @@ app.post('/policy-extraction/lock-fields', requireAuth, async (c) => {
  * Get terminology mapping for a specific provider, or all provider mappings.
  * Query params: providerId (optional — if omitted, returns all)
  */
-app.get('/provider-terminology', requireAuth, async (c) => {
+app.get('/provider-terminology', requireAdmin, async (c) => {
   try {
     const providerId = c.req.query('providerId');
 
@@ -585,7 +592,7 @@ app.get('/provider-terminology', requireAuth, async (c) => {
  * Save or update a provider's terminology mapping.
  * Body: ProviderTerminologyMap
  */
-app.post('/provider-terminology', requireAuth, async (c) => {
+app.post('/provider-terminology', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
 
@@ -621,7 +628,7 @@ app.post('/provider-terminology', requireAuth, async (c) => {
  * Returns: per-provider stats, overall stats, low-confidence field frequency,
  *          and extraction timeline data.
  */
-app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
+app.get('/policy-extraction/quality-stats', requireAdmin, async (c) => {
   try {
     // Fetch all client policy keys
     const allPolicyEntries = await kv.getByPrefix('policies:client:');
@@ -816,7 +823,7 @@ app.get('/policy-extraction/quality-stats', requireAuth, async (c) => {
  */
 app.post(
   '/policy-extraction/bulk-reextract',
-  requireAuth,
+  requireAdmin,
   aiUsageLimit({ surface: 'policy-extraction' }),
   async (c) => {
     try {

@@ -69,21 +69,6 @@ export const OtpVerifySchema = z.object({
   otp: z.string().min(4).max(10),
 });
 
-// --- Sign / Reject ---
-
-export const SignEnvelopeSchema = z
-  .object({
-    signerId: z.string().min(1, 'Signer ID is required'),
-    signatureData: z.string().optional(),
-    fieldValues: z.record(z.string(), z.string()).optional(),
-  })
-  .passthrough();
-
-export const RejectEnvelopeSchema = z.object({
-  signerId: z.string().min(1, 'Signer ID is required'),
-  reason: z.string().min(1, 'Rejection reason is required').max(2000),
-});
-
 // --- Signer Portal ---
 
 export const SignerValidateSchema = z.object({
@@ -100,8 +85,9 @@ export const SignerValidateSchema = z.object({
 // not hypothetical — it already happened in this file:
 //
 //   * SENDER-facing (`esign-sender-*-routes.ts`) — camelCase. The schemas
-//     above (SignEnvelopeSchema, RejectEnvelopeSchema, …) belong to these and
-//     are correctly wired.
+//     above belong to these and are correctly wired. (The sender-side
+//     sign/reject schemas went with the unauthenticated routes that used them;
+//     see esign-sender-envelope-routes.ts.)
 //   * SIGNER-facing (`esign-signer-*-routes.ts`) — snake_case. Consumed by
 //     `src/components/esign-signer/services/esignSignerService.ts`, which posts
 //     `access_token` / `signature_data` / `field_values`. These are PUBLIC

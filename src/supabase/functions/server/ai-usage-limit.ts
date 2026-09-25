@@ -75,6 +75,7 @@
 import type { Context, MiddlewareHandler } from 'npm:hono';
 import { checkRateLimit, type RateLimitConfig } from './rateLimiter.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const log = createModuleLogger('ai-usage-limit');
 
@@ -121,11 +122,14 @@ export function aiUsageLimits(): Record<string, RateLimitConfig> {
   };
 }
 
-/** Client IP, from the proxy headers Supabase sets. */
+/**
+ * Client IP, preferring Cloudflare's CF-Connecting-IP. The first
+ * X-Forwarded-For entry is whatever the caller sent — Cloudflare appends to an
+ * existing header rather than replacing it — so keying the per-IP cap on it let
+ * one caller spend a fresh allowance per request.
+ */
 function clientIp(c: { req: { header: (name: string) => string | undefined } }): string {
-  return (
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'noip'
-  );
+  return extractClientIp((n) => c.req.header(n)) || 'noip';
 }
 
 export interface AiUsageLimitOptions {

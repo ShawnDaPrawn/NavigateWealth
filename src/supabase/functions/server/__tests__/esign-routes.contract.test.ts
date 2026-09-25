@@ -397,11 +397,89 @@ describe('esign-routes.tsx route contracts', () => {
     expect(res.status).toBe(401);
   });
 
+  it("GET /envelopes/:id/attachments refuses another firm's envelope", async () => {
+    // The handler used to authenticate and then discard the answer, so any
+    // signed-in user could list any envelope's signer uploads with download
+    // links. The caller here resolves to firm 'u1'; the envelope is not theirs.
+    kvStore.set('esign:envelope:env_other', { id: 'env_other', firm_id: 'another-firm' });
+    kvStore.set('esign:envelope:env_other:attachments', [
+      { field_id: 'f1', storage_path: 'env_other/id-copy.pdf' },
+    ]);
+
+    const res = await esignRoutes.request('/envelopes/env_other/attachments', {
+      headers: { Authorization: 'Bearer t' },
+    });
+
+    expect(res.status).toBe(403);
+    expect(JSON.stringify(await res.json())).not.toContain('id-copy');
+  });
+
+  it('GET /envelopes/:id/attachments serves the envelope to its own firm', async () => {
+    kvStore.set('esign:envelope:env_mine', { id: 'env_mine', firm_id: 'u1' });
+    kvStore.set('esign:envelope:env_mine:attachments', [
+      { field_id: 'f1', storage_path: 'env_mine/upload.pdf' },
+    ]);
+
+    const res = await esignRoutes.request('/envelopes/env_mine/attachments', {
+      headers: { Authorization: 'Bearer t' },
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { attachments: Array<{ storage_path: string }> };
+    expect(body.attachments.map((a) => a.storage_path)).toEqual(['env_mine/upload.pdf']);
+  });
+
+  it('GET /envelopes/:id/attachments 404s an envelope that does not exist', async () => {
+    const res = await esignRoutes.request('/envelopes/env_missing/attachments', {
+      headers: { Authorization: 'Bearer t' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  // ---- Retired sender signing routes ----
+  // `/envelopes/:id/sign`, `/reject`, `/signers/:id/verify` and `/otp/send`
+  // took a signer id with no session and no signer token, and `/sign` skipped
+  // every check the token flow makes. Nothing called them, so they were
+  // deleted. The contract is that they are not ROUTES at all — a status code
+  // alone cannot say that, because the old handlers also answered 404
+  // ("Signer not found") for an unknown envelope. So this checks the route
+  // table, and that the 404 is the framework's, not a handler's.
+  const RETIRED_SIGNING_ROUTES: ReadonlyArray<readonly [string, string]> = [
+    ['/envelopes/:envelopeId/sign', '/envelopes/env_x/sign'],
+    ['/envelopes/:envelopeId/reject', '/envelopes/env_x/reject'],
+    ['/envelopes/:envelopeId/signers/:signerId/verify', '/envelopes/env_x/signers/signer_x/verify'],
+    [
+      '/envelopes/:envelopeId/signers/:signerId/otp/send',
+      '/envelopes/env_x/signers/signer_x/otp/send',
+    ],
+  ];
+  for (const [pattern, path] of RETIRED_SIGNING_ROUTES) {
+    it(`POST ${pattern} is no longer a route`, async () => {
+      const registered = esignRoutes.routes.filter(
+        (r) => r.method === 'POST' && r.path.endsWith(pattern),
+      );
+      expect(registered).toEqual([]);
+
+      const res = await esignRoutes.request(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signerId: 'signer_x',
+          signatureData: 'data:image/png;base64,AAAA',
+          reason: 'x',
+          otp: '123456',
+        }),
+      });
+      expect(res.status).toBe(404);
+      expect(await res.text()).toBe('404 Not Found');
+    });
+  }
+
   // ---- Sender envelope-actions group (session-authed sender operations) ----
   // Only the routes that authenticate before touching the body/envelope have a
-  // stable no-auth 401 contract; the body-first POSTs (otp/send, verify, sign,
-  // reject, recall, remind) are validation/seed-dependent and are exercised by
-  // the service-layer happy-path test instead.
+  // stable no-auth 401 contract; the body-first POSTs (recall, remind) are
+  // validation/seed-dependent and are exercised by the service-layer
+  // happy-path test instead.
   const SENDER_AUTH_GUARDED: ReadonlyArray<readonly [string, string, RequestInit?]> = [
     ['GET', '/envelopes/env_x/audit'],
     ['GET', '/envelopes/env_x/document'],

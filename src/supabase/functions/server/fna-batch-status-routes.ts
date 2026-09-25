@@ -7,7 +7,8 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { authenticateUser, fnaErrorResponse, isFnaAdminRole } from './fna-auth.ts';
+import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
+import { assertClientAccess } from './client-access.ts';
 import { getIntakeOverlayForDomain, type FnaIntakeDomain } from './fna-intake-service.ts';
 
 const fnaBatchStatusRoutes = new Hono();
@@ -204,12 +205,11 @@ fnaBatchStatusRoutes.get('/client/:clientId', async (c) => {
     const clientId = c.req.param('clientId')!;
 
     const user = await authenticateUser(c.req.header('Authorization'), 'fna-batch-status');
-    const isAdmin = isFnaAdminRole(user.role) || user.id === 'admin';
-    const isOwnData = user.id === clientId;
-
-    if (!isAdmin && !isOwnData) {
-      return c.json({ success: false, error: 'Unauthorized access to client data' }, 403);
-    }
+    // The single client-scope policy: the client themself, a platform admin, or
+    // the adviser ASSIGNED to this client. This checked `isFnaAdminRole`, which
+    // counts every adviser as an admin — so any adviser could read the FNA
+    // status and published data of any client, assigned or not.
+    await assertClientAccess(user, clientId, 'fna-batch-status');
 
     const [
       riskLatestPtr,

@@ -24,8 +24,11 @@ const h = vi.hoisted(() => ({
     updateUser: vi.fn(),
     onAuthStateChange: vi.fn(),
   },
+  admin: { signOut: vi.fn() },
 }));
-vi.mock('../../supabase/client', () => ({ getSupabaseClient: () => ({ auth: h.auth }) }));
+vi.mock('../../supabase/client', () => ({
+  getSupabaseClient: () => ({ auth: { ...h.auth, admin: h.admin } }),
+}));
 
 vi.mock('../securityService', () => ({
   validateSignupData: vi.fn(
@@ -34,15 +37,7 @@ vi.mock('../securityService', () => ({
       sanitized: { firstName: 'Ann', surname: 'Bee' },
     }),
   ),
-  validateLoginAttempt: vi.fn(
-    async (): Promise<{ allowed: boolean; error?: string; blocked?: boolean; resetAt?: Date }> => ({
-      allowed: true,
-    }),
-  ),
-  logLoginSuccess: vi.fn(async () => {}),
-  logLoginFailure: vi.fn(async () => {}),
   logLogout: vi.fn(async () => {}),
-  logPasswordResetRequest: vi.fn(async () => {}),
   logPasswordChange: vi.fn(async () => {}),
 }));
 
@@ -77,6 +72,7 @@ function fetchResolving(body: unknown, { ok = true, status = 200 } = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   Object.values(h.auth).forEach((fn) => fn.mockReset());
+  h.admin.signOut.mockReset();
 });
 
 describe('signIn', () => {
@@ -182,6 +178,91 @@ describe('signIn', () => {
   });
 });
 
+describe('the two halves of signIn', () => {
+  /**
+   * The login page cannot use `signIn` for a 2FA account: installing the
+   * session fires `onAuthStateChange`, AuthContext hydrates with a session the
+   * server refuses until its factor passes, and signs it out mid-challenge. So
+   * it checks the password first and installs only once the code is verified.
+   */
+  const LOGIN_OK = {
+    success: true,
+    session: { access_token: 't', refresh_token: 'r' },
+    user: { id: 'u1' },
+  };
+
+  it('authenticateWithPassword returns the tokens and installs nothing', async () => {
+    fetchResolving(LOGIN_OK);
+
+    const pending = await authService.authenticateWithPassword('a@b.co', 'pw');
+
+    expect(pending).toEqual({ userId: 'u1', accessToken: 't', refreshToken: 'r' });
+    expect(h.auth.setSession).not.toHaveBeenCalled();
+    expect(h.auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('authenticateWithPassword refuses a 200 with no user id', async () => {
+    fetchResolving({ success: true, session: { access_token: 't', refresh_token: 'r' } });
+    await expect(authService.authenticateWithPassword('a@b.co', 'pw')).rejects.toMatchObject({
+      code: 'invalid_credentials',
+    });
+  });
+
+  it('installSession installs exactly the tokens it is given', async () => {
+    h.auth.setSession.mockResolvedValue({
+      data: { user: supaUser, session: { access_token: 't' } },
+      error: null,
+    });
+
+    const res = await authService.installSession({
+      userId: 'u1',
+      accessToken: 't',
+      refreshToken: 'r',
+    });
+
+    expect(h.auth.setSession).toHaveBeenCalledWith({ access_token: 't', refresh_token: 'r' });
+    expect(res.user?.id).toBe('u1');
+  });
+
+  it('installSession surfaces a setSession failure', async () => {
+    h.auth.setSession.mockResolvedValue({
+      data: { user: null, session: null },
+      error: new Error('Invalid Refresh Token'),
+    });
+    await expect(
+      authService.installSession({ userId: 'u1', accessToken: 't', refreshToken: 'r' }),
+    ).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it('discardPendingSession revokes only that sign-in, by its own token', async () => {
+    h.admin.signOut.mockResolvedValue({ data: null, error: null });
+
+    await authService.discardPendingSession({
+      userId: 'u1',
+      accessToken: 't',
+      refreshToken: 'r',
+    });
+
+    // Local scope: a cancelled challenge on one device must not sign the
+    // owner out everywhere else.
+    expect(h.admin.signOut).toHaveBeenCalledWith('t', 'local');
+    // Nothing was installed, so there is nothing for the client to sign out.
+    expect(h.auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it('discardPendingSession never throws — a failed revoke must not break the page', async () => {
+    h.admin.signOut.mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(
+      authService.discardPendingSession({ userId: 'u1', accessToken: 't', refreshToken: 'r' }),
+    ).resolves.toBeUndefined();
+
+    h.admin.signOut.mockResolvedValue({ data: null, error: new Error('session_not_found') });
+    await expect(
+      authService.discardPendingSession({ userId: 'u1', accessToken: 't', refreshToken: 'r' }),
+    ).resolves.toBeUndefined();
+  });
+});
+
 describe('signUp', () => {
   it('creates the account via the backend endpoint (email unconfirmed, no session)', async () => {
     // The endpoint returns NOTHING account-specific — the same body whether the
@@ -217,15 +298,34 @@ describe('signUp', () => {
 });
 
 describe('signOut', () => {
-  it('signs out and logs the logout event', async () => {
-    h.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'a@b.co' } } });
-    h.auth.signOut.mockResolvedValue({ error: null });
+  it('logs the logout with the session token BEFORE ending the session', async () => {
+    const order: string[] = [];
+    h.auth.getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+    vi.mocked(security.logLogout).mockImplementationOnce(async () => {
+      order.push('log');
+    });
+    h.auth.signOut.mockImplementationOnce(async () => {
+      order.push('signOut');
+      return { error: null };
+    });
     await authService.signOut();
-    expect(security.logLogout).toHaveBeenCalledWith('a@b.co', 'u1');
+    // The server derives the account from this token, so it must still be
+    // valid when the log call arrives — i.e. sent before signOut() ends it.
+    expect(security.logLogout).toHaveBeenCalledWith('tok');
+    expect(order).toEqual(['log', 'signOut']);
+  });
+
+  it('still signs out when there is no session to log', async () => {
+    h.auth.getSession.mockResolvedValue({ data: { session: null } });
+    h.auth.signOut.mockResolvedValue({ error: null });
+    vi.mocked(security.logLogout).mockClear();
+    await authService.signOut();
+    expect(security.logLogout).not.toHaveBeenCalled();
+    expect(h.auth.signOut).toHaveBeenCalled();
   });
 
   it('throws on a Supabase sign-out error', async () => {
-    h.auth.getUser.mockResolvedValue({ data: { user: null } });
+    h.auth.getSession.mockResolvedValue({ data: { session: null } });
     h.auth.signOut.mockResolvedValue({ error: { message: 'fail' } });
     await expect(authService.signOut()).rejects.toBeInstanceOf(AuthError);
   });

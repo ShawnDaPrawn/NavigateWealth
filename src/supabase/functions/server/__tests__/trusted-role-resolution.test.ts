@@ -2,12 +2,11 @@
  * Trusted role resolution tests (SECURITY: PR #106 review P1).
  *
  * `resolveTrustedRole()` is the single source of truth the auth middleware
- * uses to derive a user's effective role. The invariant under test: privileged
- * roles (admin, super_admin, adviser) are NEVER granted from client-editable
- * `user_metadata` — only from the super-admin email allowlist, server-managed
- * `app_metadata`, or the `NW_ADMIN_EMAILS` env allowlist. Without this, any
- * authenticated user could self-escalate via
- * `supabase.auth.updateUser({ data: { role: 'admin' } })`.
+ * uses to derive a user's effective role. The invariant under test: NO role is
+ * ever taken from client-editable `user_metadata` — only from the super-admin
+ * email allowlist, server-managed `app_metadata`, or the `NW_ADMIN_EMAILS` env
+ * allowlist. Without this, any authenticated user could self-escalate via
+ * `supabase.auth.updateUser({ data: { role: … } })`.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resolveTrustedRole, isAdminEmail, SUPER_ADMIN_EMAIL } from '../constants.ts';
@@ -59,13 +58,32 @@ describe('resolveTrustedRole', () => {
     expect(resolveTrustedRole({ email: 'other@example.com' })).toBe('client');
   });
 
-  it('passes through non-privileged user_metadata roles', () => {
-    expect(resolveTrustedRole({ email: 'c@example.com', user_metadata: { role: 'client' } })).toBe(
-      'client',
-    );
-    expect(resolveTrustedRole({ email: 'v@example.com', user_metadata: { role: 'viewer' } })).toBe(
+  it('never reads a role from user_metadata — not even a "non-privileged" one', () => {
+    // Every value below was once passed straight through, because only
+    // admin/super_admin/adviser were refused. 'compliance' and 'paraplanner'
+    // are treated as staff with cross-client read access by several modules,
+    // and ANY string defeated a check written as `role === 'client'`.
+    for (const role of [
       'viewer',
-    );
+      'compliance',
+      'compliance_officer',
+      'paraplanner',
+      'worker',
+      'staff',
+      'Admin',
+      'SUPER_ADMIN',
+    ]) {
+      expect(
+        resolveTrustedRole({ email: 'client@example.com', user_metadata: { role } }),
+        `user_metadata.role=${role}`,
+      ).toBe('client');
+    }
+  });
+
+  it('still honours the same staff roles when they come from app_metadata', () => {
+    for (const role of ['compliance', 'paraplanner', 'viewer']) {
+      expect(resolveTrustedRole({ email: 'staff@example.com', app_metadata: { role } })).toBe(role);
+    }
   });
 
   it('defaults to client for missing/empty/non-string roles', () => {

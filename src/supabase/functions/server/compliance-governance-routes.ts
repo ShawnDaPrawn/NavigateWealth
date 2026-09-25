@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ComplianceService } from './compliance-service.ts';
@@ -14,7 +14,7 @@ const service = new ComplianceService();
 
 app.get(
   '/complaints',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getComplaints();
     return c.json({ success: true, data: records, total: records.length });
@@ -23,7 +23,7 @@ app.get(
 
 app.get(
   '/complaints/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const record = await service.getComplaintById(id);
@@ -34,7 +34,7 @@ app.get(
 
 app.post(
   '/complaints',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const record = await service.createComplaint(body);
@@ -44,7 +44,7 @@ app.post(
 
 app.put(
   '/compliance/complaints/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const body = await c.req.json();
@@ -81,7 +81,7 @@ app.post(
 
 app.get(
   '/marketing',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getMarketingRecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -115,7 +115,7 @@ app.post(
 
 app.get(
   '/conflicts',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getConflictRecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -149,7 +149,7 @@ app.put(
 
 app.get(
   '/tcf',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getTCFRecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -183,7 +183,7 @@ app.put(
 
 app.get(
   '/supervision',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getSupervisionRecords();
     return c.json({ success: true, data: records, total: records.length });

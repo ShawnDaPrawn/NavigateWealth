@@ -18,7 +18,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import { aiUsageLimit } from './ai-usage-limit.ts';
-import { readTokenIssuedAt } from './jwt-claims.ts';
+import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import {
@@ -93,7 +93,7 @@ async function requireAdmin(c: Context, next: Next) {
     // its JWT stayed valid. Suspending an account does not invalidate an
     // already-issued token.
     try {
-      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token), readTokenSessionId(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(

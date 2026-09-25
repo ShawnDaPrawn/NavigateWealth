@@ -234,3 +234,21 @@ describe('resources-routes: the admin routes beside it are NOT public', () => {
     expect(serviceMocks.seedLegalDocuments).toHaveBeenCalledWith(undefined);
   });
 });
+
+describe('resources-routes: saved retirement scenarios are admin-only', () => {
+  // These read, save and delete a NAMED client's scenarios by id. They were
+  // requireAuth, which any self-registered client passes; the only caller is
+  // the admin panel's calculator.
+  it.each([
+    ['GET', '/calculators/retirement/scenarios/client-a'],
+    ['POST', '/calculators/retirement/scenarios'],
+    ['DELETE', '/calculators/retirement/scenarios/client-a/scenario-1'],
+  ])('%s %s refuses a signed-in client', async (method, path) => {
+    const res = await app.request(path, {
+      method,
+      headers: { ...NON_ADMIN, 'Content-Type': 'application/json' },
+      ...(method === 'POST' ? { body: JSON.stringify({ clientId: 'client-a' }) } : {}),
+    });
+    expect(res.status).toBe(403);
+  });
+});

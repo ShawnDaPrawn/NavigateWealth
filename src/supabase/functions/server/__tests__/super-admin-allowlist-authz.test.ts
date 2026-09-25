@@ -2,7 +2,8 @@
  * Super-admin authorization uses the allowlist — SECURITY-AUDIT A10 guard
  * =======================================================================
  *
- * `SUPER_ADMIN_EMAILS` carries two recovery admins precisely so the platform
+ * A recovery super-admin (added through the `SUPER_ADMIN_EMAILS` secret — the
+ * hardcoded set holds only the owner) exists precisely so the platform
  * survives losing access to one account. But the authorization checks still
  * compared against the single deprecated `SUPER_ADMIN_EMAIL` const, so the
  * second recovery admin was refused everywhere that mattered — including, per
@@ -13,7 +14,7 @@
  *
  * Run: npx vitest run src/supabase/functions/server/__tests__/super-admin-allowlist-authz.test.ts
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 
 import { SUPER_ADMIN_EMAIL, isSuperAdminEmail } from '../constants.ts';
 import { PermissionsService } from '../personnel-permissions-service.ts';
@@ -22,8 +23,22 @@ import {
   shouldIncludeInClientManagement,
 } from '../client-management-visibility.ts';
 
-/** The second allowlisted account — the one every check used to refuse. */
-const RECOVERY_ADMIN = 'shawn.africantreasures@gmail.com';
+/**
+ * A recovery admin supplied the supported way: through the SUPER_ADMIN_EMAILS
+ * secret. It is the second allowlisted account — the kind every check used to
+ * refuse.
+ */
+const RECOVERY_ADMIN = 'recovery-admin@example.com';
+
+beforeAll(() => {
+  vi.stubGlobal('Deno', {
+    env: { get: (k: string) => (k === 'SUPER_ADMIN_EMAILS' ? RECOVERY_ADMIN : undefined) },
+  });
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('the allowlist itself', () => {
   it('admits both recovery admins', () => {
@@ -32,7 +47,7 @@ describe('the allowlist itself', () => {
   });
 
   it('is case- and whitespace-insensitive, and rejects everyone else', () => {
-    expect(isSuperAdminEmail('  SHAWN.AfricanTreasures@GMAIL.com ')).toBe(true);
+    expect(isSuperAdminEmail('  Recovery-Admin@EXAMPLE.com ')).toBe(true);
     expect(isSuperAdminEmail('attacker@example.com')).toBe(false);
     expect(isSuperAdminEmail('')).toBe(false);
     expect(isSuperAdminEmail(null)).toBe(false);

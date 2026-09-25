@@ -6,7 +6,9 @@
  * decomposition splits this 1,033-line file into sub-routers. Any change to
  * route shape, status codes, or auth behaviour will fail these tests.
  *
- * All routes sit behind a global `app.use('*', requireAuth)`.
+ * All routes sit behind a global `app.use('*', requireAdmin)`. It used to be
+ * `requireAuth`, which any self-registered client passes — the admin-only
+ * block below pins that a signed-in client is refused.
  *
  * Run: npx vitest run src/supabase/functions/server/__tests__/honeycomb-routes.contract.test.ts
  */
@@ -77,14 +79,22 @@ vi.mock('../shared-logger-utils.ts', () => ({
 }));
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
+// Stand-in for the real requireAdmin: the caller's role arrives on a test
+// header (admin unless a test says otherwise). Only `requireAdmin` is
+// provided, so the router failing to import it — say, back to requireAuth —
+// fails this suite outright.
 vi.mock('../auth-mw.ts', () => ({
-  requireAuth: async (c: any, next: any) => {
+  requireAdmin: async (c: any, next: any) => {
     if (!c.req.header('Authorization')) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
+    const role = c.req.header('x-test-role') ?? 'admin';
+    if (role !== 'admin' && role !== 'super_admin' && role !== 'super-admin') {
+      return c.json({ error: 'Forbidden: Admin access required' }, 403);
+    }
     c.set('user', { id: 'test-user', email: 'admin@test.co' });
     c.set('userId', 'test-user');
-    c.set('userRole', 'admin');
+    c.set('userRole', role);
     await next();
   },
 }));
@@ -155,6 +165,31 @@ describe('honeycomb-routes.ts route contracts', () => {
   it('returns 401 on any route without Authorization header', async () => {
     const res = await honeycombApp.request('/status/any-client');
     expect(res.status).toBe(401);
+  });
+
+  // ── Admin-only: a signed-in client is refused ──────────────────────────────
+  // These are the calls that mattered while the gate was requireAuth: a paid
+  // check forwarded under the firm's API key, and another client's KYC results.
+  const CLIENT_SESSION = { ...AUTH, 'x-test-role': 'client' };
+  it.each([
+    ['POST', '/proxy', { method: 'GET', path: '/matters' }],
+    ['POST', '/idv/no-photo', PERSON],
+    ['POST', '/financial/credit-check', PERSON],
+    ['GET', `/dashboard/${CLIENT_ID}`, undefined],
+    ['GET', `/checks/history/${CLIENT_ID}`, undefined],
+    ['GET', `/status/${CLIENT_ID}`, undefined],
+  ] as const)('refuses a client session: %s %s', async (method, path, body) => {
+    vi.mocked(globalThis.fetch).mockClear();
+    const res = await honeycombApp.request(path, {
+      method,
+      headers: { ...CLIENT_SESSION, 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    expect(res.status).toBe(403);
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('honeycombonline'),
+      expect.anything(),
+    );
   });
 
   // ── POST /proxy ─────────────────────────────────────────────────────────────

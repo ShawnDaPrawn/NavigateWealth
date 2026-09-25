@@ -4,7 +4,13 @@ import { EsignKeys } from './esign-keys.ts';
 import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
-import { getRequestMetadata, audActor, ensureStorageBuckets } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  audActor,
+  ensureStorageBuckets,
+  requireOwnedEnvelope,
+  firmScopeResponse,
+} from './esign-route-helpers.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import { PDFService } from './esign-pdf.service.ts';
 import { EsignField } from './esign-types.ts';
@@ -195,14 +201,22 @@ app.post('/signer/saved-signature', async (c) => {
 /**
  * GET /envelopes/:envelopeId/attachments
  *
- * Authenticated read of every attachment uploaded by every signer for an
- * envelope. Returns presigned URLs valid for 1h so the sender's UI can
- * download / preview without proxying through the worker.
+ * Read of every attachment uploaded by every signer for an envelope, for the
+ * envelope's own firm. Returns presigned URLs valid for 1h so the sender's UI
+ * can download / preview without proxying through the worker.
+ *
+ * Ownership, not just authentication (S6). This used to authenticate and then
+ * discard the answer, so any signed-in user — any self-registered client —
+ * could list another firm's envelope attachments (ID copies, bank statements)
+ * with download links, given the envelope id.
  */
 app.get('/envelopes/:envelopeId/attachments', async (c) => {
   try {
-    await getAuthContext(c);
+    const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+
     const records =
       ((await kv.get(EsignKeys.envelopeAttachments(envelopeId))) as Array<
         Record<string, unknown>
@@ -216,6 +230,8 @@ app.get('/envelopes/:envelopeId/attachments', async (c) => {
     return c.json({ attachments: enriched });
   } catch (err) {
     log.error('List attachments error:', err);
+    const forbidden = firmScopeResponse(c, err);
+    if (forbidden) return forbidden;
     const status = err instanceof AuthError ? err.statusCode : 500;
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list attachments' }),

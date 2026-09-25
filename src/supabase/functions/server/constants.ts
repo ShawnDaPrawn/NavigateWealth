@@ -15,23 +15,27 @@ import type { BackendApplicationStatus, FrontendApplicationStatus } from './type
 export const ADMIN_EMAIL = 'info@navigatewealth.co';
 
 /**
- * Super-admin email allowlist (durable, recovery-safe).
+ * Super-admin email allowlist.
  *
  * Why an allowlist instead of a single string: a lone hardcoded super-admin is
- * a single point of failure. If that one account is lost, compromised, or the
- * owner leaves, the only fallback was editing source and redeploying. The
- * allowlist provides a second, owner-controlled recovery identity, and
- * `isSuperAdminEmail()` (below) additionally merges any emails supplied via the
- * `SUPER_ADMIN_EMAILS` env var so a recovery admin can be added or rotated via
- * Supabase secrets WITHOUT a code deploy.
+ * a single point of failure. `isSuperAdminEmail()` (below) merges any emails
+ * supplied via the `SUPER_ADMIN_EMAILS` env var, so a recovery admin can be
+ * added or rotated via Supabase secrets WITHOUT a code deploy.
+ *
+ * ONLY ADDRESSES THAT ALREADY HAVE AN ACCOUNT BELONG HERE — in this set or in
+ * the env var. Super-admin is granted by EMAIL, so an allowlisted address with
+ * no account is a super-admin seat waiting for whoever registers it first:
+ * the registrant picks the password, and the real inbox owner need only click
+ * one confirmation link. A second "recovery" address sat here for months with
+ * no account behind it, while an unauthenticated route created PRE-VERIFIED
+ * accounts for any address — which made it a one-request super-admin. To add a
+ * recovery admin: create and verify that account first, then list it in the
+ * `SUPER_ADMIN_EMAILS` secret.
  *
  * Invariant: entries MUST be stored lowercased — all comparisons are
  * case-insensitive and go through `isSuperAdminEmail()`.
  */
-export const SUPER_ADMIN_EMAILS: ReadonlySet<string> = new Set([
-  'shawn@navigatewealth.co',
-  'shawn.africantreasures@gmail.com', // Second recovery super-admin
-]);
+export const SUPER_ADMIN_EMAILS: ReadonlySet<string> = new Set(['shawn@navigatewealth.co']);
 
 /**
  * The canonical single owner identity.
@@ -43,13 +47,13 @@ export const SUPER_ADMIN_EMAILS: ReadonlySet<string> = new Set([
  * There are exactly two backend readers, and neither should become
  * `isSuperAdminEmail()`:
  *
- *   1. `auth-routes.ts` — exempts this address from LOGIN RATE LIMITING, on an
- *      email taken straight from the request body, BEFORE authentication. That
- *      is a brute-force bypass. Widening it to the allowlist would extend the
- *      bypass to a second standing address and — through the
- *      `SUPER_ADMIN_EMAILS` env override — to whatever that variable happens to
- *      contain at the time. See SECURITY-AUDIT A10, which already reached this
- *      conclusion and wrote it down at the call site.
+ *   1. `auth-routes.ts` — exempts this address from the per-ACCOUNT login
+ *      lockout (it stays subject to the per-IP limit), on an email taken
+ *      straight from the request body, BEFORE authentication. Widening it to
+ *      the allowlist would extend the exemption to more addresses and —
+ *      through the `SUPER_ADMIN_EMAILS` env override — to whatever that
+ *      variable happens to contain at the time. See SECURITY-AUDIT A10, which
+ *      already reached this conclusion and wrote it down at the call site.
  *   2. `client-management-super-admin-routes.ts` — resolves THE owner account to
  *      read or seed its profile. That is an identity lookup, not an
  *      authorization decision; "the owner" is singular by definition and an
@@ -117,18 +121,6 @@ export function isAdminEmail(email: string | null | undefined): boolean {
     .includes(normalized);
 }
 
-/**
- * Roles that grant elevated access somewhere in the backend (`requireAdmin`
- * accepts admin/super_admin; `isFnaAdminRole` additionally accepts adviser).
- * These must NEVER be honoured from client-editable `user_metadata`.
- */
-const PRIVILEGED_ROLES: ReadonlySet<string> = new Set([
-  'admin',
-  'super_admin',
-  'super-admin',
-  'adviser',
-]);
-
 /** Minimal structural shape of a Supabase Auth user for role resolution. */
 interface RoleResolvableUser {
   email?: string | null;
@@ -144,11 +136,16 @@ interface RoleResolvableUser {
  *   2. `app_metadata.role`          → trusted verbatim (only the service role
  *      can write app_metadata; users cannot)
  *   3. `NW_ADMIN_EMAILS` allowlist  → 'admin'
- *   4. `user_metadata.role`         → honoured ONLY for non-privileged values.
- *      user_metadata is editable by the user themself via
- *      `supabase.auth.updateUser({ data: { … } })`, so a privileged value
- *      here is treated as 'client' — otherwise any authenticated user could
- *      self-assign 'admin' and pass requireAdmin.
+ *   4. Everyone else                → 'client'
+ *
+ * `user_metadata.role` is NEVER read. user_metadata is written by the user
+ * themself (`supabase.auth.updateUser({ data: { role } })`), so any role taken
+ * from it is a role the user chose. The first version of this function refused
+ * only admin/super_admin/adviser from it and passed every other value through —
+ * so any client could become 'compliance' or 'paraplanner' (roles that several
+ * modules treat as staff with cross-client read access), and any string at all
+ * defeated checks written as `role === 'client'`. Staff roles are granted by
+ * writing `app_metadata.role`, which only the service role can do.
  */
 export function resolveTrustedRole(user: RoleResolvableUser): string {
   if (isSuperAdminEmail(user.email)) return 'super_admin';
@@ -158,10 +155,6 @@ export function resolveTrustedRole(user: RoleResolvableUser): string {
 
   if (isAdminEmail(user.email)) return 'admin';
 
-  const metaRole = user.user_metadata?.role;
-  if (typeof metaRole === 'string' && metaRole && !PRIVILEGED_ROLES.has(metaRole)) {
-    return metaRole;
-  }
   return 'client';
 }
 

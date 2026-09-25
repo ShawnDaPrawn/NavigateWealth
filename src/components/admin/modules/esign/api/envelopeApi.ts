@@ -14,12 +14,6 @@ import {
   UploadDocumentResponse,
   SendInvitesRequest,
   SendInvitesResponse,
-  VerifyOTPRequest,
-  VerifyOTPResponse,
-  SubmitSignatureRequest,
-  SubmitSignatureResponse,
-  RejectSigningRequest,
-  RejectSigningResponse,
   SaveTemplateRequest,
   SaveTemplateResponse,
   GetAuditTrailResponse,
@@ -206,49 +200,6 @@ export const envelopeApi = {
       logger.warn('Failed to fetch envelope document blob', { envelopeId, error });
       return null;
     }
-  },
-
-  // ==================== SIGNER OPERATIONS ====================
-
-  /**
-   * Send OTP to signer
-   */
-  async sendOTP(envelopeId: string, signerId: string): Promise<void> {
-    return api.post<void>(`/esign/envelopes/${envelopeId}/signers/${signerId}/otp/send`);
-  },
-
-  /**
-   * Verify OTP and access code
-   */
-  async verifyOTP(
-    envelopeId: string,
-    signerId: string,
-    request: VerifyOTPRequest,
-  ): Promise<VerifyOTPResponse> {
-    return api.post<VerifyOTPResponse>(
-      `/esign/envelopes/${envelopeId}/signers/${signerId}/verify`,
-      request,
-    );
-  },
-
-  /**
-   * Submit signature
-   */
-  async submitSignature(
-    envelopeId: string,
-    request: SubmitSignatureRequest,
-  ): Promise<SubmitSignatureResponse> {
-    return api.post<SubmitSignatureResponse>(`/esign/envelopes/${envelopeId}/sign`, request);
-  },
-
-  /**
-   * Reject signing
-   */
-  async rejectSigning(
-    envelopeId: string,
-    request: RejectSigningRequest,
-  ): Promise<RejectSigningResponse> {
-    return api.post<RejectSigningResponse>(`/esign/envelopes/${envelopeId}/reject`, request);
   },
 
   // ==================== DOCUMENT & AUDIT OPERATIONS ====================

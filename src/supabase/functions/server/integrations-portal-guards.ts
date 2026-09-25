@@ -12,6 +12,7 @@
  * the exact text of several signatures here; reflow would break those anchors.
  */
 import type { IntegrationSyncRun } from './integrations-core-types.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 import type { PortalJobPolicyItem } from './integrations-portal-types.ts';
 
 export function getWorkerSecret(): string {
@@ -24,7 +25,13 @@ export function isPortalWorkerRequest(c: { req: { header: (name: string) => stri
   const headerSecret = String(c.req.header('X-Portal-Worker-Secret') || '').trim();
   const authHeader = String(c.req.header('Authorization') || '');
   const bearerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
-  return headerSecret === expected || bearerSecret === expected;
+  // Constant-time: this secret gates the worker routes that hand out plaintext
+  // insurer-portal credentials, so a comparison that returns at the first wrong
+  // byte is a timing oracle on it (M-1).
+  return (
+    (headerSecret !== '' && constantTimeEqual(headerSecret, expected)) ||
+    (bearerSecret !== '' && constantTimeEqual(bearerSecret, expected))
+  );
 }
 
 export function requirePortalWorker(c: { json: (body: unknown, status?: number) => Response; req: { header: (name: string) => string | undefined } }): Response | null {

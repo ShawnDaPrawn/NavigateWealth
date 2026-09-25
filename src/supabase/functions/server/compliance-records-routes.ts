@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { ComplianceService } from './compliance-service.ts';
 
@@ -13,7 +13,7 @@ const service = new ComplianceService();
 
 app.get(
   '/aml-fica',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getAMLFICARecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -22,7 +22,7 @@ app.get(
 
 app.get(
   '/aml-fica/client/:clientId',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const records = await service.getAMLFICARecords();
@@ -50,7 +50,7 @@ app.post(
 
 app.get(
   '/aml-fica/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const records = await service.getAMLFICARecords();
@@ -87,7 +87,7 @@ app.put(
 
 app.get(
   '/statutory',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getStatutoryRecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -96,7 +96,7 @@ app.get(
 
 app.get(
   '/statutory/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const records = await service.getStatutoryRecords();
@@ -148,7 +148,7 @@ app.post(
 
 app.get(
   '/popia/consents',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getPOPIAConsentRecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -157,7 +157,7 @@ app.get(
 
 app.post(
   '/popia/consents',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const record = await service.createPOPIAConsentRecord(body);
@@ -167,7 +167,7 @@ app.post(
 
 app.post(
   '/popia/consents/:id/withdraw',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const record = await service.withdrawPOPIAConsentRecord(id);
@@ -177,7 +177,7 @@ app.post(
 
 app.get(
   '/popia/consents/user/:userId',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.req.param('userId')!;
     const records = await service.getPOPIAConsentRecords();
@@ -196,7 +196,7 @@ app.get(
 
 app.get(
   '/paia/requests',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getPAIARequests();
     return c.json({ success: true, data: records, total: records.length });
@@ -205,7 +205,7 @@ app.get(
 
 app.post(
   '/paia/requests',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const record = await service.createPAIARequest(body);
@@ -215,7 +215,7 @@ app.post(
 
 app.put(
   '/paia/requests/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     const body = await c.req.json();
@@ -230,7 +230,7 @@ app.put(
 
 app.get(
   '/record-keeping',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getRecordKeepingEntries();
     return c.json({ success: true, data: records, total: records.length });
@@ -263,7 +263,7 @@ app.post(
 
 app.get(
   '/new-business',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getNewBusinessRecords();
     return c.json({ success: true, data: records, total: records.length });
@@ -293,7 +293,7 @@ app.put(
 
 app.get(
   '/new-business/client/:clientId',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const records = await service.getNewBusinessRecords();

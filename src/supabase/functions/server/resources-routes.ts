@@ -594,6 +594,10 @@ app.patch(
 
 // ============================================================================
 // CALCULATORS (Admin)
+//
+// requireAdmin, not requireAuth: these read, write and delete a NAMED client's
+// saved retirement scenarios by id, and requireAuth is passed by any
+// self-registered client. The only caller is the admin panel's calculator.
 // ============================================================================
 
 /**
@@ -602,7 +606,7 @@ app.patch(
  */
 app.get(
   '/calculators/retirement/scenarios/:clientId',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const scenarios = await service.getRetirementScenarios(clientId);
@@ -616,7 +620,7 @@ app.get(
  */
 app.post(
   '/calculators/retirement/scenarios',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const parsed = RetirementScenarioSchema.safeParse(body);
@@ -634,7 +638,7 @@ app.post(
  */
 app.delete(
   '/calculators/retirement/scenarios/:clientId/:scenarioId',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const clientId = c.req.param('clientId')!;
     const scenarioId = c.req.param('scenarioId')!;

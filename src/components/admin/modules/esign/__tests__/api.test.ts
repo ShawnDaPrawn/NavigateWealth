@@ -151,46 +151,7 @@ describe('esignApi envelope operations', () => {
   });
 });
 
-describe('esignApi signer operations', () => {
-  it('sendOTP posts to OTP send endpoint', async () => {
-    mockApiPost.mockResolvedValue(undefined);
-    await esignApi.sendOTP('env-001', 'signer-001');
-    expect(mockApiPost).toHaveBeenCalledWith(
-      '/esign/envelopes/env-001/signers/signer-001/otp/send',
-    );
-  });
-
-  it('verifyOTP posts verification request', async () => {
-    mockApiPost.mockResolvedValue({ success: true, token: 'jwt-token' });
-    const result = await esignApi.verifyOTP('env-001', 'signer-001', { otp: '123456' } as never);
-    expect((result as unknown as { success: boolean }).success).toBe(true);
-    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/signers/signer-001/verify', {
-      otp: '123456',
-    });
-  });
-
-  it('submitSignature posts to sign endpoint', async () => {
-    mockApiPost.mockResolvedValue({ success: true });
-    const result = await esignApi.submitSignature('env-001', {
-      signature: 'data:image/png',
-    } as never);
-    expect((result as unknown as { success: boolean }).success).toBe(true);
-    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/sign', {
-      signature: 'data:image/png',
-    });
-  });
-
-  it('rejectSigning posts to reject endpoint', async () => {
-    mockApiPost.mockResolvedValue({ success: true });
-    const result = await esignApi.rejectSigning('env-001', {
-      reason: 'Incorrect document',
-    } as never);
-    expect((result as unknown as { success: boolean }).success).toBe(true);
-    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/reject', {
-      reason: 'Incorrect document',
-    });
-  });
-
+describe('esignApi reminder and recall operations', () => {
   it('sendReminder posts to remind endpoint', async () => {
     mockApiPost.mockResolvedValue({ success: true, remindersSent: [], totalReminders: 2 });
     const result = await esignApi.sendReminder('env-001');

@@ -18,6 +18,8 @@ import {
   normalizeEmail as normalizeContactEmail,
 } from './client-email-identity.ts';
 import { resolveClientFirstName } from './client-display-name.ts';
+import { resolveTrustedRole } from './constants.ts';
+import { secureRandomDigits } from './crypto-utils.ts';
 
 const log = createModuleLogger('security-shared');
 
@@ -152,6 +154,68 @@ export function ensureAdmin(c: Context): Response | null {
   return c.json({ success: false, error: 'Forbidden: Admin access required' }, 403);
 }
 
+function isSuperAdminRole(role: string | undefined): boolean {
+  return role === 'super_admin' || role === 'super-admin';
+}
+
+/**
+ * The account-takeover guard for an admin acting on SOMEONE ELSE's account.
+ *
+ * `ensureSelfOrAdmin` answers "may this caller touch this account at all?" and
+ * says yes to every admin for every account. On the routes that change who can
+ * sign in — password reset, 2FA, suspension, sign-in email — that made `admin`
+ * and `super_admin` the same role: any admin could set the owner's password
+ * (no current password needed on an admin reset, and the owner told only if
+ * the admin chose to send the email), sign in as the owner, and hold every
+ * super-admin power. One phished admin was the whole platform.
+ *
+ * Run AFTER `ensureSelfOrAdmin`. Self-service passes; a super-admin passes; a
+ * plain admin passes for every account except one whose TRUSTED role is
+ * super-admin. The target is looked up fresh rather than taken from anything
+ * the request says about it. If the lookup fails, the answer is no: a guard
+ * that opens when its dependency is down is not a guard.
+ */
+export async function ensureCanAdministerTarget(
+  c: Context,
+  targetUserId: string,
+): Promise<Response | null> {
+  const actorId = c.get('userId') as string | undefined;
+  const actorRole = c.get('userRole') as string | undefined;
+
+  if (actorId === targetUserId) return null;
+  if (!isAdminRole(actorRole)) {
+    return c.json({ success: false, error: 'Forbidden' }, 403);
+  }
+  if (isSuperAdminRole(actorRole)) return null;
+
+  const { data, error } = await getSupabase().auth.admin.getUserById(targetUserId);
+  // No such user: nothing to protect, and the handler's own lookup answers 404.
+  // GoTrue reports that as an error with status 404 rather than an empty result.
+  if ((error as { status?: number } | null)?.status === 404) return null;
+  if (error) {
+    log.error('Target account lookup failed; refusing the admin action', {
+      error: getErrMsg(error),
+    });
+    return c.json(
+      { success: false, error: 'Could not verify the target account. Please try again.' },
+      503,
+    );
+  }
+  if (!data?.user) return null;
+
+  if (isSuperAdminRole(resolveTrustedRole(data.user))) {
+    return c.json(
+      {
+        success: false,
+        error: 'Forbidden: only a super admin can change a super admin account',
+        code: 'FORBIDDEN_SUPER_ADMIN_TARGET',
+      },
+      403,
+    );
+  }
+  return null;
+}
+
 export async function verifyCurrentPassword(
   email: string,
   currentPassword: string,
@@ -179,8 +243,17 @@ export function emailChangeKey(userId: string): string {
   return `email_change:${userId}`;
 }
 
+/**
+ * A six-digit verification code from a CSPRNG.
+ *
+ * This used `Math.random()`, whose internal state is recoverable from a handful
+ * of observed outputs — and this server exposes plenty of them (activity-log
+ * ids are built from it). These codes are what prove control of a mailbox
+ * during an email change, which is how an account's sign-in identity moves, so
+ * they come from `crypto.getRandomValues` like every other code here.
+ */
 export function generateSixDigitCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return secureRandomDigits(6);
 }
 
 export async function sha256Hex(input: string): Promise<string> {

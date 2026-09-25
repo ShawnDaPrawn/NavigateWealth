@@ -30,6 +30,7 @@ import {
   logAuditEvent,
 } from './esign-services.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 
 const log = createModuleLogger('esign-ops-routes');
 
@@ -184,8 +185,9 @@ opsRoutes.post('/cron/reminder-sweep', async (c) => {
   try {
     const authHeader = c.req.header('Authorization');
     const token = authHeader?.replace('Bearer ', '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!token || token !== serviceRoleKey) {
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    // Constant-time, matching cron-auth.ts (M-1).
+    if (!token || serviceRoleKey === '' || !constantTimeEqual(token, serviceRoleKey)) {
       return c.json({ error: 'Unauthorized — CRON endpoint requires service role key' }, 401);
     }
 

@@ -29,6 +29,7 @@ import {
 } from './quality-issues-normalize.ts';
 import { mergeWorkflowState } from './quality-issues-automation.ts';
 import { buildCurrentSnapshot, runAutomationOnCurrentState } from './quality-issues-state.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('quality-issues');
@@ -44,7 +45,11 @@ function hasValidIngestToken(c: Context): boolean {
     ?.replace(/^Bearer\s+/i, '')
     .trim();
   const headerToken = c.req.header('X-Quality-Ingest-Token')?.trim();
-  return bearerToken === expectedToken || headerToken === expectedToken;
+  // Constant-time, like every other shared-secret check here (M-1).
+  return (
+    (!!bearerToken && constantTimeEqual(bearerToken, expectedToken)) ||
+    (!!headerToken && constantTimeEqual(headerToken, expectedToken))
+  );
 }
 
 app.get(

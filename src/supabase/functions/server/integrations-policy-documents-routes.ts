@@ -2,7 +2,12 @@
  * Policy-document routes (Phase 5 Slice E decomposition).
  * =========================================================
  *
- * Extracted verbatim from integrations.tsx. No logic changes.
+ * Extracted verbatim from integrations.tsx.
+ *
+ * Every route calls requireClientAccess on the clientId it was given — the
+ * same check the sibling `/policies` routes make. These took the clientId from
+ * the caller and checked nothing further, so any signed-in user could fetch a
+ * signed URL to any client's policy schedule, replace it, or delete it.
  *
  * Routes owned here:
  *   POST   /policy-documents/upload    — upload or replace a policy document
@@ -19,6 +24,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { requireAuth } from './auth-mw.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { requireClientAccess } from './client-access.ts';
 import {
   PolicyDocumentMetadataSchema,
   DeletePolicyDocumentSchema,
@@ -81,6 +87,8 @@ app.post('/policy-documents/upload', requireAuth, async (c) => {
     }
 
     const { policyId, clientId, documentType, uploadedBy } = metadata.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const docMeta = await replacePolicyDocumentForPolicy({
       clientId,
@@ -113,6 +121,8 @@ app.get('/policy-documents/download', requireAuth, async (c) => {
     if (!policyId || !clientId) {
       return c.json({ error: 'Missing policyId or clientId' }, 400);
     }
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const policiesKey = `policies:client:${clientId}`;
     const policies = (await kv.get(policiesKey)) || [];
@@ -165,6 +175,8 @@ app.delete('/policy-documents', requireAuth, async (c) => {
     }
 
     const { policyId, clientId } = parsed.data;
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
 
     const policiesKey = `policies:client:${clientId}`;
     const policies = (await kv.get(policiesKey)) || [];

@@ -23,6 +23,7 @@ import {
 import { getEnvelopeDetails } from './esign-services.ts';
 import type { EsignEnvelopeDetails } from './esign-types.ts';
 import { resolveApiKey } from './api-key-service.ts';
+import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const log = createModuleLogger('esign-route-helpers');
 
@@ -55,7 +56,9 @@ export interface FieldRecord {
  */
 export function getRequestMetadata(c: { req: { header: (name: string) => string | undefined } }) {
   return {
-    ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown',
+    // Recorded in the signing evidence, so it must be the address Cloudflare
+    // saw — not a header the caller can fill in with any value.
+    ip: extractClientIp((n) => c.req.header(n)) || 'unknown',
     userAgent: c.req.header('user-agent') || 'unknown',
   };
 }

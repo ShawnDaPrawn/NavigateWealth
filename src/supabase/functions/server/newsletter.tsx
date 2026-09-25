@@ -40,7 +40,7 @@ import {
   NEWSLETTER_UNSUBSCRIBE_IP_LIMIT_PER_HOUR,
   checkIpOnlyRateLimit,
 } from './public-form-rate-limit.ts';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import {
@@ -536,7 +536,13 @@ app.get('/unsubscribe', async (c) => {
 });
 
 // ============================================================================
-// ADMIN ENDPOINTS (require auth) — thin dispatchers to newsletter-service.ts
+// ADMIN ENDPOINTS (requireAdmin) — thin dispatchers to newsletter-service.ts
+//
+// Most of these were `requireAuth`, which any self-registered client passes:
+// enough to download the whole subscriber list (names and email addresses),
+// add or remove subscribers, and rewrite their details — while the audit
+// entries below recorded the actor as 'admin'. The callers are the admin
+// panel's publications and dashboard modules only.
 // ============================================================================
 
 /**
@@ -544,7 +550,7 @@ app.get('/unsubscribe', async (c) => {
  */
 app.get(
   '/admin/subscribers',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
       log.error('Newsletter group backfill failed during subscriber listing', error);
@@ -559,7 +565,7 @@ app.get(
  */
 app.post(
   '/admin/add',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const parsed = AdminAddSubscriberSchema.safeParse(body);
@@ -590,7 +596,7 @@ app.post(
  */
 app.post(
   '/admin/bulk',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const parsed = AdminBulkSubscriberSchema.safeParse(body);
@@ -626,7 +632,7 @@ app.post(
  */
 app.post(
   '/admin/remove',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const parsed = AdminEmailSchema.safeParse(body);
@@ -657,7 +663,7 @@ app.post(
  */
 app.post(
   '/admin/resubscribe',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const parsed = AdminEmailSchema.safeParse(body);
@@ -688,7 +694,7 @@ app.post(
  */
 app.post(
   '/admin/update',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const parsed = AdminUpdateSubscriberSchema.safeParse(body);
@@ -718,7 +724,7 @@ app.post(
  */
 app.get(
   '/admin/stats',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     await backfillLegacyNewsletterSubscribersToGroup().catch((error) => {
       log.error('Newsletter group backfill failed during stats load', error);
