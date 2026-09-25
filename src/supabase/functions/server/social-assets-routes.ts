@@ -225,7 +225,7 @@ app.put(
   requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
-    if (id !== 'generate' && id !== 'schedule') {
+    if (id !== 'generate' && id !== 'schedule' && id !== 'assets_schedule') {
       return c.json({ success: false, error: 'Unknown playbook' }, 404);
     }
     const raw = await c.req.json().catch(() => ({}));
