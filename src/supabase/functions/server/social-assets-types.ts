@@ -104,7 +104,7 @@ export interface SocialAutomationSettings {
 }
 
 export interface SocialAutomationPlaybook {
-  id: 'generate' | 'schedule';
+  id: 'generate' | 'schedule' | 'assets_schedule';
   title: string;
   instructions: string;
   version: number;

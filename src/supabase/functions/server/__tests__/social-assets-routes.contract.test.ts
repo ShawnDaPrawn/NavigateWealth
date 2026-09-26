@@ -248,7 +248,7 @@ describe('reads and writes', () => {
     );
   });
 
-  it('PUT playbook only knows generate and schedule', async () => {
+  it('PUT playbook only knows generate, schedule and assets_schedule', async () => {
     const unknown = await request(app, '/playbooks/other', {
       method: 'PUT',
       as: 'admin',
@@ -262,5 +262,17 @@ describe('reads and writes', () => {
     });
     expect(good.status).toBe(200);
     expect(svc.updatePlaybook).toHaveBeenCalledWith('schedule', { title: 't' }, DEFAULT_TEST_USER);
+
+    const assetsShelf = await request(app, '/playbooks/assets_schedule', {
+      method: 'PUT',
+      as: 'admin',
+      body: { title: 't' },
+    });
+    expect(assetsShelf.status).toBe(200);
+    expect(svc.updatePlaybook).toHaveBeenCalledWith(
+      'assets_schedule',
+      { title: 't' },
+      DEFAULT_TEST_USER,
+    );
   });
 });

@@ -25,7 +25,7 @@ are worth keeping straight.
                         └────────┬─────────┘
                                  │  status = available
                         ┌────────▼─────────┐
-                        │ Claude routine   │ (to be built)
+                        │ Claude routine   │ playbook 'assets_schedule'
                         │ → Buffer, then   │
                         │   mark used      │
                         └──────────────────┘
@@ -152,7 +152,7 @@ As a Custom GPT Action: import an OpenAPI schema covering `POST
 `x-nw-social-assets-token`, and paste the Vault secret. The JSON `sourceUrl`
 form is the one to use — a GPT Action cannot post multipart.
 
-## For the publishing routine (later)
+## The publishing routine
 
 An agent whose only reach is the Supabase connector does not need the HTTPS
 endpoint at all; the same operations exist as SQL functions, and both paths go
@@ -172,6 +172,32 @@ select public.social_channel_assets_set_status('<asset id>', 'available', 'admin
 
 All four functions are `service_role` only; the table has RLS on with no
 policies, so no browser reaches it directly.
+
+### Setting up the routine
+
+Like the weekly-text pipeline (`docs/runbooks/social-automation.md`), the real
+instructions live in `social_automation_playbooks` (id `assets_schedule`) and
+are edited there, in the admin UI's Settings & playbooks screen — not in this
+file or in the trigger prompt below. Give the routine the **Supabase** and
+**Buffer** connectors, and web search; nothing else.
+
+> Using the Supabase connection for project `vpjmdsltwrnpefzcgdmz`, run
+> `select instructions from public.social_automation_playbooks where id = 'assets_schedule';`
+> and follow those instructions exactly, identifying yourself as `claude-routine`
+> (or `chatgpt-routine`). Use the Supabase connection for SQL, the Buffer connection to list
+> channels/posts and create posts, and web search for the context, currency and timeliness
+> refresh. Finish with the short report the playbook asks for.
+
+The skill `.claude/skills/social-weekly-assets-schedule/SKILL.md` is the same instructions for
+a session that has the repository checked out — point a Routine's prompt at
+`"run the social-weekly-assets-schedule skill"` once it does.
+
+This routine picks its own target week (always the coming Monday–Sunday, whichever weekday it
+runs on) and reads quota, kill switch, style guide and compliance rules from
+`social_automation_settings` exactly as the other two routines do, so it is safe to run this
+alongside them without double-posting — each pipeline claims a disjoint set of assets
+(`social_channel_assets` vs. `social_assets`) and Buffer's own queue is the shared idempotency
+check.
 
 ## Where the files live
 
