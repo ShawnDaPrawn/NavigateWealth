@@ -9,10 +9,14 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import documentsEmailRoutes from './documents-email-routes.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
-import { CreateDocumentLinkSchema, UpdateDocumentSchema } from './documents-validation.ts';
+import {
+  ClientUpdateDocumentSchema,
+  CreateDocumentLinkSchema,
+  UpdateDocumentSchema,
+} from './documents-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
-import { requireAuth } from './auth-mw.ts';
-import { requireClientAccess } from './client-access.ts';
+import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { isPlatformAdminRole, requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
 const log = createModuleLogger('documents');
@@ -37,6 +41,13 @@ app.route('/', documentsEmailRoutes);
 // Root handlers
 app.get('/', (c) => c.json({ service: 'documents', status: 'active' }));
 app.get('', (c) => c.json({ service: 'documents', status: 'active' }));
+
+/** A storage path under this client's own folder, as upload writes them. */
+function isOwnedStoragePath(userId: string, filePath: unknown): boolean {
+  return (
+    typeof filePath === 'string' && filePath.startsWith(`${userId}/`) && !filePath.includes('..')
+  );
+}
 
 // Lazy Supabase client — must NOT be top-level to avoid deployment crashes in edge functions.
 const getSupabase = () =>
@@ -270,7 +281,9 @@ app.post('/:userId/upload', async (c) => {
  * POST /documents/:userId/link
  * Create a link reference for a user
  */
-app.post('/:userId/link', async (c) => {
+// Admin only: the only caller is the admin upload dialog, and the admin panel
+// opens a stored link with window.open.
+app.post('/:userId/link', requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId')!;
     const body = await c.req.json();
@@ -404,6 +417,13 @@ app.get('/:userId/:documentId/download', async (c) => {
       });
     }
 
+    // Only ever sign a path inside this client's own folder, whatever the
+    // record says — the record is not proof of where its file belongs.
+    if (!isOwnedStoragePath(userId, docData.filePath)) {
+      log.warn('Refusing a document whose file lies outside its owner folder', { documentId });
+      return c.json({ success: false, error: 'Document not found' }, 404);
+    }
+
     // Generate signed URL (valid for 1 hour)
     const { data: signedUrlData, error: signedUrlError } = await getSupabase()
       .storage.from(BUCKET_NAME)
@@ -442,7 +462,12 @@ app.patch('/:userId/:documentId', async (c) => {
     const userId = c.req.param('userId')!;
     const documentId = c.req.param('documentId')!;
     const body = await c.req.json();
-    const parsed = UpdateDocumentSchema.safeParse(body);
+    // A client may only favourite or mark their own document; staff may also
+    // edit its descriptive fields. Nobody may rewrite where the file lives.
+    const schema = isPlatformAdminRole(c.get('userRole'))
+      ? UpdateDocumentSchema
+      : ClientUpdateDocumentSchema;
+    const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return c.json(
         { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
@@ -491,7 +516,9 @@ app.patch('/:userId/:documentId', async (c) => {
  * DELETE /documents/:userId/:documentId
  * Delete a document (both metadata and file if applicable)
  */
-app.delete('/:userId/:documentId', async (c) => {
+// Admin only: these are the firm's records of what a client was given, and
+// nothing on the client side deletes them.
+app.delete('/:userId/:documentId', requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId')!;
     const documentId = c.req.param('documentId')!;
@@ -512,6 +539,10 @@ app.delete('/:userId/:documentId', async (c) => {
 
     // If it's a file document, delete from storage
     if (docData.type === 'document' && docData.filePath) {
+      if (!isOwnedStoragePath(userId, docData.filePath)) {
+        log.warn('Refusing to delete a file outside its owner folder', { documentId });
+        return c.json({ success: false, error: 'Document not found' }, 404);
+      }
       const { error: deleteError } = await getSupabase()
         .storage.from(BUCKET_NAME)
         .remove([docData.filePath]);

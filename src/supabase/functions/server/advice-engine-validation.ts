@@ -173,13 +173,16 @@ export const BaseFNACreateSchema = z.object({
 });
 
 /**
- * Base update FNA schema
+ * Base update FNA schema.
+ *
+ * No `status`: publishing and archiving go through the admin-only publish
+ * routes. Accepting `status: 'published'` here let an update skip them. An
+ * unknown key is stripped, so a caller that still sends one is not broken.
  */
 export const BaseFNAUpdateSchema = z.object({
   inputs: z.record(z.string(), z.unknown()).optional(),
   outputs: z.record(z.string(), z.unknown()).optional(),
   recommendations: z.array(RecommendationSchema).optional(),
-  status: FNAStatusSchema.optional(),
 });
 
 // ============================================================================

@@ -12,7 +12,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { requireCronAuth } from './cron-auth.ts';
@@ -48,7 +48,8 @@ const snapshotService = new NetWorthSnapshotService();
  */
 app.get(
   '/cron/status',
-  requireAuth,
+  // Admin only: the only caller is the admin dashboard's maintenance hook.
+  requireAdmin,
   asyncHandler(async (c) => {
     const lastRun = await getLastClientCleanupRun();
     const today = new Date().toISOString().slice(0, 10);

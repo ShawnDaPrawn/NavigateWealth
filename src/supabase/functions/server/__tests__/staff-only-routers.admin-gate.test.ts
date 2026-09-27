@@ -68,11 +68,46 @@ vi.mock('../email-service.ts', () => ({
 vi.mock('../admin-audit-service.ts', () => ({
   AdminAuditService: { record: vi.fn(async () => undefined) },
 }));
+vi.mock('../client-management-service.ts', () => ({
+  ClientsService: class {
+    constructor() {
+      return emptyService();
+    }
+  },
+}));
+vi.mock('../net-worth-snapshot-service.ts', () => ({
+  NetWorthSnapshotService: class {
+    constructor() {
+      return emptyService();
+    }
+  },
+}));
+vi.mock('../client-cleanup-service.ts', () => ({
+  runClientCleanup: vi.fn(async () => ({})),
+  getLastClientCleanupRun: vi.fn(async () => null),
+}));
+vi.mock('../client-retention-service.ts', () => ({
+  runClientRetentionSweep: vi.fn(async () => ({})),
+}));
+vi.mock('../brand-service.ts', () => ({
+  BrandService: class {
+    constructor() {
+      return emptyService();
+    }
+  },
+}));
+vi.mock('../kv-cleanup-service.ts', () => ({
+  runKvCleanup: vi.fn(async () => ({})),
+  getLastCleanupRun: vi.fn(async () => null),
+}));
 
 const { request, routeRegistrations } = await import('./helpers/contract-harness.ts');
 const compliance = (await import('../compliance-routes.ts')).default;
 const submissions = (await import('../submissions-routes.ts')).default;
 const newsletter = (await import('../newsletter.tsx')).default;
+const clients = (await import('../client-management-routes.ts')).default;
+const kvCleanup = (await import('../kv-cleanup-routes.ts')).default;
+const brand = (await import('../brand-routes.ts')).default;
 
 type App = Parameters<typeof request>[0] & { routes: unknown };
 
@@ -111,6 +146,26 @@ const ROUTERS: Array<{
     app: newsletter,
     include: (_method, path) => path.startsWith('/admin/'),
     minRoutes: 9,
+  },
+  {
+    name: 'client management',
+    app: clients,
+    // `/cron/cleanup` answers the scheduler's cron token, not a session.
+    include: (_method, path) => path !== '/cron/cleanup',
+    minRoutes: 17,
+  },
+  {
+    name: 'kv cleanup',
+    app: kvCleanup,
+    // `/` is the health descriptor; `/cron` answers the cron token.
+    include: (_method, path) => path !== '/' && path !== '/cron',
+    minRoutes: 2,
+  },
+  {
+    name: 'brand',
+    app: brand,
+    include: (_method, path) => path !== '/health',
+    minRoutes: 16,
   },
 ];
 

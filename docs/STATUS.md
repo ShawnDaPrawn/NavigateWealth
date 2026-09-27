@@ -237,24 +237,86 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
   credentials), the quality-issues ingest token and the KV-cleanup,
   publications and e-sign reminder cron checks compared with `===`; all use
   `constantTimeEqual`, pinned tree-wide by `shared-secret-compare.test.ts`.
+- **The e-sign sender side is staff-only.** Every sender route authenticated
+  with `getAuthContext`, which any signed-in user passes, and scoped data to a
+  "firm" that for a client is their own user id — so a self-registered client
+  could upload a PDF, email platform-branded signing requests to anyone, and
+  mint v1 API keys and webhooks. Bulk void/remind had no role check, templates
+  and campaigns were global, and anyone could republish the consent text every
+  signer sees. Every sender route now requires an admin (consent publishing a
+  super-admin). `esign-sender-admin-gate.test.ts` walks the router's own route
+  table: anything not on its short open list (signer-token flow, `verify-hash`,
+  active consent text, `/me/*`, cron, the API-key `/v1/*`, a client's own
+  envelope list and the four client history reads) must refuse a client.
+- **E-sign ownership.** Invites, fields, recall, remind, delete, evidence pack,
+  reminder config, signing mode, draft settings, recovery-bin restore/purge and
+  bulk void/remind now check the envelope's firm; invites refuse a sent
+  envelope. Webhook replay re-queued a delivery before checking its firm; the
+  check now comes first. The client envelope list restricted only the `client`
+  role, so any adviser could list any client's envelopes; it uses
+  `client-access.ts`.
+- **Documents.** `PATCH /documents/:userId/:documentId` spread any field over
+  the stored record, so a client could repoint `filePath` at another client's
+  file and then download or delete it. Unknown fields are stripped, a client
+  can change only `isFavourite`/`status`, and download and delete touch only a
+  path inside the owner's folder. `/link` (http(s) only), `DELETE` and `/email`
+  are admin-only. `POST /profile/upload` requires a `userId` (no shared `temp/`
+  folder) and `/profile/send-documents` is admin-only and skips paths outside
+  the client's folder.
+- **Other guards.** `/integrations/config` and `/template` (every client's
+  policies for a provider) are admin-only; `POST /medical-fna/create` checks
+  `body.clientId`, and the FNA coverage test now sweeps body client ids too;
+  `fna-intake-routes.ts` no longer shadows the canonical `assertClientAccess`,
+  and accept/request-info check the session's client; RoA drafts check the body
+  client and strip lifecycle fields; staff Ask Vasco requires an admin or the
+  assigned adviser; `/ai-intelligence` resolves the role with
+  `resolveTrustedRole` and admits admins only (it trusted the KV profile role
+  and let any adviser reach every client); the resource library, brand kit
+  reads, cron and KV-cleanup status are admin-only; `GET /publications/articles`
+  and `/articles/:id` serve only published articles unless the caller is an
+  admin; a generic FNA update can no longer set `status` (publishing is its own
+  admin route).
+- **Assigned adviser.** A client's own profile save could set `adviserId` /
+  `applicationId`, which decide who their assigned adviser is — the thing
+  `client-access.ts` grants an adviser access by — and a full-replacement save
+  erased every server-owned field it did not send. Non-admin saves now carry
+  those fields over from the stored record.
+- **Smaller.** New request ids come from `crypto.randomUUID()` (the id is the
+  only credential on the public completion link; it was a timestamp plus
+  `Math.random`). Ask Vasco's gate now sets `userId`, so the per-user AI caps
+  apply rather than only the per-IP cap. A guard records the verification it
+  performed, and later guards and `getAuthContext` reuse it for the same token,
+  so a request verifies once however many of them it passes (a router-wide
+  `requireAuth` in front of a route's `requireAdmin` used to cost a second
+  GoTrue round trip and store read).
 
 ### Found by the September 2026 auth review, still open
 
-Server-side guard fixes still to land (verified by read, not yet changed):
-the e-sign SENDER side is open to any signed-in user (a client can upload a
-PDF, send platform-emailed signing requests to anyone, mint v1 API keys and
-webhooks; invites, fields, recall, remind, reminder-config, signing-mode and
-draft-settings skip the envelope-ownership check; templates, campaigns and
-packets are global; bulk void/remind, consent-text publishing and the sweeps
-have no role check); `GET/POST /integrations/template` and `/config` expose
-every client's policies for a provider; `POST /medical-fna/create` never checks
-`body.clientId`; `PATCH /documents/:userId/:documentId` accepts any field, so
-a client can repoint `filePath` at another client's file;
-`POST /documents/:userId/email` sends firm-branded mail to any address;
-`fna-intake-routes.ts` shadows the canonical `assertClientAccess`; RoA draft
-create/update, `/ai-advisor/admin/*` and `/ai-intelligence` are wider than
-`client-access.ts`; resource-library writes need only a session;
-`GET /publications/articles` serves drafts to anyone.
+Code, deliberately deferred:
+
+- **Saved signatures are keyed on email alone** (`esign:signer-profile:<email>`),
+  so anyone holding a signer token for an envelope addressed to that email is
+  shown the signature adopted on another firm's envelope. With the sender side
+  staff-only and one firm, only an admin can create that envelope today; key it
+  by firm before a second firm is onboarded.
+- **Signer tokens have no TTL of their own** (audit L-9, partly closed): envelope
+  expiry and rotation after submit or reminder bound the main flows, but the
+  download, saved-signature, pause and KBA routes accept a token without an
+  active-state check.
+- **`GET /newsletter/unsubscribe?email=` opts out any address.** It is
+  rate-limited and only ever unsubscribes, but needs a per-recipient token like
+  the newsletter-studio one-click route. Welcome emails already sent carry
+  email-only links, so tokenless requests need a confirm-by-email step rather
+  than a hard refusal — a POPIA opt-out must keep working.
+- **`GET /requests/:id` returns the whole internal record** to anyone with the
+  id. The id is now unguessable; the response should shrink to what the public
+  completion page needs, which is part of the open product decision on that
+  flow (the page is broken anyway: it reads `data.request` and posts to a
+  `/submit` route that has never existed).
+- **Clients cannot open their own envelopes.** The client history reads use
+  `requireOwnedEnvelope`, whose firm scope is the client's own user id, so a
+  client's download, audit, document and certificate reads 404. Not a leak —
+  a missing feature that needs a signer- or client-scoped read.
 
 Larger or operator work:
 

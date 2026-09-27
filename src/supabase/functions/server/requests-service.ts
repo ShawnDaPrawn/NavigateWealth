@@ -559,7 +559,10 @@ export class RequestsService {
       }
 
       const now = new Date().toISOString();
-      const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // The id is the ONLY credential on the public completion link
+      // (GET /requests/:id takes no session), so it comes from a CSPRNG. It used
+      // to be a timestamp plus nine characters of Math.random.
+      const requestId = `req_${crypto.randomUUID()}`;
 
       // Initialize compliance checklist status
       const checklistStatus = template.complianceApprovalConfig.checklistItems.map((item) => ({

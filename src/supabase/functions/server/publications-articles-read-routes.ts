@@ -3,9 +3,19 @@
  * by-slug, and legacy /slug (Phase 7 max-lines split). Extracted verbatim from
  * publications-articles-routes.ts; mounted via
  * `articlesRoutes.route('/', articlesReadRoutes)`. Pure kv reads — no auth
- * middleware (published-article reads are public). Behaviour-preserving.
+ * middleware (published-article reads are public).
+ *
+ * PUBLISHED ONLY, unless the caller is an admin. `GET /articles` and
+ * `GET /articles/:id` used to return drafts, scheduled and archived articles
+ * to anyone who simply left out `?status=published`; the slug routes already
+ * restricted themselves. The admin check runs only when a request could
+ * return unpublished content, so the public site's `status=published` reads
+ * pay nothing for it.
  */
 import { Hono } from 'npm:hono';
+import type { Context } from 'npm:hono';
+import { getAuthContext } from './auth-mw.ts';
+import { isPlatformAdminRole } from './client-access.ts';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
@@ -18,9 +28,21 @@ const log = createModuleLogger('publications-articles-read-routes');
 
 const articlesReadRoutes = new Hono();
 
+/** True only for a valid admin session. Never throws: anything else is public. */
+async function callerIsAdmin(c: Context): Promise<boolean> {
+  if (!c.req.header('Authorization')) return false;
+  try {
+    return isPlatformAdminRole((await getAuthContext(c)).role);
+  } catch {
+    return false;
+  }
+}
+
 articlesReadRoutes.get('/articles', async (c) => {
   try {
-    const status = c.req.query('status');
+    const requestedStatus = c.req.query('status');
+    const status =
+      requestedStatus === 'published' || !(await callerIsAdmin(c)) ? 'published' : requestedStatus;
     const type_id = c.req.query('type_id');
     const category_id = c.req.query('category_id');
     const search = c.req.query('search');
@@ -119,7 +141,8 @@ articlesReadRoutes.get('/articles/:id', async (c) => {
     const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
 
-    if (!article) {
+    // An unpublished article does not exist as far as the public is concerned.
+    if (!article || (article.status !== 'published' && !(await callerIsAdmin(c)))) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 

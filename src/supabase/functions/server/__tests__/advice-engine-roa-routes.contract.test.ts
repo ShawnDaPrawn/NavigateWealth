@@ -383,6 +383,8 @@ describe('canManageRoAContracts — module contracts are super-admin only', () =
 
 describe('draft lifecycle routes reach the service', () => {
   beforeEach(() => {
+    assignedAdviser.clear();
+    assignedAdviser.set(CLIENT_ID, 'adviser-7');
     drafts.set('d1', { id: 'd1', adviserId: 'adviser-1' });
     svc.saveDraft.mockResolvedValue({ id: 'd1' });
     svc.submitDraft.mockResolvedValue({ id: 'd1', status: 'submitted' });
@@ -601,6 +603,8 @@ describe('canAccessRoADraft is enforced at every call site, not just one', () =>
   const OTHER = 'd-other-adviser';
 
   beforeEach(() => {
+    assignedAdviser.clear();
+    assignedAdviser.set(CLIENT_ID, 'adviser-1');
     drafts.set(OWNED, { id: OWNED, adviserId: 'adviser-1', clientId: CLIENT_ID });
     drafts.set(OTHER, { id: OTHER, adviserId: 'adviser-9', clientId: CLIENT_ID });
 
@@ -696,6 +700,73 @@ describe('canAccessRoADraft is enforced at every call site, not just one', () =>
 
     const stranger = await req('/roa/drafts/d-created', { as: 'paraplanner', user: 'para-3' });
     expect(stranger.status).toBe(403);
+  });
+});
+
+describe('a draft body cannot reach past its adviser or forge its own lifecycle', () => {
+  const OTHER_CLIENT = '99999999-2222-4333-8444-555555555555';
+
+  beforeEach(() => {
+    assignedAdviser.clear();
+    assignedAdviser.set(CLIENT_ID, 'adviser-1');
+    drafts.set('d1', { id: 'd1', adviserId: 'adviser-1', clientId: CLIENT_ID });
+    svc.saveDraft.mockResolvedValue({ id: 'd1' });
+  });
+
+  it("refuses an adviser creating a draft for a client who isn't theirs", async () => {
+    // saveDraft builds the draft's client snapshot from body.clientId, so this
+    // would hand the adviser that client's full context.
+    const res = await req('/roa/drafts', {
+      as: 'adviser',
+      user: 'adviser-1',
+      method: 'POST',
+      body: { clientId: OTHER_CLIENT },
+    });
+    expect(res.status).toBe(403);
+    expect(svc.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('refuses re-pointing an existing draft at an unassigned client', async () => {
+    const res = await req('/roa/drafts/d1', {
+      as: 'adviser',
+      user: 'adviser-1',
+      method: 'PUT',
+      body: { clientId: OTHER_CLIENT },
+    });
+    expect(res.status).toBe(403);
+    expect(svc.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('still lets an adviser start a draft before choosing a client', async () => {
+    const res = await req('/roa/drafts', {
+      as: 'adviser',
+      user: 'adviser-1',
+      method: 'POST',
+      body: { selectedModules: [], moduleData: {}, status: 'draft', version: 1 },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('drops lifecycle and provenance fields from the body', async () => {
+    await req('/roa/drafts/d1', {
+      as: 'adviser',
+      user: 'adviser-1',
+      method: 'PUT',
+      body: {
+        clientId: CLIENT_ID,
+        moduleData: { m1: { note: 'kept' } },
+        status: 'submitted',
+        lockedAt: '2026-01-01T00:00:00.000Z',
+        finalisedAt: '2026-01-01T00:00:00.000Z',
+        finalisedBy: 'someone',
+        clientSnapshot: { name: 'Invented client facts' },
+      },
+    });
+    const [input] = svc.saveDraft.mock.calls[0] as [Record<string, unknown>];
+    expect(input.moduleData).toEqual({ m1: { note: 'kept' } });
+    for (const field of ['status', 'lockedAt', 'finalisedAt', 'finalisedBy', 'clientSnapshot']) {
+      expect(input, field).not.toHaveProperty(field);
+    }
   });
 });
 

@@ -12,7 +12,7 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
@@ -23,7 +23,7 @@ const log = createModuleLogger('esign-diagnostics-routes');
 
 const diagnosticsRoutes = new Hono();
 
-diagnosticsRoutes.post('/maintenance/stuck-alert-sweep', async (c) => {
+diagnosticsRoutes.post('/maintenance/stuck-alert-sweep', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const result = await runStuckAlertSweep();
@@ -63,7 +63,7 @@ diagnosticsRoutes.post('/cron/stuck-alert-sweep', async (c) => {
  *   • envelope_id   — narrow to one envelope
  *   • limit         — default 100, max 500
  */
-diagnosticsRoutes.get('/audit/search', async (c) => {
+diagnosticsRoutes.get('/audit/search', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -94,7 +94,7 @@ diagnosticsRoutes.get('/audit/search', async (c) => {
  * GET /diagnostics/synthetic — returns the latest probe result +
  * rolling history. Lightweight; hits KV only.
  */
-diagnosticsRoutes.get('/diagnostics/synthetic', async (c) => {
+diagnosticsRoutes.get('/diagnostics/synthetic', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const [latest, history] = await Promise.all([getLatestProbe(), getProbeHistory()]);
@@ -115,7 +115,7 @@ diagnosticsRoutes.get('/diagnostics/synthetic', async (c) => {
  * return the result. Useful when we need to confirm we are healthy
  * before shipping.
  */
-diagnosticsRoutes.post('/diagnostics/synthetic/run', async (c) => {
+diagnosticsRoutes.post('/diagnostics/synthetic/run', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const result = await runSyntheticProbe();

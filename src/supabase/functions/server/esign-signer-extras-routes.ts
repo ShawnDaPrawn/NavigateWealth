@@ -1,7 +1,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import {
@@ -210,7 +210,7 @@ app.post('/signer/saved-signature', async (c) => {
  * could list another firm's envelope attachments (ID copies, bank statements)
  * with download links, given the envelope id.
  */
-app.get('/envelopes/:envelopeId/attachments', async (c) => {
+app.get('/envelopes/:envelopeId/attachments', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;

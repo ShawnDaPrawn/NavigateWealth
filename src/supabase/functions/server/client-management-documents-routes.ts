@@ -6,6 +6,7 @@ import * as kv from './kv_store.tsx';
 import { sendEmail } from './email-service.ts';
 import { createServiceClient } from './client-management-utils.ts';
 import { requireClientAccess } from './client-access.ts';
+import { requireAdmin } from './auth-mw.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-management-documents');
@@ -18,16 +19,20 @@ app.post('/upload', async (c) => {
   try {
     const body = await c.req.parseBody();
     const file = body['file'];
-    const userId = body['userId']; // Optional, for folder structure
+    const userId = body['userId'];
 
     if (!file || !(file instanceof File)) {
       return c.json({ error: 'No file uploaded' }, 400);
     }
 
-    if (typeof userId === 'string') {
-      const accessDenied = await requireClientAccess(c, userId);
-      if (accessDenied) return accessDenied;
+    // Required, and checked. It used to be optional, and an upload without it
+    // went to a shared `temp/` folder with no access check at all — free
+    // storage for any signed-in user. Both SPA callers always send it.
+    if (typeof userId !== 'string' || !userId) {
+      return c.json({ error: 'userId is required' }, 400);
     }
+    const accessDenied = await requireClientAccess(c, userId);
+    if (accessDenied) return accessDenied;
 
     // Create Supabase client
     const supabase = createServiceClient();
@@ -48,7 +53,7 @@ app.post('/upload', async (c) => {
     // Generate safe filename
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const path = userId ? `${userId}/${timestamp}_${safeName}` : `temp/${timestamp}_${safeName}`;
+    const path = `${userId}/${timestamp}_${safeName}`;
 
     // Upload file
     const { data, error } = await supabase.storage.from(bucketName).upload(path, file, {
@@ -81,9 +86,14 @@ app.post('/upload', async (c) => {
 
 /**
  * POST /send-documents
- * Send encrypted documents to client via email
+ * Send encrypted documents to client via email.
+ *
+ * Admin only, and only files inside the client's own folder. The storage paths
+ * and the destination email both come from the client's profile, which the
+ * client can edit: a client could list another client's file and have it
+ * zipped and mailed to themselves. Nothing in the app calls this route.
  */
-app.post('/send-documents', async (c) => {
+app.post('/send-documents', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const { userId } = body;
@@ -134,6 +144,14 @@ app.post('/send-documents', async (c) => {
 
     for (const doc of uploadedDocs) {
       const filePath = doc.fileUrl || doc.path; // Frontend saves path in fileUrl often
+      if (
+        typeof filePath !== 'string' ||
+        !filePath.startsWith(`${userId}/`) ||
+        filePath.includes('..')
+      ) {
+        log.warn('Skipping a document outside the client folder', { userId });
+        continue;
+      }
 
       // Download file from Storage
       const { data: fileData, error: downloadError } = await supabase.storage

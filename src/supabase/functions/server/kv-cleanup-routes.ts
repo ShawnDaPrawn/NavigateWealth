@@ -9,7 +9,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { runKvCleanup, getLastCleanupRun } from './kv-cleanup-service.ts';
@@ -31,7 +31,8 @@ app.get('/', (c) => c.json({ service: 'kv-cleanup', status: 'active' }));
  */
 app.get(
   '/status',
-  requireAuth,
+  // Admin only: the only caller is the admin dashboard's maintenance hook.
+  requireAdmin,
   asyncHandler(async (c) => {
     const lastRun = await getLastCleanupRun();
     const today = new Date().toISOString().slice(0, 10);

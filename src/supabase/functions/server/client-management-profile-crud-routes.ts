@@ -20,6 +20,24 @@ import { isPlatformAdminRole, requireClientAccess } from './client-access.ts';
 const app = new Hono();
 const log = createModuleLogger('client-management-profile-crud');
 
+/**
+ * Fields on a profile record that the server owns. A non-admin save can neither
+ * set them nor erase them (a full-replacement save used to drop whatever it did
+ * not send): the stored values are carried over. `adviserId` and
+ * `applicationId` decide who the client's ASSIGNED adviser is
+ * (`fna-intake-adviser-resolver.ts`), which is what `client-access.ts` grants an
+ * adviser access by — so a client must not be able to pick one.
+ */
+const SERVER_CONTROLLED_PROFILE_FIELDS = [
+  'role',
+  'accountStatus',
+  'adviserAssigned',
+  'suspended',
+  'adviserId',
+  'applicationId',
+  'application_id',
+] as const;
+
 async function requireProfileKeyAccess(c: Parameters<typeof requireClientAccess>[0], key: string) {
   const userId = extractUserIdFromProfileKey(key);
   if (!userId) {
@@ -136,7 +154,7 @@ app.post(
       // for both the full-replacement and partial-patch paths.)
       const callerIsAdmin = isPlatformAdminRole(c.get('userRole'));
       if (!callerIsAdmin) {
-        for (const privileged of ['role', 'accountStatus', 'adviserAssigned', 'suspended']) {
+        for (const privileged of SERVER_CONTROLLED_PROFILE_FIELDS) {
           delete incomingData[privileged];
         }
       }
@@ -156,6 +174,17 @@ app.post(
 
       let finalProfile = {};
 
+      // Read the stored record once, before either path: the partial patch
+      // merges over it, and a non-admin save carries the server-controlled
+      // fields over from it.
+      let existing: Record<string, unknown>;
+      try {
+        existing = ((await kv.get(key)) || {}) as Record<string, unknown>;
+      } catch (readError) {
+        log.error('Failed to read profile before update.', readError);
+        throw new Error('Database error. Please refresh the page.', { cause: readError });
+      }
+
       if (isFullProfileReplacement) {
         log.info('Full profile replacement detected. Deleting existing record first.', { key });
 
@@ -173,17 +202,19 @@ app.post(
       } else {
         // Partial Patch Logic
         log.info('Partial patch detected. Merging...');
-        try {
-          const existing = (await kv.get(key)) || {};
-          finalProfile = {
-            ...existing,
-            ...(data as Record<string, unknown>),
-            updatedAt: new Date().toISOString(),
-          };
-        } catch (readError) {
-          log.error('Failed to read profile for PATCH.', readError);
-          throw new Error('Database error. Please refresh the page.', { cause: readError });
+        finalProfile = {
+          ...existing,
+          ...(data as Record<string, unknown>),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      if (!callerIsAdmin) {
+        const carried: Record<string, unknown> = {};
+        for (const field of SERVER_CONTROLLED_PROFILE_FIELDS) {
+          if (field in existing) carried[field] = existing[field];
         }
+        finalProfile = { ...finalProfile, ...carried };
       }
 
       // Sanitize
@@ -264,7 +295,7 @@ app.put(
     if (accessDenied) return accessDenied;
 
     if (!isPlatformAdminRole(c.get('userRole'))) {
-      for (const privileged of ['role', 'accountStatus', 'adviserAssigned']) {
+      for (const privileged of SERVER_CONTROLLED_PROFILE_FIELDS) {
         delete (updates as Record<string, unknown>)[privileged];
       }
     }

@@ -12,7 +12,7 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
@@ -48,83 +48,89 @@ const log = createModuleLogger('esign-campaigns-routes');
 
 const campaignsRoutes = new Hono();
 
-campaignsRoutes.post('/campaigns', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const user = ctx.user;
-    const body = await c.req.json();
-    const {
-      templateId,
-      templateVersion,
-      title,
-      message,
-      expiryDays,
-      csvText,
-      rows: rawRows,
-    } = body as {
-      templateId?: string;
-      templateVersion?: number;
-      title?: string;
-      message?: string;
-      expiryDays?: number;
-      csvText?: string;
-      rows?: unknown;
-    };
+campaignsRoutes.post(
+  '/campaigns',
+  requireAdmin,
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const user = ctx.user;
+      const body = await c.req.json();
+      const {
+        templateId,
+        templateVersion,
+        title,
+        message,
+        expiryDays,
+        csvText,
+        rows: rawRows,
+      } = body as {
+        templateId?: string;
+        templateVersion?: number;
+        title?: string;
+        message?: string;
+        expiryDays?: number;
+        csvText?: string;
+        rows?: unknown;
+      };
 
-    if (!templateId) return c.json({ error: 'templateId is required' }, 400);
-    if (!title?.trim()) return c.json({ error: 'title is required' }, 400);
+      if (!templateId) return c.json({ error: 'templateId is required' }, 400);
+      if (!title?.trim()) return c.json({ error: 'title is required' }, 400);
 
-    const template = await getTemplate(templateId);
-    if (!template) return c.json({ error: 'Template not found' }, 404);
+      const template = await getTemplate(templateId);
+      if (!template) return c.json({ error: 'Template not found' }, 404);
 
-    let rows: Awaited<ReturnType<typeof mapCsvToRows>>['rows'] = [];
-    let warnings: string[] = [];
-    if (typeof csvText === 'string' && csvText.trim().length > 0) {
-      const parsed = parseCsv(csvText);
-      const mapped = mapCsvToRows(parsed.headers, parsed.rows, template);
-      rows = mapped.rows;
-      warnings = mapped.warnings;
-    } else if (Array.isArray(rawRows)) {
-      rows = rawRows as typeof rows;
-    } else {
-      return c.json({ error: 'Provide csvText or rows[]' }, 400);
+      let rows: Awaited<ReturnType<typeof mapCsvToRows>>['rows'] = [];
+      let warnings: string[] = [];
+      if (typeof csvText === 'string' && csvText.trim().length > 0) {
+        const parsed = parseCsv(csvText);
+        const mapped = mapCsvToRows(parsed.headers, parsed.rows, template);
+        rows = mapped.rows;
+        warnings = mapped.warnings;
+      } else if (Array.isArray(rawRows)) {
+        rows = rawRows as typeof rows;
+      } else {
+        return c.json({ error: 'Provide csvText or rows[]' }, 400);
+      }
+
+      if (rows.length === 0) return c.json({ error: 'No rows parsed from CSV' }, 400);
+
+      // `(ctx as { firmId?: string }).firmId` was a cast to a field the auth
+      // context does not have — `getAuthContext` returns { user, userId, role,
+      // token }. So it was always undefined and every campaign created here was
+      // filed under the literal string 'standalone', in one shared bucket, while
+      // the three other call sites in this same file already used
+      // `resolveFirmId(ctx.user)`. A campaign created here was therefore
+      // invisible to the routes that list by real firm id.
+      const firmId = resolveFirmId(ctx.user);
+      const result = await createCampaign({
+        firmId,
+        templateId,
+        templateVersion,
+        title: title.trim(),
+        message,
+        expiryDays,
+        createdBy: user.id,
+        rows,
+      });
+      if (result.error || !result.campaign) {
+        return c.json({ error: result.error || 'Failed to create campaign' }, 400);
+      }
+      return c.json({ campaign: result.campaign, warnings });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
+      log.error('Create campaign error:', error);
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to create campaign' },
+        500,
+      );
     }
+  },
+);
 
-    if (rows.length === 0) return c.json({ error: 'No rows parsed from CSV' }, 400);
-
-    // `(ctx as { firmId?: string }).firmId` was a cast to a field the auth
-    // context does not have — `getAuthContext` returns { user, userId, role,
-    // token }. So it was always undefined and every campaign created here was
-    // filed under the literal string 'standalone', in one shared bucket, while
-    // the three other call sites in this same file already used
-    // `resolveFirmId(ctx.user)`. A campaign created here was therefore
-    // invisible to the routes that list by real firm id.
-    const firmId = resolveFirmId(ctx.user);
-    const result = await createCampaign({
-      firmId,
-      templateId,
-      templateVersion,
-      title: title.trim(),
-      message,
-      expiryDays,
-      createdBy: user.id,
-      rows,
-    });
-    if (result.error || !result.campaign) {
-      return c.json({ error: result.error || 'Failed to create campaign' }, 400);
-    }
-    return c.json({ campaign: result.campaign, warnings });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
-    log.error('Create campaign error:', error);
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to create campaign' },
-      500,
-    );
-  }
-});
-
-campaignsRoutes.get('/campaigns', async (c) => {
+campaignsRoutes.get('/campaigns', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const campaigns = await listCampaigns();
@@ -136,7 +142,7 @@ campaignsRoutes.get('/campaigns', async (c) => {
   }
 });
 
-campaignsRoutes.get('/campaigns/:id', async (c) => {
+campaignsRoutes.get('/campaigns/:id', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const campaign = await getCampaign(c.req.param('id')!);
@@ -149,42 +155,52 @@ campaignsRoutes.get('/campaigns/:id', async (c) => {
   }
 });
 
-campaignsRoutes.post('/campaigns/:id/results/:rowId', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const rowId = c.req.param('rowId')!;
-    const body = await c.req.json();
-    const status = body.status as 'sent' | 'failed' | 'cancelled' | 'queued';
-    if (!['sent', 'failed', 'cancelled', 'queued'].includes(status)) {
-      return c.json({ error: 'Invalid status' }, 400);
+campaignsRoutes.post(
+  '/campaigns/:id/results/:rowId',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      await getAuthContext(c);
+      const id = c.req.param('id')!;
+      const rowId = c.req.param('rowId')!;
+      const body = await c.req.json();
+      const status = body.status as 'sent' | 'failed' | 'cancelled' | 'queued';
+      if (!['sent', 'failed', 'cancelled', 'queued'].includes(status)) {
+        return c.json({ error: 'Invalid status' }, 400);
+      }
+      const result = await recordCampaignRowResult(id, rowId, {
+        envelopeId: typeof body.envelopeId === 'string' ? body.envelopeId : undefined,
+        status,
+        errorMessage: typeof body.errorMessage === 'string' ? body.errorMessage : undefined,
+      });
+      if (result.error) return c.json({ error: result.error }, 404);
+      return c.json({ campaign: result.campaign });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
+      log.error('Record campaign row result error:', error);
+      return c.json({ error: 'Failed to update row result' }, 500);
     }
-    const result = await recordCampaignRowResult(id, rowId, {
-      envelopeId: typeof body.envelopeId === 'string' ? body.envelopeId : undefined,
-      status,
-      errorMessage: typeof body.errorMessage === 'string' ? body.errorMessage : undefined,
-    });
-    if (result.error) return c.json({ error: result.error }, 404);
-    return c.json({ campaign: result.campaign });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
-    log.error('Record campaign row result error:', error);
-    return c.json({ error: 'Failed to update row result' }, 500);
-  }
-});
+  },
+);
 
-campaignsRoutes.post('/campaigns/:id/cancel', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    await getAuthContext(c);
-    const result = await cancelCampaign(c.req.param('id')!);
-    if (result.error) return c.json({ error: result.error }, 404);
-    return c.json({ campaign: result.campaign });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
-    log.error('Cancel campaign error:', error);
-    return c.json({ error: 'Failed to cancel campaign' }, 500);
-  }
-});
+campaignsRoutes.post(
+  '/campaigns/:id/cancel',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      await getAuthContext(c);
+      const result = await cancelCampaign(c.req.param('id')!);
+      if (result.error) return c.json({ error: result.error }, 404);
+      return c.json({ campaign: result.campaign });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
+      log.error('Cancel campaign error:', error);
+      return c.json({ error: 'Failed to cancel campaign' }, 500);
+    }
+  },
+);
 
 // ===========================================================================
 // P4.8 — Packets (sequenced templates) + packet runs
@@ -200,6 +216,7 @@ campaignsRoutes.post('/campaigns/:id/cancel', rateLimit('SENDER_MUTATE'), async 
  */
 campaignsRoutes.post(
   '/documents/upload',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -251,35 +268,41 @@ campaignsRoutes.post(
  * POST /packets
  * Author a new packet (ordered list of templates).
  */
-campaignsRoutes.post('/packets', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const body = await c.req.json();
-    const { name, description, steps } = body || {};
-    if (!name || !Array.isArray(steps) || steps.length === 0) {
-      return c.json({ error: 'name and at least one step are required' }, 400);
+campaignsRoutes.post(
+  '/packets',
+  requireAdmin,
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const body = await c.req.json();
+      const { name, description, steps } = body || {};
+      if (!name || !Array.isArray(steps) || steps.length === 0) {
+        return c.json({ error: 'name and at least one step are required' }, 400);
+      }
+      const result = await createPacket({
+        firmId: resolveFirmId(ctx.user),
+        name,
+        description,
+        steps: steps.map((s: { templateId: string; templateVersion?: number; label?: string }) => ({
+          templateId: s.templateId,
+          templateVersion: s.templateVersion,
+          label: s.label,
+        })),
+        createdByUserId: ctx.user.id,
+      });
+      if (result.error) return c.json({ error: result.error }, 400);
+      return c.json({ packet: result.packet });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
+      log.error('Create packet error:', error);
+      return c.json({ error: 'Failed to create packet' }, 500);
     }
-    const result = await createPacket({
-      firmId: resolveFirmId(ctx.user),
-      name,
-      description,
-      steps: steps.map((s: { templateId: string; templateVersion?: number; label?: string }) => ({
-        templateId: s.templateId,
-        templateVersion: s.templateVersion,
-        label: s.label,
-      })),
-      createdByUserId: ctx.user.id,
-    });
-    if (result.error) return c.json({ error: result.error }, 400);
-    return c.json({ packet: result.packet });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
-    log.error('Create packet error:', error);
-    return c.json({ error: 'Failed to create packet' }, 500);
-  }
-});
+  },
+);
 
-campaignsRoutes.get('/packets', async (c) => {
+campaignsRoutes.get('/packets', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const packets = await listPackets();
@@ -291,7 +314,7 @@ campaignsRoutes.get('/packets', async (c) => {
   }
 });
 
-campaignsRoutes.get('/packets/:id', async (c) => {
+campaignsRoutes.get('/packets/:id', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const packet = await getPacket(c.req.param('id')!);
@@ -304,7 +327,7 @@ campaignsRoutes.get('/packets/:id', async (c) => {
   }
 });
 
-campaignsRoutes.delete('/packets/:id', rateLimit('SENDER_MUTATE'), async (c) => {
+campaignsRoutes.delete('/packets/:id', requireAdmin, rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     await getAuthContext(c);
     const result = await deletePacket(c.req.param('id')!);
@@ -329,6 +352,7 @@ campaignsRoutes.delete('/packets/:id', rateLimit('SENDER_MUTATE'), async (c) => 
  */
 campaignsRoutes.post(
   '/packet-runs',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -370,7 +394,7 @@ campaignsRoutes.post(
   },
 );
 
-campaignsRoutes.get('/packet-runs', async (c) => {
+campaignsRoutes.get('/packet-runs', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const runs = await listPacketRuns();
@@ -382,7 +406,7 @@ campaignsRoutes.get('/packet-runs', async (c) => {
   }
 });
 
-campaignsRoutes.get('/packet-runs/:id', async (c) => {
+campaignsRoutes.get('/packet-runs/:id', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const run = await getPacketRun(c.req.param('id')!);
@@ -395,17 +419,22 @@ campaignsRoutes.get('/packet-runs/:id', async (c) => {
   }
 });
 
-campaignsRoutes.post('/packet-runs/:id/cancel', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    await getAuthContext(c);
-    const result = await cancelPacketRun(c.req.param('id')!);
-    if (result.error) return c.json({ error: result.error }, 404);
-    return c.json({ run: result.run });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
-    log.error('Cancel packet run error:', error);
-    return c.json({ error: 'Failed to cancel packet run' }, 500);
-  }
-});
+campaignsRoutes.post(
+  '/packet-runs/:id/cancel',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      await getAuthContext(c);
+      const result = await cancelPacketRun(c.req.param('id')!);
+      if (result.error) return c.json({ error: result.error }, 404);
+      return c.json({ run: result.run });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) return c.json({ error: 'Unauthorized' }, 401);
+      log.error('Cancel packet run error:', error);
+      return c.json({ error: 'Failed to cancel packet run' }, 500);
+    }
+  },
+);
 
 export default campaignsRoutes;

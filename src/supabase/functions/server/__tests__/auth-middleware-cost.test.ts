@@ -23,6 +23,15 @@
  *
  * Hence a ratchet rather than a comment.
  *
+ * The cost is now also removed at the source. A guard records the verification
+ * it performed (`VERIFIED_AUTH` in auth-mw.ts), and every later guard on the
+ * same request — and `getAuthContext` — reuses it for the same bearer token
+ * rather than asking Supabase Auth again. That covers the shapes a source scan
+ * cannot see: a router-wide `requireAuth` in front of a route's `requireAdmin`,
+ * and a guarded handler that also calls `getAuthContext` (the latter used to be
+ * a second scan here). The behaviour is pinned below. The ratchet stays: a
+ * route that names both guards still reads as if it had two different gates.
+ *
  * Run: npx vitest run src/supabase/functions/server/__tests__/auth-middleware-cost.test.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -68,120 +77,6 @@ function scannableBody(source: string): string {
   return source.replace(IMPORT_STATEMENT, '');
 }
 
-/**
- * A route registration that chains a role guard AND re-authenticates in the
- * handler body.
- *
- * WHY THIS IS A SECOND PATTERN. `REDUNDANT_PAIR` only sees middleware NAMES
- * chained in an argument list, so it cannot see the other shape of the same
- * waste: `app.get('/x', requireAdmin, async (c) => { const ctx = await
- * getAuthContext(c); ... })`. `requireAdmin` has already validated the token
- * against Supabase Auth, run the account-security lookup and set `user` /
- * `userId` / `userRole` on the context — calling `getAuthContext` after it
- * repeats the network round trip and the store read on EVERY successful
- * request.
- *
- * Not hypothetical: introduced on PR #248 while adding the missing role gate to
- * `GET /envelopes`, reviewed out, and this check added so the next one fails
- * here instead. Read the user with `c.get('user')`.
- *
- * Comment lines are stripped first, for the reason the route-auth detector
- * learned the same night: prose explaining the rule mentions `getAuthContext`,
- * and a detector that reads its own documentation as code is useless.
- */
-const GUARDED_ROUTE =
-  /\.(?:get|post|put|patch|delete)\(\s*(?:'[^']*'|`[^`]*`)\s*,\s*require(?:Admin|SuperAdmin)\b/g;
-/** ANY route registration — used to stop a scan before it reaches the next one. */
-const ANY_ROUTE = /\.(?:get|post|put|patch|delete)\(\s*(?:'[^']*'|`[^`]*`)/g;
-const HANDLER_SCAN_CHARS = 2500;
-
-/**
- * The handler body for the registration at `start`: up to the NEXT route
- * registration, never past it.
- *
- * A fixed-width window overruns into the following handler and attributes its
- * `getAuthContext` call to the wrong route — which is exactly what happened on
- * the first run of this check: it named a route that had already been fixed,
- * because the next handler down was the real offender.
- */
-function handlerBody(src: string, start: number): string {
-  ANY_ROUTE.lastIndex = start + 1;
-  const next = ANY_ROUTE.exec(src);
-  const end = next ? Math.min(next.index, start + HANDLER_SCAN_CHARS) : start + HANDLER_SCAN_CHARS;
-  return withoutCommentLines(src.slice(start, end));
-}
-
-function withoutCommentLines(slice: string): string {
-  return slice
-    .split('\n')
-    .filter((line) => {
-      const t = line.trimStart();
-      return !(t.startsWith('*') || t.startsWith('//') || t.startsWith('/*'));
-    })
-    .join('\n');
-}
-
-describe('re-authentication inside a guarded handler', () => {
-  it('no route chains a role guard and then calls getAuthContext', () => {
-    const offenders: string[] = [];
-    for (const file of serverSources()) {
-      const src = scannableBody(readFileSync(file, 'utf8'));
-      for (const m of src.matchAll(GUARDED_ROUTE)) {
-        if (/\bgetAuthContext\s*\(/.test(handlerBody(src, m.index!))) {
-          const line = src.slice(0, m.index!).split('\n').length;
-          offenders.push(`${file.slice(SERVER_DIR.length + 1)}:${line}`);
-        }
-      }
-    }
-    expect(
-      offenders,
-      'These routes authenticate twice per request: a role guard already ran ' +
-        "`resolveAuthUser` and set the context. Read `c.get('user')` instead of " +
-        'calling `getAuthContext(c)` again. Offenders: ' +
-        offenders.join(', '),
-    ).toEqual([]);
-  });
-
-  it('flags the shape it exists to catch, and ignores the fixed one', () => {
-    // Without this the check could pass vacuously if the regex stopped matching.
-    const bad = [
-      "app.get('/envelopes', requireAdmin, async (c) => {",
-      '  const ctx = await getAuthContext(c);',
-      '  return c.json(ctx);',
-      '});',
-    ].join('\n');
-    const good = [
-      "app.get('/envelopes', requireAdmin, async (c) => {",
-      "  const user = c.get('user');",
-      '  return c.json(user);',
-      '});',
-    ].join('\n');
-    const probe = (src: string) =>
-      [...src.matchAll(GUARDED_ROUTE)].some((m) =>
-        /\bgetAuthContext\s*\(/.test(handlerBody(src, m.index!)),
-      );
-    expect(probe(bad)).toBe(true);
-    expect(probe(good)).toBe(false);
-
-    // A comment naming the function must not count as a call.
-    const commented = [
-      "app.get('/envelopes', requireAdmin, async (c) => {",
-      '  // Do NOT call getAuthContext(c) here — requireAdmin already did.',
-      "  const user = c.get('user');",
-      '});',
-    ].join('\n');
-    expect(probe(commented)).toBe(false);
-  });
-
-  it('finds the guarded routes at all, so the scan cannot be vacuous', () => {
-    let guarded = 0;
-    for (const file of serverSources()) {
-      guarded += [...scannableBody(readFileSync(file, 'utf8')).matchAll(GUARDED_ROUTE)].length;
-    }
-    expect(guarded).toBeGreaterThan(5);
-  });
-});
-
 describe('redundant auth middleware', () => {
   it('is not paired with a role guard on any route registration', () => {
     const offenders: string[] = [];
@@ -191,8 +86,7 @@ describe('redundant auth middleware', () => {
     }
     // If this fails: drop the `requireAuth` ARGUMENT (not the import).
     // `requireAdmin` and `requireSuperAdmin` already resolve and set the same
-    // context, and each extra `requireAuth` costs one Supabase Auth round trip
-    // plus one database read per request.
+    // context, so the pair reads as two gates where there is one.
     expect(offenders).toEqual([]);
   });
 
@@ -251,7 +145,8 @@ vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
 });
 
-const { requireAuth, requireAdmin } = await import('../auth-mw.ts');
+const { requireAuth, requireAdmin, requirePrimaryAuth, getAuthContext, AuthError } =
+  await import('../auth-mw.ts');
 
 function mount(...middleware: Parameters<Hono['get']>[1][]) {
   const app = new Hono();
@@ -281,13 +176,34 @@ describe('resolveAuthUser round trips', () => {
     expect(kvGet).toHaveBeenCalledTimes(1);
   });
 
-  it('requireAuth before requireAdmin doubles both — this is what the ratchet stops', async () => {
-    // Demonstrates the cost rather than asserting a shipped behaviour: no route
-    // is registered this way any more, and the source scan above keeps it so.
+  it('requireAuth before requireAdmin still resolves the caller once', async () => {
+    // The second guard reuses the verification the first one recorded.
     const res = await call(mount(requireAuth, requireAdmin));
     expect(res.status).toBe(200);
+    expect(supa.getUser).toHaveBeenCalledTimes(1);
+    expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves once behind a router-wide requireAuth and a route requireAdmin', async () => {
+    // The shape a source scan cannot see, and the one documents.tsx and the
+    // profile router use for their admin-only routes.
+    const app = new Hono();
+    app.use('*', requireAuth);
+    app.get('/x', requireAdmin, (c) => c.json({ ok: true }));
+    const res = await call(app);
+    expect(res.status).toBe(200);
+    expect(supa.getUser).toHaveBeenCalledTimes(1);
+    expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let a requirePrimaryAuth pass stand in for the account-state gate', async () => {
+    // requirePrimaryAuth skips the gate on purpose (it fronts the 2FA
+    // challenge), so a guard after it must run the gate itself.
+    kvGet.mockResolvedValue({ suspended: true });
+    const res = await call(mount(requirePrimaryAuth, requireAdmin));
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe('ACCOUNT_SUSPENDED');
     expect(supa.getUser).toHaveBeenCalledTimes(2);
-    expect(kvGet).toHaveBeenCalledTimes(2);
   });
 
   it('answers an unauthenticated caller identically either way', async () => {
@@ -319,5 +235,67 @@ describe('resolveAuthUser round trips', () => {
     expect(res.status).toBe(403);
     expect((await res.json()).code).toBe('ACCOUNT_SUSPENDED');
     expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('getAuthContext behind a guard', () => {
+  /** A route whose handler reads the caller the way the e-sign handlers do. */
+  function mountReading(...middleware: Parameters<Hono['get']>[1][]) {
+    const app = new Hono();
+    // @ts-expect-error — spreading middleware into Hono's variadic overloads.
+    app.get('/x', ...middleware, async (c) => {
+      try {
+        const ctx = await getAuthContext(c);
+        return c.json({ userId: ctx.userId, role: ctx.role });
+      } catch (error) {
+        if (error instanceof AuthError) {
+          return c.json({ code: error.code }, error.statusCode as 401 | 403);
+        }
+        throw error;
+      }
+    });
+    return app;
+  }
+
+  it('reuses the verification requireAdmin already performed', async () => {
+    const res = await call(mountReading(requireAdmin));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ userId: 'u-1', role: 'admin' });
+    expect(supa.getUser).toHaveBeenCalledTimes(1);
+    expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses the verification requireAuth already performed', async () => {
+    const res = await call(mountReading(requireAuth));
+    expect(res.status).toBe(200);
+    expect(supa.getUser).toHaveBeenCalledTimes(1);
+    expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('verifies in full with no guard in front', async () => {
+    const res = await call(mountReading());
+    expect(res.status).toBe(200);
+    expect(supa.getUser).toHaveBeenCalledTimes(1);
+    expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat a requirePrimaryAuth pass as a full verification', async () => {
+    // requirePrimaryAuth skips the account-state gate on purpose (it fronts the
+    // 2FA challenge). Reusing its result would hand a suspended account a
+    // clean getAuthContext, so the handler's call must run the gate itself.
+    kvGet.mockResolvedValue({ suspended: true });
+    const res = await call(mountReading(requirePrimaryAuth));
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe('ACCOUNT_SUSPENDED');
+    expect(supa.getUser).toHaveBeenCalledTimes(2);
+    expect(kvGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('never carries a verification from one request into the next', async () => {
+    const app = mountReading(requireAdmin);
+    await call(app);
+    await call(app);
+    expect(supa.getUser).toHaveBeenCalledTimes(2);
+    expect(kvGet).toHaveBeenCalledTimes(2);
   });
 });

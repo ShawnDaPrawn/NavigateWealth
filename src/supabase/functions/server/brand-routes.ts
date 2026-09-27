@@ -9,7 +9,7 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 
 import { BrandService } from './brand-service.ts';
@@ -40,11 +40,15 @@ app.get('/health', (c) => c.json({ service: 'brand', status: 'active' }));
 
 // ============================================================================
 // SUMMARY (stat cards)
+//
+// Every brand route is admin-only. The reads were requireAuth, and
+// /logos/signed-url signs any path in the brand bucket; the only callers are
+// in the admin panel's brand module.
 // ============================================================================
 
 app.get(
   '/summary',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const summary = await service.getSummary();
     return c.json({ success: true, ...summary });
@@ -57,7 +61,7 @@ app.get(
 
 app.get(
   '/logos',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const logos = await service.getLogos();
     const enriched = await Promise.all(
@@ -243,7 +247,7 @@ app.delete(
 
 app.get(
   '/logos/signed-url',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const path = c.req.query('path');
     if (!path) return c.json({ error: 'path query param required' }, 400);
@@ -258,7 +262,7 @@ app.get(
 
 app.get(
   '/colours',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const palette = await service.getColourPalette();
     return c.json({ success: true, palette });
@@ -292,7 +296,7 @@ app.put(
 
 app.get(
   '/typography',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const config = await service.getTypography();
     return c.json({ success: true, config });
@@ -326,7 +330,7 @@ app.put(
 
 app.get(
   '/collateral',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const items = await service.getCollateral();
     const enriched = await Promise.all(
@@ -393,7 +397,7 @@ app.delete(
 
 app.get(
   '/guidelines',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const guidelines = await service.getGuidelines();
     // If there's a PDF, generate a signed URL

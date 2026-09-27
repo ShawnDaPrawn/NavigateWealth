@@ -42,19 +42,21 @@ const FILES = [
  * meaning anything.
  */
 const EXEMPT: Record<string, string> = {
-  // Published-FNA reads the client portal makes with the anon key and no user
-  // session. Each carries its own inline admin-or-self check plus a documented
-  // bypass; unifying them is blocked on the portal's auth refactor, and forcing
-  // the shared policy here would break client-facing display today.
-  'medical-fna-routes.tsx /client/:clientId/latest-published':
-    'client portal anon-key read, inline check + documented bypass',
-  'investment-ina-routes.tsx /client/:clientId/latest-published':
-    'client portal anon-key read, inline check + documented bypass',
-  'estate-planning-fna-session-routes.ts /client/:clientId/latest-published':
-    'client portal anon-key read, inline check + documented bypass',
+  // Empty on purpose. The three `latest-published` reads used to sit here as
+  // "anon-key portal reads with a documented bypass"; the September 2026 auth
+  // review found the bypass let anyone read any client's published FNA with no
+  // login at all, and they now call the shared policy like everything else.
 };
 
 const RESOURCE_PARAM = /:(clientId|fnaId|sessionId|willId|docId)\b/;
+/**
+ * A client id taken from the request BODY rather than the path. The path sweep
+ * cannot see these, which is how `POST /medical-fna/create` went unchecked: it
+ * read `clientId` out of the parsed body and filed that client's profile data
+ * into its response.
+ */
+const BODY_CLIENT_ID =
+  /\{[^}]*\bclientId\b[^}]*\}\s*=\s*(?:parsed\.data|body|await c\.req\.json\(\))|\b(?:body|parsed\.data)\.clientId\b/;
 const POLICY_CALL = /assert(Client|RecordClient)Access\(/;
 const ROUTE = /^(?:app|\w+Routes)\.(get|post|put|patch|delete)\(\s*'([^']*)'/;
 
@@ -83,7 +85,7 @@ function handlers(): Handler[] {
 }
 
 const all = handlers();
-const keyed = all.filter((h) => RESOURCE_PARAM.test(h.path));
+const keyed = all.filter((h) => RESOURCE_PARAM.test(h.path) || BODY_CLIENT_ID.test(h.body));
 
 describe('FNA route ownership coverage', () => {
   it('finds the routes it claims to sweep (analysis sanity check)', () => {
@@ -118,5 +120,22 @@ describe('FNA route ownership coverage', () => {
     for (const key of Object.keys(EXEMPT)) {
       expect(live, `exemption "${key}" no longer matches any route`).toContain(key);
     }
+  });
+
+  it('keeps no exemption for a route that already calls the policy', () => {
+    // The same rot from the other side: once the route gains the check, the
+    // exemption only documents a bypass that no longer exists.
+    const stale = keyed
+      .filter((h) => `${h.file} ${h.path}` in EXEMPT && POLICY_CALL.test(h.body))
+      .map((h) => `${h.file} ${h.path}`);
+    expect(stale).toEqual([]);
+  });
+
+  it('covers client ids taken from the request body, not only the path', () => {
+    // Sanity check that the body sweep is live, so it cannot pass vacuously.
+    const bodyKeyed = all.filter((h) => BODY_CLIENT_ID.test(h.body));
+    expect(bodyKeyed.map((h) => `${h.method} ${h.path} (${h.file})`)).toContain(
+      'POST /create (medical-fna-routes.tsx)',
+    );
   });
 });

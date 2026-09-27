@@ -23,6 +23,7 @@ import {
 } from './email-recipients.ts';
 import { encodeBase64 } from 'jsr:@std/encoding/base64';
 import type { DocumentMetadata } from './documents.tsx';
+import { requireAdmin } from './auth-mw.ts';
 
 const log = createModuleLogger('documents-email-routes');
 
@@ -38,7 +39,10 @@ const documentsEmailRoutes = new Hono();
  * POST /documents/:userId/email
  * Email selected documents to client (Encrypted ZIP)
  */
-documentsEmailRoutes.post('/:userId/email', async (c) => {
+// Admin only. The parent router's client-access check let a client send
+// firm-branded mail — their own subject, recipients and raw-HTML message — to
+// any address. Every caller is in the admin panel.
+documentsEmailRoutes.post('/:userId/email', requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId')!;
     const {

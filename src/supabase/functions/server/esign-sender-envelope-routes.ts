@@ -23,6 +23,7 @@ import { getAuthContext, AuthError } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import { getClientEnvelopes } from './esign-services.ts';
+import { canAccessClientAs } from './client-access.ts';
 
 const log = createModuleLogger('esign-sender-envelope-routes');
 
@@ -35,9 +36,10 @@ app.get('/clients/:clientId/envelopes', async (c) => {
     const clientId = c.req.param('clientId')!;
     const clientEmail = c.req.query('email') || undefined;
 
-    // Portal clients may only fetch their own CRM id (aligns with client-portal-routes.ts).
-    // Staff/adviser/admin callers continue to use this route for arbitrary client envelopes.
-    if (ctx.role === 'client' && ctx.userId !== clientId) {
+    // The shared client-access policy: the client themself, a platform admin,
+    // or the client's ASSIGNED adviser. This used to restrict only the
+    // 'client' role, so every other role could list any client's envelopes.
+    if (!(await canAccessClientAs({ id: ctx.userId, role: ctx.role }, clientId))) {
       return c.json({ error: 'Forbidden: You may only view your own envelopes' }, 403);
     }
 

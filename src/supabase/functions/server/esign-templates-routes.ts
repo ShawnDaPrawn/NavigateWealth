@@ -12,7 +12,7 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { resolveFirmId, ensureStorageBuckets } from './esign-route-helpers.ts';
@@ -37,63 +37,69 @@ const log = createModuleLogger('esign-templates-routes');
 
 const templatesRoutes = new Hono();
 
-templatesRoutes.post('/templates', requireIdempotency(), rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const auth = await getAuthContext(c);
-    const body = await c.req.json();
+templatesRoutes.post(
+  '/templates',
+  requireAdmin,
+  requireIdempotency(),
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const auth = await getAuthContext(c);
+      const body = await c.req.json();
 
-    if (!body.name || !body.name.trim()) {
-      return c.json({ error: 'Template name is required' }, 400);
+      if (!body.name || !body.name.trim()) {
+        return c.json({ error: 'Template name is required' }, 400);
+      }
+
+      let template;
+
+      if (body.fromEnvelopeId) {
+        // Create from existing envelope
+        template = await createTemplateFromEnvelope({
+          envelopeId: body.fromEnvelopeId,
+          name: body.name,
+          description: body.description,
+          category: body.category,
+          createdBy: auth.userId || auth.user?.email || 'unknown',
+        });
+      } else {
+        // Create blank / from provided data
+        template = await createTemplate({
+          name: body.name,
+          description: body.description,
+          category: body.category,
+          signingMode: body.signingMode,
+          defaultMessage: body.defaultMessage,
+          defaultExpiryDays: body.defaultExpiryDays,
+          recipients: body.recipients,
+          fields: body.fields,
+          createdBy: auth.userId || auth.user?.email || 'unknown',
+        });
+      }
+
+      if (!template) {
+        return c.json({ error: 'Failed to create template' }, 500);
+      }
+
+      return c.json({ template });
+    } catch (error: unknown) {
+      if (error instanceof AuthError) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+      log.error('Create template error:', error);
+      return c.json(
+        { error: error instanceof Error ? error.message : 'Failed to create template' },
+        500,
+      );
     }
-
-    let template;
-
-    if (body.fromEnvelopeId) {
-      // Create from existing envelope
-      template = await createTemplateFromEnvelope({
-        envelopeId: body.fromEnvelopeId,
-        name: body.name,
-        description: body.description,
-        category: body.category,
-        createdBy: auth.userId || auth.user?.email || 'unknown',
-      });
-    } else {
-      // Create blank / from provided data
-      template = await createTemplate({
-        name: body.name,
-        description: body.description,
-        category: body.category,
-        signingMode: body.signingMode,
-        defaultMessage: body.defaultMessage,
-        defaultExpiryDays: body.defaultExpiryDays,
-        recipients: body.recipients,
-        fields: body.fields,
-        createdBy: auth.userId || auth.user?.email || 'unknown',
-      });
-    }
-
-    if (!template) {
-      return c.json({ error: 'Failed to create template' }, 500);
-    }
-
-    return c.json({ template });
-  } catch (error: unknown) {
-    if (error instanceof AuthError) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-    log.error('Create template error:', error);
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to create template' },
-      500,
-    );
-  }
-});
+  },
+);
 
 /**
  * GET /templates
  * List all templates
  */
-templatesRoutes.get('/templates', async (c) => {
+templatesRoutes.get('/templates', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templates = await listTemplates();
@@ -114,7 +120,7 @@ templatesRoutes.get('/templates', async (c) => {
  * GET /templates/:templateId
  * Get single template
  */
-templatesRoutes.get('/templates/:templateId', async (c) => {
+templatesRoutes.get('/templates/:templateId', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;
@@ -141,7 +147,7 @@ templatesRoutes.get('/templates/:templateId', async (c) => {
  * PUT /templates/:templateId
  * Update template
  */
-templatesRoutes.put('/templates/:templateId', async (c) => {
+templatesRoutes.put('/templates/:templateId', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;
@@ -170,7 +176,7 @@ templatesRoutes.put('/templates/:templateId', async (c) => {
  * Rebuild a template from a configured draft envelope so documents, fields,
  * signing mode, and recipient slots can be updated in one save.
  */
-templatesRoutes.post('/templates/:templateId/from-envelope', async (c) => {
+templatesRoutes.post('/templates/:templateId/from-envelope', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;
@@ -214,7 +220,7 @@ templatesRoutes.post('/templates/:templateId/from-envelope', async (c) => {
  * Clone the template's saved source documents into a fresh draft envelope
  * so the admin can edit recipients, fields, or send without re-uploading.
  */
-templatesRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
+templatesRoutes.post('/templates/:templateId/materialise-draft', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
@@ -312,7 +318,7 @@ templatesRoutes.post('/templates/:templateId/materialise-draft', async (c) => {
  * DELETE /templates/:templateId
  * Delete template
  */
-templatesRoutes.delete('/templates/:templateId', async (c) => {
+templatesRoutes.delete('/templates/:templateId', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;
@@ -343,7 +349,7 @@ templatesRoutes.delete('/templates/:templateId', async (c) => {
  * upload context so the envelope record records exactly which template
  * snapshot it was materialised from.
  */
-templatesRoutes.post('/templates/:templateId/use', async (c) => {
+templatesRoutes.post('/templates/:templateId/use', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;
@@ -376,7 +382,7 @@ templatesRoutes.post('/templates/:templateId/use', async (c) => {
  * GET /templates/:templateId/versions
  * P4.2 — list available historical versions of a template.
  */
-templatesRoutes.get('/templates/:templateId/versions', async (c) => {
+templatesRoutes.get('/templates/:templateId/versions', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;
@@ -399,7 +405,7 @@ templatesRoutes.get('/templates/:templateId/versions', async (c) => {
  * P4.2 — fetch a specific historical version of a template (returns
  * the live record when version matches the live one).
  */
-templatesRoutes.get('/templates/:templateId/versions/:version', async (c) => {
+templatesRoutes.get('/templates/:templateId/versions/:version', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const templateId = c.req.param('templateId')!;

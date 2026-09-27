@@ -9,7 +9,7 @@
  * is the guard.
  */
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import {
@@ -31,7 +31,7 @@ consentRoutes.get('/consent/active', async (c) => {
 });
 
 /** GET /consent/versions — admin: list every published version. */
-consentRoutes.get('/consent/versions', async (c) => {
+consentRoutes.get('/consent/versions', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const versions = await listConsentVersions();
@@ -47,40 +47,50 @@ consentRoutes.get('/consent/versions', async (c) => {
 });
 
 /** POST /consent/versions — publish & activate a new consent version. */
-consentRoutes.post('/consent/versions', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-    if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
-    const id = String(body.id ?? '').trim();
-    const text = String(body.text ?? '').trim();
-    const summary = typeof body.summary === 'string' ? body.summary : undefined;
-    if (!id || !text) return c.json({ error: 'id and text are required' }, 400);
-    const record = await publishConsentVersion({ id, text, summary, publishedBy: ctx.user.id });
-    return c.json({ success: true, version: record }, 201);
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 400;
-    return new Response(JSON.stringify({ error: getErrMsg(error) }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-});
+consentRoutes.post(
+  '/consent/versions',
+  requireSuperAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+      if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
+      const id = String(body.id ?? '').trim();
+      const text = String(body.text ?? '').trim();
+      const summary = typeof body.summary === 'string' ? body.summary : undefined;
+      if (!id || !text) return c.json({ error: 'id and text are required' }, 400);
+      const record = await publishConsentVersion({ id, text, summary, publishedBy: ctx.user.id });
+      return c.json({ success: true, version: record }, 201);
+    } catch (error: unknown) {
+      const status = error instanceof AuthError ? error.statusCode : 400;
+      return new Response(JSON.stringify({ error: getErrMsg(error) }), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  },
+);
 
 /** POST /consent/versions/:id/activate — flip the active pointer. */
-consentRoutes.post('/consent/versions/:id/activate', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const record = await setActiveConsent(id);
-    return c.json({ success: true, version: record });
-  } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 400;
-    return new Response(JSON.stringify({ error: getErrMsg(error) }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-});
+consentRoutes.post(
+  '/consent/versions/:id/activate',
+  requireSuperAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      await getAuthContext(c);
+      const id = c.req.param('id')!;
+      const record = await setActiveConsent(id);
+      return c.json({ success: true, version: record });
+    } catch (error: unknown) {
+      const status = error instanceof AuthError ? error.statusCode : 400;
+      return new Response(JSON.stringify({ error: getErrMsg(error) }), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  },
+);
 
 export default consentRoutes;

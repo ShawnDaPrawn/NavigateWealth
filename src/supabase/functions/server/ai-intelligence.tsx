@@ -17,6 +17,8 @@ import type { Context, Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import * as kv from './kv_store.tsx';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
+import { resolveTrustedRole } from './constants.ts';
+import { isPlatformAdminRole } from './client-access.ts';
 import { aiUsageLimit } from './ai-usage-limit.ts';
 import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -104,26 +106,25 @@ async function requireAdmin(c: Context, next: Next) {
       throw securityError;
     }
 
-    // Check if user has appropriate access from KV store
-    const profileKey = `user_profile:${user.id}:personal_info`;
-    const profile = await kv.get(profileKey);
-
-    log.info('🔐 AI Intelligence auth check:', {
-      userId: user.id,
-      email: user.email,
-      profileExists: !!profile,
-      role: profile?.role,
-    });
-
-    // Allow admin, super_admin, and adviser roles
-    const allowedRoles = ['admin', 'super_admin', 'adviser'];
-    if (!profile || !allowedRoles.includes(profile.role)) {
-      log.info('❌ Access denied - unauthorized role:', { role: profile?.role });
+    // Role from the TRUSTED resolver, as every auth-mw guard does — not from
+    // the KV profile, a second copy that can drift from it. Platform admins
+    // only: this used to admit any adviser, and `/chat` loads the full context
+    // of whatever clientId it is given while `/search-clients` searches every
+    // profile, with no check that the client was theirs. Every caller is in
+    // the admin panel.
+    const role = resolveTrustedRole(user);
+    if (!isPlatformAdminRole(role)) {
+      log.info('❌ AI Intelligence access denied', { role });
       return c.json({ error: 'Forbidden: Authorized role required' }, 403);
     }
 
-    // Attach user info to context
+    const profile = await kv.get(`user_profile:${user.id}:personal_info`);
+
+    // Attach user info to context. `userId` is what aiUsageLimit reads for the
+    // per-user cap; without it only the per-IP cap applied here.
     c.set('user', user);
+    c.set('userId', user.id);
+    c.set('userRole', role);
     c.set('profile', profile);
 
     await next();

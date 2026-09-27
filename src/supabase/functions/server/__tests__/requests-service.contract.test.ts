@@ -397,6 +397,14 @@ describe('creating a request', () => {
     expect(created).toMatchObject({ templateId: TEMPLATE, templateVersion: 4 });
   });
 
+  it('mints an unguessable id, since the id alone opens the public link', async () => {
+    seedTemplate(TEMPLATE, { version: 1 });
+    const created = await service.createRequest(TEMPLATE, { requestDetails: {} }, USER, USER_NAME);
+    expect(created.id).toMatch(
+      /^req_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
   it('refuses a template that does not exist', async () => {
     await expect(
       service.createRequest('ghost', { requestDetails: {} }, USER, USER_NAME),

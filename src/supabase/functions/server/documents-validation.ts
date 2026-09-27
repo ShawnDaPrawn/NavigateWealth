@@ -8,7 +8,13 @@ import { z } from 'npm:zod';
 
 export const CreateDocumentLinkSchema = z.object({
   title: z.string().min(1, 'Document title is required').max(300),
-  url: z.string().min(1, 'URL is required').max(2000),
+  // http(s) only. The admin panel opens a stored link with window.open, so a
+  // `javascript:` URL here would run in whichever staff session clicked it.
+  url: z
+    .string()
+    .min(1, 'URL is required')
+    .max(2000)
+    .refine((u) => /^https?:\/\//i.test(u.trim()), 'Link must start with http:// or https://'),
   description: z.string().max(2000).optional().default(''),
   productCategory: z.string().max(100).optional().default('General'),
   policyNumber: z.string().max(100).optional().default(''),
@@ -24,7 +30,17 @@ export const UpdateDocumentSchema = z
     isFavourite: z.boolean().optional(),
     status: z.enum(['new', 'reviewed', 'archived']).optional(),
   })
-  .passthrough();
+  // Unknown keys are STRIPPED, never stored. This was `.passthrough()`, and the
+  // handler spreads the result over the stored record — so a client could
+  // rewrite `filePath`, `sourceSystem` or `url` on their own document and
+  // point the download or delete at another client's file.
+  .strip();
+
+/** What a client may change on their own document: nothing but their own view of it. */
+export const ClientUpdateDocumentSchema = UpdateDocumentSchema.pick({
+  isFavourite: true,
+  status: true,
+});
 
 export const EmailDocumentSchema = z
   .object({

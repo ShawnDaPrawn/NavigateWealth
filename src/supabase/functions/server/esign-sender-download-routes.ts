@@ -1,15 +1,13 @@
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   getRequestMetadata,
-  resolveFirmId,
   requireOwnedEnvelope,
   firmScopeResponse,
 } from './esign-route-helpers.ts';
 import { PDFService } from './esign-pdf.service.ts';
 import {
-  getEnvelopeDetails,
   getEnvelopeSigners,
   updateEnvelopeStatus,
   getAuditTrail,
@@ -138,21 +136,15 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
  * P6.7 — download a ZIP bundling the signed PDF, certificate, audit
  * trail, manifest, consent copy, and every attachment. Admin-only.
  */
-app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
+app.get('/envelopes/:envelopeId/evidence-pack', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
 
-    // P6.9 — firm scoping. The current admin user must belong to the
-    // same firm as the envelope (or the envelope must be 'standalone').
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership (S6). The hand-rolled P6.9 check this replaces waved through
+    // any envelope with no firm_id — the 'standalone' shortcut.
+    const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
     if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
-
-    const callerFirm = resolveFirmId(ctx.user);
-    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
-    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
 
     const pack = await buildEvidencePack(envelopeId);
     if (!pack) return c.json({ error: 'Envelope not found' }, 404);
@@ -193,7 +185,7 @@ app.get('/envelopes/:envelopeId/evidence-pack', async (c) => {
  * GET /envelopes/:envelopeId/reminder-config
  * Get reminder configuration for an envelope
  */
-app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
+app.get('/envelopes/:envelopeId/reminder-config', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
@@ -220,7 +212,7 @@ app.get('/envelopes/:envelopeId/reminder-config', async (c) => {
  * PUT /envelopes/:envelopeId/reminder-config
  * Update reminder configuration for an envelope
  */
-app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
+app.put('/envelopes/:envelopeId/reminder-config', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
@@ -235,6 +227,11 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
       remind_before_expiry_days,
       escalation_offsets_days,
     } = body;
+
+    // Ownership before mutation (S6), as the GET beside it already does. This
+    // rewrote the reminder schedule of any envelope id it was given.
+    const envelope = await requireOwnedEnvelope(user, envelopeId);
+    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
     await setReminderConfig(envelopeId, {
       ...(auto_remind !== undefined && { auto_remind }),
@@ -277,7 +274,7 @@ app.put('/envelopes/:envelopeId/reminder-config', async (c) => {
  * PATCH /envelopes/:envelopeId/signing-mode
  * Update signing mode (sequential/parallel) for an envelope
  */
-app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
+app.patch('/envelopes/:envelopeId/signing-mode', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
@@ -290,7 +287,8 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
       return c.json({ error: 'signing_mode must be "sequential" or "parallel"' }, 400);
     }
 
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership before mutation (S6).
+    const envelope = await requireOwnedEnvelope(user, envelopeId);
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
     }
@@ -338,7 +336,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', async (c) => {
  * GET /envelopes/:envelopeId/audit/export
  * Export audit trail as CSV.
  */
-app.get('/envelopes/:envelopeId/audit/export', async (c) => {
+app.get('/envelopes/:envelopeId/audit/export', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
