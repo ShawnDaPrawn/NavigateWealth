@@ -58,6 +58,9 @@ function Field({
       <HelpCircle className="uui-field__trailing-icon" />
     </span>
   ) : null;
+  // A textarea's help icon sits beside its label, as in Figma; with no label
+  // to sit beside it falls back to the control like every other trailing icon.
+  const helpInLabel = multiline && !invalid && !!label;
 
   return (
     <div
@@ -73,13 +76,13 @@ function Field({
               *
             </span>
           )}
-          {multiline && trailing && !invalid && trailing}
+          {helpInLabel && trailing}
         </label>
       )}
       <div className="uui-field__control" data-multiline={multiline || undefined}>
         {Icon && <Icon />}
         {children}
-        {!(multiline && !invalid) && trailing}
+        {!helpInLabel && trailing}
       </div>
       {hint && (
         <p className="uui-field__hint" id={hintId}>

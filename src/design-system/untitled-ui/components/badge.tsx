@@ -44,7 +44,8 @@ export interface BadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 
   iconTrailing?: UntitledIcon;
   /** Renders the trailing X; called when it is pressed. */
   onRemove?: () => void;
-  /** Accessible name for the X; defaults to "Remove". */
+  /** Accessible name for the X; defaults to "Remove". An icon-only badge
+   *  (iconLeading with no children) also needs an `aria-label`. */
   removeLabel?: string;
 }
 
@@ -83,6 +84,9 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
         data-leading={leading}
         data-trailing={trailing}
         data-icon-only={iconOnly || undefined}
+        // An icon-only badge's only content is an aria-hidden SVG; as an image
+        // its aria-label (which callers must pass) becomes its accessible name.
+        role={iconOnly && !onRemove ? 'img' : undefined}
         {...props}
       >
         {dot && (

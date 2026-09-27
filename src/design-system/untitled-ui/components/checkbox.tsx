@@ -101,16 +101,25 @@ export interface CheckboxProps extends ChoiceProps {
 }
 
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ indeterminate = false, size = 'sm', ...props }, ref) => {
+  ({ indeterminate = false, size = 'sm', onChange, ...props }, ref) => {
     const inner = React.useRef<HTMLInputElement | null>(null);
     const setRef = useMergedRef(ref, inner);
 
+    // `indeterminate` is a DOM property with no HTML attribute, and the browser
+    // clears it on every click. Re-apply it after each render and after each
+    // change, so the prop stays the source of truth even when a click does not
+    // make the parent re-render.
     React.useEffect(() => {
       if (inner.current) inner.current.indeterminate = indeterminate;
-    }, [indeterminate]);
+    });
+
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      onChange?.(event);
+      event.currentTarget.indeterminate = indeterminate;
+    };
 
     return (
-      <Choice kind="checkbox" size={size} inputRef={setRef} {...props}>
+      <Choice kind="checkbox" size={size} inputRef={setRef} onChange={handleChange} {...props}>
         <Check className="uui-choice__mark" data-mark="check" strokeWidth={MARK_STROKE[size]} />
         <Minus className="uui-choice__mark" data-mark="minus" strokeWidth={MARK_STROKE[size]} />
       </Choice>

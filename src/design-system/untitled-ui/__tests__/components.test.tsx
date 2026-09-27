@@ -123,9 +123,15 @@ describe('Untitled UI Badge', () => {
     expect(badge?.getAttribute('data-trailing')).toBe('icon');
   });
 
-  it('is icon-only with an icon and no label', () => {
+  it('is icon-only with an icon and no label, exposed as a named image', () => {
     render(<Badge iconLeading={Mail01} aria-label="Mail" />);
-    expect(screen.getByLabelText('Mail')?.getAttribute('data-icon-only')).toBe('true');
+    const badge = screen.getByRole('img', { name: 'Mail' });
+    expect(badge.getAttribute('data-icon-only')).toBe('true');
+  });
+
+  it('keeps the generic role when the badge has a label', () => {
+    render(<Badge iconLeading={Mail01}>Mail</Badge>);
+    expect(screen.getByText('Mail').hasAttribute('role')).toBe(false);
   });
 
   it('renders a remove button that calls onRemove', () => {
@@ -180,6 +186,12 @@ describe('Untitled UI Input and Textarea', () => {
     expect(textarea.closest('.uui-field__control')?.getAttribute('data-multiline')).toBe('true');
   });
 
+  it('keeps the textarea help icon when there is no label', () => {
+    const { container } = render(<Textarea aria-label="Notes" helpText="Plain text only." />);
+    const help = screen.getByRole('img', { name: 'Plain text only.' });
+    expect(container.querySelector('.uui-field__control')?.contains(help)).toBe(true);
+  });
+
   it('shows the error icon in an invalid textarea', () => {
     const { container } = render(<Textarea label="Notes" invalid hint="Required." />);
     expect(container.querySelector('.uui-field__control .uui-field__trailing-icon')).not.toBeNull();
@@ -202,6 +214,22 @@ describe('Untitled UI Checkbox and Radio', () => {
     const box = screen.getByRole('checkbox', { name: 'Select all' }) as HTMLInputElement;
     expect(box.indeterminate).toBe(true);
     expect(box.closest('.uui-choice')?.getAttribute('data-size')).toBe('md');
+  });
+
+  it('keeps the indeterminate state after a click while the prop still asks for it', () => {
+    const onChange = vi.fn();
+    render(<Checkbox label="Select all" indeterminate onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Select all' }) as HTMLInputElement;
+    fireEvent.click(box);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(box.indeterminate).toBe(true);
+  });
+
+  it('clears the indeterminate state when the prop turns off', () => {
+    const { rerender } = render(<Checkbox aria-label="Group" indeterminate />);
+    const box = screen.getByRole('checkbox', { name: 'Group' }) as HTMLInputElement;
+    rerender(<Checkbox aria-label="Group" indeterminate={false} />);
+    expect(box.indeterminate).toBe(false);
   });
 
   it('forwards refs', () => {
