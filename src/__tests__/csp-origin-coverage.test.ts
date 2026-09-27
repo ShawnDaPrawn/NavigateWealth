@@ -70,6 +70,12 @@ const NOT_FETCHED: Record<string, string> = {
   'navigatewealth.co': 'own origin, apex form used in redirect config and copy',
   'navigatewealth.com': 'the .com typo-domain, referenced in copy only',
 
+  // Issue labels (shared/quality/issueLabels.ts): a docs link inside a
+  // "likely cause" hint shown to admins, and the dummy base used to parse a
+  // relative path with `new URL()`. Neither is ever requested.
+  'react.dev': 'React error-code docs link, text in an issue hint',
+  'app.local': 'placeholder base for new URL() parsing of relative paths',
+
   // <a href> destinations. CSP does not govern navigation; `navigate-to` was
   // never shipped by any browser.
   'www.linkedin.com': 'social profile link (<a href>)',

@@ -5,23 +5,25 @@ import { requireAdmin, requireAuth } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
-  createQualityIssueFingerprint,
-  inferQualityIssueCategory,
-  inferQualityIssuePriority,
   type QualityIssueAutomationRun,
   type QualityIssue,
 } from '../../../shared/quality/qualityIssues.ts';
+import { createKvRepository } from './repositories/kv-repository.ts';
+import {
+  RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR,
+  checkIpOnlyRateLimit,
+} from './public-form-rate-limit.ts';
+import { buildRuntimeClientIssue, trimRuntimeIssues } from './quality-issues-runtime-client.ts';
 
 import {
   ISSUE_WORKFLOW_KEY,
   LATEST_SNAPSHOT_KEY,
+  MAX_PUBLIC_RUNTIME_ISSUES,
   MAX_RUNTIME_ISSUES,
   MAX_SECURITY_FEED_ISSUES,
   RUNTIME_CLIENT_ISSUES_KEY,
+  RUNTIME_CLIENT_PUBLIC_KEY_PREFIX,
   SECURITY_FEED_ISSUES_KEY,
-  asOptionalNumber,
-  asTrimmedString,
-  issueId,
   normalizeSecurityFeed,
   normalizeSnapshot,
   normalizeWorkflowMap,
@@ -33,6 +35,9 @@ import { constantTimeEqual } from './crypto-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('quality-issues');
+
+/** Signed-out browser reports: one row per fingerprint, see the route below. */
+const publicRuntimeRepo = createKvRepository<QualityIssue>(RUNTIME_CLIENT_PUBLIC_KEY_PREFIX);
 
 function hasValidIngestToken(c: Context): boolean {
   const expectedToken = Deno.env.get('QUALITY_ISSUES_INGEST_TOKEN');
@@ -186,83 +191,30 @@ app.post(
   '/runtime-client',
   requireAuth,
   asyncHandler(async (c) => {
-    const now = new Date().toISOString();
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
-    const kind = asTrimmedString(body.kind, 'window-error', 80);
-    const message = asTrimmedString(body.message, 'Client runtime error');
-    const filePath = asTrimmedString(body.filePath, 'browser', 240);
-    const line = asOptionalNumber(body.line);
-    const column = asOptionalNumber(body.column);
-    const title = asTrimmedString(body.title, 'Client runtime error', 240);
-    const stack = asTrimmedString(body.stack, '', 3000);
-    const componentStack = asTrimmedString(body.componentStack, '', 3000);
-    const href = asTrimmedString(body.href, '', 500);
-    const userAgent = asTrimmedString(body.userAgent, '', 500);
     const user = c.get('user') as { id?: string; email?: string } | undefined;
-    const userEmail = user?.email ? `\nUser: ${user.email}` : '';
-    const context = [
-      href ? `URL: ${href}` : '',
-      userAgent ? `User-Agent: ${userAgent}` : '',
-      componentStack ? `Component stack:\n${componentStack}` : '',
-      stack ? `Stack:\n${stack}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
-    const id = issueId(['runtime-client', kind, message, filePath, line, column]);
-    const category = inferQualityIssueCategory('runtime-client', kind);
-    const priority = inferQualityIssuePriority({
-      source: 'runtime-client',
-      severity: 'error',
-      category,
-    });
-    const fingerprint = createQualityIssueFingerprint({
-      source: 'runtime-client',
-      category,
-      ruleId: kind,
-      title,
-      filePath,
-      line,
-      column,
-    });
     const currentIssues = (await kv.get(RUNTIME_CLIENT_ISSUES_KEY)) as QualityIssue[] | null;
     const issues = Array.isArray(currentIssues) ? currentIssues : [];
-    const existingIndex = issues.findIndex(
-      (issue) => issue.fingerprint === fingerprint || issue.id === id,
+
+    const { issue: nextIssue } = buildRuntimeClientIssue(
+      body,
+      { userId: user?.id, userEmail: user?.email, anonymous: false },
+      (fingerprint, id) =>
+        issues.find((issue) => issue.fingerprint === fingerprint || issue.id === id),
     );
 
-    const nextIssue: QualityIssue = {
-      id,
-      source: 'runtime-client',
-      category,
-      priority,
-      fingerprint,
-      severity: 'error',
-      status: 'open',
-      title,
-      message: `${message}${userEmail}${context ? `\n\n${context}` : ''}`.slice(0, 5000),
-      filePath,
-      line,
-      column,
-      ruleId: kind,
-      firstSeenAt: existingIndex >= 0 ? issues[existingIndex].firstSeenAt : now,
-      lastSeenAt: now,
-      occurrences: existingIndex >= 0 ? issues[existingIndex].occurrences + 1 : 1,
-    };
+    const nextIssues = [
+      nextIssue,
+      ...issues.filter(
+        (issue) => issue.fingerprint !== nextIssue.fingerprint && issue.id !== nextIssue.id,
+      ),
+    ];
 
-    const nextIssues =
-      existingIndex >= 0
-        ? issues.map((issue, index) => (index === existingIndex ? nextIssue : issue))
-        : [nextIssue, ...issues];
-
-    const trimmedIssues = nextIssues
-      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))
-      .slice(0, MAX_RUNTIME_ISSUES);
-
-    await kv.set(RUNTIME_CLIENT_ISSUES_KEY, trimmedIssues);
+    await kv.set(RUNTIME_CLIENT_ISSUES_KEY, trimRuntimeIssues(nextIssues, MAX_RUNTIME_ISSUES));
 
     log.warn('Runtime client issue ingested', {
-      id,
-      title,
+      id: nextIssue.id,
+      title: nextIssue.title,
       userId: user?.id,
       occurrences: nextIssue.occurrences,
     });
@@ -270,5 +222,60 @@ app.post(
     return c.json({ success: true, issue: nextIssue });
   }),
 );
+
+/**
+ * POST /runtime-client/public — the same report from a SIGNED-OUT browser.
+ *
+ * Unauthenticated by necessity: the login page, the public site and the
+ * e-sign signer flow all run without a session, and errors there were being
+ * dropped on the floor. Bounded like the CSP endpoint: IP rate-limited, one
+ * row per fingerprint under its own prefix (a burst cannot evict signed-in
+ * reports), a hard cap on stored rows, and URLs stripped to origin + path.
+ *
+ * Always answers 204 so a prober learns nothing about the limit.
+ */
+app.post(
+  '/runtime-client/public',
+  asyncHandler(async (c) => {
+    const limit = await checkIpOnlyRateLimit(
+      'runtime-client',
+      (name) => c.req.header(name),
+      RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR,
+    );
+    if (!limit.allowed) return c.body(null, 204);
+
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!body || typeof body !== 'object' || typeof body.message !== 'string') {
+      return c.body(null, 204);
+    }
+
+    // Look the fingerprint up first, then build against that one row.
+    const probe = buildRuntimeClientIssue(body, { anonymous: true }, () => undefined);
+    const existing = (await publicRuntimeRepo.get(probe.fingerprint)) ?? undefined;
+    const { issue } = buildRuntimeClientIssue(body, { anonymous: true }, () => existing);
+    await publicRuntimeRepo.put(probe.fingerprint, issue);
+    await trimPublicRuntimeIssues();
+
+    log.warn('Public runtime client issue ingested', {
+      title: issue.title,
+      occurrences: issue.occurrences,
+    });
+
+    return c.body(null, 204);
+  }),
+);
+
+async function trimPublicRuntimeIssues(): Promise<void> {
+  const rows = (await publicRuntimeRepo.listAll('trim public runtime issues to cap')).filter(
+    Boolean,
+  );
+  if (rows.length <= MAX_PUBLIC_RUNTIME_ISSUES) return;
+  const kept = new Set(
+    trimRuntimeIssues(rows, MAX_PUBLIC_RUNTIME_ISSUES).map((issue) => issue.fingerprint),
+  );
+  for (const issue of rows) {
+    if (!kept.has(issue.fingerprint)) await publicRuntimeRepo.remove(issue.fingerprint);
+  }
+}
 
 export default app;

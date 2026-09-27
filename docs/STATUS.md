@@ -454,5 +454,19 @@ is work not yet done, not budget.
   history is a separate decision — it means a `git filter-repo` rewrite and a
   one-time re-clone for every collaborator, and it has not been done.
 
+- **Error monitoring is in-house, and still single-row for signed-in
+  reports.** The admin Issues module is the app's "Sentry": the browser
+  reporter (`utils/quality/runtimeIssueReporter.ts`) captures crashes, handled
+  errors (`logger.error` and any `Error` given to `console.error`), gateway 5xx
+  and network failures, with breadcrumbs, and reports signed-out errors through
+  a rate-limited public route; the root observer in `create-app.ts` records
+  every 5xx the function answers with, thrown or hand-built. Labels come from
+  `shared/quality/issueLabels.ts`. Not done: source maps (production stacks are
+  minified, so the area comes from the chunk name and URL, not the source
+  line), and the signed-in and server rows are still one KV array each — a
+  read-modify-write that can drop an increment across isolates (A17). Moving
+  them to per-fingerprint rows, as the public and CSP rows already are, is the
+  next step.
+
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.

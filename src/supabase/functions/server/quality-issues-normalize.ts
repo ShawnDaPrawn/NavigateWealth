@@ -24,6 +24,13 @@ import {
 
 export const LATEST_SNAPSHOT_KEY = 'quality_issues:latest_snapshot';
 export const RUNTIME_CLIENT_ISSUES_KEY = 'quality_issues:runtime_client';
+/**
+ * Browser errors reported by SIGNED-OUT visitors (the public ingest route).
+ * One row per fingerprint, like CSP violations below and for the same reason:
+ * an unauthenticated burst must not evict signed-in reports or lose findings to
+ * a read-modify-write race on one shared array.
+ */
+export const RUNTIME_CLIENT_PUBLIC_KEY_PREFIX = 'quality_issues:runtime_client_public:';
 export const SECURITY_FEED_ISSUES_KEY = 'quality_issues:security_feed';
 /**
  * CSP violations reported by visitors' browsers (csp-report-routes.ts).
@@ -48,6 +55,12 @@ export const CSP_VIOLATION_KEY_PREFIX = 'quality_issues:csp_violation:';
 export const ISSUE_WORKFLOW_KEY = 'quality_issues:workflow';
 export const AUTOMATION_STATE_KEY = 'quality_issues:automation:last_run';
 export const MAX_RUNTIME_ISSUES = 100;
+/** Runtime issues from signed-out visitors live in their own capped row. */
+export const MAX_PUBLIC_RUNTIME_ISSUES = 100;
+/** Breadcrumbs kept per issue: the last few things the user did. */
+export const MAX_BREADCRUMBS = 20;
+/** Distinct user ids remembered per issue, to count "users affected". */
+export const MAX_AFFECTED_USER_IDS = 50;
 export const MAX_SECURITY_FEED_ISSUES = 250;
 export const MAX_CSP_VIOLATION_ISSUES = 250;
 export const MAX_WORKFLOW_NOTE_LENGTH = 2000;
@@ -154,6 +167,19 @@ export function normalizeIssue(
       : undefined;
   const fixAvailable =
     typeof rawIssue.fixAvailable === 'boolean' ? rawIssue.fixAvailable : undefined;
+  const optionalText = (value: unknown, max: number): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : undefined;
+  const breadcrumbs = Array.isArray(rawIssue.breadcrumbs)
+    ? rawIssue.breadcrumbs
+        .filter((entry): entry is string => typeof entry === 'string')
+        .slice(-MAX_BREADCRUMBS)
+        .map((entry) => entry.slice(0, 300))
+    : undefined;
+  const affectedUserIds = Array.isArray(rawIssue.affectedUserIds)
+    ? rawIssue.affectedUserIds
+        .filter((entry): entry is string => typeof entry === 'string')
+        .slice(0, MAX_AFFECTED_USER_IDS)
+    : undefined;
 
   const issue = {
     id:
@@ -193,6 +219,18 @@ export function normalizeIssue(
         ? Math.floor(rawIssue.occurrences)
         : 1,
     runUrl: typeof rawIssue.runUrl === 'string' ? rawIssue.runUrl : undefined,
+    summary: optionalText(rawIssue.summary, 600),
+    likelyCause: optionalText(rawIssue.likelyCause, 600),
+    area: optionalText(rawIssue.area, 120),
+    route: optionalText(rawIssue.route, 240),
+    details: optionalText(rawIssue.details, 8000),
+    breadcrumbs: breadcrumbs && breadcrumbs.length > 0 ? breadcrumbs : undefined,
+    affectedUserIds: affectedUserIds && affectedUserIds.length > 0 ? affectedUserIds : undefined,
+    affectedUsers:
+      typeof rawIssue.affectedUsers === 'number' && rawIssue.affectedUsers > 0
+        ? Math.floor(rawIssue.affectedUsers)
+        : undefined,
+    anonymous: rawIssue.anonymous === true ? true : undefined,
   };
 
   return {

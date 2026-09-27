@@ -6,6 +6,7 @@
 import { ArrowUpRight } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { isQualityIssuePastResponseSla } from '../../../../../shared/quality/qualityIssues';
+import { describeStoredIssue } from '../../../../../shared/quality/issueLabels';
 import { formatCvssScore, severityTone, statusLabels, statusTone } from '../issuePresentation';
 import type { QualityIssue, QualityIssueStatus } from '../types';
 
@@ -61,16 +62,31 @@ export function IssueSignalBadges({ issue }: { issue: QualityIssue }) {
 
 export function IssueDetails({ issue }: { issue: QualityIssue }) {
   const cvssScore = formatCvssScore(issue.cvssScore);
+  const labels = describeStoredIssue(issue);
 
   return (
     <>
-      <div className="font-medium text-gray-900">{issue.title}</div>
-      <div className="mt-1 text-gray-600">{issue.message}</div>
+      <div className="font-medium text-gray-900">{labels.title}</div>
+      <div className="mt-1 line-clamp-3 text-gray-600">{labels.summary || labels.text}</div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Badge variant="outline" className={severityTone[issue.severity]}>
           {issue.severity}
         </Badge>
-        {issue.ruleId ? <span className="text-xs text-gray-500">{issue.ruleId}</span> : null}
+        {labels.area ? <span className="text-xs text-gray-500">{labels.area}</span> : null}
+        {issue.occurrences > 1 ? (
+          <span className="text-xs text-gray-500">{issue.occurrences}× seen</span>
+        ) : null}
+        {issue.affectedUsers ? (
+          <span className="text-xs text-gray-500">
+            {issue.affectedUsers} user{issue.affectedUsers === 1 ? '' : 's'}
+          </span>
+        ) : null}
+        {issue.anonymous ? (
+          <span className="text-xs text-gray-500">signed-out visitors</span>
+        ) : null}
+        {issue.ruleId && !labels.area ? (
+          <span className="text-xs text-gray-500">{issue.ruleId}</span>
+        ) : null}
         {issue.component ? <span className="text-xs text-gray-500">{issue.component}</span> : null}
         {issue.packageName ? (
           <span className="text-xs text-gray-500">
@@ -110,5 +126,85 @@ export function IssueDetails({ issue }: { issue: QualityIssue }) {
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The diagnosis block in the review sheet: what happened in plain English, the
+ * usual cause, what the user was doing, and the raw technical detail folded
+ * away underneath.
+ */
+export function IssueDiagnosis({ issue }: { issue: QualityIssue }) {
+  const labels = describeStoredIssue(issue);
+  const hasDiagnosis =
+    !!labels.summary || !!labels.likelyCause || !!issue.breadcrumbs?.length || !!labels.details;
+  if (!hasDiagnosis) return null;
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-base font-semibold text-gray-900">What Happened</h2>
+      {labels.summary ? <p className="text-sm text-gray-700">{labels.summary}</p> : null}
+      {labels.text && labels.text !== labels.summary ? (
+        <div className="rounded-lg border border-gray-100 bg-gray-50/70 p-3">
+          <p className="text-xs uppercase tracking-wide text-gray-500">Error message</p>
+          <p className="mt-1 break-words font-mono text-xs text-gray-800">{labels.text}</p>
+        </div>
+      ) : null}
+      {labels.likelyCause ? (
+        <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-sm">
+          <p className="text-xs uppercase tracking-wide text-blue-700">Likely cause</p>
+          <p className="mt-1 text-blue-900">{labels.likelyCause}</p>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+        {labels.area ? (
+          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+            {labels.area}
+          </Badge>
+        ) : null}
+        {issue.route ? (
+          <Badge
+            variant="outline"
+            className="border-slate-200 bg-slate-50 font-mono text-slate-700"
+          >
+            {issue.route}
+          </Badge>
+        ) : null}
+        {issue.affectedUsers ? (
+          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+            {issue.affectedUsers} user{issue.affectedUsers === 1 ? '' : 's'} affected
+          </Badge>
+        ) : null}
+        {issue.anonymous ? (
+          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+            Signed-out visitors
+          </Badge>
+        ) : null}
+      </div>
+      {issue.breadcrumbs?.length ? (
+        <div className="rounded-lg border border-gray-100 bg-white p-3">
+          <p className="text-xs uppercase tracking-wide text-gray-500">
+            Leading up to it (most recent last)
+          </p>
+          <ol className="mt-2 space-y-1 font-mono text-xs text-gray-700">
+            {issue.breadcrumbs.map((crumb, index) => (
+              <li key={`${index}-${crumb}`} className="break-words">
+                {crumb}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+      {labels.details ? (
+        <details className="rounded-lg border border-gray-100 bg-white p-3">
+          <summary className="cursor-pointer text-xs uppercase tracking-wide text-gray-500">
+            Technical details
+          </summary>
+          <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs text-gray-700">
+            {labels.details}
+          </pre>
+        </details>
+      ) : null}
+    </section>
   );
 }
