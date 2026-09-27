@@ -904,27 +904,28 @@ app.delete('/history', requireAdmin, async (c) => {
 
 /**
  * POST /search-clients - Search for clients
+ *
+ * NOT metered by aiUsageLimit: this is a KV text search with no model call.
+ * Since requireAdmin started setting `userId`, it shared the `/chat` per-user
+ * burst cap (20 per 5 minutes), and the debounced search in the RoA client
+ * picker spent one per keystroke pause, so a few client lookups locked the
+ * super admin out of search and chat for ten minutes.
  */
-app.post(
-  '/search-clients',
-  requireAdmin,
-  aiUsageLimit({ surface: 'ai-intelligence' }),
-  async (c) => {
-    try {
-      const body = await c.req.json();
-      const { searchTerm } = body;
+app.post('/search-clients', requireAdmin, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { searchTerm } = body;
 
-      if (!searchTerm || searchTerm.length < 2) {
-        return c.json({ clients: [] });
-      }
-
-      const clients = await searchClients(searchTerm);
-      return c.json({ clients });
-    } catch (error) {
-      log.error('Error searching clients:', error);
-      return c.json({ error: 'Failed to search clients' }, 500);
+    if (!searchTerm || searchTerm.length < 2) {
+      return c.json({ clients: [] });
     }
-  },
-);
+
+    const clients = await searchClients(searchTerm);
+    return c.json({ clients });
+  } catch (error) {
+    log.error('Error searching clients:', error);
+    return c.json({ error: 'Failed to search clients' }, 500);
+  }
+});
 
 export default app;

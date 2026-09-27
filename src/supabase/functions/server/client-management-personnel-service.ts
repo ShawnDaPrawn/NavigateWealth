@@ -88,6 +88,15 @@ export const PersonnelService = {
     if (authError) throw authError;
     if (!authData.user) throw new Error('Failed to create user in Auth system');
 
+    // The invite's `data` lands in user_metadata, which resolveTrustedRole
+    // does not read (it is client-editable). Without app_metadata.role an
+    // invited compliance, paraplanner or viewer resolves to `client`.
+    // createAccount sets it at creation; an invite has to set it afterwards.
+    const { error: roleError } = await getSupabase().auth.admin.updateUserById(authData.user.id, {
+      app_metadata: { role: payload.role },
+    });
+    if (roleError) throw roleError;
+
     // 4. Create Personnel Profile
     const newProfile: PersonnelProfile = {
       id: authData.user.id,
