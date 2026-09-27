@@ -384,10 +384,10 @@ describe.each(FAMILIES)('$name FNA — update', ({ prefix, type }) => {
       method: 'PUT',
       as: 'adviser',
       user: ADVISER_A,
-      body: { status: 'draft' },
+      body: { outputs: { note: 'x' } },
     });
     expect(res.status).toBe(200);
-    expect(svc.updateFNA).toHaveBeenCalledWith(type, FNA_ID, { status: 'draft' });
+    expect(svc.updateFNA).toHaveBeenCalledWith(type, FNA_ID, { outputs: { note: 'x' } });
   });
 
   it('denies EVERYONE on a record with no owner, platform admins included', async () => {
@@ -432,13 +432,27 @@ describe.each(FAMILIES)('$name FNA — update', ({ prefix, type }) => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects an invalid status value on an otherwise permitted update', async () => {
+  it('never lets an update set the status — publishing has its own admin route', async () => {
+    // The update schema accepted `status: 'published'`, so an adviser could
+    // publish through PUT and skip the admin-only publish route.
+    seed(type, FNA_ID, CLIENT_A);
+    const res = await req(`${prefix}/${FNA_ID}`, {
+      method: 'PUT',
+      as: 'adviser',
+      user: ADVISER_A,
+      body: { outputs: { note: 'x' }, status: 'published' },
+    });
+    expect(res.status).toBe(200);
+    expect(svc.updateFNA).toHaveBeenCalledWith(type, FNA_ID, { outputs: { note: 'x' } });
+  });
+
+  it('rejects a malformed update on an otherwise permitted call', async () => {
     seed(type, FNA_ID, CLIENT_A);
     const res = await req(`${prefix}/${FNA_ID}`, {
       method: 'PUT',
       as: 'admin',
       user: 'staff-1',
-      body: { status: 'not-a-status' },
+      body: { inputs: 'not-an-object' },
     });
     expect(res.status).toBe(400);
     expect(svc.updateFNA).not.toHaveBeenCalled();

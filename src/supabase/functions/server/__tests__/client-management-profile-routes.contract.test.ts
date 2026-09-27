@@ -165,9 +165,11 @@ vi.mock('../auth-mw.ts', () => ({
     if (!c.req.header('Authorization')) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
-    c.set('user', { id: 'test-user', email: 'admin@test.co' });
-    c.set('userId', 'test-user');
-    c.set('userRole', 'admin');
+    // An admin unless a test names another caller.
+    const userId = c.req.header('x-test-user') ?? 'test-user';
+    c.set('user', { id: userId, email: 'admin@test.co' });
+    c.set('userId', userId);
+    c.set('userRole', c.req.header('x-test-role') ?? 'admin');
     await next();
   },
   requireAdmin: async (c: any, next: any) => {
@@ -385,6 +387,73 @@ describe('client-management-profile-routes.ts route contracts', () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(body.success).toBe(true);
+    });
+  });
+
+  // ── Server-controlled profile fields ──────────────────────────────────────
+  //
+  // `adviserId` / `applicationId` pick the client's assigned adviser, which is
+  // what the client-access policy grants an adviser access by. A client's own
+  // save used to be able to set them, and a full-replacement save erased every
+  // server-owned field it did not send.
+  describe('server-controlled profile fields', () => {
+    const AS_CLIENT = { ...AUTH, 'x-test-role': 'client', 'x-test-user': TEST_UUID };
+    const stored = () => kvStore.get(PROFILE_KEY) as Record<string, unknown>;
+    const save = (data: Record<string, unknown>, headers: Record<string, string>) =>
+      profileRouter.request('/personal-info', {
+        method: 'POST',
+        body: JSON.stringify({ key: PROFILE_KEY, data }),
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+
+    beforeEach(() => {
+      kvStore.set(PROFILE_KEY, {
+        userId: TEST_UUID,
+        firstName: 'John',
+        lastName: 'Client',
+        email: 'john@test.co',
+        role: 'client',
+        accountStatus: 'approved',
+        adviserId: 'adviser-1',
+        applicationId: 'app-1',
+      });
+    });
+
+    it("ignores a client's own attempt to pick their adviser", async () => {
+      const res = await save({ adviserId: 'adviser-2', applicationId: 'app-2' }, AS_CLIENT);
+      expect(res.status).toBe(200);
+      expect(stored()).toMatchObject({ adviserId: 'adviser-1', applicationId: 'app-1' });
+    });
+
+    it("keeps the server-owned fields through a client's full-replacement save", async () => {
+      const res = await save(
+        { firstName: 'John', lastName: 'Renamed', email: 'john@test.co', role: 'admin' },
+        AS_CLIENT,
+      );
+      expect(res.status).toBe(200);
+      expect(stored()).toMatchObject({
+        lastName: 'Renamed',
+        role: 'client',
+        accountStatus: 'approved',
+        adviserId: 'adviser-1',
+        applicationId: 'app-1',
+      });
+    });
+
+    it('lets an admin assign the adviser', async () => {
+      const res = await save({ adviserId: 'adviser-2' }, AUTH);
+      expect(res.status).toBe(200);
+      expect(stored().adviserId).toBe('adviser-2');
+    });
+
+    it('ignores the adviser fields on the legacy PUT / as well', async () => {
+      const res = await profileRouter.request('/', {
+        method: 'PUT',
+        body: JSON.stringify({ userId: TEST_UUID, firstName: 'Jane', adviserId: 'adviser-2' }),
+        headers: { ...AS_CLIENT, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      expect(stored()).toMatchObject({ firstName: 'Jane', adviserId: 'adviser-1' });
     });
   });
 

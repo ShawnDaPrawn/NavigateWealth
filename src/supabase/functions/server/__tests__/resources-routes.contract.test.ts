@@ -252,3 +252,26 @@ describe('resources-routes: saved retirement scenarios are admin-only', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('resources-routes: the resource library is admin-only', () => {
+  // Create, edit, duplicate and publish were requireAuth — a client could
+  // rewrite or publish the firm's library. The reads list unpublished items.
+  it.each([
+    ['GET', '/'],
+    ['POST', '/'],
+    ['PUT', '/res-1'],
+    ['POST', '/res-1/duplicate'],
+    ['PATCH', '/res-1/status'],
+    ['GET', '/training'],
+    ['GET', '/knowledge'],
+    ['POST', '/zip-encrypt'],
+    ['POST', '/zip-encrypt/upload-chunk'],
+  ])('%s %s refuses a signed-in client', async (method, path) => {
+    const res = await app.request(path, {
+      method,
+      headers: { ...NON_ADMIN, 'Content-Type': 'application/json' },
+      ...(method === 'GET' ? {} : { body: JSON.stringify({ title: 'x', status: 'published' }) }),
+    });
+    expect(res.status).toBe(403);
+  });
+});

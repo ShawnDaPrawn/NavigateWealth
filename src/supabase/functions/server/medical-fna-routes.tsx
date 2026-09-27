@@ -303,6 +303,10 @@ medicalFnaRoutes.post('/create', async (c) => {
     }
 
     const { clientId } = parsed.data;
+    // The only create route in the FNA family that never checked the caller
+    // against `clientId`: it reads that client's profile (age, income,
+    // dependants, medical plan) into the response and files an FNA under them.
+    await assertClientAccess(user, clientId, 'medical-fna:create');
 
     log.info('Creating Medical FNA for client:', { clientId });
 

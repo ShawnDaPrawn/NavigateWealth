@@ -36,6 +36,13 @@ vi.mock('../fna-intake-service.ts', () => ({
     ['risk', 'medical', 'retirement', 'investment', 'tax', 'estate'].includes(domain),
 }));
 
+// The shared client-access policy is real; only the adviser-assignment lookup
+// it depends on is stubbed. The adviser below is assigned to `clientId` only.
+const resolveClientAdviserUserId = vi.fn();
+vi.mock('../fna-intake-adviser-resolver.ts', () => ({
+  resolveClientAdviserUserId: (...args: unknown[]) => resolveClientAdviserUserId(...args),
+}));
+
 vi.mock('../fna-intake-rate-limit.ts', () => ({
   assertIntakeDraftRateLimit: vi.fn(),
   assertIntakeSubmitRateLimit: vi.fn(),
@@ -59,6 +66,9 @@ describe('fna-intake-routes auth matrix', () => {
     getActiveIntakeSession.mockResolvedValue(null);
     getIntakeSession.mockResolvedValue(null);
     listSubmittedIntakeSessions.mockResolvedValue([]);
+    resolveClientAdviserUserId.mockImplementation(async (id: string) =>
+      id === clientId ? adviserId : null,
+    );
   });
 
   it('returns 401 when auth header is missing', async () => {
@@ -76,13 +86,32 @@ describe('fna-intake-routes auth matrix', () => {
     expect(listSubmittedIntakeSessions).not.toHaveBeenCalled();
   });
 
-  it('allows adviser queue/list', async () => {
-    authenticateUser.mockResolvedValue({ id: adviserId, email: 'a@test.com', role: 'adviser' });
+  it('allows an admin the firm-wide queue', async () => {
+    authenticateUser.mockResolvedValue({ id: 'admin-1', email: 'ad@test.com', role: 'admin' });
     listSubmittedIntakeSessions.mockResolvedValue([]);
 
     const res = await app.request('/queue/list', { headers: authHeader });
     expect(res.status).toBe(200);
     expect(listSubmittedIntakeSessions).toHaveBeenCalled();
+  });
+
+  it('refuses an adviser the firm-wide queue', async () => {
+    // Every submitted intake, for every client. An adviser reaches their own
+    // clients' intakes through the per-client routes instead.
+    authenticateUser.mockResolvedValue({ id: adviserId, email: 'a@test.com', role: 'adviser' });
+
+    const res = await app.request('/queue/list', { headers: authHeader });
+    expect(res.status).toBe(403);
+    expect(listSubmittedIntakeSessions).not.toHaveBeenCalled();
+  });
+
+  it("refuses an adviser another adviser's client, reads included", async () => {
+    // The local helper this file used to carry let ANY adviser through.
+    authenticateUser.mockResolvedValue({ id: adviserId, email: 'a@test.com', role: 'adviser' });
+
+    const res = await app.request('/retirement/draft/' + otherClientId, { headers: authHeader });
+    expect(res.status).toBe(403);
+    expect(getActiveIntakeSession).not.toHaveBeenCalled();
   });
 
   it('forbids client from reading another client status', async () => {
@@ -116,8 +145,34 @@ describe('fna-intake-routes auth matrix', () => {
     expect(acceptIntakeSession).not.toHaveBeenCalled();
   });
 
-  it('allows real adviser accept', async () => {
+  it("refuses an adviser accepting an intake for a client who isn't theirs", async () => {
     authenticateUser.mockResolvedValue({ id: adviserId, email: 'a@test.com', role: 'adviser' });
+    getIntakeSession.mockResolvedValue({
+      id: sessionId,
+      clientId: otherClientId,
+      domain: 'retirement',
+      status: 'submitted',
+    });
+
+    for (const action of ['accept', 'request-info']) {
+      const res = await app.request('/session/' + sessionId + '/' + action, {
+        method: 'POST',
+        headers: authHeader,
+      });
+      expect(res.status, action).toBe(403);
+    }
+    expect(acceptIntakeSession).not.toHaveBeenCalled();
+    expect(requestMoreInfo).not.toHaveBeenCalled();
+  });
+
+  it('allows the assigned adviser to accept', async () => {
+    authenticateUser.mockResolvedValue({ id: adviserId, email: 'a@test.com', role: 'adviser' });
+    getIntakeSession.mockResolvedValue({
+      id: sessionId,
+      clientId,
+      domain: 'retirement',
+      status: 'submitted',
+    });
     acceptIntakeSession.mockResolvedValue({
       session: { id: sessionId, clientId, domain: 'retirement', status: 'accepted' },
       linkedFnaId: 'fna-1',

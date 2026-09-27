@@ -9,7 +9,7 @@
  */
 
 import { Context, Hono } from 'npm:hono';
-import { requireAuth, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
+import { requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ResourcesService } from './resources-service.ts';
@@ -395,16 +395,21 @@ app.get(
 
 // ============================================================================
 // RESOURCE LIBRARY (Admin)
+//
+// Every route here is requireAdmin. Creating, editing, duplicating and
+// publishing were requireAuth, which any self-registered client passes — so a
+// client could rewrite or publish the firm's resource library. The reads have
+// admin-only callers too (and list unpublished items); the public site reads
+// only /resources/legal/:slug.
 // ============================================================================
 
 /**
  * GET /resources
- * Get all resources
- * Available to all authenticated users
+ * Get all resources (admin)
  */
 app.get(
   '/',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const category = c.req.query('category');
 
@@ -421,7 +426,7 @@ app.get(
  */
 app.post(
   '/',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const body = await c.req.json();
@@ -459,7 +464,7 @@ app.post(
  */
 app.put(
   '/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const resourceId = c.req.param('id')!;
     const body = await c.req.json();
@@ -526,7 +531,7 @@ app.delete(
  */
 app.post(
   '/:id/duplicate',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const resourceId = c.req.param('id')!;
     const userId = c.get('userId') as string;
@@ -559,7 +564,7 @@ app.post(
  */
 app.patch(
   '/:id/status',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const resourceId = c.req.param('id')!;
     const userId = c.get('userId') as string;
@@ -659,7 +664,7 @@ app.delete(
  */
 app.post(
   '/zip-encrypt',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
     const { files, password } = body;
@@ -690,7 +695,7 @@ app.post(
  */
 app.post(
   '/zip-encrypt/upload-chunk',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.parseBody();
     const chunk = body['chunk'];
@@ -719,7 +724,7 @@ app.post(
  */
 app.get(
   '/training',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const _type = c.req.query('type');
     const category = c.req.query('category');
@@ -766,7 +771,7 @@ app.get(
  */
 app.get(
   '/knowledge',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const resources = await service.getAllResources({ category: 'Knowledge Base' });
 

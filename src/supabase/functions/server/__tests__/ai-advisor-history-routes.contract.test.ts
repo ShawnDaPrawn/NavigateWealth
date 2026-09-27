@@ -547,34 +547,20 @@ describe('DELETE /admin/history', () => {
   });
 });
 
-describe('the destructive routes and the elevated allow-list', () => {
+describe('the destructive routes and the non-admin staff roles', () => {
   beforeEach(() => {
     seedClientProfile(CLIENT, { adviserId: ADVISER });
   });
 
-  it('lets a "viewer" delete a client\'s entire Ask Vasco conversation', async () => {
-    // FLAGGED, NOT ENDORSED. `assertCanProxyClientVasco` gates the read routes
-    // and the destructive ones through the same elevated allow-list, and that
-    // list includes `viewer` — a real assignable personnel role whose name
-    // promises read-only. So the least-privileged staff role can erase a
-    // client's conversation record, not just read it.
-    //
-    // Left as-is because narrowing it is a product decision: `viewer` may be
-    // used for a POPIA erasure workflow, and locking it out would break that.
-    // Pinned here so the behaviour is visible rather than incidental.
-    await ensureAdvisorSession(CLIENT, null, 'Their thread');
-    const auth = asUser('viewer-1', 'viewer');
-
-    const res = await call(`/admin/history?clientUserId=${CLIENT}`, { method: 'DELETE', auth });
-
-    expect(res.status).toBe(200);
-    const listed = await json(await call(`/admin/sessions?clientUserId=${CLIENT}`, { auth }));
-    expect(listed.sessions).toEqual([]);
-  });
-
-  it.each(['compliance', 'compliance_officer', 'paraplanner'])(
-    'lets a %s delete a client conversation too',
+  it.each(['viewer', 'compliance', 'compliance_officer', 'paraplanner'])(
+    "refuses a %s — erasing a client's conversation is not theirs to do",
     async (role) => {
+      // These roles used to pass the same "elevated" allow-list as admins, so
+      // `viewer` — the role whose name promises read-only — could erase a
+      // client's whole Ask Vasco record. The proxy now follows the one policy
+      // in client-access.ts: platform admins, or the client's ASSIGNED adviser.
+      // Other personnel roles have no assignment model, so they are denied
+      // until one exists; an admin still performs any erasure request.
       await ensureAdvisorSession(CLIENT, null, 'Their thread');
 
       const res = await call(`/admin/history?clientUserId=${CLIENT}`, {
@@ -582,7 +568,24 @@ describe('the destructive routes and the elevated allow-list', () => {
         auth: asUser(`staff-${role}`, role),
       });
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
+      const listed = await json(
+        await call(`/admin/sessions?clientUserId=${CLIENT}`, {
+          auth: asUser('admin-1', 'admin'),
+        }),
+      );
+      expect(listed.sessions).toHaveLength(1);
     },
   );
+
+  it('an admin can still clear a client conversation', async () => {
+    await ensureAdvisorSession(CLIENT, null, 'Their thread');
+    const auth = asUser('admin-1', 'admin');
+
+    const res = await call(`/admin/history?clientUserId=${CLIENT}`, { method: 'DELETE', auth });
+
+    expect(res.status).toBe(200);
+    const listed = await json(await call(`/admin/sessions?clientUserId=${CLIENT}`, { auth }));
+    expect(listed.sessions).toEqual([]);
+  });
 });
