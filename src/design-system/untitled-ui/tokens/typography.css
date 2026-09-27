@@ -1,0 +1,332 @@
+/*
+ * Untitled UI PRO (v7.0) — text styles
+ *
+ * Exported from the Figma file. Not imported anywhere on the site.
+ * See ../README.md ("Updating from Figma") before editing by hand.
+ * The 44 text styles: 11 sizes x 4 weights. Display sizes md and up carry
+ * -2% letter spacing, as in Figma.
+ */
+
+.uui-text-display-2xl-regular {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-2xl);
+  line-height: var(--uui-line-height-display-2xl);
+  font-weight: var(--uui-font-weight-regular);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-2xl-medium {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-2xl);
+  line-height: var(--uui-line-height-display-2xl);
+  font-weight: var(--uui-font-weight-medium);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-2xl-semibold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-2xl);
+  line-height: var(--uui-line-height-display-2xl);
+  font-weight: var(--uui-font-weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-2xl-bold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-2xl);
+  line-height: var(--uui-line-height-display-2xl);
+  font-weight: var(--uui-font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-xl-regular {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xl);
+  line-height: var(--uui-line-height-display-xl);
+  font-weight: var(--uui-font-weight-regular);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-xl-medium {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xl);
+  line-height: var(--uui-line-height-display-xl);
+  font-weight: var(--uui-font-weight-medium);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-xl-semibold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xl);
+  line-height: var(--uui-line-height-display-xl);
+  font-weight: var(--uui-font-weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-xl-bold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xl);
+  line-height: var(--uui-line-height-display-xl);
+  font-weight: var(--uui-font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-lg-regular {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-lg);
+  line-height: var(--uui-line-height-display-lg);
+  font-weight: var(--uui-font-weight-regular);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-lg-medium {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-lg);
+  line-height: var(--uui-line-height-display-lg);
+  font-weight: var(--uui-font-weight-medium);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-lg-semibold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-lg);
+  line-height: var(--uui-line-height-display-lg);
+  font-weight: var(--uui-font-weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-lg-bold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-lg);
+  line-height: var(--uui-line-height-display-lg);
+  font-weight: var(--uui-font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-md-regular {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-md);
+  line-height: var(--uui-line-height-display-md);
+  font-weight: var(--uui-font-weight-regular);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-md-medium {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-md);
+  line-height: var(--uui-line-height-display-md);
+  font-weight: var(--uui-font-weight-medium);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-md-semibold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-md);
+  line-height: var(--uui-line-height-display-md);
+  font-weight: var(--uui-font-weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-md-bold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-md);
+  line-height: var(--uui-line-height-display-md);
+  font-weight: var(--uui-font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.uui-text-display-sm-regular {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-sm);
+  line-height: var(--uui-line-height-display-sm);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-display-sm-medium {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-sm);
+  line-height: var(--uui-line-height-display-sm);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-display-sm-semibold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-sm);
+  line-height: var(--uui-line-height-display-sm);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-display-sm-bold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-sm);
+  line-height: var(--uui-line-height-display-sm);
+  font-weight: var(--uui-font-weight-bold);
+}
+
+.uui-text-display-xs-regular {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xs);
+  line-height: var(--uui-line-height-display-xs);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-display-xs-medium {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xs);
+  line-height: var(--uui-line-height-display-xs);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-display-xs-semibold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xs);
+  line-height: var(--uui-line-height-display-xs);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-display-xs-bold {
+  font-family: var(--uui-font-family-display);
+  font-size: var(--uui-font-size-display-xs);
+  line-height: var(--uui-line-height-display-xs);
+  font-weight: var(--uui-font-weight-bold);
+}
+
+.uui-text-text-xl-regular {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xl);
+  line-height: var(--uui-line-height-text-xl);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-text-xl-medium {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xl);
+  line-height: var(--uui-line-height-text-xl);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-text-xl-semibold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xl);
+  line-height: var(--uui-line-height-text-xl);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-text-xl-bold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xl);
+  line-height: var(--uui-line-height-text-xl);
+  font-weight: var(--uui-font-weight-bold);
+}
+
+.uui-text-text-lg-regular {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-lg);
+  line-height: var(--uui-line-height-text-lg);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-text-lg-medium {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-lg);
+  line-height: var(--uui-line-height-text-lg);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-text-lg-semibold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-lg);
+  line-height: var(--uui-line-height-text-lg);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-text-lg-bold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-lg);
+  line-height: var(--uui-line-height-text-lg);
+  font-weight: var(--uui-font-weight-bold);
+}
+
+.uui-text-text-md-regular {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-text-md-medium {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-text-md-semibold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-text-md-bold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+  font-weight: var(--uui-font-weight-bold);
+}
+
+.uui-text-text-sm-regular {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-text-sm-medium {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-text-sm-semibold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-text-sm-bold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+  font-weight: var(--uui-font-weight-bold);
+}
+
+.uui-text-text-xs-regular {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xs);
+  line-height: var(--uui-line-height-text-xs);
+  font-weight: var(--uui-font-weight-regular);
+}
+
+.uui-text-text-xs-medium {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xs);
+  line-height: var(--uui-line-height-text-xs);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-text-text-xs-semibold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xs);
+  line-height: var(--uui-line-height-text-xs);
+  font-weight: var(--uui-font-weight-semibold);
+}
+
+.uui-text-text-xs-bold {
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-xs);
+  line-height: var(--uui-line-height-text-xs);
+  font-weight: var(--uui-font-weight-bold);
+}
