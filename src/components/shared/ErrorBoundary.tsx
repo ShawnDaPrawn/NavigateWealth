@@ -72,12 +72,16 @@ export class ErrorBoundary extends Component<Props, State> {
       }
     }
 
+    // Marked BEFORE logging: logger.error forwards to the issue reporter,
+    // which would otherwise file this crash a second time as a handled error.
+    // The boundary's own report below is the richer one (component stack).
+    markErrorReported(error);
+
     // Log using unified logger
     logger.error('ErrorBoundary caught an error', error, {
       componentStack: errorInfo.componentStack,
     });
 
-    markErrorReported(error);
     void reportRuntimeClientIssue({
       kind: 'react-error-boundary',
       title: error.name || 'React render error',
