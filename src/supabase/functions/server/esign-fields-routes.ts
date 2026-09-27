@@ -12,19 +12,19 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { requireOwnedEnvelope, firmScopeResponse } from './esign-route-helpers.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { UpdateFieldsSchema } from './esign-validation.ts';
 import { getRequestMetadata, FieldRecord } from './esign-route-helpers.ts';
-import { getEnvelopeDetails, logAuditEvent } from './esign-services.ts';
+import { logAuditEvent } from './esign-services.ts';
 
 const log = createModuleLogger('esign-fields-routes');
 
 const fieldsRoutes = new Hono();
 
-fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
+fieldsRoutes.put('/envelopes/:envelopeId/fields', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
@@ -38,8 +38,9 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
     }
     const { fields } = parsed.data;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership before mutation (S6), as PATCH already does. This replaced
+    // every field on any envelope whose id the caller supplied.
+    const envelope = await requireOwnedEnvelope(user, envelopeId);
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);
@@ -126,7 +127,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', async (c) => {
  * GET /envelopes/:envelopeId/fields
  * Get all fields for an envelope
  */
-fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
+fieldsRoutes.get('/envelopes/:envelopeId/fields', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
@@ -162,7 +163,7 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', async (c) => {
  * PATCH /envelopes/:envelopeId/fields/:fieldId
  * Update a single field (for real-time position updates)
  */
-fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
+fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
@@ -255,7 +256,7 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
  * DELETE /envelopes/:envelopeId/fields/:fieldId
  * Delete a single field
  */
-fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
+fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
@@ -263,8 +264,8 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', async (c) => {
     const envelopeId = c.req.param('envelopeId')!;
     const fieldId = c.req.param('fieldId')!;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership before mutation (S6).
+    const envelope = await requireOwnedEnvelope(user, envelopeId);
 
     if (!envelope) {
       return c.json({ error: 'Envelope not found' }, 404);

@@ -13,7 +13,7 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { logAuditEvent } from './esign-services.ts';
@@ -55,6 +55,7 @@ const withoutSecret = <T extends { secret?: string }>(subscription: T): Omit<T, 
 /** POST /webhooks — create a subscription. */
 webhooksRoutes.post(
   '/webhooks',
+  requireAdmin,
   rateLimit('SENDER_MUTATE'),
   validateBody(CreateWebhookSchema),
   async (c) => {
@@ -118,7 +119,7 @@ webhooksRoutes.post(
 );
 
 /** GET /webhooks — list subscriptions for the current firm. */
-webhooksRoutes.get('/webhooks', async (c) => {
+webhooksRoutes.get('/webhooks', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -139,6 +140,7 @@ webhooksRoutes.get('/webhooks', async (c) => {
 /** PATCH /webhooks/:id — update url / events / active / description. */
 webhooksRoutes.patch(
   '/webhooks/:id',
+  requireAdmin,
   rateLimit('SENDER_MUTATE'),
   validateOptionalBody(UpdateWebhookSchema),
   async (c) => {
@@ -197,36 +199,43 @@ webhooksRoutes.patch(
 );
 
 /** POST /webhooks/:id/rotate-secret — issue a new signing secret. */
-webhooksRoutes.post('/webhooks/:id/rotate-secret', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const existing = await getWebhookSub(id);
-    if (!existing) return c.json({ error: 'Subscription not found' }, 404);
-    if (existing.firm_id !== resolveFirmId(ctx.user)) {
-      return c.json({ error: 'Forbidden' }, 403);
+webhooksRoutes.post(
+  '/webhooks/:id/rotate-secret',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const id = c.req.param('id')!;
+      const existing = await getWebhookSub(id);
+      if (!existing) return c.json({ error: 'Subscription not found' }, 404);
+      if (existing.firm_id !== resolveFirmId(ctx.user)) {
+        return c.json({ error: 'Forbidden' }, 403);
+      }
+      const rotated = await rotateWebhookSubSecret(id);
+      await logAuditEvent({
+        envelopeId: 'system',
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'webhook_subscription_secret_rotated',
+        metadata: { id },
+      });
+      return c.json({ subscription: rotated });
+    } catch (error: unknown) {
+      log.error('Rotate webhook secret error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to rotate secret',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
     }
-    const rotated = await rotateWebhookSubSecret(id);
-    await logAuditEvent({
-      envelopeId: 'system',
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'webhook_subscription_secret_rotated',
-      metadata: { id },
-    });
-    return c.json({ subscription: rotated });
-  } catch (error: unknown) {
-    log.error('Rotate webhook secret error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to rotate secret' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+  },
+);
 
 /** DELETE /webhooks/:id — remove a subscription. */
-webhooksRoutes.delete('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => {
+webhooksRoutes.delete('/webhooks/:id', requireAdmin, rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const id = c.req.param('id')!;
@@ -260,7 +269,7 @@ webhooksRoutes.delete('/webhooks/:id', rateLimit('SENDER_MUTATE'), async (c) => 
  * GET /webhooks/deliveries?status=&limit=
  * Recent deliveries for the current firm, newest first.
  */
-webhooksRoutes.get('/webhooks/deliveries', async (c) => {
+webhooksRoutes.get('/webhooks/deliveries', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -281,7 +290,7 @@ webhooksRoutes.get('/webhooks/deliveries', async (c) => {
 });
 
 /** GET /webhooks/dead-letters — everything that gave up. */
-webhooksRoutes.get('/webhooks/dead-letters', async (c) => {
+webhooksRoutes.get('/webhooks/dead-letters', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -300,33 +309,40 @@ webhooksRoutes.get('/webhooks/dead-letters', async (c) => {
 });
 
 /** POST /webhooks/deliveries/:id/replay — re-enqueue a failed/dead delivery. */
-webhooksRoutes.post('/webhooks/deliveries/:id/replay', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const id = c.req.param('id')!;
-    const delivery = await replayWebhookDelivery(id);
-    if (!delivery) return c.json({ error: 'Delivery not found' }, 404);
-    if (delivery.firm_id !== resolveFirmId(ctx.user)) {
-      return c.json({ error: 'Forbidden' }, 403);
+webhooksRoutes.post(
+  '/webhooks/deliveries/:id/replay',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const id = c.req.param('id')!;
+      // The firm check happens inside the replay, before anything is written.
+      const delivery = await replayWebhookDelivery(id, resolveFirmId(ctx.user));
+      if (!delivery) return c.json({ error: 'Delivery not found' }, 404);
+      await logAuditEvent({
+        envelopeId: delivery.envelope_id ?? 'system',
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'webhook_delivery_replayed',
+        metadata: {
+          id,
+          subscription_id: delivery.subscription_id,
+          event_type: delivery.event_type,
+        },
+      });
+      return c.json({ delivery });
+    } catch (error: unknown) {
+      log.error('Replay webhook delivery error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to replay delivery',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
     }
-    await logAuditEvent({
-      envelopeId: delivery.envelope_id ?? 'system',
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'webhook_delivery_replayed',
-      metadata: { id, subscription_id: delivery.subscription_id, event_type: delivery.event_type },
-    });
-    return c.json({ delivery });
-  } catch (error: unknown) {
-    log.error('Replay webhook delivery error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to replay delivery',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+  },
+);
 
 export default webhooksRoutes;

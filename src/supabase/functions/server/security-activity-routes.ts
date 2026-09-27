@@ -17,6 +17,7 @@ import { requireAuth } from './auth-mw.ts';
 import { LogActivitySchema } from './security-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { logSafeError, ensureSelfOrAdmin, type ActivityLogEntry } from './security-shared.ts';
+import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
@@ -82,7 +83,7 @@ app.post('/:userId/activity', requireAuth, async (c) => {
     const logId = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Get request info
-    const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
+    const ip = extractClientIp((n) => c.req.header(n)) || 'unknown';
     const userAgent = c.req.header('user-agent') || 'unknown';
 
     const activityLog: ActivityLogEntry = {

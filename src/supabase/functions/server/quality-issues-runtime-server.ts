@@ -12,7 +12,11 @@
  *
  * This module closes that gap (the "extend in-house reporter / backend" half of
  * the error-monitoring work): `recordRuntimeServerIssue` is called from the
- * error middleware for UNEXPECTED 500s and persists a deduplicated,
+ * root 5xx observer in create-app.ts for EVERY 5xx response — thrown
+ * exceptions (the error handler hands its Error over through the request
+ * context) and the ~350 routes that catch their own failure and answer
+ * `c.json({ error }, 500)`, which never reach the error handler at all. It
+ * persists a deduplicated,
  * occurrence-counted issue into KV under RUNTIME_SERVER_ISSUES_KEY. The routes
  * module folds these into the dashboard snapshot alongside client issues, so
  * they get the same fingerprinting, recurrence detection, and task automation.
@@ -33,14 +37,28 @@ import {
   inferQualityIssuePriority,
   type QualityIssue,
 } from '../../../shared/quality/qualityIssues.ts';
+import {
+  cleanErrorMessage,
+  describeRuntimeIssue,
+  normalizeMessageForGrouping,
+} from '../../../shared/quality/issueLabels.ts';
 
 export const RUNTIME_SERVER_ISSUES_KEY = 'quality_issues:runtime_server';
 const MAX_RUNTIME_SERVER_ISSUES = 100;
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_STACK_LENGTH = 3000;
+const MAX_BODY_CHARS = 4000;
 
 export interface RuntimeServerIssueInput {
-  error: Error;
+  /** The thrown exception, when the 500 came from the shared error handler. */
+  error?: Error | null;
+  /**
+   * The body of a 5xx response a route built by hand (`c.json({error}, 500)`).
+   * ~350 routes catch their own failures this way and never reach the error
+   * handler, so the body is the only description of what went wrong. Read in
+   * the background; a promise so the caller never waits on it.
+   */
+  responseBody?: Promise<string | undefined> | string;
   path?: string;
   method?: string;
   statusCode?: number;
@@ -52,13 +70,40 @@ function truncate(value: string | undefined, maxLength: number): string | undefi
   return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
-function buildIssueId(ruleId: string, filePath: string): string {
-  return ['runtime-server', ruleId, filePath]
-    .filter(Boolean)
-    .join(':')
+function buildIssueId(fingerprint: string): string {
+  return `runtime-server:${fingerprint}`
     .toLowerCase()
-    .replace(/[^a-z0-9:_./-]+/g, '-')
+    .replace(/[^a-z0-9:_./<>-]+/g, '-')
     .slice(0, 180);
+}
+
+/**
+ * Pull the human-readable reason out of an error response body. Routes use a
+ * handful of shapes: `{error}`, `{message}`, `{error, details}`, or plain text.
+ */
+export function messageFromResponseBody(body: string | undefined): string | undefined {
+  if (!body) return undefined;
+  const trimmed = body.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const pick = (value: unknown): string | undefined =>
+      typeof value === 'string' && value.trim()
+        ? value.trim()
+        : value &&
+            typeof value === 'object' &&
+            typeof (value as { message?: unknown }).message === 'string'
+          ? ((value as { message: string }).message || '').trim() || undefined
+          : undefined;
+    const primary = pick(parsed.error) ?? pick(parsed.message);
+    const details = pick(parsed.details) ?? pick(parsed.detail);
+    if (primary && details && !primary.includes(details)) return `${primary}: ${details}`;
+    return primary ?? details;
+  } catch {
+    // HTML error pages carry nothing useful beyond their title.
+    const title = trimmed.match(/<title>([^<]+)<\/title>/i)?.[1];
+    return (title ?? trimmed).slice(0, 300);
+  }
 }
 
 /** Read the persisted server-runtime issues (used by the dashboard snapshot). */
@@ -118,7 +163,7 @@ export function scheduleRuntimeServerIssue(input: RuntimeServerIssueInput): Prom
 
 /**
  * Persist an unhandled server exception as a 'runtime-server' quality issue.
- * Deduplicates by fingerprint (same error name + endpoint) and increments an
+ * Deduplicates by fingerprint (error class + route shape + message shape) and increments an
  * occurrence counter, mirroring the `/runtime-client` ingest behaviour.
  *
  * Prefer {@link scheduleRuntimeServerIssue} from a request path — this one
@@ -138,25 +183,50 @@ async function writeIssue(input: RuntimeServerIssueInput): Promise<void> {
     const now = new Date().toISOString();
     const { error, path, method, statusCode, requestId } = input;
 
-    const ruleId = (error?.name || 'ServerError').slice(0, 120);
-    const title = (error?.name || 'Server error').slice(0, 240);
-    const baseMessage = error?.message || 'Unhandled server error';
-    const filePath = path ? path.slice(0, 240) : 'edge-function';
+    let bodyMessage: string | undefined;
+    try {
+      bodyMessage = messageFromResponseBody(await input.responseBody);
+    } catch {
+      bodyMessage = undefined;
+    }
+
+    // Generic wrapper text from the shared handler says nothing; prefer the
+    // exception, then whatever the route wrote into its response.
+    const genericBody = !bodyMessage || /^An unexpected error occurred$/i.test(bodyMessage);
+    const rawMessage =
+      error?.message || (!genericBody ? bodyMessage : undefined) || 'Unhandled server error';
+    const errorName = error?.name || (statusCode ? `HTTP ${statusCode}` : 'ServerError');
+    const kind = error ? 'server-exception' : 'server-error-response';
+    const labels = describeRuntimeIssue({
+      kind,
+      errorName,
+      message: rawMessage,
+      stack: error?.stack,
+      method,
+      path,
+      statusCode,
+    });
+
+    const ruleId = (error?.name || `http-${statusCode || 500}`).slice(0, 120);
+    const route = labels.route || 'edge-function';
+    const filePath = `${(method || '').toUpperCase()} ${route}`.trim().slice(0, 240);
     const category = inferQualityIssueCategory('runtime-server', ruleId);
     const priority = inferQualityIssuePriority({
       source: 'runtime-server',
       severity: 'error',
       category,
     });
+    // Group by route SHAPE + message SHAPE, so the same failure on different
+    // records is one issue and two different failures on one route are two.
     const fingerprint = createQualityIssueFingerprint({
       source: 'runtime-server',
       category,
       ruleId,
-      title,
+      title: normalizeMessageForGrouping(cleanErrorMessage(rawMessage)),
       filePath,
     });
 
-    const context = [
+    const details = [
       method && path ? `Request: ${method} ${path}` : path ? `Path: ${path}` : '',
       statusCode ? `Status: ${statusCode}` : '',
       requestId ? `Request-ID: ${requestId}` : '',
@@ -165,7 +235,7 @@ async function writeIssue(input: RuntimeServerIssueInput): Promise<void> {
       .filter(Boolean)
       .join('\n\n');
 
-    const id = buildIssueId(ruleId, filePath);
+    const id = buildIssueId(fingerprint);
 
     const currentIssues = (await kv.get(RUNTIME_SERVER_ISSUES_KEY)) as QualityIssue[] | null;
     const issues = Array.isArray(currentIssues) ? currentIssues : [];
@@ -181,8 +251,13 @@ async function writeIssue(input: RuntimeServerIssueInput): Promise<void> {
       fingerprint,
       severity: 'error',
       status: 'open',
-      title,
-      message: `${baseMessage}${context ? `\n\n${context}` : ''}`.slice(0, MAX_MESSAGE_LENGTH),
+      title: labels.title,
+      message: rawMessage.slice(0, MAX_MESSAGE_LENGTH),
+      summary: labels.summary,
+      likelyCause: labels.likelyCause,
+      area: labels.area,
+      route: labels.route,
+      details: details.slice(0, MAX_MESSAGE_LENGTH),
       filePath,
       ruleId,
       firstSeenAt: existingIndex >= 0 ? issues[existingIndex].firstSeenAt : now,
@@ -202,5 +277,17 @@ async function writeIssue(input: RuntimeServerIssueInput): Promise<void> {
     await kv.set(RUNTIME_SERVER_ISSUES_KEY, trimmedIssues);
   } catch {
     // Monitoring must never create a second failure inside the error handler.
+  }
+}
+
+/**
+ * Read at most MAX_BODY_CHARS of a cloned error response. Never throws.
+ */
+export async function readErrorBody(response: Response): Promise<string | undefined> {
+  try {
+    const text = await response.text();
+    return text.slice(0, MAX_BODY_CHARS);
+  } catch {
+    return undefined;
   }
 }

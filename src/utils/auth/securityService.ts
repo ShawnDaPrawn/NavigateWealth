@@ -87,120 +87,14 @@ export async function validateSignupData(data: {
 }
 
 /**
- * Validate login attempt on server (rate limiting check)
+ * Record a sign-out for the CURRENT session.
+ *
+ * Must be called BEFORE the session is ended: the server takes the identity
+ * from this access token rather than from anything in the body, so that nobody
+ * can write sign-out entries into a stranger's security log by naming their id.
+ * Best-effort — a sign-out must never fail because it could not be logged.
  */
-export async function validateLoginAttempt(email: string): Promise<{
-  allowed: boolean;
-  error?: string;
-  blocked?: boolean;
-  resetAt?: Date;
-}> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-    const response = await fetch(`${API_BASE}/login-validate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
-      body: JSON.stringify({ email }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return {
-          allowed: false,
-          blocked: result.blocked,
-          error: result.error || 'Too many login attempts',
-          resetAt: result.resetAt ? new Date(result.resetAt) : undefined,
-        };
-      }
-      return {
-        allowed: false,
-        error: result.error || 'Unable to validate this login attempt. Please try again.',
-      };
-    }
-
-    return { allowed: true };
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.name === 'AbortError' || error.message.includes('fetch'))
-    ) {
-      logger.warn('Login validation server unavailable; blocking the login attempt.');
-      return {
-        allowed: false,
-        error: 'Unable to validate this login attempt. Please try again.',
-      };
-    }
-    console.error('Login validation error:', error);
-    return {
-      allowed: false,
-      error: 'Unable to validate this login attempt. Please try again.',
-    };
-  }
-}
-
-/**
- * Log successful login
- */
-export async function logLoginSuccess(email: string, userId: string): Promise<void> {
-  try {
-    await fetch(`${API_BASE}/login-success`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
-      body: JSON.stringify({ email, userId }),
-      keepalive: true,
-    });
-  } catch (error) {
-    // Don't throw - logging failure shouldn't break login
-    if (error instanceof Error && import.meta.env.DEV) {
-      logger.debug('Login success log skipped', { message: error.message });
-    }
-  }
-}
-
-/**
- * Log failed login
- */
-export async function logLoginFailure(email: string, reason: string): Promise<void> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-    await fetch(`${API_BASE}/login-failure`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
-      body: JSON.stringify({ email, reason }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-  } catch (error) {
-    // Silently ignore AbortError as it's expected on timeout
-    if (error instanceof Error && error.name !== 'AbortError') {
-      console.error('Failed to log login failure:', error);
-    }
-  }
-}
-
-/**
- * Log logout event
- */
-export async function logLogout(email: string, userId: string): Promise<void> {
+export async function logLogout(accessToken: string): Promise<void> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
@@ -209,9 +103,10 @@ export async function logLogout(email: string, userId: string): Promise<void> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
+        Authorization: `Bearer ${accessToken}`,
+        apikey: publicAnonKey,
       },
-      body: JSON.stringify({ email, userId }),
+      body: JSON.stringify({}),
       signal: controller.signal,
     });
 
@@ -221,48 +116,6 @@ export async function logLogout(email: string, userId: string): Promise<void> {
     if (error instanceof Error && error.name !== 'AbortError') {
       console.error('Failed to log logout:', error);
     }
-  }
-}
-
-/**
- * Log password reset request
- */
-export async function logPasswordResetRequest(email: string): Promise<{
-  success: boolean;
-  message: string;
-}> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-    const response = await fetch(`${API_BASE}/password-reset-request`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicAnonKey}`,
-      },
-      body: JSON.stringify({ email }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    const result = await response.json();
-
-    // Always return generic message (prevent account enumeration)
-    return {
-      success: true,
-      message:
-        result.message ||
-        'If an account exists with this email, a password reset link has been sent.',
-    };
-  } catch (error) {
-    console.error('Password reset request error:', error);
-    // Generic message even on error
-    return {
-      success: true,
-      message: 'If an account exists with this email, a password reset link has been sent.',
-    };
   }
 }
 
@@ -425,10 +278,13 @@ export const securityService = {
   /**
    * Send 2FA code
    */
-  sendTwoFactorCode: async (userId: string, email?: string) => {
+  sendTwoFactorCode: async (userId: string, _email?: string) => {
+    // The server delivers to the address on the account and ignores any
+    // address in the request — a second factor sent wherever the caller asks
+    // is no second factor. `_email` stays for call-site compatibility.
     const data = await api.post<{ success: boolean; error?: string }>(
       SECURITY_API_ENDPOINTS.SEND_CODE(userId),
-      { email },
+      {},
     );
 
     if (!data.success) {

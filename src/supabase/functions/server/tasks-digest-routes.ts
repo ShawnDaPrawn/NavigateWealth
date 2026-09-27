@@ -27,7 +27,7 @@ import { asyncHandler } from './error.middleware.ts';
 import * as kv from './kv_store.tsx';
 import { resolveTrustedRole } from './constants.ts';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
-import { readTokenIssuedAt } from './jwt-claims.ts';
+import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
 
@@ -168,7 +168,11 @@ async function requireCronOrAdminAuth(
         // suspended admin to log in again — a loop that cannot succeed — so the
         // status and code are returned directly instead.
         try {
-          await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
+          await enforceAccountSecurity(
+            user.id,
+            readTokenIssuedAt(token),
+            readTokenSessionId(token),
+          );
         } catch (securityError) {
           if (securityError instanceof AuthError) {
             return new Response(
@@ -187,9 +191,8 @@ async function requireCronOrAdminAuth(
         // `user.user_metadata?.role || user.user_metadata?.systemRole`, which is
         // client-editable — any signed-in user could call
         // `supabase.auth.updateUser({ data: { role: 'admin' } })` and pass this
-        // check. resolveTrustedRole refuses exactly that: `admin` and
-        // `super_admin` are in PRIVILEGED_ROLES and are never honoured from
-        // user_metadata (constants.ts:132-135).
+        // check. resolveTrustedRole refuses exactly that: it never reads a role
+        // from user_metadata at all (see constants.ts).
         const role = resolveTrustedRole(user);
         if (role === 'admin' || role === 'super_admin' || role === 'super-admin') {
           c.set('userId', user.id);

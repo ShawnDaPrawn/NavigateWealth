@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ComplianceService } from './compliance-service.ts';
@@ -23,7 +23,7 @@ const service = new ComplianceService();
 
 app.get(
   '/stats',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const summary = await service.getComplianceSummary();
     return c.json({
@@ -35,7 +35,7 @@ app.get(
 
 app.get(
   '/overview',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const summary = await service.getComplianceSummary();
     return c.json({
@@ -47,7 +47,7 @@ app.get(
 
 app.get(
   '/deadlines',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const days = c.req.query('days') || '30';
     const daysInt = parseInt(days, 10);
@@ -91,7 +91,7 @@ app.get(
 
 app.get(
   '/activities',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const limit = c.req.query('limit') || '20';
 
@@ -191,7 +191,7 @@ app.get(
 
 app.post(
   '/popia/consent',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
     const body = await c.req.json();
@@ -210,7 +210,7 @@ app.post(
 
 app.post(
   '/popia/withdraw',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const userId = c.get('userId') as string;
 
@@ -268,7 +268,7 @@ app.post(
 
 app.get(
   '/documents-insurance',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const records = await service.getDocumentsInsuranceRecords();
     return c.json({

@@ -101,14 +101,51 @@ describe('fna-auth applies the shared account-security policy', () => {
     );
   });
 
-  it('admits a 2FA user verified within the grace window', async () => {
+  /** A bearer token carrying a GoTrue `session_id` (signature never checked here). */
+  const tokenFor = (sessionId: string) => {
+    const b64 = (o: unknown) =>
+      btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `Bearer ${b64({ alg: 'HS256' })}.${b64({ sub: 'user-1', session_id: sessionId })}.sig`;
+  };
+
+  it('admits a 2FA user whose THIS session verified within the grace window', async () => {
+    securityRecords.set('security:user-1', { twoFactorEnabled: true });
+    securityRecords.set('2fa_sessions:user-1', { 'sess-A': new Date().toISOString() });
+    await expect(authenticateUser(tokenFor('sess-A'), 'fna')).resolves.toMatchObject({
+      id: 'user-1',
+    });
+  });
+
+  it("REJECTS a second sign-in that rides on another session's verification", async () => {
+    // The attack this closes: the owner verified at 09:00 on their laptop; an
+    // attacker with the stolen password signs in at 10:00. The account-wide
+    // `last2faVerifiedAt` used to wave the attacker through.
     securityRecords.set('security:user-1', {
       twoFactorEnabled: true,
       last2faVerifiedAt: new Date().toISOString(),
     });
-    await expect(authenticateUser('Bearer valid-token', 'fna')).resolves.toMatchObject({
-      id: 'user-1',
+    securityRecords.set('2fa_sessions:user-1', { 'owner-session': new Date().toISOString() });
+    await expect(authenticateUser(tokenFor('attacker-session'), 'fna')).rejects.toThrow(
+      'Two-factor verification required',
+    );
+  });
+
+  it('REJECTS a 2FA user whose token carries no session id at all', async () => {
+    securityRecords.set('security:user-1', { twoFactorEnabled: true });
+    securityRecords.set('2fa_sessions:user-1', { 'sess-A': new Date().toISOString() });
+    await expect(authenticateUser('Bearer valid-token', 'fna')).rejects.toThrow(
+      'Two-factor verification required',
+    );
+  });
+
+  it('REJECTS a session whose verification is older than the grace window', async () => {
+    securityRecords.set('security:user-1', { twoFactorEnabled: true });
+    securityRecords.set('2fa_sessions:user-1', {
+      'sess-A': new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
     });
+    await expect(authenticateUser(tokenFor('sess-A'), 'fna')).rejects.toThrow(
+      'Two-factor verification required',
+    );
   });
 });
 

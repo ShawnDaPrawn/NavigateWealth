@@ -1,6 +1,10 @@
 /**
  * useEnvelopeActions Hook
- * React hook for envelope actions (upload, send, sign, etc.)
+ * React hook for sender-side envelope actions (upload, send, void, etc.).
+ *
+ * Signing and declining are not here: a signer does both through the
+ * token-authenticated /signer/* flow (components/esign-signer). The sender-side
+ * sign/reject endpoints these once wrapped took no credential and were removed.
  */
 
 import { useState } from 'react';
@@ -9,8 +13,6 @@ import { logger } from '../../../../../utils/logger';
 import type {
   UploadDocumentRequest,
   SendInvitesRequest,
-  SubmitSignatureRequest,
-  RejectSigningRequest,
   SaveTemplateRequest,
   EsignEnvelope,
   EsignField,
@@ -24,14 +26,6 @@ interface UseEnvelopeActionsReturn {
   sending: boolean;
   sendError: string | null;
   sendInvites: (envelopeId: string, request: SendInvitesRequest) => Promise<boolean>;
-
-  signing: boolean;
-  signError: string | null;
-  submitSignature: (envelopeId: string, request: SubmitSignatureRequest) => Promise<boolean>;
-
-  rejecting: boolean;
-  rejectError: string | null;
-  rejectSigning: (envelopeId: string, request: RejectSigningRequest) => Promise<boolean>;
 
   savingTemplate: boolean;
   templateError: string | null;
@@ -61,14 +55,6 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
   // Send state
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-
-  // Sign state
-  const [signing, setSigning] = useState(false);
-  const [signError, setSignError] = useState<string | null>(null);
-
-  // Reject state
-  const [rejecting, setRejecting] = useState(false);
-  const [rejectError, setRejectError] = useState<string | null>(null);
 
   // Template state
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -138,54 +124,6 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
       return false;
     } finally {
       setSending(false);
-    }
-  };
-
-  // ==================== SUBMIT SIGNATURE ====================
-
-  const submitSignature = async (
-    envelopeId: string,
-    request: SubmitSignatureRequest,
-  ): Promise<boolean> => {
-    setSigning(true);
-    setSignError(null);
-
-    try {
-      logger.debug('✍️ Submitting signature for envelope:', { envelopeId });
-      await esignApi.submitSignature(envelopeId, request);
-      logger.debug('✅ Signature submitted successfully');
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to submit signature';
-      logger.error('❌ Sign error:', errorMessage);
-      setSignError(errorMessage);
-      return false;
-    } finally {
-      setSigning(false);
-    }
-  };
-
-  // ==================== REJECT SIGNING ====================
-
-  const rejectSigning = async (
-    envelopeId: string,
-    request: RejectSigningRequest,
-  ): Promise<boolean> => {
-    setRejecting(true);
-    setRejectError(null);
-
-    try {
-      logger.debug('❌ Rejecting signing for envelope:', { envelopeId });
-      await esignApi.rejectSigning(envelopeId, request);
-      logger.debug('✅ Rejection recorded successfully');
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to reject signing';
-      logger.error('❌ Reject error:', errorMessage);
-      setRejectError(errorMessage);
-      return false;
-    } finally {
-      setRejecting(false);
     }
   };
 
@@ -300,14 +238,6 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     sending,
     sendError,
     sendInvites,
-
-    signing,
-    signError,
-    submitSignature,
-
-    rejecting,
-    rejectError,
-    rejectSigning,
 
     savingTemplate,
     templateError,

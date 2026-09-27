@@ -308,7 +308,7 @@ describe('adoption ratchet: unvalidated body routes in auth + esign', () => {
     // A true negative: if these show up as unvalidated, the detection is wrong
     // and the floor below means nothing.
     for (const wired of [
-      'auth-routes.ts POST /login-validate',
+      'auth-routes.ts POST /login',
       'auth-routes.ts POST /password-change',
       'esign-signer-submit-routes.ts POST /signer/submit',
       'esign-signer-otp-routes.ts POST /signer/resend-otp',

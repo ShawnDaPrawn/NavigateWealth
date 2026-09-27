@@ -14,8 +14,9 @@
  * envelope) is the guard since tsc does not type-check edge code.
  */
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { belongsToFirm } from './esign-firm-scope.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { getSmsProviderStatus } from './sms-service.ts';
@@ -30,13 +31,14 @@ import {
   logAuditEvent,
 } from './esign-services.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 
 const log = createModuleLogger('esign-ops-routes');
 
 const opsRoutes = new Hono();
 
 // P5.1 — SMS provider health check (Twilio configured / noop dev mode badge).
-opsRoutes.get('/diagnostics/sms', async (c) => {
+opsRoutes.get('/diagnostics/sms', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     return c.json({ success: true, sms: getSmsProviderStatus() });
@@ -53,7 +55,7 @@ opsRoutes.get('/diagnostics/sms', async (c) => {
  * POST /maintenance/expiry-sweep
  * Run envelope expiry sweep (admin only, dry-run-first pattern §14.1)
  */
-opsRoutes.post('/maintenance/expiry-sweep', async (c) => {
+opsRoutes.post('/maintenance/expiry-sweep', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const { dryRun = true } = await c.req.json().catch(() => ({ dryRun: true }));
@@ -142,7 +144,7 @@ opsRoutes.post('/cron/expiry-sweep', requireCronAuth, async (c) => {
  * Manually trigger the escalating-reminder sweep (admin only, supports
  * dry-run-first pattern). Useful for testing new reminder configs.
  */
-opsRoutes.post('/maintenance/reminder-sweep', async (c) => {
+opsRoutes.post('/maintenance/reminder-sweep', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const { dryRun = true } = await c.req.json().catch(() => ({ dryRun: true }));
@@ -184,8 +186,9 @@ opsRoutes.post('/cron/reminder-sweep', async (c) => {
   try {
     const authHeader = c.req.header('Authorization');
     const token = authHeader?.replace('Bearer ', '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!token || token !== serviceRoleKey) {
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    // Constant-time, matching cron-auth.ts (M-1).
+    if (!token || serviceRoleKey === '' || !constantTimeEqual(token, serviceRoleKey)) {
       return c.json({ error: 'Unauthorized — CRON endpoint requires service role key' }, 401);
     }
 
@@ -220,7 +223,7 @@ opsRoutes.post('/cron/reminder-sweep', async (c) => {
  * POST /maintenance/bulk-remind
  * Send reminders to pending signers across multiple envelopes (admin only)
  */
-opsRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c) => {
+opsRoutes.post('/maintenance/bulk-remind', requireAdmin, rateLimit('SENDER_BULK'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const { envelopeIds, dryRun = true } = await c.req.json();
@@ -242,7 +245,9 @@ opsRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c) =
     for (const envelopeId of envelopeIds) {
       try {
         const envelope = await getEnvelopeDetails(envelopeId);
-        if (!envelope) {
+        // Another firm's envelope is reported exactly like an unknown one:
+        // this used to act on — and list the signers of — any id supplied.
+        if (!envelope || !belongsToFirm(ctx.user, { firm_id: envelope.firm_id ?? null })) {
           results.push({
             envelopeId,
             title: 'Unknown',
@@ -353,7 +358,7 @@ opsRoutes.post('/maintenance/bulk-remind', rateLimit('SENDER_BULK'), async (c) =
  * POST /maintenance/bulk-void
  * Void multiple envelopes at once (admin only, dry-run-first pattern)
  */
-opsRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) => {
+opsRoutes.post('/maintenance/bulk-void', requireAdmin, rateLimit('SENDER_BULK'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const { envelopeIds, reason = 'Bulk void by admin', dryRun = true } = await c.req.json();
@@ -376,7 +381,9 @@ opsRoutes.post('/maintenance/bulk-void', rateLimit('SENDER_BULK'), async (c) => 
     for (const envelopeId of envelopeIds) {
       try {
         const envelope = await getEnvelopeDetails(envelopeId);
-        if (!envelope) {
+        // Another firm's envelope is reported exactly like an unknown one:
+        // this used to void any envelope id supplied.
+        if (!envelope || !belongsToFirm(ctx.user, { firm_id: envelope.firm_id ?? null })) {
           results.push({
             envelopeId,
             title: 'Unknown',

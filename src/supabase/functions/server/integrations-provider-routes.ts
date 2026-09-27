@@ -16,7 +16,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAuth, requireAdmin } from './auth-mw.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { SaveConfigSchema } from './integrations-validation.ts';
 import type { KvProvider, KvSchema } from './integrations-types.ts';
@@ -102,7 +102,10 @@ app.get('/providers', requireAuth, async (c) => {
 });
 
 // GET /config
-app.get('/config', requireAuth, async (c) => {
+// Admin only: the firm-wide field mapping and autoPublish settings behind every
+// provider import. These were requireAuth, which any self-registered client
+// passes. The only callers are in the admin product-management module.
+app.get('/config', requireAdmin, async (c) => {
   const providerId = c.req.query('providerId');
   const categoryId = c.req.query('categoryId');
 
@@ -145,7 +148,7 @@ app.get('/config', requireAuth, async (c) => {
 });
 
 // POST /config
-app.post('/config', requireAuth, async (c) => {
+app.post('/config', requireAdmin, async (c) => {
   try {
     const body = await c.req.json();
     const parsed = SaveConfigSchema.safeParse(body);
@@ -185,7 +188,9 @@ app.post('/config', requireAuth, async (c) => {
 });
 
 // GET /template
-app.get('/template', requireAuth, async (c) => {
+// Admin only: the workbook is built from EVERY client's policies for the
+// provider and category (client ids, policy ids, values).
+app.get('/template', requireAdmin, async (c) => {
   try {
     const providerId = c.req.query('providerId');
     const categoryId = c.req.query('categoryId');

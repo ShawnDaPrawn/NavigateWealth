@@ -12,6 +12,7 @@
  */
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 import {
   processArticleNotificationJobs,
   getArticleNotificationJob,
@@ -161,9 +162,10 @@ export async function isAuthorizedPublicationsCronRequest(
   const normalizedSharedToken = (sharedToken || '').trim();
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
+  // Constant-time, matching cron-auth.ts (M-1).
   if (
-    (serviceRoleKey && normalizedAuthToken === serviceRoleKey) ||
-    (superAdminPw && normalizedAuthToken === superAdminPw)
+    (serviceRoleKey !== '' && constantTimeEqual(normalizedAuthToken, serviceRoleKey)) ||
+    (superAdminPw !== '' && constantTimeEqual(normalizedAuthToken, superAdminPw))
   ) {
     return true;
   }
@@ -174,7 +176,7 @@ export async function isAuthorizedPublicationsCronRequest(
       typeof sharedCronToken === 'string' &&
       sharedCronToken.trim().length > 0 &&
       normalizedSharedToken.length > 0 &&
-      normalizedSharedToken === sharedCronToken
+      constantTimeEqual(normalizedSharedToken, sharedCronToken)
     );
   } catch (error) {
     log.warn('Unable to load publications cron auth token from KV', {

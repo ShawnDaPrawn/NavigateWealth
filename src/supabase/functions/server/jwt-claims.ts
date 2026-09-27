@@ -78,3 +78,19 @@ export function readTokenIssuedAt(token: string | undefined): number | null {
   const iat = payload?.iat;
   return typeof iat === 'number' && Number.isFinite(iat) ? iat : null;
 }
+
+/**
+ * The GoTrue `session_id` claim, or null when it cannot be read.
+ *
+ * Identifies the SIGN-IN a token belongs to; it survives token refreshes and
+ * differs between two sign-ins to the same account. Two-factor verification is
+ * recorded against it (see `enforceAccountSecurity`), which is what stops a
+ * second sign-in — an attacker's, with a stolen password — from riding on the
+ * account holder's verification. Null means "cannot tell", and the 2FA check
+ * treats that as unverified.
+ */
+export function readTokenSessionId(token: string | undefined): string | null {
+  if (!token) return null;
+  const sessionId = decodePayload(token)?.session_id;
+  return typeof sessionId === 'string' && sessionId ? sessionId : null;
+}

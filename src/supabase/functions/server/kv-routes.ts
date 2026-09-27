@@ -45,6 +45,16 @@ const SECRET_KEY_PREFIXES = [
   'api_credentials:',
   'integration_secrets:',
   'provider_portal_credentials:',
+  // The namespaces that ACTUALLY hold credentials today. The list above was
+  // written ahead of the code, and the portal credentials landed under a
+  // different name than the one reserved for them — so insurer-portal
+  // usernames and passwords, stored in plaintext, were readable here while the
+  // reserved name guarded nothing.
+  'portal-credential:', // provider portal username + password (integrations-portal-credentials.ts)
+  'linkedin:token:', // LinkedIn OAuth access tokens (linkedin-service.ts)
+  'system:publications:cron_auth_token', // shared cron secret (publications-route-helpers.ts)
+  '2fa:', // live two-factor codes, in plaintext until used (security-2fa-routes.ts)
+  'esign:apikey:', // e-sign API key records (api-key-service.ts)
 ];
 
 function isSecretKey(key: string): boolean {

@@ -124,12 +124,6 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       // limiter as the rest of this group.
       'auth-routes.ts POST /login',
       'auth-routes.ts POST /password-reset',
-      'auth-routes.ts POST /login-failure',
-      'auth-routes.ts POST /login-success',
-      'auth-routes.ts POST /login-validate',
-      'auth-routes.ts POST /logout',
-      'auth-routes.ts POST /password-reset-request',
-      'auth-routes.ts POST /signup',
       'auth-routes.ts POST /signup-validate',
       'auth-signup.ts POST /signup',
     ],
@@ -146,8 +140,6 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'client-document-summaries-routes.ts POST /maintenance/weekly-scan',
       'client-management-routes.ts POST /cron/cleanup',
       'esign-ops-routes.ts POST /cron/expiry-sweep',
-      'esign-ops-routes.ts POST /cron/reminder-sweep',
-      'kv-cleanup-routes.ts POST /cron',
       'newsletter-studio-routes.ts POST /cron/process',
       'openclaw-routes.ts POST /events',
       'quality-issues-routes.ts POST /ingest-ci-report',
@@ -161,6 +153,13 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     reason:
       "The endpoint named by `Reporting-Endpoints` / `report-uri` in vercel.json. It CANNOT be guarded: the browser sends these itself, on public marketing pages where the visitor has no session, and it will not attach an app token. Bounded instead by what an anonymous caller can actually do — reports are deduplicated by fingerprint and the list is hard-capped at MAX_CSP_VIOLATION_ISSUES, every field is length-limited, at most MAX_REPORTS_PER_REQUEST are taken from one body, and the response is always 204 so nothing is learned from it. Nothing sensitive is retained: every URL is reduced to origin+path before storage, because a violation on the signer page would otherwise carry `/sign?token=…` — the signer's live credential — into the KV store.",
     routes: ['csp-report-routes.ts POST /'],
+  },
+  {
+    kind: 'browser-telemetry',
+    classification: 'public',
+    reason:
+      "Browser error reports from SIGNED-OUT visitors — the login page, the public site and the e-sign signer flow run with no session, and before this route every error there was dropped. Bounded the same way as the CSP endpoint: IP rate-limited (RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR), one row per fingerprint under its own KV prefix so a burst cannot evict signed-in reports, hard-capped at MAX_PUBLIC_RUNTIME_ISSUES, every field length-limited, and always 204. URLs are stripped to origin + path (plus the screen-naming `module`/`tab`/`view` params) before storage, so the signer's `?token=` credential is never retained.",
+    routes: ['quality-issues-routes.ts POST /runtime-client/public'],
   },
   {
     kind: 'lead-gen',
@@ -196,24 +195,10 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     reason:
       'Resolved through getAuthContext / signer-token validation inside the handler body, past the detector’s scan window or under an identifier it does not know.',
     routes: [
-      // Verifies the bearer token itself via `supabase.auth.getUser(token)`,
-      // enforces the shared account-security policy, then requires an
-      // admin/super_admin role off the caller's KV profile. Guarded, but by
-      // hand rather than by a middleware the detector knows.
-      //
-      // It only became visible once the detector stopped letting comments count
-      // as guards: its own docblock reads "rather than going through
-      // requireAdmin", and that phrase was masking it. A route whose protection
-      // depends on the wording of a nearby comment is classified, not trusted.
-      'auth-routes.ts GET /security-status',
       'esign-consent-routes.ts GET /consent/active',
       'esign-envelopes-routes.ts POST /verify-hash',
       'esign-routes.tsx GET /',
       'esign-routes.tsx GET /health',
-      'esign-sender-envelope-routes.ts POST /envelopes/:envelopeId/reject',
-      'esign-sender-envelope-routes.ts POST /envelopes/:envelopeId/sign',
-      'esign-sender-envelope-routes.ts POST /envelopes/:envelopeId/signers/:signerId/otp/send',
-      'esign-sender-envelope-routes.ts POST /envelopes/:envelopeId/signers/:signerId/verify',
       'esign-v1-routes.ts GET /v1/envelopes',
       'esign-v1-routes.ts GET /v1/envelopes/:id',
       'esign-v1-routes.ts GET /v1/envelopes/:id/audit',

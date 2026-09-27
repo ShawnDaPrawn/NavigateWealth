@@ -19,7 +19,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { authUsers, chat } = vi.hoisted(() => {
+const { authUsers, chat, metered } = vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = {
     env: {
       get: (key: string) => (key === 'OPENAI_API_KEY' ? 'test-openai-key' : `test-${key}`),
@@ -34,6 +34,8 @@ const { authUsers, chat } = vi.hoisted(() => {
       getUserContext: vi.fn(async () => 'context'),
       buildRuntimeContextPrompt: vi.fn(() => 'runtime prompt'),
     },
+    /** The `userId` the limiter saw on each metered request. */
+    metered: [] as Array<string | undefined>,
   };
 });
 
@@ -43,7 +45,8 @@ const { authUsers, chat } = vi.hoisted(() => {
 // are about the route's own behaviour; `ai-usage-limit.test.ts` and
 // `ai-usage-limit-coverage.test.ts` cover the limiter itself.
 vi.mock('../ai-usage-limit.ts', () => ({
-  aiUsageLimit: () => async (_c: unknown, next: () => Promise<void>) => {
+  aiUsageLimit: () => async (c: { get: (key: string) => unknown }, next: () => Promise<void>) => {
+    metered.push(c.get('userId') as string | undefined);
     await next();
   },
   chargeAiUsage: async () => null,
@@ -297,6 +300,19 @@ describe('POST /chat/stream', () => {
     );
   });
 
+  it('meters the caller per user, not only per IP', async () => {
+    // `aiUsageLimit` applies its per-user caps only when the route's auth has
+    // put `userId` on the context; this router's own gate used to set `user`
+    // alone.
+    metered.length = 0;
+    await call('/chat/stream', {
+      method: 'POST',
+      auth: asUser(CLIENT, 'client'),
+      body: JSON.stringify({ messages: [] }),
+    });
+    expect(metered).toEqual([CLIENT]);
+  });
+
   it('passes the session id through when one is given', async () => {
     await call('/chat/stream', {
       method: 'POST',
@@ -322,15 +338,11 @@ describe('POST /chat/stream', () => {
 });
 
 describe('staff opening a client conversation', () => {
-  const ELEVATED = [
-    'admin',
-    'super_admin',
-    'super-admin',
-    'compliance',
-    'compliance_officer',
-    'paraplanner',
-    'viewer',
-  ];
+  const PLATFORM_ADMINS = ['admin', 'super_admin', 'super-admin'];
+  // Personnel roles with no assignment model. They used to share the admins'
+  // "elevated" pass to every client; client-access.ts denies them until an
+  // assignment relationship exists for them.
+  const OTHER_STAFF = ['compliance', 'compliance_officer', 'paraplanner', 'viewer'];
 
   beforeEach(() => {
     seedClientProfile(CLIENT, { adviserId: ADVISER });
@@ -343,12 +355,20 @@ describe('staff opening a client conversation', () => {
     expect((await json(res)).error).toMatch(/clientUserId query parameter is required/);
   });
 
-  it.each(ELEVATED)('lets a %s open any client conversation', async (role) => {
+  it.each(PLATFORM_ADMINS)('lets a %s open any client conversation', async (role) => {
     const res = await call(`/admin/history?clientUserId=${CLIENT}`, {
       auth: asUser(`staff-${role}`, role),
     });
 
     expect(res.status).toBe(200);
+  });
+
+  it.each(OTHER_STAFF)('refuses a %s', async (role) => {
+    const res = await call(`/admin/history?clientUserId=${CLIENT}`, {
+      auth: asUser(`staff-${role}`, role),
+    });
+
+    expect(res.status).toBe(403);
   });
 
   it('lets an adviser open a client assigned to them', async () => {
@@ -368,14 +388,18 @@ describe('staff opening a client conversation', () => {
     expect((await json(res)).error).toMatch(/only view Ask Vasco for clients assigned to you/);
   });
 
-  it('reads the assignment from the nested personal-information block too', async () => {
+  it('takes the assignment from the shared resolver, not a second copy of the rules', async () => {
+    // This gate used to read its own places for the assignment, including the
+    // nested personal-information block the shared resolver does not read
+    // (no production profile relies on it: 0 of 201 on 2026-09-25). One
+    // policy decides, so a field only this route consulted grants nothing.
     seedClientProfile(CLIENT, { personalInformation: { adviserId: ADVISER } });
 
     const res = await call(`/admin/history?clientUserId=${CLIENT}`, {
       auth: asUser(ADVISER, 'adviser'),
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 
   it('refuses an adviser a client with no assignment recorded', async () => {

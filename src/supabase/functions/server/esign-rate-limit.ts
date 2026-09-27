@@ -18,6 +18,7 @@
 import type { MiddlewareHandler } from 'npm:hono';
 import { checkRateLimit, type RateLimitConfig } from './rateLimiter.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const log = createModuleLogger('esign-rate-limit');
 
@@ -76,8 +77,9 @@ function defaultIdentifier(c: {
 }): string {
   const token = c.req.param('token')! || c.req.header('x-signer-token');
   if (token) return `tkn:${token.slice(0, 32)}`;
-  const ip =
-    c.req.header('x-forwarded-for')?.split(',')[0].trim() || c.req.header('x-real-ip') || 'noip';
+  // Cloudflare's CF-Connecting-IP first: the first X-Forwarded-For entry is
+  // whatever the caller sent, so keying on it let one client rotate buckets.
+  const ip = extractClientIp((n) => c.req.header(n)) || 'noip';
   return `ip:${ip}`;
 }
 

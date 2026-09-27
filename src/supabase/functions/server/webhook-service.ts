@@ -480,10 +480,14 @@ export async function listDeadLetters(firmId?: string): Promise<WebhookDelivery[
 /**
  * Re-queue a delivery for another attempt. Valid for `failed` or `dead`
  * deliveries; no-op for `pending` / `delivered`.
+ *
+ * `firmId` is the caller's firm. A delivery that belongs to another firm is
+ * reported as absent and left untouched: the route used to check ownership on
+ * the value this returned, which was AFTER the write had re-queued it.
  */
-export async function replayDelivery(id: string): Promise<WebhookDelivery | null> {
+export async function replayDelivery(id: string, firmId: string): Promise<WebhookDelivery | null> {
   const delivery = (await kv.get(KEYS.deliveryById(id))) as WebhookDelivery | null;
-  if (!delivery) return null;
+  if (!delivery || delivery.firm_id !== firmId) return null;
   if (delivery.status === 'pending' || delivery.status === 'delivered') return delivery;
   delivery.status = 'pending';
   delivery.attempts = 0;

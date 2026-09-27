@@ -11,8 +11,8 @@
  * granted admin on it. `user_metadata` is CLIENT-EDITABLE — any signed-in user
  * can call `supabase.auth.updateUser({ data: { role: 'admin' } })` — so that
  * check could be passed by anyone with an account. `resolveTrustedRole`
- * (constants.ts:132-135) refuses precisely this: `admin` and `super_admin` are
- * in PRIVILEGED_ROLES and are never honoured from user_metadata.
+ * (constants.ts) refuses precisely this: it never reads a role from
+ * user_metadata at all.
  *
  * The canonical path (`auth-mw.ts`) also applies `enforceAccountSecurity`, so a
  * deleted, suspended or stale-2FA account is rejected. Every hand-rolled copy

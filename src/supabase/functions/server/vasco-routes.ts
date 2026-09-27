@@ -58,6 +58,7 @@ import {
   getAnalyticsSummary,
 } from './vasco-analytics-service.ts';
 import { corsResponseHeaders } from './cors-origin.ts';
+import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
 const app = new Hono();
 const log = createModuleLogger('vasco-routes');
@@ -88,11 +89,9 @@ app.post('/chat', asyncHandler(async (c) => {
     );
   }
 
-  // Extract IP for rate limiting
-  const ip =
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
-    c.req.header('x-real-ip') ||
-    'unknown';
+  // Extract IP for rate limiting — Cloudflare's CF-Connecting-IP first; the
+  // first X-Forwarded-For entry is caller-controlled.
+  const ip = extractClientIp((n) => c.req.header(n)) || 'unknown';
 
   // Parse request body
   const body = await c.req.json();
@@ -218,11 +217,9 @@ app.post('/chat/stream', asyncHandler(async (c) => {
     );
   }
 
-  // Extract IP for rate limiting
-  const ip =
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
-    c.req.header('x-real-ip') ||
-    'unknown';
+  // Extract IP for rate limiting — Cloudflare's CF-Connecting-IP first; the
+  // first X-Forwarded-For entry is caller-controlled.
+  const ip = extractClientIp((n) => c.req.header(n)) || 'unknown';
 
   // Parse request body
   const body = await c.req.json();

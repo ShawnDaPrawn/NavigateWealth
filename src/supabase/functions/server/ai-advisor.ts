@@ -10,8 +10,9 @@ import * as kv from './kv_store.tsx';
 import { ensureSeeded, getActivePrompt } from './prompt-service.ts';
 import { getAuthContext, AuthError, enforceAccountSecurity } from './auth-mw.ts';
 import { aiUsageLimit } from './ai-usage-limit.ts';
-import { readTokenIssuedAt } from './jwt-claims.ts';
+import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import { PERSONNEL_ROLES } from './constants.ts';
+import { canAccessClientAs, isPlatformAdminRole } from './client-access.ts';
 import { PROFILE_KEY, getOpenAIKey, getSupabase } from './ai-advisor-shared.ts';
 import {
   clearAdvisorSessionMessages,
@@ -68,7 +69,7 @@ async function requireAuth(c: Context, next: Next) {
     // ai-intelligence.tsx. Without it a suspended account keeps talking to the
     // advisor until its token expires on its own.
     try {
-      await enforceAccountSecurity(user.id, readTokenIssuedAt(token));
+      await enforceAccountSecurity(user.id, readTokenIssuedAt(token), readTokenSessionId(token));
     } catch (securityError) {
       if (securityError instanceof AuthError) {
         return c.json(
@@ -79,8 +80,11 @@ async function requireAuth(c: Context, next: Next) {
       throw securityError;
     }
 
-    // Attach user info to context
+    // Attach user info to context. `userId` is what `aiUsageLimit` meters by:
+    // without it the per-user burst and daily caps were skipped and only the
+    // per-IP cap applied.
     c.set('user', user);
+    c.set('userId', user.id);
     await next();
   } catch (error) {
     log.error('Auth middleware error:', error);
@@ -88,16 +92,15 @@ async function requireAuth(c: Context, next: Next) {
   }
 }
 
-function getAdviserIdFromClientProfile(profile: unknown): string | null {
-  if (!isRecord(profile)) return null;
-  const pi = isRecord(profile.personalInformation) ? profile.personalInformation : null;
-  const raw = profile.adviserId ?? pi?.adviserId;
-  return typeof raw === 'string' && raw.trim() ? raw : null;
-}
-
 /**
  * Staff may open the client's portal Ask Vasco (same KV conversation) for oversight.
- * Elevated roles see any client; advisers only their assigned book.
+ *
+ * Platform admins see any client; an adviser sees only a client assigned to
+ * them, resolved SERVER-SIDE by the shared policy in client-access.ts. This
+ * used to wave through compliance, paraplanner and viewer for every client,
+ * and took an adviser's assignment from `profile.adviserId` — a field the
+ * client can edit — so either path read, injected into or deleted any
+ * client's AI conversations.
  */
 async function assertCanProxyClientVasco(
   c: Context,
@@ -111,29 +114,17 @@ async function assertCanProxyClientVasco(
     return c.json({ error: 'Cannot open Ask Vasco for staff accounts' }, 403);
   }
 
-  const elevated = new Set([
-    'admin',
-    'super_admin',
-    'super-admin',
-    'compliance',
-    'compliance_officer',
-    'paraplanner',
-    'viewer',
-  ]);
-  if (elevated.has(staffRole)) return null;
-
-  if (staffRole === 'adviser') {
-    const adviserId = getAdviserIdFromClientProfile(profile);
-    if (adviserId !== staffUserId) {
-      return c.json(
-        { error: 'Forbidden: you can only view Ask Vasco for clients assigned to you' },
-        403,
-      );
-    }
-    return null;
+  // Staff only — `canAccessClientAs` also admits a client acting for
+  // themself, which is not what this proxy is for.
+  if (!isPlatformAdminRole(staffRole) && staffRole !== 'adviser') {
+    return c.json({ error: 'Forbidden: insufficient permissions' }, 403);
   }
+  if (await canAccessClientAs({ id: staffUserId, role: staffRole }, clientUserId)) return null;
 
-  return c.json({ error: 'Forbidden: insufficient permissions' }, 403);
+  return c.json(
+    { error: 'Forbidden: you can only view Ask Vasco for clients assigned to you' },
+    403,
+  );
 }
 
 app.get('/status', requireAuth, (c) => {

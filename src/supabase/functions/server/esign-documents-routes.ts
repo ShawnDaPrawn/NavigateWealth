@@ -12,7 +12,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import type { EsignEnvelope, EsignField, EsignSigner } from './esign-types.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
@@ -64,7 +64,7 @@ const log = createModuleLogger('esign-documents-routes');
 
 const documentsRoutes = new Hono();
 
-documentsRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
+documentsRoutes.get('/envelopes/:envelopeId/manifest', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
@@ -92,6 +92,7 @@ documentsRoutes.get('/envelopes/:envelopeId/manifest', async (c) => {
 
 documentsRoutes.put(
   '/envelopes/:envelopeId/manifest',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -147,7 +148,7 @@ documentsRoutes.put(
   },
 );
 
-documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
+documentsRoutes.delete('/envelopes/:envelopeId/manifest', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
@@ -198,6 +199,7 @@ documentsRoutes.delete('/envelopes/:envelopeId/manifest', async (c) => {
  */
 documentsRoutes.post(
   '/envelopes/:envelopeId/materialize-preview',
+  requireAdmin,
   rateLimit('SENDER_MUTATE'),
   async (c) => {
     try {
@@ -271,7 +273,7 @@ documentsRoutes.post(
  * synthesises a single-doc list for legacy envelopes so consumers
  * never have to special-case "old data".
  */
-documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
+documentsRoutes.get('/envelopes/:envelopeId/documents', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
@@ -308,6 +310,7 @@ documentsRoutes.get('/envelopes/:envelopeId/documents', async (c) => {
  */
 documentsRoutes.post(
   '/envelopes/:envelopeId/documents',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -406,7 +409,7 @@ documentsRoutes.post(
  * Remove a document from a draft envelope. Refuses to remove the last
  * document (every envelope must have at least one).
  */
-documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c) => {
+documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
@@ -455,7 +458,7 @@ documentsRoutes.delete('/envelopes/:envelopeId/documents/:documentId', async (c)
  * are appended to the end so a stale client cannot accidentally drop
  * documents.
  */
-documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
+documentsRoutes.put('/envelopes/:envelopeId/documents/order', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const envelopeId = c.req.param('envelopeId')!;
@@ -498,6 +501,7 @@ documentsRoutes.put('/envelopes/:envelopeId/documents/order', async (c) => {
  */
 documentsRoutes.post(
   '/envelopes/:envelopeId/invites',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -519,6 +523,14 @@ documentsRoutes.post(
 
       if (!envelope) {
         return c.json({ error: 'Envelope not found' }, 404);
+      }
+      // The only mutation in this file that checked neither: whose envelope it
+      // is, and whether it has already gone out. Without them a sender could
+      // add signers to another firm's envelope (and be emailed their signing
+      // links), or to an envelope already in flight.
+      assertEnvelopeOwnership(user, envelopeId, envelope as { firm_id?: string | null });
+      if (envelope.status !== 'draft') {
+        return c.json({ error: 'Invites can only be sent while the envelope is a draft' }, 409);
       }
 
       // Determine signing mode: sequential (default) or parallel
@@ -847,6 +859,8 @@ documentsRoutes.post(
         signingMode: effectiveMode,
       });
     } catch (error: unknown) {
+      const scoped = firmScopeResponse(c, error);
+      if (scoped) return scoped;
       log.error('❌ Send invites error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
       return new Response(

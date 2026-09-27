@@ -526,3 +526,48 @@ describe('GET /audit/permissions/:personnelId', () => {
     expect(body.data).toEqual([]);
   });
 });
+
+describe("GET /:id/clients — an adviser's book", () => {
+  const seedBook = () => {
+    kvStore.set('user_profile:client-a:personal_info', {
+      userId: 'client-a',
+      adviserId: 'adviser-1',
+      personalInformation: { firstName: 'Ann', lastName: 'Client', email: 'ann@example.com' },
+    });
+  };
+
+  it.each([
+    // The guard used to refuse ONLY a mismatched adviser, so each of these
+    // could list any adviser's clients by name and email.
+    ['a plain client', 'client'],
+    ['a paraplanner', 'paraplanner'],
+    ['a viewer', 'viewer'],
+    ['an unrecognised role', 'worker'],
+  ])('refuses %s', async (_label, role) => {
+    seedBook();
+    const res = await call('/adviser-1/clients', { auth: asUser('someone', role) });
+    expect(res.status).toBe(403);
+    expect(JSON.stringify(await json(res))).not.toContain('ann@example.com');
+  });
+
+  it("refuses an adviser asking for ANOTHER adviser's book with a 403, not a 500", async () => {
+    seedBook();
+    const res = await call('/adviser-1/clients', { auth: asUser('adviser-2', 'adviser') });
+    expect(res.status).toBe(403);
+  });
+
+  it('lets an adviser see their own book', async () => {
+    seedBook();
+    const res = await call('/adviser-1/clients', { auth: asUser('adviser-1', 'adviser') });
+    expect(res.status).toBe(200);
+    expect((await json(res)).data).toEqual([
+      expect.objectContaining({ id: 'client-a', email: 'ann@example.com' }),
+    ]);
+  });
+
+  it.each(['admin', 'compliance'])('lets %s see any book', async (role) => {
+    seedBook();
+    const res = await call('/adviser-1/clients', { auth: asUser('staff-1', role) });
+    expect(res.status).toBe(200);
+  });
+});

@@ -9,11 +9,12 @@
  */
 
 import { Hono } from 'npm:hono';
-import { requireAuth, requireAdmin } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { runKvCleanup, getLastCleanupRun } from './kv-cleanup-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { constantTimeEqual } from './crypto-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('kv-cleanup');
@@ -30,7 +31,8 @@ app.get('/', (c) => c.json({ service: 'kv-cleanup', status: 'active' }));
  */
 app.get(
   '/status',
-  requireAuth,
+  // Admin only: the only caller is the admin dashboard's maintenance hook.
+  requireAdmin,
   asyncHandler(async (c) => {
     const lastRun = await getLastCleanupRun();
     const today = new Date().toISOString().slice(0, 10);
@@ -132,10 +134,11 @@ app.post(
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
 
-    if (
-      (!serviceRoleKey || token !== serviceRoleKey) &&
-      (!superAdminPw || token !== superAdminPw)
-    ) {
+    // Constant-time, matching cron-auth.ts (M-1).
+    const authorized =
+      (serviceRoleKey !== '' && constantTimeEqual(token, serviceRoleKey)) ||
+      (superAdminPw !== '' && constantTimeEqual(token, superAdminPw));
+    if (!authorized) {
       return c.json({ error: 'Unauthorized — cron auth required' }, 401);
     }
 

@@ -68,27 +68,26 @@ vi.mock('../stderr-logger.ts', () => ({
   }),
 }));
 
-// ── Auth middleware: enforce the header, otherwise pass a fake admin user ────
-vi.mock('../auth-mw.ts', () => ({
-  requireAuth: async (c: any, next: any) => {
+// ── Auth middleware: enforce the header; the role comes from `x-test-role` ───
+// (admin unless a test says otherwise). requireAuth admits any role and
+// requireAdmin only admins — so a route that should be admin-only but carries
+// requireAuth lets a client through, and the admin-only block below fails.
+vi.mock('../auth-mw.ts', () => {
+  const gate = (adminOnly: boolean) => async (c: any, next: any) => {
     if (!c.req.header('Authorization')) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
-    c.set('user', { id: 'test-user', email: 'admin@test.co' });
-    c.set('userId', 'test-user');
-    c.set('userRole', 'admin');
-    await next();
-  },
-  requireAdmin: async (c: any, next: any) => {
-    if (!c.req.header('Authorization')) {
-      return c.json({ error: 'Unauthorized' }, 401);
+    const role = c.req.header('x-test-role') ?? 'admin';
+    if (adminOnly && role !== 'admin' && role !== 'super_admin') {
+      return c.json({ error: 'Forbidden: Admin access required' }, 403);
     }
     c.set('user', { id: 'test-user', email: 'admin@test.co' });
     c.set('userId', 'test-user');
-    c.set('userRole', 'admin');
+    c.set('userRole', role);
     await next();
-  },
-}));
+  };
+  return { requireAuth: gate(false), requireAdmin: gate(true) };
+});
 
 // ── Supabase client stub ─────────────────────────────────────────────────────
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
@@ -180,6 +179,26 @@ beforeEach(() => {
 });
 
 describe('integrations.tsx route contracts', () => {
+  describe('admin-only provider routes refuse a signed-in client', () => {
+    // GET /template builds its workbook from EVERY client's policies for the
+    // provider; /config is the firm-wide import mapping. Both were requireAuth.
+    const CLIENT = { ...AUTH, 'x-test-role': 'client', 'Content-Type': 'application/json' };
+    it.each([
+      ['GET', '/template?providerId=p1&categoryId=risk'],
+      ['GET', '/config?providerId=p1&categoryId=risk'],
+      ['POST', '/config'],
+    ])('%s %s', async (method, path) => {
+      const res = await integrationsApp.request(path, {
+        method,
+        headers: CLIENT,
+        ...(method === 'POST'
+          ? { body: JSON.stringify({ providerId: 'p1', categoryId: 'risk' }) }
+          : {}),
+      });
+      expect(res.status).toBe(403);
+    });
+  });
+
   it('GET / returns the service status envelope (no auth)', async () => {
     const res = await integrationsApp.request('/');
     expect(res.status).toBe(200);

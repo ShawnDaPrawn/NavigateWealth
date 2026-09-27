@@ -133,6 +133,7 @@ async function cleanRateLimits(dryRun: boolean): Promise<CategoryResult> {
     // written and never swept, which is the leak the prefix contract in
     // public-form-rate-limit.ts warns about.
     ...(await fetchKeyValuesByPrefix('rate_limit:csp-report:')),
+    ...(await fetchKeyValuesByPrefix('rate_limit:runtime-client:')),
     ...(await fetchKeyValuesByPrefix('rate_limit:newsletter-unsubscribe:')),
   ];
 

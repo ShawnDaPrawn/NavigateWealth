@@ -23,9 +23,6 @@ export {
   useSendInvites,
   useVoidEnvelope,
   useSaveAsTemplate,
-  useSendOTP,
-  useSubmitSignature,
-  useRejectSigning,
 } from './useEnvelopeMutations';
 
 // Legacy hooks (kept for backward compatibility)

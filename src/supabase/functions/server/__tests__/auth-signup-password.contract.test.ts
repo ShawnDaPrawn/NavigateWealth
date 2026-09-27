@@ -2,11 +2,10 @@
  * `POST /auth-signup/signup` — the signup route that is actually reachable.
  * =========================================================================
  *
- * There are two signup routes and, until this suite, the wrong one was guarded.
- * `POST /auth/signup` in auth-routes.ts has validated password strength for a
- * long time, but nothing calls it — `auth-validation.ts` says so in a comment:
- * "the signup route that got a schema in B2 was the one nobody uses, and the
- * live one had none. The gate was on the wrong door."
+ * There used to be two signup routes and, until this suite, the wrong one was
+ * guarded: the schema and strength check sat on `POST /auth/signup` in
+ * auth-routes.ts, which nothing called (and which has since been removed — it
+ * created PRE-VERIFIED accounts for any address). The live one had none.
  *
  * SignupPage.tsx and authService.ts both post to `/auth-signup/signup`, and here
  * the password went straight into `admin.createUser`. `PublicSignupSchema` asks

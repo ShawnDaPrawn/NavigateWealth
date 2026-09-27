@@ -10,6 +10,7 @@ import {
 } from './advice-engine-roa-conversation.ts';
 import { buildClientContext } from './advice-engine-roa-service-helpers.ts';
 import { ClientIdParamSchema } from './advice-engine-validation.ts';
+import { requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
 const roaService = new AdviceEngineRoAService();
@@ -40,6 +41,46 @@ function canAccessRoADraft(
   return draft.adviserId === userId || draft.createdBy === userId || draft.updatedBy === userId;
 }
 
+/**
+ * Advisers reach a client's RoA context and evidence only for clients assigned
+ * to them — the same rule every FNA module applies (`client-access.ts`).
+ * Platform admins and the RoA review roles (compliance, paraplanner) keep
+ * cross-client access; those roles can only be granted through `app_metadata`
+ * now that `resolveTrustedRole` ignores user_metadata. Returns a 403 response,
+ * or null to proceed.
+ */
+async function requireAdviserClientScope(c: any, clientId: string): Promise<Response | null> {
+  if ((c.get('userRole') as string | undefined) !== 'adviser') return null;
+  return requireClientAccess(c, clientId);
+}
+
+/**
+ * The draft fields a request body may write. Lifecycle and provenance —
+ * `status`, `lockedAt`, `finalisedAt`, `finalisedBy` and the captured
+ * `clientSnapshot` — are set by the server (context capture, /submit,
+ * /finalise), and `saveDraft` used to take them from the body: a caller could
+ * forge a finalised, locked Record of Advice or substitute the client facts it
+ * records. The SPA's autosave sends the whole draft back; the stored values
+ * are kept.
+ */
+function editableDraftFields(body: unknown): Record<string, unknown> {
+  const {
+    status: _status,
+    lockedAt: _lockedAt,
+    finalisedAt: _finalisedAt,
+    finalisedBy: _finalisedBy,
+    clientSnapshot: _clientSnapshot,
+    ...editable
+  } = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  return editable;
+}
+
+/** Scope a client named in the BODY, as the path-param routes already are. */
+async function requireBodyClientScope(c: any, clientId: unknown): Promise<Response | null> {
+  if (typeof clientId !== 'string' || !clientId) return null; // no client chosen yet
+  return requireAdviserClientScope(c, clientId);
+}
+
 function forbiddenRoADraftResponse(c: any) {
   return c.json(
     { error: 'Forbidden: RoA draft is not visible to this user', code: 'FORBIDDEN_ROA_DRAFT' },
@@ -61,6 +102,8 @@ app.get(
     }
 
     const { clientId } = ClientIdParamSchema.parse(c.req.param());
+    const outOfScope = await requireAdviserClientScope(c, clientId);
+    if (outOfScope) return outOfScope;
     const context = await buildClientContext(
       clientId,
       c.get('user') as { id: string; email?: string },
@@ -252,7 +295,10 @@ app.get(
       return c.json({ error: 'Forbidden: Advice access required', code: 'FORBIDDEN_ADVICE' }, 403);
     }
 
-    const files = await roaService.listClientFiles(c.req.param('clientId')!);
+    const clientId = c.req.param('clientId')!;
+    const outOfScope = await requireAdviserClientScope(c, clientId);
+    if (outOfScope) return outOfScope;
+    const files = await roaService.listClientFiles(clientId);
     return c.json({ files });
   }),
 );
@@ -267,7 +313,12 @@ app.post(
     }
 
     const userId = c.get('userId') as string;
-    const body = await c.req.json();
+    const body = editableDraftFields(await c.req.json());
+    // `saveDraft` builds the draft's client context from `body.clientId`, so an
+    // adviser naming a client who is not theirs would read that client's
+    // full context through the snapshot.
+    const outOfScope = await requireBodyClientScope(c, body.clientId);
+    if (outOfScope) return outOfScope;
     const draft = await roaService.saveDraft(
       { ...body, adviserId: userId },
       c.get('user') as { id: string; email?: string },
@@ -309,7 +360,9 @@ app.put(
       return forbiddenRoADraftResponse(c);
     }
 
-    const body = await c.req.json();
+    const body = editableDraftFields(await c.req.json());
+    const outOfScope = await requireBodyClientScope(c, body.clientId);
+    if (outOfScope) return outOfScope;
     const draft = await roaService.saveDraft(
       { ...body, id: draftId, adviserId: existingDraft.adviserId },
       c.get('user') as { id: string; email?: string },

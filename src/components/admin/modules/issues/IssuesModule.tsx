@@ -24,6 +24,7 @@ import {
   QUALITY_ISSUE_SOURCES,
   recommendQualityIssueActions,
 } from '../../../../shared/quality/qualityIssues';
+import { describeStoredIssue } from '../../../../shared/quality/issueLabels';
 import { pendingCountsKeys } from '../../../../utils/queryKeys';
 import type {
   QualityIssueCategory,
@@ -45,6 +46,7 @@ import {
 } from './issuePresentation';
 import {
   IssueDetails,
+  IssueDiagnosis,
   IssueLocation,
   IssueSignalBadges,
   WorkflowBadge,
@@ -472,13 +474,17 @@ export function IssuesModule() {
                       </Badge>
                       <IssueSignalBadges issue={selectedIssue} />
                     </div>
-                    <SheetTitle>{selectedIssue.title}</SheetTitle>
-                    <SheetDescription>{selectedIssue.message}</SheetDescription>
+                    <SheetTitle>{describeStoredIssue(selectedIssue).title}</SheetTitle>
+                    <SheetDescription className="line-clamp-3">
+                      {describeStoredIssue(selectedIssue).text}
+                    </SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
 
               <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+                <IssueDiagnosis issue={selectedIssue} />
+
                 <section className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>

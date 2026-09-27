@@ -19,8 +19,6 @@ import { useEnvelopeActions } from '../useEnvelopeActions';
 
 const mockUploadDocument = vi.fn();
 const mockSendInvites = vi.fn();
-const mockSubmitSignature = vi.fn();
-const mockRejectSigning = vi.fn();
 const mockSaveAsTemplate = vi.fn();
 const mockSaveFields = vi.fn();
 const mockDeleteEnvelope = vi.fn();
@@ -31,8 +29,6 @@ vi.mock('../../api', () => ({
   esignApi: {
     uploadDocument: (...args: unknown[]) => mockUploadDocument(...args),
     sendInvites: (...args: unknown[]) => mockSendInvites(...args),
-    submitSignature: (...args: unknown[]) => mockSubmitSignature(...args),
-    rejectSigning: (...args: unknown[]) => mockRejectSigning(...args),
     saveAsTemplate: (...args: unknown[]) => mockSaveAsTemplate(...args),
     saveFields: (...args: unknown[]) => mockSaveFields(...args),
     deleteEnvelope: (...args: unknown[]) => mockDeleteEnvelope(...args),
@@ -96,8 +92,6 @@ describe('useEnvelopeActions – initial state', () => {
     const { result } = renderHook(() => useEnvelopeActions());
     expect(result.current.uploading).toBe(false);
     expect(result.current.sending).toBe(false);
-    expect(result.current.signing).toBe(false);
-    expect(result.current.rejecting).toBe(false);
     expect(result.current.savingTemplate).toBe(false);
     expect(result.current.savingFields).toBe(false);
     expect(result.current.deleting).toBe(false);
@@ -109,8 +103,6 @@ describe('useEnvelopeActions – initial state', () => {
     const { result } = renderHook(() => useEnvelopeActions());
     expect(result.current.uploadError).toBeNull();
     expect(result.current.sendError).toBeNull();
-    expect(result.current.signError).toBeNull();
-    expect(result.current.rejectError).toBeNull();
     expect(result.current.templateError).toBeNull();
     expect(result.current.saveFieldsError).toBeNull();
     expect(result.current.deleteError).toBeNull();
@@ -121,8 +113,6 @@ describe('useEnvelopeActions – initial state', () => {
     const { result } = renderHook(() => useEnvelopeActions());
     expect(typeof result.current.uploadDocument).toBe('function');
     expect(typeof result.current.sendInvites).toBe('function');
-    expect(typeof result.current.submitSignature).toBe('function');
-    expect(typeof result.current.rejectSigning).toBe('function');
     expect(typeof result.current.saveAsTemplate).toBe('function');
     expect(typeof result.current.saveFields).toBe('function');
     expect(typeof result.current.deleteEnvelope).toBe('function');
@@ -272,96 +262,6 @@ describe('sendInvites', () => {
     expect(returned).toBe(false);
     expect(result.current.sendError).toBe('Send failed');
     expect(result.current.sending).toBe(false);
-  });
-});
-
-// ============================================================================
-// submitSignature
-// ============================================================================
-
-describe('submitSignature', () => {
-  const req = { signerId: 'signer-1', consentAccepted: true };
-
-  it('returns true on success', async () => {
-    mockSubmitSignature.mockResolvedValue({});
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    let returned: unknown;
-    await act(async () => {
-      returned = await result.current.submitSignature('env-1', req);
-    });
-
-    expect(returned).toBe(true);
-  });
-
-  it('clears loading state after success', async () => {
-    mockSubmitSignature.mockResolvedValue({});
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    await act(async () => {
-      await result.current.submitSignature('env-1', req);
-    });
-
-    expect(result.current.signing).toBe(false);
-  });
-
-  it('returns false and sets signError on failure', async () => {
-    mockSubmitSignature.mockRejectedValue(new Error('Sign failed'));
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    let returned: unknown;
-    await act(async () => {
-      returned = await result.current.submitSignature('env-1', req);
-    });
-
-    expect(returned).toBe(false);
-    expect(result.current.signError).toBe('Sign failed');
-    expect(result.current.signing).toBe(false);
-  });
-});
-
-// ============================================================================
-// rejectSigning
-// ============================================================================
-
-describe('rejectSigning', () => {
-  const req = { signerId: 'signer-1', reason: 'Not acceptable' };
-
-  it('returns true on success', async () => {
-    mockRejectSigning.mockResolvedValue({});
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    let returned: unknown;
-    await act(async () => {
-      returned = await result.current.rejectSigning('env-1', req);
-    });
-
-    expect(returned).toBe(true);
-  });
-
-  it('clears loading state after success', async () => {
-    mockRejectSigning.mockResolvedValue({});
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    await act(async () => {
-      await result.current.rejectSigning('env-1', req);
-    });
-
-    expect(result.current.rejecting).toBe(false);
-  });
-
-  it('returns false and sets rejectError on failure', async () => {
-    mockRejectSigning.mockRejectedValue(new Error('Reject failed'));
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    let returned: unknown;
-    await act(async () => {
-      returned = await result.current.rejectSigning('env-1', req);
-    });
-
-    expect(returned).toBe(false);
-    expect(result.current.rejectError).toBe('Reject failed');
-    expect(result.current.rejecting).toBe(false);
   });
 });
 

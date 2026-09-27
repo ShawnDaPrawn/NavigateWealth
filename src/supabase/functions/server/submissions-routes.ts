@@ -13,12 +13,19 @@
  * Per §4.2: routes are thin dispatchers — they parse input, call the
  * service, and return responses. Validation schemas live in
  * submissions-validation.ts.
+ *
+ * ACCESS: `POST /` is public (website forms). Every other route is
+ * `requireAdmin`. They used to be `requireAuth`, which any self-registered
+ * client passes — enough to read every lead the website had collected (names,
+ * emails, phone numbers, messages, IP addresses), edit or delete them, and send
+ * Navigate Wealth-branded "invitation" email to any address through /invite.
+ * The admin panel, the only caller, is admin and super_admin only.
  */
 
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { submissionsService } from './submissions-service.ts';
-import { requireAuth } from './auth-mw.ts';
+import { requireAdmin } from './auth-mw.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -47,7 +54,7 @@ const app = new Hono();
 // Registered before /:id to prevent path collision (§14.2).
 app.post(
   '/invite',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const body = await c.req.json();
 
@@ -121,7 +128,7 @@ app.post(
 // List all submissions with optional ?type= and ?status= filters
 app.get(
   '/',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const rawQuery = {
       type: c.req.query('type'),
@@ -153,7 +160,7 @@ app.get(
 // Registered before /:id to prevent collision
 app.get(
   '/count/new',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const count = await submissionsService.countNew();
     return c.json({ success: true, count });
@@ -163,7 +170,7 @@ app.get(
 // ── GET /submissions/:id ───────────────────────────────────────────────────────
 app.get(
   '/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
@@ -177,9 +184,10 @@ app.get(
 
 // ── POST /submissions ──────────────────────────────────────────────────────────
 // Create a new submission — called by source forms on the website.
-// This endpoint is intentionally public (no requireAuth) so website
-// forms can POST without a session. The auth check at the admin UI
-// layer ensures only authenticated admins can read/manage submissions.
+// This endpoint is intentionally public (no session) so website forms can
+// POST without one. Reading and managing submissions is enforced HERE, by
+// requireAdmin on every other route — not by the admin UI, which a caller
+// can simply skip.
 //
 // Hardened with:
 //   - Zod schema validation
@@ -292,7 +300,7 @@ app.post(
 // Update status, notes, assignedTo, or merge into payload
 app.patch(
   '/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     if (!id) return c.json({ success: false, error: 'Missing id' }, 400);
@@ -323,7 +331,7 @@ app.patch(
 // Hard delete — admin only
 app.delete(
   '/:id',
-  requireAuth,
+  requireAdmin,
   asyncHandler(async (c) => {
     const id = c.req.param('id')!;
     if (!id) return c.json({ success: false, error: 'Missing id' }, 400);

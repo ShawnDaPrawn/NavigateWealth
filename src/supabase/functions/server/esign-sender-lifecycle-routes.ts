@@ -1,10 +1,14 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { requireIdempotency } from './idempotency.ts';
-import { getRequestMetadata, resolveFirmId } from './esign-route-helpers.ts';
+import {
+  getRequestMetadata,
+  requireOwnedEnvelope,
+  firmScopeResponse,
+} from './esign-route-helpers.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import {
   getEnvelopeDetails,
@@ -37,15 +41,16 @@ const app = new Hono();
  * Completed, voided, or partially-signed (any signer has signed) envelopes
  * cannot be discarded — use void/recall for those.
  */
-app.delete('/envelopes/:envelopeId', async (c) => {
+app.delete('/envelopes/:envelopeId', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
     const user = ctx.user;
     const envelopeId = c.req.param('envelopeId')!;
 
-    // Get envelope details
-    const envelope = await getEnvelopeDetails(envelopeId);
+    // Ownership first (S6): nothing about another firm's envelope, not even
+    // its status, is answered before this.
+    const envelope = await requireOwnedEnvelope(user, envelopeId);
 
     if (!envelope) {
       // Envelope already deleted or not found, treat as success (idempotency)
@@ -93,12 +98,9 @@ app.delete('/envelopes/:envelopeId', async (c) => {
       );
     }
 
-    // P6.9 — firm scope check before any mutating action.
-    const callerFirm = resolveFirmId(user);
-    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
-    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
+    // (The P6.9 firm check that used to sit here let an envelope with no
+    // firm_id through for anyone — the 'standalone' shortcut. Ownership is now
+    // established by requireOwnedEnvelope above, which denies that case.)
 
     const wasSent = envelope.status === 'sent' || envelope.status === 'viewed';
 
@@ -186,6 +188,8 @@ app.delete('/envelopes/:envelopeId', async (c) => {
       notifiedSigners: wasSent ? signers.length : 0,
     });
   } catch (error: unknown) {
+    const scoped = firmScopeResponse(c, error);
+    if (scoped) return scoped;
     log.error('Delete envelope error:', error);
     const status = error instanceof AuthError ? error.statusCode : 500;
     return new Response(
@@ -203,6 +207,7 @@ app.delete('/envelopes/:envelopeId', async (c) => {
  */
 app.post(
   '/envelopes/:envelopeId/recall',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -214,8 +219,8 @@ app.post(
       const body = await c.req.json();
       const { reason } = body;
 
-      // Get envelope details
-      const envelope = await getEnvelopeDetails(envelopeId);
+      // Ownership first (S6). Recall and remind checked none at all.
+      const envelope = await requireOwnedEnvelope(user, envelopeId);
 
       if (!envelope) {
         return c.json({ error: 'Envelope not found' }, 404);
@@ -331,6 +336,8 @@ app.post(
         envelope: await getEnvelopeDetails(envelopeId),
       });
     } catch (error: unknown) {
+      const scoped = firmScopeResponse(c, error);
+      if (scoped) return scoped;
       log.error('❌ Recall envelope error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
       return new Response(
@@ -349,6 +356,7 @@ app.post(
  */
 app.post(
   '/envelopes/:envelopeId/remind',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -358,8 +366,8 @@ app.post(
       const user = ctx.user;
       const envelopeId = c.req.param('envelopeId')!;
 
-      // Get envelope details
-      const envelope = await getEnvelopeDetails(envelopeId);
+      // Ownership first (S6). Recall and remind checked none at all.
+      const envelope = await requireOwnedEnvelope(user, envelopeId);
 
       if (!envelope) {
         return c.json({ error: 'Envelope not found' }, 404);
@@ -444,6 +452,8 @@ app.post(
         totalReminders: remindersSent.length,
       });
     } catch (error: unknown) {
+      const scoped = firmScopeResponse(c, error);
+      if (scoped) return scoped;
       log.error('❌ Send reminder error:', error);
       const status = error instanceof AuthError ? error.statusCode : 500;
       return new Response(

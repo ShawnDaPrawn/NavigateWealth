@@ -83,10 +83,25 @@ const authMocks = vi.hoisted(() => ({
     }
     c.set('user', { id: 'test-user', email: 'admin@test.co' });
     c.set('userId', 'test-user');
-    c.set('userRole', 'admin');
+    // Tests that need a different caller role say so on this header.
+    c.set('userRole', c.req.header('x-test-role') ?? 'admin');
     await next();
   }),
 }));
+
+// ── Atomic rate limiter (Postgres RPC in production) ─────────────────────────
+const limiter = vi.hoisted(() => ({
+  checkRateLimit: vi.fn(async () => ({
+    allowed: true,
+    remaining: 9,
+    resetAt: new Date(Date.now() + 60_000),
+    blocked: false,
+  })),
+}));
+vi.mock('../rateLimiter.ts', async () => {
+  const actual = await vi.importActual<typeof import('../rateLimiter.ts')>('../rateLimiter.ts');
+  return { ...actual, checkRateLimit: limiter.checkRateLimit };
+});
 
 vi.mock('../auth-mw.ts', () => ({
   requireAuth: authMocks.requireAuth,
@@ -99,6 +114,13 @@ const mockSupabaseUser = {
   email: 'user@test.co',
 };
 
+/** Accounts other than the caller, for admin-acting-on-someone-else cases. */
+const OTHER_ACCOUNTS: Record<string, { id: string; email: string }> = {
+  // The owner: super-admin by the email allowlist.
+  'owner-id': { id: 'owner-id', email: 'shawn@navigatewealth.co' },
+  'client-id': { id: 'client-id', email: 'client@test.co' },
+};
+
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
     auth: {
@@ -107,7 +129,11 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
           if (id === 'test-user') {
             return { data: { user: mockSupabaseUser }, error: null };
           }
-          return { data: null, error: { message: 'User not found' } };
+          if (OTHER_ACCOUNTS[id]) {
+            return { data: { user: OTHER_ACCOUNTS[id] }, error: null };
+          }
+          // GoTrue's shape for an unknown id: an error carrying status 404.
+          return { data: { user: null }, error: { message: 'User not found', status: 404 } };
         }),
         updateUserById: vi.fn(async () => ({
           data: { user: mockSupabaseUser },
@@ -137,8 +163,18 @@ import securityApp from '../security.tsx';
 const AUTH = { Authorization: 'Bearer test-token' };
 const OTHER_USER_ID = 'other-user-id';
 
+/** A bearer token carrying a GoTrue `session_id`; the auth stub never checks it. */
+function sessionAuth(sessionId: string) {
+  const b64 = (o: unknown) =>
+    btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return {
+    Authorization: `Bearer ${b64({ alg: 'HS256' })}.${b64({ sub: 'test-user', session_id: sessionId })}.sig`,
+  };
+}
+
 beforeEach(() => {
   kvStore.clear();
+  limiter.checkRateLimit.mockClear();
 });
 
 describe('security.tsx route contracts', () => {
@@ -362,16 +398,27 @@ describe('security.tsx route contracts', () => {
       expect(res.status).toBe(401);
     });
 
-    it('returns 404 when user is not found in Supabase', async () => {
-      const res = await securityApp.request(`/${OTHER_USER_ID}/2fa/send-code`, {
+    it("refuses to send a code for someone else's account, even for an admin", async () => {
+      // Self-only now: an admin could previously trigger codes into a
+      // client's inbox and — through verify-code — guess at them.
+      const res = await securityApp.request('/client-id/2fa/send-code', {
         method: 'POST',
         body: JSON.stringify({}),
         headers: { ...AUTH, 'Content-Type': 'application/json' },
       });
-      // 403 because OTHER_USER_ID !== test-user (self-check) and role is admin so passes,
-      // then getUserById returns not-found
-      // admin role passes ensureSelfOrAdmin, but getUserById on OTHER_USER_ID returns 404
-      expect([403, 404]).toContain(res.status);
+      expect(res.status).toBe(403);
+    });
+
+    it('never delivers to an address named in the request', async () => {
+      const email = await import('../email-service.ts');
+      vi.mocked(email.sendTwoFactorEmail).mockClear();
+      await securityApp.request('/test-user/2fa/send-code', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'attacker@evil.example' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      const [to] = vi.mocked(email.sendTwoFactorEmail).mock.calls[0] as [string, string];
+      expect(to).toBe('user@test.co');
     });
 
     it('returns 200 and sends code when user exists', async () => {
@@ -432,6 +479,152 @@ describe('security.tsx route contracts', () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as { success: boolean };
       expect(body.success).toBe(true);
+    });
+  });
+
+  // ── 2FA is bound to the SESSION that verified ──────────────────────────────
+  describe('per-session two-factor verification', () => {
+    const seedCode = () =>
+      kvStore.set('2fa:test-user:code', {
+        code: '654321',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        attempts: 0,
+      });
+    const verify = (headers: Record<string, string>, code = '654321') =>
+      securityApp.request('/test-user/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+
+    it('unlocks the verifying session — and only that one', async () => {
+      seedCode();
+      const res = await verify(sessionAuth('sess-A'));
+      expect(res.status).toBe(200);
+      const sessions = kvStore.get('2fa_sessions:test-user') as Record<string, string>;
+      expect(Object.keys(sessions)).toEqual(['sess-A']);
+    });
+
+    it('reports the session state on /status for the session that asks', async () => {
+      seedCode();
+      await verify(sessionAuth('sess-A'));
+      kvStore.set('security:test-user', { suspended: false, twoFactorEnabled: true });
+
+      const same = await securityApp.request('/test-user/status', {
+        headers: sessionAuth('sess-A'),
+      });
+      expect(((await same.json()) as any).status.sessionTwoFactorVerified).toBe(true);
+
+      // A second sign-in — e.g. an attacker with the password — is not
+      // verified by the first one's code.
+      const other = await securityApp.request('/test-user/status', {
+        headers: sessionAuth('sess-B'),
+      });
+      expect(((await other.json()) as any).status.sessionTwoFactorVerified).toBe(false);
+    });
+
+    it("refuses to verify a code for someone else's account", async () => {
+      kvStore.set('2fa:client-id:code', {
+        code: '654321',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        attempts: 0,
+      });
+      const res = await securityApp.request('/client-id/2fa/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: '654321' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(403);
+      expect(kvStore.has('2fa_sessions:client-id')).toBe(false);
+    });
+
+    it('stops guessing at the atomic limit before touching the stored code', async () => {
+      // The per-code and cumulative counters are read-modify-write and could
+      // be raced by concurrent requests; the Postgres limiter cannot.
+      seedCode();
+      limiter.checkRateLimit.mockResolvedValueOnce({
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(Date.now() + 60_000),
+        blocked: true,
+      });
+      const res = await verify(sessionAuth('sess-A'));
+      expect(res.status).toBe(429);
+      expect((kvStore.get('2fa:test-user:code') as { attempts: number }).attempts).toBe(0);
+      expect(kvStore.has('2fa_sessions:test-user')).toBe(false);
+    });
+
+    it('forgets verified sessions and tells the holder when 2FA is switched off', async () => {
+      const email = await import('../email-service.ts');
+      vi.mocked(email.sendEmail).mockClear();
+      kvStore.set('security:test-user', { suspended: false, twoFactorEnabled: true });
+      kvStore.set('2fa_sessions:test-user', { 'sess-A': new Date().toISOString() });
+
+      const res = await securityApp.request('/test-user/2fa', {
+        method: 'POST',
+        body: JSON.stringify({ enabled: false }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      expect(kvStore.has('2fa_sessions:test-user')).toBe(false);
+      expect(vi.mocked(email.sendEmail)).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'user@test.co' }),
+      );
+    });
+  });
+
+  // ── An admin is not a super-admin ─────────────────────────────────────────
+  describe('admin actions on a super-admin account', () => {
+    const post = (path: string, body: unknown, role = 'admin') =>
+      securityApp.request(path, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { ...AUTH, 'x-test-role': role, 'Content-Type': 'application/json' },
+      });
+
+    it.each([
+      ['reset the password', '/owner-id/password', { newPassword: 'Kh1mba!Zwelithu#7' }],
+      ['switch off 2FA', '/owner-id/2fa', { enabled: false }],
+      ['suspend the account', '/owner-id/suspend', { suspended: true }],
+      [
+        'move the sign-in email',
+        '/owner-id/email-change/request',
+        { newEmail: 'evil@example.com' },
+      ],
+    ])('a plain admin cannot %s', async (_label, path, body) => {
+      // Any one of these was a takeover of the owner by any admin: an admin
+      // reset needs no current password, and an admin email change skips the
+      // current-address code.
+      const res = await post(path, body);
+      expect(res.status).toBe(403);
+      expect(((await res.json()) as { code?: string }).code).toBe('FORBIDDEN_SUPER_ADMIN_TARGET');
+      expect(kvStore.has('security:owner-id')).toBe(false);
+    });
+
+    it('a super-admin still can', async () => {
+      const res = await post('/owner-id/suspend', { suspended: false }, 'super_admin');
+      expect(res.status).toBe(200);
+    });
+
+    it('a plain admin can still reset a client, and the reset is audited and announced', async () => {
+      const email = await import('../email-service.ts');
+      vi.mocked(email.sendEmail).mockClear();
+      const res = await post('/client-id/password', {
+        // The schema requires the field; an admin reset never checks it.
+        currentPassword: 'not-checked-on-admin-reset',
+        newPassword: 'Kh1mba!Zwelithu#7',
+        emailPassword: false,
+      });
+      expect(res.status).toBe(200);
+      // Told even though the admin chose not to email a reset link.
+      expect(vi.mocked(email.sendEmail)).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'client@test.co' }),
+      );
+      const audit = [...kvStore.entries()].find(([k]) => k.startsWith('audit:admin:'));
+      expect(audit?.[1]).toMatchObject({
+        action: 'password_reset_by_admin',
+        entityId: 'client-id',
+      });
     });
   });
 

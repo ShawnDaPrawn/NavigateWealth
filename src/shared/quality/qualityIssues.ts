@@ -87,6 +87,23 @@ export interface QualityIssue {
   status: QualityIssueStatus;
   title: string;
   message: string;
+  /** Plain-English sentence: what happened and where (runtime issues). */
+  summary?: string;
+  /** Pattern-based hint at the usual cause and where to look first. */
+  likelyCause?: string;
+  /** Product area the failure happened in ("Admin · Clients", "API · Policies"). */
+  area?: string;
+  /** Route shape with ids collapsed (`/clients/:id/policies`). */
+  route?: string;
+  /** Technical context kept out of `message`: URL, browser, stacks. */
+  details?: string;
+  /** What the user did just before the failure, oldest first. */
+  breadcrumbs?: string[];
+  /** Distinct signed-in users who hit this issue (capped). */
+  affectedUsers?: number;
+  affectedUserIds?: string[];
+  /** True when reported by a signed-out visitor through the public ingest. */
+  anonymous?: boolean;
   ownerName?: string;
   statusNote?: string;
   resolutionEvidence?: string;

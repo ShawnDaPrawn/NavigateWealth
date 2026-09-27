@@ -29,7 +29,8 @@ import {
   FnaIntakeSessionIdParamSchema,
   FnaIntakeSubmitSchema,
 } from './fna-validation.ts';
-import { intakeForbidden, intakeUnprocessable } from './fna-intake-errors.ts';
+import { intakeUnprocessable } from './fna-intake-errors.ts';
+import { assertClientAccess, isPlatformAdminRole } from './client-access.ts';
 import {
   assertIntakeDraftRateLimit,
   assertIntakeSubmitRateLimit,
@@ -42,12 +43,11 @@ async function requireAuth(c: { req: { header: (name: string) => string | undefi
   return authenticateUser(c.req.header('Authorization'), 'fna-intake');
 }
 
-function assertClientAccess(user: { id: string; role: string }, clientId: string) {
-  if (isFnaAdminRole(user.role)) return;
-  if (user.id !== clientId) {
-    throw intakeForbidden();
-  }
-}
+// Client scoping goes through the one shared policy in client-access.ts (self,
+// platform admin, or the client's ASSIGNED adviser). This file used to carry
+// its own `assertClientAccess` that shadowed that import and let ANY adviser
+// read or edit ANY client's intake — the same bypass once fixed in
+// fna-batch-status-routes.ts.
 
 function parseParam(
   schema: { safeParse: (v: string) => { success: boolean; data?: string } },
@@ -65,7 +65,9 @@ fnaIntakeRoutes.get('/queue/list', async (c) => {
   try {
     const user = await requireAuth(c);
     requireRealUserForIntakeAdmin(user);
-    if (!isFnaAdminRole(user.role)) {
+    // Platform admins only: the queue is every submitted intake, firm-wide.
+    // Advisers see their own clients' intakes through the per-client routes.
+    if (!isPlatformAdminRole(user.role)) {
       return c.json({ success: false, error: 'Admin access required' }, 403);
     }
 
@@ -85,7 +87,7 @@ fnaIntakeRoutes.get('/:domain/status/:clientId', async (c) => {
     if (!isFnaIntakeDomain(domain)) {
       return c.json({ success: false, error: 'Invalid domain' }, 400);
     }
-    assertClientAccess(user, clientId);
+    await assertClientAccess(user, clientId, 'fna-intake');
 
     const session = await getActiveIntakeSession(clientId, domain);
     return c.json({
@@ -107,7 +109,7 @@ fnaIntakeRoutes.get('/:domain/draft/:clientId', async (c) => {
     if (!isFnaIntakeDomain(domain)) {
       return c.json({ success: false, error: 'Invalid domain' }, 400);
     }
-    assertClientAccess(user, clientId);
+    await assertClientAccess(user, clientId, 'fna-intake');
 
     const session = await getActiveIntakeSession(clientId, domain);
     if (!session || session.status === 'accepted') {
@@ -130,7 +132,7 @@ fnaIntakeRoutes.put('/:domain/draft/:clientId', async (c) => {
     if (!isFnaIntakeDomain(domain)) {
       return c.json({ success: false, error: 'Invalid domain' }, 400);
     }
-    assertClientAccess(user, clientId);
+    await assertClientAccess(user, clientId, 'fna-intake');
 
     const bodyParse = FnaIntakeSaveDraftSchema.safeParse(await c.req.json());
     if (!bodyParse.success) {
@@ -170,7 +172,7 @@ fnaIntakeRoutes.post('/session/:sessionId/submit', async (c) => {
 
     const existing = await getIntakeSession(sessionId);
     if (!existing) return c.json({ success: false, error: 'Session not found' }, 404);
-    assertClientAccess(user, existing.clientId);
+    await assertClientAccess(user, existing.clientId, 'fna-intake:submit');
 
     if (existing.status !== 'submitted') {
       await assertIntakeSubmitRateLimit(user.id);
@@ -196,9 +198,13 @@ fnaIntakeRoutes.post('/session/:sessionId/accept', async (c) => {
       return c.json({ success: false, error: 'Admin access required' }, 403);
     }
 
-    parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    const sessionId = parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    const existing = await getIntakeSession(sessionId);
+    if (!existing) return c.json({ success: false, error: 'Session not found' }, 404);
+    // Staff role is not enough: an adviser acts only on an assigned client's intake.
+    await assertClientAccess(user, existing.clientId, 'fna-intake:accept');
 
-    const result = await acceptIntakeSession(c.req.param('sessionId')!, {
+    const result = await acceptIntakeSession(sessionId, {
       id: user.id,
       email: user.email,
     });
@@ -227,9 +233,13 @@ fnaIntakeRoutes.post('/session/:sessionId/request-info', async (c) => {
       return c.json({ success: false, error: 'Admin access required' }, 403);
     }
 
-    parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    const sessionId = parseParam(FnaIntakeSessionIdParamSchema, c.req.param('sessionId')!);
+    const existing = await getIntakeSession(sessionId);
+    if (!existing) return c.json({ success: false, error: 'Session not found' }, 404);
+    // Staff role is not enough: an adviser acts only on an assigned client's intake.
+    await assertClientAccess(user, existing.clientId, 'fna-intake:request-info');
 
-    const session = await requestMoreInfo(c.req.param('sessionId')!, {
+    const session = await requestMoreInfo(sessionId, {
       id: user.id,
       email: user.email,
     });

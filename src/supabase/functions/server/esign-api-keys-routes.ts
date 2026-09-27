@@ -10,7 +10,7 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { validateBody, validateOptionalBody } from './validate.ts';
@@ -32,6 +32,7 @@ const apiKeysRoutes = new Hono();
 
 apiKeysRoutes.post(
   '/api-keys',
+  requireAdmin,
   rateLimit('SENDER_MUTATE'),
   validateBody(CreateApiKeySchema),
   async (c) => {
@@ -76,7 +77,7 @@ apiKeysRoutes.post(
 );
 
 /** GET /api-keys — list keys for the current firm (redacted). */
-apiKeysRoutes.get('/api-keys', async (c) => {
+apiKeysRoutes.get('/api-keys', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -95,6 +96,7 @@ apiKeysRoutes.get('/api-keys', async (c) => {
 /** PATCH /api-keys/:id — update name / active / scopes / expires_at. */
 apiKeysRoutes.patch(
   '/api-keys/:id',
+  requireAdmin,
   rateLimit('SENDER_MUTATE'),
   validateOptionalBody(UpdateApiKeySchema),
   async (c) => {
@@ -144,7 +146,7 @@ apiKeysRoutes.patch(
 );
 
 /** POST /api-keys/:id/rotate — issue a sibling key (dual-active). */
-apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c) => {
+apiKeysRoutes.post('/api-keys/:id/rotate', requireAdmin, rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const id = c.req.param('id')!;
@@ -176,7 +178,7 @@ apiKeysRoutes.post('/api-keys/:id/rotate', rateLimit('SENDER_MUTATE'), async (c)
 });
 
 /** DELETE /api-keys/:id — permanent revoke. */
-apiKeysRoutes.delete('/api-keys/:id', rateLimit('SENDER_MUTATE'), async (c) => {
+apiKeysRoutes.delete('/api-keys/:id', requireAdmin, rateLimit('SENDER_MUTATE'), async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const id = c.req.param('id')!;

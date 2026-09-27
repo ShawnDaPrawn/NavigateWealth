@@ -78,8 +78,11 @@ vi.mock('../stderr-logger.ts', () => ({
 vi.mock('../quality-issues-runtime-server.ts', () => ({
   scheduleRuntimeServerIssue: vi.fn(async () => {}),
   recordRuntimeServerIssue: vi.fn(async () => {}),
+  readErrorBody: vi.fn(async (response: Response) => response.text()),
   RUNTIME_SERVER_ISSUES_KEY: 'quality_issues:runtime_server',
 }));
+
+const { scheduleRuntimeServerIssue } = await import('../quality-issues-runtime-server.ts');
 
 const { createApp, DEFAULT_MOUNTS, SERVER_VERSION, SERVER_PREFIX } =
   await import('../create-app.ts');
@@ -616,5 +619,61 @@ describe('request body ceiling (H-11)', () => {
       headers: { 'content-length': String(500 * 1024 * 1024) },
     });
     expect(res.status).toBe(200);
+  });
+});
+
+describe('createApp: every 5xx reaches the issues dashboard', () => {
+  /** A registrar mounting routes that fail the three ways routes fail here. */
+  const failingMount = {
+    name: 'failing',
+    register: (app: Hono) => {
+      app.get(`${PREFIX}/hand-built/:id`, (c) =>
+        c.json({ error: 'Failed to generate download URL' }, 500),
+      );
+      app.get(`${PREFIX}/thrown`, () => {
+        throw new TypeError('x.map is not a function');
+      });
+      app.get(`${PREFIX}/not-found`, (c) => c.json({ error: 'nope' }, 404));
+    },
+  };
+
+  it('records a hand-built 500 that never reached the error handler, with its body', async () => {
+    const res = await get(createApp({ mounts: [failingMount] }), `${PREFIX}/hand-built/42`);
+    expect(res.status).toBe(500);
+
+    expect(scheduleRuntimeServerIssue).toHaveBeenCalledTimes(1);
+    const input = vi.mocked(scheduleRuntimeServerIssue).mock.calls[0][0];
+    expect(input).toMatchObject({
+      method: 'GET',
+      path: `${PREFIX}/hand-built/42`,
+      statusCode: 500,
+    });
+    expect(input.error).toBeUndefined();
+    await expect(input.responseBody).resolves.toContain('Failed to generate download URL');
+    // The caller still gets the untouched body.
+    await expect(res.json()).resolves.toEqual({ error: 'Failed to generate download URL' });
+  });
+
+  it('records a thrown error exactly once, carrying the exception and the full path', async () => {
+    const res = await get(createApp({ mounts: [failingMount] }), `${PREFIX}/thrown`);
+    expect(res.status).toBe(500);
+
+    expect(scheduleRuntimeServerIssue).toHaveBeenCalledTimes(1);
+    const input = vi.mocked(scheduleRuntimeServerIssue).mock.calls[0][0];
+    expect(input.error).toBeInstanceOf(TypeError);
+    expect(input.error?.message).toBe('x.map is not a function');
+    expect(input.path).toBe(`${PREFIX}/thrown`);
+  });
+
+  it('ignores responses below 500', async () => {
+    const app = createApp({ mounts: [failingMount] });
+    await get(app, `${PREFIX}/not-found`);
+    await get(app, PREFIX);
+    expect(scheduleRuntimeServerIssue).not.toHaveBeenCalled();
+  });
+
+  it('never sends the internal already-recorded marker to the caller', async () => {
+    const res = await get(createApp({ mounts: [failingMount] }), `${PREFIX}/thrown`);
+    expect(res.headers.get('x-nw-issue-recorded')).toBeNull();
   });
 });

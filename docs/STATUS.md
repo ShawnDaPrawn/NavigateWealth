@@ -68,13 +68,13 @@ Two constraints on the gates that are easy to trip over:
 Each of these looks like a bug and is not. Removing one without meeting its
 stated prerequisite has already caused a production outage once.
 
-| Where                                          | The fallback                                                                                                                                                                                                                                             | Why it exists                                                                                                                                                                                | What must be true before removing it                                                                                                                           |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/supabase/functions/server/cors-origin.ts` | When `NW_ALLOWED_ORIGINS` is unset, reflect the incoming browser origin and log a warning. A strict allow-list applies when it is set. Hand-built `Response`s (streams, downloads) read the same list via `corsResponseHeaders` rather than sending `*`. | Prevents a repeat of the 2026-04-18 CORS lockout. Auth, not CORS, is the authorization boundary.                                                                                             | Every real SPA origin is known and set in `NW_ALLOWED_ORIGINS`, and preflights pass from each one.                                                             |
-| `supabase/config.toml`                         | `verify_jwt = false` on the function.                                                                                                                                                                                                                    | The function exposes anonymous health probes.                                                                                                                                                | Health probes move to an unauthenticated sibling function. Until then, **every sub-router must apply its own auth at mount time** — this is the real boundary. |
-| `src/utils/supabase/info.tsx`                  | Hardcoded project ref and anon key fallback.                                                                                                                                                                                                             | Lets the SPA boot without local env vars.                                                                                                                                                    | Vercel production and preview env vars are pinned and verified.                                                                                                |
-| `src/supabase/functions/server/constants.ts`   | `SUPER_ADMIN_EMAIL` as a single const, alongside the `SUPER_ADMIN_EMAILS` allowlist.                                                                                                                                                                     | **Closed by decision, 2026-08-27 — do not remove.** Its two readers are a pre-auth rate-limit exemption and a singular owner lookup. Widening either to the allowlist would reduce security. | Nothing. Authorization goes through `isSuperAdminEmail()`; the pre-auth exemption stays narrow; the owner lookup stays singular.                               |
-| `middleware.ts`                                | Kept free of imports from the SPA source tree.                                                                                                                                                                                                           | Importing SPA modules breaks the Vercel Edge build.                                                                                                                                          | Nothing — this is a permanent constraint of the Edge runtime.                                                                                                  |
+| Where                                          | The fallback                                                                                                                                                                                                                                             | Why it exists                                                                                                                                                                                                                                         | What must be true before removing it                                                                                                                           |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/supabase/functions/server/cors-origin.ts` | When `NW_ALLOWED_ORIGINS` is unset, reflect the incoming browser origin and log a warning. A strict allow-list applies when it is set. Hand-built `Response`s (streams, downloads) read the same list via `corsResponseHeaders` rather than sending `*`. | Prevents a repeat of the 2026-04-18 CORS lockout. Auth, not CORS, is the authorization boundary.                                                                                                                                                      | Every real SPA origin is known and set in `NW_ALLOWED_ORIGINS`, and preflights pass from each one.                                                             |
+| `supabase/config.toml`                         | `verify_jwt = false` on the function.                                                                                                                                                                                                                    | The function exposes anonymous health probes.                                                                                                                                                                                                         | Health probes move to an unauthenticated sibling function. Until then, **every sub-router must apply its own auth at mount time** — this is the real boundary. |
+| `src/utils/supabase/info.tsx`                  | Hardcoded project ref and anon key fallback.                                                                                                                                                                                                             | Lets the SPA boot without local env vars.                                                                                                                                                                                                             | Vercel production and preview env vars are pinned and verified.                                                                                                |
+| `src/supabase/functions/server/constants.ts`   | `SUPER_ADMIN_EMAIL` as a single const, alongside the `SUPER_ADMIN_EMAILS` allowlist.                                                                                                                                                                     | **Closed by decision, 2026-08-27 — do not remove.** Its two readers are a pre-auth exemption from the per-ACCOUNT login lockout (the per-IP limit still applies) and a singular owner lookup. Widening either to the allowlist would reduce security. | Nothing. Authorization goes through `isSuperAdminEmail()`; the pre-auth exemption stays narrow; the owner lookup stays singular.                               |
+| `middleware.ts`                                | Kept free of imports from the SPA source tree.                                                                                                                                                                                                           | Importing SPA modules breaks the Vercel Edge build.                                                                                                                                                                                                   | Nothing — this is a permanent constraint of the Edge runtime.                                                                                                  |
 
 ## Standing constraints
 
@@ -146,7 +146,11 @@ but cannot complete them.
 | Item                                    | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Detail                                                             |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | Backup secrets and first verified run   | **The largest open resilience gap.** `weekly-backup` has three legs and not one has ever executed: all three scheduled runs were green because every step skipped. Leg 1 needs `SUPABASE_DB_URL` (use the **session pooler** string on port 5432 — the direct host is IPv6-only and runners are IPv4). Leg 2 needs `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. Leg 3 needs an Object Lock bucket and `NW_BACKUP_S3_BUCKET`. Closes when a dispatched run shows every leg `true` in its job summary — not before. | [`runbooks/backup-and-restore.md`](runbooks/backup-and-restore.md) |
-| Two-factor auth on privileged accounts  | Two-factor is built and works, and it is opt-in. Nothing enforces it by role, and **no admin, super-admin or adviser account has it enabled** (1 of 193 users overall). One phished adviser password is currently enough. Enforcement needs a code change; enabling it on the existing privileged accounts does not.                                                                                                                                                                                               | `security-2fa-routes.ts`, `auth-mw.ts`                             |
+| Two-factor auth on privileged accounts  | Two-factor is built and works, and it is opt-in. Nothing enforces it by role, and **no admin, super-admin or adviser account has it enabled** (1 of 193 users overall). One phished adviser password is currently enough. Enforcement needs a code change; enabling it on the existing privileged accounts does not. Verification is now bound to the sign-in that performed it (`2fa_sessions:{userId}`), so turning it on protects against a stolen password even while the owner is signed in elsewhere.        | `security-2fa-routes.ts`, `auth-mw.ts`                             |
+| Super-admin / admin allowlists          | Super-admin and admin are granted by EMAIL (`SUPER_ADMIN_EMAILS`, `NW_ADMIN_EMAILS`), so every address listed — hardcoded or in those two Edge Function secrets — must already have an account. An address with none is a seat for whoever registers it first. The hardcoded set now holds only the owner; check both secrets for addresses with no account.                                                                                                                                                       | `constants.ts`                                                     |
+| Legacy staff role backfill              | Two admins and one adviser carry their role only in `user_metadata`, which the server no longer reads for any role. The admins keep access only while `NW_ADMIN_EMAILS` lists them; the adviser resolves as a client. Run the personnel backfill (super-admin) so each gets `app_metadata.role`.                                                                                                                                                                                                                   | `client-management-personnel-service.ts`                           |
+| `SUPER_ADMIN_PASSWORD` rotation         | Until the September 2026 auth review this one secret could reset any account's password through `/auth/ensure-dev-user`. Those routes are gone and it now only authenticates cron calls, but anyone who ever held it held the platform: rotate it.                                                                                                                                                                                                                                                                 | `cron-auth.ts`                                                     |
+| Anonymous-callable database function    | The live security advisor flags `public.social_asset_intake_submit_hex_staged` as `SECURITY DEFINER` and executable by `anon` and `authenticated`. It was applied in production from unmerged PR #337 and is not in `supabase/migrations`. Every sibling `social_asset_intake_*` function is service-role only. Revoking `EXECUTE` from `anon`, `authenticated` and `public` needs owner confirmation for the production write.                                                                                    | Supabase security advisor                                          |
 | Supabase password policy                | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                                                                                                                                                                                                                                                                                                              | Archived ledger § 3.6                                              |
 | `NW_ALLOWED_ORIGINS`                    | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                                                                                                                                                                                                                                                                                                          | Archived ledger § 3.2                                              |
 | Social automation — cron jobs           | Open until `supabase/cron/social-automation-jobs.sql` is run after the `/social-assets` Edge Function deploys, and query C shows both paths answering 200.                                                                                                                                                                                                                                                                                                                                                         | `runbooks/social-automation.md`                                    |
@@ -166,11 +170,175 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it.                                     |
 | H-3 / H-4      | **Closed.** The limiter is atomic (RPC, migration 20260821210412) and fails closed, and OTP brute-force is bounded by `esign-rate-limit.ts`. The remaining half — that the login and password-reset limits sat BESIDE the auth path rather than in it, so a caller could skip them entirely — is closed by `POST /auth/login` and `POST /auth/password-reset`. |
-| H-6 / H-9      | E-sign download and attachment ownership checks                                                                                                                                                                                                                                                                                                                |
+| H-6 / H-9      | **Closed.** Download, audit, document and certificate reads use `requireOwnedEnvelope` (S6); the attachment LIST (`GET /esign/envelopes/:id/attachments`) was the last one that authenticated and then ignored the answer, and now checks envelope ownership too.                                                                                              |
 | H-11           | **Closed.** Content-type-aware body ceiling in `create-app.ts` (2 MB JSON / 55 MB upload, with a named exception for transcription's base64 audio), enforced ahead of every route.                                                                                                                                                                             |
 | M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                                                             |
 | M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                                                       |
 | —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                                                                 |
+
+### Closed by the September 2026 auth review
+
+- **Anyone could become super-admin in two requests.** `POST /auth/signup`
+  (no caller in the SPA) created PRE-VERIFIED accounts for any address,
+  unauthenticated and unlimited, and a second hardcoded super-admin address had
+  no account. Both are gone. So are `/auth/ensure-dev-user` and
+  `/auth/create-superadmin` (a single static secret could reset any password or
+  mint a super-admin), and the unauthenticated `/auth/login-success` (it reset
+  the login lockout for any address), `/login-validate`, `/login-failure` and
+  `/password-reset-request`. `/auth/logout`, `/auth/security-status` and
+  `/auth/clear-rate-limit` now require a session.
+- **Any user could self-assign a staff role.** `resolveTrustedRole` passed any
+  `user_metadata.role` other than admin/super_admin/adviser through, so
+  `supabase.auth.updateUser({ data: { role: 'compliance' } })` read every
+  client's full RoA context and every Ask Vasco transcript. No role is read from
+  `user_metadata` any more.
+- **2FA was per account, not per sign-in** — a stolen password skipped it
+  whenever the owner had verified in the previous three hours. It is now bound
+  to the GoTrue `session_id`, guesses sit behind the atomic limiter, codes go
+  only to the account's own address, and switching it off emails the holder.
+- **Any admin could take over the owner** by resetting the password, disabling
+  2FA, suspending or moving the sign-in email of a super-admin.
+  `ensureCanAdministerTarget` refuses all four; admin resets are audited and
+  always announced to the account holder.
+- **Data reads:** any signed-in user could list any adviser's clients
+  (`/personnel/:id/clients`); three FNA `latest-published` reads (estate,
+  investment, medical) needed no login at all; advisers could read any client's
+  RoA context and FNA batch status. All now go through `client-access.ts`.
+- **Smaller:** per-email lockout buckets are keyed on the normalised address;
+  the owner address is exempt only from the per-account lockout, not the per-IP
+  limit; the e-sign, AI and Vasco limiters and the e-sign evidence IP use
+  `CF-Connecting-IP` rather than the caller-controlled first `X-Forwarded-For`
+  entry; email-change codes come from a CSPRNG; the `/kv-store` denylist covers
+  the namespaces that actually hold credentials (`portal-credential:` was
+  readable while the reserved name guarded nothing); the login `returnUrl`
+  accepted `/\host`, an open redirect.
+- **E-sign signing without any credential.** `POST /esign/envelopes/:id/sign`,
+  `/reject`, `/signers/:id/verify` and `/signers/:id/otp/send` took a signer id
+  with no session and no signer token, and `/sign` skipped every check the
+  token flow makes (state, expiry, OTP/KBA, order, field ownership) before
+  triggering the platform-sealed completion. Nothing called them; they are
+  deleted, with their dead SPA wrappers.
+- **Staff-only routers any client could use.** Honeycomb KYC/AML (paid checks
+  and the raw `/proxy` under the firm's API key, plus every client's results),
+  the compliance registers (every client's AML/FICA record, complaints — one
+  editable — POPIA, PAIA, statutory), website submissions (every lead, plus
+  firm-branded `/invite` email to any address), newsletter subscriber admin,
+  policy extraction (other clients' extracted policies, paid bulk
+  re-extraction) and saved retirement scenarios were `requireAuth`. All are
+  `requireAdmin`; every caller is in the admin panel.
+- **Ownership:** policy documents (signed URL, replace, delete) take the
+  caller's `clientId` through `requireClientAccess`, like the sibling
+  `/policies` routes.
+- **2FA sign-in order.** The login page installed the session before the
+  challenge, so AuthContext hydrated with an unverified session, got
+  `TWO_FACTOR_REQUIRED` and signed out mid-challenge. It now holds the tokens
+  and installs only after the code passes; abandoned sign-ins are revoked.
+- **Timing.** The portal-worker secret (which gates plaintext insurer-portal
+  credentials), the quality-issues ingest token and the KV-cleanup,
+  publications and e-sign reminder cron checks compared with `===`; all use
+  `constantTimeEqual`, pinned tree-wide by `shared-secret-compare.test.ts`.
+- **The e-sign sender side is staff-only.** Every sender route authenticated
+  with `getAuthContext`, which any signed-in user passes, and scoped data to a
+  "firm" that for a client is their own user id — so a self-registered client
+  could upload a PDF, email platform-branded signing requests to anyone, and
+  mint v1 API keys and webhooks. Bulk void/remind had no role check, templates
+  and campaigns were global, and anyone could republish the consent text every
+  signer sees. Every sender route now requires an admin (consent publishing a
+  super-admin). `esign-sender-admin-gate.test.ts` walks the router's own route
+  table: anything not on its short open list (signer-token flow, `verify-hash`,
+  active consent text, `/me/*`, cron, the API-key `/v1/*`, a client's own
+  envelope list and the four client history reads) must refuse a client.
+- **E-sign ownership.** Invites, fields, recall, remind, delete, evidence pack,
+  reminder config, signing mode, draft settings, recovery-bin restore/purge and
+  bulk void/remind now check the envelope's firm; invites refuse a sent
+  envelope. Webhook replay re-queued a delivery before checking its firm; the
+  check now comes first. The client envelope list restricted only the `client`
+  role, so any adviser could list any client's envelopes; it uses
+  `client-access.ts`.
+- **Documents.** `PATCH /documents/:userId/:documentId` spread any field over
+  the stored record, so a client could repoint `filePath` at another client's
+  file and then download or delete it. Unknown fields are stripped, a client
+  can change only `isFavourite`/`status`, and download and delete touch only a
+  path inside the owner's folder. `/link` (http(s) only), `DELETE` and `/email`
+  are admin-only. `POST /profile/upload` requires a `userId` (no shared `temp/`
+  folder) and `/profile/send-documents` is admin-only and skips paths outside
+  the client's folder.
+- **Other guards.** `/integrations/config` and `/template` (every client's
+  policies for a provider) are admin-only; `POST /medical-fna/create` checks
+  `body.clientId`, and the FNA coverage test now sweeps body client ids too;
+  `fna-intake-routes.ts` no longer shadows the canonical `assertClientAccess`,
+  and accept/request-info check the session's client; RoA drafts check the body
+  client and strip lifecycle fields; staff Ask Vasco requires an admin or the
+  assigned adviser; `/ai-intelligence` resolves the role with
+  `resolveTrustedRole` and admits admins only (it trusted the KV profile role
+  and let any adviser reach every client); the resource library, brand kit
+  reads, cron and KV-cleanup status are admin-only; `GET /publications/articles`
+  and `/articles/:id` serve only published articles unless the caller is an
+  admin; a generic FNA update can no longer set `status` (publishing is its own
+  admin route).
+- **Assigned adviser.** A client's own profile save could set `adviserId` /
+  `applicationId`, which decide who their assigned adviser is — the thing
+  `client-access.ts` grants an adviser access by — and a full-replacement save
+  erased every server-owned field it did not send. Non-admin saves now carry
+  those fields over from the stored record.
+- **Smaller.** New request ids come from `crypto.randomUUID()` (the id is the
+  only credential on the public completion link; it was a timestamp plus
+  `Math.random`). Ask Vasco's gate now sets `userId`, so the per-user AI caps
+  apply rather than only the per-IP cap. A guard records the verification it
+  performed, and later guards and `getAuthContext` reuse it for the same token,
+  so a request verifies once however many of them it passes (a router-wide
+  `requireAuth` in front of a route's `requireAdmin` used to cost a second
+  GoTrue round trip and store read).
+
+### Found by the September 2026 auth review, still open
+
+Code, deliberately deferred:
+
+- **Saved signatures are keyed on email alone** (`esign:signer-profile:<email>`),
+  so anyone holding a signer token for an envelope addressed to that email is
+  shown the signature adopted on another firm's envelope. With the sender side
+  staff-only and one firm, only an admin can create that envelope today; key it
+  by firm before a second firm is onboarded.
+- **Signer tokens have no TTL of their own** (audit L-9, partly closed): envelope
+  expiry and rotation after submit or reminder bound the main flows, but the
+  download, saved-signature, pause and KBA routes accept a token without an
+  active-state check.
+- **`GET /newsletter/unsubscribe?email=` opts out any address.** It is
+  rate-limited and only ever unsubscribes, but needs a per-recipient token like
+  the newsletter-studio one-click route. Welcome emails already sent carry
+  email-only links, so tokenless requests need a confirm-by-email step rather
+  than a hard refusal — a POPIA opt-out must keep working.
+- **`GET /requests/:id` returns the whole internal record** to anyone with the
+  id. The id is now unguessable; the response should shrink to what the public
+  completion page needs, which is part of the open product decision on that
+  flow (the page is broken anyway: it reads `data.request` and posts to a
+  `/submit` route that has never existed).
+- **Clients cannot open their own envelopes.** The client history reads use
+  `requireOwnedEnvelope`, whose firm scope is the client's own user id, so a
+  client's download, audit, document and certificate reads 404. Not a leak —
+  a missing feature that needs a signer- or client-scoped read.
+
+Larger or operator work:
+
+- **Custom 2FA does not cover GoTrue itself.** Anyone holding a password can
+  still call GoTrue directly — password sign-in with the public anon key
+  (skipping `/auth/login`'s lockout; only GoTrue's own per-IP limit applies, and
+  there is no CAPTCHA) and `updateUser({ password })` from an unverified
+  session. The Edge Function refuses that session everything until its code
+  passes, but the account's password can be changed. The fix is Supabase's
+  native MFA (AAL2) plus Auth CAPTCHA, an operator and design change.
+- Per-module admin permissions are enforced only in the SPA (the server checks
+  them for personnel and newsletter-studio); the Locked module's access code is
+  checked only in the browser; the POPIA/FAIS terms flag and the approved-client
+  gate are client-editable or browser-only; `detectSessionInUrl` accepts tokens
+  on any page.
+- Database: `anon`/`authenticated` still hold table grants on six legacy
+  tables the SPA never uses (PostgREST writes), default privileges leave new
+  functions executable by those roles, and the message-attachment bucket
+  `make-91ed8379-communication` is public. Each is a production write that
+  needs owner confirmation.
+- The weekly social routines connect as `postgres` while reading web content;
+  give them a narrow role.
 
 ### Closed by the pre-launch security pass
 
@@ -285,6 +453,20 @@ is work not yet done, not budget.
   a grandfather set that may only shrink. Reclaiming the weight already in
   history is a separate decision — it means a `git filter-repo` rewrite and a
   one-time re-clone for every collaborator, and it has not been done.
+
+- **Error monitoring is in-house, and still single-row for signed-in
+  reports.** The admin Issues module is the app's "Sentry": the browser
+  reporter (`utils/quality/runtimeIssueReporter.ts`) captures crashes, handled
+  errors (`logger.error` and any `Error` given to `console.error`), gateway 5xx
+  and network failures, with breadcrumbs, and reports signed-out errors through
+  a rate-limited public route; the root observer in `create-app.ts` records
+  every 5xx the function answers with, thrown or hand-built. Labels come from
+  `shared/quality/issueLabels.ts`. Not done: source maps (production stacks are
+  minified, so the area comes from the chunk name and URL, not the source
+  line), and the signed-in and server rows are still one KV array each — a
+  read-modify-write that can drop an increment across isolates (A17). Moving
+  them to per-fingerprint rows, as the public and CSP rows already are, is the
+  next step.
 
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.

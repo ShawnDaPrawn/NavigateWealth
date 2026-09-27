@@ -7,7 +7,7 @@
  * real blind spot — a file with twelve routes where eleven call `requireAuth`
  * and one forgets still passes, and so does a NEW unguarded route added to an
  * already-guarded file. `auth-routes.ts` is the clearest example: it passes the
- * module-granular test while containing ten routes with no visible guard.
+ * module-granular test while containing several routes with no visible guard.
  *
  * This test closes that gap by counting routes rather than modules. For every
  * `app.get|post|put|patch|delete('/…')` registration in the server tree it asks
@@ -253,8 +253,8 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     // entry-point extraction; its registrations stay literal paths precisely
     // so this scan keeps finding them.
     for (const expected of [
-      'auth-routes.ts POST /login-validate',
-      'auth-routes.ts POST /signup',
+      'auth-routes.ts POST /login',
+      'auth-routes.ts POST /password-reset',
       'create-app.ts GET /make-server-91ed8379/health',
     ]) {
       expect(unguarded, `expected the analysis to still report "${expected}"`).toContain(expected);
@@ -336,7 +336,7 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     expect(PUBLIC_BY_DESIGN_ROUTES.length).toBeGreaterThan(50);
     // Signup is the canonical trap: the SPA posts to it before any JWT exists.
     expect(PUBLIC_BY_DESIGN_ROUTES).toContain('auth-signup.ts POST /signup');
-    expect(PUBLIC_BY_DESIGN_ROUTES).toContain('auth-routes.ts POST /login-validate');
+    expect(PUBLIC_BY_DESIGN_ROUTES).toContain('auth-routes.ts POST /login');
   });
 
   it('does not add unguarded routes beyond the committed floor', () => {

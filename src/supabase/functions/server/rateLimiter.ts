@@ -49,6 +49,18 @@ export const RATE_LIMITS = {
 } as const;
 
 /**
+ * The bucket key for an email address: trimmed and lower-cased.
+ *
+ * GoTrue matches addresses case-insensitively, so a limit keyed on the raw
+ * string gave every spelling of one account its own budget — `Victim@x.com`,
+ * `victim@X.com` and ` victim@x.com` were three fresh sets of five guesses
+ * against the same password. Every per-email limit must key on this.
+ */
+export function normalizeRateLimitEmail(email: unknown): string {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
+
+/**
  * Check rate limit for a specific identifier (email or IP)
  * Returns whether the request is allowed and remaining attempts
  */

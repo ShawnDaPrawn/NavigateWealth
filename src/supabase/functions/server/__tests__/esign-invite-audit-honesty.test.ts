@@ -5,7 +5,9 @@
  *
  * `sendEmail` returns `false` WITHOUT throwing on three paths (email-core.ts):
  * no SENDGRID_API_KEY, a non-OK SendGrid response, and any caught error. Four
- * separate call sites had the identical shape —
+ * separate call sites had the identical shape (three remain; the fourth went
+ * with the unauthenticated sender `/sign` route, deleted in the September 2026
+ * auth review) —
  *
  *     if (emailSent) { await updateSignerStatus(...); }
  *     await logAuditEvent({ action: 'invite_sent', ... });   // unconditional
@@ -18,12 +20,12 @@
  * stalls with nothing surfacing why, because everyone is waiting on a
  * signature from someone who was never told.
  *
- * WHY A SOURCE RATCHET RATHER THAN FOUR ROUTE SUITES
+ * WHY A SOURCE RATCHET RATHER THAN PER-ROUTE SUITES
  * The behavioural test lives in esign-packet-service.contract.test.ts, which
  * drives the real service through the real `sendEmail` boundary. The other
- * three sites sit deep inside large route handlers whose harnesses would cost
- * far more than the one line each is being checked for — and a ratchet catches
- * the FIFTH site, which a per-site test by definition cannot.
+ * sites sit deep inside large route handlers whose harnesses would cost far
+ * more than the one line each is being checked for — and a ratchet catches the
+ * NEXT site, which a per-site test by definition cannot.
  *
  * This asserts the guard exists, not that it is spelled a particular way: any
  * conditional expression on the `action` is accepted.
@@ -67,7 +69,7 @@ describe('invite audit honesty (source ratchet)', () => {
     ).toEqual([]);
   });
 
-  it('finds the four known call sites, so the ratchet is actually scanning', () => {
+  it('finds the three known call sites, so the ratchet is actually scanning', () => {
     // Without this, deleting the regex or pointing it at an empty directory
     // would make the ratchet above pass vacuously — the exact failure mode a
     // ratchet is supposed to prevent.
@@ -81,7 +83,6 @@ describe('invite audit honesty (source ratchet)', () => {
     expect([...sitesByFile.keys()].sort()).toEqual([
       'esign-documents-routes.ts',
       'esign-packet-service.ts',
-      'esign-sender-envelope-routes.ts',
       'esign-signer-submit-routes.ts',
     ]);
   });
