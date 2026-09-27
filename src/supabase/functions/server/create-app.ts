@@ -40,7 +40,11 @@ import { Hono } from 'npm:hono';
 import type { Context } from 'npm:hono';
 import { cors } from 'npm:hono/cors';
 
-import { runWithRequestContext } from './request-context.ts';
+import {
+  ISSUE_RECORDED_HEADER,
+  runWithRequestContext,
+  type RequestContext,
+} from './request-context.ts';
 import { resolveAllowedOrigins } from './cors-origin.ts';
 import { mountCoreRoutes } from './mount-core.ts';
 import { mountFnaRoutes } from './mount-fna.ts';
@@ -188,6 +192,66 @@ export function bodyLimitMiddleware(): (
   };
 }
 
+/**
+ * Record every 5xx this function answers with.
+ * ==============================================
+ *
+ * The shared error handler only sees exceptions that are THROWN. Roughly 350
+ * route handlers across ~90 modules catch their own failure and answer
+ * `c.json({ error: '…' }, 500)` instead, and those never reached the issues
+ * dashboard — the error was real, the user saw it, and nobody else did. This
+ * observer sits at the root, after every route has run, and records any 5xx
+ * response regardless of how it was produced:
+ *
+ *   - a thrown exception: the error handler parks the Error on the request
+ *     context, so the issue carries its class, message and stack;
+ *   - a hand-built 5xx: the response body is cloned and its `error`/`message`
+ *     becomes the description.
+ *
+ * Recording happens here, at the root, because only here is the FULL path
+ * known — lazily-mounted sub-routers see a stripped one.
+ *
+ * Never blocks and never throws: the recorder is imported on demand (it is not
+ * part of the boot payload), keeps its KV write alive past the response with
+ * `EdgeRuntime.waitUntil`, and any failure is swallowed. Monitoring must not
+ * become the outage.
+ */
+export async function observeServerErrorResponse(
+  c: Context,
+  requestContext: RequestContext,
+): Promise<void> {
+  const response = c.res;
+  if (!response) return;
+  const alreadyRecorded = response.headers.get(ISSUE_RECORDED_HEADER) !== null;
+  if (alreadyRecorded) {
+    try {
+      response.headers.delete(ISSUE_RECORDED_HEADER);
+    } catch {
+      // Immutable headers: harmless, the marker carries nothing sensitive.
+    }
+  }
+  if (response.status < 500 || alreadyRecorded || c.req.method === 'OPTIONS') return;
+
+  try {
+    const { scheduleRuntimeServerIssue, readErrorBody } =
+      await import('./quality-issues-runtime-server.ts');
+    const clone = requestContext.capturedError ? null : response.clone();
+    await scheduleRuntimeServerIssue({
+      error: requestContext.capturedError,
+      responseBody: clone ? readErrorBody(clone) : undefined,
+      path: new URL(c.req.url).pathname,
+      method: c.req.method,
+      statusCode: response.status,
+      requestId: requestContext.requestId,
+    });
+  } catch (err: unknown) {
+    console.error(
+      '[ISSUES] Could not record 5xx response:',
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
 /** One route family's registrar, named so a failure can be reported. */
 export interface MountRegistrar {
   name: string;
@@ -286,8 +350,11 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     // via router.fetch(), which run inside this same async chain — now logs
     // with this id attached (Stage B / B4). Degrades to today's behaviour if
     // the deployed runtime lacks node:async_hooks.
-    await runWithRequestContext({ requestId }, () => next());
+    const requestContext: RequestContext = { requestId };
+    await runWithRequestContext(requestContext, () => next());
     c.header('x-request-id', requestId);
+    // Every 5xx, thrown or hand-built, reaches the issues dashboard from here.
+    await observeServerErrorResponse(c, requestContext);
   });
 
   // ── Root error handler (Stage B / B1) ───────────────────────────────────
@@ -329,6 +396,8 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     // this is the only thing keeping the correlation id on the response the
     // caller sees. Pinned by the request-context failure test.
     if (typeof requestId === 'string') response.headers.set('x-request-id', requestId);
+    // Internal marker (see observeServerErrorResponse); never sent to callers.
+    response.headers.delete(ISSUE_RECORDED_HEADER);
     return response;
   });
 

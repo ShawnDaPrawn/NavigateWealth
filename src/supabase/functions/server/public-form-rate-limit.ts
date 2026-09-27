@@ -66,6 +66,7 @@ export type PublicFormScope =
   | 'quote'
   | 'consultation'
   | 'csp-report'
+  | 'runtime-client'
   | 'newsletter-unsubscribe';
 
 /** Submissions per email address per window. Matches the previous behaviour. */
@@ -100,6 +101,13 @@ export const CSP_REPORT_IP_LIMIT_PER_HOUR = 60;
  * CPU vector on an unauthenticated GET.
  */
 export const NEWSLETTER_UNSUBSCRIBE_IP_LIMIT_PER_HOUR = 20;
+
+/**
+ * Browser error reports from signed-out visitors, per IP per hour. The browser
+ * reporter already debounces identical errors, so a real visitor stays far
+ * below this even on a badly broken page; the cap only bites a flood.
+ */
+export const RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR = 30;
 
 const WINDOW_MS = 60 * 60 * 1000;
 

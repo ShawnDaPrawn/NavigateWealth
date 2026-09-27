@@ -92,6 +92,13 @@ class Logger implements ILogger {
   }
 
   error(message: string, error?: unknown, context?: LogContext) {
+    // Sink first so the reporter can mark the error before the console path
+    // (which it also watches) sees it.
+    try {
+      errorSink?.(message, error, context);
+    } catch {
+      // Reporting must never break logging.
+    }
     this.log('error', message, context, error);
   }
 
@@ -100,6 +107,20 @@ class Logger implements ILogger {
       this.log('debug', message, context);
     }
   }
+}
+
+/**
+ * Where `logger.error` calls are forwarded in addition to the console — the
+ * runtime issue reporter installs itself here, so every handled error the app
+ * logs also reaches the admin Issues dashboard, headlined by the message the
+ * developer wrote ("Failed to load client policies"). A setter rather than an
+ * import keeps this module dependency-free: nearly everything imports it.
+ */
+type LoggerErrorSink = (message: string, error?: unknown, context?: LogContext) => void;
+let errorSink: LoggerErrorSink | null = null;
+
+export function setLoggerErrorSink(sink: LoggerErrorSink | null): void {
+  errorSink = sink;
 }
 
 export const logger = new Logger();

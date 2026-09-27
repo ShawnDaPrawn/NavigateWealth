@@ -5,7 +5,10 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
-import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
+import {
+  markErrorReported,
+  reportRuntimeClientIssue,
+} from '../../utils/quality/runtimeIssueReporter';
 import {
   isDefinitiveStaleChunkLoadFailure,
   isStaleChunkLoadFailure,
@@ -68,6 +71,11 @@ export class ErrorBoundary extends Component<Props, State> {
         return;
       }
     }
+
+    // Marked BEFORE logging: logger.error forwards to the issue reporter,
+    // which would otherwise file this crash a second time as a handled error.
+    // The boundary's own report below is the richer one (component stack).
+    markErrorReported(error);
 
     // Log using unified logger
     logger.error('ErrorBoundary caught an error', error, {

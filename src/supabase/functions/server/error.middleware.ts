@@ -14,6 +14,7 @@ import { ZodError } from 'npm:zod';
 import { logger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { scheduleRuntimeServerIssue } from './quality-issues-runtime-server.ts';
+import { getRequestContext, ISSUE_RECORDED_HEADER } from './request-context.ts';
 
 // ============================================================================
 // ERROR CLASSES
@@ -168,25 +169,37 @@ export async function errorHandler(error: Error, c: Context) {
   // scheduled instead — kept alive past the response via EdgeRuntime.waitUntil
   // where that exists, and awaited where it does not, so nothing is lost to an
   // isolate suspending. Never throws either way.
-  await scheduleRuntimeServerIssue({
-    error,
-    path: new URL(c.req.url).pathname,
-    method: c.req.method,
-    statusCode: 500,
-    // Lazily-mounted sub-routers are dispatched via `router.fetch()` into a
-    // separate Hono instance, so index.tsx's `c.set('requestId')` is not
-    // visible there — lazy-router forwards the id as a header instead.
-    //
-    // The header is re-validated rather than trusted. lazy-router already
-    // overwrites it with the id index.tsx validated, but this function is also
-    // reachable directly through `asyncHandler` in ~50 modules, and the value
-    // lands unbounded and unsanitised in a KV-persisted issue message that the
-    // admin dashboard renders. One validation at the point of use is cheaper
-    // than trusting every future call path.
-    requestId: resolveRequestId(c),
-  });
+  //
+  // Inside a request served by createApp(), the root 5xx observer records every
+  // 5xx response — including this one — with the FULL request path. Hand it the
+  // exception instead of recording here, so the issue is written once and
+  // carries the stack. Only when there is no request context (a sub-router
+  // exercised on its own) does this handler record directly, and it marks the
+  // response so nothing upstream records it a second time.
+  const requestContext = getRequestContext();
+  if (requestContext) {
+    requestContext.capturedError = error;
+  } else {
+    await scheduleRuntimeServerIssue({
+      error,
+      path: new URL(c.req.url).pathname,
+      method: c.req.method,
+      statusCode: 500,
+      // Lazily-mounted sub-routers are dispatched via `router.fetch()` into a
+      // separate Hono instance, so index.tsx's `c.set('requestId')` is not
+      // visible there — lazy-router forwards the id as a header instead.
+      //
+      // The header is re-validated rather than trusted. lazy-router already
+      // overwrites it with the id index.tsx validated, but this function is also
+      // reachable directly through `asyncHandler` in ~50 modules, and the value
+      // lands unbounded and unsanitised in a KV-persisted issue message that the
+      // admin dashboard renders. One validation at the point of use is cheaper
+      // than trusting every future call path.
+      requestId: resolveRequestId(c),
+    });
+  }
 
-  return c.json(
+  const response = c.json(
     {
       message: 'An unexpected error occurred',
       statusCode: 500,
@@ -202,6 +215,8 @@ export async function errorHandler(error: Error, c: Context) {
     },
     500,
   );
+  if (!requestContext) response.headers.set(ISSUE_RECORDED_HEADER, '1');
+  return response;
 }
 
 // ============================================================================
