@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { rateLimit } from './esign-rate-limit.ts';
@@ -16,7 +16,7 @@ const log = createModuleLogger('esign-sender-kba-routes');
 const app = new Hono();
 
 /** GET /diagnostics/kba — admin: show which provider is wired. */
-app.get('/diagnostics/kba', async (c) => {
+app.get('/diagnostics/kba', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     return c.json({ success: true, ...getKbaStatus() });

@@ -168,16 +168,9 @@ envelopesRoutes.post('/verify-hash', async (c) => {
  */
 envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
   try {
-    // Read the user `requireAdmin` already put on the context — do NOT call
-    // `getAuthContext(c)` here.
-    //
-    // `requireAdmin` -> `resolveAuthUser` has already validated the bearer
-    // token against Supabase Auth, run the account-security lookup, and set
-    // `user` / `userId` / `userRole` / `userEmail`. Calling `getAuthContext`
-    // again repeats BOTH the network round trip and the security-store read on
-    // every successful request — the exact per-request auth cost
-    // `auth-middleware-cost.test.ts` exists to prevent, and which its regex
-    // misses because it only detects chained middleware names.
+    // Read the user `requireAdmin` already put on the context. (`getAuthContext`
+    // would return the same verification — a guard records it and the helper
+    // reuses it for the same token — but the context value is the direct read.)
     const user = c.get('user') as { id: string; app_metadata?: Record<string, unknown> };
 
     // Get query params
@@ -273,6 +266,7 @@ envelopesRoutes.delete('/envelopes', requireSuperAdmin, async (c) => {
  */
 envelopesRoutes.post(
   '/envelopes/upload',
+  requireAdmin,
   requireIdempotency(),
   rateLimit('SENDER_MUTATE'),
   async (c) => {
@@ -524,7 +518,7 @@ envelopesRoutes.post(
  * GET /envelopes/:envelopeId
  * Get envelope details with signers, fields, and document URL
  */
-envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
+envelopesRoutes.get('/envelopes/:envelopeId', requireAdmin, async (c) => {
   try {
     // Authenticate
     const ctx = await getAuthContext(c);
@@ -580,7 +574,7 @@ envelopesRoutes.get('/envelopes/:envelopeId', async (c) => {
  * records (those are created at invite-send time); they are the lightweight
  * form data the admin entered during the recipients step.
  */
-envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
+envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', requireAdmin, async (c) => {
   try {
     // `await getAuthContext(c);` — with the result discarded — is what stood
     // here. That authenticates and then throws the answer away, which is the
@@ -663,7 +657,7 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', async (c) => {
  * keeps the surface flexible for the studio's settings popover and any
  * future quick-edit UIs.
  */
-envelopesRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
+envelopesRoutes.patch('/envelopes/:envelopeId/draft-settings', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const user = ctx.user;
@@ -673,6 +667,16 @@ envelopesRoutes.patch('/envelopes/:envelopeId/draft-settings', async (c) => {
 
     const envelope = await kv.get(EsignKeys.envelope(envelopeId));
     if (!envelope) {
+      return c.json({ error: 'Envelope not found' }, 404);
+    }
+    // Same firm check as draft-signers above, and for the same reason answered
+    // as 404: this rewrote the title, message, expiry and settings of ANY
+    // draft whose id it was given, and returned the whole envelope.
+    if (!belongsToFirm(user, { firm_id: (envelope.firm_id as string | undefined) ?? null })) {
+      log.warn('Draft-settings write denied by firm scope', {
+        envelopeId,
+        callerFirmId: resolveFirmId(user),
+      });
       return c.json({ error: 'Envelope not found' }, 404);
     }
     if (envelope.status !== 'draft') {

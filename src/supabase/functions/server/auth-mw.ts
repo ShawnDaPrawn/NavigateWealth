@@ -168,6 +168,24 @@ export async function enforceAccountSecurity(
 }
 
 /**
+ * Context key for a verification a guard has ALREADY performed in this request
+ * (token checked with GoTrue, account-security state enforced, role resolved).
+ * Both `getAuthContext` and the guards reuse it for the same bearer token, so a
+ * request verifies once however many of them it passes through: a router-wide
+ * `requireAuth` in front of a route's `requireAdmin`, or a guarded handler that
+ * also calls `getAuthContext`. `requirePrimaryAuth` never sets it: it skips the
+ * account-state gate, so its result is not a full verification.
+ */
+const VERIFIED_AUTH = 'verifiedAuth';
+
+interface VerifiedAuth {
+  user: any;
+  userId: string;
+  role: string;
+  token: string;
+}
+
+/**
  * Get auth context manually (for non-middleware use).
  * Throws AuthError on failure — suitable for try/catch patterns in route handlers.
  */
@@ -179,6 +197,10 @@ export async function getAuthContext(c: Context) {
   }
 
   const token = authHeader.split(' ')[1];
+
+  const verified = c.get(VERIFIED_AUTH) as VerifiedAuth | undefined;
+  if (verified && verified.token === token) return verified;
+
   const {
     data: { user },
     error,
@@ -233,6 +255,15 @@ async function resolveAuthUser(
   }
 
   const token = authHeader.split(' ')[1];
+
+  // An earlier guard on this request already verified this exact token in full
+  // and set the context below; a full verification also satisfies a caller that
+  // asked for less (`enforceSecurityState = false`).
+  const verified = c.get(VERIFIED_AUTH) as VerifiedAuth | undefined;
+  if (verified && verified.token === token) {
+    return { user: verified.user, userId: verified.userId, role: verified.role };
+  }
+
   const {
     data: { user },
     error,
@@ -267,6 +298,9 @@ async function resolveAuthUser(
   c.set('userId', user.id);
   c.set('userRole', role);
   c.set('userEmail', user.email);
+  if (enforceSecurityState) {
+    c.set(VERIFIED_AUTH, { user, userId: user.id, role, token } satisfies VerifiedAuth);
+  }
 
   return { user, userId: user.id, role };
 }

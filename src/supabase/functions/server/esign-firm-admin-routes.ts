@@ -12,10 +12,15 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
-import { getRequestMetadata, resolveFirmId } from './esign-route-helpers.ts';
-import { getEnvelopeDetails, logAuditEvent } from './esign-services.ts';
+import {
+  getRequestMetadata,
+  resolveFirmId,
+  requireOwnedEnvelope,
+  firmScopeResponse,
+} from './esign-route-helpers.ts';
+import { logAuditEvent } from './esign-services.ts';
 import { getEsignMetrics } from './esign-metrics-service.ts';
 import {
   getRetentionPolicy,
@@ -37,7 +42,7 @@ const log = createModuleLogger('esign-firm-admin-routes');
 
 const firmAdminRoutes = new Hono();
 
-firmAdminRoutes.get('/retention', async (c) => {
+firmAdminRoutes.get('/retention', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -53,7 +58,7 @@ firmAdminRoutes.get('/retention', async (c) => {
 });
 
 /** PUT /retention — set or update the policy. */
-firmAdminRoutes.put('/retention', async (c) => {
+firmAdminRoutes.put('/retention', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -75,7 +80,7 @@ firmAdminRoutes.put('/retention', async (c) => {
 });
 
 /** DELETE /retention — revert to default (no purging). */
-firmAdminRoutes.delete('/retention', async (c) => {
+firmAdminRoutes.delete('/retention', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -93,7 +98,7 @@ firmAdminRoutes.delete('/retention', async (c) => {
 });
 
 /** POST /maintenance/retention-sweep — force a sweep. */
-firmAdminRoutes.post('/maintenance/retention-sweep', async (c) => {
+firmAdminRoutes.post('/maintenance/retention-sweep', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const result = await runRetentionSweep();
@@ -114,7 +119,7 @@ firmAdminRoutes.post('/maintenance/retention-sweep', async (c) => {
  * Returns `{ branding: null }` when nothing has been configured so the
  * signer UI keeps its built-in defaults. Firm-scoped via `resolveFirmId`.
  */
-firmAdminRoutes.get('/branding', async (c) => {
+firmAdminRoutes.get('/branding', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -135,7 +140,7 @@ firmAdminRoutes.get('/branding', async (c) => {
  * must be HTTPS, support email must be a valid address. Anything that
  * fails validation surfaces as a 400 with the exact reason.
  */
-firmAdminRoutes.put('/branding', async (c) => {
+firmAdminRoutes.put('/branding', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -165,7 +170,7 @@ firmAdminRoutes.put('/branding', async (c) => {
 });
 
 /** DELETE /branding — clear the firm branding so signer pages revert to defaults. */
-firmAdminRoutes.delete('/branding', async (c) => {
+firmAdminRoutes.delete('/branding', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -191,7 +196,7 @@ firmAdminRoutes.delete('/branding', async (c) => {
  * fly — small-to-medium firms (thousands of envelopes) complete in
  * well under 300ms and avoid a stale cache surface.
  */
-firmAdminRoutes.get('/metrics', async (c) => {
+firmAdminRoutes.get('/metrics', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -212,7 +217,7 @@ firmAdminRoutes.get('/metrics', async (c) => {
 // ==================== RECOVERY BIN ROUTES (P6.8) ====================
 
 /** GET /recovery-bin — list soft-deleted envelopes (firm-scoped). */
-firmAdminRoutes.get('/recovery-bin', async (c) => {
+firmAdminRoutes.get('/recovery-bin', requireAdmin, async (c) => {
   try {
     const ctx = await getAuthContext(c);
     const firmId = resolveFirmId(ctx.user);
@@ -234,104 +239,112 @@ firmAdminRoutes.get('/recovery-bin', async (c) => {
 });
 
 /** POST /recovery-bin/:envelopeId/restore — clear the soft-delete stamp. */
-firmAdminRoutes.post('/recovery-bin/:envelopeId/restore', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId')!;
-    const envelope = await getEnvelopeDetails(envelopeId);
-    if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
+firmAdminRoutes.post(
+  '/recovery-bin/:envelopeId/restore',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const envelopeId = c.req.param('envelopeId')!;
+      // Ownership (S6). The hand-rolled check this replaces waved through any
+      // envelope with no firm_id — the 'standalone' shortcut.
+      const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+      if (!envelope) return c.json({ error: 'Envelope not found' }, 404);
 
-    const callerFirm = resolveFirmId(ctx.user);
-    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
-    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
-      return c.json({ error: 'Forbidden' }, 403);
+      const restored = await restoreEnvelope(envelopeId, ctx.user.id);
+      if (!restored) return c.json({ error: 'Envelope is not in the recovery bin' }, 400);
+
+      const { ip, userAgent } = getRequestMetadata(c);
+      await logAuditEvent({
+        envelopeId,
+        actorType: 'sender_user',
+        actorId: ctx.user.id,
+        action: 'restored',
+        email: ctx.user.email || 'admin@system',
+        ip,
+        userAgent,
+        metadata: { restoredAt: new Date().toISOString() },
+      });
+
+      AdminAuditService.record({
+        actorId: ctx.user.id,
+        actorRole: 'admin',
+        category: 'security',
+        action: 'esign_envelope_restored',
+        summary: `Envelope restored: ${restored.title}`,
+        severity: 'info',
+        entityType: 'envelope',
+        entityId: envelopeId,
+      }).catch(() => {});
+
+      return c.json({ success: true, envelope: restored });
+    } catch (error: unknown) {
+      const scoped = firmScopeResponse(c, error);
+      if (scoped) return scoped;
+      log.error('Restore envelope error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to restore envelope',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
     }
-
-    const restored = await restoreEnvelope(envelopeId, ctx.user.id);
-    if (!restored) return c.json({ error: 'Envelope is not in the recovery bin' }, 400);
-
-    const { ip, userAgent } = getRequestMetadata(c);
-    await logAuditEvent({
-      envelopeId,
-      actorType: 'sender_user',
-      actorId: ctx.user.id,
-      action: 'restored',
-      email: ctx.user.email || 'admin@system',
-      ip,
-      userAgent,
-      metadata: { restoredAt: new Date().toISOString() },
-    });
-
-    AdminAuditService.record({
-      actorId: ctx.user.id,
-      actorRole: 'admin',
-      category: 'security',
-      action: 'esign_envelope_restored',
-      summary: `Envelope restored: ${restored.title}`,
-      severity: 'info',
-      entityType: 'envelope',
-      entityId: envelopeId,
-    }).catch(() => {});
-
-    return c.json({ success: true, envelope: restored });
-  } catch (error: unknown) {
-    log.error('Restore envelope error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to restore envelope',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+  },
+);
 
 /** DELETE /recovery-bin/:envelopeId — permanently purge a single envelope. */
-firmAdminRoutes.delete('/recovery-bin/:envelopeId', rateLimit('SENDER_MUTATE'), async (c) => {
-  try {
-    const ctx = await getAuthContext(c);
-    const envelopeId = c.req.param('envelopeId')!;
-    const envelope = await getEnvelopeDetails(envelopeId);
-    if (!envelope) return c.json({ success: true, purged: true, already: true });
+firmAdminRoutes.delete(
+  '/recovery-bin/:envelopeId',
+  requireAdmin,
+  rateLimit('SENDER_MUTATE'),
+  async (c) => {
+    try {
+      const ctx = await getAuthContext(c);
+      const envelopeId = c.req.param('envelopeId')!;
+      // Ownership FIRST (S6), before anything about the envelope is answered.
+      // The check this replaces came after the recovery-bin test and waved
+      // through any envelope with no firm_id — the 'standalone' shortcut — on
+      // a route that PERMANENTLY deletes.
+      const envelope = await requireOwnedEnvelope(ctx.user, envelopeId);
+      if (!envelope) return c.json({ success: true, purged: true, already: true });
 
-    if (!envelope.deleted_at) {
-      return c.json({ error: 'Envelope is not in the recovery bin' }, 400);
+      if (!envelope.deleted_at) {
+        return c.json({ error: 'Envelope is not in the recovery bin' }, 400);
+      }
+
+      await hardDeleteEnvelope(envelopeId);
+
+      AdminAuditService.record({
+        actorId: ctx.user.id,
+        actorRole: 'admin',
+        category: 'security',
+        action: 'esign_envelope_purged',
+        summary: `Envelope permanently deleted: ${envelope.title}`,
+        severity: 'critical',
+        entityType: 'envelope',
+        entityId: envelopeId,
+      }).catch(() => {});
+
+      return c.json({ success: true, purged: true });
+    } catch (error: unknown) {
+      const scoped = firmScopeResponse(c, error);
+      if (scoped) return scoped;
+      log.error('Purge envelope error:', error);
+      const status = error instanceof AuthError ? error.statusCode : 500;
+      return new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Failed to purge envelope',
+        }),
+        { status, headers: { 'Content-Type': 'application/json' } },
+      );
     }
-
-    const callerFirm = resolveFirmId(ctx.user);
-    const envelopeFirm = (envelope.firm_id as string | undefined) || 'standalone';
-    if (envelopeFirm !== 'standalone' && envelopeFirm !== callerFirm) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    await hardDeleteEnvelope(envelopeId);
-
-    AdminAuditService.record({
-      actorId: ctx.user.id,
-      actorRole: 'admin',
-      category: 'security',
-      action: 'esign_envelope_purged',
-      summary: `Envelope permanently deleted: ${envelope.title}`,
-      severity: 'critical',
-      entityType: 'envelope',
-      entityId: envelopeId,
-    }).catch(() => {});
-
-    return c.json({ success: true, purged: true });
-  } catch (error: unknown) {
-    log.error('Purge envelope error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to purge envelope',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-});
+  },
+);
 
 /** POST /maintenance/recovery-sweep — run the retention sweeper on demand. */
-firmAdminRoutes.post('/maintenance/recovery-sweep', async (c) => {
+firmAdminRoutes.post('/maintenance/recovery-sweep', requireAdmin, async (c) => {
   try {
     await getAuthContext(c);
     const result = await purgeExpiredDeletedEnvelopes();
