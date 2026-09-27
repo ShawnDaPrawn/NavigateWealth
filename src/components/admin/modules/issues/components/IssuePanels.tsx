@@ -220,7 +220,7 @@ export function FeedHealthPanel({ snapshot }: { snapshot: QualityIssueSnapshot }
       description:
         runtimeIssues.length > 0
           ? `${runtimeIssues.length} client/server runtime issue${runtimeIssues.length === 1 ? '' : 's'} captured`
-          : 'Listening for authenticated client and server runtime errors',
+          : 'Listening for browser crashes, handled errors, API failures and server 5xx responses',
       detail: latestRuntimeSeenAt ? getAgeLabel(latestRuntimeSeenAt) : 'No runtime issues captured',
       icon: Clock,
       tone: 'healthy',

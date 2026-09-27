@@ -5,7 +5,10 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { logger } from '../../utils/logger';
-import { reportRuntimeClientIssue } from '../../utils/quality/runtimeIssueReporter';
+import {
+  markErrorReported,
+  reportRuntimeClientIssue,
+} from '../../utils/quality/runtimeIssueReporter';
 import {
   isDefinitiveStaleChunkLoadFailure,
   isStaleChunkLoadFailure,
@@ -74,6 +77,7 @@ export class ErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack,
     });
 
+    markErrorReported(error);
     void reportRuntimeClientIssue({
       kind: 'react-error-boundary',
       title: error.name || 'React render error',

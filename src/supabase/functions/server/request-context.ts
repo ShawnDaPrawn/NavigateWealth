@@ -35,7 +35,21 @@
 
 export interface RequestContext {
   requestId: string;
+  /**
+   * The exception the shared error handler turned into a 500, handed to the
+   * root 5xx observer in create-app.ts so it can be recorded ONCE, with the
+   * full request path. Sub-routers see a stripped path (`/documents/1` rather
+   * than `/policies/documents/1`), so recording at the root labels it right.
+   */
+  capturedError?: Error;
 }
+
+/**
+ * Marks a 5xx response the error handler already recorded itself (only when
+ * no request context exists, e.g. a sub-router exercised directly). The root
+ * observer skips such responses and strips the header before it leaves.
+ */
+export const ISSUE_RECORDED_HEADER = 'x-nw-issue-recorded';
 
 /** The subset of AsyncLocalStorage this module uses. */
 interface AsyncStore {

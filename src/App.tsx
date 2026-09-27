@@ -10,6 +10,7 @@ import { AppProviders } from './components/providers/AppProviders';
 import { SkipToContent } from './components/shared/AccessibilityHelpers';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import {
+  markErrorReported,
   reportRuntimeClientIssue,
   runtimeIssueFromUnknown,
 } from './utils/quality/runtimeIssueReporter';
@@ -68,6 +69,7 @@ export default function App() {
         return true;
       }
 
+      markErrorReported(event.error);
       void reportRuntimeClientIssue({
         kind: 'window-error',
         title: event.error instanceof Error ? event.error.name : 'Window error',

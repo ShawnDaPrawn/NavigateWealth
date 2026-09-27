@@ -22,6 +22,7 @@ import {
   ISSUE_WORKFLOW_KEY,
   LATEST_SNAPSHOT_KEY,
   RUNTIME_CLIENT_ISSUES_KEY,
+  RUNTIME_CLIENT_PUBLIC_KEY_PREFIX,
   CSP_VIOLATION_KEY_PREFIX,
   SECURITY_FEED_ISSUES_KEY,
   normalizeAutomationRun,
@@ -34,6 +35,7 @@ const log = createModuleLogger('quality-issues');
 
 /** See the note in csp-report-routes.ts: this namespace goes through the repository. */
 const cspViolationsRepo = createKvRepository<QualityIssue>(CSP_VIOLATION_KEY_PREFIX);
+const publicRuntimeRepo = createKvRepository<QualityIssue>(RUNTIME_CLIENT_PUBLIC_KEY_PREFIX);
 
 export async function loadQualityIssueState(): Promise<{
   baseSnapshot: QualityIssueSnapshot;
@@ -55,12 +57,14 @@ export async function loadQualityIssueState(): Promise<{
   // runtime bucket so they appear in the dashboard snapshot alongside client
   // errors — coalesceQualityIssuesByFingerprint keeps the two sources distinct.
   const runtimeServerIssues = await getRuntimeServerIssues();
+  const publicRuntimeIssues = await publicRuntimeRepo.listAll('quality dashboard snapshot');
 
   return {
     baseSnapshot: snapshot || createEmptyQualityIssueSnapshot(),
     baseRuntimeIssues: [
       ...(Array.isArray(runtimeIssues) ? runtimeIssues : []),
       ...runtimeServerIssues,
+      ...(Array.isArray(publicRuntimeIssues) ? publicRuntimeIssues.filter(Boolean) : []),
     ],
     baseSecurityFeedIssues: [
       ...(Array.isArray(securityFeedIssues) ? securityFeedIssues : []),

@@ -155,6 +155,13 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     routes: ['csp-report-routes.ts POST /'],
   },
   {
+    kind: 'browser-telemetry',
+    classification: 'public',
+    reason:
+      "Browser error reports from SIGNED-OUT visitors — the login page, the public site and the e-sign signer flow run with no session, and before this route every error there was dropped. Bounded the same way as the CSP endpoint: IP rate-limited (RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR), one row per fingerprint under its own KV prefix so a burst cannot evict signed-in reports, hard-capped at MAX_PUBLIC_RUNTIME_ISSUES, every field length-limited, and always 204. URLs are stripped to origin + path (plus the screen-naming `module`/`tab`/`view` params) before storage, so the signer's `?token=` credential is never retained.",
+    routes: ['quality-issues-routes.ts POST /runtime-client/public'],
+  },
+  {
     kind: 'lead-gen',
     classification: 'public',
     reason:

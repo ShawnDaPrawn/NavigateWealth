@@ -127,3 +127,92 @@ describe('scheduling off the request path', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe('labels and grouping', () => {
+  it('describes a hand-built 500 from its response body', async () => {
+    await recordRuntimeServerIssue({
+      responseBody: Promise.resolve(JSON.stringify({ error: 'Failed to generate download URL' })),
+      path: '/make-server-91ed8379/documents/3f2a1b4c-1234-4abc-8def-1234567890ab/download',
+      method: 'GET',
+      statusCode: 500,
+    });
+
+    const [issue] = await getRuntimeServerIssues();
+    expect(issue.title).toBe(
+      'GET /documents/:id/download failed (500): Failed to generate download URL',
+    );
+    expect(issue.message).toBe('Failed to generate download URL');
+    expect(issue.route).toBe('/documents/:id/download');
+    expect(issue.area).toBe('API · Documents');
+    expect(issue.summary).toBeTruthy();
+    expect(issue.details).toContain('Status: 500');
+  });
+
+  it('groups the same failure on different records into one issue', async () => {
+    const body = (id: string) =>
+      JSON.stringify({ error: `Failed to load client ${id}`, details: 'timeout after 30 s' });
+    await recordRuntimeServerIssue({
+      responseBody: body('3f2a1b4c-1234-4abc-8def-1234567890ab'),
+      path: '/make-server-91ed8379/clients/3f2a1b4c-1234-4abc-8def-1234567890ab',
+      method: 'GET',
+      statusCode: 500,
+    });
+    await recordRuntimeServerIssue({
+      responseBody: body('99999999-1234-4abc-8def-1234567890ab'),
+      path: '/make-server-91ed8379/clients/99999999-1234-4abc-8def-1234567890ab',
+      method: 'GET',
+      statusCode: 500,
+    });
+
+    const issues = await getRuntimeServerIssues();
+    expect(issues).toHaveLength(1);
+    expect(issues[0].occurrences).toBe(2);
+  });
+
+  it('keeps two different failures on the same route apart', async () => {
+    await recordRuntimeServerIssue({ error: anError('AError'), path: '/a', statusCode: 500 });
+    await recordRuntimeServerIssue({
+      responseBody: '{"error":"Storage bucket missing"}',
+      path: '/a',
+      statusCode: 500,
+    });
+    expect(await getRuntimeServerIssues()).toHaveLength(2);
+  });
+
+  it('prefers the exception over the shared handler’s generic body', async () => {
+    await recordRuntimeServerIssue({
+      error: Object.assign(new TypeError('rows.map is not a function'), { name: 'TypeError' }),
+      responseBody: '{"message":"An unexpected error occurred"}',
+      path: '/tasks',
+      method: 'GET',
+      statusCode: 500,
+    });
+    const [issue] = await getRuntimeServerIssues();
+    expect(issue.title).toBe("GET /tasks failed (500): 'rows.map' is not a function");
+    expect(issue.details).toContain('Stack:');
+  });
+
+  it('survives a body that cannot be read', async () => {
+    await recordRuntimeServerIssue({
+      responseBody: Promise.reject(new Error('stream broke')),
+      path: '/x',
+      statusCode: 503,
+    });
+    const [issue] = await getRuntimeServerIssues();
+    expect(issue.title).toContain('/x failed (503)');
+  });
+});
+
+describe('messageFromResponseBody', () => {
+  it('reads the shapes routes actually use', async () => {
+    const { messageFromResponseBody } = await import('../quality-issues-runtime-server.ts');
+    expect(messageFromResponseBody('{"error":"A"}')).toBe('A');
+    expect(messageFromResponseBody('{"message":"B"}')).toBe('B');
+    expect(messageFromResponseBody('{"error":"C","details":"D"}')).toBe('C: D');
+    expect(messageFromResponseBody('{"error":{"message":"E"}}')).toBe('E');
+    expect(messageFromResponseBody('<html><title>502 Bad Gateway</title></html>')).toBe(
+      '502 Bad Gateway',
+    );
+    expect(messageFromResponseBody('')).toBeUndefined();
+  });
+});
