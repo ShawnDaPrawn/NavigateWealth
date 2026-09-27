@@ -1,4 +1,45 @@
 {
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "mcp__github__*",
+      "mcp__Supabase__*",
+      "mcp__Vercel__*",
+      "mcp__Claude_Code_Remote__*",
+      "mcp__Claude_Docs__*",
+      "mcp__Buffer__*",
+      "mcp__Figma__*",
+      "mcp__Gmail__*",
+      "mcp__Microsoft_365__*",
+      "mcp__Twilio__*",
+      "mcp__ICD-10_Codes__*"
+    ],
+    "ask": [
+      "mcp__Vercel__buy_addon",
+      "mcp__Vercel__buy_credits",
+      "mcp__Vercel__buy_credits_endpoint",
+      "mcp__Vercel__buy_domain",
+      "mcp__Vercel__buy_domains",
+      "mcp__Vercel__buy_pro",
+      "mcp__Vercel__buy_single_domain",
+      "mcp__Supabase__create_project",
+      "mcp__Supabase__pause_project"
+    ],
+    "deny": [
+      "mcp__Supabase__deploy_edge_function",
+      "Bash(supabase functions deploy *)",
+      "Bash(npx supabase functions deploy *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
