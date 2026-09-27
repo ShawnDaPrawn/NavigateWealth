@@ -20,6 +20,7 @@ import {
   getAuthHeaders,
   getMultipartAuthHeaders,
   handleResponse,
+  headers,
   notifyEmailEngagementChanged,
 } from './shared';
 
@@ -58,9 +59,14 @@ export const ArticlesAPI = {
     if (filters?.date_to) params.append('date_to', filters.date_to);
 
     const url = `${BASE_URL}/articles${params.toString() ? `?${params.toString()}` : ''}`;
-    // Authenticated: since #348 the server returns unpublished articles only
-    // to an admin session, so the anon key would hide every draft.
-    const response = await fetch(url, { headers: await getAuthHeaders() });
+    // Since #348 the server returns unpublished articles only to an admin
+    // session, so the anon key would hide every draft. An explicit
+    // `published` read (the public Resources page) keeps the anon key: the
+    // server short-circuits it, and getSession() can queue behind auth
+    // hydration on a cold load.
+    const response = await fetch(url, {
+      headers: filters?.status === 'published' ? headers : await getAuthHeaders(),
+    });
     return handleResponse<Article[]>(response);
   },
 

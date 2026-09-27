@@ -139,6 +139,15 @@ describe('ArticlesAPI', () => {
       const init = mockFetch.mock.calls[0][1] as RequestInit;
       expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-token');
     });
+
+    // The public Resources page asks for published articles only. It must not
+    // wait on getSession(), which can queue behind auth hydration.
+    it('getArticles({ status: published }) keeps the anon key', async () => {
+      mockFetch.mockResolvedValue(makeOkResponse([]));
+      await ArticlesAPI.getArticles({ status: 'published' });
+      const init = mockFetch.mock.calls[0][1] as RequestInit;
+      expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-anon-key');
+    });
   });
 
   describe('getArticle', () => {
