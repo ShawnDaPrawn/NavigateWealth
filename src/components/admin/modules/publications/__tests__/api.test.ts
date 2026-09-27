@@ -124,6 +124,23 @@ describe('ArticlesAPI', () => {
     });
   });
 
+  // The server returns drafts only to an admin session (#348). With the anon
+  // key every draft vanished from the admin list and opening one 404'd.
+  describe('admin reads send the session token, not the anon key', () => {
+    it.each([
+      ['getArticles', () => ArticlesAPI.getArticles({ status: 'draft' })],
+      ['getArticle', () => ArticlesAPI.getArticle('a-001')],
+      ['getArticleBySlug', () => ArticlesAPI.getArticleBySlug('test-article')],
+      ['searchArticles', () => ArticlesAPI.searchArticles('tax')],
+      ['getFeaturedArticles', () => ArticlesAPI.getFeaturedArticles(5)],
+    ])('%s', async (_name, call) => {
+      mockFetch.mockResolvedValue(makeOkResponse([]));
+      await call();
+      const init = mockFetch.mock.calls[0][1] as RequestInit;
+      expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-token');
+    });
+  });
+
   describe('getArticle', () => {
     it('fetches article by id', async () => {
       mockFetch.mockResolvedValue(makeOkResponse(MOCK_ARTICLE));
