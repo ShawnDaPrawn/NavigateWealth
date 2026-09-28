@@ -24,14 +24,23 @@ export function DesignSystemLibrary() {
   // Only keep the library if it was built. Otherwise the site's SPA fallback
   // answers and the iframe would show the site inside itself, so the loaded
   // page is checked for the library's marker (same origin, so it is readable).
+  // Once the library has loaded, a later page without the marker means the
+  // iframe was navigated away from it, so the library is loaded again.
   const onFrameLoad = () => {
+    const frame = frameRef.current;
     let found = false;
     try {
-      found = Boolean(frameRef.current?.contentDocument?.querySelector(LIBRARY_MARKER));
+      found = Boolean(frame?.contentDocument?.querySelector(LIBRARY_MARKER));
     } catch {
-      found = false;
+      // Another origin's page is unreadable, so it is not the library.
     }
-    setStatus(found ? 'ready' : 'missing');
+    if (found) {
+      setStatus('ready');
+    } else if (status === 'ready' && frame) {
+      frame.src = LIBRARY_PATH;
+    } else {
+      setStatus('missing');
+    }
   };
 
   useEffect(() => {

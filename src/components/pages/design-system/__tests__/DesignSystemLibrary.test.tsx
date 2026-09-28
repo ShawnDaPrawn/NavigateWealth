@@ -69,6 +69,15 @@ describe('DesignSystemLibrary', () => {
     expect(frame.getAttribute('aria-hidden')).toBeNull();
   });
 
+  it('reloads the library, rather than giving up, if the iframe is navigated away from it', () => {
+    const frame = renderLoaded(true);
+    frame.contentDocument?.querySelector('meta[name="nw-design-system-library"]')?.remove();
+    frame.setAttribute('src', 'https://www.fsca.co.za/');
+    fireEvent.load(frame);
+    expect(screen.queryByText('The component library is not built here')).toBeNull();
+    expect(screen.getByTitle(TITLE).getAttribute('src')).toBe(LIBRARY_PATH);
+  });
+
   it('shows build instructions when the site answers instead of the library', () => {
     renderLoaded(false);
     expect(screen.getByText('The component library is not built here')).toBeTruthy();
