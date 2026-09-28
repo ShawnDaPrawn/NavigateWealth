@@ -30,9 +30,19 @@ vi.mock('../../../../../../utils/supabase/client', () => ({
   }),
 }));
 
+vi.mock('../../../../../../utils/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { useAutoContentProcessor } from '../useAutoContentProcessor';
+import { logger } from '../../../../../../utils/logger';
 
 // ── Constants mirrored from source ────────────────────────────────────────────
 
@@ -210,6 +220,47 @@ describe('useAutoContentProcessor — processing logic', () => {
       await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
     });
     expect((result as { current: void; error?: unknown }).error).toBeUndefined();
+  });
+
+  it('logs a tick failure with logger.warn, never console.error, so it does not spam Issue Manager', async () => {
+    // The catch is commented "Silent failure — this is a background task".
+    // console.error and logger.error both reach the runtime issue reporter
+    // (runtimeIssueReporter.ts), so either would turn an ordinary overnight
+    // network blip into a permanent Issue Manager entry — the opposite of
+    // "silent". logger.warn does not.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockProcessDue.mockRejectedValue(new Error('network failure'));
+
+    renderHook(() => useAutoContentProcessor());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('[AutoContentProcessor]'),
+      expect.objectContaining({ error: 'network failure' }),
+    );
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('reports a successful generation with logger.info, not console.error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockProcessDue.mockResolvedValue({
+      totalArticlesGenerated: 2,
+      processed: [{ pipelineId: 'pipeline-a', articlesGenerated: 2 }],
+    });
+
+    renderHook(() => useAutoContentProcessor());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
+    });
+
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Generated 2 article(s)'));
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 
   it('does not start a concurrent run when already processing', async () => {

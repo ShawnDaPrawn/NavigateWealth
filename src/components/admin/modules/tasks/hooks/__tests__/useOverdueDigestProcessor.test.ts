@@ -42,6 +42,7 @@ vi.mock('../../../../../../utils/logger', () => ({
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { useOverdueDigestProcessor } from '../useOverdueDigestProcessor';
+import { logger } from '../../../../../../utils/logger';
 
 // ── Constants mirrored from source ────────────────────────────────────────────
 
@@ -251,5 +252,28 @@ describe('useOverdueDigestProcessor — digest logic', () => {
       await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
     });
     expect((result as { current: void; error?: unknown }).error).toBeUndefined();
+  });
+
+  it('logs a tick failure with logger.warn, never console.error, so it does not spam Issue Manager', async () => {
+    // The catch is commented "Silent failure — this is a background task".
+    // console.error and logger.error both reach the runtime issue reporter
+    // (runtimeIssueReporter.ts), so either would turn an ordinary overnight
+    // network blip into a permanent Issue Manager entry — the opposite of
+    // "silent". logger.warn does not.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockApiGet.mockRejectedValue(new Error('network failure'));
+
+    renderHook(() => useOverdueDigestProcessor());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('[OverdueDigestProcessor]'),
+      expect.objectContaining({ error: 'network failure' }),
+    );
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 });

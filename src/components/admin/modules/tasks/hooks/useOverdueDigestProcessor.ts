@@ -95,8 +95,13 @@ export function useOverdueDigestProcessor(options?: {
         logger.info('[OverdueDigestProcessor] No overdue tasks — no email sent');
       }
     } catch (err) {
-      // Silent failure — this is a background task
-      console.error('[OverdueDigestProcessor] Error checking/sending overdue digest:', err);
+      // Silent failure — this is a background task. logger.warn (not .error /
+      // console.error) so an ordinary network blip while the panel is left
+      // open overnight does not turn into a permanent Issue Manager entry —
+      // see runtimeIssueReporter.ts's console.error and logger.error capture.
+      logger.warn('[OverdueDigestProcessor] Error checking/sending overdue digest', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       isRunningRef.current = false;
     }
