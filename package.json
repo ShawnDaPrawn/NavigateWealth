@@ -160,6 +160,9 @@
     "uui-react:install": "npm --prefix design-system/untitled-ui-react ci",
     "uui-react:dev": "npm --prefix design-system/untitled-ui-react run dev",
     "uui-react:build": "npm --prefix design-system/untitled-ui-react run build",
+    "design-system:dev": "npm --prefix design-system/untitled-ui-react run showcase:dev",
+    "design-system:build": "npm --prefix design-system/untitled-ui-react ci && npm --prefix design-system/untitled-ui-react run showcase:build",
+    "build:deploy": "npm run build && npm run design-system:build",
     "figma:webp": "node ./scripts/build/generate-figma-webp.mjs"
   },
   "lint-staged": {

@@ -19,7 +19,7 @@ import { IconsTab } from './design-system/IconsTab';
 import { PatternsTab } from './design-system/PatternsTab';
 import { OverviewTab } from './design-system/OverviewTab';
 import { ColorsTab } from './design-system/ColorsTab';
-import { ComponentsTab } from './design-system/ComponentsTab';
+import { ComponentsLibraryTab } from './design-system/ComponentsLibraryTab';
 import { SectionsTab } from './design-system/SectionsTab';
 import { PartnershipSection } from './design-system/PartnershipSection';
 
@@ -149,7 +149,7 @@ export default function DesignSystemPage() {
             </TabsContent>
 
             <TabsContent value="components" className="mt-0">
-              <ComponentsTab />
+              <ComponentsLibraryTab />
             </TabsContent>
 
             <TabsContent value="patterns" className="mt-0">

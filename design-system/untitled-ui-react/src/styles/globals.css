@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./theme.css";
+/* Navigate Wealth brand, fonts and neutrals over Untitled UI's defaults. */
+@import "./navigate-wealth.css";
 @import "./typography.css";
 
 @plugin "@tailwindcss/typography";
