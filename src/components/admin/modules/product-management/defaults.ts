@@ -25,43 +25,8 @@ export const DEFAULT_SCHEMAS: CategoryTableStructure[] = [
       { id: 'ma_7', name: 'Notes', type: 'long_text', required: false },
     ],
   },
-  {
-    categoryId: 'retirement_planning',
-    fields: [
-      { id: 'ret_1', name: 'Policy Number', type: 'text', required: true },
-      {
-        id: 'ret_2',
-        name: 'Product Type',
-        type: 'dropdown',
-        required: true,
-        options: [
-          'Retirement Annuity',
-          'Pension Fund',
-          'Provident Fund',
-          'Preservation Fund',
-          'Living Annuity',
-        ],
-        keyId: 'retirement_fund_type',
-      },
-      {
-        id: 'ret_3',
-        name: 'Current Value',
-        type: 'currency',
-        required: true,
-        keyId: 'retirement_fund_value',
-      },
-      { id: 'ret_4', name: 'Projected Maturity Value', type: 'currency', required: false },
-      { id: 'ret_5', name: 'Retirement Age', type: 'number', required: false },
-      {
-        id: 'ret_6',
-        name: 'Premium',
-        type: 'currency',
-        required: true,
-        keyId: 'retirement_monthly_contribution',
-      },
-      { id: 'ret_7', name: 'Notes', type: 'long_text', required: false },
-    ],
-  },
+  // No 'retirement_planning' entry: Retirement Planning is only the heading
+  // over Pre-Retirement and Post-Retirement, not a product with its own schema.
   {
     categoryId: 'retirement_pre',
     fields: [

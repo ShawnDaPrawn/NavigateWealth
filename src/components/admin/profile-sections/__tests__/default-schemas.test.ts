@@ -21,8 +21,11 @@ describe('DEFAULT_SCHEMAS', () => {
     expect(DEFAULT_SCHEMAS.medical_aid).toBeDefined();
   });
 
-  it('has retirement_planning schema', () => {
-    expect(DEFAULT_SCHEMAS.retirement_planning).toBeDefined();
+  it('has Pre- and Post-Retirement schemas but no parent Retirement Planning product', () => {
+    expect(DEFAULT_SCHEMAS.retirement_pre).toBeDefined();
+    expect(DEFAULT_SCHEMAS.retirement_post).toBeDefined();
+    // Retirement Planning is only the heading over the two; it has no schema.
+    expect(DEFAULT_SCHEMAS.retirement_planning).toBeUndefined();
   });
 
   it('has investment schema', () => {
