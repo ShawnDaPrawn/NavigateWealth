@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Edit2, RotateCcw, AlertTriangle, Info } from 'lucide-react';
+import { Edit2, RotateCcw, AlertTriangle, Info } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -36,6 +36,7 @@ import {
 import { formatCurrency } from '../utils';
 import { OVERRIDE_CLASSIFICATIONS } from '../constants';
 import type { RiskCalculations, Adjustments, Override, OverrideClassification } from '../types';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step3Props {
   calculations: RiskCalculations;
@@ -317,22 +318,7 @@ export function Step3ManualAdjustment({
         </AlertDescription>
       </Alert>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Calculations
-        </Button>
-        <Button
-          type="button"
-          onClick={handleProceed}
-          size="lg"
-          className="bg-primary hover:bg-primary/90"
-        >
-          Continue to Finalise
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={3} onBack={onBack} onNext={handleProceed} />
 
       {/* Override Dialog */}
       <Dialog open={!!editingType} onOpenChange={() => setEditingType(null)}>

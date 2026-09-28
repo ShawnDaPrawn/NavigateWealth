@@ -64,8 +64,9 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
     (fnaId: string) => {
       if (!config) return;
       logger.info(`${config.name} completed`, { fnaId });
+      // The wizard announces the publish itself (useFNAPublish); announcing it
+      // here too showed two toasts for one publish.
       loadFNA();
-      toast.success(`${config.name} completed successfully`);
     },
     [config, loadFNA],
   );

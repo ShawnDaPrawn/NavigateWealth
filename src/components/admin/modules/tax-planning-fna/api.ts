@@ -45,10 +45,10 @@ export const TaxPlanningFnaAPI = {
       adviserNotes: string;
       status: 'draft' | 'published';
     },
-  ): Promise<FinalTaxPlan> {
+  ): Promise<FinalTaxPlan & { id: string }> {
     logger.debug('[TaxPlanningFnaAPI] Saving session', { clientId, status: data.status });
     try {
-      const response = await api.post<{ success: boolean; data: FinalTaxPlan }>(
+      const response = await api.post<{ success: boolean; data: FinalTaxPlan & { id: string } }>(
         '/tax-planning-fna/save',
         { clientId, ...data },
       );

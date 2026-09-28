@@ -3,19 +3,17 @@
  * Extracted from types.ts for module structure alignment (Phase 5)
  */
 
+import { buildFNAWizardSteps } from '../fna';
+
 // ==================== WIZARD STEPS ====================
 
-export const WIZARD_STEPS = [
-  {
-    step: 1,
-    title: 'Information Gathering',
-    description: 'Collect household and utilisation data',
-  },
-  {
-    step: 2,
-    title: 'System Auto-Calculation',
-    description: 'Review automated medical aid recommendations',
-  },
-  { step: 3, title: 'Adviser Manual Adjustment', description: 'Apply overrides if needed' },
-  { step: 4, title: 'Finalise & Publish', description: 'Review and publish the FNA' },
-] as const;
+/**
+ * The shared four-step FNA flow with this wizard's step descriptions. Step
+ * titles and order come from the fna module and are the same in every wizard.
+ */
+export const WIZARD_STEPS = buildFNAWizardSteps({
+  1: 'Collect household and utilisation data',
+  2: 'Review automated medical aid recommendations',
+  3: 'Apply overrides if needed',
+  4: 'Review and publish the FNA',
+});

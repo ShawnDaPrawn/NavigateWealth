@@ -25,6 +25,9 @@ import {
   hasSpousePartner,
   isEmptyValue,
   loadClientDataSources,
+  medicalAidValueFromPolicies,
+  normalizeHospitalTariff,
+  normalizeMaritalStatusForEstate,
   normalizeMaritalStatusForTax,
   totalFromAssets,
   totalFromLiabilities,
@@ -269,6 +272,16 @@ function resolveCanonicalKey(
     return { value: picked.value, source: picked.source, confidence: picked.confidence };
   }
 
+  const fromMedicalAidPolicy = medicalAidValueFromPolicies(sources, canonicalKey);
+  if (!isEmptyValue(fromMedicalAidPolicy)) {
+    return {
+      value: fromMedicalAidPolicy,
+      source: 'policies',
+      confidence: 'derived',
+      sourceDetail: 'Medical aid policy',
+    };
+  }
+
   if (canonicalKey === 'retirement_fund_value_total') {
     const value = aggregateRetirementCapital(sources);
     return value > 0 ? { value, source: 'policies', confidence: 'derived' } : null;
@@ -315,10 +328,23 @@ function formatRiskFormValue(formField: string, value: unknown): unknown {
   return value;
 }
 
+/**
+ * Shapes a resolved client value for the form that asked for it. The shared
+ * client keys (FNA_CLIENT_KEYS) resolve to one value; a form whose field is an
+ * enum gets that value in its own vocabulary here, so no wizard needs a
+ * canonical key of its own for the same client fact.
+ */
 function formatFormValue(formId: FormPrefillId, formField: string, value: unknown): unknown {
   if (formId === 'risk-fna-step1') return formatRiskFormValue(formField, value);
+  if (formId === 'tax-fna-step1' && formField === 'maritalStatus') {
+    return normalizeMaritalStatusForTax(value);
+  }
+  if (formId === 'estate-fna-step1' && formField === 'familyInfo.maritalStatus') {
+    return normalizeMaritalStatusForEstate(value);
+  }
   if (formId === 'medical-fna-step1') {
     if (formField === 'spousePartner') return Boolean(value);
+    if (formField === 'existingHospitalCover') return normalizeHospitalTariff(value);
     if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
       return Number(value);
     }

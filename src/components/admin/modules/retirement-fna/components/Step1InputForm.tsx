@@ -15,11 +15,12 @@ import { Label } from '../../../../ui/label';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
-import { User, Wallet, Info, ArrowRight, Loader2, CalendarDays, TrendingUp } from 'lucide-react';
+import { User, Wallet, Info, Loader2, CalendarDays, TrendingUp } from 'lucide-react';
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
 import { RetirementFNAInputs, RetirementFNAAdjustments } from '../types';
 import { DEFAULT_RETIREMENT_ASSUMPTIONS } from '../utils/calculation-engine';
 import { useFormPrefill } from '../../form-prefill';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step1InputFormProps {
   clientId?: string;
@@ -38,7 +39,6 @@ interface AutoPopulateResponse {
   currentAge?: number;
   intendedRetirementAge?: number;
   netMonthlyIncome?: number;
-  grossMonthlyIncome?: number;
   totalMonthlyContribution?: number;
   totalCurrentRetirementCapital?: number;
   [key: string]: unknown;
@@ -51,10 +51,8 @@ function mapPrefillToRetirementInputs(
   return {
     currentAge: Number(autoData.currentAge) || undefined,
     retirementAge: Number(autoData.retirementAge ?? autoData.intendedRetirementAge) || 65,
-    currentMonthlyIncome:
-      Number(
-        autoData.currentMonthlyIncome ?? autoData.netMonthlyIncome ?? autoData.grossMonthlyIncome,
-      ) || 0,
+    // Net income only: gross is a different client key and must not stand in for it.
+    currentMonthlyIncome: Number(autoData.currentMonthlyIncome ?? autoData.netMonthlyIncome) || 0,
     currentMonthlyContribution:
       Number(autoData.currentMonthlyContribution ?? autoData.totalMonthlyContribution) || 0,
     currentRetirementSavings:
@@ -457,13 +455,12 @@ export function Step1InputForm({
           </TabsContent>
         </Tabs>
 
-        {/* Navigation */}
-        <div className="flex justify-between pt-6 border-t">
-          <div className="text-sm text-muted-foreground">
-            {intakeMode ? 'Financial discovery intake' : 'Step 1 of 4'}
-          </div>
-          <div className="flex gap-2">
-            {intakeMode && onSaveDraft && (
+        <FNAStepNavigation
+          step={1}
+          nextType="submit"
+          nextLabel={submitLabel ?? (intakeMode ? 'Continue to submit' : undefined)}
+          secondaryActions={
+            intakeMode && onSaveDraft ? (
               <Button
                 type="button"
                 variant="outline"
@@ -471,13 +468,9 @@ export function Step1InputForm({
               >
                 Save progress
               </Button>
-            )}
-            <Button type="submit" size="lg" className="gap-2">
-              {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Run Calculation')}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+            ) : undefined
+          }
+        />
       </form>
     </div>
   );

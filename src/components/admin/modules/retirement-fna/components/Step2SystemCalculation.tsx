@@ -10,20 +10,12 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
-import {
-  CheckCircle2,
-  AlertTriangle,
-  ArrowRight,
-  ArrowLeft,
-  Info,
-  TrendingUp,
-  TrendingDown,
-} from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Info, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency } from '../../../../../utils/currencyFormatter';
 import { RetirementFNAInputs, RetirementCalculationResults } from '../types';
 import { SVGBarChart } from '../../../../ui/svg-charts';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step2SystemCalculationProps {
   inputs: Partial<RetirementFNAInputs>;
@@ -222,17 +214,7 @@ export function Step2SystemCalculation({
         </AlertDescription>
       </Alert>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 1
-        </Button>
-        <Button type="button" onClick={onNext} size="lg" className="bg-primary hover:bg-primary/90">
-          Continue to Adjustments
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );
 }

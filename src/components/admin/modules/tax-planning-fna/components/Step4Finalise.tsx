@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Checkbox } from '../../../../ui/checkbox';
 import {
   TaxPlanningInputs,
@@ -9,11 +8,12 @@ import {
   TaxRecommendation,
 } from '../types';
 import { TaxPlanningCalculationService } from '../services/taxPlanningCalculationService';
-import { ArrowLeft, FileText, Printer, Lock, Save } from 'lucide-react';
+import { FileText, Lock } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Textarea } from '../../../../ui/textarea';
 import { Label } from '../../../../ui/label';
 import { toast } from 'sonner';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step4Props {
   finalInputs: TaxPlanningInputs;
@@ -21,9 +21,16 @@ interface Step4Props {
   adjustments: AdjustmentLog[];
   onPublish: (finalRecommendations: TaxRecommendation[], adviserNotes: string) => void;
   onBack: () => void;
+  isPublishing?: boolean;
 }
 
-export function Step4Finalise({ finalResults, adjustments, onPublish, onBack }: Step4Props) {
+export function Step4Finalise({
+  finalResults,
+  adjustments,
+  onPublish,
+  onBack,
+  isPublishing = false,
+}: Step4Props) {
   const [recommendations, setRecommendations] = useState<TaxRecommendation[]>([]);
   const [selectedRecIds, setSelectedRecIds] = useState<string[]>([]);
   const [adviserNotes, setAdviserNotes] = useState('');
@@ -202,19 +209,7 @@ export function Step4Finalise({ finalResults, adjustments, onPublish, onBack }: 
         </CardContent>
       </Card>
 
-      <div className="flex justify-between pt-6 border-t">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Adjustments
-        </Button>
-        <div className="flex gap-3">
-          <Button variant="outline" disabled>
-            <Printer className="h-4 w-4 mr-2" /> Draft Preview
-          </Button>
-          <Button onClick={handlePublish} size="lg" className="bg-green-700 hover:bg-green-800">
-            <Save className="h-4 w-4 mr-2" /> Publish Record
-          </Button>
-        </div>
-      </div>
+      <FNAStepNavigation step={4} onBack={onBack} onNext={handlePublish} isBusy={isPublishing} />
     </div>
   );
 }
