@@ -131,14 +131,21 @@ export function portalJobItemsHaveRetirementAnnuityMarker(items?: PortalJobPolic
   );
 }
 
+const RETIREMENT_PRODUCT_CATEGORY_IDS = new Set(['retirement_pre', 'retirement_post']);
+
 /**
- * A Retirement Annuity is a Pre-Retirement product. This used to answer
- * 'retirement_planning', which is only the heading over Pre- and
- * Post-Retirement, so RA rows were staged against a parent-category mapping
- * and schema and wrote that schema's field ids onto Pre-Retirement policies.
+ * A Retirement Annuity row found outside the retirement products is filed
+ * under Pre-Retirement, where an RA belongs. A row already carrying
+ * Pre-Retirement or Post-Retirement keeps it: stage-items rows are stamped
+ * with their queued policy's category, and buildSyncRun rejects a row whose
+ * stamp does not match the run it is grouped into.
+ *
+ * This used to answer 'retirement_planning', which is only the heading over
+ * the two, so RA rows were staged against a parent-category mapping and schema
+ * and wrote that schema's field ids onto Pre-Retirement policies.
  */
 export function inferPortalRowCategoryId(row: Record<string, unknown>, fallbackCategoryId: string): string {
-  if (recordHasRetirementAnnuityMarker(row)) {
+  if (recordHasRetirementAnnuityMarker(row) && !RETIREMENT_PRODUCT_CATEGORY_IDS.has(fallbackCategoryId)) {
     return 'retirement_pre';
   }
   return fallbackCategoryId;
