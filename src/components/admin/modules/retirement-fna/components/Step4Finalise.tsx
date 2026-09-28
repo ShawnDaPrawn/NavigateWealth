@@ -10,26 +10,17 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { Alert, AlertDescription } from '../../../../ui/alert';
-import {
-  CheckCircle2,
-  AlertTriangle,
-  ArrowLeft,
-  Save,
-  FileText,
-  TrendingUp,
-  TrendingDown,
-  Info,
-} from 'lucide-react';
+import { CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import { formatCurrency } from '../../../../../utils/currencyFormatter';
 import {
   RetirementFNAInputs,
   RetirementCalculationResults,
   RetirementFNAAdjustments,
 } from '../types';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step4FinaliseProps {
   inputs: RetirementFNAInputs;
@@ -37,6 +28,7 @@ interface Step4FinaliseProps {
   adjustments: RetirementFNAAdjustments;
   onPublish: () => void;
   onBack: () => void;
+  isPublishing?: boolean;
 }
 
 export function Step4Finalise({
@@ -45,6 +37,7 @@ export function Step4Finalise({
   adjustments,
   onPublish,
   onBack,
+  isPublishing = false,
 }: Step4FinaliseProps) {
   const {
     requiredCapital,
@@ -296,28 +289,7 @@ export function Step4Finalise({
         </AlertDescription>
       </Alert>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 3
-        </Button>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" disabled>
-            <FileText className="mr-2 h-4 w-4" />
-            Preview PDF
-          </Button>
-          <Button
-            type="button"
-            onClick={onPublish}
-            size="lg"
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Publish & Close
-          </Button>
-        </div>
-      </div>
+      <FNAStepNavigation step={4} onBack={onBack} onNext={onPublish} isBusy={isPublishing} />
     </div>
   );
 }

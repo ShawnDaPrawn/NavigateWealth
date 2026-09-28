@@ -3,30 +3,20 @@
  * Extracted from types.ts for module structure alignment (Phase 5)
  */
 
+import { buildFNAWizardSteps } from '../fna';
+
 // ==================== WIZARD STEPS ====================
 
-export const WIZARD_STEPS = [
-  {
-    step: 1,
-    title: 'Information Gathering',
-    description: 'Confirm client profile and income streams',
-  },
-  {
-    step: 2,
-    title: 'System Auto-Calculation',
-    description: 'Deterministic tax projection engine',
-  },
-  {
-    step: 3,
-    title: 'Adviser Manual Adjustment',
-    description: 'Scenario modelling and overrides',
-  },
-  {
-    step: 4,
-    title: 'Finalise & Publish',
-    description: 'Generate recommendations and advice',
-  },
-] as const;
+/**
+ * The shared four-step FNA flow with this wizard's step descriptions. Step
+ * titles and order come from the fna module and are the same in every wizard.
+ */
+export const WIZARD_STEPS = buildFNAWizardSteps({
+  1: 'Confirm client profile and income streams',
+  2: 'Deterministic tax projection engine',
+  3: 'Scenario modelling and overrides',
+  4: 'Generate recommendations and advice',
+});
 
 // ==================== TAX CONSTANTS (2026/2027) ====================
 

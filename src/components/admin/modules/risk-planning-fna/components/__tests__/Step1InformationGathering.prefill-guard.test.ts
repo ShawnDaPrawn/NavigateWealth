@@ -3,28 +3,34 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+/**
+ * Client keys reach an FNA's Step 1 only through the shared review prefill.
+ *
+ * Risk and Medical each used to read the client keys themselves for their
+ * "sync existing cover" buttons, with their own key-to-field maps (Medical
+ * even read the policies directly). Those maps drifted from the registry and
+ * applied values without review. Both buttons now go through
+ * useFormPrefill().refreshFromPolicies like every other FNA.
+ */
 const dir = dirname(fileURLToPath(import.meta.url));
-const step1Source = readFileSync(join(dir, '..', 'Step1InformationGathering.tsx'), 'utf8');
+const modulesDir = join(dir, '..', '..', '..');
+const step1Sources = {
+  risk: readFileSync(join(dir, '..', 'Step1InformationGathering.tsx'), 'utf8'),
+  medical: readFileSync(
+    join(modulesDir, 'medical-fna', 'components', 'Step1InputForm.tsx'),
+    'utf8',
+  ),
+};
 
-function extractFunctionBody(source: string, marker: string): string {
-  const start = source.indexOf(marker);
-  expect(start).toBeGreaterThan(-1);
-  return source.slice(start);
-}
-
-describe('Step1InformationGathering prefill guard', () => {
-  it('uses review flow for profile prefill and avoids clientKeys effects', () => {
-    expect(step1Source).toContain('useFormPrefill');
-    expect(step1Source).not.toMatch(/useEffect\s*\([\s\S]*?\[[^\]]*clientKeys[^\]]*\]/);
+describe.each(Object.entries(step1Sources))('%s Step 1 client keys', (_name, source) => {
+  it('takes client keys through the shared review prefill', () => {
+    expect(source).toContain('useFormPrefill');
+    expect(source).toContain('refreshFromPolicies');
   });
 
-  it('does not map hook clientKeys into cover fields outside recalculate handler', () => {
-    const populateBlock = extractFunctionBody(step1Source, 'const populateFromInitialData');
-    const recalculateBlock = extractFunctionBody(step1Source, 'const handleRecalculateTotals');
-
-    expect(populateBlock.split('const handleRecalculateTotals')[0]).not.toContain('clientKeys');
-    expect(recalculateBlock).toContain('getClientKeys');
-    expect(recalculateBlock).toMatch(/keyToFieldMap[\s\S]*existingCoverLifePersonal/);
-    expect(step1Source).toMatch(/hasClientKeys=\{!!clientKeys\?\.keys\?\.length\}/);
+  it('does not read client keys or policies itself', () => {
+    expect(source).not.toMatch(/useClientKeys|useClientProductKeys|getClientKeys|clientKeysApi/);
+    expect(source).not.toMatch(/\/integrations\/policies/);
+    expect(source).not.toMatch(/keyToFieldMap/);
   });
 });
