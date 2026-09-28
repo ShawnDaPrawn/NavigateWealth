@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { RouterProvider } from 'react-router';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
-import { AuthProvider } from '../auth/AuthContext';
+import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { AdminDataPrefetch } from './AdminDataPrefetch';
 import { Toaster } from '../ui/sonner';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
+import { OfflineScreen } from '../shared/OfflineScreen';
 import { InactivityManager } from '../auth/InactivityManager';
 import { ScrollToTop } from '../shared/ScrollToTop';
 import { ImageOptimization } from '../shared/ImageOptimization';
@@ -70,6 +71,8 @@ const queryClient = new QueryClient({
 });
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+
   return (
     <>
       <ImageOptimization />
@@ -78,6 +81,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <UnsavedChangesRegistryProvider>
         <ErrorBoundary fallbackTitle="Navigation Error">{children}</ErrorBoundary>
       </UnsavedChangesRegistryProvider>
+      {/* Here, outside the routes' Suspense and error boundaries, so it still
+          covers a page whose chunk is loading or failed to load. Signed-in
+          only: everything behind a sign-in is server-backed. */}
+      <OfflineScreen enabled={isAuthenticated} />
       <Toaster position="top-right" richColors />
     </>
   );
