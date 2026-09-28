@@ -137,62 +137,8 @@ export const DEFAULT_SCHEMAS: Record<string, { fields: DefaultSchemaField[] }> =
       { id: 'ret_post_7', name: 'Notes', type: 'long_text', required: false },
     ],
   },
-  investments: {
-    fields: [
-      { id: 'inv_1', name: 'Policy Number', type: 'text', required: true },
-      {
-        id: 'inv_2',
-        name: 'Product Type',
-        type: 'dropdown',
-        required: true,
-        options: ['Endowment', 'Unit Trust', 'Tax Free Savings', 'Offshore Investment', 'Shares'],
-        keyId: 'invest_product_type',
-      },
-      {
-        id: 'inv_3',
-        name: 'Current Value',
-        type: 'currency',
-        required: true,
-        keyId: 'invest_current_value',
-      },
-      {
-        id: 'inv_4',
-        name: 'Estimated Maturity Value',
-        type: 'currency',
-        required: false,
-        keyId: 'invest_maturity_value',
-      },
-      {
-        id: 'inv_5',
-        name: 'Maturity Date',
-        type: 'date',
-        required: false,
-        keyId: 'invest_maturity_date',
-      },
-      {
-        id: 'inv_6',
-        name: 'Premium',
-        type: 'currency',
-        required: false,
-        keyId: 'invest_monthly_contribution',
-      },
-      { id: 'inv_7', name: 'Notes', type: 'long_text', required: false },
-      {
-        id: 'inv_8',
-        name: 'Growth Rate',
-        type: 'percentage',
-        required: false,
-        keyId: 'invest_assumptions_growth',
-      },
-      {
-        id: 'inv_9',
-        name: 'Escalation Rate',
-        type: 'percentage',
-        required: false,
-        keyId: 'invest_assumptions_escalation',
-      },
-    ],
-  },
+  // No 'investments' entry: Investments is only the heading over Voluntary
+  // and Guaranteed Investments, not a product with its own schema.
   investments_voluntary: {
     fields: [
       { id: 'inv_vol_1', name: 'Policy Number', type: 'text', required: true },

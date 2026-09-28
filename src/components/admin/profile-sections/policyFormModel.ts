@@ -44,18 +44,24 @@ export function findFieldByKeyIds(
   return undefined;
 }
 
-// Field ids of the retired parent "Retirement Planning" schema. Retirement
-// Planning is now only a heading, but policies captured under it still carry
-// these ids, so keep mapping them onto their keys to carry the values across.
-const RETIRED_RETIREMENT_PLANNING_FIELD_KEY_IDS: Array<[string, string]> = [
+// Field ids of the retired parent "Retirement Planning" and "Investments"
+// schemas. Both are now only headings, but policies captured under them still
+// carry these ids, so keep mapping them onto their keys to carry the values
+// across.
+const RETIRED_PARENT_FIELD_KEY_IDS: Array<[string, string]> = [
   ['ret_2', 'retirement_fund_type'],
   ['ret_3', 'retirement_fund_value'],
   ['ret_6', 'retirement_monthly_contribution'],
+  ['inv_2', 'invest_product_type'],
+  ['inv_3', 'invest_current_value'],
+  ['inv_4', 'invest_maturity_value'],
+  ['inv_5', 'invest_maturity_date'],
+  ['inv_6', 'invest_monthly_contribution'],
+  ['inv_8', 'invest_assumptions_growth'],
+  ['inv_9', 'invest_assumptions_escalation'],
 ];
 
-export const DEFAULT_FIELD_KEY_IDS = new Map<string, string>(
-  RETIRED_RETIREMENT_PLANNING_FIELD_KEY_IDS,
-);
+export const DEFAULT_FIELD_KEY_IDS = new Map<string, string>(RETIRED_PARENT_FIELD_KEY_IDS);
 for (const schema of Object.values(DEFAULT_SCHEMAS)) {
   for (const field of schema.fields) {
     if (field.keyId) {
