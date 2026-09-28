@@ -32,6 +32,13 @@ describe('product-management/defaults', () => {
     expect(ids).toContain('medical_aid');
   });
 
+  it('has Pre- and Post-Retirement but no parent Retirement Planning product', () => {
+    const ids = DEFAULT_SCHEMAS.map((s) => s.categoryId);
+    expect(ids).toContain('retirement_pre');
+    expect(ids).toContain('retirement_post');
+    expect(ids).not.toContain('retirement_planning');
+  });
+
   it('INTERNAL_FIELDS is a non-empty array', () => {
     expect(Array.isArray(INTERNAL_FIELDS)).toBe(true);
     expect(INTERNAL_FIELDS.length).toBeGreaterThan(0);

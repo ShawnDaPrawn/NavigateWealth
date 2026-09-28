@@ -131,9 +131,15 @@ export function portalJobItemsHaveRetirementAnnuityMarker(items?: PortalJobPolic
   );
 }
 
+/**
+ * A Retirement Annuity is a Pre-Retirement product. This used to answer
+ * 'retirement_planning', which is only the heading over Pre- and
+ * Post-Retirement, so RA rows were staged against a parent-category mapping
+ * and schema and wrote that schema's field ids onto Pre-Retirement policies.
+ */
 export function inferPortalRowCategoryId(row: Record<string, unknown>, fallbackCategoryId: string): string {
   if (recordHasRetirementAnnuityMarker(row)) {
-    return 'retirement_planning';
+    return 'retirement_pre';
   }
   return fallbackCategoryId;
 }
