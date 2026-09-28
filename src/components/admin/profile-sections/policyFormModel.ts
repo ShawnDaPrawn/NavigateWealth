@@ -44,7 +44,18 @@ export function findFieldByKeyIds(
   return undefined;
 }
 
-export const DEFAULT_FIELD_KEY_IDS = new Map<string, string>();
+// Field ids of the retired parent "Retirement Planning" schema. Retirement
+// Planning is now only a heading, but policies captured under it still carry
+// these ids, so keep mapping them onto their keys to carry the values across.
+const RETIRED_RETIREMENT_PLANNING_FIELD_KEY_IDS: Array<[string, string]> = [
+  ['ret_2', 'retirement_fund_type'],
+  ['ret_3', 'retirement_fund_value'],
+  ['ret_6', 'retirement_monthly_contribution'],
+];
+
+export const DEFAULT_FIELD_KEY_IDS = new Map<string, string>(
+  RETIRED_RETIREMENT_PLANNING_FIELD_KEY_IDS,
+);
 for (const schema of Object.values(DEFAULT_SCHEMAS)) {
   for (const field of schema.fields) {
     if (field.keyId) {

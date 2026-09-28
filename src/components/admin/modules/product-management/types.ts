@@ -25,8 +25,10 @@ export const PRODUCT_CATEGORIES = [
   { id: 'investments_voluntary', name: 'Voluntary Investments', automationEligible: true, parentId: 'investments' },
   { id: 'investments_guaranteed', name: 'Guaranteed Investments', automationEligible: true, parentId: 'investments' },
   { id: 'employee_benefits', name: 'Employee Benefits' },
-  { id: 'employee_benefits_risk', name: 'Risk' },
-  { id: 'employee_benefits_retirement', name: 'Retirement' },
+  // Named in full: these render flat (provider checkboxes, badges, dropdowns),
+  // where a bare "Retirement" read as a stray parent over Pre/Post-Retirement.
+  { id: 'employee_benefits_risk', name: 'Employee Benefits (Risk)' },
+  { id: 'employee_benefits_retirement', name: 'Employee Benefits (Retirement)' },
   { id: 'tax_planning', name: 'Tax Planning' },
   { id: 'estate_planning', name: 'Estate Planning' },
 ] as const;
