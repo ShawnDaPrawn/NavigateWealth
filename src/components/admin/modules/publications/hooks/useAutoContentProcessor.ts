@@ -16,6 +16,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { PublicationsAPI } from '../api';
 import { createClient } from '../../../../../utils/supabase/client';
+import { logger } from '../../../../../utils/logger';
 
 /** Interval in milliseconds — 15 minutes */
 const POLL_INTERVAL_MS = 15 * 60 * 1000;
@@ -61,14 +62,19 @@ export function useAutoContentProcessor(options?: {
         const pipelineNames = result.processed
           .filter((p) => p.articlesGenerated > 0)
           .map((p) => p.pipelineId);
-        console.error(
+        logger.info(
           `[AutoContentProcessor] Generated ${result.totalArticlesGenerated} article(s) from ${pipelineNames.length} pipeline(s)`,
         );
         onArticlesGenerated?.(result.totalArticlesGenerated, pipelineNames);
       }
     } catch (err) {
-      // Silent failure — this is a background task
-      console.error('[AutoContentProcessor] Error processing due pipelines:', err);
+      // Silent failure — this is a background task. logger.warn (not .error /
+      // console.error) so an ordinary network blip while the panel is left
+      // open overnight does not turn into a permanent Issue Manager entry —
+      // see runtimeIssueReporter.ts's console.error and logger.error capture.
+      logger.warn('[AutoContentProcessor] Error processing due pipelines', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       isRunningRef.current = false;
     }
