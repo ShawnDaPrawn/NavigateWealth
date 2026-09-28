@@ -11,20 +11,20 @@ imported it cannot restyle anything that has not opted in.
 
 ## What is here
 
-| Path                        | What it holds                                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `tokens/primitives.css`     | Collection `_Primitives`: 375 colours (every palette, 25–950) and the 32-step spacing scale                              |
-| `tokens/semantic.css`       | Collection `1. Color modes`: 303 semantic colours (`text-*`, `bg-*`, `border-*`, `fg-*`, `utility-*`…), light and dark   |
-| `tokens/scales.css`         | Collections `2. Radius`, `3. Spacing`, `4. Widths`, `5. Containers`, `6. Typography`                                     |
-| `tokens/effects.css`        | The 24 effect styles: shadows xs–3xl, skeuomorphic, focus rings, portfolio-mockup shadows, backdrop blurs                |
-| `tokens/typography.css`     | The 44 text styles as classes, e.g. `.uui-text-display-md-semibold`, `.uui-text-text-sm-medium`                          |
-| `components/components.css` | Styles for the first six components below                                                                                |
-| `components/*.css`          | One stylesheet per later component (avatar, tooltip, tag, progress, button group, select, dropdown, slider, radio group) |
-| `components/*.tsx`          | React components (see the next table)                                                                                    |
-| `icons/icons.tsx`           | The icons those components use, with path data from the file's Icons page                                                |
-| `untitled-ui.css`           | Imports all of the above — the one stylesheet to import                                                                  |
-| `index.ts`                  | Exports every component and icon                                                                                         |
-| `__tests__/`                | Behaviour tests for each component, and a token-integrity test                                                           |
+| Path                        | What it holds                                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokens/primitives.css`     | Collection `_Primitives`: 375 colours (every palette, 25–950) and the 32-step spacing scale                                                         |
+| `tokens/semantic.css`       | Collection `1. Color modes`: 303 semantic colours (`text-*`, `bg-*`, `border-*`, `fg-*`, `utility-*`…), light and dark                              |
+| `tokens/scales.css`         | Collections `2. Radius`, `3. Spacing`, `4. Widths`, `5. Containers`, `6. Typography`                                                                |
+| `tokens/effects.css`        | The 24 effect styles: shadows xs–3xl, skeuomorphic, focus rings, portfolio-mockup shadows, backdrop blurs                                           |
+| `tokens/typography.css`     | The 44 text styles as classes, e.g. `.uui-text-display-md-semibold`, `.uui-text-text-sm-medium`                                                     |
+| `components/components.css` | Styles for the first six components below                                                                                                           |
+| `components/*.css`          | One stylesheet per later component (avatar, tooltip, tag, progress, button group, select, dropdown, slider, radio group, text editor, video player) |
+| `components/*.tsx`          | React components (see the next table)                                                                                                               |
+| `icons/icons.tsx`           | The icons those components use, with path data from the file's Icons page                                                                           |
+| `untitled-ui.css`           | Imports all of the above — the one stylesheet to import                                                                                             |
+| `index.ts`                  | Exports every component and icon                                                                                                                    |
+| `__tests__/`                | Behaviour tests for each component, and a token-integrity test                                                                                      |
 
 ### Components exported so far
 
@@ -46,6 +46,8 @@ imported it cannot restyle anything that has not opted in.
 | `Dropdown`, `DropdownMenu`, `DropdownItem`, `DropdownDivider`, `DropdownHeader`, `DropdownFooter`, `ContextMenu` | Dropdown menu, Context menu                | Any trigger; icon and shortcut items; divider, header, footer; right-click menu                                    |
 | `Slider`                                                                                                         | Slider                                     | One or two handles; no label, bottom or top-floating labels                                                        |
 | `RadioGroup`, `RadioGroupItem`                                                                                   | Radio group                                | Card items: radio button or icon simple; sizes sm, md                                                              |
+| `TextEditor`, `TextEditorToolbar`, `TextEditorButton`, `TextEditorDivider`                                       | Text editor, Text editor toolbar           | Sizes sm, md; bold, italic, underline, alignment, bullets, optional links; hint; plain-text paste                  |
+| `VideoPlayer`                                                                                                    | Video player 16:9                          | Sizes sm–lg; play/pause, mute, seek, timestamps, full screen, centre play button; keyboard shortcuts               |
 
 Every size was measured in a browser against the Figma frames (button heights
 36/40/44/48, badges 22/24/28, inputs 40/44, selects 36/40/44, menu items 36,
@@ -56,10 +58,9 @@ is not exported.
 
 In the order worth doing them:
 
-1. **Icons** — the full set of 1,173 icons. Each is a single 24×24 stroke
-   path, so they drop straight into the `createIcon` factory in `icons/icons.tsx`.
-2. **Remaining base components** — Text editors, Video players, and the
-   other Input types (dropdown, leading text, payment, tags, trailing button,
+1. **Icons** — the full set of 1,173 icons. Most are a single 24×24 stroke
+   path (the factory also takes other grid sizes and solid shapes), so they drop straight into the `createIcon` factory in `icons/icons.tsx`.
+2. **Remaining base components** — the other Input types (dropdown, leading text, payment, tags, trailing button,
    verification code).
 3. **Application components** — Modals, Tabs, Tables, Pagination, Breadcrumbs,
    Alerts and notifications, Date pickers, Calendars, File upload, Empty states,

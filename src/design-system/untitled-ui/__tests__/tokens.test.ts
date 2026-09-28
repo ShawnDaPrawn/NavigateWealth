@@ -26,6 +26,8 @@ const files = {
   dropdown: read('../components/dropdown.css'),
   slider: read('../components/slider.css'),
   radioGroup: read('../components/radio-group.css'),
+  textEditor: read('../components/text-editor.css'),
+  videoPlayer: read('../components/video-player.css'),
 };
 
 const defined = (css: string) =>

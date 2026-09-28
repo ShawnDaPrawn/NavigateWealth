@@ -1,0 +1,178 @@
+/*
+ * Untitled UI v8.0 — "Video player 16:9". A 16:9 frame (sm 240, md 560, lg
+ * 720px wide) with a 0.5px inner hairline. While paused, a 10% black scrim and
+ * a 64px frosted play button sit in the centre. The actions bar along the
+ * bottom has 32px white icon buttons, 12/18 white timestamps and an 8px
+ * frosted progress track with a buffered band and a white fill.
+ */
+
+.uui-video {
+  --_radius: var(--uui-radius-md);
+  --_bar-pad: 40px 20px 16px;
+  --_bar-gap: 2px;
+
+  position: relative;
+  width: 560px;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--_radius);
+  background: var(--uui-v8-base-black);
+  font-family: var(--uui-font-family-body);
+  outline: none;
+}
+.uui-video::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.1);
+  pointer-events: none;
+}
+.uui-video[data-size='sm'] {
+  --_radius: var(--uui-radius-sm);
+  --_bar-pad: 24px 4px 4px;
+  width: 240px;
+}
+.uui-video[data-size='lg'] {
+  --_radius: var(--uui-radius-xl);
+  --_bar-pad: 48px 32px 24px;
+  --_bar-gap: 4px;
+  width: 720px;
+}
+.uui-video:focus-visible {
+  box-shadow: var(--uui-focus-ring);
+}
+
+.uui-video__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- Centre play button ---- */
+.uui-video__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 0.1);
+  color: var(--uui-v8-base-white);
+  cursor: pointer;
+  outline: none;
+}
+.uui-video__overlay-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--uui-radius-full);
+  background: rgb(255 255 255 / 0.3);
+  backdrop-filter: blur(8px);
+  transition: background 100ms linear;
+}
+.uui-video[data-size='sm'] .uui-video__overlay-button {
+  width: 48px;
+  height: 48px;
+}
+.uui-video__overlay-button > .uui-icon {
+  width: 20px;
+  height: 20px;
+  margin-left: 2px; /* optical centre of the play triangle */
+}
+.uui-video__overlay:hover .uui-video__overlay-button {
+  background: rgb(255 255 255 / 0.4);
+}
+.uui-video__overlay:focus-visible .uui-video__overlay-button {
+  box-shadow: var(--uui-focus-ring);
+}
+
+/* ---- Actions bar ---- */
+.uui-video__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--_bar-gap);
+  padding: var(--_bar-pad);
+  background: linear-gradient(to top, rgb(0 0 0 / 0.4), transparent);
+  color: var(--uui-v8-base-white);
+}
+
+.uui-video__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--uui-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.uui-video__action > .uui-icon {
+  width: 16px;
+  height: 16px;
+}
+.uui-video__action:hover {
+  background: rgb(255 255 255 / 0.2);
+  backdrop-filter: blur(4px);
+}
+.uui-video__action:focus-visible {
+  box-shadow: 0 0 0 2px var(--uui-v8-base-white);
+}
+
+.uui-video__progress {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--uui-spacing-md);
+  min-width: 0;
+  padding: 0 var(--uui-spacing-xs);
+}
+.uui-video__time {
+  flex: none;
+  font-size: var(--uui-font-size-text-xs);
+  line-height: var(--uui-line-height-text-xs);
+  font-weight: var(--uui-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+/* The small player has no room for timestamps */
+.uui-video[data-size='sm'] .uui-video__time {
+  display: none;
+}
+
+.uui-video__track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: var(--uui-radius-full);
+  background:
+    linear-gradient(to right, var(--uui-v8-base-white) var(--_progress), transparent 0),
+    linear-gradient(to right, rgb(255 255 255 / 0.3) var(--_buffered), transparent 0),
+    rgb(255 255 255 / 0.3);
+  backdrop-filter: blur(4px);
+}
+.uui-video__seek {
+  position: absolute;
+  inset: -8px 0;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.uui-video__track:has(.uui-video__seek:focus-visible) {
+  box-shadow: 0 0 0 2px var(--uui-v8-base-white);
+}
