@@ -83,4 +83,27 @@ export {
 } from './components/text-editor';
 export { VideoPlayer, type VideoPlayerProps } from './components/video-player';
 export { formatVideoTime } from './components/format-video-time';
+export { Tabs, type TabsProps, type TabItem, type TabsType } from './components/tabs';
+export { Breadcrumbs, type BreadcrumbsProps, type BreadcrumbItem } from './components/breadcrumbs';
+export {
+  Pagination,
+  PaginationDots,
+  type PaginationProps,
+  type PaginationDotsProps,
+} from './components/pagination';
+export { paginationRange } from './components/pagination-range';
+export {
+  Alert,
+  Notification,
+  FeaturedIconOutline,
+  type AlertProps,
+  type NotificationProps,
+  type AlertColor,
+} from './components/alert';
+export {
+  LoadingIndicator,
+  ContentDivider,
+  type LoadingIndicatorProps,
+  type ContentDividerProps,
+} from './components/feedback';
 export * from './icons/icons';

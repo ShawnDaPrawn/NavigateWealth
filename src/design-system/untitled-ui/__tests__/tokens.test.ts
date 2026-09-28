@@ -28,6 +28,9 @@ const files = {
   radioGroup: read('../components/radio-group.css'),
   textEditor: read('../components/text-editor.css'),
   videoPlayer: read('../components/video-player.css'),
+  tabs: read('../components/tabs.css'),
+  navigation: read('../components/navigation.css'),
+  feedback: read('../components/feedback.css'),
 };
 
 const defined = (css: string) =>
