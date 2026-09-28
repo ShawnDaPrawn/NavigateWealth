@@ -53,3 +53,7 @@ src/components/auth/AuthContext.tsx
 
 # Pinned by src/supabase/functions/server/__tests__/vasco-routes.guardrails.test.ts
 src/supabase/functions/server/vasco-routes.ts
+
+# The official Untitled UI React kit keeps its own Prettier config (160 columns,
+# 4-space indent, import sorting). Format it from inside that folder.
+design-system/untitled-ui-react
