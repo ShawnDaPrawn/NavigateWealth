@@ -61,7 +61,10 @@ export function ProductManagementTab() {
                   Pre-Retirement
                 </SelectItem>
                 <SelectItem value="retirement_post" className="pl-6">
-                  Post-Retirement
+                  Post-Retirement (Living Annuity)
+                </SelectItem>
+                <SelectItem value="retirement_post_fixed" className="pl-6">
+                  Post-Retirement (Fixed Annuity)
                 </SelectItem>
               </SelectGroup>
 

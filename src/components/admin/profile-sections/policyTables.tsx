@@ -75,13 +75,16 @@ export function renderPolicyTables({
       (p) => p.categoryId === 'retirement_pre' || p.categoryId === 'retirement_planning',
     );
     const postPolicies = policies.filter((p) => p.categoryId === 'retirement_post');
+    const fixedPolicies = policies.filter((p) => p.categoryId === 'retirement_post_fixed');
 
     const hasPre = prePolicies.length > 0;
     const hasPost = postPolicies.length > 0;
+    const hasFixed = fixedPolicies.length > 0;
 
     // Use pre-retirement schema for legacy/pre policies
     const preSchema = subCategorySchemas.retirement_pre || tableStructure;
     const postSchema = subCategorySchemas.retirement_post || [];
+    const fixedSchema = subCategorySchemas.retirement_post_fixed || [];
 
     return (
       <div className="space-y-6">
@@ -105,7 +108,7 @@ export function renderPolicyTables({
 
         {hasPost && (
           <PolicyTable
-            title="Post-Retirement"
+            title="Post-Retirement (Living Annuity)"
             policies={postPolicies}
             structure={postSchema}
             clientId={clientId}
@@ -121,8 +124,27 @@ export function renderPolicyTables({
           />
         )}
 
+        {hasFixed && (
+          <PolicyTable
+            title="Post-Retirement (Fixed Annuity)"
+            policies={fixedPolicies}
+            structure={fixedSchema}
+            clientId={clientId}
+            onEdit={handleEditPolicy}
+            onArchive={setArchivingPolicy}
+            onReinstate={handleReinstatePolicy}
+            onDelete={setDeletingPolicy}
+            onRefreshFromProvider={handleRefreshPolicy}
+            canRefreshPolicy={canRefreshPolicy}
+            refreshingPolicyId={refreshingPolicyId}
+            formatFieldValue={formatFieldValue}
+            colorTheme="indigo"
+          />
+        )}
+
         {!hasPre &&
           !hasPost &&
+          !hasFixed &&
           // Fallback if no specific categories found but we have policies
           policies.length > 0 && (
             <PolicyTable

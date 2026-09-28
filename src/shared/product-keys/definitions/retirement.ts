@@ -1,5 +1,6 @@
 /**
- * Product keys — Retirement, pre- and post-retirement.
+ * Product keys — Retirement: pre-retirement, and post-retirement as a living
+ * annuity or a fixed annuity.
  *
  * One slice of the catalogue that used to be all 1,637 lines of
  * `keyManagerConstants.ts`. That file still composes these into
@@ -156,7 +157,7 @@ export const RETIREMENT_PRE_KEYS: ProductKey[] = [
   },
 ];
 
-// Retirement Keys (Post-Retirement)
+// Retirement Keys (Post-Retirement, Living Annuity)
 export const RETIREMENT_POST_KEYS: ProductKey[] = [
   {
     id: 'post_retirement_capital_value',
@@ -215,5 +216,68 @@ export const RETIREMENT_POST_KEYS: ProductKey[] = [
     dataType: 'currency',
     isCalculated: true,
     calculatedFrom: ['post_retirement_drawdown_amount'],
+  },
+];
+
+// Retirement Keys (Post-Retirement, Fixed Annuity)
+// A fixed (guaranteed life) annuity pays a set income for life and has no
+// capital value of its own, so these keys carry income, not a fund value.
+export const RETIREMENT_POST_FIXED_KEYS: ProductKey[] = [
+  {
+    id: 'post_retirement_fixed_annuity_date_of_inception',
+    category: 'retirement_post_fixed',
+    name: 'Date of Inception',
+    description: 'Start date of the fixed annuity',
+    dataType: 'date',
+    isCalculated: false,
+  },
+  {
+    id: 'post_retirement_fixed_annuity_type',
+    category: 'retirement_post_fixed',
+    name: 'Annuity Type',
+    description: 'Level, escalating, inflation-linked or with-profit annuity',
+    dataType: 'text',
+    isCalculated: false,
+  },
+  {
+    id: 'post_retirement_fixed_annuity_purchase_price',
+    category: 'retirement_post_fixed',
+    name: 'Purchase Price',
+    description: 'Capital used to buy the annuity',
+    dataType: 'currency',
+    isCalculated: false,
+  },
+  {
+    id: 'post_retirement_fixed_annuity_income',
+    category: 'retirement_post_fixed',
+    name: 'Monthly Annuity Income',
+    description: 'Monthly income paid by the fixed annuity',
+    dataType: 'currency',
+    isCalculated: false,
+  },
+  {
+    id: 'post_retirement_fixed_annuity_escalation',
+    category: 'retirement_post_fixed',
+    name: 'Income Escalation',
+    description: 'Annual increase applied to the annuity income',
+    dataType: 'percentage',
+    isCalculated: false,
+  },
+  {
+    id: 'post_retirement_fixed_annuity_guarantee_period',
+    category: 'retirement_post_fixed',
+    name: 'Guarantee Period (years)',
+    description: 'Years the income is paid even if the annuitant dies',
+    dataType: 'number',
+    isCalculated: false,
+  },
+  {
+    id: 'post_retirement_fixed_annuity_income_total',
+    category: 'retirement_post_fixed',
+    name: 'Total Fixed Annuity Income',
+    description: 'Total monthly income from all fixed annuities',
+    dataType: 'currency',
+    isCalculated: true,
+    calculatedFrom: ['post_retirement_fixed_annuity_income'],
   },
 ];

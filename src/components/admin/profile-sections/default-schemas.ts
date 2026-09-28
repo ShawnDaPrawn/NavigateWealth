@@ -137,6 +137,64 @@ export const DEFAULT_SCHEMAS: Record<string, { fields: DefaultSchemaField[] }> =
       { id: 'ret_post_7', name: 'Notes', type: 'long_text', required: false },
     ],
   },
+  retirement_post_fixed: {
+    fields: [
+      { id: 'ret_post_fixed_1', name: 'Policy Number', type: 'text', required: true },
+      {
+        id: 'ret_post_fixed_inception',
+        name: 'Date of Inception',
+        type: 'date',
+        required: false,
+        keyId: 'post_retirement_fixed_annuity_date_of_inception',
+      },
+      {
+        id: 'ret_post_fixed_2',
+        name: 'Annuity Type',
+        type: 'dropdown',
+        required: true,
+        options: ['Level', 'Escalating', 'Inflation-Linked', 'With-Profit'],
+        keyId: 'post_retirement_fixed_annuity_type',
+      },
+      {
+        id: 'ret_post_fixed_parties',
+        name: 'Parties',
+        type: 'dropdown',
+        required: true,
+        options: ['Single Life', 'Joint Life'],
+      },
+      {
+        id: 'ret_post_fixed_3',
+        name: 'Purchase Price',
+        type: 'currency',
+        required: false,
+        keyId: 'post_retirement_fixed_annuity_purchase_price',
+      },
+      {
+        id: 'ret_post_fixed_4',
+        name: 'Monthly Income',
+        type: 'currency',
+        required: true,
+        keyId: 'post_retirement_fixed_annuity_income',
+      },
+      {
+        id: 'ret_post_fixed_5',
+        name: 'Income Escalation (%)',
+        type: 'percentage',
+        required: false,
+        keyId: 'post_retirement_fixed_annuity_escalation',
+      },
+      {
+        id: 'ret_post_fixed_6',
+        name: 'Guarantee Period (years)',
+        type: 'number',
+        required: false,
+        keyId: 'post_retirement_fixed_annuity_guarantee_period',
+      },
+      { id: 'ret_post_fixed_7', name: 'Anniversary Date', type: 'date', required: false },
+      { id: 'ret_post_fixed_8', name: 'Beneficiaries', type: 'long_text', required: false },
+      { id: 'ret_post_fixed_9', name: 'Notes', type: 'long_text', required: false },
+    ],
+  },
   // No 'investments' entry: Investments is only the heading over Voluntary
   // and Guaranteed Investments, not a product with its own schema.
   investments_voluntary: {

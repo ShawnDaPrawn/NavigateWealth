@@ -201,13 +201,15 @@ export function PolicyCategoryTab({
 
     // Load sub-structures for composite categories in parallel
     if (categoryId === 'retirement_planning') {
-      const [preFields, postFields] = await Promise.all([
+      const [preFields, postFields, fixedFields] = await Promise.all([
         fetchSchemaForCategory('retirement_pre'),
         fetchSchemaForCategory('retirement_post'),
+        fetchSchemaForCategory('retirement_post_fixed'),
       ]);
       setSubCategorySchemas({
         retirement_pre: preFields,
         retirement_post: postFields,
+        retirement_post_fixed: fixedFields,
       });
     } else if (categoryId === 'investments') {
       const [volFields, guaFields] = await Promise.all([

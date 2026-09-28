@@ -157,7 +157,7 @@ describe('job creation', () => {
   it.each([
     [
       'retirement_planning',
-      'Retirement Planning is a parent category. Portal automation can only run for Pre-Retirement or Post-Retirement.',
+      'Retirement Planning is a parent category. Portal automation can only run for Pre-Retirement, Post-Retirement (Living Annuity) or Post-Retirement (Fixed Annuity).',
     ],
     [
       'investments',

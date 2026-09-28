@@ -6,6 +6,7 @@ export type ProductCategoryId =
   | 'retirement_planning' 
   | 'retirement_pre'
   | 'retirement_post'
+  | 'retirement_post_fixed'
   | 'investments'
   | 'investments_voluntary'
   | 'investments_guaranteed'
@@ -18,9 +19,10 @@ export type ProductCategoryId =
 export const PRODUCT_CATEGORIES = [
   { id: 'risk_planning', name: 'Risk Planning' },
   { id: 'medical_aid', name: 'Medical Aid' },
-  { id: 'retirement_planning', name: 'Retirement Planning', isGroup: true, automationEligible: false, children: ['retirement_pre', 'retirement_post'] },
+  { id: 'retirement_planning', name: 'Retirement Planning', isGroup: true, automationEligible: false, children: ['retirement_pre', 'retirement_post', 'retirement_post_fixed'] },
   { id: 'retirement_pre', name: 'Pre-Retirement', automationEligible: true, parentId: 'retirement_planning' },
-  { id: 'retirement_post', name: 'Post-Retirement', automationEligible: true, parentId: 'retirement_planning' },
+  { id: 'retirement_post', name: 'Post-Retirement (Living Annuity)', automationEligible: true, parentId: 'retirement_planning' },
+  { id: 'retirement_post_fixed', name: 'Post-Retirement (Fixed Annuity)', automationEligible: true, parentId: 'retirement_planning' },
   { id: 'investments', name: 'Investments', isGroup: true, automationEligible: false, children: ['investments_voluntary', 'investments_guaranteed'] },
   { id: 'investments_voluntary', name: 'Voluntary Investments', automationEligible: true, parentId: 'investments' },
   { id: 'investments_guaranteed', name: 'Guaranteed Investments', automationEligible: true, parentId: 'investments' },
@@ -38,6 +40,7 @@ export const PORTAL_AUTOMATION_CATEGORY_IDS: ProductCategoryId[] = [
   'medical_aid',
   'retirement_pre',
   'retirement_post',
+  'retirement_post_fixed',
   'investments_voluntary',
   'investments_guaranteed',
   'employee_benefits',

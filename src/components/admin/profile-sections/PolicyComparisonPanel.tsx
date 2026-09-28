@@ -71,6 +71,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   retirement_planning: 'bg-green-100 text-green-700 hover:bg-green-100',
   retirement_pre: 'bg-green-100 text-green-700 hover:bg-green-100',
   retirement_post: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+  retirement_post_fixed: 'bg-teal-100 text-teal-700 hover:bg-teal-100',
   investments: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
   investments_voluntary: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
   investments_guaranteed: 'bg-sky-100 text-sky-700 hover:bg-sky-100',

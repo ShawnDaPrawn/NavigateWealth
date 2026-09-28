@@ -13,6 +13,7 @@ export type ProductKeyCategory =
   | 'medical_aid'
   | 'retirement_pre'
   | 'retirement_post'
+  | 'retirement_post_fixed'
   | 'invest_voluntary'
   | 'invest_guaranteed'
   | 'employee_benefits'
