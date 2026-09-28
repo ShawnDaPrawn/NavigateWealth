@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Alert, AlertDescription } from '../../../ui/alert';
 import { Button } from '../../../ui/button';
-import { Info, Loader2, Sparkles } from 'lucide-react';
+import { Info, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 
 interface PrefillBannerProps {
   loading?: boolean;
@@ -12,6 +12,7 @@ interface PrefillBannerProps {
   missingProfileHints?: string[];
   onReview?: () => void;
   onReapply?: () => void;
+  onRefreshFromPolicies?: () => void;
 }
 
 export function PrefillBanner({
@@ -23,6 +24,7 @@ export function PrefillBanner({
   missingProfileHints = [],
   onReview,
   onReapply,
+  onRefreshFromPolicies,
 }: PrefillBannerProps) {
   const profileEditUrl = clientId
     ? `/admin?module=clients&clientId=${encodeURIComponent(clientId)}`
@@ -71,6 +73,19 @@ export function PrefillBanner({
                 data-testid="prefill-review-matches"
               >
                 Review matches
+              </Button>
+            )}
+            {onRefreshFromPolicies && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onRefreshFromPolicies}
+                disabled={loading}
+                data-testid="prefill-refresh-from-policies"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                Load from policies
               </Button>
             )}
             {onReapply && (

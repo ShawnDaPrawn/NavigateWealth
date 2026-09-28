@@ -8,11 +8,11 @@
  * - Navigation: Back to Step 1, Next to Step 3
  */
 
-import { ArrowLeft, ArrowRight, Shield, Users, Wallet, Clock, Info } from 'lucide-react';
+import { Shield, Users, Wallet, Clock, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { MedicalFNAInputs, MedicalFNAResults } from '../types';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step2Props {
   inputs: Partial<MedicalFNAInputs>;
@@ -182,17 +182,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
         </AlertDescription>
       </Alert>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 1
-        </Button>
-        <Button type="button" onClick={onNext} size="lg">
-          Continue to Adjustments
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );
 }

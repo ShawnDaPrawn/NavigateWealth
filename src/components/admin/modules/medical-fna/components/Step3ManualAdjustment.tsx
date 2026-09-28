@@ -8,9 +8,8 @@
  */
 
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Shield, Users, Wallet, Clock, Info } from 'lucide-react';
+import { Shield, Users, Wallet, Clock, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -24,6 +23,7 @@ import {
 } from '../../../../ui/select';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { MedicalFNAResults, MedicalFNAAdjustments } from '../types';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step3Props {
   calculations: MedicalFNAResults;
@@ -191,16 +191,7 @@ export function Step3ManualAdjustment({
         </CardContent>
       </Card>
 
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 2
-        </Button>
-        <Button type="button" onClick={() => onNext(adjustments)} size="lg">
-          Continue to Finalise
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={3} onBack={onBack} onNext={() => onNext(adjustments)} />
     </div>
   );
 }

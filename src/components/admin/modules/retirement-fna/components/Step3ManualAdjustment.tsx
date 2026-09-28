@@ -10,7 +10,6 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -21,12 +20,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../../../../ui/accordion';
-import { Settings, ArrowRight, ArrowLeft, Info, AlertTriangle } from 'lucide-react';
+import { Settings, Info, AlertTriangle } from 'lucide-react';
 import {
   RetirementFNAInputs,
   RetirementFNAAdjustments,
   RetirementCalculationResults,
 } from '../types';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step3ManualAdjustmentProps {
   inputs: Partial<RetirementFNAInputs>;
@@ -332,22 +332,7 @@ export function Step3ManualAdjustment({
         </AlertDescription>
       </Alert>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 2
-        </Button>
-        <Button
-          type="button"
-          onClick={() => onNext(adjustments)}
-          size="lg"
-          className="bg-primary hover:bg-primary/90"
-        >
-          Review Final Results
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={3} onBack={onBack} onNext={() => onNext(adjustments)} />
     </div>
   );
 }

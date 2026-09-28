@@ -226,6 +226,79 @@ export function normalizeMaritalStatusForTax(raw: unknown): string {
   return 'single';
 }
 
+/** Estate Planning's marital status options. */
+export function normalizeMaritalStatusForEstate(raw: unknown): string {
+  if (typeof raw !== 'string') return 'single';
+  // Accepts profile wording ("Married", "In Community of Property") and intake
+  // enum values ("married_in_community") alike.
+  const lower = raw.toLowerCase().replace(/_/g, ' ');
+  if (lower.includes('divorc')) return 'divorced';
+  if (lower.includes('widow')) return 'widowed';
+  if (lower.includes('customary')) return 'married_customary';
+  const married = lower.includes('married') || lower.includes('community') || /\banc\b/.test(lower);
+  if (!married) return 'single';
+  if (
+    lower.includes('out of community') ||
+    lower.includes('antenuptial') ||
+    /\banc\b/.test(lower)
+  ) {
+    return 'married_anc';
+  }
+  if (lower.includes('in community') || /\bcop\b/.test(lower)) return 'married_cop';
+  // A plain "Married" is taken as out of community, as the tax normaliser does.
+  return 'married_anc';
+}
+
+/** Medical FNA's hospital cover options: "100%", "200%" or "Other". */
+export function normalizeHospitalTariff(raw: unknown): string {
+  const text = String(raw ?? '');
+  if (text.includes('200')) return '200%';
+  if (text.includes('100')) return '100%';
+  return 'Other';
+}
+
+/**
+ * Medical aid policy schema fields, used when a medical_aid_* client key has
+ * not been calculated yet. The first active medical aid policy is the primary
+ * one; the premium is the total across all of them.
+ */
+const MEDICAL_AID_POLICY_FIELDS: Record<string, { field: string; numeric: boolean }> = {
+  medical_aid_plan_type: { field: 'ma_2', numeric: false },
+  medical_aid_dependents: { field: 'ma_4', numeric: true },
+  medical_aid_total_premium: { field: 'ma_6', numeric: true },
+  medical_aid_msa: { field: 'ma_8', numeric: true },
+  medical_aid_late_joiner_penalty: { field: 'ma_9', numeric: true },
+  medical_aid_hospital_tariff: { field: 'ma_10', numeric: false },
+};
+
+function parseRandAmount(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isNaN(value) ? undefined : value;
+  if (typeof value !== 'string') return undefined;
+  const parsed = parseFloat(value.replace(/[R,\s]/g, ''));
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+export function medicalAidValueFromPolicies(
+  sources: ClientDataSources,
+  canonicalKey: string,
+): unknown {
+  const spec = MEDICAL_AID_POLICY_FIELDS[canonicalKey];
+  if (!spec) return undefined;
+  const policies = sources.policiesClient
+    .map((p) => p as Record<string, unknown>)
+    .filter((p) => p.categoryId === 'medical_aid' && !p.archived)
+    .map((p) => (p.data && typeof p.data === 'object' ? (p.data as Record<string, unknown>) : {}));
+  if (policies.length === 0) return undefined;
+
+  if (canonicalKey === 'medical_aid_total_premium') {
+    const total = policies.reduce((sum, data) => sum + (parseRandAmount(data[spec.field]) ?? 0), 0);
+    return total > 0 ? total : undefined;
+  }
+  const raw = policies[0][spec.field];
+  if (isEmptyValue(raw)) return undefined;
+  return spec.numeric ? parseRandAmount(raw) : raw;
+}
+
 export function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((acc, key) => {
     if (acc && typeof acc === 'object' && key in (acc as Record<string, unknown>)) {

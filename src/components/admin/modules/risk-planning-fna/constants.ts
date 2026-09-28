@@ -9,6 +9,7 @@
  * Mandatory Fix #3: Existing Cover Offset Rules
  */
 
+import { buildFNAWizardSteps } from '../fna';
 import type { OverrideClassification, IPBenefitPeriod, IPEscalationType } from './types';
 
 // ==================== LIFE COVER CONSTANTS ====================
@@ -192,28 +193,16 @@ export const VALIDATION_RULES = {
 
 // ==================== STEP CONFIGURATION ====================
 
-export const WIZARD_STEPS = [
-  {
-    step: 1,
-    title: 'Information Gathering',
-    description: 'Collect client financial and personal information',
-  },
-  {
-    step: 2,
-    title: 'System Auto-Calculation',
-    description: 'Review automated risk calculations',
-  },
-  {
-    step: 3,
-    title: 'Adviser Manual Adjustment',
-    description: 'Apply Rand-value overrides if needed',
-  },
-  {
-    step: 4,
-    title: 'Finalise & Publish',
-    description: 'Review and publish the FNA',
-  },
-] as const;
+/**
+ * The shared four-step FNA flow with this wizard's step descriptions. Step
+ * titles and order come from the fna module and are the same in every wizard.
+ */
+export const WIZARD_STEPS = buildFNAWizardSteps({
+  1: 'Collect client financial and personal information',
+  2: 'Review automated risk calculations',
+  3: 'Apply Rand-value overrides if needed',
+  4: 'Review and publish the FNA',
+});
 
 // ==================== QUERY KEYS ====================
 

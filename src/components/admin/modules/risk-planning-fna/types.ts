@@ -5,6 +5,8 @@
  * Non-Negotiable: No `any` types, all boundaries strictly typed
  */
 
+import type { FNAWizardStepNumber } from '../fna';
+
 // ==================== ENUMS & CONSTANTS ====================
 
 export type EmploymentType = 'employed' | 'self-employed';
@@ -303,11 +305,8 @@ export interface PublishedFNA {
 
 // ==================== WIZARD STATE ====================
 
-/**
- * Standard 4-step wizard type — consistent across Risk, Retirement, Tax, Medical FNA modules.
- * Estate Planning and Investment INA use multi-step string-based workflows by design.
- */
-export type WizardStep = 1 | 2 | 3 | 4;
+/** A step of the shared four-step FNA flow — the same type in every wizard. */
+export type WizardStep = FNAWizardStepNumber;
 
 export interface WizardState {
   currentStep: WizardStep;
@@ -322,10 +321,6 @@ export interface WizardState {
 
   // Step 3
   adjustments: Adjustments;
-
-  // Step 4
-  isPublishing: boolean;
-  publishError?: string;
 }
 
 // ==================== API TYPES ====================
