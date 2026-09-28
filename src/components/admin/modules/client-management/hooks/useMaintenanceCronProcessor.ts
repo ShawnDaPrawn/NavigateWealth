@@ -98,8 +98,13 @@ export function useMaintenanceCronProcessor(options?: {
           }
         }
       } catch (err) {
-        // Silent failure — background task
-        console.error('[MaintenanceCronProcessor] Error running client cleanup:', err);
+        // Silent failure — background task. logger.warn (not .error /
+        // console.error) so an ordinary network blip while the panel is left
+        // open overnight does not turn into a permanent Issue Manager entry —
+        // see runtimeIssueReporter.ts's console.error and logger.error capture.
+        logger.warn('[MaintenanceCronProcessor] Error running client cleanup', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
 
       // ── 2. KV Store Cleanup ────────────────────────────────────────
@@ -121,8 +126,11 @@ export function useMaintenanceCronProcessor(options?: {
           }
         }
       } catch (err) {
-        // Silent failure — background task
-        console.error('[MaintenanceCronProcessor] Error running KV cleanup:', err);
+        // Silent failure — background task. logger.warn, same reasoning as
+        // the client cleanup catch above.
+        logger.warn('[MaintenanceCronProcessor] Error running KV cleanup', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     } finally {
       isRunningRef.current = false;

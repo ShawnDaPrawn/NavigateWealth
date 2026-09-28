@@ -38,6 +38,7 @@ vi.mock('../../../../../../utils/logger', () => ({
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { useMaintenanceCronProcessor } from '../useMaintenanceCronProcessor';
+import { logger } from '../../../../../../utils/logger';
 
 // ── Constants mirrored from source ────────────────────────────────────────────
 
@@ -268,6 +269,33 @@ describe('useMaintenanceCronProcessor — maintenance logic', () => {
       await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
     });
     expect((result as Record<string, unknown>).error).toBeUndefined();
+  });
+
+  it('logs client and KV cleanup tick failures with logger.warn, never console.error', async () => {
+    // Both catches are commented "Silent failure — background task".
+    // console.error and logger.error both reach the runtime issue reporter
+    // (runtimeIssueReporter.ts), so either would turn an ordinary overnight
+    // network blip into a permanent Issue Manager entry — the opposite of
+    // "silent". logger.warn does not.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockApiGet.mockRejectedValue(new Error('network error'));
+
+    renderHook(() => useMaintenanceCronProcessor());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_DELAY_MS + 100);
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('[MaintenanceCronProcessor] Error running client cleanup'),
+      expect.objectContaining({ error: 'network error' }),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('[MaintenanceCronProcessor] Error running KV cleanup'),
+      expect.objectContaining({ error: 'network error' }),
+    );
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 
   it('does not call onClientCleanupRan when cleanup result.success is false', async () => {
