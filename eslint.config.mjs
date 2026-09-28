@@ -35,6 +35,9 @@ export default tseslint.config(
       '**/*.d.ts',
       'public/sitemap.xml',
       'seo-route-manifest.json',
+      // The official Untitled UI React kit: a self-contained app with its own
+      // package.json, React 19, formatting and build (see design-system/README.md).
+      'design-system/untitled-ui-react/**',
     ],
   },
 

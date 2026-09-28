@@ -157,6 +157,9 @@
     "form-prefill:e2e": "playwright test e2e/form-prefill-smoke.spec.ts --project=desktop-chromium",
     "form-prefill:migrate-templates": "node ./scripts/ops/migrate-form-templates-to-storage.mjs",
     "depcruise": "npx dependency-cruiser@16 \"src/**/*.{ts,tsx}\" --config quality/dependency-cruiser.cjs",
+    "uui-react:install": "npm --prefix design-system/untitled-ui-react ci",
+    "uui-react:dev": "npm --prefix design-system/untitled-ui-react run dev",
+    "uui-react:build": "npm --prefix design-system/untitled-ui-react run build",
     "figma:webp": "node ./scripts/build/generate-figma-webp.mjs"
   },
   "lint-staged": {
