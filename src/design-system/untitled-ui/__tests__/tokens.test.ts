@@ -15,6 +15,7 @@ const files = {
   scales: read('../tokens/scales.css'),
   effects: read('../tokens/effects.css'),
   typography: read('../tokens/typography.css'),
+  paletteV8: read('../tokens/palette-v8.css'),
   components: read('../components/components.css'),
 };
 
@@ -46,6 +47,10 @@ describe('Untitled UI tokens', () => {
     // 303 in the Figma collection plus the orphaned text-brand-secondary-hover.
     expect(lightTokens).toHaveLength(304);
     expect(darkTokens).toEqual(lightTokens);
+  });
+
+  it('exports the 300 colours of the v8.0 palette (28 families)', () => {
+    expect(defined(files.paletteV8).size).toBe(300);
   });
 
   it('exports all 44 text styles', () => {
