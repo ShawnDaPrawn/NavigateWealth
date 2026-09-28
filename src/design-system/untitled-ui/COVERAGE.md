@@ -5,6 +5,10 @@ STYLES (v8.0)"**, read page by page through the Figma connector on 2026-09-28. E
 component set in the file is listed below, so nothing can go missing: each export
 batch ticks its rows off here.
 
+**Who reads this:** whoever exports the next Untitled UI batch (to pick up where
+the last one stopped), and any developer checking whether a component exists in
+code before building one.
+
 Legend: ✅ in code · 🟡 in code from the v7.0 file, needs the v8.0 update · ⬜ not yet
 
 Figures are the file's own: `sets` is component sets on the page, `variants` the
