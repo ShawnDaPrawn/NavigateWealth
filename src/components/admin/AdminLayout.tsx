@@ -3,6 +3,7 @@ import { usePendingCounts } from './hooks/usePendingCounts';
 import { Menu } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
+import { OfflineScreen } from '../shared/OfflineScreen';
 
 // Import refactored layout components
 import { Sidebar } from './layout/Sidebar';
@@ -77,6 +78,8 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
           </div>
         </main>
       </div>
+
+      <OfflineScreen />
     </div>
   );
 }

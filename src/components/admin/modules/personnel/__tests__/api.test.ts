@@ -379,6 +379,17 @@ describe('fetchMyPermissions', () => {
     expect(result.isSuperAdmin).toBe(false);
     expect(result.modules).toEqual({});
   });
+
+  // Regression: caching "no modules" for a dropped connection collapsed the
+  // sidebar to Dashboard + Notes and kept it collapsed after reconnecting.
+  it('rethrows a network failure instead of answering "no access"', async () => {
+    const networkError = Object.assign(new Error('Network error. Please check your connection.'), {
+      statusCode: 0,
+      code: 'NETWORK_ERROR',
+    });
+    mockApiGet.mockRejectedValue(networkError);
+    await expect(fetchMyPermissions()).rejects.toBe(networkError);
+  });
 });
 
 describe('fetchAllPermissions', () => {

@@ -169,15 +169,21 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
 
   const isSuperAdmin = data?.isSuperAdmin === true;
 
+  // No answer yet: still loading, paused while offline, or the request never
+  // reached the server (fetchMyPermissions rethrows those rather than caching
+  // "no access"). `isLoading` alone misses the last two — a paused query is not
+  // "loading" — which is how the sidebar collapsed to Dashboard and Notes
+  // offline. The server enforces access on every request regardless.
+  const unresolved = data === undefined;
+
   const can = (module: AdminModule): boolean => {
     // Always-accessible modules
     if (ALWAYS_ACCESSIBLE_MODULES.includes(module)) return true;
     // Super admin bypass
     if (isSuperAdmin) return true;
-    // While permissions are still loading, show all modules optimistically
-    // to prevent the sidebar from appearing empty during initial load.
-    // Once resolved, restricted items will be hidden.
-    if (isLoading) return true;
+    // Until permissions are known, show all modules optimistically so the
+    // sidebar does not appear empty. Once resolved, restricted items hide.
+    if (unresolved) return true;
     // Check stored permissions
     return data?.modules?.[module]?.access === true;
   };
@@ -185,8 +191,8 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
   const canDo = (module: AdminModule, capability: Capability): boolean => {
     // Super admin bypass — all capabilities
     if (isSuperAdmin) return true;
-    // While loading, grant all capabilities optimistically (same reasoning as can())
-    if (isLoading) return true;
+    // Until known, grant all capabilities optimistically (same reasoning as can())
+    if (unresolved) return true;
     // Module must be accessible first
     if (!can(module)) return false;
     // View is always granted when module is accessible

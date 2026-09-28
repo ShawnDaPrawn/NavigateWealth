@@ -8,6 +8,7 @@
 
 import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
+import { isNetworkFailure } from '../../../../utils/network/connectivity';
 import type {
   Personnel,
   PersonnelDocument,
@@ -341,6 +342,12 @@ export async function fetchMyPermissions(): Promise<PermissionSet & { isSuperAdm
     );
     return response.data;
   } catch (error) {
+    // No response at all is not an answer about permissions. Caching the
+    // fallback below for it collapsed the sidebar to Dashboard and Notes —
+    // even for a super admin — whenever the connection dropped, and kept it
+    // that way after reconnecting. Rethrown, the query stays unresolved and
+    // refetches once the connection is back.
+    if (isNetworkFailure(error)) throw error;
     logger.error('[API] Failed to fetch current user permissions', error);
     // Fail-open for super admin detection; fail-closed for modules
     return { personnelId: '', modules: {}, updatedAt: '', updatedBy: '', isSuperAdmin: false };

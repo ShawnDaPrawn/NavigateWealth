@@ -323,6 +323,19 @@ describe('useCurrentUserPermissions', () => {
     expect(result.current.can('clients')).toBe(true);
   });
 
+  // Regression: offline, the query is PAUSED (isLoading false, no data), or it
+  // failed without reaching the server. Either way permissions are unknown, and
+  // the sidebar used to collapse to Dashboard + Notes — even for a super admin.
+  it('can() and canDo() stay optimistic while permissions are unknown (offline)', () => {
+    mockUseQuery.mockReturnValue({ data: undefined, isLoading: false });
+
+    const { result } = renderHook(() => useCurrentUserPermissions());
+
+    expect(result.current.can('clients')).toBe(true);
+    expect(result.current.can('personnel')).toBe(true);
+    expect(result.current.canDo('publications', 'publish')).toBe(true);
+  });
+
   it('can() returns false when module not in stored permissions and not loading', () => {
     mockUseQuery.mockReturnValue({
       data: { isSuperAdmin: false, modules: { clients: { access: false } } },
