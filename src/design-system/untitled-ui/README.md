@@ -1,8 +1,8 @@
 # Untitled UI PRO — in code, not yet in use
 
-This folder is the Untitled UI PRO design system (Figma file
-"❖ Untitled UI – PRO VARIABLES (v7.0)", the owner's licensed copy), exported
-into code so it is ready **when it is needed**.
+This folder is the Untitled UI PRO design system (the owner's licensed copy;
+tokens and components now follow the v8.0 "PRO STYLES" file), exported into
+code so it is ready **when it is needed**.
 
 **Nothing on the site imports it.** The live site, the `/design-system` page
 and the shadcn components in `src/components/ui/` are unchanged. The styles are
@@ -11,34 +11,46 @@ imported it cannot restyle anything that has not opted in.
 
 ## What is here
 
-| Path                        | What it holds                                                                                                          |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `tokens/primitives.css`     | Collection `_Primitives`: 375 colours (every palette, 25–950) and the 32-step spacing scale                            |
-| `tokens/semantic.css`       | Collection `1. Color modes`: 303 semantic colours (`text-*`, `bg-*`, `border-*`, `fg-*`, `utility-*`…), light and dark |
-| `tokens/scales.css`         | Collections `2. Radius`, `3. Spacing`, `4. Widths`, `5. Containers`, `6. Typography`                                   |
-| `tokens/effects.css`        | The 24 effect styles: shadows xs–3xl, skeuomorphic, focus rings, portfolio-mockup shadows, backdrop blurs              |
-| `tokens/typography.css`     | The 44 text styles as classes, e.g. `.uui-text-display-md-semibold`, `.uui-text-text-sm-medium`                        |
-| `components/components.css` | Styles for the components below                                                                                        |
-| `components/*.tsx`          | React components (see the next table)                                                                                  |
-| `icons/icons.tsx`           | The icons those components use, with path data from the file's Icons page                                              |
-| `untitled-ui.css`           | Imports all of the above — the one stylesheet to import                                                                |
-| `index.ts`                  | Exports every component and icon                                                                                       |
-| `__tests__/`                | Behaviour tests for each component, and a token-integrity test                                                         |
+| Path                        | What it holds                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `tokens/primitives.css`     | Collection `_Primitives`: 375 colours (every palette, 25–950) and the 32-step spacing scale                              |
+| `tokens/semantic.css`       | Collection `1. Color modes`: 303 semantic colours (`text-*`, `bg-*`, `border-*`, `fg-*`, `utility-*`…), light and dark   |
+| `tokens/scales.css`         | Collections `2. Radius`, `3. Spacing`, `4. Widths`, `5. Containers`, `6. Typography`                                     |
+| `tokens/effects.css`        | The 24 effect styles: shadows xs–3xl, skeuomorphic, focus rings, portfolio-mockup shadows, backdrop blurs                |
+| `tokens/typography.css`     | The 44 text styles as classes, e.g. `.uui-text-display-md-semibold`, `.uui-text-text-sm-medium`                          |
+| `components/components.css` | Styles for the first six components below                                                                                |
+| `components/*.css`          | One stylesheet per later component (avatar, tooltip, tag, progress, button group, select, dropdown, slider, radio group) |
+| `components/*.tsx`          | React components (see the next table)                                                                                    |
+| `icons/icons.tsx`           | The icons those components use, with path data from the file's Icons page                                                |
+| `untitled-ui.css`           | Imports all of the above — the one stylesheet to import                                                                  |
+| `index.ts`                  | Exports every component and icon                                                                                         |
+| `__tests__/`                | Behaviour tests for each component, and a token-integrity test                                                           |
 
 ### Components exported so far
 
-| Component           | Figma component set                        | Covers                                                                                                             |
-| ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `Button`            | Buttons/Button, Buttons/Button destructive | Sizes sm–xl; Primary, Secondary, Tertiary, Link color, Link gray; destructive; icons; icon-only; loading; disabled |
-| `CloseButton`       | Buttons/Button close X                     | Sizes sm–lg; light and dark background                                                                             |
-| `Badge`             | Badge                                      | Pill color, Badge color, Badge modern; sizes sm–lg; 12 colours; dot; leading/trailing icon; X close; icon-only     |
-| `Input`             | Input field (Type = Default)               | Sizes sm, md; label, required, hint, help icon, leading icon; error; disabled                                      |
-| `Textarea`          | Textarea input field (Type = Default)      | Label, required, hint, help icon; error; disabled                                                                  |
-| `Checkbox`, `Radio` | Checkbox, \_Checkbox base                  | Sizes sm, md; checked, indeterminate; label and supporting text; disabled                                          |
-| `Toggle`            | Toggle, \_Toggle base                      | Default and Slim; sizes sm, md; label and supporting text; disabled                                                |
+| Component                                                                                                        | Figma component set                        | Covers                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `Button`                                                                                                         | Buttons/Button, Buttons/Button destructive | Sizes sm–xl; Primary, Secondary, Tertiary, Link color, Link gray; destructive; icons; icon-only; loading; disabled |
+| `CloseButton`                                                                                                    | Buttons/Button close X                     | Sizes sm–lg; light and dark background                                                                             |
+| `Badge`                                                                                                          | Badge                                      | Pill color, Badge color, Badge modern; sizes sm–lg; 12 colours; dot; leading/trailing icon; X close; icon-only     |
+| `Input`                                                                                                          | Input field (Type = Default)               | Sizes sm, md; label, required, hint, help icon, leading icon; error; disabled                                      |
+| `Textarea`                                                                                                       | Textarea input field (Type = Default)      | Label, required, hint, help icon; error; disabled                                                                  |
+| `Checkbox`, `Radio`                                                                                              | Checkbox, \_Checkbox base                  | Sizes sm, md; checked, indeterminate; label and supporting text; disabled                                          |
+| `Toggle`                                                                                                         | Toggle, \_Toggle base                      | Default and Slim; sizes sm, md; label and supporting text; disabled                                                |
+| `Avatar`, `AvatarGroup`, `AvatarLabelGroup`                                                                      | Avatar, Avatar group, Avatar label group   | Sizes xs–2xl; photo, initials, placeholder; status dot; +N; add button                                             |
+| `Tooltip`                                                                                                        | Tooltip                                    | Dark and light; supporting text; arrow; four placements                                                            |
+| `Tag`                                                                                                            | Tag                                        | Sizes sm–lg; dot, avatar or checkbox; X close or count                                                             |
+| `ProgressBar`, `ProgressCircle`                                                                                  | Progress bar, Progress circle              | Label none/right/bottom; circles xxs–lg, full or half                                                              |
+| `ButtonGroup`, `ButtonGroupItem`                                                                                 | Button group                               | Sizes sm, md; current item; icons; dot                                                                             |
+| `Select`, `MultiSelect`                                                                                          | Select, Multi-select                       | Sizes sm–lg; icon, avatar, supporting text; keyboard and type-to-find; form value                                  |
+| `Dropdown`, `DropdownMenu`, `DropdownItem`, `DropdownDivider`, `DropdownHeader`, `DropdownFooter`, `ContextMenu` | Dropdown menu, Context menu                | Any trigger; icon and shortcut items; divider, header, footer; right-click menu                                    |
+| `Slider`                                                                                                         | Slider                                     | One or two handles; no label, bottom or top-floating labels                                                        |
+| `RadioGroup`, `RadioGroupItem`                                                                                   | Radio group                                | Card items: radio button or icon simple; sizes sm, md                                                              |
 
 Every size was measured in a browser against the Figma frames (button heights
-36/40/44/48, badges 22/24/28, inputs 40/44, textarea 128, and so on) and matched.
+36/40/44/48, badges 22/24/28, inputs 40/44, selects 36/40/44, menu items 36,
+and so on) and matched. `COVERAGE.md` is the page-by-page list of what is and
+is not exported.
 
 ### Not exported yet
 
@@ -46,8 +58,7 @@ In the order worth doing them:
 
 1. **Icons** — the full set of 1,173 icons. Each is a single 24×24 stroke
    path, so they drop straight into the `createIcon` factory in `icons/icons.tsx`.
-2. **Remaining base components** — Button groups, Tags, Dropdowns, Avatars,
-   Tooltips, Progress indicators, Sliders, Text editors, Video players, and the
+2. **Remaining base components** — Text editors, Video players, and the
    other Input types (dropdown, leading text, payment, tags, trailing button,
    verification code).
 3. **Application components** — Modals, Tabs, Tables, Pagination, Breadcrumbs,

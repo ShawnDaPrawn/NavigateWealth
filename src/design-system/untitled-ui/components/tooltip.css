@@ -1,0 +1,110 @@
+/*
+ * Untitled UI v8.0 — "Tooltip". Dark (Neutral 900) or light (white with a
+ * Neutral 200 alpha outline), 8px radius, shadow-lg, 12px text, optional arrow.
+ */
+
+.uui-tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.uui-tooltip {
+  --_bg: var(--uui-v8-neutral-900);
+  --_fg: var(--uui-v8-base-white);
+  --_hint: var(--uui-v8-neutral-300);
+  --_edge: transparent;
+
+  position: absolute;
+  z-index: 50;
+  width: max-content;
+  max-width: 320px;
+  padding: var(--uui-spacing-md) var(--uui-spacing-lg);
+  border-radius: var(--uui-radius-md);
+  background: var(--_bg);
+  box-shadow:
+    0 0 0 1px var(--_edge),
+    var(--uui-shadow-lg);
+  color: var(--_fg);
+  font-family: var(--uui-font-family-body);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--uui-font-weight-semibold);
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 120ms ease-out,
+    visibility 120ms;
+}
+.uui-tooltip[data-theme='light'] {
+  --_bg: var(--uui-v8-base-white);
+  --_fg: var(--uui-v8-neutral-700);
+  --_hint: var(--uui-v8-neutral-600);
+  --_edge: var(--uui-v8-neutral-200-alpha);
+}
+.uui-tooltip[data-has-hint] {
+  padding: var(--uui-spacing-lg);
+}
+.uui-tooltip__hint {
+  display: block;
+  margin-top: var(--uui-spacing-xxs);
+  color: var(--_hint);
+  font-weight: var(--uui-font-weight-medium);
+}
+
+.uui-tooltip-anchor:hover > .uui-tooltip,
+.uui-tooltip-anchor:focus-within > .uui-tooltip,
+.uui-tooltip[data-open] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Placement: 6px away from the trigger (the arrow's depth) */
+.uui-tooltip[data-placement='top'] {
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.uui-tooltip[data-placement='bottom'] {
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.uui-tooltip[data-placement='left'] {
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.uui-tooltip[data-placement='right'] {
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Arrow: a 12px square rotated 45deg, half hidden under the bubble */
+.uui-tooltip[data-arrow]::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--_bg);
+  transform: rotate(45deg);
+}
+.uui-tooltip[data-arrow][data-placement='top']::after {
+  top: calc(100% - 6px);
+  left: calc(50% - 6px);
+}
+.uui-tooltip[data-arrow][data-placement='bottom']::after {
+  bottom: calc(100% - 6px);
+  left: calc(50% - 6px);
+}
+.uui-tooltip[data-arrow][data-placement='left']::after {
+  left: calc(100% - 6px);
+  top: calc(50% - 6px);
+}
+.uui-tooltip[data-arrow][data-placement='right']::after {
+  right: calc(100% - 6px);
+  top: calc(50% - 6px);
+}

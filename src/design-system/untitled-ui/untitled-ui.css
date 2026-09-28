@@ -1,5 +1,5 @@
 /*
- * Untitled UI PRO (v7.0): tokens and base component styles.
+ * Untitled UI PRO (v8.0): tokens and component styles.
  *
  * Import this once wherever the components are used. It defines only
  * `--uui-*` custom properties and `.uui-*` classes, so it cannot restyle
@@ -7,3 +7,12 @@
  */
 @import './tokens/index.css';
 @import './components/components.css';
+@import './components/avatar.css';
+@import './components/tooltip.css';
+@import './components/tag.css';
+@import './components/progress.css';
+@import './components/button-group.css';
+@import './components/select.css';
+@import './components/dropdown.css';
+@import './components/slider.css';
+@import './components/radio-group.css';

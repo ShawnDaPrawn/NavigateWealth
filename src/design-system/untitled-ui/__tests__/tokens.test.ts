@@ -17,6 +17,15 @@ const files = {
   typography: read('../tokens/typography.css'),
   paletteV8: read('../tokens/palette-v8.css'),
   components: read('../components/components.css'),
+  avatar: read('../components/avatar.css'),
+  tooltip: read('../components/tooltip.css'),
+  tag: read('../components/tag.css'),
+  progress: read('../components/progress.css'),
+  buttonGroup: read('../components/button-group.css'),
+  select: read('../components/select.css'),
+  dropdown: read('../components/dropdown.css'),
+  slider: read('../components/slider.css'),
+  radioGroup: read('../components/radio-group.css'),
 };
 
 const defined = (css: string) =>
