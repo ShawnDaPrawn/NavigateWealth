@@ -4,8 +4,8 @@
  * Figma variants → props:
  *   Type   Pill color | Badge color | Badge modern             → type
  *   Size   sm | md | lg                                        → size
- *   Color  Gray | Brand | Error | Warning | Success | Gray blue
- *          (a.k.a. Blue gray) | Blue light | Blue | Indigo |
+ *   Color  Gray | Brand | Error | Warning | Success | Gray blue (v8: Slate)
+ *          (a.k.a. Blue gray) | Blue light (v8: Sky) | Blue | Indigo |
  *          Purple | Pink | Orange                              → color
  *   Icon   Dot                                                 → dot
  *          Icon leading / Icon trailing                        → iconLeading / iconTrailing
@@ -28,6 +28,10 @@ export type BadgeColor =
   | 'success'
   | 'gray-blue'
   | 'blue-light'
+  /** v8.0 name for gray-blue */
+  | 'slate'
+  /** v8.0 name for blue-light */
+  | 'sky'
   | 'blue'
   | 'indigo'
   | 'purple'
@@ -48,6 +52,12 @@ export interface BadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 
    *  (iconLeading with no children) also needs an `aria-label`. */
   removeLabel?: string;
 }
+
+// v8.0 renamed two badge colours; both names map to the same tokens.
+const V8_COLOR_ALIASES: Partial<Record<BadgeColor, BadgeColor>> = {
+  slate: 'gray-blue',
+  sky: 'blue-light',
+};
 
 // Figma draws badge icons at 12px with a 1.5px stroke: 3 units in a 24 viewBox.
 const BADGE_ICON_STROKE = 3;
@@ -80,7 +90,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
         className={clsx('uui-badge', className)}
         data-type={type}
         data-size={size}
-        data-color={color === 'gray' ? undefined : color}
+        data-color={color === 'gray' ? undefined : (V8_COLOR_ALIASES[color] ?? color)}
         data-leading={leading}
         data-trailing={trailing}
         data-icon-only={iconOnly || undefined}

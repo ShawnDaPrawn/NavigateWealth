@@ -2,7 +2,7 @@
  * Untitled UI "Buttons/Button" and "Buttons/Button destructive".
  *
  * Figma variants → props:
- *   Size        sm | md | lg | xl                       → size
+ *   Size        xs | sm | md | lg | xl                  → size (xs is new in v8.0)
  *   Hierarchy   Primary | Secondary | Tertiary |
  *               Link color | Link gray                  → hierarchy
  *   State       Loading                                 → isLoading
@@ -16,7 +16,7 @@ import { clsx } from 'clsx';
 
 import { Spinner, type UntitledIcon } from '../icons/icons';
 
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type ButtonHierarchy = 'primary' | 'secondary' | 'tertiary' | 'link-color' | 'link-gray';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

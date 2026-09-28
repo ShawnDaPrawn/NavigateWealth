@@ -37,6 +37,11 @@ describe('Untitled UI Button', () => {
     expect(button?.getAttribute('type')).toBe('button');
   });
 
+  it('supports the v8.0 xs size', () => {
+    render(<Button size="xs">Tiny</Button>);
+    expect(screen.getByRole('button', { name: 'Tiny' }).getAttribute('data-size')).toBe('xs');
+  });
+
   it('defaults to a primary md button', () => {
     render(<Button>Save</Button>);
     const button = screen.getByRole('button', { name: 'Save' });
@@ -110,6 +115,17 @@ describe('Untitled UI Badge', () => {
     expect(badge?.getAttribute('data-color')).toBe('success');
     expect(badge?.getAttribute('data-leading')).toBe('dot');
     expect(container.querySelector('.uui-badge__dot')).not.toBeNull();
+  });
+
+  it('accepts the v8.0 colour names Slate and Sky', () => {
+    render(
+      <>
+        <Badge color="slate">S</Badge>
+        <Badge color="sky">K</Badge>
+      </>,
+    );
+    expect(screen.getByText('S').getAttribute('data-color')).toBe('gray-blue');
+    expect(screen.getByText('K').getAttribute('data-color')).toBe('blue-light');
   });
 
   it('marks leading and trailing icons', () => {

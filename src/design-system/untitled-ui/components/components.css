@@ -120,7 +120,14 @@
   box-shadow: var(--_ring);
 }
 
-/* Sizes — padding keeps the Figma heights: sm 36, md 40, lg 44, xl 48 */
+/* Sizes — padding keeps the Figma heights: xs 32, sm 36, md 40, lg 44, xl 48 */
+.uui-button[data-size='xs'] {
+  padding: 6px 10px;
+}
+.uui-button[data-size='xs'] > .uui-icon {
+  width: 16px;
+  height: 16px;
+}
 .uui-button[data-size='sm'] {
   padding: var(--uui-spacing-md) var(--uui-spacing-lg);
 }
@@ -140,6 +147,9 @@
   line-height: var(--uui-line-height-text-md);
 }
 
+.uui-button[data-icon-only][data-size='xs'] {
+  padding: var(--uui-spacing-md);
+}
 .uui-button[data-icon-only][data-size='sm'] {
   padding: var(--uui-spacing-md);
 }
@@ -158,8 +168,9 @@
   --_bg: var(--uui-color-bg-brand-solid);
   --_bg-hover: var(--uui-color-bg-brand-solid-hover);
   --_fg: var(--uui-color-text-white);
-  --_icon: var(--uui-color-button-primary-icon);
-  --_icon-hover: var(--uui-color-button-primary-icon-hover);
+  /* v8.0 draws primary icons white (v7.0 used Brand 300) */
+  --_icon: var(--uui-color-fg-white);
+  --_icon-hover: var(--uui-color-fg-white);
   --_shadow: var(--uui-shadow-xs-skeuomorphic);
   --_ring: var(--uui-focus-ring-shadow-xs-skeuomorphic);
 }
@@ -232,8 +243,8 @@
 .uui-button[data-destructive][data-hierarchy='primary'] {
   --_bg: var(--uui-color-bg-error-solid);
   --_bg-hover: var(--uui-color-bg-error-solid-hover);
-  --_icon: var(--uui-color-button-destructive-primary-icon);
-  --_icon-hover: var(--uui-color-button-destructive-primary-icon-hover);
+  --_icon: var(--uui-color-fg-white);
+  --_icon-hover: var(--uui-color-fg-white);
   --_ring: var(--uui-focus-ring-error-shadow-xs-skeuomorphic);
 }
 .uui-button[data-destructive][data-hierarchy='secondary'] {
@@ -260,29 +271,18 @@
   --_bg: var(--uui-color-bg-error-solid);
 }
 
-/* Disabled */
+/* Disabled — v8.0 keeps each hierarchy's colours and fades the button to 50%,
+   icons to 60% of that; the secondary border lightens and the shadow drops to xs */
 .uui-button:disabled:not([data-loading]),
 .uui-button[aria-disabled='true']:not([data-loading]) {
-  --_fg: var(--uui-color-fg-disabled);
-  --_icon: var(--uui-color-fg-disabled-subtle);
+  opacity: 0.5;
   cursor: not-allowed;
 }
-.uui-button:is(:disabled, [aria-disabled='true']):not([data-loading])[data-hierarchy='primary'] {
-  --_bg: var(--uui-color-bg-disabled);
-  --_border: var(--uui-color-border-disabled-subtle);
-  --_shadow: var(--uui-shadow-xs);
-}
-.uui-button:is(:disabled, [aria-disabled='true']):not(
-    [data-loading]
-  )[data-hierarchy='primary']::before {
-  padding: 0;
-  background: none;
-  -webkit-mask: none;
-  mask: none;
-  box-shadow: inset 0 0 0 1px var(--_border);
+.uui-button:is(:disabled, [aria-disabled='true']):not([data-loading]) > .uui-icon {
+  opacity: 0.6;
 }
 .uui-button:is(:disabled, [aria-disabled='true']):not([data-loading])[data-hierarchy='secondary'] {
-  --_border: var(--uui-color-border-disabled-subtle);
+  --_border: var(--uui-color-border-secondary);
   --_shadow: var(--uui-shadow-xs);
 }
 
@@ -645,7 +645,7 @@
   display: flex;
   align-items: center;
   gap: var(--uui-spacing-md);
-  padding: 10px 14px;
+  padding: var(--uui-spacing-md) var(--uui-spacing-lg); /* v8.0: 40px tall at md */
   border-radius: var(--uui-radius-md);
   background: var(--uui-color-bg-primary);
   box-shadow:
@@ -662,8 +662,10 @@
     var(--uui-shadow-xs);
 }
 
-.uui-field[data-size='sm'] .uui-field__control {
-  padding: var(--uui-spacing-md) var(--uui-spacing-lg);
+.uui-field[data-size='sm'] .uui-field__input {
+  /* v8.0: sm keeps md's padding and drops to 14px text, 36px tall */
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
 }
 
 .uui-field[data-invalid] .uui-field__control {
@@ -712,22 +714,13 @@
 }
 
 .uui-field__control:has(.uui-field__input:disabled) {
-  --_border: var(--uui-color-border-disabled);
-  background: var(--uui-color-bg-disabled-subtle);
-  color: var(--uui-color-text-disabled);
+  /* v8.0: disabled keeps its colours at 50% opacity */
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-.uui-field__control:has(.uui-field__input:disabled) > .uui-icon {
-  color: var(--uui-color-fg-disabled);
 }
 
 .uui-field__input:disabled {
   cursor: not-allowed;
-}
-
-.uui-field__input:disabled::placeholder {
-  color: var(--uui-color-text-disabled);
 }
 
 /* Textarea: 12px/14px padding, 128px tall by default, resizable */
@@ -853,9 +846,12 @@
 }
 
 .uui-choice__input:disabled + .uui-choice__box {
-  background: var(--uui-color-bg-disabled-subtle);
-  box-shadow: inset 0 0 0 1px var(--uui-color-border-disabled);
-  color: var(--uui-color-fg-disabled-subtle);
+  /* v8.0: disabled keeps its colours at 50% opacity; unchecked fills Neutral 100 */
+  opacity: 0.5;
+}
+
+.uui-choice__input:disabled:not(:checked, [type='checkbox']:indeterminate) + .uui-choice__box {
+  background: var(--uui-color-bg-tertiary);
 }
 
 .uui-choice__text,
@@ -914,6 +910,8 @@
   border: 0;
   border-radius: var(--uui-radius-full);
   background: var(--uui-color-bg-tertiary);
+  /* v8.0 adds a 0.5px Neutral 200 hairline to the off track */
+  box-shadow: inset 0 0 0 0.5px var(--uui-color-border-secondary);
   cursor: pointer;
   outline: none;
   transition: background-color 150ms ease-out;
@@ -937,6 +935,7 @@
 
 .uui-toggle__track[aria-checked='true'] {
   background: var(--uui-color-bg-brand-solid);
+  box-shadow: none;
 }
 
 .uui-toggle__track[aria-checked='true'] .uui-toggle__knob {
@@ -952,12 +951,9 @@
 }
 
 .uui-toggle__track:disabled {
-  background: var(--uui-color-bg-disabled);
+  /* v8.0: disabled keeps its colours at 50% opacity */
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-.uui-toggle__track:disabled .uui-toggle__knob {
-  background: var(--uui-color-toggle-button-fg-disabled);
 }
 
 /* Slim: the track is thinner than the knob, which overhangs it */
@@ -999,8 +995,4 @@
 
 .uui-toggle[data-type='slim'] .uui-toggle__track:focus-visible {
   box-shadow: var(--uui-focus-ring);
-}
-
-.uui-toggle[data-type='slim'] .uui-toggle__track:disabled {
-  box-shadow: inset 0 0 0 1px var(--uui-color-border-disabled-subtle);
 }
