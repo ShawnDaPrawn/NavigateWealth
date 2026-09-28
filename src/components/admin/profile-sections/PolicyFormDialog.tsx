@@ -146,20 +146,13 @@ export function PolicyFormDialog({
       }));
 
       // Filter providers that support this category
-      // For investment/employee-benefit subcategories, we also accept providers linked to the
-      // parent category. Retirement has no such fallback: Retirement Planning is only a heading,
-      // and providers carry Pre-Retirement / Post-Retirement directly.
+      // For employee-benefit subcategories, we also accept providers linked to the general
+      // Employee Benefits category. Retirement and Investments have no such fallback: each is
+      // only a heading, and providers carry its subcategories directly.
       const filteredProviders = allProviders.filter((p: Provider) => {
         if (p.categoryIds.includes(activeCategoryId)) return true;
 
         // Fallback: If looking for sub-category, accept parent category providers
-        if (
-          (activeCategoryId === 'investments_voluntary' ||
-            activeCategoryId === 'investments_guaranteed') &&
-          p.categoryIds.includes('investments')
-        ) {
-          return true;
-        }
         if (
           (activeCategoryId === 'employee_benefits_risk' ||
             activeCategoryId === 'employee_benefits_retirement') &&

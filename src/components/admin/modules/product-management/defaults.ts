@@ -89,37 +89,8 @@ export const DEFAULT_SCHEMAS: CategoryTableStructure[] = [
       { id: 'ret_post_7', name: 'Notes', type: 'long_text', required: false },
     ],
   },
-  {
-    categoryId: 'investments',
-    fields: [
-      { id: 'inv_1', name: 'Policy Number', type: 'text', required: true },
-      {
-        id: 'inv_2',
-        name: 'Product Type',
-        type: 'dropdown',
-        required: true,
-        options: ['Endowment', 'Unit Trust', 'Tax Free Savings', 'Offshore Investment', 'Shares'],
-        keyId: 'invest_product_type',
-      },
-      {
-        id: 'inv_3',
-        name: 'Current Value',
-        type: 'currency',
-        required: true,
-        keyId: 'invest_current_value',
-      },
-      { id: 'inv_4', name: 'Projected Value', type: 'currency', required: false },
-      { id: 'inv_5', name: 'Maturity Date', type: 'date', required: false },
-      {
-        id: 'inv_6',
-        name: 'Premium',
-        type: 'currency',
-        required: false,
-        keyId: 'invest_monthly_contribution',
-      },
-      { id: 'inv_7', name: 'Notes', type: 'long_text', required: false },
-    ],
-  },
+  // No 'investments' entry: Investments is only the heading over Voluntary
+  // and Guaranteed Investments, not a product with its own schema.
   {
     categoryId: 'investments_voluntary',
     fields: [

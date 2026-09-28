@@ -28,3 +28,32 @@ describe('normalizePolicyDataForStructure — retired Retirement Planning field 
     expect(normalized.ret_pre_3).toBe(300000);
   });
 });
+
+describe('normalizePolicyDataForStructure — retired Investments field ids', () => {
+  const voluntaryFields = DEFAULT_SCHEMAS.investments_voluntary.fields as ProductField[];
+
+  // Investments is only a heading now too; a portal run staged under it wrote
+  // its inv_* ids onto a Voluntary Investments policy.
+  it('carries the old parent-schema values onto the Voluntary Investments fields', () => {
+    const normalized = normalizePolicyDataForStructure(
+      {
+        inv_2: 'Unit Trust',
+        inv_3: 120000,
+        inv_4: 180000,
+        inv_5: '2035-01-01',
+        inv_6: 2000,
+        inv_8: 9,
+        inv_9: 5,
+      },
+      voluntaryFields,
+    );
+
+    expect(normalized.inv_vol_2).toBe('Unit Trust');
+    expect(normalized.inv_vol_3).toBe(120000);
+    expect(normalized.inv_vol_4).toBe(180000);
+    expect(normalized.inv_vol_5).toBe('2035-01-01');
+    expect(normalized.inv_vol_6).toBe(2000);
+    expect(normalized.inv_vol_8).toBe(9);
+    expect(normalized.inv_vol_9).toBe(5);
+  });
+});
