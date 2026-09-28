@@ -8,6 +8,10 @@ the site onto Untitled UI.
 copied in whole. It holds about 230 free Untitled UI React components under the
 MIT licence: base components, application components (tables, date pickers,
 charts, modals, navigation) and the theme. The paid PRO tier is not included.
+The MIT licence and Untitled UI's copyright notice are in
+`untitled-ui-react/LICENSE`, taken from Untitled UI's
+[React repository](https://github.com/untitleduico/react/blob/main/LICENSE)
+because the starter kit itself ships without one. Keep it with the code.
 
 **The site does not use it, and it cannot change the site's styling.** It is a
 separate app:
