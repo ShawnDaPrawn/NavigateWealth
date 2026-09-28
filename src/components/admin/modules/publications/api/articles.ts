@@ -59,7 +59,14 @@ export const ArticlesAPI = {
     if (filters?.date_to) params.append('date_to', filters.date_to);
 
     const url = `${BASE_URL}/articles${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await fetch(url, { headers });
+    // Since #348 the server returns unpublished articles only to an admin
+    // session, so the anon key would hide every draft. An explicit
+    // `published` read (the public Resources page) keeps the anon key: the
+    // server short-circuits it, and getSession() can queue behind auth
+    // hydration on a cold load.
+    const response = await fetch(url, {
+      headers: filters?.status === 'published' ? headers : await getAuthHeaders(),
+    });
     return handleResponse<Article[]>(response);
   },
 
@@ -75,7 +82,7 @@ export const ArticlesAPI = {
    * ```
    */
   async getArticle(id: string): Promise<Article> {
-    const response = await fetch(`${BASE_URL}/articles/${id}`, { headers });
+    const response = await fetch(`${BASE_URL}/articles/${id}`, { headers: await getAuthHeaders() });
     return handleResponse<Article>(response);
   },
 
@@ -91,7 +98,9 @@ export const ArticlesAPI = {
    * ```
    */
   async getArticleBySlug(slug: string): Promise<Article> {
-    const response = await fetch(`${BASE_URL}/articles/slug/${slug}`, { headers });
+    const response = await fetch(`${BASE_URL}/articles/slug/${slug}`, {
+      headers: await getAuthHeaders(),
+    });
     return handleResponse<Article>(response);
   },
 
@@ -297,7 +306,7 @@ export const ArticlesAPI = {
    */
   async searchArticles(query: string): Promise<Article[]> {
     const response = await fetch(`${BASE_URL}/articles?search=${encodeURIComponent(query)}`, {
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<Article[]>(response);
   },
@@ -319,7 +328,7 @@ export const ArticlesAPI = {
    */
   async getFeaturedArticles(limit: number = 10): Promise<Article[]> {
     const response = await fetch(`${BASE_URL}/articles?is_featured=true&limit=${limit}`, {
-      headers,
+      headers: await getAuthHeaders(),
     });
     return handleResponse<Article[]>(response);
   },

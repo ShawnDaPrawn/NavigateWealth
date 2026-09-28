@@ -537,8 +537,15 @@ app.delete('/:userId/:documentId', requireAdmin, async (c) => {
       });
     }
 
-    // If it's a file document, delete from storage
-    if (docData.type === 'document' && docData.filePath) {
+    // If it's a file document, delete from storage. A Record of Advice entry's
+    // filePath is the KV key of the RoA file (`roa:generated:<id>`), not a
+    // storage path: it has no object here to remove, and the owner-folder check
+    // below would refuse it, so an admin could never delete one.
+    if (
+      docData.type === 'document' &&
+      docData.filePath &&
+      docData.sourceSystem !== 'record-of-advice'
+    ) {
       if (!isOwnedStoragePath(userId, docData.filePath)) {
         log.warn('Refusing to delete a file outside its owner folder', { documentId });
         return c.json({ success: false, error: 'Document not found' }, 404);
