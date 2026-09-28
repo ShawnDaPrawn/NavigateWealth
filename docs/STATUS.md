@@ -134,6 +134,13 @@ stated prerequisite has already caused a production outage once.
   heartbeat skipped for up to 2 minutes, a healthy job can show a 4-minute-old
   check-in, so `SCHEDULER_STALE_AFTER_MS` is 10 minutes. Change one and
   re-derive the other or the Newsletter dashboard cries wolf.
+- **The Compliance admin module is an empty shell, on purpose.** It is being
+  rebuilt from scratch: the page (`src/components/admin/modules/compliance/`)
+  renders only a heading, and the `/compliance/*` edge API and
+  `compliance-service.ts` are removed. Records the old API wrote are still in
+  the KV store, untouched. The client and personnel drawers' Compliance tabs,
+  Honeycomb and the goAML digest are separate and unaffected. Do not restore
+  the old module or its API in passing.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -220,12 +227,12 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
   deleted, with their dead SPA wrappers.
 - **Staff-only routers any client could use.** Honeycomb KYC/AML (paid checks
   and the raw `/proxy` under the firm's API key, plus every client's results),
-  the compliance registers (every client's AML/FICA record, complaints — one
-  editable — POPIA, PAIA, statutory), website submissions (every lead, plus
-  firm-branded `/invite` email to any address), newsletter subscriber admin,
-  policy extraction (other clients' extracted policies, paid bulk
-  re-extraction) and saved retirement scenarios were `requireAuth`. All are
-  `requireAdmin`; every caller is in the admin panel.
+  website submissions (every lead, plus firm-branded `/invite` email to any
+  address), newsletter subscriber admin, policy extraction (other clients'
+  extracted policies, paid bulk re-extraction) and saved retirement scenarios
+  were `requireAuth`. All are `requireAdmin`; every caller is in the admin
+  panel. The compliance registers had the same hole; that API has since been
+  removed with the Compliance module (see Standing constraints).
 - **Ownership:** policy documents (signed URL, replace, delete) take the
   caller's `clientId` through `requireClientAccess`, like the sibling
   `/policies` routes.

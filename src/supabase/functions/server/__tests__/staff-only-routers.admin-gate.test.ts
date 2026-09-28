@@ -2,10 +2,10 @@
  * Staff-only routers — a signed-in CLIENT is refused on every route.
  * ================================================================
  *
- * The compliance registers, the website-submissions inbox and the newsletter
- * subscriber admin were guarded with `requireAuth`, which any self-registered
- * client passes. Each is firm-wide data (every client's AML/FICA screening,
- * every lead the website collected, the whole subscriber list), and every
+ * The website-submissions inbox and the newsletter subscriber admin were
+ * guarded with `requireAuth`, which any self-registered client passes. Each is
+ * firm-wide data (every lead the website collected, the whole subscriber
+ * list), and every
  * caller in the SPA is in the admin panel, which only admin and super_admin can
  * open. They are now `requireAdmin`.
  *
@@ -42,13 +42,6 @@ vi.mock('../auth-mw.ts', async () => {
 const emptyService = () =>
   new Proxy({}, { get: (_t, prop) => (prop === 'then' ? undefined : async () => []) });
 
-vi.mock('../compliance-service.ts', () => ({
-  ComplianceService: class {
-    constructor() {
-      return emptyService();
-    }
-  },
-}));
 vi.mock('../submissions-service.ts', () => ({ submissionsService: emptyService() }));
 vi.mock('../newsletter-service.ts', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
@@ -102,7 +95,6 @@ vi.mock('../kv-cleanup-service.ts', () => ({
 }));
 
 const { request, routeRegistrations } = await import('./helpers/contract-harness.ts');
-const compliance = (await import('../compliance-routes.ts')).default;
 const submissions = (await import('../submissions-routes.ts')).default;
 const newsletter = (await import('../newsletter.tsx')).default;
 const clients = (await import('../client-management-routes.ts')).default;
@@ -133,7 +125,6 @@ const ROUTERS: Array<{
   include: (method: string, path: string) => boolean;
   minRoutes: number;
 }> = [
-  { name: 'compliance', app: compliance, include: () => true, minRoutes: 60 },
   {
     name: 'submissions',
     app: submissions,
@@ -195,7 +186,6 @@ describe.each(ROUTERS)('$name — admin only', ({ app, include, minRoutes }) => 
 
 describe('an admin still gets through', () => {
   it.each([
-    ['compliance', compliance, '/aml-fica'],
     ['submissions', submissions, '/'],
     ['newsletter', newsletter, '/admin/subscribers'],
   ] as const)('%s GET %s', async (_name, app, path) => {
