@@ -1,5 +1,5 @@
 /**
- * Untitled UI PRO (v7.0) — exported from the Figma file into code.
+ * Untitled UI PRO (v8.0) — exported from the Figma file into code.
  *
  * Nothing on the site imports this yet. To use it, import the stylesheet once
  * (`@/design-system/untitled-ui/untitled-ui.css`) and then these components.
@@ -45,4 +45,32 @@ export {
   type ButtonGroupProps,
   type ButtonGroupItemProps,
 } from './components/button-group';
+export {
+  Select,
+  MultiSelect,
+  type SelectProps,
+  type MultiSelectProps,
+  type SelectOption,
+  type SelectSize,
+} from './components/select';
+export {
+  Dropdown,
+  DropdownMenu,
+  DropdownItem,
+  DropdownDivider,
+  DropdownHeader,
+  DropdownFooter,
+  ContextMenu,
+  type DropdownProps,
+  type DropdownMenuProps,
+  type DropdownItemProps,
+  type ContextMenuProps,
+} from './components/dropdown';
+export { Slider, type SliderProps } from './components/slider';
+export {
+  RadioGroup,
+  RadioGroupItem,
+  type RadioGroupProps,
+  type RadioGroupItemProps,
+} from './components/radio-group';
 export * from './icons/icons';

@@ -1,0 +1,174 @@
+/*
+ * Untitled UI v8.0 — "Select" / "Multi-select". The trigger reuses the field
+ * chrome from components.css (label, 1px Neutral 300 border, shadow-xs, 2px
+ * Brand border when focused); the open menu is a white 8px-radius panel with
+ * a Neutral 200 hairline and shadow-lg.
+ */
+
+.uui-select__anchor {
+  position: relative;
+}
+
+/* ---- Trigger: sm 36 (8/10/8/12), md 40 (8/12), lg 44 (10/14) ---- */
+.uui-select__trigger {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+.uui-select[data-size='sm'] .uui-select__trigger {
+  padding: var(--uui-spacing-md) 10px var(--uui-spacing-md) var(--uui-spacing-lg);
+}
+.uui-select[data-size='lg'] .uui-select__trigger {
+  padding: 10px 14px;
+}
+.uui-select__trigger[aria-expanded='true'] {
+  box-shadow:
+    inset 0 0 0 2px var(--_border-focus),
+    var(--uui-shadow-xs);
+}
+.uui-select__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uui-select__value {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--uui-spacing-md);
+  min-width: 0;
+}
+
+.uui-select__text {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+}
+.uui-select[data-size='sm'] .uui-select__text {
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+}
+.uui-select__label {
+  overflow: hidden;
+  color: var(--uui-v8-neutral-900);
+  font-weight: var(--uui-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uui-select__supporting {
+  overflow: hidden;
+  color: var(--uui-v8-neutral-600);
+  font-weight: var(--uui-font-weight-regular);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uui-select__placeholder {
+  overflow: hidden;
+  color: var(--uui-v8-neutral-500);
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uui-select[data-size='sm'] .uui-select__placeholder {
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+}
+
+.uui-select__option-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--uui-v8-neutral-400);
+}
+.uui-select__avatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -2px 0;
+  border-radius: var(--uui-radius-full);
+  object-fit: cover;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
+}
+.uui-select__chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--uui-v8-neutral-400);
+}
+
+/* ---- Menu ---- */
+.uui-select__menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  margin: 0;
+  padding: var(--uui-spacing-xs) 0;
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--uui-radius-md);
+  background: var(--uui-v8-base-white);
+  box-shadow:
+    0 0 0 1px var(--uui-v8-neutral-200),
+    var(--uui-shadow-lg);
+  outline: none;
+}
+.uui-select__menu[hidden] {
+  display: none;
+}
+
+/* Row: 1px/6px around a 6px-radius content box (sm: 1px/4px) */
+.uui-select__option {
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.uui-select[data-size='sm'] .uui-select__option {
+  padding: 1px var(--uui-spacing-xs);
+}
+.uui-select__option-content {
+  display: flex;
+  align-items: center;
+  gap: var(--uui-spacing-md);
+  padding: var(--uui-spacing-md);
+  border-radius: var(--uui-radius-sm);
+}
+.uui-select[data-size='lg'] .uui-select__option-content {
+  padding: 10px 10px 10px var(--uui-spacing-md);
+}
+.uui-select__option[aria-selected='true'] .uui-select__option-content {
+  padding-right: 10px;
+}
+.uui-select__option[data-active] .uui-select__option-content,
+.uui-select__option[aria-selected='true'] .uui-select__option-content {
+  background: var(--uui-v8-neutral-50);
+}
+.uui-select__option[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.uui-select__option[aria-disabled='true'] .uui-select__option-content {
+  background: transparent;
+}
+.uui-select__option .uui-select__text {
+  flex: 1;
+}
+
+.uui-select__check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--uui-v8-brand-600);
+}
+.uui-select[data-size='lg'] .uui-select__check {
+  width: 20px;
+  height: 20px;
+}

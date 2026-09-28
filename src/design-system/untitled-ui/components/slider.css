@@ -1,0 +1,152 @@
+/*
+ * Untitled UI v8.0 — "Slider". An 8px Neutral 200 track with a Brand 600
+ * fill, and 24px white handles with a 2px Brand 600 ring and shadow-md.
+ * Handles are native range inputs; their centres run from 12px to (width −
+ * 12px), and the fill and labels follow the same line.
+ */
+
+.uui-slider {
+  --_handle: 24px;
+  position: relative;
+  font-family: var(--uui-font-family-body);
+}
+.uui-slider[data-label='bottom'] {
+  padding-bottom: 32px;
+}
+.uui-slider[data-label='top-floating'] {
+  padding-top: 42px;
+}
+.uui-slider[data-disabled] {
+  opacity: 0.5;
+}
+
+.uui-slider__rail {
+  position: relative;
+  height: var(--_handle);
+}
+
+.uui-slider__track {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  border-radius: var(--uui-radius-xs);
+  background: var(--uui-v8-neutral-200);
+}
+.uui-slider__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--_handle) / 2 + (100% - var(--_handle)) * var(--_from) / 100);
+  right: calc(100% - var(--_handle) / 2 - (100% - var(--_handle)) * var(--_to) / 100);
+  border-radius: var(--uui-radius-xs);
+  background: var(--uui-v8-brand-600);
+}
+.uui-slider:not([data-range]) .uui-slider__fill {
+  left: 0;
+}
+
+.uui-slider__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: var(--_handle);
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.uui-slider[data-range] .uui-slider__input {
+  pointer-events: none;
+}
+.uui-slider__input[data-on-top] {
+  z-index: 1;
+}
+.uui-slider__input:disabled {
+  cursor: not-allowed;
+}
+
+.uui-slider__input::-webkit-slider-runnable-track {
+  height: var(--_handle);
+  background: transparent;
+}
+.uui-slider__input::-moz-range-track {
+  height: var(--_handle);
+  background: transparent;
+}
+
+.uui-slider__input::-webkit-slider-thumb {
+  width: var(--_handle);
+  height: var(--_handle);
+  border: 0;
+  border-radius: var(--uui-radius-full);
+  background: var(--uui-v8-base-white);
+  box-shadow:
+    inset 0 0 0 2px var(--uui-v8-brand-600),
+    var(--uui-shadow-md);
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: auto;
+  cursor: grab;
+}
+.uui-slider__input::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--_handle);
+  height: var(--_handle);
+  border: 0;
+  border-radius: var(--uui-radius-full);
+  background: var(--uui-v8-base-white);
+  box-shadow:
+    inset 0 0 0 2px var(--uui-v8-brand-600),
+    var(--uui-shadow-md);
+  pointer-events: auto;
+  cursor: grab;
+}
+.uui-slider__input:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    inset 0 0 0 2px var(--uui-v8-brand-600),
+    var(--uui-focus-ring-shadow-sm);
+}
+.uui-slider__input:focus-visible::-moz-range-thumb {
+  box-shadow:
+    inset 0 0 0 2px var(--uui-v8-brand-600),
+    var(--uui-focus-ring-shadow-sm);
+}
+.uui-slider__input:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+.uui-slider__input:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}
+
+/* Labels sit centred on their handle */
+.uui-slider__label {
+  position: absolute;
+  left: calc(var(--_handle) / 2 + (100% - var(--_handle)) * var(--_at) / 100);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.uui-slider[data-label='bottom'] .uui-slider__label {
+  top: calc(100% + 8px);
+  color: var(--uui-v8-neutral-900);
+  font-size: var(--uui-font-size-text-md);
+  line-height: var(--uui-line-height-text-md);
+  font-weight: var(--uui-font-weight-medium);
+}
+.uui-slider[data-label='top-floating'] .uui-slider__label {
+  bottom: calc(100% + 8px);
+  padding: var(--uui-spacing-md) var(--uui-spacing-lg);
+  border-radius: var(--uui-radius-md);
+  background: var(--uui-v8-base-white);
+  box-shadow:
+    0 0 0 1px var(--uui-v8-neutral-200),
+    var(--uui-shadow-lg);
+  color: var(--uui-v8-neutral-700);
+  font-size: var(--uui-font-size-text-xs);
+  line-height: var(--uui-line-height-text-xs);
+  font-weight: var(--uui-font-weight-semibold);
+}

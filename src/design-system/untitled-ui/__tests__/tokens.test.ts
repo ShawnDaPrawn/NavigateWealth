@@ -22,6 +22,10 @@ const files = {
   tag: read('../components/tag.css'),
   progress: read('../components/progress.css'),
   buttonGroup: read('../components/button-group.css'),
+  select: read('../components/select.css'),
+  dropdown: read('../components/dropdown.css'),
+  slider: read('../components/slider.css'),
+  radioGroup: read('../components/radio-group.css'),
 };
 
 const defined = (css: string) =>

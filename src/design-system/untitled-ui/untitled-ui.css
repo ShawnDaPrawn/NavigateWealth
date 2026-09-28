@@ -12,3 +12,7 @@
 @import './components/tag.css';
 @import './components/progress.css';
 @import './components/button-group.css';
+@import './components/select.css';
+@import './components/dropdown.css';
+@import './components/slider.css';
+@import './components/radio-group.css';
