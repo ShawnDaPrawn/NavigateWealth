@@ -157,7 +157,7 @@ interface ResolvedPermissions {
  * ```
  */
 export function useCurrentUserPermissions(): ResolvedPermissions {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: permissionKeys.me(),
     queryFn: () => personnelApi.fetchMyPermissions(),
     staleTime: 2 * 60 * 1000, // 2 minutes — slightly longer for sidebar stability
@@ -169,15 +169,23 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
 
   const isSuperAdmin = data?.isSuperAdmin === true;
 
+  // No answer YET: loading, or paused while offline (fetchMyPermissions
+  // rethrows network failures rather than caching "no access", and React Query
+  // holds the query paused until the connection returns). `isLoading` alone
+  // misses the paused case — a paused query is not "loading" — which is how
+  // the sidebar collapsed to Dashboard and Notes offline. A query that ENDED in
+  // an error while the backend was reachable is not "yet": it fails closed, and
+  // refetches when the next observer mounts.
+  const unresolved = data === undefined && !isError;
+
   const can = (module: AdminModule): boolean => {
     // Always-accessible modules
     if (ALWAYS_ACCESSIBLE_MODULES.includes(module)) return true;
     // Super admin bypass
     if (isSuperAdmin) return true;
-    // While permissions are still loading, show all modules optimistically
-    // to prevent the sidebar from appearing empty during initial load.
-    // Once resolved, restricted items will be hidden.
-    if (isLoading) return true;
+    // Until permissions are known, show all modules optimistically so the
+    // sidebar does not appear empty. Once resolved, restricted items hide.
+    if (unresolved) return true;
     // Check stored permissions
     return data?.modules?.[module]?.access === true;
   };
@@ -185,8 +193,8 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
   const canDo = (module: AdminModule, capability: Capability): boolean => {
     // Super admin bypass — all capabilities
     if (isSuperAdmin) return true;
-    // While loading, grant all capabilities optimistically (same reasoning as can())
-    if (isLoading) return true;
+    // Until known, grant all capabilities optimistically (same reasoning as can())
+    if (unresolved) return true;
     // Module must be accessible first
     if (!can(module)) return false;
     // View is always granted when module is accessible

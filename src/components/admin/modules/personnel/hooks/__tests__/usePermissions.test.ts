@@ -323,6 +323,31 @@ describe('useCurrentUserPermissions', () => {
     expect(result.current.can('clients')).toBe(true);
   });
 
+  // Regression: offline, the query is PAUSED (isLoading false, no data, no
+  // error). Permissions are not known yet, and the sidebar used to collapse to
+  // Dashboard + Notes — even for a super admin.
+  it('can() and canDo() stay optimistic while the query is paused offline', () => {
+    mockUseQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
+
+    const { result } = renderHook(() => useCurrentUserPermissions());
+
+    expect(result.current.can('clients')).toBe(true);
+    expect(result.current.can('personnel')).toBe(true);
+    expect(result.current.canDo('publications', 'publish')).toBe(true);
+  });
+
+  // A request that ended in an error with the backend reachable is an outcome,
+  // not "still unknown": restricted users must not keep every module.
+  it('can() and canDo() fail closed after the query errors', () => {
+    mockUseQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+
+    const { result } = renderHook(() => useCurrentUserPermissions());
+
+    expect(result.current.can('clients')).toBe(false);
+    expect(result.current.can('dashboard')).toBe(true);
+    expect(result.current.canDo('publications', 'publish')).toBe(false);
+  });
+
   it('can() returns false when module not in stored permissions and not loading', () => {
     mockUseQuery.mockReturnValue({
       data: { isSuperAdmin: false, modules: { clients: { access: false } } },
