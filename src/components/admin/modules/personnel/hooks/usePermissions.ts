@@ -157,7 +157,7 @@ interface ResolvedPermissions {
  * ```
  */
 export function useCurrentUserPermissions(): ResolvedPermissions {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: permissionKeys.me(),
     queryFn: () => personnelApi.fetchMyPermissions(),
     staleTime: 2 * 60 * 1000, // 2 minutes — slightly longer for sidebar stability
@@ -169,12 +169,14 @@ export function useCurrentUserPermissions(): ResolvedPermissions {
 
   const isSuperAdmin = data?.isSuperAdmin === true;
 
-  // No answer yet: still loading, paused while offline, or the request never
-  // reached the server (fetchMyPermissions rethrows those rather than caching
-  // "no access"). `isLoading` alone misses the last two — a paused query is not
-  // "loading" — which is how the sidebar collapsed to Dashboard and Notes
-  // offline. The server enforces access on every request regardless.
-  const unresolved = data === undefined;
+  // No answer YET: loading, or paused while offline (fetchMyPermissions
+  // rethrows network failures rather than caching "no access", and React Query
+  // holds the query paused until the connection returns). `isLoading` alone
+  // misses the paused case — a paused query is not "loading" — which is how
+  // the sidebar collapsed to Dashboard and Notes offline. A query that ENDED in
+  // an error while the backend was reachable is not "yet": it fails closed, and
+  // refetches when the next observer mounts.
+  const unresolved = data === undefined && !isError;
 
   const can = (module: AdminModule): boolean => {
     // Always-accessible modules

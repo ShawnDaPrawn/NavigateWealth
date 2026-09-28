@@ -8,7 +8,6 @@ import { Footer } from './Footer';
 import { DashboardFooter } from './DashboardFooter';
 import { AccountSuspendedPage } from '../pages/AccountSuspendedPage';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
-import { OfflineScreen } from '../shared/OfflineScreen';
 import { InstallAppPrompt } from '../pwa/InstallAppPrompt';
 import { StandaloneRedirect } from '../pwa/StandaloneRedirect';
 import { ArticleBrowserRedirect } from '../pwa/ArticleBrowserRedirect';
@@ -161,8 +160,6 @@ export function MainLayout({
         (effectivelyAuthenticated ? <DashboardFooter /> : <Footer />)}
       <StandaloneRedirect />
       <InstallAppPrompt />
-      {/* Signed-in screens are all server-backed; public pages still read fine offline. */}
-      <OfflineScreen enabled={effectivelyAuthenticated} />
     </div>
   );
 }
