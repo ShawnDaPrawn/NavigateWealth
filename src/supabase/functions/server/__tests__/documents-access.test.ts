@@ -162,6 +162,20 @@ describe('staff-only actions', () => {
     expect(storage.remove).toHaveBeenCalledWith(['client-a/1700000000_schedule.pdf']);
   });
 
+  // A Record of Advice entry's filePath is a KV key, not a storage path, so the
+  // owner-folder check refused it and no admin could delete one.
+  it('the super admin can delete a Record of Advice entry, and storage is untouched', async () => {
+    kvStore.set(DOC_KEY, {
+      ...stored(),
+      sourceSystem: 'record-of-advice',
+      filePath: 'roa:generated:roa-1',
+    });
+    const res = await request(app, '/client-a/doc-1', { as: 'super_admin', method: 'DELETE' });
+    expect(res.status).toBe(200);
+    expect(storage.remove).not.toHaveBeenCalled();
+    expect(kvStore.get(DOC_KEY)).toBeUndefined();
+  });
+
   it('a client cannot add a link record', async () => {
     const res = await request(app, '/client-a/link', {
       ...asClientA,

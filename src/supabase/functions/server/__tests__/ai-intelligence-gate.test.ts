@@ -26,6 +26,8 @@ type StubUser = {
   user_metadata?: Record<string, unknown>;
 };
 const users = vi.hoisted(() => new Map<string, StubUser>());
+// When set, the stubbed AI limiter refuses every request it guards.
+const limiter = vi.hoisted(() => ({ exhausted: false }));
 
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
@@ -35,6 +37,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
         return user ? { data: { user }, error: null } : { data: { user: null }, error: {} };
       },
     },
+    from: () => ({ select: () => ({ like: async () => ({ data: [], error: null }) }) }),
   }),
 }));
 vi.mock('../kv_store.tsx', async () =>
@@ -48,7 +51,9 @@ vi.mock('../auth-mw.ts', () => ({
   enforceAccountSecurity: vi.fn(async () => undefined),
 }));
 vi.mock('../ai-usage-limit.ts', () => ({
-  aiUsageLimit: () => async (_c: unknown, next: () => Promise<void>) => next(),
+  aiUsageLimit:
+    () => async (c: { json: (b: unknown, s: number) => Response }, next: () => Promise<void>) =>
+      limiter.exhausted ? c.json({ error: 'rate limited' }, 429) : next(),
 }));
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
@@ -60,6 +65,7 @@ const status = (token: string) =>
 beforeEach(() => {
   kvStore.clear();
   users.clear();
+  limiter.exhausted = false;
 });
 
 describe('AI Intelligence gate', () => {
@@ -89,5 +95,27 @@ describe('AI Intelligence gate', () => {
   it('refuses a missing or invalid token', async () => {
     expect((await app.request('/status')).status).toBe(401);
     expect((await status('not-a-session')).status).toBe(401);
+  });
+});
+
+describe('client search is not an AI call', () => {
+  const search = (token: string) =>
+    app.request('/search-clients', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searchTerm: 'smith' }),
+    });
+
+  it('admits the super admin by the owner email alone', async () => {
+    users.set('t-owner', { id: 'o1', email: 'shawn@navigatewealth.co' });
+    expect((await status('t-owner')).status).toBe(200);
+  });
+
+  // Search shared /chat's per-user burst cap, and the RoA client picker spends
+  // one per debounced keystroke, so a few lookups locked the super admin out.
+  it('still answers when the AI allowance is spent', async () => {
+    users.set('t-owner', { id: 'o1', email: 'shawn@navigatewealth.co' });
+    limiter.exhausted = true;
+    expect((await search('t-owner')).status).toBe(200);
   });
 });

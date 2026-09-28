@@ -8,7 +8,6 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { authenticateUser, fnaErrorResponse } from './fna-auth.ts';
 import { assertClientAccess } from './client-access.ts';
-import { getErrMsg } from './shared-logger-utils.ts';
 import { SaveInvestmentSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { versionSuffix } from './fna-versioning.ts';
@@ -185,8 +184,10 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
     return c.json({ success: true, data: latest });
   } catch (error: unknown) {
     log.error('❌ Error fetching latest published Investment INA:', error);
-    const message = getErrMsg(error);
-    return c.json({ success: false, error: message }, 500);
+    // fnaErrorResponse, not a flat 500: this route now authenticates, and an
+    // expired session must come back as 401 so the API client refreshes and
+    // retries instead of the page quietly showing no published INA.
+    return fnaErrorResponse(c, error);
   }
 });
 
