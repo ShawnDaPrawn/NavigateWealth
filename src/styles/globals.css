@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* The official Untitled UI React kit is a separate app with its own theme; keep
+   the site's Tailwind from generating utilities for its class names. */
+@source not '../../design-system/untitled-ui-react';
 @custom-variant dark (&:is(.dark *));
 
 /* Schedule consultation flow: modal open = only top bars + blank canvas (hide site footer) */

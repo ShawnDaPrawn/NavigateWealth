@@ -1,0 +1,41 @@
+# Builds the official Untitled UI React kit (design-system/untitled-ui-react),
+# which is a separate app with its own dependencies and is not part of the
+# site's Quality Check. Runs only when the kit changes.
+name: Untitled UI React kit
+
+on:
+  pull_request:
+    paths:
+      - 'design-system/untitled-ui-react/**'
+      - '.github/workflows/untitled-ui-react.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'design-system/untitled-ui-react/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: design-system/untitled-ui-react
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          # The kit's upstream CI uses Node 22 (Vite 8 needs 20.19+ or 22.12+).
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: design-system/untitled-ui-react/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Type-check and build
+        run: npm run build
