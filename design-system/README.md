@@ -51,6 +51,9 @@ Typography, are the site's own and are unchanged.
 - It is built to `dist/design-system-library/` and deployed with the site:
   Vercel runs `npm run build:deploy` (see `vercel.json`), which is the site's
   `npm run build` followed by `npm run design-system:build`.
+- `middleware.ts`, the site's real-404 middleware, skips
+  `/design-system-library/`. Without that it would answer the built folder with
+  the 404 page.
 - The site's Components tab (`src/components/pages/design-system/DesignSystemLibrary.tsx`)
   shows it in a same-origin iframe. The iframe reports its height to the page
   and asks the page to scroll for index links, so it reads as one page. The

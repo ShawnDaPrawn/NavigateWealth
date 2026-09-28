@@ -16,8 +16,13 @@ export const config = {
      * extensions (robots.txt, sitemap.xml, /404.html, JS/CSS/images, etc.).
      * Excluding extension paths also prevents the /404.html fetch below from
      * re-entering this middleware.
+     *
+     * /design-system-library/ is the separately built component library that
+     * the /design-system page embeds (see design-system/README.md). It is a
+     * static folder with its own index.html, not an SPA route, so it must reach
+     * Vercel's filesystem instead of being answered with a 404 here.
      */
-    '/((?!assets/|_vercel|.*\\.[\\w-]+$).*)',
+    '/((?!assets/|_vercel|design-system-library/|design-system-library$|.*\\.[\\w-]+$).*)',
   ],
 };
 
