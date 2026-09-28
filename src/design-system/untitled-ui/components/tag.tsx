@@ -28,6 +28,8 @@ export interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
   checkbox?: boolean;
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
+  /** The checkbox's accessible name; defaults to the tag's own text. */
+  checkboxLabel?: string;
   disabled?: boolean;
 }
 
@@ -46,6 +48,7 @@ export const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
       checkbox = false,
       checked,
       onCheckedChange,
+      checkboxLabel,
       disabled,
       className,
       children,
@@ -55,6 +58,7 @@ export const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
   ) => {
     const leading = dot ? 'dot' : avatarSrc ? 'avatar' : undefined;
     const action = onRemove ? 'close' : count !== undefined ? 'count' : undefined;
+    const labelId = React.useId();
 
     return (
       <span
@@ -72,7 +76,10 @@ export const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
               className="uui-tag__check-input"
               checked={checked}
               disabled={disabled}
-              aria-label={typeof children === 'string' ? children : undefined}
+              // Named by `checkboxLabel` if given, else by the rendered label,
+              // which works for any children, not only plain strings.
+              aria-label={checkboxLabel}
+              aria-labelledby={checkboxLabel ? undefined : labelId}
               onChange={(e) => onCheckedChange?.(e.currentTarget.checked)}
             />
             <span className="uui-tag__check-box" aria-hidden="true">
@@ -86,7 +93,7 @@ export const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
           </svg>
         )}
         {avatarSrc && <img className="uui-tag__avatar" src={avatarSrc} alt="" />}
-        {children}
+        <span id={labelId}>{children}</span>
         {count !== undefined && !onRemove && <span className="uui-tag__count">{count}</span>}
         {onRemove && (
           <button

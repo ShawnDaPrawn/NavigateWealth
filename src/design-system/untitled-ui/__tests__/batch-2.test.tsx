@@ -33,8 +33,22 @@ describe('Untitled UI Avatar', () => {
   it('shows the placeholder icon with no photo or initials, and a status', () => {
     const { container } = render(<Avatar alt="Unknown user" status="online" bordered />);
     expect(container.querySelector('.uui-avatar__face svg')).not.toBeNull();
-    expect(container.querySelector('[data-status="online"]')?.textContent).toBe('Online');
+    // role="img" hides its children, so the status is part of the name.
+    expect(screen.getByRole('img', { name: 'Unknown user, Online' })).toBeTruthy();
     expect(container.querySelector('.uui-avatar')?.getAttribute('data-bordered')).toBe('true');
+  });
+
+  it('announces the status of a photo avatar', () => {
+    const { container } = render(<Avatar src="/olivia.png" alt="Olivia" status="offline" />);
+    expect(container.querySelector('[data-status="offline"]')?.textContent).toBe('Offline');
+  });
+
+  it('tries a new photo after the previous one failed', () => {
+    const { rerender } = render(<Avatar src="/missing.png" alt="Olivia" initials="OR" />);
+    fireEvent.error(screen.getByRole('img', { name: 'Olivia' }));
+    expect(screen.getByRole('img', { name: 'Olivia' }).tagName).toBe('SPAN');
+    rerender(<Avatar src="/new.png" alt="Olivia" initials="OR" />);
+    expect(screen.getByRole('img', { name: 'Olivia' }).tagName).toBe('IMG');
   });
 
   it('groups avatars, collapses extras into +N and offers an add button', () => {
@@ -81,6 +95,19 @@ describe('Untitled UI Tooltip', () => {
     expect(tip.getAttribute('data-has-hint')).toBe('true');
     expect(tip.textContent).toContain('Ctrl+S');
   });
+
+  it("keeps the trigger's existing description", () => {
+    render(
+      <>
+        <p id="hint">Required.</p>
+        <Tooltip title="More info">
+          <input aria-label="Name" aria-describedby="hint" />
+        </Tooltip>
+      </>,
+    );
+    const ids = screen.getByRole('textbox', { name: 'Name' }).getAttribute('aria-describedby');
+    expect(ids).toBe(`hint ${screen.getByRole('tooltip').id}`);
+  });
 });
 
 describe('Untitled UI Tag', () => {
@@ -91,7 +118,9 @@ describe('Untitled UI Tag', () => {
         Design
       </Tag>,
     );
-    expect(screen.getByText('Design').getAttribute('data-action')).toBe('close');
+    expect(screen.getByText('Design').closest('.uui-tag')?.getAttribute('data-action')).toBe(
+      'close',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Remove Design' }));
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
@@ -115,6 +144,21 @@ describe('Untitled UI Tag', () => {
     );
     fireEvent.click(screen.getByRole('checkbox', { name: 'Finance' }));
     expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
+
+  it('names the checkbox when the label is markup, or by checkboxLabel', () => {
+    render(
+      <>
+        <Tag checkbox>
+          <strong>Tax</strong> 2026
+        </Tag>
+        <Tag checkbox checkboxLabel="Select Legal">
+          Legal
+        </Tag>
+      </>,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Tax 2026' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Select Legal' })).toBeTruthy();
   });
 });
 

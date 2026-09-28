@@ -35,8 +35,13 @@ export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
     { size = 'md', src, alt = '', initials, status, bordered = false, className, ...props },
     ref,
   ) => {
-    const [failed, setFailed] = React.useState(false);
-    const showImage = !!src && !failed;
+    // Remember which URL failed, so a new `src` gets its own attempt.
+    const [failedSrc, setFailedSrc] = React.useState<string>();
+    const showImage = !!src && failedSrc !== src;
+    const statusText = status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : '';
+    // Without a photo the avatar is role="img", whose children are hidden from
+    // assistive tech, so the status joins its accessible name instead.
+    const fallbackLabel = [alt || initials, statusText].filter(Boolean).join(', ') || undefined;
 
     return (
       <span
@@ -45,12 +50,17 @@ export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
         data-size={size}
         data-bordered={bordered || undefined}
         role={showImage ? undefined : 'img'}
-        aria-label={showImage ? undefined : alt || initials || undefined}
+        aria-label={showImage ? undefined : fallbackLabel}
         {...props}
       >
         <span className="uui-avatar__face" data-image={showImage || undefined}>
           {showImage ? (
-            <img className="uui-avatar__img" src={src} alt={alt} onError={() => setFailed(true)} />
+            <img
+              className="uui-avatar__img"
+              src={src}
+              alt={alt}
+              onError={() => setFailedSrc(src)}
+            />
           ) : initials ? (
             <span aria-hidden="true">{initials}</span>
           ) : (
@@ -59,7 +69,7 @@ export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
         </span>
         {status && (
           <span className="uui-avatar__status" data-status={status}>
-            <span className="uui-sr-only">{status === 'online' ? 'Online' : 'Offline'}</span>
+            {showImage && <span className="uui-sr-only">{statusText}</span>}
           </span>
         )}
       </span>

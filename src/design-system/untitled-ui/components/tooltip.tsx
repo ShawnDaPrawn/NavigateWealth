@@ -37,12 +37,11 @@ export function Tooltip({
   ...props
 }: TooltipProps) {
   const id = React.useId();
-  const trigger = React.cloneElement(
-    children as React.ReactElement<{ 'aria-describedby'?: string }>,
-    {
-      'aria-describedby': id,
-    },
-  );
+  const child = children as React.ReactElement<{ 'aria-describedby'?: string }>;
+  // Add to, rather than replace, any description the trigger already has
+  // (e.g. a field's hint or error text).
+  const describedBy = [child.props['aria-describedby'], id].filter(Boolean).join(' ');
+  const trigger = React.cloneElement(child, { 'aria-describedby': describedBy });
 
   return (
     <span className={clsx('uui-tooltip-anchor', className)} {...props}>
