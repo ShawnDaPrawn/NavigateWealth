@@ -1,0 +1,9 @@
+/*
+ * Untitled UI PRO (v7.0): tokens and base component styles.
+ *
+ * Import this once wherever the components are used. It defines only
+ * `--uui-*` custom properties and `.uui-*` classes, so it cannot restyle
+ * anything that does not opt in.
+ */
+@import './tokens/index.css';
+@import './components/components.css';
