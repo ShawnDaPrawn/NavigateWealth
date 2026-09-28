@@ -3,6 +3,7 @@ import App from './App.tsx';
 import './index.css';
 import { installFunctionRegionInterceptor } from './utils/api/functionRegion';
 import { installRuntimeIssueCapture } from './utils/quality/runtimeIssueReporter';
+import { installConnectivityMonitor } from './utils/network/connectivity';
 
 // Before the first render, so no request can escape unpinned. See
 // functionRegion.ts for the measurement and the failover trade-off.
@@ -12,5 +13,9 @@ installFunctionRegionInterceptor();
 // the server cannot see, and breadcrumbs. Installed after the region
 // interceptor so it observes the final request as sent.
 installRuntimeIssueCapture();
+
+// Offline / unreachable detection for the offline screen, and what tells React
+// Query to pause and later refetch. Last, so it sees requests as sent.
+installConnectivityMonitor();
 
 createRoot(document.getElementById('root')!).render(<App />);
