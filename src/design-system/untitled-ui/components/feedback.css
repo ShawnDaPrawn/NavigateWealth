@@ -1,0 +1,257 @@
+/*
+ * Untitled UI v8.0 — "Alert", "Notification", "Featured icon outline",
+ * "Loading indicator" and "Content divider".
+ *
+ * Alert (Floating): white, 12px radius, 1px Neutral 300 border, shadow-xs,
+ * 16px padding and gap. A 40px bordered featured icon (Default colour) or a
+ * ringed outline icon (other colours); 14/20 semibold Neutral 700 title over
+ * Neutral 600 supporting text (4px apart); actions 12px below.
+ * Notification: the same content in a 400px card with shadow-lg.
+ */
+
+/* ---- Featured icon outline: icon plus 2 faint rings ---- */
+.uui-featured-outline {
+  --_c: var(--uui-v8-brand-600);
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 8px;
+  color: var(--_c);
+}
+.uui-featured-outline::before,
+.uui-featured-outline::after {
+  content: '';
+  position: absolute;
+  border: 2px solid var(--_c);
+  border-radius: var(--uui-radius-full);
+  pointer-events: none;
+}
+.uui-featured-outline::before {
+  inset: -5px;
+  opacity: 0.3;
+}
+.uui-featured-outline::after {
+  inset: -10px;
+  opacity: 0.1;
+}
+.uui-featured-outline > .uui-icon {
+  width: 20px;
+  height: 20px;
+}
+.uui-featured-outline[data-color='gray'] {
+  --_c: var(--uui-v8-neutral-600);
+}
+.uui-featured-outline[data-color='error'] {
+  --_c: var(--uui-v8-red-600);
+}
+.uui-featured-outline[data-color='warning'] {
+  --_c: var(--uui-v8-yellow-600);
+}
+.uui-featured-outline[data-color='success'] {
+  --_c: var(--uui-v8-green-600);
+}
+
+/* ---- Alert and Notification ---- */
+.uui-alert,
+.uui-notification {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--uui-spacing-xl);
+  padding: var(--uui-spacing-xl);
+  border-radius: var(--uui-radius-xl);
+  background: var(--uui-v8-base-white);
+  box-shadow:
+    inset 0 0 0 1px var(--uui-v8-neutral-300),
+    var(--uui-shadow-xs);
+  font-family: var(--uui-font-family-body);
+}
+.uui-notification {
+  box-sizing: border-box;
+  width: 400px;
+  max-width: 100%;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.08),
+    var(--uui-shadow-lg);
+}
+
+.uui-alert__featured {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--uui-radius-md);
+  background: var(--uui-v8-base-white);
+  box-shadow:
+    inset 0 0 0 1px var(--uui-v8-neutral-300),
+    var(--uui-shadow-xs-skeuomorphic);
+  color: var(--uui-v8-neutral-700);
+}
+.uui-alert__featured > .uui-icon {
+  width: 20px;
+  height: 20px;
+}
+/* The outline icon sits 2px lower to centre on the first line of text */
+.uui-alert .uui-featured-outline,
+.uui-notification .uui-featured-outline {
+  margin-top: 10px;
+}
+
+.uui-alert__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--uui-spacing-lg);
+  min-width: 0;
+}
+.uui-alert[data-closable] .uui-alert__content,
+.uui-notification[data-closable] .uui-alert__content {
+  padding-right: 32px; /* room for the close button */
+}
+.uui-notification .uui-alert__content {
+  padding-top: 2px;
+}
+.uui-alert__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uui-spacing-xs);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+}
+.uui-alert__title {
+  margin: 0;
+  color: var(--uui-v8-neutral-700);
+  font-weight: var(--uui-font-weight-semibold);
+}
+.uui-notification .uui-alert__title {
+  color: var(--uui-v8-neutral-900);
+}
+.uui-alert__supporting {
+  color: var(--uui-v8-neutral-600);
+}
+.uui-alert__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uui-spacing-lg);
+}
+.uui-alert__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* ---- Loading indicator ---- */
+.uui-loading {
+  --_size: 48px;
+  --_stroke: 3; /* in 24-unit viewBox terms: 6px at 48px */
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--uui-spacing-xl);
+  color: var(--uui-v8-neutral-700);
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+  font-weight: var(--uui-font-weight-medium);
+}
+.uui-loading[data-size='sm'] {
+  --_size: 32px;
+  --_stroke: 3;
+}
+.uui-loading[data-size='lg'] {
+  --_size: 56px;
+  --_stroke: 2.6;
+  font-size: var(--uui-font-size-text-lg);
+  line-height: var(--uui-line-height-text-lg);
+}
+.uui-loading[data-size='xl'] {
+  --_size: 64px;
+  --_stroke: 3;
+  gap: 20px;
+  font-size: var(--uui-font-size-text-lg);
+  line-height: var(--uui-line-height-text-lg);
+}
+.uui-loading__graphic {
+  width: var(--_size);
+  height: var(--_size);
+  fill: none;
+  animation: uui-spin 1s linear infinite;
+}
+.uui-loading__track {
+  stroke: var(--uui-v8-neutral-200);
+  stroke-width: var(--_stroke);
+}
+.uui-loading__arc {
+  stroke: var(--uui-v8-brand-600);
+  stroke-width: var(--_stroke);
+  stroke-linecap: round;
+}
+.uui-loading[data-variant='dot-circle'] .uui-loading__graphic {
+  fill: var(--uui-v8-brand-600);
+  animation-timing-function: steps(8);
+}
+@media (prefers-reduced-motion: reduce) {
+  .uui-loading__graphic {
+    animation-duration: 3s;
+  }
+}
+@keyframes uui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Content divider ---- */
+.uui-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--uui-spacing-md);
+  color: var(--uui-v8-neutral-600);
+  font-family: var(--uui-font-family-body);
+  font-size: var(--uui-font-size-text-sm);
+  line-height: var(--uui-line-height-text-sm);
+  font-weight: var(--uui-font-weight-medium);
+}
+.uui-divider[data-empty] {
+  height: 1px;
+  background: var(--uui-v8-neutral-200);
+}
+.uui-divider__line {
+  flex: 1;
+  height: 1px;
+  background: var(--uui-v8-neutral-200);
+}
+.uui-divider__content {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--uui-spacing-md);
+}
+.uui-divider[data-variant='dual-line'] {
+  justify-content: center;
+  padding: var(--uui-spacing-lg) 0;
+  box-shadow:
+    inset 0 1px 0 var(--uui-v8-neutral-200),
+    inset 0 -1px 0 var(--uui-v8-neutral-200);
+}
+.uui-divider[data-variant='background-fill'] {
+  justify-content: center;
+  padding: var(--uui-spacing-md) 0;
+  border-radius: var(--uui-radius-md);
+  background: var(--uui-v8-neutral-50);
+}
+.uui-divider[data-variant='dual-line'][data-empty],
+.uui-divider[data-variant='background-fill'][data-empty] {
+  height: auto;
+  padding: 0;
+  background: none;
+  box-shadow: inset 0 1px 0 var(--uui-v8-neutral-200);
+  min-height: 1px;
+}
