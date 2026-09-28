@@ -1,0 +1,55 @@
+/*
+ * Navigate Wealth theme for the Untitled UI components.
+ *
+ * Imported after Untitled UI's own theme.css (see globals.css), so these values
+ * win. It re-points Untitled UI's tokens at the Navigate Wealth brand, which is
+ * the same brand the website uses (src/styles/globals.css and the Colours tab on
+ * /design-system):
+ *
+ *   Brand       #6d28d9 (Tailwind violet-700) on every primary action, link,
+ *               focus ring and brand badge. Untitled UI's "brand-600" is the
+ *               step it uses for solid brand fills, so the violet scale is
+ *               shifted one step to put #6d28d9 there.
+ *   Neutrals    Tailwind gray, as the site uses, instead of Untitled UI's neutral.
+ *   Status      Tailwind green / yellow / red: already the same as the site.
+ *   Type        The site's system font stack instead of Inter.
+ *
+ * Change the brand here, in one place, and every component follows.
+ */
+
+@theme {
+    /* FONT FAMILY: the site's font stack (Tailwind's default sans) */
+    --font-body: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-display: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+    /* BRAND: Navigate Wealth violet, #6d28d9 at 600 */
+    --color-brand-25: #faf8ff;
+    --color-brand-50: #f5f3ff;
+    --color-brand-100: #ede9fe;
+    --color-brand-200: #ddd6fe;
+    --color-brand-300: #c4b5fd;
+    --color-brand-400: #a78bfa;
+    --color-brand-500: #7c3aed;
+    --color-brand-600: #6d28d9;
+    --color-brand-700: #5b21b6;
+    --color-brand-800: #4c1d95;
+    --color-brand-900: #3b1578;
+    --color-brand-950: #2e1065;
+
+    /* NEUTRALS: Tailwind gray, as the site uses */
+    --color-neutral-25: #fcfcfd;
+    --color-neutral-50: #f9fafb;
+    --color-neutral-100: #f3f4f6;
+    --color-neutral-200: #e5e7eb;
+    --color-neutral-300: #d1d5db;
+    --color-neutral-400: #9ca3af;
+    --color-neutral-500: #6b7280;
+    --color-neutral-600: #4b5563;
+    --color-neutral-700: #374151;
+    --color-neutral-800: #1f2937;
+    --color-neutral-900: #111827;
+    --color-neutral-950: #030712;
+
+    /* Navigate Wealth's dark navy section colour, for dark surfaces */
+    --color-navy: #313653;
+}

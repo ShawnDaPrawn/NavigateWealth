@@ -6,7 +6,9 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc -b && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "showcase:dev": "vite --config vite.showcase.config.ts",
+        "showcase:build": "tsc -b && vite build --config vite.showcase.config.ts"
     },
     "dependencies": {
         "@internationalized/date": "^3.12.4",

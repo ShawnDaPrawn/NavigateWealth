@@ -39,3 +39,8 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+      # The component library shown on /design-system. Vercel builds it the
+      # same way on deploy (npm run build:deploy), so a break shows here first.
+      - name: Build the component library page
+        run: npm run showcase:build

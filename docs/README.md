@@ -84,9 +84,7 @@ Short READMEs live next to the thing they describe, which is where they belong.
 | [`../.github/pull_request_template.md`](../.github/pull_request_template.md)                   | The finalization checklist a PR loads                                                  |
 | `../src/components/admin/modules/*/README.md`                                                  | Per-module architecture and constraints for seven admin modules                        |
 | [`../src/components/features/README.md`](../src/components/features/README.md)                 | What a client-facing feature module is, and why the directory is not called `modules/` |
-| [`../src/design-system/untitled-ui/README.md`](../src/design-system/untitled-ui/README.md)     | The Untitled UI PRO design system exported to code, not yet used by the site           |
-| [`../src/design-system/untitled-ui/COVERAGE.md`](../src/design-system/untitled-ui/COVERAGE.md) | Every Untitled UI v8.0 component set, and which are in code yet                        |
-| [`../design-system/README.md`](../design-system/README.md)                                     | The official Untitled UI React kit: what it is, how it is kept apart from the site     |
+| [`../design-system/README.md`](../design-system/README.md)                                     | The central design system: the Untitled UI kit, its theme, and the /design-system page |
 | [`../design-system/untitled-ui-react/README.md`](../design-system/untitled-ui-react/README.md) | Untitled UI's own README for the Vite starter kit                                      |
 | [`../design-system/untitled-ui-react/CLAUDE.md`](../design-system/untitled-ui-react/CLAUDE.md) | Untitled UI's guide to its components, for Claude Code                                 |
 | [`../scripts/README.md`](../scripts/README.md)                                                 | What each scripts folder is for, which scripts are entry points, and the path rule     |
