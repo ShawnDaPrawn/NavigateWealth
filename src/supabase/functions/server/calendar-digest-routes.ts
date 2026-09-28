@@ -26,6 +26,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { requireCronAuth } from './cron-auth.ts';
+import { withLinkedClient } from './calendar-client-link.ts';
 import { getAllClients } from './communication-business-logic.ts';
 import type { CommunicationClient, SupabaseAdminClient } from './communication-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
@@ -106,9 +107,17 @@ app.post(
     log.info(`Querying events between ${dayStartUtc.toISOString()} and ${dayEndUtc.toISOString()}`);
 
     // 2. Query all events for today across all users
-    const { data: events, error } = await getSupabase()
+    //
+    // No `client:clients(*)` embed here — migration
+    // `20260906005533_calendar_client_fk_to_auth_users.sql` re-pointed
+    // `events.client_id` at `auth.users`, which removed the PostgREST
+    // relationship that embed depended on (PGRST200, "Could not find a
+    // relationship between 'events' and 'clients'"). `calendar-service.ts`
+    // already derives `client` from `attendees` via `withLinkedClient`; this
+    // route just hadn't been updated to match.
+    const { data: rawEvents, error } = await getSupabase()
       .from('events')
-      .select('*, client:clients(id, full_name, email)')
+      .select('*')
       .gte('start_at', dayStartUtc.toISOString())
       .lt('start_at', dayEndUtc.toISOString())
       .neq('status', 'cancelled')
@@ -118,6 +127,8 @@ app.post(
       log.error('Failed to query calendar events', error);
       return c.json({ success: false, error: `DB query failed: ${error.message}` }, 500);
     }
+
+    const events = (rawEvents || []).map(withLinkedClient);
 
     const todayFormatted = new Date().toLocaleDateString('en-ZA', {
       weekday: 'long',
