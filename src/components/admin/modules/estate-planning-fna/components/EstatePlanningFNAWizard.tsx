@@ -30,7 +30,11 @@ import { Step1InformationGathering } from './Step1InformationGathering';
 import { Step2SystemCalculation } from './Step2SystemCalculation';
 import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
-import { buildDefaultEstateInputs, mergeEstateInputs } from './estateWizardInputs';
+import {
+  buildDefaultEstateInputs,
+  mergeEstateInputs,
+  normalizeEstateIntake,
+} from './estateWizardInputs';
 
 /**
  * Records, not client keys: the review prefill cannot carry lists, so these
@@ -49,7 +53,10 @@ async function loadClientRecords(clientId: string): Promise<Record<string, unkno
     const populated = await EstatePlanningAPI.autoPopulateInputs(clientId);
     const records: Record<string, unknown> = {};
     for (const field of CLIENT_RECORD_FIELDS) {
-      if (Array.isArray(populated?.[field])) records[field] = populated[field];
+      // Only lists the client actually has on record, so an empty one never
+      // hides what the client listed in their intake.
+      const list = populated?.[field];
+      if (Array.isArray(list) && list.length > 0) records[field] = list;
     }
     return records;
   } catch (error) {
@@ -86,10 +93,11 @@ export function EstatePlanningFNAWizard({
 }: FNAWizardProps) {
   const hasIntake = !!intakePrefill && Object.keys(intakePrefill).length > 0;
   const [initialStep] = useState(() => resolveInitialFNAStep(startAtStep, intakePrefill));
+  const [intake] = useState(() => normalizeEstateIntake(intakePrefill));
 
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [inputs, setInputs] = useState<EstatePlanningInputs>(() =>
-    mergeEstateInputs(buildDefaultEstateInputs(), intakePrefill),
+    mergeEstateInputs(buildDefaultEstateInputs(), intake),
   );
   const [loading, setLoading] = useState(true);
   const [systemResults, setSystemResults] = useState<EstatePlanningResults | null>(null);
@@ -105,10 +113,12 @@ export function EstatePlanningFNAWizard({
     void (async () => {
       const records = await loadClientRecords(clientId);
       if (cancelled) return;
-      // Records first, then the intake on top: the client's own answers win.
+      // The client's answers from their intake, then the adviser's records on
+      // top: a list on record replaces the client's rough rows for that list,
+      // so nothing is counted twice. A list with no records keeps the intake's.
       const loaded = mergeEstateInputs(
-        mergeEstateInputs(buildDefaultEstateInputs(), records),
-        intakePrefill,
+        mergeEstateInputs(buildDefaultEstateInputs(), intake),
+        records,
       );
       setInputs(loaded);
 

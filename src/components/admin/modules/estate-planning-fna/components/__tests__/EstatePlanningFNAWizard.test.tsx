@@ -29,7 +29,11 @@ vi.mock('sonner', () => ({
 }));
 
 import { EstatePlanningFNAWizard } from '../EstatePlanningFNAWizard';
-import { buildDefaultEstateInputs, mergeEstateInputs } from '../estateWizardInputs';
+import {
+  buildDefaultEstateInputs,
+  mergeEstateInputs,
+  normalizeEstateIntake,
+} from '../estateWizardInputs';
 
 const noop = vi.fn();
 
@@ -131,5 +135,96 @@ describe('mergeEstateInputs', () => {
     expect(merged.willInfo.hasValidWill).toBe('yes');
     expect(merged.willInfo.executorNominated).toBe('unknown');
     expect(merged.assumptions.executorFeePercentage).toBe(3.5);
+  });
+});
+
+describe('accepted client intake', () => {
+  // What the client estate intake saves, after the queue has added the review
+  // matches the adviser applied at accept as dotted keys.
+  const clientIntake = {
+    willInfo: { hasValidWill: 'no' },
+    familyInfo: { maritalStatus: 'married_in_community' },
+    'familyInfo.fullName': 'Sam Client',
+    'familyInfo.age': 58,
+    assets: [
+      { id: 'r1', description: 'House', value: 2_000_000 },
+      { id: 'r2', description: '', value: 0 },
+    ],
+    liabilities: [{ id: 'r3', description: 'Bond', value: '500000' }],
+  };
+
+  it('calculates from the client’s own rows when the client has no records', async () => {
+    autoPopulateInputsMock.mockResolvedValue({ assets: [], liabilities: [], lifePolicies: [] });
+    render(
+      <EstatePlanningFNAWizard
+        open
+        onClose={noop}
+        clientId="c-1"
+        startAtStep={2}
+        intakePrefill={clientIntake}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText('System Calculation')).toBeTruthy());
+    // The R2m house counts in the gross estate; the R500k bond is a real number, not NaN.
+    expect(screen.getAllByText('R2 000 000').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/NaN/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to Adjustments/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Continue to Finalise/ }));
+    await waitFor(() => expect(screen.getByText('Final Analysis')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Publish FNA/ }));
+
+    await waitFor(() => expect(saveSessionMock).toHaveBeenCalled());
+    const [, saved] = saveSessionMock.mock.calls[0];
+    expect(saved.familyInfo).toMatchObject({
+      fullName: 'Sam Client',
+      age: 58,
+      maritalStatus: 'married_cop',
+    });
+    expect(saved).not.toHaveProperty(['familyInfo.fullName']);
+    expect(saved.assets).toEqual([
+      expect.objectContaining({ description: 'House', currentValue: 2_000_000, type: 'personal' }),
+    ]);
+    expect(saved.liabilities).toEqual([
+      expect.objectContaining({ description: 'Bond', outstandingBalance: 500_000, type: 'other' }),
+    ]);
+  });
+
+  it('uses the adviser’s records over the client’s rough rows, so nothing counts twice', async () => {
+    render(
+      <EstatePlanningFNAWizard
+        open
+        onClose={noop}
+        clientId="c-1"
+        startAtStep={2}
+        intakePrefill={clientIntake}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText('System Calculation')).toBeTruthy());
+    // Records hold the R4m home; the intake's R2m "House" row is not added to it.
+    expect(screen.getAllByText('R4 000 000').length).toBeGreaterThan(0);
+    expect(screen.queryByText('R6 000 000')).toBeNull();
+  });
+});
+
+describe('normalizeEstateIntake', () => {
+  it('leaves rows already in the calculation’s shape untouched', () => {
+    const normalized = normalizeEstateIntake({ assets: [asset] });
+    expect(normalized.assets).toEqual([asset]);
+  });
+
+  it('keeps an Estate Planning marital status and drops an unknown one', () => {
+    expect(normalizeEstateIntake({ familyInfo: { maritalStatus: 'widowed' } }).familyInfo).toEqual({
+      maritalStatus: 'widowed',
+    });
+    expect(
+      normalizeEstateIntake({ familyInfo: { maritalStatus: 'it is complicated' } }).familyInfo,
+    ).toEqual({});
+  });
+
+  it('returns nothing for no intake', () => {
+    expect(normalizeEstateIntake(undefined)).toEqual({});
   });
 });

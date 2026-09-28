@@ -66,6 +66,13 @@ analysis's auto-populate endpoint, and only the list fields are taken from it:
 discretionary investments for the INA; assets, liabilities, life policies and
 dependants for Estate.
 
+**An accepted client intake** is normalised before a wizard uses it: Estate
+turns the intake's `{ description, value }` asset and liability rows into the
+shapes its calculation reads and maps the intake's marital status options onto
+its own (`normalizeEstateIntake`). Where the client already has records for a
+list, the records replace the client's rough rows for that list, so nothing is
+counted twice; a list with no records keeps the client's rows.
+
 Two tests hold this in place:
 
 - `src/shared/form-prefill/__tests__/fna-client-keys.test.ts` — a canonical key
