@@ -48,6 +48,23 @@ describe('Untitled UI TextEditor', () => {
     expect(onChange).toHaveBeenCalledWith('<p>Hello there</p>', 'Hello there');
   });
 
+  it('reports a toolbar change once, even when the browser fires input itself', () => {
+    const onChange = vi.fn();
+    render(<TextEditor aria-label="Body" onChange={onChange} />);
+    const box = screen.getByRole('textbox', { name: 'Body' });
+    // As real browsers do: execCommand dispatches an input event synchronously.
+    exec.mockImplementation(() => {
+      fireEvent.input(box);
+      return true;
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Bold' }));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    // And once when it does not (older engines).
+    exec.mockImplementation(() => true);
+    fireEvent.click(screen.getByRole('button', { name: 'Italic' }));
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
   it('pastes plain text only', () => {
     render(<TextEditor aria-label="Body" />);
     fireEvent.paste(screen.getByRole('textbox', { name: 'Body' }), {
@@ -132,6 +149,27 @@ describe('Untitled UI VideoPlayer', () => {
     fireEvent.loadedMetadata(video);
     fireEvent.change(screen.getByRole('slider', { name: 'Seek' }), { target: { value: '40' } });
     expect(video.currentTime).toBe(40);
+  });
+
+  it('keeps a callback ref attached across updates', () => {
+    const ref = vi.fn();
+    const { container } = render(<VideoPlayer title="Intro" ref={ref} />);
+    const video = container.querySelector('video')!;
+    video.currentTime = 3;
+    fireEvent.timeUpdate(video);
+    fireEvent.play(video);
+    expect(ref).toHaveBeenCalledTimes(1);
+    expect(ref).toHaveBeenCalledWith(video);
+  });
+
+  it("runs the caller's onClick and still toggles playback", () => {
+    const onClick = vi.fn();
+    const { container } = render(<VideoPlayer title="Intro" onClick={onClick} />);
+    const video = container.querySelector('video')!;
+    const play = vi.spyOn(video, 'play').mockResolvedValue(undefined);
+    fireEvent.click(video);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
   });
 
   it('can hide the controls and overlay', () => {

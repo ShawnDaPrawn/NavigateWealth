@@ -70,6 +70,7 @@ export const VideoPlayer = React.forwardRef<HTMLVideoElement, VideoPlayerProps>(
       onLoadedMetadata,
       onProgress,
       onVolumeChange,
+      onClick,
       ...props
     },
     ref,
@@ -83,11 +84,16 @@ export const VideoPlayer = React.forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [buffered, setBuffered] = React.useState(0);
     const [fullscreen, setFullscreen] = React.useState(false);
 
-    const setRefs = (node: HTMLVideoElement | null) => {
-      videoRef.current = node;
-      if (typeof ref === 'function') ref(node);
-      else if (ref) ref.current = node;
-    };
+    // Stable while the forwarded ref is, so React does not detach and
+    // re-attach it on every time update.
+    const setRefs = React.useCallback(
+      (node: HTMLVideoElement | null) => {
+        videoRef.current = node;
+        if (typeof ref === 'function') ref(node);
+        else if (ref) ref.current = node;
+      },
+      [ref],
+    );
 
     React.useEffect(() => {
       const onChange = () => setFullscreen(document.fullscreenElement === frameRef.current);
@@ -151,7 +157,10 @@ export const VideoPlayer = React.forwardRef<HTMLVideoElement, VideoPlayerProps>(
           ref={setRefs}
           className={clsx('uui-video__media', className)}
           playsInline
-          onClick={toggle}
+          onClick={(e) => {
+            onClick?.(e);
+            if (!e.defaultPrevented) toggle();
+          }}
           onPlay={(e) => {
             setPlaying(true);
             onPlay?.(e);

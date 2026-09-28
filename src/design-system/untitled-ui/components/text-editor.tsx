@@ -168,7 +168,12 @@ export function TextEditor({
     return () => document.removeEventListener('selectionchange', onSelection);
   }, [refreshState]);
 
+  // Counts input events, so a command can tell whether the browser already
+  // fired one (and onChange with it) and avoid reporting the change twice.
+  const inputs = React.useRef(0);
+
   const emit = () => {
+    inputs.current += 1;
     const el = editorRef.current;
     if (!el) return;
     const text = el.textContent ?? '';
@@ -176,11 +181,17 @@ export function TextEditor({
     onChange?.(el.innerHTML, text);
   };
 
+  /** Runs an editing command and reports the change exactly once. */
+  const apply = (command: string, value?: string) => {
+    const before = inputs.current;
+    exec(command, value);
+    if (inputs.current === before) emit();
+  };
+
   const run = (command: string, value?: string) => {
     editorRef.current?.focus();
-    exec(command, value);
+    apply(command, value);
     refreshState();
-    emit();
   };
 
   const addLink = () => {
@@ -242,8 +253,7 @@ export function TextEditor({
         onPaste={(e) => {
           // Paste as plain text so foreign markup and scripts never enter.
           e.preventDefault();
-          exec('insertText', e.clipboardData.getData('text/plain'));
-          emit();
+          apply('insertText', e.clipboardData.getData('text/plain'));
         }}
         onKeyDown={(e) => {
           if (!(e.metaKey || e.ctrlKey)) return;
