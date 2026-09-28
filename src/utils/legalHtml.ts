@@ -1,4 +1,11 @@
 import DOMPurify from 'dompurify';
+// The legal text is set in Libre Caslon Text (see LEGAL_DOCUMENT_CONTENT_CLASS).
+// Self-hosted, so reading a legal document makes no third-party font request.
+// Every surface that applies the class imports this module, so the faces load
+// wherever the class is used and nowhere else.
+import '@fontsource/libre-caslon-text/400.css';
+import '@fontsource/libre-caslon-text/400-italic.css';
+import '@fontsource/libre-caslon-text/700.css';
 
 const LEGAL_HTML_SANITIZE_CONFIG = {
   USE_PROFILES: { html: true },
@@ -22,20 +29,21 @@ const LEGAL_HTML_SANITIZE_CONFIG = {
 export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   'legal-document-content',
   'prose',
-  'prose-stone',
+  'prose-neutral',
   'prose-lg',
   'max-w-none',
-  'text-stone-800',
+  'text-neutral-900',
+  "[font-family:'Libre_Caslon_Text',Georgia,'Times_New_Roman',serif]",
   'prose-headings:font-semibold',
   'prose-headings:tracking-tight',
-  'prose-headings:text-stone-950',
+  'prose-headings:text-neutral-950',
   'prose-h1:mt-8',
   'prose-h1:mb-4',
   'prose-h1:text-3xl',
   'prose-h2:mt-8',
   'prose-h2:mb-4',
   'prose-h2:border-b',
-  'prose-h2:border-stone-200',
+  'prose-h2:border-neutral-200',
   'prose-h2:pb-2',
   'prose-h2:text-2xl',
   'prose-h3:mt-6',
@@ -58,7 +66,7 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_h2+h3]:mt-4',
   '[&_h3+p]:mt-3',
   'prose-strong:font-semibold',
-  'prose-strong:text-stone-950',
+  'prose-strong:text-neutral-950',
   'prose-ul:my-4',
   'prose-ol:my-4',
   'prose-li:my-1',
@@ -68,12 +76,20 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_ol]:list-decimal',
   '[&_ol]:pl-6',
   '[&_li]:pl-1',
-  '[&_li::marker]:text-stone-500',
+  '[&_li::marker]:text-neutral-600',
   '[&_li>p]:my-1',
+  // Stored HTML carries the editor's own link and rule colours
+  // (`text-purple-600`, `border-gray-200`); these out-rank them by specificity
+  // so the published text stays black and white.
+  '[&_a]:text-neutral-950',
+  '[&_a]:underline',
+  '[&_a]:underline-offset-2',
+  '[&_a:hover]:text-neutral-600',
+  '[&_hr]:border-neutral-200',
   'prose-table:block',
   'prose-table:w-full',
-  'prose-th:bg-stone-100',
-  'prose-th:text-stone-900',
+  'prose-th:bg-neutral-100',
+  'prose-th:text-neutral-900',
   'prose-td:align-top',
   '[&_p:empty]:block',
   '[&_p:empty]:h-5',
@@ -101,7 +117,7 @@ export const LEGAL_DOCUMENT_CONTENT_STYLE = `
   }
 
   .legal-document-content li::marker {
-    color: #78716c;
+    color: #525252;
   }
 
   .legal-document-content li > ul {
