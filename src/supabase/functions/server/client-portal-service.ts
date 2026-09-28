@@ -397,7 +397,6 @@ function extractProductHoldings(policies: PolicyRecord[]): ProductHolding[] {
             'ret_6',
             'ret_pre_6',
             'ret_post_6',
-            'ret_post_fixed_4',
             'inv_6',
             'inv_vol_6',
             'ma_6',
