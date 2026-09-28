@@ -48,6 +48,12 @@
  * worth telling someone if it keeps happening."
  */
 
+import {
+  checkConnectivityNow,
+  getConnectivityStatus,
+  subscribeConnectivity,
+} from './network/connectivity';
+
 const RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
 const RELOAD_WINDOW_MS = 60_000;
 
@@ -135,25 +141,57 @@ export function isDefinitiveStaleChunkLoadFailure(value: unknown): boolean {
   return DEFINITIVE_STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-/** Reload once inside a 60s window. Returns true if a reload was triggered. */
+let reloadPending = false;
+
+function reloadNow(): void {
+  reloadPending = false;
+  try {
+    window.sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+  } catch {
+    // Storage blocked: reload regardless.
+  }
+  window.location.reload();
+}
+
+/**
+ * Reload once inside a 60s window — but only into a working connection.
+ *
+ * A chunk can also fail to load because the connection dropped, and then it
+ * is not a stale deploy at all: reloading would swap the app, offline screen
+ * included, for the browser's own error page. The browser does not always know
+ * (Wi-Fi up, internet down), so the reload waits for a connectivity check, and
+ * while the tab is disconnected it is deferred until the connection is back.
+ *
+ * Returns true if a reload was triggered or scheduled.
+ */
 export function reloadOnceForStaleChunk(): boolean {
   if (typeof window === 'undefined') {
     return false;
   }
-
-  try {
-    const now = Date.now();
-    const lastReload = Number(window.sessionStorage.getItem(RELOAD_KEY) || '0');
-
-    if (Number.isFinite(lastReload) && now - lastReload < RELOAD_WINDOW_MS) {
-      return false;
-    }
-
-    window.sessionStorage.setItem(RELOAD_KEY, String(now));
-    window.location.reload();
-    return true;
-  } catch {
-    window.location.reload();
+  if (reloadPending) {
     return true;
   }
+
+  try {
+    const lastReload = Number(window.sessionStorage.getItem(RELOAD_KEY) || '0');
+    if (Number.isFinite(lastReload) && Date.now() - lastReload < RELOAD_WINDOW_MS) {
+      return false;
+    }
+  } catch {
+    // Storage blocked: there is no window to respect.
+  }
+
+  reloadPending = true;
+  void checkConnectivityNow().then((connected) => {
+    if (connected) {
+      reloadNow();
+      return;
+    }
+    const unsubscribe = subscribeConnectivity(() => {
+      if (getConnectivityStatus() !== 'online') return;
+      unsubscribe();
+      reloadNow();
+    });
+  });
+  return true;
 }

@@ -1,6 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+
+const connectivity = vi.hoisted(() => ({
+  status: 'online' as 'online' | 'offline' | 'unreachable',
+  listeners: new Set<() => void>(),
+  checkNow: vi.fn<() => Promise<boolean>>(),
+}));
+
+vi.mock('../network/connectivity', () => ({
+  checkConnectivityNow: () => connectivity.checkNow(),
+  getConnectivityStatus: () => connectivity.status,
+  subscribeConnectivity: (listener: () => void) => {
+    connectivity.listeners.add(listener);
+    return () => connectivity.listeners.delete(listener);
+  },
+}));
+
 import {
   isDefinitiveStaleChunkLoadFailure,
   isStaleChunkLoadFailure,
@@ -194,18 +210,49 @@ describe('the lazy-export suffix list stays complete', () => {
 describe('reloadOnceForStaleChunk', () => {
   afterEach(() => {
     sessionStorage.clear();
+    connectivity.status = 'online';
+    connectivity.listeners.clear();
+    connectivity.checkNow.mockReset();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it('reloads once, then refuses inside the 60s window', () => {
+  it('reloads once the connection is confirmed, then refuses inside the 60s window', async () => {
+    connectivity.checkNow.mockResolvedValue(true);
     const reload = vi.fn();
     vi.stubGlobal('location', { reload });
 
     expect(reloadOnceForStaleChunk()).toBe(true);
-    expect(reload).toHaveBeenCalledOnce();
+    // A second failure while the first check is in flight does not stack.
+    expect(reloadOnceForStaleChunk()).toBe(true);
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
+    expect(connectivity.checkNow).toHaveBeenCalledOnce();
 
     expect(reloadOnceForStaleChunk()).toBe(false);
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  // Regression: offline, a chunk fails because there is no connection, not
+  // because the deploy is stale. Reloading then replaced the app — offline
+  // screen and all — with the browser's own error page.
+  it('waits for the connection to come back instead of reloading into it', async () => {
+    connectivity.status = 'offline';
+    connectivity.checkNow.mockResolvedValue(false);
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+
+    expect(reloadOnceForStaleChunk()).toBe(true);
+    await vi.waitFor(() => expect(connectivity.listeners.size).toBe(1));
+    expect(reload).not.toHaveBeenCalled();
+
+    // Still down: nothing yet.
+    connectivity.status = 'unreachable';
+    connectivity.listeners.forEach((listener) => listener());
+    expect(reload).not.toHaveBeenCalled();
+
+    connectivity.status = 'online';
+    [...connectivity.listeners].forEach((listener) => listener());
+    expect(reload).toHaveBeenCalledOnce();
+    expect(connectivity.listeners.size).toBe(0);
   });
 });
