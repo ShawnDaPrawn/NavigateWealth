@@ -60,6 +60,19 @@ describe('Untitled UI Tabs', () => {
     expect(document.activeElement).toBe(billing);
   });
 
+  it('falls back to the first enabled tab when the selection disappears', () => {
+    const { rerender } = render(<Tabs aria-label="Late" items={[]} />);
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    rerender(<Tabs aria-label="Late" items={tabs} />);
+    expect(screen.getByRole('tab', { name: 'My details' }).tabIndex).toBe(0);
+    expect(screen.getByRole('tabpanel').textContent).toBe('Details panel');
+    fireEvent.click(screen.getByRole('tab', { name: 'Billing' }));
+    rerender(<Tabs aria-label="Late" items={tabs.filter((t) => t.id !== 'billing')} />);
+    expect(screen.getByRole('tab', { name: 'My details' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
   it('uses up/down when vertical and supports panel-less navigation tabs', () => {
     render(
       <Tabs
@@ -98,11 +111,18 @@ describe('Untitled UI Breadcrumbs', () => {
   });
 
   it('collapses the middle with maxItems and supports the slash divider', () => {
-    const { container } = render(<Breadcrumbs items={items} maxItems={3} divider="slash" />);
-    expect(container.querySelectorAll('li')).toHaveLength(4);
+    const { container, rerender } = render(
+      <Breadcrumbs items={items} maxItems={3} divider="slash" />,
+    );
+    // The "…" counts toward maxItems: Home, …, Members.
+    expect(container.querySelectorAll('li')).toHaveLength(3);
     expect(container.textContent).toContain('…');
     expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Team' })).toBeNull();
     expect(container.querySelector('.uui-breadcrumbs__divider')?.textContent).toBe('/');
+    rerender(<Breadcrumbs items={items} maxItems={2} />);
+    expect(container.querySelectorAll('li')).toHaveLength(2);
+    expect(screen.queryByRole('link', { name: 'Home' })).toBeNull();
   });
 });
 
@@ -139,6 +159,12 @@ describe('Untitled UI Pagination', () => {
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
     expect(onPageChange).toHaveBeenCalledWith(9);
+  });
+
+  it('renders read-only dots as one image with no buttons', () => {
+    render(<PaginationDots count={5} current={2} />);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByRole('img', { name: 'Slide 3 of 5' })).toBeTruthy();
   });
 
   it('renders a dot group with a current dot', () => {

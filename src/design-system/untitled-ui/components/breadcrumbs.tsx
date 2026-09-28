@@ -44,8 +44,11 @@ export function Breadcrumbs({
 }: BreadcrumbsProps) {
   let shown: (BreadcrumbItem | 'ellipsis')[] = items;
   if (maxItems && maxItems >= 2 && items.length > maxItems) {
-    // Keep the first item and the last (maxItems - 1), as in the Figma "..." example.
-    shown = [items[0], 'ellipsis', ...items.slice(items.length - (maxItems - 1))];
+    // The "…" counts toward the limit. Keep the first item when there is
+    // room (as in the Figma example), then as many trailing items as fit.
+    const head = maxItems >= 3 ? [items[0]] : [];
+    const tail = items.slice(items.length - (maxItems - 1 - head.length));
+    shown = [...head, 'ellipsis', ...tail];
   }
 
   return (

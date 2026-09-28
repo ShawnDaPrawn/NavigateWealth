@@ -68,7 +68,10 @@ export function Tabs({
   const baseId = React.useId();
   const firstEnabled = items.find((i) => !i.disabled)?.id;
   const [own, setOwn] = React.useState(defaultValue ?? firstEnabled);
-  const selected = value ?? own;
+  // Fall back to the first enabled tab if the chosen one is missing or
+  // disabled (e.g. after `items` changes), so the list keeps a tab stop.
+  const wanted = value ?? own;
+  const selected = items.some((i) => i.id === wanted && !i.disabled) ? wanted : firstEnabled;
   const refs = React.useRef<(HTMLButtonElement | null)[]>([]);
   // The line style is vertical-only, as in Figma.
   const vertical = orientation === 'vertical' || type === 'line';

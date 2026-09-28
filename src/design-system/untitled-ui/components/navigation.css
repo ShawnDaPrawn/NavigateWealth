@@ -177,7 +177,6 @@ button.uui-pagination__number:focus-visible {
   border: 0;
   border-radius: var(--uui-radius-full);
   background: var(--uui-v8-neutral-200);
-  cursor: pointer;
   outline: none;
   transition: background-color 100ms linear;
 }
@@ -185,8 +184,12 @@ button.uui-pagination__number:focus-visible {
   width: calc(var(--_dot) * 3.5);
   height: calc(var(--_dot) / 2);
 }
-.uui-pagination-dots__dot[aria-current='true'] {
+.uui-pagination-dots__dot[aria-current='true'],
+.uui-pagination-dots__dot[data-current] {
   background: var(--uui-v8-brand-600);
+}
+button.uui-pagination-dots__dot {
+  cursor: pointer;
 }
 .uui-pagination-dots__dot:focus-visible {
   box-shadow: var(--uui-focus-ring);

@@ -147,14 +147,29 @@ export function PaginationDots({
   className,
   ...props
 }: PaginationDotsProps) {
+  const common = {
+    className: clsx('uui-pagination-dots', className),
+    'data-size': size,
+    'data-variant': variant,
+    'data-framed': framed || undefined,
+  };
+  // Without onChange the dots only show position: one image, no dead buttons.
+  if (!onChange) {
+    return (
+      <div role="img" aria-label={`${getLabel(current)} of ${count}`} {...common} {...props}>
+        {Array.from({ length: count }, (_, i) => (
+          <span
+            key={i}
+            className="uui-pagination-dots__dot"
+            aria-hidden="true"
+            data-current={i === current || undefined}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
-    <div
-      className={clsx('uui-pagination-dots', className)}
-      data-size={size}
-      data-variant={variant}
-      data-framed={framed || undefined}
-      {...props}
-    >
+    <div {...common} {...props}>
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}
@@ -162,7 +177,7 @@ export function PaginationDots({
           className="uui-pagination-dots__dot"
           aria-label={getLabel(i)}
           aria-current={i === current ? 'true' : undefined}
-          onClick={() => onChange?.(i)}
+          onClick={() => onChange(i)}
         />
       ))}
     </div>
