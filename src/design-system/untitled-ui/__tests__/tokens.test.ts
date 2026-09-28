@@ -17,6 +17,11 @@ const files = {
   typography: read('../tokens/typography.css'),
   paletteV8: read('../tokens/palette-v8.css'),
   components: read('../components/components.css'),
+  avatar: read('../components/avatar.css'),
+  tooltip: read('../components/tooltip.css'),
+  tag: read('../components/tag.css'),
+  progress: read('../components/progress.css'),
+  buttonGroup: read('../components/button-group.css'),
 };
 
 const defined = (css: string) =>

@@ -1,0 +1,167 @@
+/*
+ * Untitled UI v8.0 — "Tag". White, 6px radius, 1px inside Neutral 300 border,
+ * Neutral 700 medium text. Optional dot/avatar/checkbox before the label and an
+ * X close or count after it.
+ */
+
+.uui-tag {
+  --_pad-y: 2px;
+  --_pad-x: 9px;
+  --_gap: 5px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--_gap);
+  padding: var(--_pad-y) var(--_pad-x);
+  border-radius: var(--uui-radius-sm);
+  background: var(--uui-v8-base-white);
+  box-shadow: inset 0 0 0 1px var(--uui-v8-neutral-300);
+  color: var(--uui-v8-neutral-700);
+  font-family: var(--uui-font-family-body);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: var(--uui-font-weight-medium);
+  white-space: nowrap;
+}
+.uui-tag[data-size='sm'] {
+  --_pad-y: 3px;
+  --_pad-x: 8px;
+  --_gap: 4px;
+  font-size: 12px;
+  line-height: 18px;
+}
+.uui-tag[data-size='lg'] {
+  --_pad-y: 4px;
+  --_pad-x: 10px;
+  --_gap: 6px;
+}
+
+/* A trailing X or count sits 4px (md: 3px) from the edge */
+.uui-tag[data-action] {
+  padding-right: var(--uui-spacing-xs);
+}
+.uui-tag[data-size='md'][data-action='count'] {
+  padding-right: 3px;
+}
+.uui-tag[data-leading='dot'] {
+  padding-left: calc(var(--_pad-x) - 2px);
+}
+.uui-tag[data-leading='avatar'] {
+  padding-left: calc(var(--_pad-x) - 4px);
+}
+
+.uui-tag__dot {
+  width: 8px;
+  height: 8px;
+  color: var(--uui-v8-green-500);
+}
+.uui-tag__avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--uui-radius-full);
+  object-fit: cover;
+  box-shadow: inset 0 0 0 0.33px rgb(0 0 0 / 0.16);
+}
+
+.uui-tag__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--uui-v8-neutral-400);
+  cursor: pointer;
+  outline: none;
+}
+.uui-tag[data-size='sm'] .uui-tag__close {
+  width: 14px;
+  height: 14px;
+}
+.uui-tag[data-size='lg'] .uui-tag__close {
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+}
+.uui-tag__close > .uui-icon {
+  width: 100%;
+  height: 100%;
+}
+.uui-tag__close:hover {
+  background: var(--uui-v8-neutral-50);
+  color: var(--uui-v8-neutral-500);
+}
+.uui-tag__close:focus-visible {
+  box-shadow: var(--uui-focus-ring);
+}
+
+.uui-tag__count {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--uui-v8-neutral-100);
+  font-size: 12px;
+  line-height: 18px;
+}
+.uui-tag[data-size='sm'] .uui-tag__count {
+  padding: 0 4px;
+  line-height: 16px;
+}
+.uui-tag[data-size='lg'] .uui-tag__count {
+  padding: 0 6px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Tag checkbox: a 16px, 4px-radius box styled from a real (invisible) input */
+.uui-tag__check {
+  position: relative;
+  display: inline-flex;
+}
+.uui-tag__check-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.uui-tag__check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--uui-radius-xs);
+  background: var(--uui-v8-base-white);
+  box-shadow: inset 0 0 0 1px var(--uui-v8-neutral-300);
+  color: var(--uui-v8-base-white);
+}
+.uui-tag__check-box > .uui-icon {
+  display: none;
+  width: 12px;
+  height: 12px;
+}
+.uui-tag__check-input:checked + .uui-tag__check-box {
+  background: var(--uui-v8-brand-600);
+  box-shadow: inset 0 0 0 1px var(--uui-v8-brand-600);
+}
+.uui-tag__check-input:checked + .uui-tag__check-box > .uui-icon {
+  display: block;
+}
+.uui-tag__check-input:checked:hover + .uui-tag__check-box {
+  background: var(--uui-v8-brand-700);
+  box-shadow: inset 0 0 0 1px var(--uui-v8-brand-700);
+}
+.uui-tag__check-input:focus-visible + .uui-tag__check-box {
+  box-shadow:
+    inset 0 0 0 1px var(--uui-v8-neutral-300),
+    var(--uui-focus-ring);
+}
+.uui-tag__check-input:disabled + .uui-tag__check-box {
+  opacity: 0.5;
+}
+.uui-tag__check-input:disabled:not(:checked) + .uui-tag__check-box {
+  background: var(--uui-v8-neutral-100);
+}
