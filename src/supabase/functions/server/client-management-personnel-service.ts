@@ -95,7 +95,17 @@ export const PersonnelService = {
     const { error: roleError } = await getSupabase().auth.admin.updateUserById(authData.user.id, {
       app_metadata: { role: payload.role },
     });
-    if (roleError) throw roleError;
+    if (roleError) {
+      // Undo the invite: with no personnel profile the admin could neither
+      // resend nor cancel it, and a retry would hit "already registered".
+      const { error: cleanupError } = await getSupabase().auth.admin.deleteUser(authData.user.id);
+      if (cleanupError) {
+        log.error('Could not remove an invited user after the role write failed', {
+          userId: authData.user.id,
+        });
+      }
+      throw roleError;
+    }
 
     // 4. Create Personnel Profile
     const newProfile: PersonnelProfile = {
@@ -335,6 +345,24 @@ export const PersonnelService = {
     // Prevent Role Escalation by non-super-admin
     if (updates.role && updates.role === 'super_admin' && viewerRole !== 'super_admin') {
       throw new Error('Cannot assign super_admin role');
+    }
+
+    // app_metadata.role is what every guard trusts, so a role change must
+    // reach it or a demotion never takes effect. That makes this an authority
+    // change, not a profile edit: only an admin may make it (the route lets
+    // anyone update their own profile, so compliance could otherwise promote
+    // itself), and only the super admin may change a super admin's role.
+    if (updates.role && updates.role !== existing.role) {
+      if (!['super_admin', 'admin'].includes(viewerRole)) {
+        throw new Error('Unauthorized: Only admins can change a role.');
+      }
+      if (existing.role === 'super_admin' && viewerRole !== 'super_admin') {
+        throw new Error('Cannot change a super_admin role');
+      }
+      const { error: roleError } = await getSupabase().auth.admin.updateUserById(targetId, {
+        app_metadata: { role: updates.role },
+      });
+      if (roleError) throw roleError;
     }
 
     const updated = {
