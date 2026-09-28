@@ -22,7 +22,7 @@ export const config = {
      * static folder with its own index.html, not an SPA route, so it must reach
      * Vercel's filesystem instead of being answered with a 404 here.
      */
-    '/((?!assets/|_vercel|design-system-library|.*\\.[\\w-]+$).*)',
+    '/((?!assets/|_vercel|design-system-library/|design-system-library$|.*\\.[\\w-]+$).*)',
   ],
 };
 

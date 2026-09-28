@@ -27,4 +27,9 @@ describe('middleware matcher', () => {
     expect(runsOn('/design-system-library')).toBe(false);
     expect(runsOn('/design-system-library/assets/showcase-abc.js')).toBe(false);
   });
+
+  it('still runs on paths that only start with the library name', () => {
+    expect(runsOn('/design-system-library-old')).toBe(true);
+    expect(runsOn('/design-system-libraryish/nested')).toBe(true);
+  });
 });
