@@ -57,9 +57,10 @@ export async function getPolicyNumberForPolicy(
   const policyCategoryNumberField = findPolicyNumberField(policySchema?.fields || []);
   if (policyCategoryNumberField?.id) candidateFieldIds.add(policyCategoryNumberField.id);
 
-  // Policy-number field of the retired "Retirement Planning" parent schema.
-  // Retirement policies staged through it may hold their number only there.
+  // Policy-number fields of the retired "Retirement Planning" and "Investments"
+  // parent schemas. Policies staged through them may hold their number only there.
   candidateFieldIds.add('ret_1');
+  candidateFieldIds.add('inv_1');
 
   ['policyNumber', 'policy_number', 'policyNo', 'policy_no', 'reference'].forEach((fieldId) =>
     candidateFieldIds.add(fieldId),

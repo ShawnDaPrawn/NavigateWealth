@@ -27,3 +27,25 @@ describe('getPolicyNumberForPolicy — retired Retirement Planning field id', ()
     expect(await getPolicyNumberForPolicy(policy, [])).toBe('RA-002');
   });
 });
+
+describe('getPolicyNumberForPolicy — retired Investments field id', () => {
+  beforeEach(() => kvStore.clear());
+
+  function voluntaryPolicy(data: Record<string, unknown>): KvPolicy {
+    return {
+      id: 'p2',
+      clientId: 'c1',
+      categoryId: 'investments_voluntary',
+      data,
+    } as unknown as KvPolicy;
+  }
+
+  it('reads a Voluntary Investments policy number held only in the legacy inv_1 field', async () => {
+    expect(await getPolicyNumberForPolicy(voluntaryPolicy({ inv_1: 'UT-001' }), [])).toBe('UT-001');
+  });
+
+  it('prefers the Voluntary Investments policy-number field when both are set', async () => {
+    const policy = voluntaryPolicy({ inv_1: 'OLD-2', inv_vol_1: 'UT-002' });
+    expect(await getPolicyNumberForPolicy(policy, [])).toBe('UT-002');
+  });
+});

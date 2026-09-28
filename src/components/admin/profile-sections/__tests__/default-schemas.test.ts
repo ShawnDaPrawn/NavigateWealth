@@ -28,8 +28,11 @@ describe('DEFAULT_SCHEMAS', () => {
     expect(DEFAULT_SCHEMAS.retirement_planning).toBeUndefined();
   });
 
-  it('has investment schema', () => {
-    expect(DEFAULT_SCHEMAS.investments ?? DEFAULT_SCHEMAS.investment).toBeDefined();
+  it('has Voluntary and Guaranteed Investments schemas but no parent Investments product', () => {
+    expect(DEFAULT_SCHEMAS.investments_voluntary).toBeDefined();
+    expect(DEFAULT_SCHEMAS.investments_guaranteed).toBeDefined();
+    // Investments is only the heading over the two; it has no schema.
+    expect(DEFAULT_SCHEMAS.investments).toBeUndefined();
   });
 
   it('each schema has a fields array with entries', () => {

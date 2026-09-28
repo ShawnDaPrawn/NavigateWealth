@@ -39,6 +39,13 @@ describe('product-management/defaults', () => {
     expect(ids).not.toContain('retirement_planning');
   });
 
+  it('has Voluntary and Guaranteed Investments but no parent Investments product', () => {
+    const ids = DEFAULT_SCHEMAS.map((s) => s.categoryId);
+    expect(ids).toContain('investments_voluntary');
+    expect(ids).toContain('investments_guaranteed');
+    expect(ids).not.toContain('investments');
+  });
+
   it('INTERNAL_FIELDS is a non-empty array', () => {
     expect(Array.isArray(INTERNAL_FIELDS)).toBe(true);
     expect(INTERNAL_FIELDS.length).toBeGreaterThan(0);
