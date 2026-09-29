@@ -78,7 +78,9 @@ export function NewsletterDetailPage() {
         structuredData={createWebPageSchema(seoTitle, newsletter.description, canonical)}
       />
 
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Same container as the navigation bar, so the issue lines up with the
+          logo on the left and "Get Started" on the right. */}
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-12">
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <Button asChild variant="outline" className="border-stone-300 bg-white/90">
             <Link to={ARCHIVE_PATH}>
