@@ -1,11 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { useState, useRef } from 'react';
-import {
-  BASE_PDF_CSS,
-  getPdfDimensions,
-  type PdfOrientation,
-  type PdfPageSize,
-} from '../../../shared/pdf';
+import { BASE_PDF_CSS, type PdfOrientation, type PdfPageSize } from '../../../shared/pdf';
 import {
   exportPdfFromPreview,
   resolvePdfExportPages,
@@ -14,10 +9,10 @@ import {
 // Re-exported so existing importers of this file keep working; the canonical
 // home is shared/pdf.
 export { exportPdfFromPreview, resolvePdfExportPages, resolvePdfPreviewContainer };
+import { printPdfPreview } from '../../../shared/pdf/pdfPrint';
 import { LETTER_CSS } from './templates/LetterheadPdfLayout';
 import type { LetterMeta } from './templates/LetterheadPdfLayout';
 import type { FormBlock } from './builder/types';
-import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../../../utils/pdfPrintTitle';
 import { ZoomIn, ZoomOut, Maximize, X, Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -102,226 +97,17 @@ export const PdfTemplateViewer = ({
   };
 
   const handlePrintDownload = () => {
-    // Get the preview container content
-    const previewContainer = resolvePdfPreviewContainer(contentRef.current, pageSelector);
-    if (!previewContainer) {
-      console.error('Preview container not found');
-      return;
-    }
-
-    const printWindow = window.open('', '_blank', 'width=1200,height=900');
-    if (!printWindow) {
-      console.error('Print window could not be opened');
-      return;
-    }
-
-    const contentMarkup = previewContainer.outerHTML;
-    const inlinePrintStyles = Array.from(contentRef.current?.querySelectorAll('style') || [])
-      .map((style) => style.textContent || '')
-      .join('\n');
-    const isPagedLegalPreview = Boolean(
-      previewContainer.matches('.legal-paged-preview-root, [data-legal-pdf-renderer="paged"]') ||
-      previewContainer.querySelector('.pagedjs_page'),
-    );
-
     // Use LETTER_CSS for letters (which already includes BASE_PDF_CSS),
     // or BASE_PDF_CSS for standard forms
-    const layoutCSS = isLetter ? LETTER_CSS : BASE_PDF_CSS;
-    const pageDimensions = getPdfDimensions(pageSize, orientation);
-
-    // Print overrides differ for letter vs form pages
-    const letterPrintOverrides = `
-      /* Letter-specific print overrides */
-      .letter-page {
-        margin: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-        width: ${pageDimensions.widthMm}mm !important;
-        height: ${pageDimensions.heightMm}mm !important;
-        position: relative !important;
-        overflow: visible !important;
-        page-break-after: always !important;
-        break-after: page !important;
-      }
-
-      .letter-page:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-      }
-
-      .letter-content {
-        height: ${pageDimensions.heightMm}mm !important;
-        padding: var(--margin-top) var(--margin-right) var(--margin-bottom-with-footer) var(--margin-left) !important;
-        position: relative !important;
-      }
-
-      .letter-content.subsequent-page {
-        padding-top: 15mm !important;
-      }
-
-      .letterhead-block {
-        display: flex !important;
-      }
-
-      .letter-footer {
-        position: absolute !important;
-        bottom: var(--margin-bottom) !important;
-        left: var(--margin-left) !important;
-        right: var(--margin-right) !important;
-        height: var(--footer-height) !important;
-        display: block !important;
-      }
-
-      .letter-closing {
-        display: block !important;
-      }
-
-      .closing-signatories {
-        display: flex !important;
-      }
-    `;
-
-    const formPrintOverrides = `
-      /* Form-specific print overrides */
-      .pdf-page {
-        margin: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-        width: ${pageDimensions.widthMm}mm !important;
-        height: ${pageDimensions.heightMm}mm !important;
-        position: relative !important;
-        overflow: hidden !important;
-        page-break-after: always !important;
-        break-after: page !important;
-      }
-
-      .pdf-page:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-      }
-
-      .pdf-content {
-        padding: var(--margin-top) var(--margin-right) var(--margin-bottom-with-footer) var(--margin-left) !important;
-        height: 100% !important;
-      }
-
-      .pdf-footer {
-        position: absolute !important;
-        bottom: var(--margin-bottom) !important;
-        left: var(--margin-left) !important;
-        right: var(--margin-right) !important;
-        width: auto !important;
-      }
-    `;
-
-    const pagedLegalPrintOverrides = `
-      /* Paged legal document print overrides */
-      .legal-paged-preview-root {
-        background: #ffffff !important;
-        padding: 0 !important;
-      }
-
-      .legal-paged-preview-root .pagedjs_pages {
-        display: block !important;
-        gap: 0 !important;
-      }
-
-      .legal-paged-preview-root .pagedjs_page {
-        margin: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-        width: ${pageDimensions.widthMm}mm !important;
-        height: ${pageDimensions.heightMm}mm !important;
-        page-break-after: always !important;
-        break-after: page !important;
-      }
-
-      .legal-paged-preview-root .pagedjs_page:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-      }
-    `;
-
-    printWindow.document.open();
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${escapeHtmlText(navigateWealthPdfDocumentTitle(title))}</title>
-          <style>
-            /* Layout styles */
-            ${layoutCSS}
-            ${inlinePrintStyles}
-
-            html, body {
-              margin: 0;
-              padding: 0;
-              background: #ffffff;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            
-            /* Overrides for exact printing with no browser margins */
-            @media print {
-              @page {
-                size: ${pageSize} ${orientation};
-                margin: 0 !important; 
-              }
-              
-              html, body {
-                width: ${pageDimensions.widthMm}mm;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: white;
-              }
-
-              /* Reset the viewport/page wrappers for print */
-              .pdf-preview-container {
-                display: block !important;
-              }
-
-              .pdf-viewport {
-                display: block !important;
-                background: none !important;
-                padding: 0 !important;
-                height: auto !important;
-                min-height: 0 !important;
-              }
-
-              ${isLetter ? letterPrintOverrides : formPrintOverrides}
-              ${isPagedLegalPreview ? pagedLegalPrintOverrides : ''}
-            }
-          </style>
-        </head>
-        <body>
-          ${contentMarkup}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-
-    const triggerPrint = async () => {
-      try {
-        if (printWindow.document.fonts?.ready) {
-          await printWindow.document.fonts.ready;
-        }
-      } catch (error) {
-        console.warn('[PdfTemplateViewer] Waiting for print fonts failed', error);
-      }
-
-      window.setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-
-        window.setTimeout(() => {
-          printWindow.close();
-        }, 1000);
-      }, 300);
-    };
-
-    void triggerPrint();
+    printPdfPreview({
+      root: contentRef.current,
+      title,
+      pageSize,
+      orientation,
+      pageSelector,
+      layoutCss: isLetter ? LETTER_CSS : BASE_PDF_CSS,
+      isLetter,
+    });
   };
 
   /** Download as Word (.docx) — letter mode only */

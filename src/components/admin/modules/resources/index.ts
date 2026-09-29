@@ -29,4 +29,3 @@ export { InteractiveFormRenderer } from './builder/InteractiveFormRenderer';
 export { ResourcesSkeleton } from './components/ResourcesSkeleton';
 export { CATEGORY_ICONS } from './key-manager/constants';
 export { UniversalKeyManager } from './UniversalKeyManager';
-export { LegalDocumentPdfDialog } from './legal-documents/LegalDocumentPdfDialog';

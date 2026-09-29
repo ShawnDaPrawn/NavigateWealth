@@ -46,7 +46,7 @@ import { toast } from 'sonner';
 import { RichTextEditor } from '../../publications';
 import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
-import { LegalDocumentPdfDialog } from './LegalDocumentPdfDialog';
+import { LegalDocumentPdfDialog } from '../../../../shared/LegalDocumentPdfDialog';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
   LEGAL_DOCUMENT_CONTENT_STYLE,
