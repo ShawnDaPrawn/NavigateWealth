@@ -3,13 +3,12 @@
  * "Lightweight" Gap Analysis Version
  */
 
+import type { FNAWizardStepNumber } from '../fna';
+
 // ==================== WIZARD STEP TYPE ====================
 
-/**
- * Standard 4-step wizard type — consistent across Risk, Retirement, Tax, Medical FNA modules.
- * Estate Planning and Investment INA use multi-step string-based workflows by design.
- */
-export type WizardStep = 1 | 2 | 3 | 4;
+/** A step of the shared four-step FNA flow — the same type in every wizard. */
+export type WizardStep = FNAWizardStepNumber;
 
 // ==================== INPUT TYPES ====================
 
@@ -88,7 +87,6 @@ export interface MedicalFNAWizardState {
   inputs: Partial<MedicalFNAInputs>;
   calculations: MedicalFNAResults | null;
   adjustments: MedicalFNAAdjustments;
-  isPublishing: boolean;
 }
 
 /**

@@ -64,9 +64,6 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     deleteFNA: (fnaId) => RiskPlanningFnaAPI.delete(fnaId),
     publishFNA: (fnaId) => asRecord(RiskPlanningFnaAPI.publish(fnaId)),
     unpublishFNA: (fnaId) => asRecord(RiskPlanningFnaAPI.unpublish(fnaId)),
-    wizardProps: {
-      onCompleteKey: 'onFNAComplete',
-    },
     resultsPropsKey: 'fna',
   },
 
@@ -87,9 +84,6 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
       MedicalFNAApiService.unpublishMedicalFNA(fnaId) as unknown as Promise<
         Record<string, unknown>
       >,
-    wizardProps: {
-      onCompleteKey: 'onFNAComplete',
-    },
     resultsPropsKey: 'results',
   },
 
@@ -102,9 +96,6 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     deleteFNA: (fnaId) => RetirementFnaAPI.delete(fnaId),
     publishFNA: (fnaId) => asRecord(RetirementFnaAPI.publish(fnaId)),
     unpublishFNA: (fnaId) => asRecord(RetirementFnaAPI.unpublish(fnaId)),
-    wizardProps: {
-      onCompleteKey: 'onFNAComplete',
-    },
     resultsPropsKey: 'fna',
   },
 
@@ -118,9 +109,6 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     deleteFNA: (sessionId) => EstatePlanningApiService.deleteSession(sessionId),
     publishFNA: (sessionId) => asRecord(EstatePlanningApiService.publishSession(sessionId)),
     unpublishFNA: (sessionId) => asRecord(EstatePlanningApiService.unpublishSession(sessionId)),
-    wizardProps: {
-      onCompleteKey: 'onFNAComplete',
-    },
     resultsPropsKey: 'fna',
   },
 
@@ -134,9 +122,6 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     deleteFNA: (sessionId) => InvestmentINAApiService.deleteSession(sessionId),
     publishFNA: (sessionId) => asRecord(InvestmentINAApiService.publishSession(sessionId)),
     unpublishFNA: (sessionId) => asRecord(InvestmentINAApiService.unpublishSession(sessionId)),
-    wizardProps: {
-      onCompleteKey: 'onComplete',
-    },
     resultsPropsKey: 'session',
   },
 
@@ -157,9 +142,6 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     unpublishFNA: async (sessionId) => {
       await TaxPlanningFnaAPI.unpublishSession(sessionId);
       return {};
-    },
-    wizardProps: {
-      onCompleteKey: 'onFNAComplete',
     },
     resultsPropsKey: 'fna',
   },

@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { TaxPlanningInputs, TaxCalculationResults } from '../types';
 import { TAX_YEAR_2026_2027 } from '../constants';
-import { ArrowLeft, ArrowRight, Calculator, AlertTriangle } from 'lucide-react';
+import { Calculator, AlertTriangle } from 'lucide-react';
 import { Progress } from '../../../../ui/progress';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step2Props {
   inputs: TaxPlanningInputs;
@@ -246,14 +246,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
         </div>
       </div>
 
-      <div className="flex justify-between pt-6 border-t">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Inputs
-        </Button>
-        <Button onClick={onNext} size="lg" className="bg-primary hover:bg-primary/90">
-          Proceed to Adjustments <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );
 }

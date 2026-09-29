@@ -10,8 +10,6 @@
 
 import React from 'react';
 import {
-  ArrowLeft,
-  Save,
   Shield,
   Users,
   Wallet,
@@ -23,7 +21,6 @@ import {
   ArrowUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Badge } from '../../../../ui/badge';
 import {
@@ -32,6 +29,7 @@ import {
   MedicalFNAFinalNeeds,
   MedicalFNAInputs,
 } from '../types';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step4Props {
   inputs: MedicalFNAInputs;
@@ -39,6 +37,7 @@ interface Step4Props {
   adjustments: MedicalFNAAdjustments;
   onPublish: (finalNeeds: MedicalFNAFinalNeeds) => void;
   onBack: () => void;
+  isPublishing?: boolean;
 }
 
 export function Step4Finalise({
@@ -47,6 +46,7 @@ export function Step4Finalise({
   adjustments,
   onPublish,
   onBack,
+  isPublishing = false,
 }: Step4Props) {
   // Calculate final values (System vs Override)
   const finalNeeds: MedicalFNAFinalNeeds = {
@@ -268,16 +268,12 @@ export function Step4Finalise({
         </Card>
       )}
 
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 3
-        </Button>
-        <Button type="button" onClick={() => onPublish(finalNeeds)} size="lg">
-          <Save className="mr-2 h-4 w-4" />
-          Publish Analysis
-        </Button>
-      </div>
+      <FNAStepNavigation
+        step={4}
+        onBack={onBack}
+        onNext={() => onPublish(finalNeeds)}
+        isBusy={isPublishing}
+      />
     </div>
   );
 }

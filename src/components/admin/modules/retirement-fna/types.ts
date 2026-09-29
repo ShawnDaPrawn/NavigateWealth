@@ -8,17 +8,16 @@
  * - Aligned with Risk Planning FNA patterns
  */
 
+import type { FNAWizardStepNumber } from '../fna';
+
 // ==================== WIZARD STEPS ====================
 // Moved to constants.ts — re-exported for backward compatibility
 export { WIZARD_STEPS } from './constants';
 
 // ==================== WIZARD STEP TYPE ====================
 
-/**
- * Standard 4-step wizard type — consistent across Risk, Retirement, Tax, Medical FNA modules.
- * Estate Planning and Investment INA use multi-step string-based workflows by design.
- */
-export type WizardStep = 1 | 2 | 3 | 4;
+/** A step of the shared four-step FNA flow — the same type in every wizard. */
+export type WizardStep = FNAWizardStepNumber;
 
 // ==================== INPUT TYPES (Step 1) ====================
 
@@ -99,7 +98,7 @@ export interface RetirementFNAAdjustments {
 /**
  * Wizard State Management
  * Tracks current step and accumulated data throughout the FNA process.
- * Standardised shape: { currentStep, clientId, clientName, inputs, calculations, adjustments, isPublishing }
+ * Standardised shape: { currentStep, clientId, clientName, inputs, calculations, adjustments }
  */
 export interface RetirementFNAWizardState {
   currentStep: WizardStep;
@@ -108,7 +107,6 @@ export interface RetirementFNAWizardState {
   inputs: Partial<RetirementFNAInputs>;
   adjustments: RetirementFNAAdjustments;
   calculations: RetirementCalculationResults | null;
-  isPublishing: boolean;
   fnaId?: string; // If working with an existing draft
 }
 

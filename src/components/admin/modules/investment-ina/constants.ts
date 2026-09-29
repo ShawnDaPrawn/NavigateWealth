@@ -3,7 +3,21 @@
  * Extracted from types.ts for module structure alignment (Phase 5)
  */
 
+import { buildFNAWizardSteps } from '../fna';
 import type { GoalType, RiskProfile, DefaultEconomicAssumptions } from './types';
+
+// ==================== WIZARD STEPS ====================
+
+/**
+ * The shared four-step FNA flow with this wizard's step descriptions. Step
+ * titles and order come from the fna module and are the same in every wizard.
+ */
+export const WIZARD_STEPS = buildFNAWizardSteps({
+  1: 'Client profile, investments and goals',
+  2: 'Goal funding projections',
+  3: 'Override risk profile or assumptions',
+  4: 'Review and publish the INA',
+});
 
 // ==================== DEFAULT ECONOMIC ASSUMPTIONS ====================
 
