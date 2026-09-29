@@ -209,7 +209,12 @@ function IssueDetail({
     draftIssue.statusNote !== (issue.statusNote || undefined) ||
     draftIssue.resolutionEvidence !== (issue.resolutionEvidence || undefined);
   const nextSteps = recommendQualityIssueActions(draftIssue);
-  const showEvidence = draft.status === 'resolved' || !!issue.resolutionEvidence;
+  // Once there is evidence (stored or drafted), keep the field on screen even
+  // if the status moves off Resolved: anything saved must be visible.
+  const showEvidence =
+    draft.status === 'resolved' ||
+    !!issue.resolutionEvidence ||
+    draft.resolutionEvidence.trim() !== '';
   const labels = describeStoredIssue(issue);
 
   async function handleSave() {

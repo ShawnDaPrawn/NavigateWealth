@@ -222,6 +222,22 @@ describe('IssuesModule', () => {
     expect(within(sheet).getByLabelText(/How do you know it's fixed/)).toBeTruthy();
   });
 
+  it('keeps drafted evidence visible after switching away from Resolved', async () => {
+    await renderLoaded();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar crashed' }));
+    const sheet = await screen.findByRole('dialog');
+    fireEvent.click(within(sheet).getByRole('radio', { name: 'Resolved' }));
+    fireEvent.change(within(sheet).getByLabelText(/How do you know it's fixed/), {
+      target: { value: 'PR #380' },
+    });
+
+    // The draft is still saved with the issue, so it must not vanish from view.
+    fireEvent.click(within(sheet).getByRole('radio', { name: 'Open' }));
+    const evidence = within(sheet).getByLabelText(/How do you know it's fixed/);
+    expect((evidence as HTMLTextAreaElement).value).toBe('PR #380');
+  });
+
   it('explains a failed load and offers a retry', async () => {
     vi.mocked(fetchQualityIssuesSnapshot).mockRejectedValueOnce(new Error('Gateway timeout'));
 
