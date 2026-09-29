@@ -32,6 +32,7 @@ export const CATEGORY_ICONS: Record<ProductKeyCategory, React.ElementType> = {
   medical_aid: Heart,
   retirement_pre: PiggyBank,
   retirement_post: Coins,
+  retirement_post_fixed: Lock,
   invest_voluntary: TrendingUp,
   invest_guaranteed: Lock,
   employee_benefits: Users,
@@ -188,6 +189,23 @@ export const KEY_USAGE_MAP: Record<string, KeyModuleName[]> = {
     KEY_MODULES.FINANCIAL_REPORTS,
   ],
 
+  // Post-Retirement (Fixed Annuity) keys
+  post_retirement_fixed_annuity_income: [
+    KEY_MODULES.RETIREMENT_FNA,
+    KEY_MODULES.CLIENT_DASHBOARD,
+    KEY_MODULES.POLICY_MANAGEMENT,
+    KEY_MODULES.FINANCIAL_REPORTS,
+  ],
+  post_retirement_fixed_annuity_purchase_price: [
+    KEY_MODULES.POLICY_MANAGEMENT,
+    KEY_MODULES.FINANCIAL_REPORTS,
+  ],
+  post_retirement_fixed_annuity_income_total: [
+    KEY_MODULES.RETIREMENT_FNA,
+    KEY_MODULES.CLIENT_DASHBOARD,
+    KEY_MODULES.FINANCIAL_REPORTS,
+  ],
+
   // Investment keys
   invest_current_value: [
     KEY_MODULES.INVESTMENT_INA,
@@ -286,6 +304,7 @@ export const PRODUCT_CATEGORIES: ProductKeyCategory[] = [
   'medical_aid',
   'retirement_pre',
   'retirement_post',
+  'retirement_post_fixed',
   'invest_voluntary',
   'invest_guaranteed',
   'employee_benefits',

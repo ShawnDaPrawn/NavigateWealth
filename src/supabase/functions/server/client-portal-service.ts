@@ -234,6 +234,7 @@ const CATEGORY_BUCKET: Record<string, string> = {
   retirement_planning: 'retirement',
   retirement_pre: 'retirement',
   retirement_post: 'retirement',
+  retirement_post_fixed: 'retirement',
   investments: 'investment',
   investments_voluntary: 'investment',
   investments_guaranteed: 'investment',

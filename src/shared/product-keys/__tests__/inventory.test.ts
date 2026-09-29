@@ -21,12 +21,16 @@ import { describe, expect, it } from 'vitest';
 import * as keys from '../registry';
 import type { ProductKey } from '../../types/product-keys';
 
-/** Captured from the pre-split file. Total: 164 keys, all ids distinct. */
+/**
+ * Captured from the pre-split file (164 keys), plus the seven Fixed Annuity keys
+ * added with that product. Total: 171 keys, all ids distinct.
+ */
 const EXPECTED_COUNTS: Record<string, number> = {
   RISK_KEYS: 19,
   MEDICAL_AID_KEYS: 12,
   RETIREMENT_PRE_KEYS: 17,
   RETIREMENT_POST_KEYS: 7,
+  RETIREMENT_POST_FIXED_KEYS: 7,
   INVEST_VOLUNTARY_KEYS: 11,
   INVEST_GUARANTEED_KEYS: 6,
   EMPLOYEE_BENEFITS_RISK_KEYS: 5,
@@ -44,8 +48,8 @@ const EXPECTED_COUNTS: Record<string, number> = {
   PROFILE_BANKING_KEYS: 4,
   PROFILE_RISK_KEYS: 4,
   PROFILE_FINANCIAL_KEYS: 8,
-  ALL_PRODUCT_KEYS: 164,
-  KEY_CATEGORIES: 21,
+  ALL_PRODUCT_KEYS: 171,
+  KEY_CATEGORIES: 22,
 };
 
 const exported = keys as unknown as Record<string, unknown>;
@@ -74,17 +78,18 @@ describe('the catalogue has not lost anything', () => {
     const duplicates = ids.filter((id) => (seen.has(id) ? true : (seen.add(id), false)));
 
     expect(duplicates).toEqual([]);
-    expect(seen.size).toBe(164);
+    expect(seen.size).toBe(171);
   });
 
   it('composes ALL_PRODUCT_KEYS from the per-category arrays, losing none', () => {
-    // The aggregate is a hand-written spread of nineteen arrays. Dropping one
+    // The aggregate is a hand-written spread of twenty arrays. Dropping one
     // line from it is invisible to the type system.
     const parts = [
       'RISK_KEYS',
       'MEDICAL_AID_KEYS',
       'RETIREMENT_PRE_KEYS',
       'RETIREMENT_POST_KEYS',
+      'RETIREMENT_POST_FIXED_KEYS',
       'INVEST_VOLUNTARY_KEYS',
       'INVEST_GUARANTEED_KEYS',
       'EMPLOYEE_BENEFITS_KEYS',

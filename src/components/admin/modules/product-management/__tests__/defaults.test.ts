@@ -39,6 +39,15 @@ describe('product-management/defaults', () => {
     expect(ids).not.toContain('retirement_planning');
   });
 
+  it('has a Post-Retirement (Fixed Annuity) structure alongside the Living Annuity one', () => {
+    const ids = DEFAULT_SCHEMAS.map((s) => s.categoryId);
+    expect(ids).toContain('retirement_post');
+    expect(ids).toContain('retirement_post_fixed');
+
+    const fixed = DEFAULT_SCHEMAS.find((s) => s.categoryId === 'retirement_post_fixed');
+    expect(fixed?.fields.map((f) => f.keyId)).toContain('post_retirement_fixed_annuity_income');
+  });
+
   it('has Voluntary and Guaranteed Investments but no parent Investments product', () => {
     const ids = DEFAULT_SCHEMAS.map((s) => s.categoryId);
     expect(ids).toContain('investments_voluntary');

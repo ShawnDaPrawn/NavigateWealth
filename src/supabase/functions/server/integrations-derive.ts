@@ -38,7 +38,13 @@ export async function recalculateClientTotals(clientId: string) {
       retirement_total_contribution: ['retirement_monthly_contribution'],
       retirement_fund_value_total: ['retirement_fund_value'],
       post_retirement_capital_total: ['post_retirement_capital_value'],
-      post_retirement_income_total: ['post_retirement_drawdown_amount'],
+      // Post-retirement income counts both living-annuity drawdowns and
+      // fixed-annuity income; the fixed total is also kept on its own.
+      post_retirement_income_total: [
+        'post_retirement_drawdown_amount',
+        'post_retirement_fixed_annuity_income',
+      ],
+      post_retirement_fixed_annuity_income_total: ['post_retirement_fixed_annuity_income'],
       invest_total_contribution: ['invest_monthly_contribution'],
       eb_total_premium: [
         'eb_monthly_premium',
@@ -61,7 +67,8 @@ export async function recalculateClientTotals(clientId: string) {
       retirement_total_contribution: ['retirement_planning', 'retirement_pre'],
       retirement_fund_value_total: ['retirement_planning', 'retirement_pre'],
       post_retirement_capital_total: ['retirement_post'],
-      post_retirement_income_total: ['retirement_post'],
+      post_retirement_income_total: ['retirement_post', 'retirement_post_fixed'],
+      post_retirement_fixed_annuity_income_total: ['retirement_post_fixed'],
       invest_total_contribution: ['investments', 'investments_voluntary', 'investments_guaranteed'],
       eb_total_premium: [
         'employee_benefits',

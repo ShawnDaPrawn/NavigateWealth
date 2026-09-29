@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SCHEMAS } from '../default-schemas';
+import { ALL_PRODUCT_KEYS } from '@/shared/product-keys/registry';
 
 describe('DEFAULT_SCHEMAS', () => {
   it('is a non-null object', () => {
@@ -26,6 +27,18 @@ describe('DEFAULT_SCHEMAS', () => {
     expect(DEFAULT_SCHEMAS.retirement_post).toBeDefined();
     // Retirement Planning is only the heading over the two; it has no schema.
     expect(DEFAULT_SCHEMAS.retirement_planning).toBeUndefined();
+  });
+
+  it('has a Post-Retirement (Fixed Annuity) schema whose keys are all registered', () => {
+    const fixed = DEFAULT_SCHEMAS.retirement_post_fixed;
+    expect(fixed).toBeDefined();
+
+    const registered = new Map(ALL_PRODUCT_KEYS.map((k) => [k.id, k.category]));
+    const keyIds = fixed.fields.map((f) => f.keyId).filter((id): id is string => Boolean(id));
+    expect(keyIds).toContain('post_retirement_fixed_annuity_income');
+    for (const keyId of keyIds) {
+      expect(registered.get(keyId), keyId).toBe('retirement_post_fixed');
+    }
   });
 
   it('has Voluntary and Guaranteed Investments schemas but no parent Investments product', () => {

@@ -93,9 +93,16 @@ RETIREMENT (PRE):
 - retirement_fund_value: Current fund value
 - retirement_monthly_contribution: Monthly contribution / premium
 
-RETIREMENT (POST):
+RETIREMENT (POST, LIVING ANNUITY):
 - post_retirement_capital_value: Living annuity capital value
 - post_retirement_drawdown_amount: Monthly income / drawdown
+
+RETIREMENT (POST, FIXED ANNUITY):
+- post_retirement_fixed_annuity_type: Annuity type (Level, Escalating, Inflation-Linked, With-Profit)
+- post_retirement_fixed_annuity_purchase_price: Purchase price paid for the annuity
+- post_retirement_fixed_annuity_income: Monthly annuity income
+- post_retirement_fixed_annuity_escalation: Annual income escalation (%)
+- post_retirement_fixed_annuity_guarantee_period: Guarantee period in years
 
 INVESTMENTS:
 - invest_product_type: Product type (Unit Trust, TFSA, Endowment, etc.)
