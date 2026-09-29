@@ -10,6 +10,7 @@ import {
   DEFAULT_LEGAL_PDF_CONFIG,
   getNormalizedLegalPdfDocument,
   LEGAL_PDF_CONTENT_CSS,
+  LEGAL_PDF_EXPORT_IMAGE,
 } from './legalPdfPrintDocument';
 import { toast } from 'sonner';
 
@@ -877,6 +878,7 @@ export function LegalDocumentPdfDownloadSurface({
           pageSize: pdfConfig.pageSize,
           orientation: pdfConfig.orientation,
           pageSelector: activePageSelector,
+          ...LEGAL_PDF_EXPORT_IMAGE,
         });
       } catch (error) {
         console.error('[LegalDocumentPdfDownloadSurface] PDF export failed:', error);

@@ -11,7 +11,7 @@ import {
   LEGAL_DOCUMENTS_BY_SLUG,
   LEGAL_SECTION_LABELS,
 } from '../../shared/legal-documents-registry';
-import { LegalDocumentPdfDialog } from '../admin/modules/resources';
+import { LegalDocumentPdfDialog } from '../shared/LegalDocumentPdfDialog';
 import {
   LEGAL_DOCUMENT_CONTENT_CLASS,
   normalizeLegalDocumentAnchors,
