@@ -16,6 +16,7 @@ import { ArrowRight, Info, User, Wallet, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
 import { useFormPrefill } from '../../form-prefill';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step1Props {
   clientId?: string;
@@ -346,21 +347,18 @@ export function Step1InputForm({
         </TabsContent>
       </Tabs>
 
-      <div className="flex justify-between pt-6 border-t">
-        <div className="text-sm text-muted-foreground">{intakeMode ? 'Step 1' : 'Step 1 of 4'}</div>
-        <div className="flex gap-2">
-          {intakeMode && onSaveDraft && (
+      <FNAStepNavigation
+        step={1}
+        onNext={handleSubmit}
+        nextLabel={submitLabel ?? (intakeMode ? 'Continue to submit' : undefined)}
+        secondaryActions={
+          intakeMode && onSaveDraft ? (
             <Button type="button" variant="outline" onClick={() => onSaveDraft(formData)}>
-              Save draft
+              Save progress
             </Button>
-          )}
-          <Button onClick={handleSubmit} size="lg" className="gap-2">
-            {submitLabel ??
-              (intakeMode ? 'Continue to submit' : 'Confirm Inputs & Run Calculation')}{' '}
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
     </div>
   );
 }

@@ -1,17 +1,19 @@
-import { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
-import { Card } from '../../../../ui/card';
+/**
+ * Tax Planning FNA Wizard
+ *
+ * Runs the shared four-step FNA flow (see fna/wizard/fnaWizardFlow.ts) inside
+ * the shared FNAWizardShell. This file owns only what is specific to tax: the
+ * baseline / scenario calculation and the call that persists the record.
+ */
 
-// Components
+import { useState } from 'react';
+import { FNAWizardShell, resolveInitialFNAStep, useFNAPublish } from '../../fna';
+import type { FNAWizardProps } from '../../fna';
 import { Step1InputForm } from './Step1InputForm';
 import { Step2SystemCalculation } from './Step2SystemCalculation';
 import { Step3ManualAdjustment } from './Step3ManualAdjustment';
 import { Step4Finalise } from './Step4Finalise';
-
-// Logic
-import {
+import type {
   TaxPlanningInputs,
   TaxCalculationResults,
   AdjustmentLog,
@@ -22,77 +24,46 @@ import { WIZARD_STEPS } from '../constants';
 import { TaxPlanningCalculationService } from '../services/taxPlanningCalculationService';
 import { TaxPlanningFnaAPI } from '../api';
 
-interface TaxPlanningFNAWizardProps {
-  clientId?: string;
-  clientName?: string;
-  open?: boolean;
-  onClose?: () => void;
-  onComplete?: () => void;
-  onFNAComplete?: () => void;
-  startAtStep?: number;
-  intakePrefill?: Record<string, unknown>;
-}
-
 export function TaxPlanningFNAWizard({
   clientId,
   clientName,
   open,
   onClose,
-  onComplete,
   onFNAComplete,
   startAtStep,
   intakePrefill,
-}: TaxPlanningFNAWizardProps) {
-  // ================= STATE =================
-  const [currentStep, setCurrentStep] = useState<WizardStep>(() => {
-    if (startAtStep === 2 && intakePrefill) return 2;
-    return startAtStep && startAtStep >= 1 && startAtStep <= 4 ? (startAtStep as WizardStep) : 1;
-  });
-  const [isPublishing, setIsPublishing] = useState(false);
+}: FNAWizardProps) {
+  const initialStep = resolveInitialFNAStep(startAtStep, intakePrefill);
+  const intakeInputs =
+    intakePrefill && Object.keys(intakePrefill).length > 0
+      ? (intakePrefill as unknown as TaxPlanningInputs)
+      : null;
 
-  // Data Store
-  const [baselineInputs, setBaselineInputs] = useState<TaxPlanningInputs | null>(() => {
-    if (startAtStep === 2 && intakePrefill) return intakePrefill as unknown as TaxPlanningInputs;
-    return null;
-  });
-  const [baselineResults, setBaselineResults] = useState<TaxCalculationResults | null>(() => {
-    if (startAtStep === 2 && intakePrefill) {
-      return TaxPlanningCalculationService.calculate(intakePrefill as unknown as TaxPlanningInputs);
-    }
-    return null;
-  });
+  const [currentStep, setCurrentStep] = useState<WizardStep>(initialStep);
 
-  // Scenario Store
-  const [adjustedInputs, setAdjustedInputs] = useState<TaxPlanningInputs | null>(() => {
-    if (startAtStep === 2 && intakePrefill) return intakePrefill as unknown as TaxPlanningInputs;
-    return null;
-  });
+  // Baseline: the inputs confirmed in Step 1 and their calculation.
+  const [baselineInputs, setBaselineInputs] = useState<TaxPlanningInputs | null>(intakeInputs);
+  const [baselineResults, setBaselineResults] = useState<TaxCalculationResults | null>(() =>
+    initialStep === 2 && intakeInputs
+      ? TaxPlanningCalculationService.calculate(intakeInputs)
+      : null,
+  );
+
+  // Scenario: the adviser's adjusted inputs from Step 3.
+  const [adjustedInputs, setAdjustedInputs] = useState<TaxPlanningInputs | null>(intakeInputs);
   const [adjustments, setAdjustments] = useState<AdjustmentLog[]>([]);
 
-  // ================= ACTIONS =================
+  const { isPublishing, publish } = useFNAPublish({ fnaType: 'tax', onFNAComplete, onClose });
 
-  // STEP 1 -> 2
   const handleStep1Submit = (inputs: TaxPlanningInputs) => {
-    // 1. Lock Baseline Inputs
     setBaselineInputs(inputs);
-
-    // 2. Run Deterministic Engine
-    const results = TaxPlanningCalculationService.calculate(inputs);
-    setBaselineResults(results);
-
-    // 3. Initialize Adjusted State (Baseline = Adjusted initially)
+    setBaselineResults(TaxPlanningCalculationService.calculate(inputs));
+    // Baseline = adjusted until the adviser models a scenario.
     setAdjustedInputs(inputs);
-    setAdjustments([]); // Clear any old adjustments if we went back
-
+    setAdjustments([]);
     setCurrentStep(2);
   };
 
-  // STEP 2 -> 3
-  const handleStep2Next = () => {
-    setCurrentStep(3);
-  };
-
-  // STEP 3 -> 4
   const handleStep3Submit = (
     newAdjustedInputs: TaxPlanningInputs,
     newAdjustments: AdjustmentLog[],
@@ -102,47 +73,22 @@ export function TaxPlanningFNAWizard({
     setCurrentStep(4);
   };
 
-  // SERVICE WRAPPER FOR STEP 3
-  const handleCalculateScenario = (inputs: TaxPlanningInputs) => {
-    return TaxPlanningCalculationService.calculate(inputs);
-  };
+  const handlePublish = (recommendations: TaxRecommendation[], adviserNotes: string) => {
+    if (!adjustedInputs) return;
 
-  // STEP 4 PUBLISH
-  const handlePublish = async (recommendations: TaxRecommendation[], adviserNotes: string) => {
-    if (!clientId || !baselineInputs || !adjustedInputs) {
-      toast.error('Missing required data to publish');
-      return;
-    }
-
-    setIsPublishing(true);
-
-    try {
-      // Recalculate final results to ensure consistency
-      const finalResults = TaxPlanningCalculationService.calculate(adjustedInputs);
-
-      await TaxPlanningFnaAPI.saveSession(clientId, {
+    void publish(async () => {
+      const session = await TaxPlanningFnaAPI.saveSession(clientId, {
         inputs: adjustedInputs,
-        finalResults,
+        // Recalculated so the stored results always match the stored inputs.
+        finalResults: TaxPlanningCalculationService.calculate(adjustedInputs),
         adjustments,
         recommendations,
         adviserNotes,
         status: 'published',
       });
-
-      toast.success('Tax Planning Record published successfully');
-
-      if (onFNAComplete) onFNAComplete();
-      if (onComplete) onComplete();
-      if (onClose) onClose();
-    } catch (error) {
-      console.error('Failed to publish tax plan', error);
-      toast.error('Failed to publish tax plan. Please try again.');
-    } finally {
-      setIsPublishing(false);
-    }
+      return session.id;
+    });
   };
-
-  // ================= RENDER =================
 
   const renderStep = () => {
     switch (currentStep) {
@@ -160,7 +106,7 @@ export function TaxPlanningFNAWizard({
           <Step2SystemCalculation
             inputs={baselineInputs}
             calculations={baselineResults}
-            onNext={handleStep2Next}
+            onNext={() => setCurrentStep(3)}
             onBack={() => setCurrentStep(1)}
           />
         );
@@ -170,103 +116,39 @@ export function TaxPlanningFNAWizard({
           <Step3ManualAdjustment
             baselineInputs={baselineInputs}
             baselineResults={baselineResults}
-            onCalculate={handleCalculateScenario}
+            onCalculate={(inputs) => TaxPlanningCalculationService.calculate(inputs)}
             onNext={handleStep3Submit}
             onBack={() => setCurrentStep(2)}
           />
         );
-      case 4: {
-        if (!adjustedInputs || !baselineInputs) return null;
-        // We calculate final results on the fly or use a cached one.
-        // Let's re-calculate to be safe, ensuring consistency.
-        const finalResults = TaxPlanningCalculationService.calculate(adjustedInputs);
-
+      case 4:
+        if (!adjustedInputs) return null;
         return (
           <Step4Finalise
             finalInputs={adjustedInputs}
-            finalResults={finalResults}
+            finalResults={TaxPlanningCalculationService.calculate(adjustedInputs)}
             adjustments={adjustments}
             onPublish={handlePublish}
             onBack={() => setCurrentStep(3)}
+            isPublishing={isPublishing}
           />
         );
-      }
       default:
         return null;
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="!max-w-[1600px] w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-8">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-xl font-semibold">
-              Tax Planning FNA {clientName && `- ${clientName}`}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Stepper - Standardized to match Risk/Retirement FNA */}
-            <div className="flex justify-between items-center relative">
-              <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -z-10" />
-              {WIZARD_STEPS.map((step) => {
-                const isActive = currentStep === step.step;
-                const isCompleted = currentStep > step.step;
-
-                return (
-                  <div key={step.step} className="flex flex-col items-center bg-background px-2">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors
-                        ${
-                          isActive
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : isCompleted
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-muted-foreground text-muted-foreground bg-background'
-                        }`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : (
-                        <span className="font-medium text-sm">{step.step}</span>
-                      )}
-                    </div>
-                    <div className="mt-2 text-center max-w-[180px]">
-                      <p
-                        className={`text-sm font-semibold ${
-                          isActive ? 'text-primary' : 'text-foreground'
-                        }`}
-                      >
-                        {step.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Step Content */}
-            <div className="min-h-[500px]">{renderStep()}</div>
-          </div>
-        </div>
-
-        {/* Publishing State Overlay */}
-        {isPublishing && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center">
-            <Card className="p-6 max-w-sm shadow-lg border-2">
-              <div className="text-center space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-                <p className="font-medium text-base">Finalizing Record</p>
-                <p className="text-sm text-muted-foreground">
-                  Encrypting and locking tax planning data...
-                </p>
-              </div>
-            </Card>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <FNAWizardShell
+      open={open}
+      onClose={onClose}
+      fnaType="tax"
+      clientName={clientName}
+      steps={WIZARD_STEPS}
+      currentStep={currentStep}
+      isPublishing={isPublishing}
+    >
+      {renderStep()}
+    </FNAWizardShell>
   );
 }

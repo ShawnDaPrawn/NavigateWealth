@@ -213,24 +213,6 @@ export interface FNASession {
   publishedBy?: string;
 }
 
-// ==================== WIZARD STEP TYPES ====================
-
-export type FNAWizardStep =
-  | 'personal'
-  | 'income'
-  | 'liabilities'
-  | 'assets'
-  | 'existing-cover'
-  | 'assumptions'
-  | 'review';
-
-export interface FNAWizardState {
-  currentStep: FNAWizardStep;
-  completedSteps: FNAWizardStep[];
-  inputs: Partial<FNAInputs>;
-  errors: Record<string, string>;
-}
-
 // ==================== FNA REGISTRY CONTRACT ====================
 
 /**
@@ -245,20 +227,35 @@ export interface FNAWizardState {
 export interface FNAConfig {
   type: 'risk' | 'medical' | 'retirement' | 'investment' | 'estate' | 'tax';
   name: string;
-  // Wizard/ResultsView are rendered with dynamically-spread props
-  // (`<config.Wizard {...props} />`), so each module's specific prop type is
-  // intentionally erased here.
-  Wizard: React.ComponentType<any>;
+  /** Every FNA wizard takes the same props — see FNAWizardProps. */
+  Wizard: React.ComponentType<FNAWizardProps>;
+  // ResultsView is rendered with dynamically-spread props, so each module's
+  // specific prop type is intentionally erased here.
   ResultsView: React.ComponentType<any>;
   // API functions
   getLatestPublished: (clientId: string) => Promise<Record<string, unknown> | null>;
   deleteFNA: (fnaId: string) => Promise<void>;
   publishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
   unpublishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
-  // Wizard props mapping
-  wizardProps?: {
-    onCompleteKey?: string;
-  };
   // Results props mapping
   resultsPropsKey?: string;
+}
+
+/**
+ * The props of every FNA / INA wizard. One contract, so the registry, the
+ * intake hand-off and anything else that opens a wizard treat all six alike.
+ */
+export interface FNAWizardProps {
+  open: boolean;
+  onClose: () => void;
+  clientId: string;
+  clientName?: string;
+  /** Called with the published FNA's id once Step 4 succeeds. */
+  onFNAComplete?: (fnaId: string) => void;
+  /**
+   * Accepted client intake. With `startAtStep` ≥ 2 the wizard opens on Step 2
+   * with the calculation already run; see resolveInitialFNAStep.
+   */
+  intakePrefill?: Record<string, unknown>;
+  startAtStep?: number;
 }

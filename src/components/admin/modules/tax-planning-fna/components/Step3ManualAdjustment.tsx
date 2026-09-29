@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { TaxPlanningInputs, TaxCalculationResults, AdjustmentLog } from '../types';
-import { ArrowLeft, ArrowRight, RefreshCw, ArrowRightLeft } from 'lucide-react';
+import { RefreshCw, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step3Props {
   baselineInputs: TaxPlanningInputs;
@@ -276,18 +277,11 @@ export function Step3ManualAdjustment({
         </div>
       </div>
 
-      <div className="flex justify-between pt-6 border-t">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
-        <Button
-          onClick={() => onNext(adjustedInputs, adjustments)}
-          size="lg"
-          className="bg-primary hover:bg-primary/90"
-        >
-          Finalise & Generate Recommendations <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
+      <FNAStepNavigation
+        step={3}
+        onBack={onBack}
+        onNext={() => onNext(adjustedInputs, adjustments)}
+      />
     </div>
   );
 }
