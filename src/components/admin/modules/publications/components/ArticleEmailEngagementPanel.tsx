@@ -139,8 +139,25 @@ function statusBadgeVariant(status: ArticleEmailDeliveryStatus): string {
   }
 }
 
+/**
+ * The Status chip's text. An article only has a publish campaign when it went
+ * out with "Notify newsletter subscribers" ticked, so one published to the
+ * website alone has no status. That used to fall back to "queued", which read
+ * as if an email were about to go out.
+ */
+function campaignStatusLabel(summary: ArticleEmailEngagementSummary): string {
+  if (summary.campaignStatus) return summary.campaignStatus.replace(/_/g, ' ');
+  // No campaign but tracked sends: a reshare, or a send from before campaigns.
+  const hasEmailActivity =
+    (summary.intendedRecipientCount ?? 0) + summary.sent + summary.pending + summary.failed > 0;
+  return hasEmailActivity ? 'emailed' : 'not emailed';
+}
+
 function campaignStatusBadgeClass(status: ArticleEmailEngagementSummary['campaignStatus']): string {
   switch (status) {
+    case null:
+    case undefined:
+      return 'bg-slate-100 text-slate-700 border-slate-200';
     case 'completed':
       return 'bg-green-50 text-green-700 border-green-200';
     case 'completed_with_failures':
@@ -566,7 +583,7 @@ export function ArticleEmailEngagementPanel() {
                       <TableCell className="align-top">
                         <div className="flex flex-col gap-2">
                           <Badge className={campaignStatusBadgeClass(summary.campaignStatus)}>
-                            {(summary.campaignStatus || 'queued').replace(/_/g, ' ')}
+                            {campaignStatusLabel(summary)}
                           </Badge>
                           {summary.isDeleted && (
                             <Badge className="bg-slate-100 text-slate-700 border-slate-200">
@@ -664,7 +681,7 @@ export function ArticleEmailEngagementPanel() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Badge className={campaignStatusBadgeClass(detail.summary.campaignStatus)}>
-                      {(detail.summary.campaignStatus || 'queued').replace(/_/g, ' ')}
+                      {campaignStatusLabel(detail.summary)}
                     </Badge>
                     {detail.summary.isDeleted && (
                       <Badge className="bg-slate-100 text-slate-700 border-slate-200">
