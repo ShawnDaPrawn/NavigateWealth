@@ -147,7 +147,7 @@ describe('useFNAManagement — handleRunFNA / handleEditFNA', () => {
 });
 
 describe('useFNAManagement — handleFNAComplete', () => {
-  it('calls loadFNA and shows toast.success on completion', async () => {
+  it('reloads the FNA on completion without a second success toast', async () => {
     const { toast } = await import('sonner');
     const fnaRecord = { id: 'fna-42' };
     const getLatestPublished = vi.fn().mockResolvedValue(fnaRecord);
@@ -162,7 +162,7 @@ describe('useFNAManagement — handleFNAComplete', () => {
     });
 
     expect(getLatestPublished).toHaveBeenCalledTimes(2); // once on mount, once on complete
-    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('Test FNA'));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('does nothing when config is null', async () => {

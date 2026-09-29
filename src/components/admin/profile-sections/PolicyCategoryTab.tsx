@@ -402,22 +402,6 @@ export function PolicyCategoryTab({
     }
   };
 
-  const getWizardProps = () => {
-    if (!hasFNA || !fnaConfig) return {};
-
-    const props: Record<string, unknown> = {
-      open: fnaManagement.wizardOpen,
-      onClose: () => fnaManagement.setWizardOpen(false),
-      clientId,
-    };
-
-    // Add completion callback with the correct key name
-    const completionKey = fnaConfig.wizardProps?.onCompleteKey || 'onFNAComplete';
-    props[completionKey] = fnaManagement.handleFNAComplete;
-
-    return props;
-  };
-
   // Helper to determine if we should split tables
   const renderPolicyTables = () =>
     renderPolicyTablesView({
@@ -733,10 +717,17 @@ export function PolicyCategoryTab({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* FNA Wizard - Unified for all FNA types */}
-      {hasFNA && fnaConfig && (
+      {/* FNA Wizard - Unified for all FNA types. Mounted per opening so every
+          session starts on Step 1 with fresh state, like the intake hand-off. */}
+      {hasFNA && fnaConfig && fnaManagement.wizardOpen && (
         <Suspense fallback={null}>
-          <fnaConfig.Wizard {...getWizardProps()} />
+          <fnaConfig.Wizard
+            open={fnaManagement.wizardOpen}
+            onClose={() => fnaManagement.setWizardOpen(false)}
+            clientId={clientId}
+            clientName={clientDisplayName || undefined}
+            onFNAComplete={fnaManagement.handleFNAComplete}
+          />
         </Suspense>
       )}
 

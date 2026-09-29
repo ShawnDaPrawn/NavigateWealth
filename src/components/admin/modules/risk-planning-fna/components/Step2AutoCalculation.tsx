@@ -9,8 +9,7 @@
  * - Navigation: Back to Step 1, Next to Step 3
  */
 
-import { ArrowLeft, ArrowRight, Info } from 'lucide-react';
-import { Button } from '../../../../ui/button';
+import { Info } from 'lucide-react';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import type { RiskCalculations } from '../types';
 
@@ -18,6 +17,7 @@ import { LifeCoverResult } from './step2/LifeCoverResult';
 import { DisabilityCoverResult } from './step2/DisabilityCoverResult';
 import { SevereIllnessCoverResult } from './step2/SevereIllnessCoverResult';
 import { IncomeProtectionResult } from './step2/IncomeProtectionResult';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step2Props {
   calculations: RiskCalculations;
@@ -58,17 +58,7 @@ export function Step2AutoCalculation({ calculations, onNext, onBack }: Step2Prop
         </AlertDescription>
       </Alert>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Step 1
-        </Button>
-        <Button type="button" onClick={onNext} size="lg" className="bg-primary hover:bg-primary/90">
-          Continue to Adjustments
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );
 }

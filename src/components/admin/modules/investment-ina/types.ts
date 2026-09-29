@@ -3,6 +3,8 @@
  * Goal-Based Investment Planning for Navigate Wealth Admin Portal
  */
 
+import type { FNAWizardStepNumber } from '../fna';
+
 // ==================== GOAL TYPES ====================
 
 export type GoalType =
@@ -101,6 +103,10 @@ export interface InvestmentINAInputs {
 
   // Investment Goals
   goals: InvestmentGoal[];
+
+  // Adviser review (Steps 3 and 4 of the wizard), stored with the inputs
+  adviserAdjustments?: InvestmentINAAdviserAdjustments;
+  adviserNotes?: string;
 }
 
 // ==================== CALCULATION RESULT TYPES ====================
@@ -241,31 +247,24 @@ export interface InvestmentINASession {
 // ==================== WIZARD STEP TYPES ====================
 
 /**
- * INTENTIONAL DEVIATION from standard 4-step WizardStep = 1 | 2 | 3 | 4 pattern.
- *
- * Investment INA uses a 7-step string-based workflow because goal-based investment
- * planning requires dedicated steps for client overview, discretionary investments,
- * risk profiling, economic assumptions, goals setup, review, and results — each
- * representing a distinct data collection phase that doesn't map to the standard
- * 4-step model (Information Gathering → Auto-Calculation → Manual Adjustment → Finalise).
- *
- * The standard 4-step modules (Risk, Retirement, Tax, Medical) follow
- * WizardStep = 1 | 2 | 3 | 4 with a consistent state shape defined in their types.ts.
+ * The INA runs the shared four-step FNA flow like every other analysis
+ * (see fna/wizard/fnaWizardFlow.ts). Its Step 3 is an assumption override:
+ * the adviser may replace the client's risk profile or the economic
+ * assumptions, with a recorded reason.
  */
-export type InvestmentINAWizardStep =
-  | 'client-overview'
-  | 'discretionary-investments'
-  | 'risk-profile'
-  | 'economic-assumptions'
-  | 'goals-setup'
-  | 'review'
-  | 'results';
+export type WizardStep = FNAWizardStepNumber;
 
-export interface InvestmentINAWizardState {
-  currentStep: InvestmentINAWizardStep;
-  completedSteps: InvestmentINAWizardStep[];
-  inputs: Partial<InvestmentINAInputs>;
-  errors: Record<string, string>;
+type INAAdjustableInputs = Pick<
+  InvestmentINAInputs,
+  'clientRiskProfile' | 'longTermInflationRate' | 'expectedRealReturns'
+>;
+
+export interface InvestmentINAAdviserAdjustments {
+  /** Only the values the adviser changed. */
+  overrides: Partial<INAAdjustableInputs>;
+  /** What the system used, kept for the audit trail once overrides apply. */
+  systemValues?: Partial<INAAdjustableInputs>;
+  reason: string;
 }
 
 // ==================== HELPER TYPES ====================

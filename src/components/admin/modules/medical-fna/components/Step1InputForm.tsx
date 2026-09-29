@@ -2,7 +2,8 @@
  * Step 1: Information Gathering
  *
  * Behaviour Rules:
- * - Auto-populate from client profile if data exists
+ * - Client keys arrive only through the shared review prefill (useFormPrefill),
+ *   the same path every FNA uses, including Load from Policies
  * - Changes may be edited and persisted back to client profile
  * - All inputs validated before proceeding to Step 2
  */
@@ -11,7 +12,6 @@ import React from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  ArrowRight,
   Info,
   Users,
   Shield,
@@ -42,11 +42,10 @@ import {
   FormLabel,
   FormMessage,
 } from '../../../../ui/form';
-import { useClientProductKeys } from '../hooks/useClientProductKeys';
 import { MedicalFNAInputSchema, MedicalFNAFormValues } from '../schema';
 import { MedicalFNAInputs } from '../types';
-import { toast } from 'sonner';
 import { useFormPrefill } from '../../form-prefill';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step1Props {
   clientId?: string;
@@ -65,16 +64,6 @@ export function Step1InputForm({
   submitLabel,
   onSaveDraft,
 }: Step1Props) {
-  const {
-    planType,
-    hospitalTariff,
-    totalPremium,
-    msa,
-    lateJoinerPenalty,
-    dependentsCount,
-    isLoading: isProductKeysLoading,
-  } = useClientProductKeys(clientId);
-
   const form = useForm<MedicalFNAFormValues>({
     // zodResolver infers its INPUT type from the schema, where every field with
     // a .default() is optional; MedicalFNAFormValues (z.infer = OUTPUT) has them
@@ -105,8 +94,10 @@ export function Step1InputForm({
 
   const [prefillStarted, setPrefillStarted] = React.useState(false);
 
-  const { PrefillUI, startPrefill } = useFormPrefill({
-    clientId: initialData && Object.keys(initialData).length > 0 ? undefined : clientId,
+  // Client keys reach this form only through the shared review prefill. The
+  // review stays available throughout; only the automatic start is gated.
+  const { PrefillUI, startPrefill, refreshFromPolicies, refreshing } = useFormPrefill({
+    clientId,
     formId: 'medical-fna-step1',
     currentValues: form.getValues() as Record<string, unknown>,
     autoOpenReview: !intakeMode,
@@ -130,54 +121,6 @@ export function Step1InputForm({
 
   const onSubmit = (data: MedicalFNAFormValues) => {
     onNext(data);
-  };
-
-  const handleImportExistingCover = () => {
-    if (isProductKeysLoading) {
-      toast.info('Still loading client data...');
-      return;
-    }
-
-    let updatedCount = 0;
-
-    if (planType) {
-      form.setValue('existingPlanType', planType);
-      updatedCount++;
-    }
-    if (hospitalTariff) {
-      // Normalize hospital tariff to match select options
-      let mappedTariff = 'Other';
-      if (hospitalTariff.includes('100%')) mappedTariff = '100%';
-      else if (hospitalTariff.includes('200%')) mappedTariff = '200%';
-      // Also try without the percentage symbol if user just typed "100" or "200"
-      else if (hospitalTariff.includes('100')) mappedTariff = '100%';
-      else if (hospitalTariff.includes('200')) mappedTariff = '200%';
-
-      form.setValue('existingHospitalCover', mappedTariff);
-      updatedCount++;
-    }
-    if (totalPremium !== undefined) {
-      form.setValue('existingTotalPremium', totalPremium);
-      updatedCount++;
-    }
-    if (msa !== undefined) {
-      form.setValue('existingMSA', msa);
-      updatedCount++;
-    }
-    if (lateJoinerPenalty !== undefined) {
-      form.setValue('existingLJP', lateJoinerPenalty);
-      updatedCount++;
-    }
-    if (dependentsCount !== undefined) {
-      form.setValue('existingDependents', dependentsCount);
-      updatedCount++;
-    }
-
-    if (updatedCount > 0) {
-      toast.success(`Imported ${updatedCount} fields from existing policies`);
-    } else {
-      toast.info('No matching policy data found to import');
-    }
   };
 
   return (
@@ -436,26 +379,21 @@ export function Step1InputForm({
               <Heart className="w-5 h-5 text-primary" />
               <CardTitle className="text-lg">Existing Medical Aid Details (Optional)</CardTitle>
             </div>
-            {clientId && (
+            {clientId && !intakeMode && (
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={handleImportExistingCover}
-                disabled={isProductKeysLoading}
+                onClick={() => void refreshFromPolicies()}
+                disabled={refreshing}
                 className="flex-shrink-0"
               >
-                {isProductKeysLoading ? (
-                  <div className="contents">
-                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                    Syncing...
-                  </div>
+                {refreshing ? (
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                 ) : (
-                  <div className="contents">
-                    <RefreshCw className="h-3 w-3 mr-1.5" />
-                    Import Details
-                  </div>
+                  <RefreshCw className="h-3 w-3 mr-1.5" />
                 )}
+                Load from Policies
               </Button>
             )}
           </CardHeader>
@@ -692,23 +630,22 @@ export function Step1InputForm({
           </p>
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          {intakeMode && onSaveDraft && (
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => onSaveDraft(form.getValues() as MedicalFNAInputs)}
-            >
-              Save progress
-            </Button>
-          )}
-          <Button type="submit" size="lg">
-            {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Analyze Needs')}{' '}
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
-        </div>
+        <FNAStepNavigation
+          step={1}
+          nextType="submit"
+          nextLabel={submitLabel ?? (intakeMode ? 'Continue to submit' : undefined)}
+          secondaryActions={
+            intakeMode && onSaveDraft ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onSaveDraft(form.getValues() as MedicalFNAInputs)}
+              >
+                Save progress
+              </Button>
+            ) : undefined
+          }
+        />
       </form>
     </Form>
   );

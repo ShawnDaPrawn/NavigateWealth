@@ -27,6 +27,7 @@ that change only when the design changes.
 - [`provider-automation-golden-flows.md`](architecture/provider-automation-golden-flows.md) — protected regression flows for provider automation
 - [`provider-integration-reassessment.md`](architecture/provider-integration-reassessment.md) — why portal automation works only for Allan Gray, and the proposed rebuild (a proposal, with its open questions listed; not a decision record)
 - [`openclaw-gateway.md`](architecture/openclaw-gateway.md) — the OpenClaw gateway contract and capability model
+- [`fna-wizards.md`](architecture/fna-wizards.md) — the shared shell, four-step flow and client-key rules every FNA and INA wizard follows
 
 **`runbooks/`** — how to operate, verify or repair something that is running.
 Written for someone acting under time pressure.

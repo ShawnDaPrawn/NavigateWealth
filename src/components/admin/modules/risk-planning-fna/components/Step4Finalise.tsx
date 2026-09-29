@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle, Download, FileText } from 'lucide-react';
+import { CheckCircle, Download } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
@@ -22,12 +22,14 @@ import type { RiskCalculations, Adjustments, FinalRiskNeed } from '../types';
 import { RiskPlanningFNAPdfExport } from './RiskPlanningFNAPdfExport';
 import { exportComponentToPdf } from '../utils/pdfExport';
 import { toast } from 'sonner';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step4Props {
   calculations: RiskCalculations;
   adjustments: Adjustments;
   onPublish: (finalNeeds: FinalRiskNeed[]) => void;
   onBack: () => void;
+  isPublishing?: boolean;
   clientName?: string;
   clientId?: string;
 }
@@ -37,6 +39,7 @@ export function Step4Finalise({
   adjustments,
   onPublish,
   onBack,
+  isPublishing = false,
   clientName = 'Client',
   clientId,
 }: Step4Props) {
@@ -408,29 +411,23 @@ export function Step4Finalise({
         <p>Calculated By: {calculations.metadata.calculatedBy}</p>
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-between pt-6 border-t gap-4">
-        <Button type="button" variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Adjustments
-        </Button>
-
-        <div className="flex gap-2">
+      <FNAStepNavigation
+        step={4}
+        onBack={onBack}
+        onNext={handlePublish}
+        isBusy={isPublishing}
+        secondaryActions={
           <Button
             type="button"
             variant="outline"
             onClick={handlePdfExport}
-            disabled={isExportingPdf}
+            disabled={isExportingPdf || isPublishing}
           >
             <Download className="mr-2 h-4 w-4" />
             Export PDF
           </Button>
-          <Button type="button" onClick={handlePublish}>
-            <FileText className="mr-2 h-4 w-4" />
-            Publish FNA
-          </Button>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 }

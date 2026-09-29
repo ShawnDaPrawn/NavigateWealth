@@ -1,3 +1,5 @@
+import type { FNAWizardStepNumber } from '../fna';
+
 // ==================== WIZARD STEPS & TAX CONSTANTS ====================
 // Moved to constants.ts — re-exported for backward compatibility
 export { WIZARD_STEPS, TAX_YEAR_2026_2027 } from './constants';
@@ -9,11 +11,8 @@ export { TAX_YEAR_2024_2025 } from './constants';
 
 // ==================== WIZARD STEP TYPE ====================
 
-/**
- * Standard 4-step wizard type — consistent across Risk, Retirement, Tax, Medical FNA modules.
- * Estate Planning and Investment INA use multi-step string-based workflows by design.
- */
-export type WizardStep = 1 | 2 | 3 | 4;
+/** A step of the shared four-step FNA flow — the same type in every wizard. */
+export type WizardStep = FNAWizardStepNumber;
 
 // ==================== STEP 1: INPUTS ====================
 
@@ -120,11 +119,10 @@ export interface FinalTaxPlan {
 
 /**
  * Wizard State Management
- * Standardised shape: { currentStep, isPublishing, inputs, calculations/results, adjustments }
+ * Standardised shape: { currentStep, inputs, calculations/results, adjustments }
  */
 export interface TaxPlanningWizardState {
   currentStep: WizardStep;
-  isPublishing: boolean;
 
   // Data State
   inputs: TaxPlanningInputs;
