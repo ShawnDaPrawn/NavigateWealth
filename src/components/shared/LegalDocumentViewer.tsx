@@ -303,7 +303,7 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="h-[92vh] max-w-6xl overflow-hidden border-stone-200 bg-transparent p-0 shadow-none">
+        <DialogContent className="h-[92vh] max-w-6xl overflow-hidden border-neutral-200 bg-transparent p-0 shadow-none">
           <DialogHeader className="sr-only">
             <DialogTitle>{document?.title || 'Legal document'}</DialogTitle>
             <DialogDescription>
@@ -311,16 +311,16 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-[linear-gradient(180deg,#f5f5f4_0%,#fafaf9_18%,#ffffff_100%)] shadow-2xl">
+          <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-2xl">
             <style dangerouslySetInnerHTML={{ __html: LEGAL_DOCUMENT_CONTENT_STYLE }} />
 
-            <div className="border-b border-stone-200 bg-white/90 px-5 py-4 backdrop-blur sm:px-6">
+            <div className="border-b border-neutral-200 bg-white/90 px-5 py-4 backdrop-blur sm:px-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
                     Navigate Wealth legal library
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-stone-950 sm:text-xl">
+                  <div className="mt-1 text-lg font-semibold text-neutral-950 sm:text-xl">
                     {document?.title || 'Legal document'}
                   </div>
                 </div>
@@ -328,7 +328,7 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                   <Button
                     onClick={handlePdfDownload}
                     disabled={pdfDownloading}
-                    className="bg-sky-700 hover:bg-sky-800 disabled:cursor-wait disabled:opacity-80"
+                    className="bg-neutral-950 text-white hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-80"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     {pdfDownloading ? 'Preparing PDF...' : 'Download PDF'}
@@ -341,29 +341,29 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
               {document ? (
                 <div className="mx-auto max-w-screen-2xl px-4 py-5 sm:px-6">
                   <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-                    <Card className="overflow-hidden border-stone-200 bg-white shadow-sm">
+                    <Card className="overflow-hidden border-neutral-200 bg-white shadow-sm">
                       <CardContent className="p-0">
-                        <div className="border-b border-stone-200 bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,#ffffff_42%,#f5f5f4_100%)] px-6 py-7 sm:px-8">
+                        <div className="border-b border-neutral-200 bg-white px-6 py-7 sm:px-8">
                           <div className="mb-4 flex flex-wrap items-center gap-3">
-                            <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">
+                            <Badge className="border-neutral-300 bg-white text-neutral-900 hover:bg-white">
                               {sectionLabel}
                             </Badge>
-                            <div className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                            <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
                               Version {document.version}
                             </div>
                           </div>
 
                           <div className="flex flex-wrap items-start justify-between gap-4">
                             <div className="max-w-3xl">
-                              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-sky-800">
+                              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-neutral-900">
                                 <ShieldCheck className="h-4 w-4" />
                                 Navigate Wealth legal publication
                               </div>
-                              <h2 className="text-3xl font-semibold tracking-tight text-stone-950">
+                              <h2 className="text-3xl font-semibold tracking-tight text-neutral-950">
                                 {document.title}
                               </h2>
                               {document.description && (
-                                <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600">
+                                <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
                                   {document.description}
                                 </p>
                               )}
@@ -371,32 +371,32 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                           </div>
 
                           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                              <div className="text-xs uppercase tracking-wide text-stone-500">
+                            <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+                              <div className="text-xs uppercase tracking-wide text-neutral-500">
                                 Effective date
                               </div>
-                              <div className="mt-1 text-sm font-medium text-stone-900">
+                              <div className="mt-1 text-sm font-medium text-neutral-900">
                                 {formatLongDate(document.effectiveDate)}
                               </div>
                             </div>
-                            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                              <div className="text-xs uppercase tracking-wide text-stone-500">
+                            <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+                              <div className="text-xs uppercase tracking-wide text-neutral-500">
                                 Last updated
                               </div>
-                              <div className="mt-1 text-sm font-medium text-stone-900">
+                              <div className="mt-1 text-sm font-medium text-neutral-900">
                                 {formatLongDate(document.updatedAt)}
                               </div>
                             </div>
-                            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                              <div className="text-xs uppercase tracking-wide text-stone-500">
+                            <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+                              <div className="text-xs uppercase tracking-wide text-neutral-500">
                                 Reader mode
                               </div>
-                              <div className="mt-1 text-sm font-medium text-stone-900">
+                              <div className="mt-1 text-sm font-medium text-neutral-900">
                                 {document.renderMode === 'versioned_document'
                                   ? 'Versioned legal document'
                                   : 'Legal document'}
                               </div>
-                              <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
+                              <div className="mt-1 text-xs font-medium uppercase tracking-wide text-neutral-500">
                                 Version {document.version}
                               </div>
                             </div>
@@ -413,13 +413,13 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                     </Card>
 
                     <div className="hidden space-y-4 lg:block">
-                      <Card className="border-stone-200 bg-white/95 shadow-sm backdrop-blur">
+                      <Card className="border-neutral-200 bg-white/95 shadow-sm backdrop-blur">
                         <CardContent className="p-5">
-                          <div className="flex items-center gap-2 text-base font-semibold text-stone-900">
-                            <FileText className="h-4 w-4 text-sky-700" />
+                          <div className="flex items-center gap-2 text-base font-semibold text-neutral-900">
+                            <FileText className="h-4 w-4 text-neutral-900" />
                             On this page
                           </div>
-                          <p className="mt-2 text-sm text-stone-500">
+                          <p className="mt-2 text-sm text-neutral-500">
                             Jump to the sections most relevant to you.
                           </p>
                           <div className="mt-4 space-y-2">
@@ -429,15 +429,15 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                                   key={entry.id}
                                   href={`#${entry.id}`}
                                   onClick={(event) => handleTocNavigate(event, entry.id)}
-                                  className={`block rounded-lg px-3 py-2 text-sm transition hover:bg-stone-100 hover:text-stone-950 ${
-                                    entry.level > 2 ? 'pl-6 text-stone-500' : 'text-stone-700'
+                                  className={`block rounded-lg px-3 py-2 text-sm transition hover:bg-neutral-100 hover:text-neutral-950 ${
+                                    entry.level > 2 ? 'pl-6 text-neutral-500' : 'text-neutral-700'
                                   }`}
                                 >
                                   {entry.title}
                                 </a>
                               ))
                             ) : (
-                              <p className="text-sm text-stone-500">
+                              <p className="text-sm text-neutral-500">
                                 This document does not have indexed sections yet.
                               </p>
                             )}
@@ -445,24 +445,24 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                         </CardContent>
                       </Card>
 
-                      <Card className="border-stone-200 bg-white/95 shadow-sm">
-                        <CardContent className="p-4 text-sm text-stone-600">
-                          <div className="flex items-center gap-2 font-medium text-stone-900">
-                            <CalendarDays className="h-4 w-4 text-sky-700" />
+                      <Card className="border-neutral-200 bg-white/95 shadow-sm">
+                        <CardContent className="p-4 text-sm text-neutral-600">
+                          <div className="flex items-center gap-2 font-medium text-neutral-900">
+                            <CalendarDays className="h-4 w-4 text-neutral-900" />
                             Reading details
                           </div>
                           <Separator className="my-3" />
                           <div>
                             Section:{' '}
-                            <span className="font-medium text-stone-900">{sectionLabel}</span>
+                            <span className="font-medium text-neutral-900">{sectionLabel}</span>
                           </div>
                           <div className="mt-2">
                             Version:{' '}
-                            <span className="font-medium text-stone-900">{document.version}</span>
+                            <span className="font-medium text-neutral-900">{document.version}</span>
                           </div>
                           <div className="mt-2">
                             Effective:{' '}
-                            <span className="font-medium text-stone-900">
+                            <span className="font-medium text-neutral-900">
                               {formatLongDate(document.effectiveDate)}
                             </span>
                           </div>
@@ -473,9 +473,11 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center px-6 py-16">
-                  <div className="max-w-md text-center text-stone-500">
+                  <div className="max-w-md text-center text-neutral-500">
                     <FileText className="mx-auto mb-4 h-12 w-12 opacity-40" />
-                    <p className="font-medium text-stone-700">Document content not yet available</p>
+                    <p className="font-medium text-neutral-700">
+                      Document content not yet available
+                    </p>
                     <p className="mt-2 text-sm">
                       The compliance team is preparing this document for client viewing.
                     </p>
@@ -485,12 +487,12 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
             </div>
 
             {document && (
-              <div className="border-t border-stone-200 bg-white/90 px-5 py-3 sm:px-6">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-stone-500">
+              <div className="border-t border-neutral-200 bg-white/90 px-5 py-3 sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500">
                   <div>Please review these terms carefully before continuing with your signup.</div>
                   <Link
                     to={`/legal/${document.slug}`}
-                    className="inline-flex items-center gap-1 font-medium text-sky-800 hover:text-sky-600 transition-colors"
+                    className="inline-flex items-center gap-1 font-medium text-neutral-900 hover:text-neutral-600 transition-colors"
                   >
                     Read in full screen on the legal hub
                     <ArrowUpRight className="h-3.5 w-3.5" />
