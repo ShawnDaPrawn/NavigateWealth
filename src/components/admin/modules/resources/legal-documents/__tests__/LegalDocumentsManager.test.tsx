@@ -45,7 +45,7 @@ vi.mock('@/components/admin/modules/publications/RichTextEditor', () => ({
   RichTextEditor: () => <div data-testid="rich-text-editor-stub" />,
 }));
 
-vi.mock('@/components/shared/LegalDocumentPdf', () => ({
+vi.mock('@/components/shared/LegalDocumentPdfDialog', () => ({
   LegalDocumentPdfDialog: () => <div data-testid="legal-pdf-dialog-stub" />,
 }));
 

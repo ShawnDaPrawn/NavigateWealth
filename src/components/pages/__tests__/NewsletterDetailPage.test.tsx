@@ -3,8 +3,8 @@
  *
  * The point of this page over a bare link to the PDF is that the issue has a
  * real address: a title and description in the markup, a canonical URL, and a
- * download beside the embedded document. A slug that does not exist must read
- * as "not found" rather than an error.
+ * download beside the embedded document (or, on a phone, buttons in its place).
+ * A slug that does not exist must read as "not found" rather than an error.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -78,10 +78,31 @@ describe('NewsletterDetailPage', () => {
 
   it('offers the PDF for download under its real file name', () => {
     renderPage();
-    const download = screen.getByRole('link', { name: /download pdf/i });
-    expect(download.getAttribute('href')).toBe('https://cdn.test/2026/september.pdf');
-    expect(download.getAttribute('download')).toBe('september.pdf');
+    // One button for tablet and up, one in the phone layout; CSS shows one.
+    const downloads = screen.getAllByRole('link', { name: /download pdf/i });
+    expect(downloads).toHaveLength(2);
+    for (const download of downloads) {
+      expect(download.getAttribute('href')).toBe('https://cdn.test/2026/september.pdf');
+      expect(download.getAttribute('download')).toBe('september.pdf');
+    }
     expect(screen.getByText(/september\.pdf · 2\.0 MB/)).toBeTruthy();
+  });
+
+  it('gives phones a button to open the PDF instead of the embedded viewer', () => {
+    renderPage();
+    // Phone browsers cannot page through an embedded PDF, so below `sm` the
+    // viewer is not rendered (and so never fetched) and the file opens in the
+    // phone's own viewer instead.
+    const read = screen.getByRole('link', { name: /read the newsletter/i });
+    expect(read.getAttribute('href')).toBe('https://cdn.test/2026/september.pdf');
+    expect(read.getAttribute('target')).toBe('_blank');
+    expect(read.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(read.parentElement?.className).toMatch(/(^|\s)sm:hidden(\s|$)/);
+    expect(screen.getByText('PDF · 2.0 MB')).toBeTruthy();
+
+    const viewer = screen.getByLabelText('September Market Review (PDF)').parentElement;
+    expect(viewer?.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(viewer?.className).toMatch(/(^|\s)sm:block(\s|$)/);
   });
 
   it('links back to the archive tab', () => {

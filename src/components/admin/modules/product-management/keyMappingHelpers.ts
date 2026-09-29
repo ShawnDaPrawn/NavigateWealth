@@ -13,6 +13,7 @@ export function getKeyCategoryForProductCategory(
     retirement_planning: 'retirement_pre',
     retirement_pre: 'retirement_pre',
     retirement_post: 'retirement_post',
+    retirement_post_fixed: 'retirement_post_fixed',
     investments: 'invest_voluntary',
     investments_voluntary: 'invest_voluntary',
     investments_guaranteed: 'invest_guaranteed',

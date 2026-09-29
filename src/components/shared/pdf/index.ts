@@ -16,3 +16,4 @@ export {
   resolvePdfExportPages,
   resolvePdfPreviewContainer,
 } from './pdfExport';
+export { printPdfPreview } from './pdfPrint';
