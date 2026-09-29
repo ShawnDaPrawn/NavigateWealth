@@ -138,5 +138,35 @@ describe('getKeysByCategory reaches every category it claims to', () => {
     // Not a copy: consumers rely on getKeysByCategory('risk') being RISK_KEYS.
     expect(keys.getKeysByCategory('risk' as never)).toBe(keys.RISK_KEYS);
     expect(keys.getKeysByCategory('medical_aid' as never)).toBe(keys.MEDICAL_AID_KEYS);
+    // A wrong switch arm would show living-annuity capital fields on a fixed annuity.
+    expect(keys.getKeysByCategory('retirement_post' as never)).toBe(keys.RETIREMENT_POST_KEYS);
+    expect(keys.getKeysByCategory('retirement_post_fixed' as never)).toBe(
+      keys.RETIREMENT_POST_FIXED_KEYS,
+    );
+  });
+});
+
+describe('a fixed annuity is income, not capital still owned', () => {
+  it('does not feed the purchase price or the income into living-annuity totals', () => {
+    const post = keys.RETIREMENT_POST_KEYS as ProductKey[];
+    const fixed = keys.RETIREMENT_POST_FIXED_KEYS as ProductKey[];
+
+    expect(post.find((key) => key.id === 'post_retirement_total_capital')?.calculatedFrom).toEqual([
+      'post_retirement_capital_value',
+    ]);
+    expect(post.find((key) => key.id === 'post_retirement_total_income')?.calculatedFrom).toEqual([
+      'post_retirement_drawdown_amount',
+    ]);
+
+    const incomeTotal = fixed.find(
+      (key) => key.id === 'post_retirement_fixed_annuity_income_total',
+    );
+    expect(incomeTotal?.calculatedFrom).toEqual(['post_retirement_fixed_annuity_income']);
+    expect(fixed.some((key) => key.id.includes('capital') || key.id.includes('fund_value'))).toBe(
+      false,
+    );
+    expect(
+      fixed.find((key) => key.id === 'post_retirement_fixed_annuity_purchase_price')?.isCalculated,
+    ).toBe(false);
   });
 });
