@@ -2,7 +2,8 @@
  * Step 1: Information Gathering
  *
  * Behaviour Rules:
- * - Auto-populate from client profile if data exists
+ * - Client keys arrive only through the shared review prefill (useFormPrefill),
+ *   the same path every FNA uses, including Load from Policies
  * - Changes may be edited and persisted back to client profile
  * - Derived values must be displayed but not directly editable
  * - All inputs validated before proceeding to Step 2
@@ -11,17 +12,12 @@
 import React, { useEffect, useCallback } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, ArrowLeft, Info, AlertCircle } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { Card, CardContent } from '../../../../ui/card';
+import { Info, AlertCircle } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { Form } from '../../../../ui/form';
 import { Alert, AlertDescription } from '../../../../ui/alert';
-import { clientKeysApi } from '../../client-keys';
-import { useClientProfile, useClientKeys } from '../hooks';
-import { DEFAULT_FORM_VALUES, QUERY_KEYS } from '../constants';
+import { DEFAULT_FORM_VALUES } from '../constants';
 import {
   InformationGatheringSchema,
   transformFormToInput,
@@ -33,6 +29,7 @@ import { IncomeDetailsForm } from './step1/IncomeDetailsForm';
 import { DependantsForm } from './step1/DependantsForm';
 import { ExistingCoverForm } from './step1/ExistingCoverForm';
 import { useFormPrefill } from '../../form-prefill';
+import { FNAStepNavigation } from '../../fna';
 
 interface Step1Props {
   clientId?: string;
@@ -59,11 +56,6 @@ export function Step1InformationGathering({
   submitLabel,
   onSaveDraft,
 }: Step1Props) {
-  const { data: _profileData, isLoading: isLoadingProfile } = useClientProfile(clientId);
-  const { data: clientKeys, isError: isClientKeysError } = useClientKeys(clientId);
-  const queryClient = useQueryClient();
-  const [isRecalculating, setIsRecalculating] = React.useState(false);
-
   // Tab state management
   const [activeTab, setActiveTab] = React.useState<string>('income');
 
@@ -84,8 +76,10 @@ export function Step1InformationGathering({
 
   const [prefillStarted, setPrefillStarted] = React.useState(false);
 
-  const { PrefillUI, startPrefill } = useFormPrefill({
-    clientId: hasPersistedRiskIntake(initialData) ? undefined : clientId,
+  // Client keys reach this form only through the shared review prefill. The
+  // review stays available throughout; only the automatic start is gated.
+  const { PrefillUI, startPrefill, refreshFromPolicies, refreshing } = useFormPrefill({
+    clientId,
     formId: 'risk-fna-step1',
     currentValues: form.getValues() as Record<string, unknown>,
     autoOpenReview: !intakeMode,
@@ -197,68 +191,6 @@ export function Step1InformationGathering({
     onNext(inputData);
   };
 
-  const handleRecalculateTotals = async () => {
-    if (!clientId) return;
-
-    setIsRecalculating(true);
-    try {
-      // 1. Trigger recalculation on backend
-      await clientKeysApi.recalculateClientKeys(clientId);
-
-      // 2. Invalidate query to refresh cache
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CLIENT_KEYS(clientId) });
-
-      // 3. Explicitly fetch new keys to update form immediately
-      const newKeys = await clientKeysApi.getClientKeys(clientId);
-
-      if (newKeys && newKeys.keys && newKeys.keys.length > 0) {
-        // Map of client key IDs to form field names
-        const keyToFieldMap: Record<string, keyof InformationGatheringFormValues> = {
-          risk_life_cover_total: 'existingCoverLifePersonal',
-          risk_disability_total: 'existingCoverDisabilityPersonal',
-          risk_severe_illness_total: 'existingCoverSevereIllnessPersonal',
-          risk_temporary_icb_total: 'existingCoverIPTemporaryPersonal',
-          risk_permanent_icb_total: 'existingCoverIPPermanentPersonal',
-        };
-
-        let updatedCount = 0;
-
-        // Populate each field from its corresponding client key
-        Object.entries(keyToFieldMap).forEach(([keyId, fieldName]) => {
-          const keyData = newKeys.keys.find((k) => k.keyId === keyId);
-
-          if (keyData && Number(keyData.value) > 0) {
-            form.setValue(fieldName, String(keyData.value));
-            updatedCount++;
-          }
-        });
-
-        if (updatedCount > 0) {
-          toast.success('Existing cover updated from policies');
-        } else {
-          toast.info('Recalculation complete, but no matching non-zero totals found');
-        }
-      } else {
-        toast.info('Recalculation complete. No totals found.');
-      }
-    } catch (error) {
-      console.error('Recalculation failed:', error);
-      toast.error('Failed to recalculate existing cover');
-    } finally {
-      setIsRecalculating(false);
-    }
-  };
-
-  if (isLoadingProfile) {
-    return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">Loading client profile data...</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -312,11 +244,9 @@ export function Step1InformationGathering({
 
           <TabsContent value="existing" className="mt-6">
             <ExistingCoverForm
-              clientId={clientId}
-              isRecalculating={isRecalculating}
-              onRecalculate={handleRecalculateTotals}
-              hasClientKeys={!!clientKeys?.keys?.length}
-              isClientKeysError={isClientKeysError}
+              clientId={intakeMode ? undefined : clientId}
+              isRecalculating={refreshing}
+              onRecalculate={() => void refreshFromPolicies()}
             />
           </TabsContent>
         </Tabs>
@@ -332,28 +262,22 @@ export function Step1InformationGathering({
           </Alert>
         )}
 
-        {/* Submit */}
-        <div className="flex justify-between pt-6 border-t">
-          <Button type="button" variant="outline" disabled>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div className="flex gap-2">
-            {intakeMode && onSaveDraft && (
+        <FNAStepNavigation
+          step={1}
+          nextType="submit"
+          nextLabel={submitLabel ?? (intakeMode ? 'Continue to submit' : undefined)}
+          secondaryActions={
+            intakeMode && onSaveDraft ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onSaveDraft(transformFormToInput(form.getValues()))}
               >
-                Save draft
+                Save progress
               </Button>
-            )}
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90">
-              {submitLabel ?? (intakeMode ? 'Continue to submit' : 'Continue to Calculations')}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+            ) : undefined
+          }
+        />
       </form>
     </Form>
   );

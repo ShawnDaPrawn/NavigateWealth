@@ -26,16 +26,12 @@ interface ExistingCoverFormProps {
   clientId?: string;
   isRecalculating: boolean;
   onRecalculate: () => void;
-  hasClientKeys: boolean;
-  isClientKeysError: boolean;
 }
 
 export function ExistingCoverForm({
   clientId,
   isRecalculating,
   onRecalculate,
-  hasClientKeys,
-  isClientKeysError,
 }: ExistingCoverFormProps) {
   const form = useFormContext<InformationGatheringFormValues>();
 
@@ -80,15 +76,13 @@ export function ExistingCoverForm({
         </AlertDescription>
       </Alert>
 
-      {!hasClientKeys && !isClientKeysError && (
-        <Alert variant="default" className="border-amber-200 bg-amber-50">
-          <Info className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-sm text-amber-900">
-            <strong>Note:</strong> Existing cover totals will auto-populate from saved policies once
-            they are entered in the Product Configuration section.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Alert variant="default" className="border-amber-200 bg-amber-50">
+        <Info className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="text-sm text-amber-900">
+          <strong>Note:</strong> Existing cover totals come from the client keys calculated from
+          saved policies. Use Load from Policies to recalculate them and review the matches.
+        </AlertDescription>
+      </Alert>
 
       <Card>
         <CardHeader>

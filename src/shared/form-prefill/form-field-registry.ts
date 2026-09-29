@@ -1,73 +1,88 @@
 /**
  * Form Field Registry — maps internal form fields to canonical Key Manager keys.
+ *
+ * Every FNA / INA wizard prefills its Step 1 from this registry through one
+ * resolver, so a client value means the same thing in every analysis.
+ *
+ * The client keys the analyses share (age, date of birth, income, marital
+ * status, dependants, …) are declared ONCE in FNA_CLIENT_KEYS: one canonical
+ * key, one label, one group. A form maps its own field name onto a shared key
+ * with `clientKey()`; it cannot give the same client value a different key or
+ * label. Keys that only one analysis uses (existing risk cover, medical aid
+ * plan details, retirement capital) are declared inline on that form.
+ *
+ * Map only fields the form actually has. A mapping for a field the form
+ * lacks shows the adviser a match in the review and then silently drops it.
  */
 
 import type { FormFieldMapping, FormPrefillId } from './types.ts';
 
+type SharedClientKey = Omit<FormFieldMapping, 'formField'>;
+
+/** Client keys shared by the FNA wizards. */
+export const FNA_CLIENT_KEYS = {
+  age: { canonicalKey: 'derived:age_from_dob', label: 'Current age', group: 'Profile' },
+  dateOfBirth: { canonicalKey: 'profile_date_of_birth', label: 'Date of birth', group: 'Profile' },
+  fullName: { canonicalKey: 'derived:full_name', label: 'Full name', group: 'Profile' },
+  maritalStatus: {
+    canonicalKey: 'profile_marital_status',
+    label: 'Marital status',
+    group: 'Profile',
+  },
+  retirementAge: {
+    canonicalKey: 'profile_retirement_age',
+    label: 'Retirement age',
+    group: 'Profile',
+  },
+  employmentType: {
+    canonicalKey: 'profile_employment_type',
+    label: 'Employment type',
+    group: 'Profile',
+  },
+  riskTolerance: {
+    canonicalKey: 'profile_risk_tolerance',
+    label: 'Risk tolerance',
+    group: 'Profile',
+  },
+  spouseName: { canonicalKey: 'profile_spouse_name', label: 'Spouse name', group: 'Household' },
+  dependantCount: {
+    canonicalKey: 'derived:dependant_count',
+    label: 'Number of dependants',
+    group: 'Household',
+  },
+  grossMonthlyIncome: {
+    canonicalKey: 'profile_gross_monthly_income',
+    label: 'Gross monthly income',
+    group: 'Income',
+  },
+  netMonthlyIncome: {
+    canonicalKey: 'profile_net_monthly_income',
+    label: 'Net monthly income',
+    group: 'Income',
+  },
+  monthlyExpenses: {
+    canonicalKey: 'profile_monthly_expenses',
+    label: 'Household monthly expenditure',
+    group: 'Financial',
+  },
+} as const satisfies Record<string, SharedClientKey>;
+
+export type FNAClientKeyName = keyof typeof FNA_CLIENT_KEYS;
+
+/** Maps a form's own field name onto a shared client key. */
+export function clientKey(name: FNAClientKeyName, formField: string): FormFieldMapping {
+  return { formField, ...FNA_CLIENT_KEYS[name] };
+}
+
 export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
-  'retirement-fna-step1': [
-    {
-      formField: 'currentAge',
-      label: 'Current age',
-      canonicalKey: 'derived:age_from_dob',
-      group: 'Profile',
-    },
-    {
-      formField: 'retirementAge',
-      label: 'Retirement age',
-      canonicalKey: 'profile_retirement_age',
-      group: 'Profile',
-    },
-    {
-      formField: 'currentMonthlyIncome',
-      label: 'Net monthly income',
-      canonicalKey: 'profile_net_monthly_income',
-      group: 'Income',
-    },
-    {
-      formField: 'currentMonthlyContribution',
-      label: 'Monthly retirement contribution',
-      canonicalKey: 'retirement_monthly_contribution',
-      group: 'Savings',
-    },
-    {
-      formField: 'currentRetirementSavings',
-      label: 'Current retirement capital',
-      canonicalKey: 'retirement_fund_value_total',
-      group: 'Savings',
-    },
-    {
-      formField: 'grossMonthlyIncome',
-      label: 'Gross monthly income',
-      canonicalKey: 'profile_gross_monthly_income',
-      group: 'Income',
-    },
-  ],
   'risk-fna-step1': [
-    {
-      formField: 'grossMonthlyIncome',
-      label: 'Gross monthly income',
-      canonicalKey: 'profile_gross_monthly_income',
-      group: 'Income',
-    },
-    {
-      formField: 'netMonthlyIncome',
-      label: 'Net monthly income',
-      canonicalKey: 'profile_net_monthly_income',
-      group: 'Income',
-    },
-    {
-      formField: 'currentAge',
-      label: 'Current age',
-      canonicalKey: 'derived:age_from_dob',
-      group: 'Profile',
-    },
-    {
-      formField: 'retirementAge',
-      label: 'Retirement age',
-      canonicalKey: 'profile_retirement_age',
-      group: 'Profile',
-    },
+    clientKey('age', 'currentAge'),
+    clientKey('retirementAge', 'retirementAge'),
+    clientKey('employmentType', 'employmentType'),
+    clientKey('grossMonthlyIncome', 'grossMonthlyIncome'),
+    clientKey('netMonthlyIncome', 'netMonthlyIncome'),
+    clientKey('spouseName', 'spouseFullName'),
+    clientKey('monthlyExpenses', 'totalHouseholdMonthlyExpenditure'),
     {
       formField: 'totalOutstandingDebts',
       label: 'Total outstanding debts',
@@ -79,12 +94,6 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
       label: 'Total current assets',
       canonicalKey: 'derived:total_assets',
       group: 'Financial',
-    },
-    {
-      formField: 'spouseFullName',
-      label: 'Spouse full name',
-      canonicalKey: 'profile_spouse_name',
-      group: 'Household',
     },
     {
       formField: 'existingCoverLifePersonal',
@@ -116,49 +125,20 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
       canonicalKey: 'risk_permanent_icb_total',
       group: 'Existing cover',
     },
-    {
-      formField: 'employmentType',
-      label: 'Employment type',
-      canonicalKey: 'profile_employment_type',
-      group: 'Profile',
-    },
-    {
-      formField: 'totalHouseholdMonthlyExpenditure',
-      label: 'Household monthly expenditure',
-      canonicalKey: 'profile_monthly_expenses',
-      group: 'Financial',
-    },
-    {
-      formField: 'dependantCount',
-      label: 'Number of dependants',
-      canonicalKey: 'derived:dependant_count',
-      group: 'Profile',
-    },
   ],
   'medical-fna-step1': [
-    {
-      formField: 'currentAge',
-      label: 'Client age',
-      canonicalKey: 'derived:age_from_dob',
-      group: 'Profile',
-    },
+    clientKey('age', 'currentAge'),
     {
       formField: 'spousePartner',
       label: 'Spouse / partner on cover',
       canonicalKey: 'derived:has_spouse',
-      group: 'Profile',
+      group: 'Household',
     },
     {
       formField: 'childrenCount',
       label: 'Number of children',
       canonicalKey: 'derived:dependant_count_children',
-      group: 'Profile',
-    },
-    {
-      formField: 'grossMonthlyIncome',
-      label: 'Gross monthly income',
-      canonicalKey: 'profile_gross_monthly_income',
-      group: 'Income',
+      group: 'Household',
     },
     {
       formField: 'existingPlanType',
@@ -197,20 +177,27 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
       group: 'Existing cover',
     },
   ],
+  'retirement-fna-step1': [
+    clientKey('age', 'currentAge'),
+    clientKey('retirementAge', 'retirementAge'),
+    clientKey('netMonthlyIncome', 'currentMonthlyIncome'),
+    {
+      formField: 'currentMonthlyContribution',
+      label: 'Monthly retirement contribution',
+      canonicalKey: 'retirement_monthly_contribution',
+      group: 'Savings',
+    },
+    {
+      formField: 'currentRetirementSavings',
+      label: 'Current retirement capital',
+      canonicalKey: 'retirement_fund_value_total',
+      group: 'Savings',
+    },
+  ],
   'tax-fna-step1': [
-    { formField: 'age', label: 'Age', canonicalKey: 'derived:age_from_dob', group: 'Profile' },
-    {
-      formField: 'maritalStatus',
-      label: 'Marital status',
-      canonicalKey: 'derived:marital_status_tax',
-      group: 'Profile',
-    },
-    {
-      formField: 'numberOfDependants',
-      label: 'Number of dependants',
-      canonicalKey: 'derived:dependant_count',
-      group: 'Profile',
-    },
+    clientKey('age', 'age'),
+    clientKey('maritalStatus', 'maritalStatus'),
+    clientKey('dependantCount', 'numberOfDependants'),
     {
       formField: 'employmentIncome',
       label: 'Employment income (annual)',
@@ -221,114 +208,23 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
       formField: 'medicalSchemeMembers',
       label: 'Medical scheme members',
       canonicalKey: 'derived:medical_scheme_members',
-      group: 'Medical',
-    },
-    {
-      formField: 'grossMonthlyIncome',
-      label: 'Gross monthly income',
-      canonicalKey: 'profile_gross_monthly_income',
-      group: 'Income',
-    },
-    {
-      formField: 'taxNumber',
-      label: 'Tax number',
-      canonicalKey: 'profile_tax_number',
-      group: 'Profile',
+      group: 'Household',
     },
   ],
   'estate-fna-step1': [
-    {
-      formField: 'familyInfo.fullName',
-      label: 'Full name',
-      canonicalKey: 'derived:full_name',
-      group: 'Family',
-    },
-    {
-      formField: 'familyInfo.dateOfBirth',
-      label: 'Date of birth',
-      canonicalKey: 'profile_date_of_birth',
-      group: 'Family',
-    },
-    {
-      formField: 'familyInfo.maritalStatus',
-      label: 'Marital status',
-      canonicalKey: 'profile_marital_status',
-      group: 'Family',
-    },
-    {
-      formField: 'familyInfo.spouseName',
-      label: 'Spouse name',
-      canonicalKey: 'profile_spouse_name',
-      group: 'Family',
-    },
-    {
-      formField: 'familyInfo.age',
-      label: 'Age',
-      canonicalKey: 'derived:age_from_dob',
-      group: 'Family',
-    },
+    clientKey('fullName', 'familyInfo.fullName'),
+    clientKey('dateOfBirth', 'familyInfo.dateOfBirth'),
+    clientKey('age', 'familyInfo.age'),
+    clientKey('maritalStatus', 'familyInfo.maritalStatus'),
+    clientKey('spouseName', 'familyInfo.spouseName'),
   ],
   'investment-ina-step1': [
-    {
-      formField: 'currentAge',
-      label: 'Current age',
-      canonicalKey: 'derived:age_from_dob',
-      group: 'Profile',
-    },
-    {
-      formField: 'dateOfBirth',
-      label: 'Date of birth',
-      canonicalKey: 'profile_date_of_birth',
-      group: 'Profile',
-    },
-    {
-      formField: 'grossMonthlyIncome',
-      label: 'Gross monthly income',
-      canonicalKey: 'profile_gross_monthly_income',
-      group: 'Income',
-    },
-    {
-      formField: 'netMonthlyIncome',
-      label: 'Net monthly income',
-      canonicalKey: 'profile_net_monthly_income',
-      group: 'Income',
-    },
-    {
-      formField: 'householdDependants',
-      label: 'Household dependants',
-      canonicalKey: 'derived:dependant_count',
-      group: 'Profile',
-    },
-    {
-      formField: 'monthlyContribution',
-      label: 'Monthly contribution',
-      canonicalKey: 'derived:investment_monthly_contribution',
-      group: 'Investments',
-    },
-    {
-      formField: 'fullName',
-      label: 'Full name',
-      canonicalKey: 'derived:full_name',
-      group: 'Profile',
-    },
-    {
-      formField: 'maritalStatus',
-      label: 'Marital status',
-      canonicalKey: 'profile_marital_status',
-      group: 'Profile',
-    },
-    {
-      formField: 'clientRiskProfile',
-      label: 'Risk tolerance',
-      canonicalKey: 'profile_risk_tolerance',
-      group: 'Profile',
-    },
-    {
-      formField: 'investmentHorizonYears',
-      label: 'Investment horizon (years)',
-      canonicalKey: 'profile_investment_horizon',
-      group: 'Profile',
-    },
+    clientKey('age', 'currentAge'),
+    clientKey('dateOfBirth', 'dateOfBirth'),
+    clientKey('grossMonthlyIncome', 'grossMonthlyIncome'),
+    clientKey('netMonthlyIncome', 'netMonthlyIncome'),
+    clientKey('dependantCount', 'householdDependants'),
+    clientKey('riskTolerance', 'clientRiskProfile'),
   ],
 };
 

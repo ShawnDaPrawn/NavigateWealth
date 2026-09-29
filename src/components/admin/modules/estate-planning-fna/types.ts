@@ -3,6 +3,8 @@
  * Comprehensive estate planning analysis on death
  */
 
+import type { FNAWizardStepNumber } from '../fna';
+
 // ============= PERSONAL & FAMILY INFORMATION =============
 
 export interface FamilyInformation {
@@ -174,6 +176,9 @@ export interface EstatePlanningInputs {
 
   // Planning Context
   planningNotes: string;
+
+  // Adviser review (Step 3 of the wizard), stored with the inputs
+  adviserAdjustments?: EstatePlanningAdviserAdjustments;
 }
 
 // ============= DEATH BALANCE SHEET =============
@@ -380,21 +385,27 @@ export interface EstatePlanningSession {
 // ============= WIZARD STEPS =============
 
 /**
- * INTENTIONAL DEVIATION from standard 4-step WizardStep = 1 | 2 | 3 | 4 pattern.
- *
- * Estate Planning uses a 7-step string-based workflow because the domain requires
- * dedicated steps for family overview, will documents, assets, liabilities,
- * policies/beneficiaries, assumptions, and final review — each with distinct
- * data collection needs that don't collapse into the standard 4-step model.
- *
- * The standard 4-step modules (Risk, Retirement, Tax, Medical) follow
- * WizardStep = 1 | 2 | 3 | 4 with a consistent state shape defined in their types.ts.
+ * Estate Planning runs the shared four-step FNA flow like every other analysis
+ * (see fna/wizard/fnaWizardFlow.ts). Its Step 3 is an assumption override:
+ * the adviser may change the administration-cost assumptions and the spousal
+ * bequest, with a recorded reason. The statutory values (estate duty rate,
+ * abatement, CGT inclusion rate) are not adjustable.
  */
-export type EstatePlanningWizardStep =
-  | 'family-overview'
-  | 'will-documents'
-  | 'assets-review'
-  | 'liabilities-review'
-  | 'policies-beneficiaries'
-  | 'assumptions'
-  | 'review-calculate';
+export type WizardStep = FNAWizardStepNumber;
+
+export type EstateAdjustableAssumptions = Pick<
+  EstatePlanningInputs['assumptions'],
+  | 'executorFeePercentage'
+  | 'conveyancingFeesPerProperty'
+  | 'masterFeesEstimate'
+  | 'funeralCostsEstimate'
+  | 'spousalBequest'
+>;
+
+export interface EstatePlanningAdviserAdjustments {
+  /** Only the values the adviser changed. */
+  overrides: Partial<EstateAdjustableAssumptions>;
+  /** What the system used, kept for the audit trail once overrides apply. */
+  systemValues?: Partial<EstateAdjustableAssumptions>;
+  reason: string;
+}

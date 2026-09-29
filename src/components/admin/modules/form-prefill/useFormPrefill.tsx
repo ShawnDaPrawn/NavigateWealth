@@ -7,15 +7,23 @@ import { toast } from 'sonner';
 import type { FormPrefillId, PrefillResolveResponse } from '../../../../shared/form-prefill/types';
 import { logPrefillAudit, resolveFormPrefill } from '../../../../services/form-prefill-api';
 import { PREFILL_PROFILE_HINTS } from '../../../../shared/form-prefill/form-field-registry';
+import { clientKeysApi } from '../client-keys';
 import { PrefillReviewModal } from './PrefillReviewModal';
 import { PrefillBanner } from './PrefillBanner';
 
+/**
+ * Sets `a.b.c` on `target`, copying each nested object on the way down.
+ * `target` is a shallow copy of the form's state, so writing into its nested
+ * objects in place would mutate that state (Estate's `familyInfo.*` fields).
+ */
 function setNestedValue(target: Record<string, unknown>, path: string, value: unknown): void {
   const parts = path.split('.');
   let cursor: Record<string, unknown> = target;
   for (let i = 0; i < parts.length - 1; i++) {
     const key = parts[i];
-    if (!cursor[key] || typeof cursor[key] !== 'object') cursor[key] = {};
+    const child = cursor[key];
+    cursor[key] =
+      child && typeof child === 'object' ? { ...(child as Record<string, unknown>) } : {};
     cursor = cursor[key] as Record<string, unknown>;
   }
   cursor[parts[parts.length - 1]] = value;
@@ -64,6 +72,7 @@ export function useFormPrefill({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [result, setResult] = useState<PrefillResolveResponse | null>(null);
   const [appliedCount, setAppliedCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => () => setReviewOpen(false), []);
 
@@ -95,6 +104,27 @@ export function useFormPrefill({
       toast.info('No client data matches found for this form.');
     }
   }, [runResolve]);
+
+  /**
+   * Recalculates the client's keys from their saved policies, then opens the
+   * review. This is the one way any FNA pulls fresh policy totals (existing
+   * cover, medical aid, retirement capital) — through the same review as
+   * everything else, never straight into the form.
+   */
+  const refreshFromPolicies = useCallback(async () => {
+    if (!clientId) return;
+    setRefreshing(true);
+    try {
+      await clientKeysApi.recalculateClientKeys(clientId);
+      await openReview();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to refresh client keys from policies',
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [clientId, openReview]);
 
   const startPrefill = useCallback(async () => {
     if (!clientId) return;
@@ -153,7 +183,7 @@ export function useFormPrefill({
   const PrefillUI = (
     <>
       <PrefillBanner
-        loading={loading}
+        loading={loading || refreshing}
         matchCount={result?.matches.length ?? 0}
         appliedCount={appliedCount}
         resolverVersion={result?.resolverVersion}
@@ -161,6 +191,7 @@ export function useFormPrefill({
         missingProfileHints={missingProfileHints}
         onReview={openReview}
         onReapply={startPrefill}
+        onRefreshFromPolicies={clientId ? refreshFromPolicies : undefined}
       />
       <PrefillReviewModal
         open={reviewOpen}
@@ -183,6 +214,8 @@ export function useFormPrefill({
     runResolve,
     openReview,
     startPrefill,
+    refreshFromPolicies,
+    refreshing,
     PrefillUI,
   };
 }
