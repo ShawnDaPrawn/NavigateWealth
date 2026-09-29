@@ -337,6 +337,35 @@ describe('financial figures', () => {
 // SCORING AND FNA SELECTION
 // ============================================================================
 
+describe('product holdings — Post-Retirement (Fixed Annuity)', () => {
+  it('files a fixed annuity under retirement without calling its income a premium', async () => {
+    // ret_post_fixed_4 is income PAID TO the client. Reading it as a premium
+    // would show it as an outflow and add it to "Monthly Premiums".
+    seedProfile();
+    kvStore.set(`policies:client:${CLIENT}`, [
+      {
+        id: 'fa-1',
+        categoryId: 'retirement_post_fixed',
+        providerName: 'Just',
+        data: {
+          ret_post_fixed_1: 'JA-123',
+          ret_post_fixed_2: 'Escalating',
+          ret_post_fixed_3: 1_500_000,
+          ret_post_fixed_4: 9_000,
+        },
+      },
+    ]);
+
+    const [holding] = (await getPortfolioSummary(CLIENT)).productHoldings;
+
+    expect(holding.category).toBe('retirement');
+    expect(holding.policyNumber).toBe('JA-123');
+    expect(holding.premium).toBe(0);
+    // A fixed annuity holds no capital the client owns, so it has no value.
+    expect(holding.value).toBe(0);
+  });
+});
+
 describe('financial score', () => {
   it('is zero when no pillar has been assessed', async () => {
     seedProfile();

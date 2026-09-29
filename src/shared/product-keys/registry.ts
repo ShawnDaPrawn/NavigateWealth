@@ -20,7 +20,11 @@ import type { ProductKey, ProductKeyCategory } from '../types/product-keys';
 
 import { RISK_KEYS } from './definitions/risk';
 import { MEDICAL_AID_KEYS } from './definitions/medical';
-import { RETIREMENT_PRE_KEYS, RETIREMENT_POST_KEYS } from './definitions/retirement';
+import {
+  RETIREMENT_PRE_KEYS,
+  RETIREMENT_POST_KEYS,
+  RETIREMENT_POST_FIXED_KEYS,
+} from './definitions/retirement';
 import { INVEST_VOLUNTARY_KEYS, INVEST_GUARANTEED_KEYS } from './definitions/investment';
 import {
   EMPLOYEE_BENEFITS_RISK_KEYS,
@@ -46,7 +50,11 @@ import {
 // Re-exported so consumers can keep importing the catalogue from one place.
 export { RISK_KEYS } from './definitions/risk';
 export { MEDICAL_AID_KEYS } from './definitions/medical';
-export { RETIREMENT_PRE_KEYS, RETIREMENT_POST_KEYS } from './definitions/retirement';
+export {
+  RETIREMENT_PRE_KEYS,
+  RETIREMENT_POST_KEYS,
+  RETIREMENT_POST_FIXED_KEYS,
+} from './definitions/retirement';
 export { INVEST_VOLUNTARY_KEYS, INVEST_GUARANTEED_KEYS } from './definitions/investment';
 export {
   EMPLOYEE_BENEFITS_RISK_KEYS,
@@ -75,6 +83,7 @@ export const ALL_PRODUCT_KEYS: ProductKey[] = [
   ...MEDICAL_AID_KEYS,
   ...RETIREMENT_PRE_KEYS,
   ...RETIREMENT_POST_KEYS,
+  ...RETIREMENT_POST_FIXED_KEYS,
   ...INVEST_VOLUNTARY_KEYS,
   ...INVEST_GUARANTEED_KEYS,
   ...EMPLOYEE_BENEFITS_KEYS,
@@ -103,6 +112,8 @@ export function getKeysByCategory(category: ProductKeyCategory): ProductKey[] {
       return RETIREMENT_PRE_KEYS;
     case 'retirement_post':
       return RETIREMENT_POST_KEYS;
+    case 'retirement_post_fixed':
+      return RETIREMENT_POST_FIXED_KEYS;
     case 'invest_voluntary':
       return INVEST_VOLUNTARY_KEYS;
     case 'invest_guaranteed':
@@ -161,8 +172,13 @@ export const KEY_CATEGORIES = [
   },
   {
     id: 'retirement_post' as ProductKeyCategory,
-    name: 'Post-Retirement',
-    description: 'Retirement income (Living Annuity, etc.)',
+    name: 'Post-Retirement (Living Annuity)',
+    description: 'Retirement income drawn from invested capital',
+  },
+  {
+    id: 'retirement_post_fixed' as ProductKeyCategory,
+    name: 'Post-Retirement (Fixed Annuity)',
+    description: 'Guaranteed life annuity paying a set income',
   },
   {
     id: 'invest_voluntary' as ProductKeyCategory,

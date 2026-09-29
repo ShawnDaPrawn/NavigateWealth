@@ -39,6 +39,8 @@ export interface ManualAssetDuplicateSource {
   value: number;
 }
 
+// No 'retirement_post_fixed': a fixed (guaranteed life) annuity pays an income
+// but holds no capital the client owns, so it is not an asset.
 const RETIREMENT_CATEGORY_IDS = new Set([
   'retirement_planning',
   'retirement_pre',

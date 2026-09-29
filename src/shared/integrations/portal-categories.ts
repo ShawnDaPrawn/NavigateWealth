@@ -27,6 +27,7 @@ export const PORTAL_AUTOMATION_CATEGORIES = [
   'medical_aid',
   'retirement_pre',
   'retirement_post',
+  'retirement_post_fixed',
   'investments_voluntary',
   'investments_guaranteed',
   'employee_benefits',

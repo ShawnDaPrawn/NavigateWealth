@@ -214,13 +214,15 @@ function OverviewSection({
 
       // 2. Fetch Sub-Schemas for Composite Categories in parallel
       if (section.categoryId === 'retirement_planning') {
-        const [preFields, postFields] = await Promise.all([
+        const [preFields, postFields, fixedFields] = await Promise.all([
           fetchSchemaForCategory('retirement_pre'),
           fetchSchemaForCategory('retirement_post'),
+          fetchSchemaForCategory('retirement_post_fixed'),
         ]);
         setSubCategorySchemas({
           retirement_pre: preFields,
           retirement_post: postFields,
+          retirement_post_fixed: fixedFields,
         });
       } else if (section.categoryId === 'investments') {
         const [volFields, guaFields] = await Promise.all([
@@ -599,19 +601,24 @@ function OverviewSection({
         (p) => p.categoryId === 'retirement_pre' || p.categoryId === 'retirement_planning',
       );
       const postPolicies = policies.filter((p) => p.categoryId === 'retirement_post');
+      const fixedPolicies = policies.filter((p) => p.categoryId === 'retirement_post_fixed');
 
       const preSchema = subCategorySchemas.retirement_pre || tableStructure;
       const postSchema = subCategorySchemas.retirement_post || [];
+      const fixedSchema = subCategorySchemas.retirement_post_fixed || [];
 
       return (
         <div>
           {renderTable(
-            prePolicies.length > 0 && postPolicies.length > 0 ? 'Pre-Retirement' : '',
+            prePolicies.length > 0 && postPolicies.length + fixedPolicies.length > 0
+              ? 'Pre-Retirement'
+              : '',
             prePolicies,
             preSchema,
             true,
           )}
-          {renderTable('Post-Retirement', postPolicies, postSchema, false)}
+          {renderTable('Post-Retirement (Living Annuity)', postPolicies, postSchema, false)}
+          {renderTable('Post-Retirement (Fixed Annuity)', fixedPolicies, fixedSchema, false)}
         </div>
       );
     }

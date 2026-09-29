@@ -1,7 +1,7 @@
 /**
  * Retirement Planning Dashboard Page (Client Portal)
  *
- * Splits policies into Pre-Retirement and Post-Retirement tables.
+ * Splits policies into Pre-Retirement, Living Annuity and Fixed Annuity tables.
  * Derives insights from portfolio FNA data.
  *
  * Guidelines refs: §7 (presentation), §7.1 (derived display state)
@@ -31,9 +31,15 @@ const SUB_CATEGORIES: SubCategoryConfig[] = [
   },
   {
     categoryId: 'retirement_post',
-    title: 'Post-Retirement Products',
-    subtitle: 'Living annuities and life annuities providing retirement income',
-    emptyMessage: 'No post-retirement products on record.',
+    title: 'Post-Retirement (Living Annuity)',
+    subtitle: 'Living annuities paying an income drawn from invested capital',
+    emptyMessage: 'No living annuities on record.',
+  },
+  {
+    categoryId: 'retirement_post_fixed',
+    title: 'Post-Retirement (Fixed Annuity)',
+    subtitle: 'Guaranteed life annuities paying a set income for life',
+    emptyMessage: 'No fixed annuities on record.',
   },
 ];
 

@@ -93,7 +93,8 @@ app.get('/policies', requireAuth, async (c) => {
           (p: KvPolicy) =>
             p.categoryId === 'retirement_planning' ||
             p.categoryId === 'retirement_pre' ||
-            p.categoryId === 'retirement_post',
+            p.categoryId === 'retirement_post' ||
+            p.categoryId === 'retirement_post_fixed',
         );
       } else if (categoryId === 'investments') {
         policies = policies.filter(
@@ -494,7 +495,8 @@ app.get('/policy-renewals', requireAdmin, async (c) => {
       medical_aid: 'Medical Aid',
       retirement_planning: 'Retirement Planning',
       retirement_pre: 'Pre-Retirement',
-      retirement_post: 'Post-Retirement',
+      retirement_post: 'Post-Retirement (Living Annuity)',
+      retirement_post_fixed: 'Post-Retirement (Fixed Annuity)',
       investments: 'Investments',
       investments_voluntary: 'Voluntary Investments',
       investments_guaranteed: 'Guaranteed Investments',

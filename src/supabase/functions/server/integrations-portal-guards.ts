@@ -48,7 +48,7 @@ export function categoryMatches(requestedCategoryId: string, policyCategoryId: s
   if (requestedCategoryId === policyCategoryId) return true;
 
   const groupedCategories: Record<string, string[]> = {
-    retirement_planning: ['retirement_planning', 'retirement_pre', 'retirement_post'],
+    retirement_planning: ['retirement_planning', 'retirement_pre', 'retirement_post', 'retirement_post_fixed'],
     investments: ['investments', 'investments_voluntary', 'investments_guaranteed'],
     employee_benefits: ['employee_benefits', 'employee_benefits_risk', 'employee_benefits_retirement'],
   };
@@ -60,7 +60,8 @@ const PORTAL_AUTOMATION_CATEGORY_LABELS: Record<string, string> = {
   risk_planning: 'Risk Planning',
   medical_aid: 'Medical Aid',
   retirement_pre: 'Pre-Retirement',
-  retirement_post: 'Post-Retirement',
+  retirement_post: 'Post-Retirement (Living Annuity)',
+  retirement_post_fixed: 'Post-Retirement (Fixed Annuity)',
   investments_voluntary: 'Voluntary Investments',
   investments_guaranteed: 'Guaranteed Investments',
   employee_benefits: 'Employee Benefits',
@@ -78,7 +79,7 @@ export function getPortalAutomationCategoryError(categoryId: string): string | n
   if (isPortalAutomationCategory(categoryId)) return null;
 
   if (categoryId === 'retirement_planning') {
-    return 'Retirement Planning is a parent category. Portal automation can only run for Pre-Retirement or Post-Retirement.';
+    return 'Retirement Planning is a parent category. Portal automation can only run for Pre-Retirement, Post-Retirement (Living Annuity) or Post-Retirement (Fixed Annuity).';
   }
 
   if (categoryId === 'investments') {
@@ -131,12 +132,12 @@ export function portalJobItemsHaveRetirementAnnuityMarker(items?: PortalJobPolic
   );
 }
 
-const RETIREMENT_PRODUCT_CATEGORY_IDS = new Set(['retirement_pre', 'retirement_post']);
+const RETIREMENT_PRODUCT_CATEGORY_IDS = new Set(['retirement_pre', 'retirement_post', 'retirement_post_fixed']);
 
 /**
  * A Retirement Annuity row found outside the retirement products is filed
  * under Pre-Retirement, where an RA belongs. A row already carrying
- * Pre-Retirement or Post-Retirement keeps it: stage-items rows are stamped
+ * Pre-Retirement or either Post-Retirement product keeps it: stage-items rows are stamped
  * with their queued policy's category, and buildSyncRun rejects a row whose
  * stamp does not match the run it is grouped into.
  *

@@ -201,6 +201,7 @@ export function PolicyFormDialog({
         if (
           activeCategoryId !== 'retirement_pre' &&
           activeCategoryId !== 'retirement_post' &&
+          activeCategoryId !== 'retirement_post_fixed' &&
           activeCategoryId !== 'investments_voluntary' &&
           activeCategoryId !== 'investments_guaranteed' &&
           activeCategoryId !== 'employee_benefits_risk' &&
@@ -448,7 +449,13 @@ export function PolicyFormDialog({
           <div className="contents">
             {/* Step 0: Sub-category Selection */}
             {step === 'subcategory' && (
-              <div className="grid grid-cols-2 gap-4">
+              <div
+                className={
+                  initialCategoryId === 'retirement_planning'
+                    ? 'grid grid-cols-1 sm:grid-cols-3 gap-4'
+                    : 'grid grid-cols-2 gap-4'
+                }
+              >
                 {/* Retirement Subcategories */}
                 {initialCategoryId === 'retirement_planning' && (
                   <div className="contents">
@@ -472,9 +479,26 @@ export function PolicyFormDialog({
                       <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4 group-hover:bg-green-200">
                         <Coins className="w-8 h-8 text-green-600" />
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900">Post-Retirement</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 text-center">
+                        Post-Retirement (Living Annuity)
+                      </h3>
                       <p className="text-sm text-gray-500 text-center mt-2">
-                        Income phase (Living Annuity, Life Annuity)
+                        Income drawn from invested capital
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => handleSubcategorySelect('retirement_post_fixed')}
+                      className="flex flex-col items-center justify-center p-6 border-2 border-gray-100 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all group"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4 group-hover:bg-teal-200">
+                        <Lock className="w-8 h-8 text-teal-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 text-center">
+                        Post-Retirement (Fixed Annuity)
+                      </h3>
+                      <p className="text-sm text-gray-500 text-center mt-2">
+                        Guaranteed income for life
                       </p>
                     </button>
                   </div>
