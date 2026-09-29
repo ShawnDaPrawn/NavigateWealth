@@ -301,11 +301,11 @@ export function LegalDocumentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50">
+      <div className="min-h-screen bg-white">
         <div className="mx-auto max-w-screen-2xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center rounded-3xl border border-stone-200 bg-white py-24 shadow-sm">
-            <Loader2 className="mr-3 h-6 w-6 animate-spin text-sky-700" />
-            <span className="text-sm font-medium text-stone-700">Loading legal document…</span>
+          <div className="flex items-center justify-center rounded-3xl border border-neutral-200 bg-white py-24 shadow-sm">
+            <Loader2 className="mr-3 h-6 w-6 animate-spin text-neutral-900" />
+            <span className="text-sm font-medium text-neutral-700">Loading legal document…</span>
           </div>
         </div>
       </div>
@@ -314,16 +314,18 @@ export function LegalDocumentPage() {
 
   if (!legalDocument || error) {
     return (
-      <div className="min-h-screen bg-stone-50">
+      <div className="min-h-screen bg-white">
         <SEO
           title={seoTitle}
           description={seoDescription}
           canonicalUrl={siteAbsoluteUrl(`/legal/${slug || ''}`)}
         />
         <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
-          <Card className="border-stone-200 bg-white shadow-sm">
+          <Card className="border-neutral-200 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="text-2xl text-stone-900">Legal document unavailable</CardTitle>
+              <CardTitle className="text-2xl text-neutral-900">
+                Legal document unavailable
+              </CardTitle>
               <CardDescription>
                 {error || 'This document could not be loaded right now.'}
               </CardDescription>
@@ -343,7 +345,7 @@ export function LegalDocumentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f5f5f4_0%,#fafaf9_18%,#ffffff_100%)]">
+    <div className="min-h-screen bg-white">
       <SEO
         title={seoTitle}
         description={seoDescription}
@@ -357,7 +359,7 @@ export function LegalDocumentPage() {
 
       <div className="mx-auto max-w-screen-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center gap-3">
-          <Button asChild variant="outline" className="border-stone-300 bg-white/90">
+          <Button asChild variant="outline" className="border-neutral-300 bg-white">
             <Link
               to={`/legal?section=${legalDocument.section || registryEntry?.section || 'legal-notices'}`}
             >
@@ -365,31 +367,36 @@ export function LegalDocumentPage() {
               Back to legal hub
             </Link>
           </Button>
-          <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">{sectionLabel}</Badge>
+          <Badge className="border-neutral-300 bg-white text-neutral-900 hover:bg-white">
+            {sectionLabel}
+          </Badge>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
-            <Card className="overflow-hidden border-stone-200 bg-white shadow-sm">
+            <Card className="overflow-hidden border-neutral-200 bg-white shadow-sm">
               <CardContent className="p-0">
-                <div className="border-b border-stone-200 bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,#ffffff_42%,#f5f5f4_100%)] px-6 py-8 sm:px-8 lg:px-10">
+                <div className="border-b border-neutral-200 bg-white px-6 py-8 sm:px-8 lg:px-10">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="max-w-4xl">
-                      <div className="mb-4 flex items-center gap-2 text-sm font-medium text-sky-800">
+                      <div className="mb-4 flex items-center gap-2 text-sm font-medium text-neutral-900">
                         <ShieldCheck className="h-4 w-4" />
                         Navigate Wealth legal publication
                       </div>
-                      <h1 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                      <h1 className="text-3xl font-semibold tracking-tight text-neutral-950 sm:text-4xl">
                         {legalDocument.title}
                       </h1>
                       {legalDocument.description && (
-                        <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600">
+                        <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
                           {legalDocument.description}
                         </p>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button onClick={openPdfPreview} className="bg-sky-700 hover:bg-sky-800">
+                      <Button
+                        onClick={openPdfPreview}
+                        className="bg-neutral-950 text-white hover:bg-neutral-800"
+                      >
                         <Download className="mr-2 h-4 w-4" />
                         Download PDF
                       </Button>
@@ -397,32 +404,32 @@ export function LegalDocumentPage() {
                   </div>
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-stone-500">
+                    <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-neutral-500">
                         Effective date
                       </div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">
+                      <div className="mt-1 text-sm font-medium text-neutral-900">
                         {formatLongDate(legalDocument.effectiveDate)}
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-stone-500">
+                    <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-neutral-500">
                         Last updated
                       </div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">
+                      <div className="mt-1 text-sm font-medium text-neutral-900">
                         {formatLongDate(legalDocument.updatedAt)}
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-stone-500">
+                    <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-neutral-500">
                         Reader mode
                       </div>
-                      <div className="mt-1 text-sm font-medium text-stone-900">
+                      <div className="mt-1 text-sm font-medium text-neutral-900">
                         {legalDocument.renderMode === 'versioned_document'
                           ? 'Versioned legal document'
                           : 'Legacy legal document'}
                       </div>
-                      <div className="mt-1 text-xs font-medium uppercase tracking-wide text-stone-500">
+                      <div className="mt-1 text-xs font-medium uppercase tracking-wide text-neutral-500">
                         Version {legalDocument.version}
                       </div>
                     </div>
@@ -440,10 +447,10 @@ export function LegalDocumentPage() {
           </div>
 
           <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            <Card className="border-stone-200 bg-white/95 shadow-sm backdrop-blur">
+            <Card className="border-neutral-200 bg-white/95 shadow-sm backdrop-blur">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base text-stone-900">
-                  <FileText className="h-4 w-4 text-sky-700" />
+                <CardTitle className="flex items-center gap-2 text-base text-neutral-900">
+                  <FileText className="h-4 w-4 text-neutral-900" />
                   On this page
                 </CardTitle>
                 <CardDescription>Jump to the sections most relevant to you.</CardDescription>
@@ -455,38 +462,38 @@ export function LegalDocumentPage() {
                       key={entry.id}
                       href={`#${entry.id}`}
                       onClick={(event) => handleTocNavigate(event, entry.id)}
-                      className={`block rounded-lg px-3 py-2 text-sm transition hover:bg-stone-100 hover:text-stone-950 ${
-                        entry.level > 2 ? 'pl-6 text-stone-500' : 'text-stone-700'
+                      className={`block rounded-lg px-3 py-2 text-sm transition hover:bg-neutral-100 hover:text-neutral-950 ${
+                        entry.level > 2 ? 'pl-6 text-neutral-500' : 'text-neutral-700'
                       }`}
                     >
                       {entry.title}
                     </a>
                   ))
                 ) : (
-                  <p className="text-sm text-stone-500">
+                  <p className="text-sm text-neutral-500">
                     This document does not have indexed sections yet.
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-stone-200 bg-white/95 shadow-sm">
-              <CardContent className="p-4 text-sm text-stone-600">
-                <div className="flex items-center gap-2 font-medium text-stone-900">
-                  <CalendarDays className="h-4 w-4 text-sky-700" />
+            <Card className="border-neutral-200 bg-white/95 shadow-sm">
+              <CardContent className="p-4 text-sm text-neutral-600">
+                <div className="flex items-center gap-2 font-medium text-neutral-900">
+                  <CalendarDays className="h-4 w-4 text-neutral-900" />
                   Reading details
                 </div>
                 <Separator className="my-3" />
                 <div>
-                  Section: <span className="font-medium text-stone-900">{sectionLabel}</span>
+                  Section: <span className="font-medium text-neutral-900">{sectionLabel}</span>
                 </div>
                 <div className="mt-2">
                   Version:{' '}
-                  <span className="font-medium text-stone-900">{legalDocument.version}</span>
+                  <span className="font-medium text-neutral-900">{legalDocument.version}</span>
                 </div>
                 <div className="mt-2">
                   Effective:{' '}
-                  <span className="font-medium text-stone-900">
+                  <span className="font-medium text-neutral-900">
                     {formatLongDate(legalDocument.effectiveDate)}
                   </span>
                 </div>
