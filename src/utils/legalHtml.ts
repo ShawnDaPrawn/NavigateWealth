@@ -86,6 +86,13 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_a]:underline-offset-2',
   '[&_a:hover]:text-neutral-600',
   '[&_hr]:border-neutral-200',
+  // Pasted Word/Docs content keeps inline `font-family` and `color` (see
+  // cleanInlineStyle), and an inline declaration beats any class. `!important`
+  // is what out-ranks it, so everything inside the text inherits the Caslon
+  // face and the neutral colour instead of the source document's.
+  '[&_*]:[font-family:inherit]!',
+  '[&_[style*=color]]:text-inherit!',
+  '[&_font[color]]:text-inherit!',
   'prose-table:block',
   'prose-table:w-full',
   'prose-th:bg-neutral-100',
