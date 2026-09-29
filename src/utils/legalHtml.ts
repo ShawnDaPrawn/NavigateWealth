@@ -1,11 +1,4 @@
 import DOMPurify from 'dompurify';
-// The legal text is set in Libre Caslon Text (see LEGAL_DOCUMENT_CONTENT_CLASS).
-// Self-hosted, so reading a legal document makes no third-party font request.
-// Every surface that applies the class imports this module, so the faces load
-// wherever the class is used and nowhere else.
-import '@fontsource/libre-caslon-text/400.css';
-import '@fontsource/libre-caslon-text/400-italic.css';
-import '@fontsource/libre-caslon-text/700.css';
 
 const LEGAL_HTML_SANITIZE_CONFIG = {
   USE_PROFILES: { html: true },
@@ -33,7 +26,6 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   'prose-lg',
   'max-w-none',
   'text-neutral-900',
-  "[font-family:'Libre_Caslon_Text',Georgia,'Times_New_Roman',serif]",
   'prose-headings:font-semibold',
   'prose-headings:tracking-tight',
   'prose-headings:text-neutral-950',
@@ -64,6 +56,19 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_h3]:mb-3',
   '[&_h3]:scroll-mt-44',
   '[&_h2+h3]:mt-4',
+  // Phones: the base heading sizes (42px and 28px at the app's 14px root, from
+  // globals.css) are sized for a desktop column and swamp a 390px screen.
+  'max-sm:[&_h1]:text-[22px]',
+  'max-sm:[&_h1]:leading-snug',
+  'max-sm:[&_h1]:font-semibold',
+  'max-sm:[&_h2]:mt-8',
+  'max-sm:[&_p+h2]:mt-8',
+  'max-sm:[&_p+h3]:mt-6',
+  'max-sm:[&_h2]:text-[19px]',
+  'max-sm:[&_h2]:leading-snug',
+  'max-sm:[&_h2]:font-semibold',
+  'max-sm:[&_h3]:text-[17px]',
+  'max-sm:[&_hr]:my-6',
   '[&_h3+p]:mt-3',
   'prose-strong:font-semibold',
   'prose-strong:text-neutral-950',
@@ -88,8 +93,8 @@ export const LEGAL_DOCUMENT_CONTENT_CLASS = [
   '[&_hr]:border-neutral-200',
   // Pasted Word/Docs content keeps inline `font-family` and `color` (see
   // cleanInlineStyle), and an inline declaration beats any class. `!important`
-  // is what out-ranks it, so everything inside the text inherits the Caslon
-  // face and the neutral colour instead of the source document's.
+  // is what out-ranks it, so everything inside the text inherits the app's
+  // font and the neutral colour instead of the source document's.
   '[&_*]:[font-family:inherit]!',
   '[&_[style*=color]]:text-inherit!',
   '[&_font[color]]:text-inherit!',
