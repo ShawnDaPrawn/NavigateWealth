@@ -141,6 +141,17 @@ stated prerequisite has already caused a production outage once.
   the KV store, untouched. The client and personnel drawers' Compliance tabs,
   Honeycomb and the goAML digest are separate and unaffected. Do not restore
   the old module or its API in passing.
+- **Policy details have two write paths, on purpose.** The native path, the
+  portal worker and the Review tab's template upload, stages a run that an
+  adviser publishes. The portfolio table, the Integrations **Portfolio** tab's
+  upload and the `/integrations/portfolio-table` endpoint an external agent
+  calls, applies directly after its own preview or `dryRun`. Both publish
+  through `publishSyncRun`, so locked fields hold, provenance is recorded in
+  `integrationSyncHistory` (source `portfolio_table` for the second path) and
+  client totals are recalculated the same way. Do not route agent writes
+  through the Review tab, or let either path write around `publishSyncRun`, in
+  passing: whether agent writes should wait for review is an owner decision,
+  listed in [`ROADMAP.md`](ROADMAP.md) §9a.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -164,7 +175,7 @@ but cannot complete them.
 | Social automation — Routines            | Open until the two weekly Routines (Sat 04:00 UTC generate, Sun 14:00 UTC schedule; connectors Buffer + Supabase) exist on the Claude and/or ChatGPT side. The playbooks they read are seeded by the migration.                                                                                                                                                                                                                                                                                                                                                                                        | `runbooks/social-automation.md`                                    |
 | Newsletter intake — Routine             | Open until the monthly routine exists. Owner's choice: a **ChatGPT** scheduled task on the HTTPS path (`POST /newsletter-intake/submit`, header `x-nw-newsletter-intake-token`, token in Vault as `navigatewealth_newsletter_intake_token`). Migrations `20260916211847` and `20260916212029` are applied; until the routine runs, admins upload the PDF by hand, which works today.                                                                                                                                                                                                                   | `runbooks/newsletter-intake.md`                                    |
 | Newsletter website archive              | Live. Published newsletters appear at Resources → Newsletters and at `/resources/newsletter/<slug>`. The public bucket `make-91ed8379-newsletters-public` is created lazily on the first publish — no operator step. Two public read routes were added, so `quality/baselines/route-auth-baseline` rose 129 → 131.                                                                                                                                                                                                                                                                                     | `runbooks/newsletter-intake.md`                                    |
-| Portfolio table — external agent        | Live. The Integrations **Portfolio** tab shows the provider/product policy book, downloads it, and applies an amended upload (matched by client name + policy number, previewed first). `/integrations/portfolio-table` serves the same table to an outside agent; its token is in Vault as `navigatewealth_portfolio_table_token` (migration `portfolio_table_token_vault`, applied). Open until the owner pastes that token into the scheduled bot (Grok/ChatGPT) and its first dry run answers 200. The native Review path is unchanged; this is the second, direct way policy details get updated. | `runbooks/portfolio-table.md`                                      |
+| Portfolio table — external agent        | Live and deployed. The Integrations **Portfolio** tab shows each provider/product policy book, downloads it and applies an amended upload (matched by client name + policy number, previewed first). `/integrations/portfolio-table` serves the same table to an outside agent; its token is in Vault as `navigatewealth_portfolio_table_token` (migration `portfolio_table_token_vault`, applied). Open until the owner pastes that token into the scheduled bot (Grok/ChatGPT) and its first dry run answers 200. Run the bot every few hours, not every few minutes: the known debt below says why. | `runbooks/portfolio-table.md`                                      |
 
 ## Open security follow-ups
 
@@ -449,6 +460,14 @@ is work not yet done, not budget.
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.
+- **A provider/product policy book is built from a whole-namespace read.**
+  `listPoliciesForProviderCategory` reads every `policies:client:*` row and
+  filters in the isolate. The Review path's policy index has always done this;
+  the portfolio table now does it on every call, including the calls a
+  scheduled agent makes unattended. The cost is negligible at today's book
+  size and grows with every client's policies, so keep an agent's cadence in
+  hours rather than minutes. It goes away with the `policies` move to Postgres
+  ([`ROADMAP.md`](ROADMAP.md) §6 and §9a).
 - **Tracked asset weight, and the clone size behind it.** `src/assets` holds
   Figma exports at camera resolution. The build never serves them —
   `figmaAssetResolver` prefers a generated `.webp`, then a committed

@@ -308,9 +308,24 @@ policies yet.
   headers are field names (or ids, or the configured column names) works; the
   `Client` column plus the policy-number column are required unless the hidden
   ids are present.
-- **PDF** on a row opens the policy print in a new tab via a signed link.
+- **Policy Print** on a row is a button carrying the print's upload date, so a
+  stale print shows at a glance; it opens the PDF in a new tab via a signed
+  link.
+- **Search** finds a row by client name (case and accents ignored) or policy
+  number (spaces and dashes ignored). **Every header sorts**; empty cells sort
+  last either way. Sorting **Last Updated** ascending puts the records an
+  agent has not touched lately at the top.
+- **Client** stays pinned on the left while the product fields scroll. On a
+  wide enough panel, **Last Updated** and **Policy Print** stay pinned on the
+  right too, so the two columns checked first never scroll out of view.
+- Dates read `05 Sep 2026`, whatever the browser's locale, and money uses the
+  app's canonical format (`R551,894.41`). A date field stored as `YYYY-MM-DD`
+  is shown in that same form, read as a calendar date so it never shifts a day
+  across time zones; one stored in another spelling (a portal may store
+  `02 Jul 2018`) is shown as stored.
 - **Endpoint for external agents** at the bottom of the tab shows the exact
-  URL for the selected provider/product and the header name.
+  URL for the selected provider/product, with a Copy button, and the header
+  name.
 
 ## Failure modes
 
