@@ -22,6 +22,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { PolicyDocumentViewer, type ViewerDocumentMeta } from './PolicyDocumentViewer';
+import { normalizePolicyDataForStructure } from './policyFormModel';
 
 /** A policy record returned from the integrations API */
 export interface PolicyRecord {
@@ -148,6 +149,22 @@ export function PolicyTable({
     setViewerOpen(true);
   };
 
+  // Child schemas (ret_pre_*, inv_vol_*) do not contain the retired parent
+  // field ids (ret_3, inv_6, ...). Resolve those onto the columns being shown
+  // so a legacy policy does not render as a blank row.
+  const displayDataByPolicyId = new Map(
+    policies.map((policy) => [
+      policy.id,
+      normalizePolicyDataForStructure(
+        policy.data || {},
+        structure.map((field) => ({
+          id: field.id,
+          keyId: typeof field.keyId === 'string' ? field.keyId : undefined,
+        })),
+      ),
+    ]),
+  );
+
   // Calculate totals for currency fields
   const calculateFieldTotals = () => {
     const totals: Record<string, number> = {};
@@ -156,7 +173,7 @@ export function PolicyTable({
       if (field.type === 'currency') {
         let sum = 0;
         policies.forEach((policy) => {
-          const value = policy.data?.[field.id];
+          const value = displayDataByPolicyId.get(policy.id)?.[field.id];
           if (value) {
             sum += Number(value);
           }
@@ -291,7 +308,10 @@ export function PolicyTable({
                       </div>
                     </TableCell>
                     {structure.map((field) => {
-                      const cellValue = formatFieldValue(field, policy.data?.[field.id]);
+                      const cellValue = formatFieldValue(
+                        field,
+                        displayDataByPolicyId.get(policy.id)?.[field.id],
+                      );
 
                       // Check for Goal linkage enhancements
                       let goalContent = null;

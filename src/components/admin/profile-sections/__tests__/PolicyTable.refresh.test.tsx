@@ -225,3 +225,31 @@ describe('PolicyTable — refresh from provider', () => {
     expect(onRefreshFromProvider.mock.calls[0][0].id).toBe('pol-2');
   });
 });
+
+describe('PolicyTable — retired parent field ids', () => {
+  it('shows a legacy retirement fund value in the pre-retirement column', () => {
+    render(
+      <PolicyTable
+        {...makeProps({
+          structure: [
+            {
+              id: 'ret_pre_3',
+              name: 'Current Value',
+              type: 'currency',
+              keyId: 'retirement_fund_value',
+            },
+          ],
+          policies: [
+            {
+              ...policy,
+              categoryId: 'retirement_planning',
+              data: { ret_3: 250000 },
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText(`R${Number(250000).toLocaleString()}`)).toBeDefined();
+  });
+});

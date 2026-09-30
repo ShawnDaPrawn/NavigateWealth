@@ -15,6 +15,28 @@ import type { SchemaField, KvPolicy, KvSchema, CustomKey } from './integrations-
 
 const log = createModuleLogger('integrations-derive');
 
+/**
+ * Field ids of the retired "Retirement Planning" and "Investments" parent
+ * schemas, mapped to the product keys they always carried. Those schemas were
+ * removed from DEFAULT_SCHEMAS and from KV (`config:schema:retirement_planning`
+ * / `config:schema:investments`), but policies still store `ret_3`, `ret_6`,
+ * `inv_6`, and the same ids were written onto child-category policies by older
+ * portal runs. Keep this list aligned with RETIRED_PARENT_FIELD_KEY_IDS in
+ * `src/components/admin/profile-sections/policyFormModel.ts`.
+ */
+const LEGACY_PARENT_FIELD_KEY_IDS: Record<string, string> = {
+  ret_2: 'retirement_fund_type',
+  ret_3: 'retirement_fund_value',
+  ret_6: 'retirement_monthly_contribution',
+  inv_2: 'invest_product_type',
+  inv_3: 'invest_current_value',
+  inv_4: 'invest_maturity_value',
+  inv_5: 'invest_maturity_date',
+  inv_6: 'invest_monthly_contribution',
+  inv_8: 'invest_assumptions_growth',
+  inv_9: 'invest_assumptions_escalation',
+};
+
 // Helper function to recalculate client totals
 export async function recalculateClientTotals(clientId: string) {
   try {
@@ -99,21 +121,30 @@ export async function recalculateClientTotals(clientId: string) {
         }
 
         const schemaRecord = schema as KvSchema | null;
-        if (!schemaRecord?.fields) continue;
+        const fields = schemaRecord?.fields ?? [];
+        // A key already taken from the live schema must not be added again from
+        // a retired field id. Opening the policy form copies ret_3 onto
+        // ret_pre_3 and leaves the old id in place; counting both would double
+        // the fund value.
+        const contributedKeyIds = new Set<string>();
 
-        const fields = schemaRecord.fields;
+        const addContribution = (keyId: string | undefined, value: unknown) => {
+          if (!keyId || contributedKeyIds.has(keyId) || !individualKeys.includes(keyId)) return;
+          const numValue = Number(value) || 0;
+          if (numValue > 0) {
+            total += numValue;
+            contributedKeyIds.add(keyId);
+          }
+        };
 
         for (const [fieldId, value] of Object.entries(policy.data)) {
           const fieldDef = fields.find((f: SchemaField) => f.id === fieldId);
+          if (fieldDef?.keyId) addContribution(fieldDef.keyId, value);
+        }
 
-          if (!fieldDef || !fieldDef.keyId) continue;
-
-          if (individualKeys.includes(fieldDef.keyId)) {
-            const numValue = Number(value) || 0;
-            if (numValue > 0) {
-              total += numValue;
-            }
-          }
+        for (const [fieldId, value] of Object.entries(policy.data)) {
+          if (fields.some((f: SchemaField) => f.id === fieldId)) continue;
+          addContribution(LEGACY_PARENT_FIELD_KEY_IDS[fieldId], value);
         }
       }
 

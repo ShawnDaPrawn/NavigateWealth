@@ -61,6 +61,13 @@ const RETIRED_PARENT_FIELD_KEY_IDS: Array<[string, string]> = [
   ['inv_9', 'invest_assumptions_escalation'],
 ];
 
+// Policy-number fields have no product key, so the keyId map above cannot
+// carry them. Pair each retired parent id with the child field that replaced it.
+const RETIRED_PARENT_FIELD_ID_ALIASES: Array<[string, string]> = [
+  ['ret_1', 'ret_pre_1'],
+  ['inv_1', 'inv_vol_1'],
+];
+
 export const DEFAULT_FIELD_KEY_IDS = new Map<string, string>(RETIRED_PARENT_FIELD_KEY_IDS);
 for (const schema of Object.values(DEFAULT_SCHEMAS)) {
   for (const field of schema.fields) {
@@ -79,10 +86,18 @@ export function hasPolicyValue(value: unknown): boolean {
 
 export function normalizePolicyDataForStructure(
   data: Record<string, unknown>,
-  structure: ProductField[],
+  structure: ReadonlyArray<{ id: string; keyId?: string }>,
   fallbackData: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const normalized = { ...fallbackData, ...data };
+  const structureIds = new Set(structure.map((field) => field.id));
+
+  for (const [sourceFieldId, targetFieldId] of RETIRED_PARENT_FIELD_ID_ALIASES) {
+    if (!structureIds.has(targetFieldId) || hasPolicyValue(normalized[targetFieldId])) continue;
+    if (hasPolicyValue(normalized[sourceFieldId])) {
+      normalized[targetFieldId] = normalized[sourceFieldId];
+    }
+  }
 
   for (const field of structure) {
     if (!field.keyId || hasPolicyValue(normalized[field.id])) continue;
