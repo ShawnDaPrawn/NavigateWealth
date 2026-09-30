@@ -1,6 +1,6 @@
 import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Bot, ClipboardCheck, KeyRound, Settings2 } from 'lucide-react';
+import { Bot, ClipboardCheck, KeyRound, Settings2, TableProperties } from 'lucide-react';
 import {
   IntegrationProvider,
   IntegrationStats,
@@ -73,6 +73,13 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
               {pendingReviewCount}
             </span>
           )}
+        </TabsTrigger>
+        <TabsTrigger
+          value="portfolio"
+          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
+        >
+          <TableProperties className="w-3.5 h-3.5" />
+          Portfolio
         </TabsTrigger>
         <TabsTrigger
           value="setup"

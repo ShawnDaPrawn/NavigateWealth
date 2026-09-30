@@ -238,6 +238,9 @@ export const integrationsKeys = {
   portalDiscoveryReport: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-discovery-report', jobId] as const,
   syncRun: (runId: string | null) => [...integrationsKeys.all, 'sync-run', runId] as const,
+  /** The provider/product book the Portfolio tab shows and a bot reads. */
+  portfolioTable: (providerId: string | null, categoryId: string | null) =>
+    [...integrationsKeys.all, 'portfolio-table', providerId, categoryId] as const,
 } as const;
 
 // ============================================================================

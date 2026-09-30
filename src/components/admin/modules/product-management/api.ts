@@ -1,7 +1,9 @@
 import { api } from '../../../../utils/api/client';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
-import { createClient } from '../../../../utils/supabase/client';
 import { logger } from '../../../../utils/logger';
+import type {
+  PortfolioApplyReport,
+  PortfolioTable,
+} from '../../../../shared/integrations/portfolio-table';
 import {
   Provider,
   ProviderDTO,
@@ -86,18 +88,29 @@ const buildIntegrationStats = (history: IntegrationHistoryItem[]): IntegrationSt
   };
 };
 
-async function getSupabaseAuthToken(): Promise<string> {
-  let token = publicAnonKey;
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    token = session?.access_token || publicAnonKey;
-  } catch (_error) {
-    logger.warn('Failed to retrieve session, using anon key');
-  }
-  return token;
+/**
+ * Fetch a workbook through the shared client and hand it to the browser as a
+ * download.
+ *
+ * The client returns the raw `Response` for a non-JSON body, so this inherits
+ * token refresh and a typed `APIError` on a JSON error reply — which the
+ * template download used to lose by calling `fetch` itself with the anon key
+ * as its fallback bearer.
+ */
+async function downloadWorkbook(endpoint: string, fallbackFileName: string): Promise<void> {
+  const res = await api.get<Response>(endpoint);
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="([^"]+)"/);
+  const fileName = match?.[1] || fallbackFileName;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export const productManagementApi = {
@@ -372,33 +385,55 @@ export const productManagementApi = {
   },
 
   downloadIntegrationTemplate: async (providerId: string, categoryId: string): Promise<void> => {
-    const token = await getSupabaseAuthToken();
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/integrations/template?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
+    await downloadWorkbook(
+      `integrations/template?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
+      `integration-template-${providerId}-${categoryId}.xlsx`,
     );
+  },
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Failed to download integration template');
-    }
+  // -- Portfolio table --
+  // The provider/product book: the same table an outside agent reads and
+  // writes through /integrations/portfolio-table.
 
-    const blob = await res.blob();
-    const disposition = res.headers.get('Content-Disposition') || '';
-    const match = disposition.match(/filename="([^"]+)"/);
-    const fileName = match?.[1] || `integration-template-${providerId}-${categoryId}.xlsx`;
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  fetchPortfolioTable: async (providerId: string, categoryId: string): Promise<PortfolioTable> => {
+    const response = await api.get<{ success: boolean; table: PortfolioTable }>(
+      `integrations/portfolio-table?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
+    );
+    return response.table;
+  },
+
+  downloadPortfolioTable: async (providerId: string, categoryId: string): Promise<void> => {
+    await downloadWorkbook(
+      `integrations/portfolio-table/download?providerId=${encodeURIComponent(providerId)}&categoryId=${encodeURIComponent(categoryId)}`,
+      `portfolio-${providerId}-${categoryId}.xlsx`,
+    );
+  },
+
+  /**
+   * Upload an amended portfolio sheet. `preview` reports what would change
+   * and writes nothing; `apply` writes the differences to the matching
+   * records.
+   */
+  uploadPortfolioTable: async (
+    file: File,
+    providerId: string,
+    categoryId: string,
+    mode: 'preview' | 'apply',
+  ): Promise<PortfolioApplyReport> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('providerId', providerId);
+    formData.append('categoryId', categoryId);
+    formData.append('mode', mode);
+    return api.post<PortfolioApplyReport>('integrations/portfolio-table/upload', formData);
+  },
+
+  /** A short-lived link to the policy print (PDF) on record for one policy. */
+  fetchPolicyPrintUrl: async (policyId: string, clientId: string): Promise<string> => {
+    const response = await api.get<{ success: boolean; url: string }>(
+      `integrations/portfolio-table/print?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
+    );
+    return response.url;
   },
 
   fetchPortalFlow: async (providerId: string, categoryId: string): Promise<PortalProviderFlow> => {

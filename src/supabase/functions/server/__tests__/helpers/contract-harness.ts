@@ -184,6 +184,51 @@ export function multipart(
   };
 }
 
+export type BinaryMultipartPart = {
+  name: string;
+  value: string | Uint8Array;
+  filename?: string;
+  type?: string;
+};
+
+/**
+ * Like {@link multipart}, but the body is bytes, so a part can carry a real
+ * binary file — an .xlsx workbook, a PDF.
+ *
+ * WHY NOT `FormData` + `File`: under jsdom a `File` built in the test loses
+ * its CONTENT as well as its filename on the way into `c.req.formData()` —
+ * the handler reads the nine bytes of the literal string "undefined". And a
+ * string body cannot carry binary: `Request` UTF-8-encodes it, corrupting
+ * every byte above 0x7f. Serialising the parts into a `Uint8Array` by hand
+ * is the only shape that survives both.
+ */
+export function multipartBinary(
+  parts: BinaryMultipartPart[],
+  boundary = '----contracttestbinary',
+): { body: Uint8Array; contentType: string } {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  for (const p of parts) {
+    let head = `--${boundary}\r\nContent-Disposition: form-data; name="${p.name}"`;
+    if (p.filename !== undefined) head += `; filename="${p.filename}"`;
+    head += '\r\n';
+    if (p.type) head += `Content-Type: ${p.type}\r\n`;
+    head += '\r\n';
+    chunks.push(encoder.encode(head));
+    chunks.push(typeof p.value === 'string' ? encoder.encode(p.value) : p.value);
+    chunks.push(encoder.encode('\r\n'));
+  }
+  chunks.push(encoder.encode(`--${boundary}--\r\n`));
+  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { body, contentType: `multipart/form-data; boundary=${boundary}` };
+}
+
 export type RequestOptions = {
   as?: string | null;
   user?: string;

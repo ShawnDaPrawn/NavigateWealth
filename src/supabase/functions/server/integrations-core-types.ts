@@ -105,7 +105,12 @@ export interface IntegrationSyncRun {
   providerName: string;
   categoryId: string;
   fileName: string;
-  source: 'spreadsheet' | 'portal';
+  /**
+   * 'portfolio_table' runs are built by the portfolio table (a re-uploaded
+   * book or the agent endpoint) and published in the same call, so they are
+   * persisted as a record of what changed rather than as something to review.
+   */
+  source: 'spreadsheet' | 'portal' | 'portfolio_table';
   status: SyncRunStatus;
   createdAt: string;
   updatedAt: string;

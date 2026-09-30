@@ -268,7 +268,7 @@ export interface IntegrationSyncRun {
   providerName: string;
   categoryId: string;
   fileName: string;
-  source: 'spreadsheet' | 'portal';
+  source: 'spreadsheet' | 'portal' | 'portfolio_table';
   status: 'staged' | 'published' | 'partially_published' | 'failed';
   createdAt: string;
   updatedAt: string;

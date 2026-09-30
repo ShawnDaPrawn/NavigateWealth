@@ -95,7 +95,9 @@ function describeLastSync(policy: PolicyRecord): string | null {
       ? 'provider portal'
       : latest.source === 'document'
         ? 'policy document'
-        : 'spreadsheet';
+        : latest.source === 'portfolio_table'
+          ? 'portfolio table'
+          : 'spreadsheet';
 
   return `Updated from the ${sourceLabel} on ${when.toLocaleDateString('en-ZA', {
     day: 'numeric',
