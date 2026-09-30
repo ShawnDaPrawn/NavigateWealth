@@ -84,9 +84,15 @@ export function PolicyFormDialog({
   useEffect(() => {
     if (isOpen) {
       if (editingPolicy) {
-        // If editing, use the category from the policy
-        setActiveCategoryId(editingPolicy.categoryId || initialCategoryId);
-        setStep('details');
+        // If editing, use the category from the policy. A retired parent
+        // category (Retirement Planning / Investments) no longer has a schema,
+        // so opening it on the details step rendered an empty form. Ask which
+        // product it belongs to; the provider is already known.
+        const storedCategory = editingPolicy.categoryId || initialCategoryId;
+        const needsProduct =
+          storedCategory === 'retirement_planning' || storedCategory === 'investments';
+        setActiveCategoryId(storedCategory);
+        setStep(needsProduct ? 'subcategory' : 'details');
         setSelectedProvider({
           // editingPolicy has an index signature, so these read as `unknown`.
           id: editingPolicy.providerId as string,
@@ -237,7 +243,9 @@ export function PolicyFormDialog({
 
   const handleSubcategorySelect = (subId: string) => {
     setActiveCategoryId(subId);
-    setStep('provider');
+    // A new policy still needs a provider. Editing a retired parent category
+    // already has one, so go straight to the fields once the product is chosen.
+    setStep(selectedProvider ? 'details' : 'provider');
   };
 
   const handleProviderSelect = (provider: Provider) => {

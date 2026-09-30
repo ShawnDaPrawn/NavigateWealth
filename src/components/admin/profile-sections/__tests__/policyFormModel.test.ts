@@ -10,13 +10,14 @@ describe('normalizePolicyDataForStructure — retired Retirement Planning field 
   // on the matching Pre-Retirement fields.
   it('carries the old parent-schema values onto the Pre-Retirement fields', () => {
     const normalized = normalizePolicyDataForStructure(
-      { ret_2: 'Retirement Annuity', ret_3: 250000, ret_6: 1500 },
+      { ret_1: 'RA-100', ret_2: 'Retirement Annuity', ret_3: 250000, ret_6: 1500 },
       preRetirementFields,
     );
 
     expect(normalized.ret_pre_2).toBe('Retirement Annuity');
     expect(normalized.ret_pre_3).toBe(250000);
     expect(normalized.ret_pre_6).toBe(1500);
+    expect(normalized.ret_pre_1).toBe('RA-100');
   });
 
   it('does not overwrite a Pre-Retirement value that is already set', () => {
@@ -37,6 +38,7 @@ describe('normalizePolicyDataForStructure — retired Investments field ids', ()
   it('carries the old parent-schema values onto the Voluntary Investments fields', () => {
     const normalized = normalizePolicyDataForStructure(
       {
+        inv_1: 'INV-9',
         inv_2: 'Unit Trust',
         inv_3: 120000,
         inv_4: 180000,
@@ -48,6 +50,7 @@ describe('normalizePolicyDataForStructure — retired Investments field ids', ()
       voluntaryFields,
     );
 
+    expect(normalized.inv_vol_1).toBe('INV-9');
     expect(normalized.inv_vol_2).toBe('Unit Trust');
     expect(normalized.inv_vol_3).toBe(120000);
     expect(normalized.inv_vol_4).toBe(180000);
