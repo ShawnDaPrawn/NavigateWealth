@@ -20,8 +20,12 @@ export interface NavMenuItem {
   path: string;
   label: string;
   icon: LucideIcon;
+  /** Shown under the label in a narrow mega-menu tile, which fits two short
+      lines. Keep it within NAV_DESCRIPTION_MAX_LENGTH so it never gets cut off. */
   description: string;
 }
+
+export const NAV_DESCRIPTION_MAX_LENGTH = 30;
 
 export interface MegaPanelConfig {
   heading: string;
@@ -43,49 +47,49 @@ export const serviceItems: NavMenuItem[] = [
     path: '/risk-management',
     label: 'Risk Management',
     icon: Shield,
-    description: 'Life, disability and illness cover that protects your family and income.',
+    description: 'Life and disability cover.',
   },
   {
     path: '/medical-aid',
     label: 'Medical Aid',
     icon: Heart,
-    description: 'The right medical scheme and gap cover for your healthcare needs.',
+    description: 'Medical schemes and gap cover.',
   },
   {
     path: '/retirement-planning',
     label: 'Retirement Planning',
     icon: Target,
-    description: "Build and protect the retirement lifestyle you're working towards.",
+    description: 'Retire on your own terms.',
   },
   {
     path: '/investment-management',
     label: 'Investment Management',
     icon: TrendingUp,
-    description: 'Grow your wealth with expertly managed local and offshore portfolios.',
+    description: 'Local and offshore portfolios.',
   },
   {
     path: '/employee-benefits',
     label: 'Employee Benefits',
     icon: Briefcase,
-    description: 'Group retirement, risk and healthcare benefits for your team.',
+    description: 'Group benefits for your team.',
   },
   {
     path: '/tax-planning',
     label: 'Tax Planning',
     icon: Calculator,
-    description: 'Keep your finances tax-efficient, compliant and structured smartly.',
+    description: 'Keep more of what you earn.',
   },
   {
     path: '/estate-planning',
     label: 'Estate Planning',
     icon: Users,
-    description: 'Wills, trusts and succession planning that secure your legacy.',
+    description: 'Wills, trusts and succession.',
   },
   {
     path: '/financial-planning',
     label: 'Financial Planning',
     icon: Compass,
-    description: 'A holistic roadmap that ties every part of your money together.',
+    description: 'One plan for all your money.',
   },
 ];
 
@@ -94,19 +98,19 @@ export const solutionItems: NavMenuItem[] = [
     path: '/solutions/individuals',
     label: 'For Individuals',
     icon: User,
-    description: 'Personal advice and planning for every stage of life.',
+    description: 'Advice for every life stage.',
   },
   {
     path: '/solutions/businesses',
     label: 'For Businesses',
     icon: Building,
-    description: 'Benefits, key-person cover and planning for your company.',
+    description: 'Benefits and key-person cover.',
   },
   {
     path: '/solutions/advisers',
     label: 'For Advisers',
     icon: Briefcase,
-    description: 'Partner with us to grow and support your advice practice.',
+    description: 'Grow your practice with us.',
   },
 ];
 
@@ -115,25 +119,25 @@ export const companyItems: NavMenuItem[] = [
     path: '/about',
     label: 'About Us',
     icon: Info,
-    description: 'Who we are and how we help South Africans build wealth.',
+    description: 'Who we are and how we help.',
   },
   {
     path: '/why-us',
     label: 'Why Us?',
     icon: Award,
-    description: 'What sets our advice, our service and our people apart.',
+    description: 'What sets us apart.',
   },
   {
     path: '/careers',
     label: 'Careers',
     icon: UserCheck,
-    description: 'Join our team and build a career in financial advice.',
+    description: 'Build a career with us.',
   },
   {
     path: '/press',
     label: 'Press',
     icon: Newspaper,
-    description: 'News, announcements and media resources.',
+    description: 'News and media resources.',
   },
 ];
 

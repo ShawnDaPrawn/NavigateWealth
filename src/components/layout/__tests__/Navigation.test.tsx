@@ -13,7 +13,12 @@ vi.mock('../../auth/UserProfileDropdown', () => ({
 }));
 
 import { Navigation } from '../Navigation';
-import { serviceItems, solutionItems, companyItems } from '../navigationData';
+import {
+  serviceItems,
+  solutionItems,
+  companyItems,
+  NAV_DESCRIPTION_MAX_LENGTH,
+} from '../navigationData';
 
 function renderNavigation() {
   return render(
@@ -78,6 +83,15 @@ describe('Navigation mega menus', () => {
       const link = getPanelLink(new RegExp(item.label.replace('?', '\\?')));
       expect(link.getAttribute('href')).toBe(item.path);
       expect(link.textContent).toContain(item.description);
+    }
+  });
+
+  it('keeps every tile description within the length budget', () => {
+    // A fast proxy only: jsdom has no layout, so it cannot see wrapping. The
+    // rendered check that no description is cut off with "…" lives in
+    // e2e/public-render-smoke.spec.ts, which runs in a real browser in CI.
+    for (const item of [...serviceItems, ...solutionItems, ...companyItems]) {
+      expect(item.description.length, item.label).toBeLessThanOrEqual(NAV_DESCRIPTION_MAX_LENGTH);
     }
   });
 
