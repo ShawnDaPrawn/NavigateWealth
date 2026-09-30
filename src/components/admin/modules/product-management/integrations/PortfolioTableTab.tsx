@@ -159,10 +159,24 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
 
   const handleOpenPrint = async (row: PortfolioRow) => {
     setOpeningPrintFor(row.policyId);
+    // Open the tab synchronously, inside the click's transient activation:
+    // Safari (and a slow signed-URL request anywhere) blocks a `window.open`
+    // that happens after an `await` as a popup. The placeholder is navigated
+    // once the link arrives, and closed if it does not. Severing `opener`
+    // gives the new tab no handle on this one, which is what `noopener`
+    // would have done — but `noopener` also makes `window.open` return null,
+    // and then there is nothing to navigate.
+    const tab = window.open('', '_blank');
+    if (tab) tab.opener = null;
     try {
       const url = await productManagementApi.fetchPolicyPrintUrl(row.policyId, row.clientId);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      if (tab && !tab.closed) {
+        tab.location.href = url;
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (err) {
+      tab?.close();
       toast.error(err instanceof Error ? err.message : 'Could not open the policy print');
     } finally {
       setOpeningPrintFor(null);

@@ -470,8 +470,57 @@ describe('POST / — applying rows by client name + policy number', () => {
     expect(report.rows[4].errors[0]).toMatch(/Benefit Type must be one of/);
     expect(policiesOf('c1')[0].data.eb_2).toBe('Acme');
     expect(report.summary).toMatchObject({ unmatched: 1, invalid: 4, updated: 0 });
-    // Rows that only failed still leave a history entry, so the header shows the attempt.
-    expect(historyEntries()).toHaveLength(1);
+    // Rows that only failed still leave a history entry, so the header shows
+    // the attempt — and shows it as FAILED, not as the last successful sync.
+    const [historyKey] = historyEntries();
+    expect(kvStore.get(historyKey)).toMatchObject({
+      status: 'failed',
+      publishedRows: 0,
+      errorCount: 5,
+    });
+  });
+
+  it('keeps a child-category policy out of the parent category book, so no row can write across schemas', async () => {
+    // `employee_benefits_risk` is grouped under `employee_benefits` elsewhere,
+    // but its schema is different: a parent-category row must not be able to
+    // land parent field ids on it, even through the hidden ids.
+    kvStore.set('policies:client:c1', [
+      ...policiesOf('c1'),
+      {
+        id: 'pol-eb-risk',
+        clientId: 'c1',
+        categoryId: 'employee_benefits_risk',
+        providerId: 'p1',
+        providerName: 'Allan Gray',
+        data: { ebr_1: 'EB-RISK-1' },
+        createdAt: 'x',
+        updatedAt: 'x',
+      },
+    ]);
+    const table = (
+      (await (await request(app, `/?${SCOPE}`)).json()) as {
+        table: { rows: Array<{ policyId: string }> };
+      }
+    ).table;
+    expect(table.rows.map((r) => r.policyId)).toEqual(['pol2', 'pol1']);
+
+    const catalogue = (await (await request(app, '/providers')).json()) as {
+      providers: Array<{ categories: Array<{ categoryId: string; policyCount: number }> }>;
+    };
+    expect(catalogue.providers[0].categories[0]).toMatchObject({
+      categoryId: 'employee_benefits',
+      policyCount: 2,
+    });
+
+    const res = await postRows([
+      { policyId: 'pol-eb-risk', clientId: 'c1', clientName: 'Thandi Nkosi', values: { eb_4: 1 } },
+      { clientName: 'Thandi Nkosi', policyNumber: 'EB-RISK-1', values: { eb_4: 1 } },
+    ]);
+    const report = await res.json();
+    expect(report.rows.map((r: { status: string }) => r.status)).toEqual(['invalid', 'unmatched']);
+    expect(policiesOf('c1').find((p) => p.id === 'pol-eb-risk')?.data).toEqual({
+      ebr_1: 'EB-RISK-1',
+    });
   });
 
   it('uses the hidden ids when a row carries them, but still checks the client name', async () => {

@@ -161,19 +161,31 @@ describe('PortfolioTableTab', () => {
   });
 
   it('offers the policy print only where one is on file, and opens it in a new tab', async () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    // The tab is opened synchronously on the click (before the signed URL is
+    // fetched) so Safari does not block it as a popup, then navigated.
+    const tab = { opener: {} as unknown, closed: false, location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockImplementation(() => tab as unknown as Window);
     renderTab();
     await screen.findByText('Thandi Nkosi');
     expect(screen.getByText('None on file')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: /PDF/ }));
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(tab.opener).toBeNull();
     await waitFor(() => expect(api.fetchPolicyPrintUrl).toHaveBeenCalledWith('pol1', 'c1'));
-    await waitFor(() =>
-      expect(open).toHaveBeenCalledWith(
-        'https://signed.test/print.pdf',
-        '_blank',
-        'noopener,noreferrer',
-      ),
-    );
+    await waitFor(() => expect(tab.location.href).toBe('https://signed.test/print.pdf'));
+    expect(tab.close).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
+  it('closes the placeholder tab when the print link cannot be fetched', async () => {
+    api.fetchPolicyPrintUrl.mockRejectedValueOnce(new Error('No policy print on record'));
+    const tab = { opener: {} as unknown, closed: false, location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockImplementation(() => tab as unknown as Window);
+    renderTab();
+    await screen.findByText('Thandi Nkosi');
+    fireEvent.click(screen.getByRole('button', { name: /PDF/ }));
+    await waitFor(() => expect(tab.close).toHaveBeenCalled());
+    expect(tab.location.href).toBe('');
     open.mockRestore();
   });
 

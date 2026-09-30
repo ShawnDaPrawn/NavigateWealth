@@ -38,9 +38,12 @@ overwritten, and why every write leaves a persisted run and a history entry.
 | hidden `_NW …` columns | Policy id, client id, provider id, category id. Keep them: they pin a row to its exact record.      |
 
 Rows are sorted by client name, then policy number. Archived policies are not
-included. Use a **leaf** category id (`retirement_pre`, not
-`retirement_planning`): the columns come from that category's schema, and a
-parent category would show the parent's columns against children's data.
+included. The book holds only policies filed under **exactly** the requested
+category id — its columns come from that one schema, and a row can never write
+one schema's field ids into a policy that uses another. Use the leaf ids
+`GET /providers` lists (`retirement_pre`, `employee_benefits_risk`, …); a
+parent id such as `retirement_planning` returns only legacy policies filed
+under the parent itself, never its children.
 
 ## How a row finds its policy
 

@@ -72,7 +72,6 @@ import {
   isBlank,
   valuesDiffer,
 } from './integrations-field-utils.ts';
-import { categoryMatches } from './integrations-portal-guards.ts';
 import {
   TEMPLATE_METADATA_COLUMNS,
   appendSpreadsheetRowsSheet,
@@ -200,7 +199,15 @@ export async function loadPortfolioBook(
   );
   const bindings = getTemplateFieldBindings(config, fields);
 
-  const policies = await listPoliciesForProviderCategory(providerId, categoryId);
+  // `listPoliciesForProviderCategory` treats a parent id as its whole group,
+  // so a request for `employee_benefits` would also load the `_risk` and
+  // `_retirement` policies — whose schemas differ from the parent's. The
+  // table's columns and the fields a row may write come from ONE schema, so
+  // the book holds only policies filed under exactly this category id; a row
+  // can never write one schema's field ids into a policy that uses another.
+  const policies = (await listPoliciesForProviderCategory(providerId, categoryId)).filter(
+    (policy) => policy.categoryId === categoryId,
+  );
 
   // Warm the schema cache per distinct category first, so resolving a policy
   // number below is a lookup rather than a read per policy.
@@ -531,7 +538,7 @@ export function parsePortfolioSpreadsheet(
     if (metadata.providerId && metadata.providerId !== book.providerId) {
       errors.push('This row belongs to a different provider sheet');
     }
-    if (metadata.categoryId && !categoryMatches(book.categoryId, metadata.categoryId)) {
+    if (metadata.categoryId && metadata.categoryId !== book.categoryId) {
       errors.push('This row belongs to a different product sheet');
     }
     const values: Record<string, unknown> = {};
@@ -860,7 +867,11 @@ export async function applyPortfolioRows(
       providerId: book.providerId,
       categoryId: book.categoryId,
       fileName,
-      status: summary.updated === 0 && summary.failed > 0 ? 'failed' : 'success',
+      // An entry is only written when something was updated or something went
+      // wrong, so a run that updated nothing is a failed attempt — otherwise a
+      // submission where every row was refused would show in the Integrations
+      // header as the last SUCCESSFUL sync.
+      status: summary.updated > 0 ? 'success' : 'failed',
       rowCount: outcomes.length,
       errorCount: errorCount + summary.failed,
       uploadedAt: now,
@@ -926,9 +937,9 @@ export async function listPortfolioCatalogue(): Promise<PortfolioCatalogueEntry[
         providerId: provider.id,
         providerName: provider.name || provider.id,
         categories: providerCategoryIds(provider).map((categoryId) => {
-          const matching = providerPolicies.filter((policy) =>
-            categoryMatches(categoryId, policy.categoryId),
-          );
+          // Exact match, the same scope as the table itself, so the count a
+          // bot reads here is the number of rows it will get.
+          const matching = providerPolicies.filter((policy) => policy.categoryId === categoryId);
           return {
             categoryId,
             categoryLabel: getPortfolioCategoryLabel(categoryId),
