@@ -314,7 +314,8 @@ policies yet.
 - **Search** finds a row by client name (case and accents ignored) or policy
   number (spaces and dashes ignored). **Every header sorts**; empty cells sort
   last either way. Sorting **Last Updated** ascending puts the records an
-  agent has not touched lately at the top.
+  agent has not touched lately at the top. **Policy Print** sorts by the
+  print's upload date, and a policy with no print on file sorts last.
 - **Client** stays pinned on the left while the product fields scroll. On a
   wide enough panel, **Last Updated** and **Policy Print** stay pinned on the
   right too, so the two columns checked first never scroll out of view.

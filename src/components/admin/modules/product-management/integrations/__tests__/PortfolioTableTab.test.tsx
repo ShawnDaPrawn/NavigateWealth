@@ -329,5 +329,18 @@ describe('PortfolioTableTab — finding a policy', () => {
     expect(bodyRowNames()).toEqual(['John Smith', 'Thandi Nkosi']);
     fireEvent.click(screen.getByRole('button', { name: /Cover Amount/ }));
     expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+
+    // Policy Print sorts by the print's date; a policy with none stays last.
+    const print = screen.getByRole('button', { name: 'Policy Print' });
+    fireEvent.click(print);
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+    expect(
+      screen.getByRole('columnheader', { name: 'Policy Print' }).getAttribute('aria-sort'),
+    ).toBe('ascending');
+    fireEvent.click(print);
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+    expect(
+      screen.getByRole('columnheader', { name: 'Policy Print' }).getAttribute('aria-sort'),
+    ).toBe('descending');
   });
 });

@@ -32,6 +32,7 @@ import type {
 } from '@/shared/integrations/portfolio-table';
 import {
   CLIENT_SORT_KEY,
+  PRINT_SORT_KEY,
   UPDATED_SORT_KEY,
   describeSyncSource,
   formatPortfolioDate,
@@ -61,12 +62,14 @@ const PIN_LEFT =
   'sticky left-0 border-r border-gray-200 shadow-[6px_0_8px_-6px_rgba(15,23,42,0.15)]';
 /**
  * Last Updated sits immediately left of Policy Print, so its offset is the
- * print column's width — the two literals below must stay equal.
+ * print column's width — the two `10rem` literals below must stay equal, and
+ * the column must stay wide enough for its header and button, or the pinned
+ * Last Updated column overlaps it.
  */
 const PIN_RIGHT_UPDATED =
-  '@3xl/portfolio:sticky @3xl/portfolio:right-[9.5rem] @3xl/portfolio:border-l @3xl/portfolio:border-gray-200 @3xl/portfolio:shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.15)]';
+  '@3xl/portfolio:sticky @3xl/portfolio:right-[10rem] @3xl/portfolio:border-l @3xl/portfolio:border-gray-200 @3xl/portfolio:shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.15)]';
 const PIN_RIGHT_PRINT =
-  'w-[9.5rem] min-w-[9.5rem] max-w-[9.5rem] @3xl/portfolio:sticky @3xl/portfolio:right-0';
+  'w-[10rem] min-w-[10rem] max-w-[10rem] @3xl/portfolio:sticky @3xl/portfolio:right-0';
 
 function ariaSort(sort: PortfolioSort, key: string): React.AriaAttributes['aria-sort'] {
   if (sort.key !== key) return 'none';
@@ -193,8 +196,17 @@ export function PortfolioGrid({
                 onSort={onSort}
               />
             </th>
-            <th scope="col" className={cn(HEAD, PIN_RIGHT_PRINT, '@3xl/portfolio:z-30')}>
-              Policy Print
+            <th
+              scope="col"
+              className={cn(HEAD, PIN_RIGHT_PRINT, '@3xl/portfolio:z-30')}
+              aria-sort={ariaSort(sort, PRINT_SORT_KEY)}
+            >
+              <SortButton
+                label="Policy Print"
+                sortKey={PRINT_SORT_KEY}
+                sort={sort}
+                onSort={onSort}
+              />
             </th>
           </tr>
         </thead>

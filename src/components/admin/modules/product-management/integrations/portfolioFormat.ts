@@ -125,11 +125,13 @@ export function filterPortfolioRows(rows: PortfolioRow[], query: string): Portfo
 /** Sort keys besides a schema field id. */
 export const CLIENT_SORT_KEY = 'client';
 export const UPDATED_SORT_KEY = 'updatedAt';
+/** Sorts by the print's upload date; a policy with no print on file is empty. */
+export const PRINT_SORT_KEY = 'policyPrint';
 
 export type PortfolioSortDirection = 'asc' | 'desc';
 
 export interface PortfolioSort {
-  /** `client`, `updatedAt`, or a schema field id. */
+  /** `client`, `updatedAt`, `policyPrint`, or a schema field id. */
   key: string;
   direction: PortfolioSortDirection;
 }
@@ -151,6 +153,10 @@ function sortValue(row: PortfolioRow, key: string, column?: PortfolioColumn): So
   if (key === CLIENT_SORT_KEY) return { kind: 'text', value: row.clientName };
   if (key === UPDATED_SORT_KEY) {
     const time = Date.parse(row.updatedAt);
+    return Number.isNaN(time) ? null : { kind: 'number', value: time };
+  }
+  if (key === PRINT_SORT_KEY) {
+    const time = row.policyPrint ? Date.parse(row.policyPrint.uploadDate) : Number.NaN;
     return Number.isNaN(time) ? null : { kind: 'number', value: time };
   }
   const raw = row.values[key];

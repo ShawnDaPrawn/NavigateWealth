@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { PortfolioColumn, PortfolioRow } from '@/shared/integrations/portfolio-table';
 import {
   DEFAULT_PORTFOLIO_SORT,
+  PRINT_SORT_KEY,
   describeSyncSource,
   filterPortfolioRows,
   formatPortfolioDate,
@@ -159,6 +160,29 @@ describe('sortPortfolioRows', () => {
     expect(names(sortPortfolioRows(rows, columns, { key: 'updatedAt', direction: 'asc' }))).toEqual(
       ['Anele', 'Carla', 'Bongani'],
     );
+  });
+
+  it('sorts by the upload date of the policy print, with no print on file last either way', () => {
+    const withPrint = (r: PortfolioRow, uploadDate: string): PortfolioRow => ({
+      ...r,
+      policyPrint: {
+        fileName: 'print.pdf',
+        uploadDate,
+        documentType: 'policy_schedule',
+        fileSize: 1,
+      },
+    });
+    const printed = [
+      row('No print', 'P1'),
+      withPrint(row('Newer', 'P2'), '2026-08-01T09:00:00.000Z'),
+      withPrint(row('Older', 'P3'), '2025-02-01T09:00:00.000Z'),
+    ];
+    expect(
+      names(sortPortfolioRows(printed, columns, { key: PRINT_SORT_KEY, direction: 'asc' })),
+    ).toEqual(['Older', 'Newer', 'No print']);
+    expect(
+      names(sortPortfolioRows(printed, columns, { key: PRINT_SORT_KEY, direction: 'desc' })),
+    ).toEqual(['Newer', 'Older', 'No print']);
   });
 
   it('keeps the incoming order for ties and does not mutate its input', () => {
