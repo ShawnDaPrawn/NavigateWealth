@@ -71,13 +71,18 @@ export interface KvPolicy {
    * that would mean reviewing the same values twice. What it lacked was
    * provenance, so it records here alongside the other sources and a policy's
    * history reads the same whatever moved the value.
+   *
+   * 'portfolio_table' entries come from the portfolio table — the downloadable
+   * book an adviser re-uploads, or the `/integrations/portfolio-table` endpoint
+   * an outside agent posts to. Both apply directly rather than staging for
+   * review, which is why the provenance is worth telling apart.
    */
   integrationSyncHistory?: Array<{
     runId: string;
     providerId: string;
     categoryId: string;
     publishedAt: string;
-    source: 'spreadsheet' | 'portal' | 'document';
+    source: 'spreadsheet' | 'portal' | 'document' | 'portfolio_table';
     fieldsApplied: string[];
   }>;
 }

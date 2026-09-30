@@ -61,6 +61,7 @@ describe('IntegrationHeader — the Review tab', () => {
 
   it('keeps the other destinations intact', () => {
     renderHeader();
+    expect(screen.getByText('Portfolio')).toBeDefined();
     expect(screen.getByText('Provider Setup')).toBeDefined();
     expect(screen.getByText('Mapping Configuration')).toBeDefined();
     expect(screen.getByText('Portal Automation')).toBeDefined();
