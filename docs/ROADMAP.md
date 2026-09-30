@@ -99,7 +99,7 @@ These survived the P0/P1 push and are the only items below that outrank
   `consultation.ts` still build staff-facing email HTML with **zero**
   `escapeHtml` calls on anonymous input.
 - **S11 (partial).** The atomic Postgres limiter landed for auth
-  (`20260821000001_atomic_auth_rate_limit.sql`); public lead-gen forms remain
+  (`20260821210412_atomic_auth_rate_limit.sql`); public lead-gen forms remain
   email-keyed (rotate address → unlimited) and KV limiters still fail open.
 - **P1.1.** 78 anon-key bearer call sites (ratcheted, not banned).
 - **P1.3.** `verify_jwt = false` — flipping it requires the `public` sibling
@@ -488,7 +488,9 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    pattern: migration + RLS → dual-write → backfill → read-flag → cutover.
    Because reads go through repositories by then, each cutover is a repository
    swap, not a 175-file edit. One entity per epic; `clients` first (highest
-   query pressure, most cross-feature reads).
+   query pressure, most cross-feature reads). The `policies` step also retires
+   the two whole-namespace reads of `policies:client:*`, behind the Review
+   tab's policy index and the portfolio table's book (§9a item 5).
    _Gate per entity:_ migration + RLS committed, backfill script, flag
    cutover, KV path retired.
 3. **KV stays** for genuinely schemaless/ephemeral state (drafts, rate-limit
@@ -697,6 +699,51 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
 
 ---
 
+## 9a. Policy data — the two update paths (feature track)
+
+_Added 2026-09-30, after the portfolio table landed on `main`._
+
+Policy details now change two ways. Both publish through `publishSyncRun`, so
+locked fields, provenance and client totals behave identically; they differ in
+who drives them and whether an adviser approves the change first.
+
+| Path                       | Driven by                                                                                                                  | Before anything is written                   | Where it lives                                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Native policy update agent | The portal worker, and the Review tab's template upload                                                                    | A staged run that an adviser publishes       | `integrations-portal-*`, `scripts/portal-worker/`                                                          |
+| Portfolio table            | The Integrations **Portfolio** tab (download, amend, upload) and an external agent calling `/integrations/portfolio-table` | Its own preview or `dryRun`, then it applies | `integrations-portfolio-table-*`, contract in [`runbooks/portfolio-table.md`](runbooks/portfolio-table.md) |
+
+The owner is still building the native agent; nothing below changes it. What
+remains for the external path, in order:
+
+1. **Hand the token to the first agent** and check that its first `dryRun`
+   gets a 200 back. This is an operator step, listed in
+   [`STATUS.md`](STATUS.md). Items 2 to 4 wait for a real agent's traffic, so
+   they are designed against how it actually behaves.
+2. **One token per agent.** One Vault secret admits every agent today, and the
+   actor recorded on each write (`agent:<submittedBy>`) is whatever name the
+   agent sends. A secret per agent would make the recorded actor authenticated
+   and let one agent be revoked without rotating the others.
+   _Gate:_ the actor on a published run comes from the token, not the body.
+3. **Rate-limit the token tier.** Nothing bounds how often a token holder may
+   call, and every call reads the whole policy namespace (item 5). A per-token
+   limit on the atomic Postgres limiter that auth already uses
+   (`20260821210412_atomic_auth_rate_limit.sql`) closes it.
+4. **Decide whether agent writes wait for review.** They apply directly today,
+   by design. If the owner wants an agent's changes approved like a portal
+   run's, the endpoint can stage a run for the Review tab instead of
+   publishing it, using the staged-run mechanism the portal path already has.
+   This is an owner decision, not a defect.
+5. **Indexed reads.** `listPoliciesForProviderCategory` reads every
+   `policies:client:*` row to build one book. This rides on §6's `policies`
+   cutover rather than being fixed separately:
+   `repositories/integration-book-repository.ts` is the seam, and a book
+   becomes one indexed query by provider and category.
+   _Gate:_ no whole-namespace read behind the portfolio routes.
+
+- **Effort:** S/S/M/M; item 5 is part of §6, not extra work.
+
+---
+
 ## 10. Suggested sequencing
 
 Dependency-ordered, not calendar-ordered; each cell is a stream of small PRs
@@ -712,7 +759,9 @@ under the AGENTS.md finalization protocol (verify locally → PR → auto-merge)
 | **Later**    | §7.4 esign function split · ~~§7.5 metrics~~ · §8.3 e2e growth · budget steps 800→600                               | Need the earlier structure; do from data, not assumption |
 
 **New feature work continues throughout** — WS0 is the only stop-the-line
-block. Everything else rides touch-it-you-fix-it plus dedicated slices.
+block. Everything else rides touch-it-you-fix-it plus dedicated slices. The
+policy-update paths in §9a are such a feature track: their first item is an
+operator step, and the rest wait for the first external agent's real traffic.
 
 ---
 

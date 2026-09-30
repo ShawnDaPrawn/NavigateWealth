@@ -33,12 +33,12 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
 
   return (
     <div className="p-6 border-b bg-white z-10">
-      <div className="flex justify-between items-start mb-6">
-        <div>
+      <div className="flex justify-between items-start gap-6 mb-6">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{provider.name} Integration</h2>
           <p className="text-gray-500">Review proposed {provider.name} policy updates, and configure how they are collected</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <div className="w-[250px]">
             <Select value={selectedCategoryId} onValueChange={onCategoryChange} disabled={automationCategoryIds.length === 0}>
               <SelectTrigger className="h-9 bg-white border-gray-300">

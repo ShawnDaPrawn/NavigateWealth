@@ -6,86 +6,124 @@
  * when the record was last updated and which policy print (PDF) is on file.
  * Download it as a spreadsheet, amend it, upload it back: rows are matched
  * by client name + policy number, previewed, then applied on confirmation.
+ *
+ * This file owns the data (the book query, download, preview, apply, the
+ * print link) and the page around the table; `PortfolioGrid` draws the table
+ * and `PortfolioUploadReport` the preview.
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../../ui/table';
 import {
   AlertCircle,
-  CheckCircle2,
+  Bot,
+  ChevronRight,
+  Copy,
   Download,
-  ExternalLink,
   FileSpreadsheet,
+  Info,
   Loader2,
-  Lock,
   RefreshCw,
+  Search,
+  TableProperties,
   Upload,
   X,
 } from 'lucide-react';
+import { Card } from '../../../../ui/card';
+import { Button } from '../../../../ui/button';
+import { Input } from '../../../../ui/input';
+import { Skeleton } from '../../../../ui/skeleton';
 import { cn } from '../../../../ui/utils';
 import { productManagementApi } from '../api';
 import { IntegrationProvider, getProductCategoryLabel } from '../types';
 import { integrationsKeys } from '../../../../../utils/queryKeys';
 import { supabaseUrl } from '../../../../../utils/supabase/info';
+import { copyToClipboard } from '../../../../../utils/clipboard';
 import {
   PORTFOLIO_TOKEN_HEADER,
   type PortfolioApplyReport,
   type PortfolioRow,
-  type PortfolioRowOutcome,
-  type PortfolioRowStatus,
 } from '@/shared/integrations/portfolio-table';
 import {
+  DEFAULT_PORTFOLIO_SORT,
+  filterPortfolioRows,
   formatPortfolioDateTime,
-  formatPortfolioValue,
+  nextPortfolioSort,
   pluralise as plural,
+  sortPortfolioRows,
+  type PortfolioSort,
 } from './portfolioFormat';
+import { PortfolioGrid } from './PortfolioGrid';
+import { PortfolioUploadReport } from './PortfolioUploadReport';
 
 interface PortfolioTableTabProps {
   provider: IntegrationProvider;
   selectedCategoryId: string;
 }
 
-const STATUS_LABELS: Record<PortfolioRowStatus, string> = {
-  updated: 'Updated',
-  unchanged: 'Unchanged',
-  unmatched: 'Unmatched',
-  client_mismatch: 'Client mismatch',
-  duplicate: 'Duplicate',
-  invalid: 'Invalid',
-  failed: 'Failed',
-};
+function EndpointPanel({ endpointUrl }: { endpointUrl: string }) {
+  const handleCopy = async () => {
+    try {
+      await copyToClipboard(endpointUrl);
+      toast.success('Endpoint address copied');
+    } catch {
+      toast.error('Could not copy the endpoint address');
+    }
+  };
 
-const STATUS_CLASSES: Record<PortfolioRowStatus, string> = {
-  updated: 'bg-green-50 text-green-700 border-green-200',
-  unchanged: 'bg-gray-50 text-gray-600 border-gray-200',
-  unmatched: 'bg-amber-50 text-amber-700 border-amber-200',
-  client_mismatch: 'bg-red-50 text-red-700 border-red-200',
-  duplicate: 'bg-amber-50 text-amber-700 border-amber-200',
-  invalid: 'bg-red-50 text-red-700 border-red-200',
-  failed: 'bg-red-50 text-red-700 border-red-200',
-};
-
-function describeOutcomeNotes(outcome: PortfolioRowOutcome): string[] {
-  return [...outcome.errors, ...outcome.warnings];
+  return (
+    <details className="group border-t border-gray-100 px-6 py-4">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-90"
+          aria-hidden="true"
+        />
+        <Bot className="h-4 w-4 text-gray-400" aria-hidden="true" />
+        Endpoint for external agents
+        <span className="hidden font-normal text-gray-400 sm:inline">
+          for a scheduled bot that keeps this book up to date
+        </span>
+      </summary>
+      <div className="mt-3 space-y-3 pl-6">
+        <p className="text-sm text-gray-600">
+          An agent reads this table with a <code className="text-xs">GET</code> and posts
+          corrections with a <code className="text-xs">POST</code> to the same address, sending its
+          token in the <code className="text-xs">{PORTFOLIO_TOKEN_HEADER}</code> header. The token
+          is kept in Supabase Vault;{' '}
+          <code className="text-xs">docs/runbooks/portfolio-table.md</code> has the full contract
+          and the SQL to read or rotate it.
+        </p>
+        <div className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 py-1 pr-1 pl-3">
+          <code
+            className="min-w-0 flex-1 truncate font-mono text-xs text-gray-800"
+            title={endpointUrl}
+          >
+            {endpointUrl}
+          </code>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0 gap-1.5 text-xs"
+            onClick={handleCopy}
+          >
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            Copy
+          </Button>
+        </div>
+      </div>
+    </details>
+  );
 }
 
 export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTableTabProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [report, setReport] = useState<PortfolioApplyReport | null>(null);
   const [openingPrintFor, setOpeningPrintFor] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<PortfolioSort>(DEFAULT_PORTFOLIO_SORT);
 
   const categoryLabel = getProductCategoryLabel(selectedCategoryId);
   const enabled = Boolean(provider.id && selectedCategoryId);
@@ -146,6 +184,12 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
     onError: (err: Error) => toast.error(err.message || 'Failed to apply the spreadsheet'),
   });
 
+  // The report opens above the book; bring it into view, since the adviser
+  // may have been scrolled down the table when they chose the file.
+  useEffect(() => {
+    if (report) reportRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [report]);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -183,13 +227,21 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
     }
   };
 
-  const lastChange = useMemo(
-    () =>
-      (table?.rows ?? []).reduce(
+  const summary = useMemo(() => {
+    const rows = table?.rows ?? [];
+    return {
+      lastChange: rows.reduce(
         (latest, row) => (row.updatedAt > latest ? row.updatedAt : latest),
         '',
       ),
-    [table],
+      prints: rows.filter((row) => row.policyPrint).length,
+    };
+  }, [table]);
+
+  const visibleRows = useMemo(
+    () =>
+      table ? sortPortfolioRows(filterPortfolioRows(table.rows, search), table.columns, sort) : [],
+    [table, search, sort],
   );
 
   const endpointUrl = `${supabaseUrl}/functions/v1/make-server-91ed8379/integrations/portfolio-table?providerId=${encodeURIComponent(
@@ -201,210 +253,47 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
       <div className="flex items-center justify-center h-64 text-gray-500">
         <div className="text-center">
           <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-          <p>Select a product category to see its portfolio.</p>
+          <p className="text-sm">Select a product category to see its portfolio.</p>
         </div>
       </div>
     );
   }
 
-  const renderReport = () => {
-    if (!report) return null;
-    const counters: Array<{ label: string; value: number; tone: string }> = [
-      { label: 'Rows', value: report.summary.rows, tone: 'bg-gray-50 text-gray-900' },
-      {
-        label: report.dryRun ? 'Will update' : 'Updated',
-        value: report.summary.updated,
-        tone: 'bg-green-50 text-green-900',
-      },
-      { label: 'Unchanged', value: report.summary.unchanged, tone: 'bg-gray-50 text-gray-700' },
-      { label: 'Unmatched', value: report.summary.unmatched, tone: 'bg-amber-50 text-amber-900' },
-      {
-        label: 'Client mismatch',
-        value: report.summary.clientMismatch,
-        tone: 'bg-red-50 text-red-900',
-      },
-      { label: 'Duplicate', value: report.summary.duplicate, tone: 'bg-amber-50 text-amber-900' },
-      { label: 'Invalid', value: report.summary.invalid, tone: 'bg-red-50 text-red-900' },
-      ...(report.summary.failed > 0
-        ? [{ label: 'Failed', value: report.summary.failed, tone: 'bg-red-50 text-red-900' }]
-        : []),
-    ];
+  const hasRows = Boolean(table && table.rows.length > 0);
 
-    return (
-      <Card className={report.dryRun ? 'border-purple-200' : 'border-green-200'}>
-        <CardContent className="p-6 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center shrink-0">
-                <FileSpreadsheet className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  {report.dryRun
-                    ? `Preview: ${pendingFile?.name || 'uploaded sheet'}`
-                    : 'Spreadsheet applied'}
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">
-                  {report.dryRun
-                    ? 'Nothing has been written yet. Rows are matched by client name and policy number; review them, then apply.'
-                    : `${plural(report.summary.updated, 'policy', 'policies')} updated across ${plural(
-                        report.summary.clientsTouched,
-                        'client',
-                        'clients',
-                      )}.`}
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={dismissReport} aria-label="Dismiss report">
-              <X className="w-4 h-4 text-gray-400" />
-            </Button>
-          </div>
-
-          {report.warnings.length > 0 && (
-            <ul className="rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800 space-y-1">
-              {report.warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          )}
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-            {counters.map((counter) => (
-              <div key={counter.label} className={cn('rounded-lg border p-3', counter.tone)}>
-                <p className="text-[10px] uppercase font-medium opacity-80">{counter.label}</p>
-                <p className="text-lg font-semibold">{counter.value}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="border rounded-lg overflow-auto bg-white max-h-[40vh]">
-            <Table>
-              <TableHeader className="bg-gray-50">
-                <TableRow>
-                  <TableHead>Row</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Policy Number</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Changes</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {report.rows.map((outcome) => {
-                  const notes = describeOutcomeNotes(outcome);
-                  return (
-                    <TableRow key={`${outcome.rowNumber}-${outcome.policyNumber}`}>
-                      <TableCell className="text-xs">{outcome.rowNumber}</TableCell>
-                      <TableCell className="text-xs">
-                        {outcome.clientName || '—'}
-                        {outcome.matchedClientName && outcome.status === 'client_mismatch' && (
-                          <p className="text-[11px] text-gray-500">
-                            On record: {outcome.matchedClientName}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs font-medium">
-                        {outcome.policyNumber || '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn('text-[10px]', STATUS_CLASSES[outcome.status])}
-                        >
-                          {STATUS_LABELS[outcome.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {outcome.changes.length > 0 ? (
-                          <div className="space-y-1 text-[11px] leading-5">
-                            {outcome.changes.map((change) => (
-                              <div key={change.fieldId}>
-                                <span className="font-medium">{change.fieldName}:</span>{' '}
-                                <span className="text-gray-500">
-                                  {String(change.oldValue ?? '—')}
-                                </span>{' '}
-                                &rarr;{' '}
-                                <span className="text-gray-900">
-                                  {String(change.newValue ?? '—')}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">No changes</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {notes.length > 0 ? (
-                          <div className="space-y-1 text-[11px] leading-5 text-amber-800">
-                            {notes.map((note) => (
-                              <p key={note}>{note}</p>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          {report.dryRun && (
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={dismissReport}>
-                Cancel
-              </Button>
-              <Button
-                className="bg-green-600 hover:bg-green-700"
-                disabled={!pendingFile || report.summary.updated === 0 || applyMutation.isPending}
-                onClick={() => pendingFile && applyMutation.mutate(pendingFile)}
-              >
-                {applyMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                )}
-                {report.summary.updated > 0
-                  ? `Apply ${plural(report.summary.updated, 'update', 'updates')}`
-                  : 'Nothing to apply'}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderTable = () => {
+  const renderBook = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center h-48 text-gray-500">
-          <Loader2 className="w-8 h-8 mb-2 text-purple-600 animate-spin" />
-          <p>Loading the portfolio...</p>
+        <div className="space-y-2 rounded-lg border border-gray-200 bg-white p-4" aria-busy="true">
+          <span className="sr-only">Loading the portfolio…</span>
+          <Skeleton className="h-6 w-full" />
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-8 w-full opacity-70" />
+          ))}
         </div>
       );
     }
     if (error) {
       return (
-        <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-          <div>
-            <h5 className="font-medium text-red-900">The portfolio could not be loaded</h5>
-            <p className="text-sm text-red-700 mt-1">
+        <div className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <h5 className="text-sm font-medium text-red-900">The portfolio could not be loaded</h5>
+            <p className="mt-1 text-sm text-red-700">
               {error instanceof Error ? error.message : 'Unexpected error'}
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            Try again
+          </Button>
         </div>
       );
     }
-    if (!table || table.rows.length === 0) {
+    if (!table || !hasRows) {
       return (
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center bg-white">
-          <FileSpreadsheet className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-          <h4 className="font-medium text-gray-900 mb-1">No policies on record</h4>
+        <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-10 text-center">
+          <FileSpreadsheet className="mx-auto mb-3 h-8 w-8 text-gray-300" aria-hidden="true" />
+          <h4 className="mb-1 text-sm font-semibold text-gray-900">No policies on record</h4>
           <p className="text-sm text-gray-500">
             No {categoryLabel} policies are recorded with {provider.name} yet. Policies added to
             client profiles appear here.
@@ -412,87 +301,42 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
         </div>
       );
     }
-
+    if (visibleRows.length === 0) {
+      return (
+        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center">
+          <Search className="mx-auto mb-3 h-6 w-6 text-gray-300" aria-hidden="true" />
+          <p className="text-sm text-gray-600">
+            No client or policy number matches “{search.trim()}”.
+          </p>
+          <Button variant="link" size="sm" className="mt-1" onClick={() => setSearch('')}>
+            Clear the search
+          </Button>
+        </div>
+      );
+    }
     return (
-      <div className="border rounded-lg overflow-auto bg-white max-h-[60vh]">
-        <Table className="min-w-max">
-          <TableHeader className="bg-gray-50 sticky top-0 z-10">
-            <TableRow>
-              <TableHead className="sticky left-0 z-20 bg-gray-50 min-w-[180px]">Client</TableHead>
-              {table.columns.map((column) => (
-                <TableHead key={column.id} className="whitespace-nowrap">
-                  {column.name}
-                  {column.isPolicyNumber && (
-                    <span className="ml-1 text-[10px] uppercase text-purple-600">key</span>
-                  )}
-                </TableHead>
-              ))}
-              <TableHead className="whitespace-nowrap">Last Updated</TableHead>
-              <TableHead className="whitespace-nowrap">Policy Print</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {table.rows.map((row) => (
-              <TableRow key={row.policyId}>
-                <TableCell className="sticky left-0 z-10 bg-white text-xs font-medium text-gray-900">
-                  {row.clientName}
-                </TableCell>
-                {table.columns.map((column) => {
-                  const locked = row.lockedFields.includes(column.id);
-                  return (
-                    <TableCell
-                      key={column.id}
-                      className="whitespace-nowrap text-xs text-gray-700"
-                      title={
-                        locked ? `${column.name} is locked against automated updates` : undefined
-                      }
-                    >
-                      {locked && (
-                        <Lock
-                          className="inline w-3 h-3 mr-1 text-gray-400 align-[-1px]"
-                          aria-label="Locked"
-                        />
-                      )}
-                      {formatPortfolioValue(column, row.values[column.id])}
-                    </TableCell>
-                  );
-                })}
-                <TableCell className="whitespace-nowrap text-xs text-gray-600">
-                  {formatPortfolioDateTime(row.updatedAt)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {row.policyPrint ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={openingPrintFor === row.policyId}
-                      onClick={() => handleOpenPrint(row)}
-                      title={`${row.policyPrint.fileName} (uploaded ${formatPortfolioDateTime(
-                        row.policyPrint.uploadDate,
-                      )})`}
-                    >
-                      {openingPrintFor === row.policyId ? (
-                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                      ) : (
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                      )}
-                      PDF
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-gray-400">None on file</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <PortfolioGrid
+        table={table}
+        rows={visibleRows}
+        sort={sort}
+        onSort={(key) => setSort((current) => nextPortfolioSort(current, key))}
+        openingPrintFor={openingPrintFor}
+        onOpenPrint={handleOpenPrint}
+      />
     );
   };
 
+  const stats = table
+    ? [
+        { label: 'Policies', value: String(table.policyCount) },
+        { label: 'Clients', value: String(table.clientCount) },
+        { label: 'Policy prints', value: `${summary.prints} of ${table.policyCount}` },
+        { label: 'Latest update', value: formatPortfolioDateTime(summary.lastChange) },
+      ]
+    : [];
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       <input
         type="file"
         ref={fileInputRef}
@@ -502,104 +346,145 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
         onChange={handleFileSelect}
       />
 
-      {renderReport()}
+      {report && (
+        <div ref={reportRef} className="scroll-mt-6">
+          <PortfolioUploadReport
+            report={report}
+            fileName={pendingFile?.name ?? null}
+            columns={table?.columns ?? []}
+            canApply={Boolean(pendingFile)}
+            isApplying={applyMutation.isPending}
+            onApply={() => pendingFile && applyMutation.mutate(pendingFile)}
+            onDismiss={dismissReport}
+          />
+        </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-            <div>
-              <CardTitle>Portfolio</CardTitle>
-              <CardDescription className="mt-2">
-                Every <strong>{categoryLabel}</strong> policy with <strong>{provider.name}</strong>,
-                one row per client policy, laid out as the product structure. Download it, amend it,
-                and upload it to update the matching records — rows are matched by client name and
-                policy number. An external agent reads and writes this same table through the
-                endpoint below.
-              </CardDescription>
+      <Card className="gap-0 overflow-hidden hover:shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4 px-6 pt-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-50">
+              <TableProperties className="h-5 w-5 text-purple-600" aria-hidden="true" />
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                aria-label="Refresh portfolio"
-              >
-                <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => downloadMutation.mutate()}
-                disabled={downloadMutation.isPending || !enabled}
-              >
-                {downloadMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                Download spreadsheet
-              </Button>
-              <Button
-                className="bg-purple-600 hover:bg-purple-700"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={previewMutation.isPending || !enabled}
-              >
-                {previewMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4 mr-2" />
-                )}
-                Upload spreadsheet
-              </Button>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-gray-900">{categoryLabel} portfolio</h3>
+              <p className="mt-0.5 text-sm text-gray-500">
+                Every {categoryLabel} policy held with {provider.name}, one row per client policy.
+              </p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {table && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg border bg-gray-50 p-3">
-                <p className="text-[10px] uppercase text-gray-500 font-medium">Policies</p>
-                <p className="text-lg font-semibold text-gray-900">{table.policyCount}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              aria-label="Refresh portfolio"
+              title="Refresh"
+            >
+              <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => downloadMutation.mutate()}
+              disabled={downloadMutation.isPending || !enabled}
+            >
+              {downloadMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Download spreadsheet
+            </Button>
+            <Button
+              className="bg-purple-600 hover:bg-purple-700"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={previewMutation.isPending || !enabled}
+            >
+              {previewMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Upload spreadsheet
+            </Button>
+          </div>
+        </div>
+
+        {hasRows && (
+          <dl className="mx-6 mt-5 grid grid-cols-2 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/70 sm:grid-cols-4">
+            {stats.map((stat, index) => (
+              <div
+                key={stat.label}
+                className={cn(
+                  'border-gray-200 px-4 py-3',
+                  index % 2 === 1 && 'border-l',
+                  index >= 2 && 'border-t sm:border-t-0',
+                  index === 2 && 'sm:border-l',
+                )}
+              >
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                  {stat.label}
+                </dt>
+                <dd className="mt-1 text-base font-semibold tabular-nums text-gray-900">
+                  {stat.value}
+                </dd>
               </div>
-              <div className="rounded-lg border bg-gray-50 p-3">
-                <p className="text-[10px] uppercase text-gray-500 font-medium">Clients</p>
-                <p className="text-lg font-semibold text-gray-900">{table.clientCount}</p>
+            ))}
+          </dl>
+        )}
+
+        <div className="px-6 pt-5 pb-6">
+          {hasRows && (
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <div className="relative w-full sm:w-72">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search client or policy number"
+                  aria-label="Search the portfolio"
+                  className="h-9 pr-8 pl-9 text-sm"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-0.5 text-gray-400 hover:text-gray-700"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
-              <div className="rounded-lg border bg-gray-50 p-3">
-                <p className="text-[10px] uppercase text-gray-500 font-medium">
-                  Last record change
-                </p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {formatPortfolioDateTime(lastChange)}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-gray-50 p-3">
-                <p className="text-[10px] uppercase text-gray-500 font-medium">Table generated</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {formatPortfolioDateTime(table.generatedAt)}
-                </p>
-              </div>
+              <p className="flex min-w-0 items-start gap-1.5 text-xs text-gray-500 sm:ml-auto sm:max-w-lg">
+                <Info className="mt-px h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                <span>
+                  Upload an amended sheet to update records. Rows match on client name and policy
+                  number, and nothing is saved until you apply the preview.
+                </span>
+              </p>
             </div>
           )}
 
-          {renderTable()}
+          {renderBook()}
 
-          <details className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-900">
-            <summary className="cursor-pointer font-medium">Endpoint for external agents</summary>
-            <div className="mt-3 space-y-2">
-              <p>
-                A scheduled bot reads this table with a GET and posts corrections with a POST to the
-                same address, authenticating with the <code>{PORTFOLIO_TOKEN_HEADER}</code> header.
-                The token lives in Supabase Vault; the runbook{' '}
-                <code>docs/runbooks/portfolio-table.md</code> has the contract and the SQL to read
-                or rotate it.
-              </p>
-              <code className="block break-all rounded bg-white/70 px-2 py-1 text-xs text-blue-950">
-                {endpointUrl}
-              </code>
+          {table && hasRows && (
+            <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-gray-500">
+              <span>
+                {visibleRows.length === table.rows.length
+                  ? `${plural(table.rows.length, 'policy', 'policies')}`
+                  : `Showing ${visibleRows.length} of ${plural(table.rows.length, 'policy', 'policies')}`}
+              </span>
+              <span>Generated {formatPortfolioDateTime(table.generatedAt)}</span>
             </div>
-          </details>
-        </CardContent>
+          )}
+        </div>
+
+        <EndpointPanel endpointUrl={endpointUrl} />
       </Card>
     </div>
   );

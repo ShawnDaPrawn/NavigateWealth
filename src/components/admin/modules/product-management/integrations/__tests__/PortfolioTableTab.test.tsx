@@ -3,11 +3,11 @@
  *
  * Pins what an adviser sees: the product-structure columns, a row per client
  * policy with its values, the read-only Last Updated and Policy Print
- * columns, and the upload flow — a chosen file is previewed first and only an
- * explicit Apply writes.
+ * columns, search and sorting, and the upload flow — a chosen file is
+ * previewed first and only an explicit Apply writes.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, renderWithQueryClient, screen, waitFor } from '@/test/utils';
+import { fireEvent, renderWithQueryClient, screen, waitFor, within } from '@/test/utils';
 import type { PortfolioApplyReport, PortfolioTable } from '@/shared/integrations/portfolio-table';
 
 const api = vi.hoisted(() => ({
@@ -25,7 +25,6 @@ vi.mock('sonner', () => ({
 }));
 
 import { PortfolioTableTab } from '../PortfolioTableTab';
-import { formatPortfolioValue } from '../portfolioFormat';
 
 const table: PortfolioTable = {
   providerId: 'p1',
@@ -155,9 +154,20 @@ describe('PortfolioTableTab', () => {
     }
     expect(screen.getByText('EB-001')).toBeDefined();
     expect(screen.getByText('Acme')).toBeDefined();
+    // Money reads the way the rest of the app writes it.
+    expect(screen.getByText('R100,000.00')).toBeDefined();
     // The policy number column is flagged as the match key.
-    expect(screen.getByText('key')).toBeDefined();
+    expect(screen.getByText('(match key)')).toBeDefined();
     expect(api.fetchPortfolioTable).toHaveBeenCalledWith('p1', 'employee_benefits');
+  });
+
+  it('summarises the book above the table', async () => {
+    renderTab();
+    await screen.findByText('Thandi Nkosi');
+    const stats = screen.getByText('Policy prints').closest('dl') as HTMLElement;
+    expect(within(stats).getByText('1 of 2')).toBeDefined();
+    expect(within(stats).getByText('Latest update')).toBeDefined();
+    expect(screen.getByText('2 policies')).toBeDefined();
   });
 
   it('offers the policy print only where one is on file, and opens it in a new tab', async () => {
@@ -168,7 +178,10 @@ describe('PortfolioTableTab', () => {
     renderTab();
     await screen.findByText('Thandi Nkosi');
     expect(screen.getByText('None on file')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: /PDF/ }));
+    const print = screen.getByRole('button', { name: /policy print for Thandi Nkosi/ });
+    // The button carries the print's date, so a stale print shows at a glance.
+    expect(print.textContent).toContain('01 Feb 2026');
+    fireEvent.click(print);
     expect(open).toHaveBeenCalledWith('', '_blank');
     expect(tab.opener).toBeNull();
     await waitFor(() => expect(api.fetchPolicyPrintUrl).toHaveBeenCalledWith('pol1', 'c1'));
@@ -183,7 +196,7 @@ describe('PortfolioTableTab', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => tab as unknown as Window);
     renderTab();
     await screen.findByText('Thandi Nkosi');
-    fireEvent.click(screen.getByRole('button', { name: /PDF/ }));
+    fireEvent.click(screen.getByRole('button', { name: /open the policy print/ }));
     await waitFor(() => expect(tab.close).toHaveBeenCalled());
     expect(tab.location.href).toBe('');
     open.mockRestore();
@@ -217,10 +230,20 @@ describe('PortfolioTableTab', () => {
       ),
     );
     expect(await screen.findByText('Preview: book.csv')).toBeDefined();
-    // Once as the summary counter, once as the row's badge.
-    expect(screen.getAllByText('Client mismatch')).toHaveLength(2);
+    // The count, and the row's own badge.
+    expect(screen.getByText('client mismatch')).toBeDefined();
+    expect(screen.getByText('Client mismatch')).toBeDefined();
+    // Outcomes that did not happen are left out rather than shown as zeros.
+    expect(screen.queryByText('duplicate')).toBeNull();
+    expect(screen.queryByText('invalid')).toBeNull();
     expect(screen.getByText(/belongs to Thandi Nkosi/)).toBeDefined();
     expect(screen.getByText(/Ignored columns/)).toBeDefined();
+    // A changed value is shown the way the table shows it.
+    const preview = screen
+      .getByText('Preview: book.csv')
+      .closest('[data-slot="card"]') as HTMLElement;
+    expect(within(preview).getByText('R50,000.00')).toBeDefined();
+    expect(within(preview).getByText('R60,000.00')).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply 1 update' }));
     await waitFor(() =>
@@ -252,14 +275,72 @@ describe('PortfolioTableTab', () => {
   });
 });
 
-describe('formatPortfolioValue', () => {
-  const currency = { id: 'x', name: 'x', type: 'currency', required: false, isPolicyNumber: false };
-  it('renders empties as a dash and typed values for their column', () => {
-    expect(formatPortfolioValue(currency, null)).toBe('—');
-    expect(formatPortfolioValue(currency, '')).toBe('—');
-    expect(formatPortfolioValue(currency, 1234.5)).toMatch(/^R\s1\s?234[,.]5$/);
-    expect(formatPortfolioValue({ ...currency, type: 'percentage' }, '12')).toBe('12%');
-    expect(formatPortfolioValue({ ...currency, type: 'boolean' }, true)).toBe('Yes');
-    expect(formatPortfolioValue({ ...currency, type: 'text' }, 'Acme')).toBe('Acme');
+function bodyRowNames() {
+  const region = screen.getByRole('region', { name: /portfolio/ });
+  return within(region)
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) => within(row).getAllByRole('rowheader')[0].textContent);
+}
+
+describe('PortfolioTableTab — finding a policy', () => {
+  it('searches by client name or policy number, and says when nothing matches', async () => {
+    renderTab();
+    await screen.findByText('Thandi Nkosi');
+    const search = screen.getByLabelText('Search the portfolio');
+    fireEvent.focus(search);
+
+    fireEvent.change(search, { target: { value: 'thandi' } });
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi']);
+    expect(screen.getByText('Showing 1 of 2 policies')).toBeDefined();
+
+    // Spaces and dashes in a policy number do not matter.
+    fireEvent.change(search, { target: { value: 'eb 002' } });
+    expect(bodyRowNames()).toEqual(['John Smith']);
+
+    fireEvent.change(search, { target: { value: 'nobody' } });
+    expect(screen.getByText(/No client or policy number matches/)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear the search' }));
+    expect(bodyRowNames()).toEqual(['John Smith', 'Thandi Nkosi']);
+  });
+
+  it('sorts by a header, and reverses on a second click', async () => {
+    renderTab();
+    await screen.findByText('Thandi Nkosi');
+    // Client name order to start with.
+    expect(bodyRowNames()).toEqual(['John Smith', 'Thandi Nkosi']);
+    const clientHeader = screen.getByRole('columnheader', { name: /Client/ });
+    expect(clientHeader.getAttribute('aria-sort')).toBe('ascending');
+
+    const updated = screen.getByRole('button', { name: /Last Updated/ });
+    fireEvent.click(updated);
+    // Least recently updated first: the record an agent has not touched lately.
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+    expect(
+      screen.getByRole('columnheader', { name: /Last Updated/ }).getAttribute('aria-sort'),
+    ).toBe('ascending');
+    expect(clientHeader.getAttribute('aria-sort')).toBe('none');
+
+    fireEvent.click(updated);
+    expect(bodyRowNames()).toEqual(['John Smith', 'Thandi Nkosi']);
+
+    // A money column sorts by amount.
+    fireEvent.click(screen.getByRole('button', { name: /Cover Amount/ }));
+    expect(bodyRowNames()).toEqual(['John Smith', 'Thandi Nkosi']);
+    fireEvent.click(screen.getByRole('button', { name: /Cover Amount/ }));
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+
+    // Policy Print sorts by the print's date; a policy with none stays last.
+    const print = screen.getByRole('button', { name: 'Policy Print' });
+    fireEvent.click(print);
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+    expect(
+      screen.getByRole('columnheader', { name: 'Policy Print' }).getAttribute('aria-sort'),
+    ).toBe('ascending');
+    fireEvent.click(print);
+    expect(bodyRowNames()).toEqual(['Thandi Nkosi', 'John Smith']);
+    expect(
+      screen.getByRole('columnheader', { name: 'Policy Print' }).getAttribute('aria-sort'),
+    ).toBe('descending');
   });
 });
