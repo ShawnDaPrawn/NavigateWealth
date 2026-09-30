@@ -417,6 +417,18 @@ notificationsRoutes.post(
   }),
 );
 
+// Registered BEFORE `/notification-jobs/:jobId`: Hono matches in registration
+// order, so the param route would otherwise take "processor-status" as a job id
+// and answer 404 "Notification job not found" (GitHub #384).
+notificationsRoutes.get(
+  '/notification-jobs/processor-status',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const state = await getArticleNotificationProcessorState();
+    return c.json({ success: true, data: state });
+  }),
+);
+
 notificationsRoutes.get(
   '/notification-jobs/:jobId',
   requireAdmin,
@@ -465,15 +477,6 @@ notificationsRoutes.post(
       mode: 'manual',
     });
     return c.json({ success: true, data: result });
-  }),
-);
-
-notificationsRoutes.get(
-  '/notification-jobs/processor-status',
-  requireAdmin,
-  asyncHandler(async (c) => {
-    const state = await getArticleNotificationProcessorState();
-    return c.json({ success: true, data: state });
   }),
 );
 

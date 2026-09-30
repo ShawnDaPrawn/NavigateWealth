@@ -17,18 +17,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Stub the Deno global + module stubs BEFORE imports evaluate. vi.hoisted runs
 // above all imports.
-const { stubModule, objStub } = vi.hoisted(() => {
+const { stubModule, objStub, notificationService } = vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
   // Module whose every NAMED export resolves to a vi.fn() (for service modules
-  // that export plain functions).
-  const stubModule = () =>
-    new Proxy(
-      {},
-      {
-        get: (_t, p) =>
-          p === '__esModule' ? true : typeof p === 'symbol' || p === 'then' ? undefined : vi.fn(),
-      },
-    );
+  // that export plain functions). Only `overrides` are real own keys, so they
+  // are the exports Vitest will let a handler call; the rest stay loose stubs.
+  const stubModule = (overrides: Record<string, unknown> = {}) =>
+    new Proxy(overrides, {
+      get: (t, p) =>
+        typeof p === 'string' && p in t
+          ? t[p]
+          : p === '__esModule'
+            ? true
+            : typeof p === 'symbol' || p === 'then'
+              ? undefined
+              : vi.fn(),
+    });
   // Object whose every METHOD is a vi.fn() (for namespace-object exports used as
   // `TemplateService.get(...)` / `AdminAuditService.x(...)`).
   const objStub = () =>
@@ -36,7 +40,12 @@ const { stubModule, objStub } = vi.hoisted(() => {
       {},
       { get: (_t, p) => (typeof p === 'symbol' || p === 'then' ? undefined : vi.fn()) },
     );
-  return { stubModule, objStub };
+  // The two notification reads the routing test below tells apart.
+  const notificationService = {
+    getArticleNotificationJob: vi.fn(async () => null),
+    getArticleNotificationProcessorState: vi.fn(async () => ({ lastRunAt: null })),
+  };
+  return { stubModule, objStub, notificationService };
 });
 
 const kvStore = new Map<string, unknown>();
@@ -97,7 +106,7 @@ vi.mock('../email-service.ts', () => ({ sendEmail: vi.fn(async () => ({ success:
 vi.mock('../article-notification-template.ts', () => ({
   createArticleNotificationEmail: vi.fn(() => ({ subject: '', html: '' })),
 }));
-vi.mock('../publications-notification-service.ts', () => stubModule());
+vi.mock('../publications-notification-service.ts', () => stubModule(notificationService));
 vi.mock('../publications-email-engagement-service.ts', () => stubModule());
 // Vasco's knowledge index follows article publication state via fire-and-forget
 // hooks; embedding is not this suite's concern and must not reach the network.
@@ -119,6 +128,7 @@ import publications from '../publications-routes.tsx';
 
 beforeEach(() => {
   kvStore.clear();
+  vi.clearAllMocks();
 });
 
 describe('publications-routes.tsx route contracts', () => {
@@ -177,4 +187,18 @@ describe('publications-routes.tsx route contracts', () => {
       expect(res.status).not.toBe(404);
     });
   }
+
+  // ---- A literal path must not be swallowed by a sibling `:param` route that
+  //      was registered first. `/notification-jobs/:jobId` did exactly that to
+  //      processor-status, which then answered 404 "Notification job not
+  //      found" in production (GitHub #384). ----
+  it('GET /notification-jobs/processor-status reaches its own handler, not /:jobId', async () => {
+    const res = await publications.request('/notification-jobs/processor-status', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ success: true, data: { lastRunAt: null } });
+    expect(notificationService.getArticleNotificationProcessorState).toHaveBeenCalledTimes(1);
+    expect(notificationService.getArticleNotificationJob).not.toHaveBeenCalled();
+  });
 });
