@@ -86,8 +86,10 @@ describe('Navigation mega menus', () => {
     }
   });
 
-  it('keeps every tile description short enough to show in full', () => {
-    // Longer copy wraps past the tile's two lines and gets cut off with "…".
+  it('keeps every tile description within the length budget', () => {
+    // A fast proxy only: jsdom has no layout, so it cannot see wrapping. The
+    // rendered check that no description is cut off with "…" lives in
+    // e2e/public-render-smoke.spec.ts, which runs in a real browser in CI.
     for (const item of [...serviceItems, ...solutionItems, ...companyItems]) {
       expect(item.description.length, item.label).toBeLessThanOrEqual(NAV_DESCRIPTION_MAX_LENGTH);
     }

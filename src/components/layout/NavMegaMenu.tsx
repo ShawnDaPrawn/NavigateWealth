@@ -122,7 +122,10 @@ export function NavMegaMenu({ value, label, active, items, panel }: NavMegaMenuP
                     <span className="text-sm font-semibold break-words text-gray-900 group-hover/tile:text-white group-focus/tile:text-white">
                       {item.label}
                     </span>
-                    <span className="text-xs leading-snug text-gray-500 line-clamp-2 group-hover/tile:text-white/85 group-focus/tile:text-white/85">
+                    <span
+                      data-testid="nav-tile-description"
+                      className="text-xs leading-snug text-gray-500 line-clamp-2 group-hover/tile:text-white/85 group-focus/tile:text-white/85"
+                    >
                       {item.description}
                     </span>
                   </span>

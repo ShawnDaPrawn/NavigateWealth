@@ -22,6 +22,10 @@
  * the only one of the six specs in this directory that can run in CI at all.
  * The other five are skipped without seeded accounts or signer tokens.
  *
+ * Because it is the only spec CI runs, it also carries the one layout check
+ * that needs a real browser: the desktop nav dropdowns must show every tile
+ * description in full. jsdom cannot measure text wrapping.
+ *
  * WHAT THIS DELIBERATELY DOES NOT DO
  * ----------------------------------
  * It submits nothing. A real quote submission would create a live lead and fire
@@ -126,4 +130,43 @@ test('/get-quote presents an interactive wizard, not a static page', async ({ pa
   // no longer advances the wizard is a broken funnel that still looks fine.
   await serviceCard.click();
   await expect(page.locator('input, select, textarea').first()).toBeVisible({ timeout: 20_000 });
+});
+
+test('desktop nav dropdown descriptions show in full inside their tiles', async ({
+  page,
+}, testInfo) => {
+  // Each mega-menu tile fits two lines of description and clamps the rest with
+  // "…". Copy that wraps further gets cut off, which is the regression this
+  // guards. Wrapping depends on the real font and panel width, so only a
+  // browser can check it; the unit test's character budget is a proxy.
+  test.skip(testInfo.project.name.startsWith('mobile'), 'the mega menus are desktop-only');
+
+  // lg (1024px) is where the desktop nav appears, and the tightest width.
+  for (const width of [1024, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    for (const menu of ['Services', 'Solutions', 'Company']) {
+      await page.getByRole('button', { name: menu, exact: true }).click();
+      const descriptions = page.getByTestId('nav-tile-description');
+      await expect(descriptions.first()).toBeVisible();
+
+      const problems = await descriptions.evaluateAll((els) =>
+        els.flatMap((el) => {
+          const tile = el.closest('a');
+          const text = el.textContent ?? '';
+          const found: string[] = [];
+          if (el.scrollHeight > el.clientHeight + 1) found.push(`cut off: "${text}"`);
+          if (tile && el.getBoundingClientRect().bottom > tile.getBoundingClientRect().bottom) {
+            found.push(`spills out of its tile: "${text}"`);
+          }
+          return found;
+        }),
+      );
+      expect(problems, `${menu} dropdown at ${width}px`).toEqual([]);
+
+      await page.keyboard.press('Escape');
+      await expect(descriptions).toHaveCount(0);
+    }
+  }
 });
