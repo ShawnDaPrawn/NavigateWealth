@@ -13,7 +13,12 @@ vi.mock('../../auth/UserProfileDropdown', () => ({
 }));
 
 import { Navigation } from '../Navigation';
-import { serviceItems, solutionItems, companyItems } from '../navigationData';
+import {
+  serviceItems,
+  solutionItems,
+  companyItems,
+  NAV_DESCRIPTION_MAX_LENGTH,
+} from '../navigationData';
 
 function renderNavigation() {
   return render(
@@ -78,6 +83,13 @@ describe('Navigation mega menus', () => {
       const link = getPanelLink(new RegExp(item.label.replace('?', '\\?')));
       expect(link.getAttribute('href')).toBe(item.path);
       expect(link.textContent).toContain(item.description);
+    }
+  });
+
+  it('keeps every tile description short enough to show in full', () => {
+    // Longer copy wraps past the tile's two lines and gets cut off with "…".
+    for (const item of [...serviceItems, ...solutionItems, ...companyItems]) {
+      expect(item.description.length, item.label).toBeLessThanOrEqual(NAV_DESCRIPTION_MAX_LENGTH);
     }
   });
 
