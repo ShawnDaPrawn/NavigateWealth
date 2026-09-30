@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import { DesignSystemLibrary } from '../DesignSystemLibrary';
-import { isLibraryMessage, LIBRARY_PATH } from '../designSystemLibraryMessages';
+import {
+  isLibraryMessage,
+  LIBRARY_PATH,
+  STICKY_HEADER_HEIGHT,
+  viewportMessage,
+} from '../designSystemLibraryMessages';
 
 const TITLE = 'Navigate Wealth component library';
 
@@ -52,6 +57,32 @@ describe('isLibraryMessage', () => {
       false,
     );
     expect(isLibraryMessage({ source: 'nw-design-system', type: 'navigate', top: 1 })).toBe(false);
+  });
+});
+
+describe('viewportMessage', () => {
+  it('gives the on-screen part of the iframe, below the sticky header', () => {
+    // Iframe starts 500px down a 900px window: its first 400px are visible.
+    expect(viewportMessage({ top: 500, height: 90000 }, 900)).toMatchObject({
+      type: 'viewport',
+      top: 0,
+      height: 400,
+    });
+    // Scrolled 10,000px into the iframe: the window shows 10,072 to 10,900.
+    expect(viewportMessage({ top: -10000, height: 90000 }, 900)).toMatchObject({
+      top: 10000 + STICKY_HEADER_HEIGHT,
+      height: 900 - STICKY_HEADER_HEIGHT,
+    });
+    // Near the end: the window runs past the bottom of the iframe.
+    expect(viewportMessage({ top: -89500, height: 90000 }, 900)).toMatchObject({
+      top: 89500 + STICKY_HEADER_HEIGHT,
+      height: 500 - STICKY_HEADER_HEIGHT,
+    });
+  });
+
+  it('never reports a negative height when the iframe is off screen', () => {
+    expect(viewportMessage({ top: 2000, height: 90000 }, 900).height).toBe(0);
+    expect(viewportMessage({ top: -95000, height: 90000 }, 900).height).toBe(0);
   });
 });
 
@@ -110,5 +141,19 @@ describe('DesignSystemLibrary', () => {
     const frame = renderLoaded(true);
     postFromFrame(frame, { source: 'nw-design-system', type: 'scrollTo', top: 500 });
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+
+  it('tells the library which part of it is on screen, and again on scroll', async () => {
+    const frame = renderLoaded(true);
+    const post = vi.spyOn(frame.contentWindow as Window, 'postMessage');
+    act(() => {
+      window.dispatchEvent(new Event('scroll'));
+    });
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'nw-design-system-host', type: 'viewport' }),
+        window.location.origin,
+      ),
+    );
   });
 });
