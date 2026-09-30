@@ -130,6 +130,58 @@ describe('exportPdfFromPreview', () => {
     expect(addImage.mock.calls[0][0]).toMatch(/^data:image\/jpeg/);
     expect(addImage.mock.calls[0][1]).toBe('JPEG');
   });
+
+  it('freezes each page footer onto the clone before capture', async () => {
+    const root = buildScaledPreview(2);
+    for (const page of root.querySelectorAll('.pagedjs_page')) {
+      const margin = document.createElement('div');
+      margin.className = 'pagedjs_margin-bottom';
+      page.appendChild(margin);
+    }
+
+    const realGetComputedStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      const style = realGetComputedStyle(element, pseudo);
+      if (
+        pseudo === '::after' &&
+        element instanceof HTMLElement &&
+        element.classList.contains('pagedjs_margin-bottom')
+      ) {
+        return new Proxy(style, {
+          get(target, prop, receiver) {
+            if (prop === 'content') return '"Page " counter(page) " of " counter(pages)';
+            const value = Reflect.get(target, prop, receiver);
+            return typeof value === 'function' ? value.bind(target) : value;
+          },
+        });
+      }
+      return style;
+    });
+
+    const seenDisablingStyles: string[] = [];
+    html2canvasMock.mockImplementation(async (node: HTMLElement) => {
+      const host = node.parentElement?.parentElement;
+      seenDisablingStyles.push(host?.querySelector('style')?.textContent ?? '');
+      return fakeCanvas();
+    });
+
+    await exportPdfFromPreview({
+      root,
+      title: 'PAIA Manual',
+      pageSize: 'A4',
+      orientation: 'portrait',
+      pageSelector: '.pagedjs_page',
+    });
+
+    const captured = html2canvasMock.mock.calls.map((call) => call[0] as HTMLElement);
+    expect(
+      captured.map((page) => page.querySelector('[data-pdf-frozen-counter-after]')?.textContent),
+    ).toEqual(['Page 1 of 2', 'Page 2 of 2']);
+    expect(seenDisablingStyles).toEqual([
+      '[data-pdf-frozen-counter-before]::before, [data-pdf-frozen-counter-after]::after { content: none !important; }',
+      '[data-pdf-frozen-counter-before]::before, [data-pdf-frozen-counter-after]::after { content: none !important; }',
+    ]);
+  });
 });
 
 describe('resolvePageCounterContent', () => {
