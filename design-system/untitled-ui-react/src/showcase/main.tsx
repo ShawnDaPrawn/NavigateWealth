@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@/styles/globals.css";
 import { installLinkGuard } from "./link-guard";
 import { Showcase } from "./showcase";
+import "./showcase.css";
 
 installLinkGuard();
 
