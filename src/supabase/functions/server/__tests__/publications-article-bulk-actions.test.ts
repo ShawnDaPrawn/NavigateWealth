@@ -1,6 +1,6 @@
 /**
- * POST /publications/articles/bulk-delete
- * =======================================
+ * POST /publications/articles/bulk-delete and /bulk-archive
+ * =========================================================
  *
  * Mounts the real publications app (so a sibling `:param` route swallowing
  * the literal path would show up as a wrong answer) over an in-memory KV that
@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { stubModule, objStub, audit, vasco } = vi.hoisted(() => {
+const { stubModule, objStub, audit, vasco, rebuild } = vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
   const stubModule = (overrides: Record<string, unknown> = {}) =>
     new Proxy(overrides, {
@@ -32,7 +32,8 @@ const { stubModule, objStub, audit, vasco } = vi.hoisted(() => {
     );
   const audit = { record: vi.fn(async () => ({})) };
   const vasco = { removeArticlesFromIndexInBackground: vi.fn(async () => {}) };
-  return { stubModule, objStub, audit, vasco };
+  const rebuild = { triggerSiteRebuild: vi.fn() };
+  return { stubModule, objStub, audit, vasco, rebuild };
 });
 
 const kvStore = new Map<string, unknown>();
@@ -109,7 +110,7 @@ vi.mock('../article-notification-template.ts', () => ({
 vi.mock('../publications-notification-service.ts', () => stubModule());
 vi.mock('../publications-email-engagement-service.ts', () => stubModule());
 vi.mock('../vasco-index-sync.ts', () => stubModule(vasco));
-vi.mock('../site-rebuild-trigger.ts', () => stubModule());
+vi.mock('../site-rebuild-trigger.ts', () => stubModule(rebuild));
 vi.mock('../publications-phase4-service.ts', () => ({
   TemplateService: objStub(),
   VersionService: objStub(),
@@ -132,8 +133,8 @@ const article = (id: string, status: string) => ({
   published_at: status === 'published' ? '2026-01-01T00:00:00.000Z' : undefined,
 });
 
-function bulkDelete(body: unknown, auth = true) {
-  return publications.request('/articles/bulk-delete', {
+function bulkRequest(path: string, body: unknown, auth: boolean) {
+  return publications.request(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -142,6 +143,10 @@ function bulkDelete(body: unknown, auth = true) {
     body: JSON.stringify(body),
   });
 }
+
+const bulkDelete = (body: unknown, auth = true) => bulkRequest('/articles/bulk-delete', body, auth);
+const bulkArchive = (body: unknown, auth = true) =>
+  bulkRequest('/articles/bulk-archive', body, auth);
 
 beforeEach(() => {
   kvStore.clear();
@@ -257,5 +262,106 @@ describe('POST /articles/bulk-delete', () => {
 
     expect((await res.json()).data.deleted).toHaveLength(120);
     expect([...kvStore.keys()].filter((k) => k.startsWith('article:'))).toEqual([]);
+  });
+});
+
+describe('POST /articles/bulk-archive', () => {
+  it('returns 401 without an Authorization header', async () => {
+    kvStore.set('article:d1', article('d1', 'draft'));
+    const res = await bulkArchive({ ids: ['d1'] }, false);
+    expect(res.status).toBe(401);
+    expect(kvStore.get('article:d1')).toMatchObject({ status: 'draft' });
+  });
+
+  it.each([
+    ['an empty list', { ids: [] }],
+    ['an id that could address another key', { ids: ['d1:extra'] }],
+    ['more than 200 ids', { ids: Array.from({ length: 201 }, (_, i) => `a${i}`) }],
+  ])('rejects %s with 400 and changes nothing', async (_label, body) => {
+    kvStore.set('article:d1', article('d1', 'draft'));
+    const res = await bulkArchive(body);
+    expect(res.status).toBe(400);
+    expect(kvStore.get('article:d1')).toMatchObject({ status: 'draft' });
+  });
+
+  it('archives drafts and published articles, keeping the rest of each record', async () => {
+    kvStore.set('article:d1', { ...article('d1', 'draft'), body: 'draft body' });
+    kvStore.set('article:p1', article('p1', 'published'));
+    kvStore.set('article:a1', article('a1', 'archived'));
+
+    const res = await bulkArchive({ ids: ['d1', 'p1', 'a1', 'missing'] });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      success: true,
+      data: { archived: ['d1', 'p1', 'a1'], notFound: ['missing'] },
+    });
+    expect(kvStore.get('article:d1')).toMatchObject({
+      status: 'archived',
+      title: 'Title d1',
+      body: 'draft body',
+    });
+    expect(kvStore.get('article:p1')).toMatchObject({
+      status: 'archived',
+      published_at: '2026-01-01T00:00:00.000Z',
+    });
+    expect((kvStore.get('article:d1') as { updated_at?: string }).updated_at).toBeTruthy();
+  });
+
+  it('rebuilds the public site once when a published article was archived', async () => {
+    kvStore.set('article:p1', article('p1', 'published'));
+    kvStore.set('article:p2', article('p2', 'published'));
+    kvStore.set('article:d1', article('d1', 'draft'));
+
+    await bulkArchive({ ids: ['p1', 'p2', 'd1'] });
+
+    expect(rebuild.triggerSiteRebuild).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not rebuild the public site when only drafts were archived', async () => {
+    kvStore.set('article:d1', article('d1', 'draft'));
+
+    await bulkArchive({ ids: ['d1'] });
+
+    expect(rebuild.triggerSiteRebuild).not.toHaveBeenCalled();
+  });
+
+  it('records one audit entry and one index cleanup for the articles it changed', async () => {
+    kvStore.set('article:d1', article('d1', 'draft'));
+    kvStore.set('article:p1', article('p1', 'published'));
+    kvStore.set('article:a1', article('a1', 'archived'));
+
+    await bulkArchive({ ids: ['d1', 'p1', 'a1', 'd1'] });
+
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: 'admin-1', action: 'articles_bulk_archived' }),
+    );
+    expect(vasco.removeArticlesFromIndexInBackground).toHaveBeenCalledWith(
+      ['d1', 'p1'],
+      'article_bulk_archived',
+    );
+  });
+
+  it('writes nothing when every article is already archived', async () => {
+    kvStore.set('article:a1', article('a1', 'archived'));
+
+    const res = await bulkArchive({ ids: ['a1'] });
+
+    expect((await res.json()).data).toEqual({ archived: ['a1'], notFound: [] });
+    expect(audit.record).not.toHaveBeenCalled();
+    expect(vasco.removeArticlesFromIndexInBackground).not.toHaveBeenCalled();
+  });
+
+  it('archives a selection larger than one KV batch', async () => {
+    const ids = Array.from({ length: 120 }, (_, i) => `d${i}`);
+    ids.forEach((id) => kvStore.set(`article:${id}`, article(id, 'draft')));
+
+    const res = await bulkArchive({ ids });
+
+    expect((await res.json()).data.archived).toHaveLength(120);
+    expect(
+      ids.every((id) => (kvStore.get(`article:${id}`) as { status: string }).status === 'archived'),
+    ).toBe(true);
   });
 });

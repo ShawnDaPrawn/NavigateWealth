@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 const mocks = vi.hoisted(() => ({
   articles: [] as Array<Record<string, unknown>>,
   deleteArticles: vi.fn(),
+  archiveArticles: vi.fn(),
 }));
 
 vi.mock('@/components/admin/modules/publications/hooks', () => ({
@@ -27,10 +28,10 @@ vi.mock('@/components/admin/modules/publications/hooks', () => ({
   useCategories: () => ({ categories: [], isLoading: false }),
   useArticleActions: () => ({
     handleDuplicate: vi.fn(),
-    handleArchive: vi.fn(),
     isProcessing: false,
   }),
   useDeleteArticles: () => ({ mutate: mocks.deleteArticles, isPending: false }),
+  useArchiveArticles: () => ({ mutate: mocks.archiveArticles, isPending: false }),
 }));
 
 vi.mock('sonner', () => ({
@@ -55,6 +56,10 @@ function selectAll(container: HTMLElement) {
 
 function clickBulkDelete() {
   fireEvent.click(screen.getByText('Delete').closest('button')!);
+}
+
+function clickBulkArchive() {
+  fireEvent.click(screen.getByText('Archive').closest('button')!);
 }
 
 import { ArticlesListView } from '../ArticlesListView';
@@ -126,6 +131,49 @@ describe('ArticlesListView', () => {
       expect(toast.info).toHaveBeenCalledWith(
         expect.stringMatching(/Published articles cannot be bulk deleted/),
       );
+    });
+  });
+
+  describe('bulk archive', () => {
+    it('archives the selection in one call and warns that published ones go offline', () => {
+      mocks.articles = [article('d1', 'draft'), article('p1', 'published')];
+      const { container } = render(<ArticlesListView onCreateNew={noop} onEditArticle={noop} />);
+
+      selectAll(container);
+      clickBulkArchive();
+      expect(
+        screen.getByText(/1 of them are published and will be taken off the live site/),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      expect(mocks.archiveArticles).toHaveBeenCalledTimes(1);
+      const [vars] = mocks.archiveArticles.mock.calls[0];
+      expect(vars.mode).toBe('bulk');
+      expect([...vars.ids].sort()).toEqual(['d1', 'p1']);
+      expect(screen.queryByText('2 selected')).toBeNull();
+    });
+
+    it('leaves already archived articles out of the request', () => {
+      mocks.articles = [article('d1', 'draft'), article('a1', 'archived')];
+      const { container } = render(<ArticlesListView onCreateNew={noop} onEditArticle={noop} />);
+
+      selectAll(container);
+      clickBulkArchive();
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      expect(mocks.archiveArticles.mock.calls[0][0].ids).toEqual(['d1']);
+    });
+
+    it('says so, without a dialog, when everything selected is already archived', () => {
+      mocks.articles = [article('a1', 'archived')];
+      const { container } = render(<ArticlesListView onCreateNew={noop} onEditArticle={noop} />);
+
+      selectAll(container);
+      clickBulkArchive();
+
+      expect(mocks.archiveArticles).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(toast.info).toHaveBeenCalledWith('The selected articles are already archived.');
     });
   });
 });

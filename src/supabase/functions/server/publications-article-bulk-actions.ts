@@ -1,6 +1,6 @@
 /**
- * Bulk article delete
- * ===================
+ * Bulk article delete and archive
+ * ===============================
  *
  * WHY THIS EXISTS (2026-10-01)
  * ----------------------------
@@ -10,7 +10,8 @@
  * (the browser caches a preflight per URL, and every id is a new URL) and its
  * own ~2 s request, while 225 full-list refetches ran alongside. The rows did
  * not leave the screen until the loop ended and the refresh spinner never
- * stopped. This does the same work in a handful of round-trips.
+ * stopped. "Archive selected" looped the same way. Both now do the work in a
+ * handful of round-trips.
  *
  * LIVE ARTICLES ARE NEVER DELETED HERE
  * ------------------------------------
@@ -19,6 +20,10 @@
  * check is enforced twice: once on the rows as read, and again inside the
  * DELETE statement itself (`removeManyUnless`), so an article the scheduler
  * publishes between the read and the delete is kept as well.
+ *
+ * Archive keeps the content, so it does take published articles, as the
+ * single archive always has: they leave the public site (one rebuild for the
+ * batch) and Vasco's index.
  */
 
 import { createModuleLogger } from './stderr-logger.ts';
@@ -31,8 +36,9 @@ import {
   deletedArticles,
 } from './repositories/articles-repository.ts';
 import type { Article, DeletedArticleRecord } from './publications-route-helpers.ts';
+import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 
-const log = createModuleLogger('publications-article-bulk-delete');
+const log = createModuleLogger('publications-article-bulk-actions');
 
 /**
  * Keys per KV round-trip. `getMany` and the deletes put every key into the
@@ -50,6 +56,13 @@ export interface BulkDeleteArticlesResult {
   /** Published (live) articles, left untouched. */
   kept: string[];
   /** Already gone: deleted earlier, or never existed. Safe to treat as deleted. */
+  notFound: string[];
+}
+
+export interface BulkArchiveArticlesResult {
+  /** Archived now, or already archived before this call. */
+  archived: string[];
+  /** No such article (deleted, or never existed). */
   notFound: string[];
 }
 
@@ -74,21 +87,28 @@ async function removeTagLinks(articleIds: readonly string[]): Promise<void> {
   }
 }
 
-export async function bulkDeleteArticles(
-  ids: readonly string[],
-  actorId: string,
-): Promise<BulkDeleteArticlesResult> {
-  const unique = [...new Set(ids)];
-
+/** Read each distinct id once, in batches, keyed by the id that was asked for. */
+async function readArticles(ids: readonly string[]): Promise<{
+  found: Array<{ id: string; article: Article }>;
+  notFound: string[];
+}> {
   const found: Array<{ id: string; article: Article }> = [];
   const notFound: string[] = [];
-  for (const batch of chunk(unique, KV_BATCH_SIZE)) {
+  for (const batch of chunk([...new Set(ids)], KV_BATCH_SIZE)) {
     const rows = await articles.getMany(batch);
     rows.forEach((article, i) => {
       if (article) found.push({ id: batch[i], article });
       else notFound.push(batch[i]);
     });
   }
+  return { found, notFound };
+}
+
+export async function bulkDeleteArticles(
+  ids: readonly string[],
+  actorId: string,
+): Promise<BulkDeleteArticlesResult> {
+  const { found, notFound } = await readArticles(ids);
 
   const kept = found.filter((f) => f.article.status === 'published').map((f) => f.id);
   const candidates = found.filter((f) => f.article.status !== 'published');
@@ -167,4 +187,67 @@ export async function bulkDeleteArticles(
   });
 
   return { deleted: deletedIds, kept, notFound };
+}
+
+export async function bulkArchiveArticles(
+  ids: readonly string[],
+  actorId: string,
+): Promise<BulkArchiveArticlesResult> {
+  const { found, notFound } = await readArticles(ids);
+
+  const alreadyArchived = found.filter((f) => f.article.status === 'archived').map((f) => f.id);
+  const toArchive = found.filter((f) => f.article.status !== 'archived');
+  if (toArchive.length === 0) {
+    return { archived: alreadyArchived, notFound };
+  }
+
+  // The same read-modify-write the single archive route does, batched.
+  const now = new Date().toISOString();
+  for (const batch of chunk(toArchive, KV_BATCH_SIZE)) {
+    await articles.putMany(
+      batch.map(({ id, article }): [string, Article] => [
+        id,
+        { ...article, status: 'archived', updated_at: now },
+      ]),
+    );
+  }
+
+  const archivedIds = toArchive.map((a) => a.id);
+  const wasLive = toArchive.filter((a) => a.article.status === 'published');
+  if (wasLive.length > 0) {
+    triggerSiteRebuild(`articles_bulk_archived:${wasLive.length}`);
+  }
+  // Archived content must stop being retrievable by Vasco. For an article that
+  // is not published this is all `syncArticle` would do anyway, and it is a
+  // no-op for one that was never indexed.
+  await removeArticlesFromIndexInBackground(archivedIds, 'article_bulk_archived');
+
+  await AdminAuditService.record({
+    actorId,
+    actorRole: 'admin',
+    category: 'configuration',
+    action: 'articles_bulk_archived',
+    summary: `${toArchive.length} article(s) archived in bulk`,
+    severity: 'warning',
+    entityType: 'article',
+    metadata: {
+      archivedAt: now,
+      articles: toArchive.map(({ id, article }) => ({
+        id,
+        title: article.title,
+        previousStatus: article.status,
+      })),
+      alreadyArchived,
+      notFound,
+    },
+  }).catch(() => {});
+
+  log.info('Bulk article archive', {
+    archived: toArchive.length,
+    wasLive: wasLive.length,
+    alreadyArchived: alreadyArchived.length,
+    notFound: notFound.length,
+  });
+
+  return { archived: [...archivedIds, ...alreadyArchived], notFound };
 }

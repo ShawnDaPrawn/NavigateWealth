@@ -242,6 +242,23 @@ describe('ArticlesAPI', () => {
     });
   });
 
+  describe('bulkArchiveArticles', () => {
+    it('sends the ids to the bulk archive endpoint, chunked at 200', async () => {
+      const ids = Array.from({ length: 250 }, (_, i) => `a${i}`);
+      mockApiPost.mockImplementation(async (_path: string, body: { ids: string[] }) => ({
+        success: true,
+        data: { archived: body.ids, notFound: [] },
+      }));
+      const result = await ArticlesAPI.bulkArchiveArticles(ids);
+      expect(mockApiPost.mock.calls.map(([path]) => path)).toEqual([
+        '/publications/articles/bulk-archive',
+        '/publications/articles/bulk-archive',
+      ]);
+      expect(mockApiPost.mock.calls.map(([, body]) => body.ids.length)).toEqual([200, 50]);
+      expect(result).toEqual({ archived: ids, notFound: [] });
+    });
+  });
+
   describe('publishArticle', () => {
     it('publishes article with notify_subscribers defaulting to true', async () => {
       const publishedArticle = { article: { id: 'a-001', status: 'published' } };

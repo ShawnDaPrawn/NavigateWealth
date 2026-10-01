@@ -16,9 +16,9 @@ import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import {
   ArticleEmailEngagementEventSchema,
-  BulkDeleteArticlesSchema,
+  BulkArticleIdsSchema,
 } from './publications-validation.ts';
-import { bulkDeleteArticles } from './publications-article-bulk-delete.ts';
+import { bulkArchiveArticles, bulkDeleteArticles } from './publications-article-bulk-actions.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import {
   markArticleEmailOpened,
@@ -214,10 +214,30 @@ lifecycleRoutes.post('/articles/:id/schedule', async (c) => {
   }
 });
 
+// Archive many articles in one request — see publications-article-bulk-actions.ts.
+lifecycleRoutes.post('/articles/bulk-archive', requireAdmin, async (c) => {
+  const parsed = BulkArticleIdsSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json(
+      { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+      400,
+    );
+  }
+
+  try {
+    const actorId = (c.get('userId') as string | undefined) || 'system';
+    const result = await bulkArchiveArticles(parsed.data.ids, actorId);
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    log.error('Error bulk archiving articles', error);
+    return c.json({ success: false, error: 'Failed to archive articles' }, 500);
+  }
+});
+
 // Delete many articles in one request. Published articles are kept and
-// reported back — see publications-article-bulk-delete.ts.
+// reported back — see publications-article-bulk-actions.ts.
 lifecycleRoutes.post('/articles/bulk-delete', requireAdmin, async (c) => {
-  const parsed = BulkDeleteArticlesSchema.safeParse(await c.req.json().catch(() => ({})));
+  const parsed = BulkArticleIdsSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) {
     return c.json(
       { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },

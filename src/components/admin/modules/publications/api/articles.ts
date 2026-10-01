@@ -8,6 +8,7 @@ import { api } from '../../../../../utils/api/client';
 import type { Article, CreateArticleInput, UpdateArticleInput, ArticleFilters } from '../types';
 import type {
   ArticlePublishResponse,
+  BulkArchiveArticlesResult,
   BulkDeleteArticlesResult,
   ArticleReshareResponse,
   ArticleEmailEngagementSummary,
@@ -30,8 +31,8 @@ import {
 // ARTICLES API
 // ============================================================================
 
-/** The server's per-request cap (`MAX_BULK_DELETE_IDS` in publications-validation.ts). */
-const BULK_DELETE_CHUNK_SIZE = 200;
+/** The server's per-request cap (`MAX_BULK_ARTICLE_IDS` in publications-validation.ts). */
+const BULK_CHUNK_SIZE = 200;
 
 /**
  * Articles API namespace
@@ -187,13 +188,31 @@ export const ArticlesAPI = {
    */
   async bulkDeleteArticles(ids: string[]): Promise<BulkDeleteArticlesResult> {
     const merged: BulkDeleteArticlesResult = { deleted: [], kept: [], notFound: [] };
-    for (let i = 0; i < ids.length; i += BULK_DELETE_CHUNK_SIZE) {
+    for (let i = 0; i < ids.length; i += BULK_CHUNK_SIZE) {
       const response = await api.post<{ success: boolean; data: BulkDeleteArticlesResult }>(
         '/publications/articles/bulk-delete',
-        { ids: ids.slice(i, i + BULK_DELETE_CHUNK_SIZE) },
+        { ids: ids.slice(i, i + BULK_CHUNK_SIZE) },
       );
       merged.deleted.push(...response.data.deleted);
       merged.kept.push(...response.data.kept);
+      merged.notFound.push(...response.data.notFound);
+    }
+    return merged;
+  },
+
+  /**
+   * Archive many articles in as few requests as possible, chunked like
+   * `bulkDeleteArticles`. Safe to retry: an already archived id comes back in
+   * `archived` again.
+   */
+  async bulkArchiveArticles(ids: string[]): Promise<BulkArchiveArticlesResult> {
+    const merged: BulkArchiveArticlesResult = { archived: [], notFound: [] };
+    for (let i = 0; i < ids.length; i += BULK_CHUNK_SIZE) {
+      const response = await api.post<{ success: boolean; data: BulkArchiveArticlesResult }>(
+        '/publications/articles/bulk-archive',
+        { ids: ids.slice(i, i + BULK_CHUNK_SIZE) },
+      );
+      merged.archived.push(...response.data.archived);
       merged.notFound.push(...response.data.notFound);
     }
     return merged;

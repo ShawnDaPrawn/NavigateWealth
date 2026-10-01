@@ -32,18 +32,20 @@ events that future agents could repeat.
 - **Why it hid:** A bulk action built from the single-item path works fine on
   three items. Nothing tested the selection size real cleanup involves.
 - **Fix:** `POST /articles/bulk-delete` deletes up to 200 ids in a handful of
-  batched KV round-trips (`publications-article-bulk-delete.ts`). It never
+  batched KV round-trips (`publications-article-bulk-actions.ts`). It never
   deletes a published article: those come back as `kept`, and the check is
   enforced again inside the DELETE statement itself (`kv.mdelUnlessFieldEquals`),
   so an article the scheduler publishes mid-request is kept too. The list now
   goes through `useDeleteArticles`, which removes the rows from the cache as
   soon as the delete is confirmed, puts back anything kept or failed, and
-  refetches once when it settles.
+  refetches once when it settles. "Archive selected" had the same loop and got
+  the same treatment: `POST /articles/bulk-archive` and `useArchiveArticles`.
+  Archive still takes published articles, as the single archive always has,
+  and the confirm dialog says how many will leave the live site.
 - **Lesson:** A bulk action must be one request, not a loop over the
   single-item endpoint. Per-item requests to per-item URLs each pay the full
   request floor (`runbooks/edge-function-latency.md`) plus a preflight, and a
-  per-item `refetch()` multiplies that by the size of the whole list. Bulk
-  archive in the same view still loops and is the next one to convert.
+  per-item `refetch()` multiplies that by the size of the whole list.
 
 ### 2026-09-20 - Search Console "Page With Redirect" On The Home Page; vercel.json Redirects Were Never Live
 

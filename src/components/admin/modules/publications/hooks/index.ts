@@ -19,6 +19,7 @@ export * from './useArticleForm';
 // Action hooks
 export * from './useArticleActions';
 export * from './useDeleteArticles';
+export * from './useArchiveArticles';
 export * from './useCategoryActions';
 export * from './useTypeActions';
 

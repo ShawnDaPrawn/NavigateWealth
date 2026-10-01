@@ -128,8 +128,8 @@ stated prerequisite has already caused a production outage once.
   every id is a new URL and pays its own preflight and request floor
   ([`INCIDENTS.md`](INCIDENTS.md) 2026-10-01). Articles now use
   `POST /publications/articles/bulk-delete`, which never deletes a published
-  article (the guard runs inside the DELETE itself). Bulk archive in the same
-  list still loops.
+  article (the guard runs inside the DELETE itself), and
+  `POST /publications/articles/bulk-archive`.
 - **The browser accelerators pause when the tab is hidden.** Five background
   pollers mount at `AdminDashboardPage` level for the whole admin session. The
   three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded

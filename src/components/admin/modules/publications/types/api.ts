@@ -60,6 +60,14 @@ export interface BulkDeleteArticlesResult {
   notFound: string[];
 }
 
+/** Result of `POST /articles/bulk-archive`. */
+export interface BulkArchiveArticlesResult {
+  /** Archived by this request, or already archived before it. */
+  archived: string[];
+  /** No such article any more. */
+  notFound: string[];
+}
+
 // ============================================================================
 // VALIDATION TYPES
 // ============================================================================
