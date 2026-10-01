@@ -4,9 +4,11 @@
  *
  * Extracted verbatim from integrations.tsx (these lived after `export default
  * app`). recalculateClientTotals re-aggregates a client's policy totals into the
- * client profile; autoGenerateCustomKeysForSchema derives custom-key definitions
- * for a category schema. Shared by the sync-run engine (publishSyncRun) and the
- * policy/schema/recalculate routes. Deps: kv + logger + SchemaField type only.
+ * client profile; computeClientTotals is its arithmetic, raising instead of
+ * logging, for the client totals refresh worker. autoGenerateCustomKeysForSchema
+ * derives custom-key definitions for a category schema. Shared by the sync-run
+ * engine (publishSyncRun) and the policy/schema/recalculate routes. Deps: kv +
+ * logger + SchemaField type only.
  */
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -25,100 +27,7 @@ export async function recalculateClientTotals(clientId: string) {
 
     log.info(`Found ${allPolicies.length} total policies for client`, { clientId });
 
-    const totals: Record<string, number> = {};
-
-    const totalKeyMappings: Record<string, string[]> = {
-      risk_life_cover_total: ['risk_life_cover'],
-      risk_severe_illness_total: ['risk_severe_illness'],
-      risk_disability_total: ['risk_disability'],
-      risk_temporary_icb_total: ['risk_temporary_icb'],
-      risk_permanent_icb_total: ['risk_permanent_icb'],
-      risk_total_premium: ['risk_monthly_premium'],
-      medical_aid_total_premium: ['medical_aid_monthly_premium'],
-      retirement_total_contribution: ['retirement_monthly_contribution'],
-      retirement_fund_value_total: ['retirement_fund_value'],
-      post_retirement_capital_total: ['post_retirement_capital_value'],
-      // Post-retirement income counts both living-annuity drawdowns and
-      // fixed-annuity income; the fixed total is also kept on its own.
-      post_retirement_income_total: [
-        'post_retirement_drawdown_amount',
-        'post_retirement_fixed_annuity_income',
-      ],
-      post_retirement_fixed_annuity_income_total: ['post_retirement_fixed_annuity_income'],
-      invest_total_contribution: ['invest_monthly_contribution'],
-      eb_total_premium: [
-        'eb_monthly_premium',
-        'eb_risk_monthly_premium',
-        'eb_retirement_contribution_employee',
-        'eb_retirement_contribution_employer',
-      ],
-      estate_total_annual_fee: ['estate_annual_fee'],
-      tax_total_annual_fee: ['tax_annual_fee'],
-    };
-
-    const totalKeyToCategoryIds: Record<string, string[]> = {
-      risk_life_cover_total: ['risk_planning'],
-      risk_severe_illness_total: ['risk_planning'],
-      risk_disability_total: ['risk_planning'],
-      risk_temporary_icb_total: ['risk_planning'],
-      risk_permanent_icb_total: ['risk_planning'],
-      risk_total_premium: ['risk_planning'],
-      medical_aid_total_premium: ['medical_aid'],
-      retirement_total_contribution: ['retirement_planning', 'retirement_pre'],
-      retirement_fund_value_total: ['retirement_planning', 'retirement_pre'],
-      post_retirement_capital_total: ['retirement_post'],
-      post_retirement_income_total: ['retirement_post', 'retirement_post_fixed'],
-      post_retirement_fixed_annuity_income_total: ['retirement_post_fixed'],
-      invest_total_contribution: ['investments', 'investments_voluntary', 'investments_guaranteed'],
-      eb_total_premium: [
-        'employee_benefits',
-        'employee_benefits_risk',
-        'employee_benefits_retirement',
-      ],
-      estate_total_annual_fee: ['estate_planning'],
-      tax_total_annual_fee: ['tax_planning'],
-    };
-
-    for (const [totalKey, individualKeys] of Object.entries(totalKeyMappings)) {
-      let total = 0;
-
-      const categoryIds = totalKeyToCategoryIds[totalKey] || [];
-
-      const categoryPolicies = allPolicies.filter(
-        (p: KvPolicy) => categoryIds.includes(p.categoryId) && !p.archived,
-      );
-
-      for (const policy of categoryPolicies) {
-        if (!policy.data) continue;
-
-        const schemaKey = `config:schema:${policy.categoryId}`;
-        let schema = await kv.get(schemaKey);
-
-        if (!schema) {
-          schema = DEFAULT_SCHEMAS[policy.categoryId];
-        }
-
-        const schemaRecord = schema as KvSchema | null;
-        if (!schemaRecord?.fields) continue;
-
-        const fields = schemaRecord.fields;
-
-        for (const [fieldId, value] of Object.entries(policy.data)) {
-          const fieldDef = fields.find((f: SchemaField) => f.id === fieldId);
-
-          if (!fieldDef || !fieldDef.keyId) continue;
-
-          if (individualKeys.includes(fieldDef.keyId)) {
-            const numValue = Number(value) || 0;
-            if (numValue > 0) {
-              total += numValue;
-            }
-          }
-        }
-      }
-
-      totals[totalKey] = total;
-    }
+    const totals = await computeClientTotals(allPolicies);
 
     const clientKeysKey = `user_profile:${clientId}:client_keys`;
     await kv.set(clientKeysKey, totals);
@@ -127,6 +36,116 @@ export async function recalculateClientTotals(clientId: string) {
   } catch (e) {
     log.error('Error recalculating client totals:', e);
   }
+}
+
+/**
+ * The totals a client's profile shows, from their policies. Unlike
+ * `recalculateClientTotals`, which logs and swallows every error, this throws
+ * when it cannot finish (a schema that cannot be read, policies that are not
+ * a list), so a caller that must not report a failure as done can tell. The
+ * client totals refresh worker is that caller.
+ */
+export async function computeClientTotals(policies: unknown): Promise<Record<string, number>> {
+  if (!Array.isArray(policies)) {
+    throw new Error('the policies are not a list');
+  }
+  const allPolicies: KvPolicy[] = policies;
+  const totals: Record<string, number> = {};
+
+  const totalKeyMappings: Record<string, string[]> = {
+    risk_life_cover_total: ['risk_life_cover'],
+    risk_severe_illness_total: ['risk_severe_illness'],
+    risk_disability_total: ['risk_disability'],
+    risk_temporary_icb_total: ['risk_temporary_icb'],
+    risk_permanent_icb_total: ['risk_permanent_icb'],
+    risk_total_premium: ['risk_monthly_premium'],
+    medical_aid_total_premium: ['medical_aid_monthly_premium'],
+    retirement_total_contribution: ['retirement_monthly_contribution'],
+    retirement_fund_value_total: ['retirement_fund_value'],
+    post_retirement_capital_total: ['post_retirement_capital_value'],
+    // Post-retirement income counts both living-annuity drawdowns and
+    // fixed-annuity income; the fixed total is also kept on its own.
+    post_retirement_income_total: [
+      'post_retirement_drawdown_amount',
+      'post_retirement_fixed_annuity_income',
+    ],
+    post_retirement_fixed_annuity_income_total: ['post_retirement_fixed_annuity_income'],
+    invest_total_contribution: ['invest_monthly_contribution'],
+    eb_total_premium: [
+      'eb_monthly_premium',
+      'eb_risk_monthly_premium',
+      'eb_retirement_contribution_employee',
+      'eb_retirement_contribution_employer',
+    ],
+    estate_total_annual_fee: ['estate_annual_fee'],
+    tax_total_annual_fee: ['tax_annual_fee'],
+  };
+
+  const totalKeyToCategoryIds: Record<string, string[]> = {
+    risk_life_cover_total: ['risk_planning'],
+    risk_severe_illness_total: ['risk_planning'],
+    risk_disability_total: ['risk_planning'],
+    risk_temporary_icb_total: ['risk_planning'],
+    risk_permanent_icb_total: ['risk_planning'],
+    risk_total_premium: ['risk_planning'],
+    medical_aid_total_premium: ['medical_aid'],
+    retirement_total_contribution: ['retirement_planning', 'retirement_pre'],
+    retirement_fund_value_total: ['retirement_planning', 'retirement_pre'],
+    post_retirement_capital_total: ['retirement_post'],
+    post_retirement_income_total: ['retirement_post', 'retirement_post_fixed'],
+    post_retirement_fixed_annuity_income_total: ['retirement_post_fixed'],
+    invest_total_contribution: ['investments', 'investments_voluntary', 'investments_guaranteed'],
+    eb_total_premium: [
+      'employee_benefits',
+      'employee_benefits_risk',
+      'employee_benefits_retirement',
+    ],
+    estate_total_annual_fee: ['estate_planning'],
+    tax_total_annual_fee: ['tax_planning'],
+  };
+
+  for (const [totalKey, individualKeys] of Object.entries(totalKeyMappings)) {
+    let total = 0;
+
+    const categoryIds = totalKeyToCategoryIds[totalKey] || [];
+
+    const categoryPolicies = allPolicies.filter(
+      (p: KvPolicy) => categoryIds.includes(p.categoryId) && !p.archived,
+    );
+
+    for (const policy of categoryPolicies) {
+      if (!policy.data) continue;
+
+      const schemaKey = `config:schema:${policy.categoryId}`;
+      let schema = await kv.get(schemaKey);
+
+      if (!schema) {
+        schema = DEFAULT_SCHEMAS[policy.categoryId];
+      }
+
+      const schemaRecord = schema as KvSchema | null;
+      if (!schemaRecord?.fields) continue;
+
+      const fields = schemaRecord.fields;
+
+      for (const [fieldId, value] of Object.entries(policy.data)) {
+        const fieldDef = fields.find((f: SchemaField) => f.id === fieldId);
+
+        if (!fieldDef || !fieldDef.keyId) continue;
+
+        if (individualKeys.includes(fieldDef.keyId)) {
+          const numValue = Number(value) || 0;
+          if (numValue > 0) {
+            total += numValue;
+          }
+        }
+      }
+    }
+
+    totals[totalKey] = total;
+  }
+
+  return totals;
 }
 
 // Helper function to auto-generate custom keys for unmapped fields in a schema

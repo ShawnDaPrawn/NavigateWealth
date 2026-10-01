@@ -5,13 +5,20 @@
  * The migration `client_totals_refresh` marks a client stale whenever their
  * `policies:client:{clientId}` row is written straight into the database
  * (the update bot, through the Supabase connector) rather than through the
- * app. This module is the two calls the Edge worker makes against it: list
- * the stale clients, and record one recalculated. Both are SECURITY DEFINER
- * functions, executable by service_role only.
+ * app. This module is the three calls the Edge worker makes against it, all
+ * SECURITY DEFINER functions executable by service_role only
+ * (`client_totals_refresh_claims` migration):
  *
- * Each direct write bumps a per-client counter. The worker reports the
- * counter it read, so a write that lands while it recalculates leaves the
- * client stale for the next pass instead of being marked done.
+ *  - claim the oldest free stale client, for 2 minutes, with its policies as
+ *    they are now and their md5;
+ *  - write the totals worked out from exactly those policies. The database
+ *    stores them and records the client current in one transaction, and only
+ *    while the claim is still this worker's and the policies still have that
+ *    md5. Otherwise nothing is stored;
+ *  - or record that working them out failed, which backs the client off.
+ *
+ * Nothing here can record a client current without its totals being stored,
+ * and an older run cannot store totals over a newer one.
  *
  * Before the migration is applied the functions do not exist. That reads as
  * "nothing stale", logged once, so deploying this code first is harmless.
@@ -24,11 +31,33 @@ import { createModuleLogger } from '../stderr-logger.ts';
 
 const log = createModuleLogger('client-totals-refresh-repository');
 
-/** A client whose totals may be stale, and the write counter to report back. */
-export interface StaleClient {
+/** A stale client this worker holds, and what it holds it with. */
+export interface ClaimedClient {
   clientId: string;
+  /** The write counter the claim read; the policies include every write it counts. */
   dirtySeq: number;
+  claimToken: string;
+  /** The client's policies when claimed: null when there is no policies row. */
+  policies: unknown;
+  /** md5 of those policies as the database stores them, for the fenced write. */
+  policiesMd5: string | null;
 }
+
+/**
+ * What the fenced write did:
+ *  - `refreshed`  stored; the client is current;
+ *  - `stale`      stored; a newer write is waiting, so the client stays stale;
+ *  - `superseded` not stored; the policies changed after the claim read them;
+ *  - `lost`       not stored; the claim lapsed and another worker took over.
+ */
+export type TotalsWriteOutcome = 'refreshed' | 'stale' | 'superseded' | 'lost';
+
+const WRITE_OUTCOMES: ReadonlySet<string> = new Set<TotalsWriteOutcome>([
+  'refreshed',
+  'stale',
+  'superseded',
+  'lost',
+]);
 
 /**
  * "The function does not exist": PostgREST's schema-cache miss, or Postgres's
@@ -55,34 +84,72 @@ export function resetClientTotalsRefreshClient(): void {
   warnedMissing = false;
 }
 
-/** Up to `limit` stale clients, the oldest change first. */
-export async function listStaleClients(limit: number): Promise<StaleClient[]> {
-  const { data, error } = await db().rpc('client_totals_refresh_due', { p_limit: limit });
+interface ClaimRow {
+  client_id: string;
+  dirty_seq: number | string;
+  claim_token: string;
+  policies: unknown;
+  policies_md5: string | null;
+}
+
+/** Take the oldest free stale client for 2 minutes, or null when there is none. */
+export async function claimStaleClient(): Promise<ClaimedClient | null> {
+  const { data, error } = await db().rpc('client_totals_refresh_claim');
   if (error) {
     if (MISSING_FUNCTION_CODES.has(error.code ?? '')) {
       if (!warnedMissing) {
         warnedMissing = true;
-        log.warn('client_totals_refresh_due not found — apply the client_totals_refresh migration');
+        log.warn(
+          'client_totals_refresh_claim not found — apply the client_totals_refresh_claims migration',
+        );
       }
-      return [];
+      return null;
     }
-    throw new Error(`client_totals_refresh_due failed: ${error.message}`);
+    throw new Error(`client_totals_refresh_claim failed: ${error.message}`);
   }
-  return ((data ?? []) as Array<{ client_id: string; dirty_seq: number | string }>).map((row) => ({
+  const row = ((data ?? []) as ClaimRow[])[0];
+  if (!row) return null;
+  return {
     clientId: row.client_id,
     dirtySeq: Number(row.dirty_seq),
-  }));
+    claimToken: row.claim_token,
+    policies: row.policies,
+    policiesMd5: row.policies_md5,
+  };
+}
+
+/** Store a claimed client's totals and record it current, if the claim still stands. */
+export async function writeClientTotals(
+  claim: ClaimedClient,
+  totals: Record<string, number>,
+): Promise<TotalsWriteOutcome> {
+  const { data, error } = await db().rpc('client_totals_refresh_write', {
+    p_client_id: claim.clientId,
+    p_claim_token: claim.claimToken,
+    p_policies_md5: claim.policiesMd5,
+    p_totals: totals,
+  });
+  if (error) throw new Error(`client_totals_refresh_write failed: ${error.message}`);
+  if (typeof data !== 'string' || !WRITE_OUTCOMES.has(data)) {
+    throw new Error(`client_totals_refresh_write returned ${JSON.stringify(data)}`);
+  }
+  return data as TotalsWriteOutcome;
 }
 
 /**
- * Record a recalculation made after reading `dirtySeq`. True when the client
- * is now up to date; false when a newer write arrived meanwhile.
+ * Record that working out a claimed client's totals failed: the claim is
+ * released and the client backed off. False when the claim had already
+ * lapsed, and nothing was recorded.
  */
-export async function markClientTotalsRefreshed(client: StaleClient): Promise<boolean> {
-  const { data, error } = await db().rpc('client_totals_refresh_done', {
-    p_client_id: client.clientId,
-    p_seq: client.dirtySeq,
+export async function failClientTotalsRefresh(
+  claim: ClaimedClient,
+  reason: string,
+): Promise<boolean> {
+  const { data, error } = await db().rpc('client_totals_refresh_fail', {
+    p_client_id: claim.clientId,
+    p_claim_token: claim.claimToken,
+    p_error: reason,
   });
-  if (error) throw new Error(`client_totals_refresh_done failed: ${error.message}`);
+  if (error) throw new Error(`client_totals_refresh_fail failed: ${error.message}`);
   return data === true;
 }
