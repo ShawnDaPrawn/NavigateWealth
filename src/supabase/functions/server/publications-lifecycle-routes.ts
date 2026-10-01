@@ -14,7 +14,11 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
-import { ArticleEmailEngagementEventSchema } from './publications-validation.ts';
+import {
+  ArticleEmailEngagementEventSchema,
+  BulkDeleteArticlesSchema,
+} from './publications-validation.ts';
+import { bulkDeleteArticles } from './publications-article-bulk-delete.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import {
   markArticleEmailOpened,
@@ -207,6 +211,27 @@ lifecycleRoutes.post('/articles/:id/schedule', async (c) => {
   } catch (error) {
     log.error('Error scheduling article', error);
     return c.json({ success: false, error: 'Failed to schedule article' }, 500);
+  }
+});
+
+// Delete many articles in one request. Published articles are kept and
+// reported back — see publications-article-bulk-delete.ts.
+lifecycleRoutes.post('/articles/bulk-delete', requireAdmin, async (c) => {
+  const parsed = BulkDeleteArticlesSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json(
+      { success: false, error: 'Validation failed', ...formatZodError(parsed.error) },
+      400,
+    );
+  }
+
+  try {
+    const actorId = (c.get('userId') as string | undefined) || 'system';
+    const result = await bulkDeleteArticles(parsed.data.ids, actorId);
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    log.error('Error bulk deleting articles', error);
+    return c.json({ success: false, error: 'Failed to delete articles' }, 500);
   }
 });
 

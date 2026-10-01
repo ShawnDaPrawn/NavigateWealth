@@ -4,9 +4,11 @@
  * Split out of `api.ts` (1,441 lines); `api.ts` still re-exports every group,
  * because consumers import the aggregate from there.
  */
+import { api } from '../../../../../utils/api/client';
 import type { Article, CreateArticleInput, UpdateArticleInput, ArticleFilters } from '../types';
 import type {
   ArticlePublishResponse,
+  BulkDeleteArticlesResult,
   ArticleReshareResponse,
   ArticleEmailEngagementSummary,
   ArticleEmailEngagementDetail,
@@ -27,6 +29,9 @@ import {
 // ============================================================================
 // ARTICLES API
 // ============================================================================
+
+/** The server's per-request cap (`MAX_BULK_DELETE_IDS` in publications-validation.ts). */
+const BULK_DELETE_CHUNK_SIZE = 200;
 
 /**
  * Articles API namespace
@@ -170,6 +175,28 @@ export const ArticlesAPI = {
     });
     await handleResponse<void>(response);
     notifyEmailEngagementChanged(id, 'notification_campaign_updated');
+  },
+
+  /**
+   * Delete many articles in as few requests as possible.
+   *
+   * Published articles are never deleted this way — the server returns them in
+   * `kept`. A selection larger than the server's per-request cap is sent in
+   * sequential chunks and the results merged. Safe to retry: an id deleted by
+   * an earlier attempt comes back in `notFound`.
+   */
+  async bulkDeleteArticles(ids: string[]): Promise<BulkDeleteArticlesResult> {
+    const merged: BulkDeleteArticlesResult = { deleted: [], kept: [], notFound: [] };
+    for (let i = 0; i < ids.length; i += BULK_DELETE_CHUNK_SIZE) {
+      const response = await api.post<{ success: boolean; data: BulkDeleteArticlesResult }>(
+        '/publications/articles/bulk-delete',
+        { ids: ids.slice(i, i + BULK_DELETE_CHUNK_SIZE) },
+      );
+      merged.deleted.push(...response.data.deleted);
+      merged.kept.push(...response.data.kept);
+      merged.notFound.push(...response.data.notFound);
+    }
+    return merged;
   },
 
   /**

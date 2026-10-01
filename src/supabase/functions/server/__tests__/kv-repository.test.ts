@@ -41,6 +41,23 @@ vi.mock('../kv_store.tsx', () => ({
     store.delete(k);
   }),
   mget: vi.fn(async (ks: string[]) => ks.map((k) => store.get(k) ?? null)),
+  mset: vi.fn(async (ks: string[], vs: unknown[]) => {
+    calls.push(`mset:${ks.join(',')}`);
+    ks.forEach((k, i) => store.set(k, vs[i]));
+  }),
+  mdel: vi.fn(async (ks: string[]) => {
+    calls.push(`mdel:${ks.join(',')}`);
+    ks.forEach((k) => store.delete(k));
+  }),
+  mdelUnlessFieldEquals: vi.fn(async (ks: string[], field: string, protectedValue: string) => {
+    calls.push(`mdelUnless:${ks.join(',')}`);
+    return ks.filter((k) => {
+      const row = store.get(k) as Record<string, unknown> | undefined;
+      if (!row || row[field] == null || row[field] === protectedValue) return false;
+      store.delete(k);
+      return true;
+    });
+  }),
   getByPrefix: vi.fn(async (p: string) => {
     calls.push(`getByPrefix:${p}`);
     return [...store.entries()].filter(([k]) => k.startsWith(p)).map(([, v]) => v);
@@ -98,6 +115,51 @@ describe('basic typed access', () => {
 
   it('getMany short-circuits on an empty list without touching the store', async () => {
     await expect(repo.getMany([])).resolves.toEqual([]);
+    expect(calls).toEqual([]);
+  });
+});
+
+describe('batched writes', () => {
+  it('putMany writes every entry in one round-trip', async () => {
+    await repo.putMany([
+      ['a', { id: 'a', name: 'A' }],
+      ['b', { id: 'b', name: 'B' }],
+    ]);
+    expect(calls).toEqual(['mset:widgets:a,widgets:b']);
+    await expect(repo.getMany(['a', 'b'])).resolves.toEqual([
+      { id: 'a', name: 'A' },
+      { id: 'b', name: 'B' },
+    ]);
+  });
+
+  it('removeMany deletes every id in one round-trip', async () => {
+    await repo.putMany([
+      ['a', { id: 'a', name: 'A' }],
+      ['b', { id: 'b', name: 'B' }],
+    ]);
+    calls.length = 0;
+    await repo.removeMany(['a', 'b']);
+    expect(calls).toEqual(['mdel:widgets:a,widgets:b']);
+    expect(store.size).toBe(0);
+  });
+
+  it('removeManyUnless keeps guarded rows and returns the ids it removed, un-namespaced', async () => {
+    await repo.putMany([
+      ['a', { id: 'a', name: 'keep' }],
+      ['b', { id: 'b', name: 'drop' }],
+    ]);
+    const removed = await repo.removeManyUnless(['a', 'b', 'missing'], {
+      field: 'name',
+      equals: 'keep',
+    });
+    expect(removed).toEqual(['b']);
+    await expect(repo.get('a')).resolves.toEqual({ id: 'a', name: 'keep' });
+  });
+
+  it('the batch methods short-circuit on an empty list without touching the store', async () => {
+    await repo.putMany([]);
+    await repo.removeMany([]);
+    await expect(repo.removeManyUnless([], { field: 'name', equals: 'x' })).resolves.toEqual([]);
     expect(calls).toEqual([]);
   });
 });

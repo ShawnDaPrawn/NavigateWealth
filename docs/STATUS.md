@@ -123,6 +123,13 @@ stated prerequisite has already caused a production outage once.
   `kv.getByPrefixWhereFieldEquals` against the partial index from migration
   `20260914083818`. `kv.getByPrefix` is for one-off admin reads, not for
   anything on a timer.
+- **A bulk action is one request, not a loop over the single-item endpoint.**
+  Looping `DELETE /articles/:id` over 120 drafts took 7.5 minutes, because
+  every id is a new URL and pays its own preflight and request floor
+  ([`INCIDENTS.md`](INCIDENTS.md) 2026-10-01). Articles now use
+  `POST /publications/articles/bulk-delete`, which never deletes a published
+  article (the guard runs inside the DELETE itself). Bulk archive in the same
+  list still loops.
 - **The browser accelerators pause when the tab is hidden.** Five background
   pollers mount at `AdminDashboardPage` level for the whole admin session. The
   three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded

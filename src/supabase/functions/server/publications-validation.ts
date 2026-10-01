@@ -71,6 +71,20 @@ export const ArticleDeliveryRetrySchema = z.object({
   blastAll: z.boolean().optional().default(false),
 });
 
+/** Most ids one bulk-delete request may carry; the client splits larger selections. */
+export const MAX_BULK_DELETE_IDS = 200;
+
+/**
+ * Ids are restricted to the shape `generateId()` produces. Each one becomes a
+ * key suffix (`article:<id>`), so a `:` or `%` must never get through.
+ */
+export const BulkDeleteArticlesSchema = z.object({
+  ids: z
+    .array(z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, 'Invalid article id'))
+    .min(1)
+    .max(MAX_BULK_DELETE_IDS),
+});
+
 export const ArticleEmailEngagementEventSchema = z.object({
   token: z.string().trim().min(1).max(120),
 });
