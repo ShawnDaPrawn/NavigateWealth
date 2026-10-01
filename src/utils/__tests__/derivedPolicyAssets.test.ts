@@ -91,6 +91,34 @@ describe('derivePolicyAssetsFromPolicies', () => {
     expect(result).toEqual([]);
   });
 
+  it('does not turn a fixed annuity into capital the client still owns', () => {
+    // The purchase price is spent, and the monthly figure is income paid to
+    // the client. Either number on the assets list would inflate net worth.
+    const result = derivePolicyAssetsFromPolicies([
+      {
+        id: 'fixed',
+        categoryId: 'retirement_post_fixed',
+        providerName: 'Just',
+        data: {
+          ret_post_fixed_3: 1_500_000,
+          post_retirement_fixed_annuity_purchase_price: 1_500_000,
+          ret_post_fixed_4: 9_000,
+          post_retirement_fixed_annuity_income: 9_000,
+          post_retirement_capital_value: 1_500_000,
+        },
+      },
+      {
+        id: 'living',
+        categoryId: 'retirement_post',
+        providerName: 'Allan Gray',
+        data: { ret_post_3: 800_000, ret_post_1: 'LA-1' },
+      },
+    ]);
+
+    expect(result.map((asset) => asset.policyId)).toEqual(['living']);
+    expect(result[0]).toMatchObject({ bucket: 'retirement', value: 800_000 });
+  });
+
   it('sorts by bucket (investment before retirement) then provider + policy number', () => {
     const result = derivePolicyAssetsFromPolicies([
       {
