@@ -170,6 +170,12 @@ client's** policies that lands in between is overwritten. So:
 - **The worker** stores at most three rows per wake-up, one at a time, and
   claims nothing new after 40 seconds; the next wake-up takes the rest. It
   accepts the cron token or an admin session, nothing else.
+- **One client at a time.** Storing a document rewrites the client's whole
+  policies array, so two hand-overs for the same client are never stored at
+  once. While one of a client's rows is `processing`, that client's other
+  rows wait and other clients go ahead. The claim checks this under a
+  per-client lock, so two wake-ups at the same moment cannot both take the
+  same client.
 
 ## Failure modes
 

@@ -91,8 +91,17 @@ const db = vi.hoisted(() => {
       );
     switch (name) {
       case 'policy_document_intake_claim': {
+        // One client at a time: a client with a live claim is skipped.
+        const busy = (row: IntakeRow) =>
+          state.rows.some(
+            (other) =>
+              other.id !== row.id &&
+              other.client_id === row.client_id &&
+              other.status === 'processing' &&
+              Date.parse(other.claimed_at!) >= state.clock - 10 * MINUTE,
+          );
         const [row] = state.rows
-          .filter(due)
+          .filter((candidate) => due(candidate) && !busy(candidate))
           .sort((a, b) => a.created_at.localeCompare(b.created_at));
         if (!row) return { data: [], error: null };
         Object.assign(row, {
@@ -512,6 +521,49 @@ describe('a database error', () => {
     const res = await runWorker();
     expect(res.status).toBe(500);
     expect(db.state.rows[0]).toMatchObject({ status: 'processing', attempts: 1 });
+  });
+});
+
+describe('one client at a time', () => {
+  it('leaves a client alone while another worker is storing one of its rows', async () => {
+    // Another wake-up holds a live claim on this client.
+    handOver({
+      status: 'processing',
+      attempts: 1,
+      claimed_at: new Date(db.state.clock - 60_000).toISOString(),
+      claim_token: 'other-worker',
+    });
+    const waiting = handOver({ document_type: 'statement' });
+    kvStore.set('policies:client:client-b', [{ id: 'policy_b', providerName: 'Sygnia' }]);
+    const otherClient = handOver({ client_id: 'client-b', policy_id: 'policy_b' });
+
+    const body = await (await runWorker()).json();
+    expect(body.outcomes.map((o: { id: string }) => o.id)).toEqual([otherClient.id]);
+    expect(db.state.rows.find((row) => row.id === waiting.id)?.status).toBe('pending');
+    expect(db.state.objects.has(`${CLIENT}/${POLICY}/statement.pdf`)).toBe(false);
+  });
+
+  it('stores two hand-overs for one client one after the other, both documents intact', async () => {
+    kvStore.set(`policies:client:${CLIENT}`, [
+      ...(policies() ?? []),
+      {
+        id: 'policy_second',
+        clientId: CLIENT,
+        providerName: 'Allan Gray',
+        categoryId: 'investments',
+      },
+    ]);
+    handOver();
+    handOver({ policy_id: 'policy_second' });
+
+    const body = await (await runWorker()).json();
+    expect(body).toMatchObject({ claimed: 2, processed: 2 });
+    expect(policy()?.document).toMatchObject({
+      storageKey: `${CLIENT}/${POLICY}/policy_schedule.pdf`,
+    });
+    expect(policies()?.find((p) => p.id === 'policy_second')?.document).toMatchObject({
+      storageKey: `${CLIENT}/policy_second/policy_schedule.pdf`,
+    });
   });
 });
 

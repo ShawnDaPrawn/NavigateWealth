@@ -20,7 +20,8 @@
 --      through pg_net, with the shared cron token from Vault. A pg_cron job
 --      runs the same wake-up every 2 minutes, but it only calls out when a row
 --      is due, so an idle queue costs one index probe and no Edge invocation.
---   3. The worker claims one row at a time, stores the PDF at
+--   3. The worker claims one row at a time, and one client at a time (see
+--      the claim below), stores the PDF at
 --      `{clientId}/{policyId}/{documentType}.pdf` in the
 --      `make-91ed8379-policy-documents` bucket, sets `policy.document` exactly
 --      as the app's upload does (the same `replacePolicyDocumentForPolicy`),
@@ -426,10 +427,18 @@ grant execute on function public.policy_document_intake_retry(text) to service_r
 
 -- ── 5. What the worker calls ──────────────────────────────────────────────────
 
--- Claim the oldest due row, or nothing. SKIP LOCKED lets two wake-ups run side
--- by side without taking the same row. A claim older than 10 minutes belongs
+-- Claim the oldest due row, or nothing. A claim older than 10 minutes belongs
 -- to a worker that died and is taken over, unless that was the third attempt,
 -- in which case the row is given up on rather than retried forever.
+--
+-- ONE CLIENT AT A TIME. Storing a document rewrites the client's whole
+-- `policies:client:{clientId}` array (read, then written after the upload),
+-- so two workers on the same client would each erase the other's
+-- `policy.document`, and two on the same policy could leave the stored bytes
+-- of one with the metadata of the other. So a client with a live claim is
+-- skipped until it finishes, and the check is made under a per-client
+-- advisory lock held to the end of this transaction, so two wake-ups claiming
+-- at the same moment cannot both pass it. Other clients are not held up.
 create or replace function public.policy_document_intake_claim()
 returns table (
   id            uuid,
@@ -445,7 +454,8 @@ returns table (
 language plpgsql security definer set search_path = public as $fn$
 #variable_conflict use_column
 declare
-  v_id uuid;
+  v_candidate record;
+  v_id        uuid;
 begin
   update public.policy_document_intake i
      set status = 'failed',
@@ -456,16 +466,42 @@ begin
      and i.claimed_at < now() - interval '10 minutes'
      and i.attempts >= 3;
 
-  select i.id into v_id
-    from public.policy_document_intake i
-   where i.status in ('pending', 'processing')
-     and (
-       (i.status = 'pending' and (i.next_attempt_at is null or i.next_attempt_at <= now()))
-       or (i.status = 'processing' and i.claimed_at < now() - interval '10 minutes')
-     )
-   order by i.created_at
-   limit 1
-   for update skip locked;
+  for v_candidate in
+    select i.id, i.client_id
+      from public.policy_document_intake i
+     where i.status in ('pending', 'processing')
+       and (
+         (i.status = 'pending' and (i.next_attempt_at is null or i.next_attempt_at <= now()))
+         or (i.status = 'processing' and i.claimed_at < now() - interval '10 minutes')
+       )
+     order by i.created_at
+     limit 50
+  loop
+    perform pg_advisory_xact_lock(
+      hashtextextended('policy_document_intake:' || v_candidate.client_id, 0)
+    );
+
+    -- Another row of this client is being stored: leave the client alone.
+    continue when exists (
+      select 1
+        from public.policy_document_intake p
+       where p.client_id = v_candidate.client_id
+         and p.id <> v_candidate.id
+         and p.status = 'processing'
+         and p.claimed_at >= now() - interval '10 minutes'
+    );
+
+    -- Still due? Another claim may have taken it while this one waited.
+    select i.id into v_id
+      from public.policy_document_intake i
+     where i.id = v_candidate.id
+       and (
+         (i.status = 'pending' and (i.next_attempt_at is null or i.next_attempt_at <= now()))
+         or (i.status = 'processing' and i.claimed_at < now() - interval '10 minutes')
+       )
+     for update skip locked;
+    exit when v_id is not null;
+  end loop;
 
   if v_id is null then
     return;
