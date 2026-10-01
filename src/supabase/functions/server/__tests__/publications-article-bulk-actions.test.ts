@@ -38,11 +38,24 @@ const { stubModule, objStub, audit, vasco, rebuild } = vi.hoisted(() => {
 
 const kvStore = new Map<string, unknown>();
 const clone = <T>(v: T): T => (v == null ? v : JSON.parse(JSON.stringify(v)));
-const kvMock = vi.hoisted(() => ({ mget: null as unknown }));
+type Fn = ReturnType<typeof vi.fn>;
+const kvMock = vi.hoisted(() => ({
+  mget: null as unknown as Fn,
+  mset: null as unknown as Fn,
+  listByPrefix: null as unknown as Fn,
+}));
 
 vi.mock('../kv_store.tsx', () => {
   const mget = vi.fn(async (ks: string[]) => ks.map((k) => clone(kvStore.get(k) ?? null)));
-  kvMock.mget = mget;
+  const mset = vi.fn(async (ks: string[], vs: unknown[]) => {
+    ks.forEach((k, i) => kvStore.set(k, clone(vs[i])));
+  });
+  const listByPrefix = vi.fn(async (p: string) => {
+    const out: { key: string; value: unknown }[] = [];
+    kvStore.forEach((v, k) => k.startsWith(p) && out.push({ key: k, value: clone(v) }));
+    return out;
+  });
+  Object.assign(kvMock, { mget, mset, listByPrefix });
   return {
     get: vi.fn(async (k: string) => clone(kvStore.get(k) ?? null)),
     set: vi.fn(async (k: string, v: unknown) => {
@@ -52,9 +65,7 @@ vi.mock('../kv_store.tsx', () => {
       kvStore.delete(k);
     }),
     mget,
-    mset: vi.fn(async (ks: string[], vs: unknown[]) => {
-      ks.forEach((k, i) => kvStore.set(k, clone(vs[i])));
-    }),
+    mset,
     mdel: vi.fn(async (ks: string[]) => {
       ks.forEach((k) => kvStore.delete(k));
     }),
@@ -74,11 +85,7 @@ vi.mock('../kv_store.tsx', () => {
       kvStore.forEach((v, k) => k.startsWith(p) && out.push(clone(v)));
       return out;
     }),
-    listByPrefix: vi.fn(async (p: string) => {
-      const out: { key: string; value: unknown }[] = [];
-      kvStore.forEach((v, k) => k.startsWith(p) && out.push({ key: k, value: clone(v) }));
-      return out;
-    }),
+    listByPrefix,
   };
 });
 
@@ -216,7 +223,7 @@ describe('POST /articles/bulk-delete', () => {
     // has published it. The guard in the DELETE statement must win.
     kvStore.set('article:s1', article('s1', 'published'));
     kvStore.set('article:d1', article('d1', 'draft'));
-    (kvMock.mget as ReturnType<typeof vi.fn>).mockImplementationOnce(async (ks: string[]) =>
+    kvMock.mget.mockImplementationOnce(async (ks: string[]) =>
       ks.map((k) => (k === 'article:s1' ? article('s1', 'scheduled') : clone(kvStore.get(k)))),
     );
 
@@ -242,6 +249,41 @@ describe('POST /articles/bulk-delete', () => {
       ['d1', 'd2'],
       'article_bulk_deleted',
     );
+  });
+
+  it('finishes the cleanup on a retry after a failure that followed the delete', async () => {
+    kvStore.set('article:d1', article('d1', 'draft'));
+    kvStore.set('article_tag_link:d1:t1', { article_id: 'd1', tag_id: 't1' });
+    // The article is removed, then the tag-link lookup fails: the request 500s
+    // and the API client retries it.
+    kvMock.listByPrefix.mockRejectedValueOnce(new Error('connection reset'));
+
+    const failed = await bulkDelete({ ids: ['d1'] });
+    expect(failed.status).toBe(500);
+    expect(kvStore.has('article:d1')).toBe(false);
+    expect(kvStore.get('article_deleted:d1')).toMatchObject({ title: 'Title d1' });
+
+    const retried = await bulkDelete({ ids: ['d1'] });
+
+    expect((await retried.json()).data).toEqual({ deleted: [], kept: [], notFound: ['d1'] });
+    expect(kvStore.has('article_tag_link:d1:t1')).toBe(false);
+    expect(vasco.removeArticlesFromIndexInBackground).toHaveBeenCalledWith(
+      ['d1'],
+      'article_bulk_deleted',
+    );
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(kvStore.get('article_deleted:d1')).toMatchObject({ title: 'Title d1' });
+  });
+
+  it('clears a tombstone left on an article that is live again', async () => {
+    // A failed attempt tombstoned it; it was published before the retry.
+    kvStore.set('article:p1', article('p1', 'published'));
+    kvStore.set('article_deleted:p1', { id: 'p1', title: 'Title p1' });
+
+    await bulkDelete({ ids: ['p1'] });
+
+    expect(kvStore.has('article:p1')).toBe(true);
+    expect(kvStore.has('article_deleted:p1')).toBe(false);
   });
 
   it('touches nothing and records no audit entry when every id is published', async () => {
@@ -338,19 +380,51 @@ describe('POST /articles/bulk-archive', () => {
       expect.objectContaining({ actorId: 'admin-1', action: 'articles_bulk_archived' }),
     );
     expect(vasco.removeArticlesFromIndexInBackground).toHaveBeenCalledWith(
-      ['d1', 'p1'],
+      ['d1', 'p1', 'a1'],
       'article_bulk_archived',
     );
   });
 
-  it('writes nothing when every article is already archived', async () => {
-    kvStore.set('article:a1', article('a1', 'archived'));
+  it('does not rewrite an article that is already archived', async () => {
+    const stored = { ...article('a1', 'archived'), updated_at: '2026-01-01T00:00:00.000Z' };
+    kvStore.set('article:a1', stored);
 
     const res = await bulkArchive({ ids: ['a1'] });
 
     expect((await res.json()).data).toEqual({ archived: ['a1'], notFound: [] });
-    expect(audit.record).not.toHaveBeenCalled();
-    expect(vasco.removeArticlesFromIndexInBackground).not.toHaveBeenCalled();
+    expect(kvStore.get('article:a1')).toEqual(stored);
+    expect(kvMock.mset).not.toHaveBeenCalled();
+    expect(rebuild.triggerSiteRebuild).not.toHaveBeenCalled();
+  });
+
+  it('finishes on a retry after a failure part-way through the writes', async () => {
+    // 60 articles is two KV batches. The live ones are all in the first, which
+    // lands; the second fails, so the request 500s and the client retries.
+    const ids = Array.from({ length: 60 }, (_, i) => `x${String(i).padStart(2, '0')}`);
+    ids.forEach((id, i) =>
+      kvStore.set(`article:${id}`, article(id, i < 5 ? 'published' : 'draft')),
+    );
+    kvMock.mset
+      .mockImplementationOnce(async (ks: string[], vs: unknown[]) => {
+        ks.forEach((k, i) => kvStore.set(k, clone(vs[i])));
+      })
+      .mockRejectedValueOnce(new Error('connection reset'));
+
+    const failed = await bulkArchive({ ids });
+    expect(failed.status).toBe(500);
+    // The live articles left the public site even though the request failed.
+    expect(rebuild.triggerSiteRebuild).toHaveBeenCalledTimes(1);
+
+    const retried = await bulkArchive({ ids });
+
+    expect((await retried.json()).data.archived.sort()).toEqual(ids);
+    expect(
+      ids.every((id) => (kvStore.get(`article:${id}`) as { status: string }).status === 'archived'),
+    ).toBe(true);
+    // The retry clears every archived article from the index, including the
+    // first batch the failed attempt wrote.
+    const [indexIds] = vasco.removeArticlesFromIndexInBackground.mock.calls.at(-1)!;
+    expect([...indexIds].sort()).toEqual(ids);
   });
 
   it('archives a selection larger than one KV batch', async () => {

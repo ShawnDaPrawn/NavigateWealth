@@ -113,30 +113,14 @@ export async function bulkDeleteArticles(
   const kept = found.filter((f) => f.article.status === 'published').map((f) => f.id);
   const candidates = found.filter((f) => f.article.status !== 'published');
 
-  const removed = new Set<string>();
-  for (const batch of chunk(candidates, KV_BATCH_SIZE)) {
-    const ids = await articles.removeManyUnless(
-      batch.map((c) => c.id),
-      { field: 'status', equals: 'published' },
-    );
-    ids.forEach((id) => removed.add(id));
-  }
-
-  const deleted = candidates.filter((c) => removed.has(c.id));
-  // A candidate the guarded delete did not remove changed under us — most
-  // likely published by the scheduler — so it is reported as kept.
-  for (const c of candidates) {
-    if (!removed.has(c.id)) kept.push(c.id);
-  }
-
-  if (deleted.length === 0) {
-    return { deleted: [], kept, notFound };
-  }
-
-  // Tombstones are written after the delete, and only for rows actually
-  // removed, so a kept article never gains one.
+  // Tombstones go in BEFORE the delete. The delete is the one step that cannot
+  // be repeated: once a row is gone, a retry of this request (the API client
+  // retries a 5xx) reads it as `notFound` and no longer has its title or slug
+  // to record. Written first, every removed article already has its tombstone
+  // whichever later step fails, and the cleanup below runs over `notFound`
+  // too, so a retry finishes what a failed attempt started.
   const deletedAt = new Date().toISOString();
-  for (const batch of chunk(deleted, KV_BATCH_SIZE)) {
+  for (const batch of chunk(candidates, KV_BATCH_SIZE)) {
     await deletedArticles.putMany(
       batch.map(({ id, article }): [string, DeletedArticleRecord] => [
         id,
@@ -153,13 +137,42 @@ export async function bulkDeleteArticles(
     );
   }
 
+  const removed = new Set<string>();
+  for (const batch of chunk(candidates, KV_BATCH_SIZE)) {
+    const ids = await articles.removeManyUnless(
+      batch.map((c) => c.id),
+      { field: 'status', equals: 'published' },
+    );
+    ids.forEach((id) => removed.add(id));
+  }
+
+  const deleted = candidates.filter((c) => removed.has(c.id));
+  // A candidate the guarded delete did not remove changed under us — most
+  // likely published by the scheduler — so it is reported as kept.
+  for (const c of candidates) {
+    if (!removed.has(c.id)) kept.push(c.id);
+  }
+
+  // No live article may carry a tombstone: the engagement reports would show
+  // it as deleted. That covers the candidates just kept, and any article an
+  // earlier, failed attempt tombstoned before it was published.
+  for (const batch of chunk(kept, KV_BATCH_SIZE)) {
+    await deletedArticles.removeMany(batch);
+  }
+
   const deletedIds = deleted.map((d) => d.id);
-  await removeTagLinks(deletedIds);
-  await removeArticlesFromIndexInBackground(deletedIds, 'article_bulk_deleted');
+  // Idempotent, so safe over ids an earlier attempt already removed.
+  const gone = [...deletedIds, ...notFound];
+  if (gone.length === 0) {
+    return { deleted: [], kept, notFound };
+  }
+  await removeTagLinks(gone);
+  await removeArticlesFromIndexInBackground(gone, 'article_bulk_deleted');
 
   // One entry for the whole batch. Audit keys are `<timestamp>:<actorId>`, so
   // one entry per article written in the same millisecond would overwrite
-  // each other.
+  // each other. `notFound` is recorded because, on a retry, it holds the
+  // articles the failed attempt removed.
   await AdminAuditService.record({
     actorId,
     actorRole: 'admin',
@@ -197,8 +210,17 @@ export async function bulkArchiveArticles(
 
   const alreadyArchived = found.filter((f) => f.article.status === 'archived').map((f) => f.id);
   const toArchive = found.filter((f) => f.article.status !== 'archived');
-  if (toArchive.length === 0) {
-    return { archived: alreadyArchived, notFound };
+  if (found.length === 0) {
+    return { archived: [], notFound };
+  }
+
+  // Before the writes, for the same reason the delete writes tombstones
+  // first: a retry after a partial failure finds the first batches already
+  // archived and could no longer tell they had been live. A rebuild that finds
+  // nothing changed is harmless; the hook coalesces repeats.
+  const wasLive = toArchive.filter((a) => a.article.status === 'published');
+  if (wasLive.length > 0) {
+    triggerSiteRebuild(`articles_bulk_archived:${wasLive.length}`);
   }
 
   // The same read-modify-write the single archive route does, batched.
@@ -213,14 +235,12 @@ export async function bulkArchiveArticles(
   }
 
   const archivedIds = toArchive.map((a) => a.id);
-  const wasLive = toArchive.filter((a) => a.article.status === 'published');
-  if (wasLive.length > 0) {
-    triggerSiteRebuild(`articles_bulk_archived:${wasLive.length}`);
-  }
+  const allArchived = [...archivedIds, ...alreadyArchived];
   // Archived content must stop being retrievable by Vasco. For an article that
   // is not published this is all `syncArticle` would do anyway, and it is a
-  // no-op for one that was never indexed.
-  await removeArticlesFromIndexInBackground(archivedIds, 'article_bulk_archived');
+  // no-op for one that was never indexed — which is what makes it safe to run
+  // over `alreadyArchived`, where a retry finds what a failed attempt wrote.
+  await removeArticlesFromIndexInBackground(allArchived, 'article_bulk_archived');
 
   await AdminAuditService.record({
     actorId,
@@ -249,5 +269,5 @@ export async function bulkArchiveArticles(
     notFound: notFound.length,
   });
 
-  return { archived: [...archivedIds, ...alreadyArchived], notFound };
+  return { archived: allArchived, notFound };
 }
