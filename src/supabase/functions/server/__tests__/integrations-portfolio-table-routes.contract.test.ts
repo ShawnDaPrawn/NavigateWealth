@@ -576,6 +576,30 @@ describe('POST / — applying rows by client name + policy number', () => {
     expect(report.rows[1]).toMatchObject({ status: 'updated', policyId: 'd2' });
   });
 
+  it('matches on the policy number carried in the values when the row names none separately', async () => {
+    // An agent can send the number as a cell, the way a sheet does, rather than
+    // as its own field. That cell is the match key: a number that belongs to
+    // someone else must not retarget the named client's record.
+    const res = await postRows([
+      { clientName: 'John Smith', values: { eb_1: 'EB-002', eb_4: 81000 } },
+      { clientName: 'John Smith', values: { eb_1: 'EB-001', eb_4: 1 } },
+    ]);
+    const report = await res.json();
+    expect(report.rows[0]).toMatchObject({
+      status: 'updated',
+      policyId: 'pol2',
+      policyNumber: 'EB-002',
+      matchedBy: 'client_name_policy_number',
+    });
+    expect(report.rows[1]).toMatchObject({
+      status: 'client_mismatch',
+      matchedClientName: 'Thandi Nkosi',
+      changes: [],
+    });
+    expect(policiesOf('c2')[0].data).toMatchObject({ eb_1: 'EB-002', eb_4: 81000 });
+    expect(policiesOf('c1')[0].data.eb_4).toBe(100000);
+  });
+
   it('leaves a blank cell alone unless the field is configured to clear on blank', async () => {
     const ignore = await postRows([
       { clientName: 'Thandi Nkosi', policyNumber: 'EB-001', values: { Employer: '' } },
@@ -598,6 +622,36 @@ describe('POST / — applying rows by client name + policy number', () => {
       changes: [{ fieldId: 'eb_2', oldValue: 'Acme', newValue: '' }],
     });
     expect(policiesOf('c1')[0].data.eb_2).toBe('');
+  });
+
+  it('refuses the whole row when a blank cell is configured as an error, and does not apply the cells beside it', async () => {
+    kvStore.set('config:mapping:p1:employee_benefits', {
+      providerId: 'p1',
+      categoryId: 'employee_benefits',
+      fieldMapping: {},
+      fieldBindings: [{ targetFieldId: 'eb_2', columnName: 'Employer', blankBehavior: 'error' }],
+      settings: {},
+    });
+    const res = await postRows([
+      {
+        clientName: 'Thandi Nkosi',
+        policyNumber: 'EB-001',
+        // Whitespace is blank. Cover Amount beside it is a real change that
+        // must not land: one invalid cell refuses the row.
+        values: { Employer: '   ', eb_4: 222000 },
+      },
+    ]);
+    const report = await res.json();
+    expect(report.rows[0]).toMatchObject({
+      status: 'invalid',
+      changes: [],
+      errors: ['Employer cannot be blank'],
+    });
+    expect(policiesOf('c1')[0].data.eb_2).toBe('Acme');
+    expect(policiesOf('c1')[0].data.eb_4).toBe(100000);
+    expect(report.summary).toMatchObject({ invalid: 1, updated: 0 });
+    const [historyKey] = historyEntries();
+    expect(kvStore.get(historyKey)).toMatchObject({ status: 'failed', publishedRows: 0 });
   });
 
   it('writes no history for a run that changed nothing and hit nothing', async () => {
@@ -754,5 +808,64 @@ describe('GET /download and POST /upload — the spreadsheet round trip', () => 
     });
     expect(noFile.status).toBe(400);
     expect(await noFile.json()).toMatchObject({ error: 'No file uploaded' });
+  });
+
+  it('refuses a row stamped for another provider or product, and still applies the rows that belong here', async () => {
+    // The hidden ids would otherwise match these policies exactly. A sheet
+    // downloaded for a different book must not write through them.
+    const csv = [
+      'Client,Policy Number,Cover Amount,_NW Policy ID,_NW Client ID,_NW Provider ID,_NW Category ID',
+      'Thandi Nkosi,EB-001,999999,pol1,c1,p2,risk_planning',
+      'John Smith,EB-002,777000,pol2,c2,p1,employee_benefits',
+    ].join('\n');
+    const res = await upload(csv, 'wrong-book.csv', 'apply', 'text/csv');
+    await expectStatus(res, 200);
+    const report = await res.json();
+    expect(report.rows[0]).toMatchObject({ status: 'invalid', changes: [] });
+    expect(report.rows[0].errors).toEqual([
+      'This row belongs to a different provider sheet',
+      'This row belongs to a different product sheet',
+    ]);
+    expect(report.rows[1]).toMatchObject({ status: 'updated', policyId: 'pol2', matchedBy: 'ids' });
+    expect(policiesOf('c1')[0].data.eb_4).toBe(100000);
+    expect(policiesOf('c2')[0].data.eb_4).toBe(777000);
+  });
+
+  it('a sheet with no Client column matches only through the hidden ids', async () => {
+    const csv = [
+      'Policy Number,Cover Amount,_NW Policy ID,_NW Client ID',
+      'EB-001,111000,pol1,c1',
+      'EB-002,222000,,',
+    ].join('\n');
+    const res = await upload(csv, 'no-client.csv', 'apply', 'text/csv');
+    await expectStatus(res, 200);
+    const report = await res.json();
+    expect(report.warnings[0]).toMatch(/no "Client" column/);
+    expect(report.rows[0]).toMatchObject({ status: 'updated', matchedBy: 'ids', policyId: 'pol1' });
+    expect(report.rows[1]).toMatchObject({ status: 'invalid', changes: [] });
+    expect(report.rows[1].errors).toEqual(['Client name is required for matching']);
+    // The second row's policy number is John's. Without a client name or the
+    // hidden ids it must not be applied to him.
+    expect(policiesOf('c1')[0].data.eb_4).toBe(111000);
+    expect(policiesOf('c2')[0].data.eb_4).toBe(50000);
+  });
+
+  it('reads a column addressed by its field id in brackets, and ignores a bracketed id that is not a field', async () => {
+    // `name [id]` is how the download disambiguates a header. A bracket whose
+    // id is not a field must not fall back to the words in front of it, or a
+    // typo would write into the wrong column.
+    const csv = [
+      'Client,Policy Number,Cover Amount [eb_4],Cover Amount [nope]',
+      'John Smith,EB-002,81000,1',
+    ].join('\n');
+    const res = await upload(csv, 'brackets.csv', 'apply', 'text/csv');
+    await expectStatus(res, 200);
+    const report = await res.json();
+    expect(report.warnings.join('\n')).toMatch(/Cover Amount \[nope\]/);
+    expect(report.rows[0]).toMatchObject({
+      status: 'updated',
+      changes: [{ fieldId: 'eb_4', oldValue: 50000, newValue: 81000 }],
+    });
+    expect(policiesOf('c2')[0].data.eb_4).toBe(81000);
   });
 });
