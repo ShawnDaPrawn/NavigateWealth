@@ -185,6 +185,46 @@ describe('sortPortfolioRows', () => {
     ).toEqual(['Newer', 'Older', 'No print']);
   });
 
+  it('sorts a yes/no column with false before true, and empty cells last either way', () => {
+    const flag = column('boolean', 'flag');
+    const flagged = [
+      row('Unset', 'P1', { flag: '' }),
+      row('Yes', 'P2', { flag: true }),
+      row('No', 'P3', { flag: false }),
+    ];
+    expect(names(sortPortfolioRows(flagged, [flag], { key: 'flag', direction: 'asc' }))).toEqual([
+      'No',
+      'Yes',
+      'Unset',
+    ]);
+    expect(names(sortPortfolioRows(flagged, [flag], { key: 'flag', direction: 'desc' }))).toEqual([
+      'Yes',
+      'No',
+      'Unset',
+    ]);
+  });
+
+  it('sorts a number column by amount and puts a non-numeric cell with the text', () => {
+    const mixed = [
+      row('Note', 'P1', { value: 'see file' }),
+      row('Empty', 'P2', { value: '' }),
+      row('Ten', 'P3', { value: 10 }),
+      row('Two', 'P4', { value: '2' }),
+    ];
+    expect(names(sortPortfolioRows(mixed, columns, { key: 'value', direction: 'asc' }))).toEqual([
+      'Two',
+      'Ten',
+      'Note',
+      'Empty',
+    ]);
+    expect(names(sortPortfolioRows(mixed, columns, { key: 'value', direction: 'desc' }))).toEqual([
+      'Note',
+      'Ten',
+      'Two',
+      'Empty',
+    ]);
+  });
+
   it('keeps the incoming order for ties and does not mutate its input', () => {
     const tied = [row('B', '1', { notes: 'x' }), row('A', '2', { notes: 'x' })];
     expect(names(sortPortfolioRows(tied, columns, { key: 'notes', direction: 'desc' }))).toEqual([
