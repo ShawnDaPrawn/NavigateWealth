@@ -150,13 +150,17 @@ stated prerequisite has already caused a production outage once.
   `integrationSyncHistory` (source `portfolio_table` for the second path) and
   client totals are recalculated the same way. Each agent has its own token,
   and the actor on its writes (`agent:<name>`) comes from that token, never
-  from the request body. Do not route agent writes through the Review tab,
-  let either path write around `publishSyncRun`, or take an agent's name from
-  the body, in passing: whether agent writes should wait for review is an
-  owner decision, listed in [`ROADMAP.md`](ROADMAP.md) §9a. A policy's PDF
-  has two doors as well, the app's upload and the SQL intake an agent with no
-  login uses, and both store through `replacePolicyDocumentForPolicy`; keep it
-  that way rather than giving the intake its own write.
+  from the request body. **External agent updates are automatic, by owner
+  decision (2026-10-01):** they apply and the client's profile follows, with
+  no further action or approval. That holds for an agent writing straight
+  into the database too: a trigger marks the client's totals stale and a
+  worker recalculates them (migration `client_totals_refresh`). Do not route
+  agent writes through the Review tab or add any review step without a new
+  owner decision, and do not let either path write around `publishSyncRun` or
+  take an agent's name from the body. A policy's PDF has two doors as well,
+  the app's upload and the SQL intake an agent with no login uses, and both
+  store through `replacePolicyDocumentForPolicy`; keep it that way rather than
+  giving the intake its own write.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -180,6 +184,7 @@ but cannot complete them.
 | Social automation — Routines            | Open until the two weekly Routines (Sat 04:00 UTC generate, Sun 14:00 UTC schedule; connectors Buffer + Supabase) exist on the Claude and/or ChatGPT side. The playbooks they read are seeded by the migration.                                                                                                                                                                                                                                                                                                                                                                                        | `runbooks/social-automation.md`                                    |
 | Newsletter intake — Routine             | Open until the monthly routine exists. Owner's choice: a **ChatGPT** scheduled task on the HTTPS path (`POST /newsletter-intake/submit`, header `x-nw-newsletter-intake-token`, token in Vault as `navigatewealth_newsletter_intake_token`). Migrations `20260916211847` and `20260916212029` are applied; until the routine runs, admins upload the PDF by hand, which works today.                                                                                                                                                                                                                   | `runbooks/newsletter-intake.md`                                    |
 | Newsletter website archive              | Live. Published newsletters appear at Resources → Newsletters and at `/resources/newsletter/<slug>`. The public bucket `make-91ed8379-newsletters-public` is created lazily on the first publish — no operator step. Two public read routes were added, so `quality/baselines/route-auth-baseline` rose 129 → 131.                                                                                                                                                                                                                                                                                     | `runbooks/newsletter-intake.md`                                    |
+| Agent updates — profile totals          | Migration `client_totals_refresh` applied (`20261001105937`); live once its worker deploys. Owner decision: an external agent's update applies automatically and the client's profile follows. A write straight into the database (the update bot, through the connector) marks the client's totals stale and a worker recalculates them within seconds. Every client is queued for one recalculation, which corrects the AGRA678002 client still showing 551,894.41 against 569,366.18. Open until that total reads right.                                                                            | `runbooks/client-totals-refresh.md`                                |
 | Policy document intake — SQL            | Built. Live once migration `policy_document_intake` is applied, which needs the owner: the Supabase connector holds any SQL containing DELETE (here, clearing staged parts) for approval, and nobody was there to give it. Then the update bot attaches a policy PDF with no login through `policy_document_intake_submit(…)`, or `put_part` then submit for a large file; a worker stores it as the app's upload would, which still needs a session. Open until it is applied and the first hand-over reads `processed`.                                                                              | `runbooks/policy-document-intake.md`                               |
 | Portfolio table — external agent        | Live and deployed. Each outside agent gets its own token: a super admin issues it under Integrations → Portfolio → Endpoint for external agents → Agent tokens, and the agent's name is recorded on every write it makes (a name in the body cannot change it). The original shared Vault token was carried over as the agent `shared` (migration `portfolio_agent_tokens`, applied). Open until the owner issues each bot (Grok/ChatGPT) its own token, sees its first dry run answer 200, and revokes `shared`. Run every bot every few hours, not every few minutes: the known debt below says why. | `runbooks/portfolio-table.md`                                      |
 

@@ -1,7 +1,7 @@
 # Migrations — repo vs. production
 
 **Reconciled 2026-08-24 against project `vpjmdsltwrnpefzcgdmz`. The folder now
-tells the truth.** Last appended to 2026-10-01 (`20261001083546`, applied and
+tells the truth.** Last appended to 2026-10-01 (`20261001105937`, applied and
 verified against the same project). `20261001120000_policy_document_intake.sql`
 is written and smoke-tested but **not yet applied**: its version is a
 placeholder until it is, after which the file is renamed to the recorded one.
@@ -48,6 +48,7 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260930114009_portfolio_table_token_vault.sql`              | ✅ `20260930114009`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (5 assertions), verified after (Vault secret present, oracle true for the real secret and false for wrong/empty/null, `proacl = postgres, service_role`, `search_path = ''`)                                                                                                                     |
 | `20260930141042_rls_auth_uid_initplan.sql`                    | ✅ `20260930141042`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (per-user row visibility identical before/after on `events`, `reminders`, `fna_intake_sessions`, `tasks`), verified after (22 of 22 policies wrapped, 0 bare `auth.uid()`, file md5 matches the applied SQL, `auth_rls_initplan` and `unindexed_foreign_keys` gone from the performance advisor) |
 | `20261001083546_portfolio_agent_tokens.sql`                   | ✅ `20261001083546`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (14 assertions), verified after (RLS on, anon/authenticated hold nothing, service_role select/insert/update, `shared` carried over and its hash equal to the Vault secret's, old oracle left for the live code)                                                                                  |
+| `20261001105937_client_totals_refresh.sql`                    | ✅ `20261001105937`  | Repo-authored; smoke-tested (12 assertion groups, rolled back) and mutation-checked on local Postgres 16, then applied via `apply_migration` and verified after (RLS on, table grants service_role only, 4 definer functions with pinned `search_path`, trigger enabled with its `policies:client:%` filter, cron job 36, 4 clients marked for the one-off recalculation)    |
 | `20261001120000_policy_document_intake.sql`                   | ❌ **NOT APPLIED**   | Repo-authored; smoke-tested (18 assertion groups, rolled back) and race-tested with two sessions (same key; same client) against local Postgres 16 with stand-ins for pg_net, pg_cron and Vault. `apply_migration` waits on the owner's approval because the SQL contains DELETE. Rename the file to the recorded version once applied                                       |
 
 `20260906005533` is stamped later than the day it was authored, and that is
