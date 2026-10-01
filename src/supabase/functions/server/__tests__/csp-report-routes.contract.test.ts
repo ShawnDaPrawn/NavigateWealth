@@ -268,6 +268,39 @@ describe('an anonymous caller cannot exhaust the store', () => {
   });
 });
 
+describe('accepted blocked image hosts are discarded', () => {
+  it.each([
+    ['https://content-media.investing.com/news/a.jpg'],
+    ['https://www.untitledui.com/images/flags/za.svg'],
+  ])('drops an img-src violation on %s', async (blocked) => {
+    // RSS thumbnails and the design-system showcase samples are an accepted
+    // outcome (see ACCEPTED_BLOCKED_IMAGE_HOSTS); each URL would otherwise
+    // become a permanently open Issue Manager row.
+    await post(legacy({ 'effective-directive': 'img-src', 'blocked-uri': blocked }));
+
+    expect(stored()).toHaveLength(0);
+  });
+
+  it('still records the same host under a different directive', async () => {
+    await post(
+      legacy({
+        'effective-directive': 'script-src',
+        'blocked-uri': 'https://content-media.investing.com/x.js',
+      }),
+    );
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  it('still records an img-src violation on an unlisted host', async () => {
+    await post(
+      legacy({ 'effective-directive': 'img-src', 'blocked-uri': 'https://evil.example/p.png' }),
+    );
+
+    expect(stored()).toHaveLength(1);
+  });
+});
+
 describe('extension noise is discarded', () => {
   it.each([
     ['chrome-extension://abc/inject.js'],

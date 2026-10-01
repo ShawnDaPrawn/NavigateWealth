@@ -75,6 +75,19 @@ const EXTENSION_SCHEMES = [
   'webkit-masked-url:',
 ];
 
+/**
+ * Image hosts whose `img-src` reports are an accepted, documented outcome.
+ *
+ * Market News thumbnails come from third-party RSS feeds (investing.com) with
+ * arbitrary URLs, and MarketNewsTab.tsx records the decision to let the policy
+ * block them rather than widen `img-src` to all of `https:` — the tab shows a
+ * local placeholder instead. The design-system showcase library hot-links
+ * untitledui.com sample avatars and flags. Each distinct URL would otherwise
+ * become its own open Issue Manager row that can never be "fixed". Exact
+ * hostnames only, and only for `img-src`; every other directive still reports.
+ */
+const ACCEPTED_BLOCKED_IMAGE_HOSTS = ['content-media.investing.com', 'www.untitledui.com'];
+
 /** One request cannot enqueue more than this many reports. */
 const MAX_REPORTS_PER_REQUEST = 20;
 
@@ -195,6 +208,15 @@ function isExtensionNoise(v: NormalizedViolation): boolean {
   });
 }
 
+function isAcceptedBlockedImage(v: NormalizedViolation): boolean {
+  if (!v.directive.startsWith('img-src')) return false;
+  try {
+    return ACCEPTED_BLOCKED_IMAGE_HOSTS.includes(new URL(v.blockedUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * POST / — the endpoint named by `Reporting-Endpoints` and `report-uri`.
  *
@@ -221,7 +243,9 @@ app.post(
     }
 
     const payload = await c.req.json().catch(() => null);
-    const violations = normalize(payload).filter((v) => !isExtensionNoise(v));
+    const violations = normalize(payload).filter(
+      (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v),
+    );
 
     if (violations.length === 0) {
       return c.body(null, 204);
