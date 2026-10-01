@@ -746,11 +746,15 @@ remains for the external path, in order:
    limit on the atomic Postgres limiter that auth already uses
    (`20260821210412_atomic_auth_rate_limit.sql`) closes it; the agent name the
    gate now resolves is the natural key.
-5. **Decide whether agent writes wait for review.** They apply directly today,
-   by design. If the owner wants an agent's changes approved like a portal
-   run's, the endpoint can stage a run for the Review tab instead of
-   publishing it, using the staged-run mechanism the portal path already has.
-   This is an owner decision, not a defect.
+5. **Whether agent writes wait for review** — **DECIDED 2026-10-01 by the
+   owner: they do not.** An external agent's update applies automatically and
+   updates the client's profile with no further action or approval. The
+   endpoint already published directly; what was missing was the profile for
+   an agent writing through the Supabase connector, which never recalculated
+   the client's totals. Migration `client_totals_refresh` now marks such a
+   client stale and a worker recalculates them
+   ([`runbooks/client-totals-refresh.md`](runbooks/client-totals-refresh.md)).
+   Do not add a review step to agent writes without a new owner decision.
 6. **Indexed reads.** `listPoliciesForProviderCategory` reads every
    `policies:client:*` row to build one book. This rides on §6's `policies`
    cutover rather than being fixed separately:
@@ -759,15 +763,16 @@ remains for the external path, in order:
    _Gate:_ no whole-namespace read behind the portfolio routes.
 7. **Values from an agent that only has the Supabase connector.** The update
    bot writes policy values straight into `policies:client:*` through the
-   connector, so its changes go around `publishSyncRun`: locked fields are not
-   honoured, nothing is recorded in `integrationSyncHistory`, client totals
-   are not recalculated, and a write can race the document worker (the
-   runbook's "Order with value updates"). A SQL hand-over for rows, swept by
-   a worker that calls `applyPortfolioRows` the way the document intake calls
-   the upload path, puts it on the same rails as the endpoint.
+   connector, so its changes go around `publishSyncRun`. The client's totals
+   are now recalculated automatically after such a write (item 5). What is
+   still missing: locked fields are not honoured, nothing is recorded in
+   `integrationSyncHistory`, and a write can race the document worker (the
+   intake runbook's "Order with value updates"). A SQL hand-over for rows,
+   swept by a worker that calls `applyPortfolioRows` the way the document
+   intake calls the upload path, puts it on the same rails as the endpoint.
    _Gate:_ no agent writes `kv_store_91ed8379` directly.
 
-- **Effort:** item 2 done; S/S/M for items 3 to 5; item 6 is part of §6, not extra work; item 7 is M.
+- **Effort:** items 2 and 5 done; S/S for items 3 and 4; item 6 is part of §6, not extra work; item 7 is M.
 
 ---
 

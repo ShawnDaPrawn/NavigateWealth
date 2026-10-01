@@ -60,6 +60,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/newsletter-studio', () => import('./newsletter-studio-routes.ts'));
   lazy(app, '/newsletter-intake', () => import('./newsletter-intake-routes.ts'));
   lazy(app, '/policy-document-intake', () => import('./policy-document-intake-routes.ts'));
+  lazy(app, '/client-totals-refresh', () => import('./client-totals-refresh-routes.ts'));
   lazy(app, '/newsletter-site', () => import('./newsletter-site-routes.ts'));
   lazy(app, '/consultation', () => import('./consultation.ts'));
   lazy(app, '/documents', () => import('./documents.ts'));

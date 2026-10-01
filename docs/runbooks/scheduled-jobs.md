@@ -502,6 +502,7 @@ here so the next audit starts from a complete set.
 | `db-maintenance-purge-cron-history`     | `0 2 * * *`    | SQL only: 7-day retention on `cron.job_run_details`  | migration `20260913181044`                         |
 | `db-maintenance-vacuum-system-tables`   | `20 2 * * *`   | SQL only: `vacuum (analyze)` on the two tables below | migration `20260913181044`                         |
 | `policy-document-intake-sweep`          | `*/2 * * * *`  | `/policy-document-intake/process`, only when due     | migration `policy_document_intake`                 |
+| `client-totals-refresh-sweep`           | `*/2 * * * *`  | `/client-totals-refresh/process`, only when takeable | migration `client_totals_refresh`                  |
 
 Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
 renders as its activity timeline, for every document batch uploaded in the last
@@ -577,6 +578,19 @@ read it differently from the HTTP jobs above:
 - Its token is the shared `navigatewealth_cron_auth_token` from Vault, read at
   call time, like every other job here. A missing secret makes `kick()` return
   null with a warning instead of calling out.
+
+### `client-totals-refresh-sweep` (installed by migration `client_totals_refresh`)
+
+The safety net for the automatic profile refresh (`client-totals-refresh.md`).
+It works like `policy-document-intake-sweep` above. Its command is SQL,
+`select public.client_totals_refresh_kick()`, and it calls
+`/client-totals-refresh/process` only when the worker would find a client to
+take: one whose totals are stale, that no live claim holds, and that is not
+backing off after a failure (migration `client_totals_refresh_claims`). The
+usual wake-up comes from the trigger on direct policy writes; this job covers
+lost ones, lapsed claims and finished back-offs. Query A is green every 2
+minutes whether or not anything was stale, and plane 2 exists only for the
+runs that called out.
 
 ### `social-automation-render-images` and `social-automation-sync-buffer` (to install after the social-assets deploy)
 
