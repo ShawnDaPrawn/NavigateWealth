@@ -510,6 +510,27 @@ describe('POST / — applying rows by client name + policy number', () => {
     expect(kvStore.has('user_profile:c1:client_keys')).toBe(true);
   });
 
+  it('does not rewrite a dropdown when the cell is a dash or only the word Fund', async () => {
+    // Both normalise to an empty string. includes("") is true for every option,
+    // so the first option (Group Life, already the stored value here — use a
+    // different stored value) would otherwise be written straight onto the policy.
+    const policies = kvStore.get('policies:client:c1') as Array<{ data: Record<string, unknown> }>;
+    policies[0].data.eb_3 = 'Group Disability';
+
+    const res = await postRows([
+      { clientName: 'Thandi Nkosi', policyNumber: 'EB-001', values: { 'Benefit Type': '-' } },
+      { clientName: 'Thandi Nkosi', policyNumber: 'EB-001', values: { eb_3: 'Fund' } },
+    ]);
+    const report = await res.json();
+
+    expect(report.rows.map((row: { status: string }) => row.status)).toEqual([
+      'invalid',
+      'invalid',
+    ]);
+    expect(report.summary.updated).toBe(0);
+    expect(policiesOf('c1')[0].data.eb_3).toBe('Group Disability');
+  });
+
   it('refuses a policy number that belongs to a different client', async () => {
     const res = await postRows([
       { clientName: 'Someone Else', policyNumber: 'EB-001', values: { eb_4: 1 } },
