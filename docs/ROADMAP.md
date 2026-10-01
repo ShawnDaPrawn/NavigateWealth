@@ -712,6 +712,12 @@ who drives them and whether an adviser approves the change first.
 | Native policy update agent | The portal worker, and the Review tab's template upload                                                                    | A staged run that an adviser publishes       | `integrations-portal-*`, `scripts/portal-worker/`                                                          |
 | Portfolio table            | The Integrations **Portfolio** tab (download, amend, upload) and an external agent calling `/integrations/portfolio-table` | Its own preview or `dryRun`, then it applies | `integrations-portfolio-table-*`, contract in [`runbooks/portfolio-table.md`](runbooks/portfolio-table.md) |
 
+A policy's PDF has its own two doors, both through
+`replacePolicyDocumentForPolicy`: the app's upload, and, for an agent with no
+login, a hand-over through SQL that a worker stores — **DONE 2026-10-01**
+(migration `policy_document_intake`, contract in
+[`runbooks/policy-document-intake.md`](runbooks/policy-document-intake.md)).
+
 The owner is still building the native agent; nothing below changes it. What
 remains for the external path, in order:
 
@@ -751,8 +757,17 @@ remains for the external path, in order:
    `repositories/integration-book-repository.ts` is the seam, and a book
    becomes one indexed query by provider and category.
    _Gate:_ no whole-namespace read behind the portfolio routes.
+7. **Values from an agent that only has the Supabase connector.** The update
+   bot writes policy values straight into `policies:client:*` through the
+   connector, so its changes go around `publishSyncRun`: locked fields are not
+   honoured, nothing is recorded in `integrationSyncHistory`, client totals
+   are not recalculated, and a write can race the document worker (the
+   runbook's "Order with value updates"). A SQL hand-over for rows, swept by
+   a worker that calls `applyPortfolioRows` the way the document intake calls
+   the upload path, puts it on the same rails as the endpoint.
+   _Gate:_ no agent writes `kv_store_91ed8379` directly.
 
-- **Effort:** item 2 done; S/S/M for items 3 to 5; item 6 is part of §6, not extra work.
+- **Effort:** item 2 done; S/S/M for items 3 to 5; item 6 is part of §6, not extra work; item 7 is M.
 
 ---
 
