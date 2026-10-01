@@ -117,18 +117,32 @@ export function coerceFieldValue(
 
   if (fieldType === 'dropdown' && Array.isArray(field.options) && field.options.length > 0) {
     const simplifiedRaw = normaliseDropdownValue(raw);
-    const option = field.options.find((candidate) => {
-      const simplifiedCandidate = normaliseDropdownValue(candidate);
-      return (
-        simplifiedCandidate === simplifiedRaw ||
-        simplifiedRaw.includes(simplifiedCandidate) ||
-        simplifiedCandidate.includes(simplifiedRaw)
-      );
-    });
-    if (!option) {
-      return { value, error: `${field.name} must be one of: ${field.options.join(', ')}` };
-    }
-    return { value: option };
+    const notAnOption = {
+      value,
+      error: `${field.name} must be one of: ${field.options.join(', ')}`,
+    };
+    // "-" or "Fund" normalise to "" because punctuation is stripped and the
+    // word "fund" is removed. `includes("")` is true for every option, so the
+    // first option would be written. Refuse instead of guessing.
+    if (!simplifiedRaw) return notAnOption;
+
+    const normalised = field.options.map((candidate) => ({
+      candidate,
+      simplified: normaliseDropdownValue(candidate),
+    }));
+    const exact = normalised.find((option) => option.simplified === simplifiedRaw);
+    if (exact) return { value: exact.candidate };
+
+    // A unique partial match still resolves ("Group Life Cover" → Group Life).
+    // Two matches do not: "Life" is both Single Life and Joint Life, and taking
+    // the first option would rewrite a joint annuity as a single one.
+    const partial = normalised.filter(
+      (option) =>
+        option.simplified.length > 0 &&
+        (simplifiedRaw.includes(option.simplified) || option.simplified.includes(simplifiedRaw)),
+    );
+    if (partial.length === 1) return { value: partial[0].candidate };
+    return notAnOption;
   }
 
   return { value: raw };

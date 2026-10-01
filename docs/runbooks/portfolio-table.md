@@ -73,7 +73,10 @@ Other rules:
   blank_ (then the row is invalid). Same rules as a template upload.
 - **Values are coerced by field type** exactly as a spreadsheet upload's are:
   `R 125,000` becomes `125000`, an Excel date serial becomes `YYYY-MM-DD`,
-  `group life` resolves to the dropdown option `Group Life`.
+  `group life` resolves to the dropdown option `Group Life`. A dropdown value
+  that matches more than one option, or that normalises to nothing (`-`,
+  `Fund`), is invalid and the row is not written — it is not guessed as the
+  first option.
 - **Unknown columns are ignored** with a warning; `Last Updated` and
   `Policy Print` are read-only.
 - **Provenance.** An applied row appends `{ source: 'portfolio_table', fieldsApplied }`
