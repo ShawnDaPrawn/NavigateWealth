@@ -501,6 +501,7 @@ here so the next audit starts from a complete set.
 | `newsletter-studio-process-campaigns`   | `*/2 * * * *`  | `/newsletter-studio/cron/process`                    | `supabase/cron/newsletter-studio-jobs.sql`         |
 | `db-maintenance-purge-cron-history`     | `0 2 * * *`    | SQL only: 7-day retention on `cron.job_run_details`  | migration `20260913181044`                         |
 | `db-maintenance-vacuum-system-tables`   | `20 2 * * *`   | SQL only: `vacuum (analyze)` on the two tables below | migration `20260913181044`                         |
+| `policy-document-intake-sweep`          | `*/2 * * * *`  | `/policy-document-intake/process`, only when due     | migration `policy_document_intake`                 |
 
 Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
 renders as its activity timeline, for every document batch uploaded in the last
@@ -558,6 +559,24 @@ is applied logs one warning and carries on. Delivery itself now attaches the
 PDF to every email and sizes each concurrent batch from the encoded PDF, which
 is why a 5 MB issue goes out three to five at a time rather than twenty. The
 contract for the hand-over is `newsletter-intake.md`.
+
+### `policy-document-intake-sweep` (installed by migration `policy_document_intake`)
+
+The safety net for the policy document intake (`policy-document-intake.md`).
+Its command is SQL, `select public.policy_document_intake_kick()`, and the
+function calls out to `/policy-document-intake/process` only when a hand-over
+is due: pending past its retry time, or claimed by a worker that never
+finished. Most of the time it finds nothing and makes no request at all. So
+read it differently from the HTTP jobs above:
+
+- Query A is green every 2 minutes whether or not anything was due. That is
+  correct, not the green-when-broken trap: the run did what it was asked.
+- Plane 2 exists only for the runs that called out. Their request id is what
+  `kick()` returned. The same function also runs from `submit` and `retry`,
+  which is the usual wake-up; this job covers retries and missed wake-ups.
+- Its token is the shared `navigatewealth_cron_auth_token` from Vault, read at
+  call time, like every other job here. A missing secret makes `kick()` return
+  null with a warning instead of calling out.
 
 ### `social-automation-render-images` and `social-automation-sync-buffer` (to install after the social-assets deploy)
 
