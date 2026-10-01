@@ -3,7 +3,7 @@
  *
  * The SQL side checks the ids, the file name and the key again when the
  * upload is submitted, with its own messages; these catch the obvious early,
- * with field-by-field errors, before anything is staged.
+ * with field-by-field errors, before anything is submitted.
  */
 
 import { z } from 'npm:zod';

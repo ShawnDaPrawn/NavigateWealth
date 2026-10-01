@@ -75,6 +75,14 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    looked complete locally could still fail after push — the exact failure mode
    this protocol exists to prevent.
 
+   **Run them on Node 20, as CI does.** `quality-check.yml` pins
+   `node-version: '20'`, but the sandbox's default `node` is 22, and Node 21+
+   has APIs that Node 20 lacks. Hit for real on 2026-10-01 (PR #403): std's
+   `encodeBase64` calls `ArrayBuffer.prototype.transfer`, and 11 upload tests
+   that passed locally answered 500 in CI. Node 20 is installed at
+   `/opt/node20`, so `export PATH=/opt/node20/bin:$PATH` before running the
+   gates.
+
    If a gate genuinely cannot run (e.g. a blocked `npm install`), **say so
    explicitly with the error** — do not commit unverified code and "let CI catch
    it."

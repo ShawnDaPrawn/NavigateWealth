@@ -69,11 +69,13 @@ curl -sS -X POST \
 - An admin session.
 
 **What happens.** The upload is checked at the door (a PDF that starts
-`%PDF-`, ends with `%%EOF` in its last 1 KB, and is at most 20 MB), then staged
-in parts small enough for SQL and submitted through the same
-`policy_document_intake_submit` an agent calls, so the same checks run and the
-same row is queued. Anything an earlier attempt left staged under that key is
-discarded first, never joined in. The request then runs the worker itself, so
+`%PDF-`, ends with `%%EOF` in its last 1 KB, and is at most 20 MB), then
+submitted whole, in one call to the same `policy_document_intake_submit` an
+agent calls, so the same checks run and the same row is queued. That call is
+atomic. Two requests racing with one key, such as a retry overlapping the
+first try, settle on one hand-over: the first is stored whole, and the other
+answers with its status. Anything an earlier attempt left staged under that
+key is cleared, never joined in. The request then runs the worker itself, so
 the PDF is normally on the policy by the time it answers:
 
 | Answer | Meaning                                                                                                                    |

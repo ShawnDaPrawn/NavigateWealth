@@ -13,9 +13,9 @@
  * cannot overwrite its successor.
  *
  * It also owns the calls the HTTPS upload makes to hand a PDF over the same
- * way an agent does in SQL: look a key up, stage the PDF in parts, submit it.
- * The SQL functions validate and queue exactly as they do for the agent, so
- * the two doors cannot drift apart.
+ * way an agent does in SQL: look a key up, submit the PDF. The SQL functions
+ * validate and queue exactly as they do for the agent, so the two doors
+ * cannot drift apart.
  *
  * Before the migration is applied the functions do not exist. That reads as
  * "nothing to claim", logged once, so deploying this code first is harmless.
@@ -182,56 +182,31 @@ export async function findIntake(idempotencyKey: string): Promise<IntakeStatusRo
 }
 
 /**
- * Clear the parts staged under a key that has not been submitted.
+ * Queue a whole PDF as one hand-over, exactly as an agent's SQL submit does:
+ * the SQL side checks it, records the row and wakes the worker, all in one
+ * transaction. `existed` is true when the key had been submitted already,
+ * which is how two requests racing with one key settle on one hand-over.
  *
- * Submit joins EVERY part staged under its key, so pieces left over from an
- * earlier attempt (an agent's SQL hand-over that ran out of room part-way, say)
- * would be joined into this upload's file. Clearing them first means the file
- * submitted is the one uploaded. The SQL side has no function for this; the
- * rows are scratch space the service role already owns, so a table delete is
- * the narrow way to do it.
+ * In one call on purpose, rather than staged in parts: parts staged under a
+ * key are shared by every request using that key, so two overlapping uploads
+ * could clear or interleave each other's. One submit is atomic, and it also
+ * clears any parts an earlier attempt left under the key.
  */
-export async function discardStagedParts(idempotencyKey: string): Promise<void> {
-  const { error } = await db()
-    .from('policy_document_intake_parts')
-    .delete()
-    .eq('idempotency_key', idempotencyKey);
-  if (error) throw new Error(`clearing staged parts failed: ${error.message}`);
-}
-
-/** Stage part `seq` (0-based) of a PDF's base64 under a key, before submit. */
-export async function stageIntakePart(
-  idempotencyKey: string,
-  seq: number,
-  data: string,
-): Promise<void> {
-  const { error } = await db().rpc('policy_document_intake_put_part', {
-    p_idempotency_key: idempotencyKey,
-    p_seq: seq,
-    p_data: data,
-  });
-  if (error) throw failureOf('policy_document_intake_put_part', error);
-}
-
-/**
- * Queue the staged parts as one hand-over, exactly as an agent's SQL submit
- * does: the SQL side joins and checks them, records the row and wakes the
- * worker. `existed` is true when the key had been submitted already.
- */
-export async function submitStagedIntake(params: {
+export async function submitIntake(params: {
   clientId: string;
   policyId: string;
   documentType: IntakeDocumentType;
   fileName: string;
   idempotencyKey: string;
   submittedBy: string;
+  pdfBase64: string;
 }): Promise<{ id: string; existed: boolean; status: IntakeStatus }> {
   const { data, error } = await db().rpc('policy_document_intake_submit', {
     p_client_id: params.clientId,
     p_policy_id: params.policyId,
     p_file_name: params.fileName,
     p_idempotency_key: params.idempotencyKey,
-    p_pdf_base64: null,
+    p_pdf_base64: params.pdfBase64,
     p_mime_type: 'application/pdf',
     p_document_type: params.documentType,
     p_submitted_by: params.submittedBy,

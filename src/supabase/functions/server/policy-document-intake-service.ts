@@ -18,24 +18,21 @@
  * failed with this error.
  *
  * An agent that can make an HTTPS request hands the PDF over with
- * `uploadPolicyDocument` instead: the file arrives whole, is staged and
- * submitted through the same SQL functions, and is stored in the same request
- * when nothing else holds the client. A PDF too large for one SQL statement no
- * longer has to be cut into pieces by the agent.
+ * `uploadPolicyDocument` instead: the file arrives whole, is submitted through
+ * the same SQL function in one call, and is stored in the same request when
+ * nothing else holds the client. A PDF too large for one SQL statement through
+ * the connector no longer has to be cut into pieces by the agent.
  */
-import { encodeBase64 } from 'jsr:@std/encoding/base64';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { replacePolicyDocumentForPolicy } from './integrations-document-storage.ts';
 import {
   claimNextIntake,
   completeIntake,
-  discardStagedParts,
   failIntake,
   findIntake,
   IntakeRejectedError,
-  stageIntakePart,
-  submitStagedIntake,
+  submitIntake,
   type ClaimedIntake,
   type IntakeDocumentType,
   type IntakeStatus,
@@ -54,13 +51,6 @@ const MAX_ERROR_LENGTH = 1000;
 
 /** The largest PDF a hand-over may carry: the SQL side's limit, and Storage's. */
 export const MAX_INTAKE_PDF_BYTES = 20 * 1024 * 1024;
-
-/**
- * Bytes of PDF per staged part. 750,000 bytes encode to exactly 1,000,000
- * base64 characters, the most `put_part` takes, and being a multiple of 3 no
- * part but the last carries `=` padding, so the parts join into valid base64.
- */
-export const INTAKE_PART_BYTES = 750_000;
 
 /** How long an upload waits for its PDF to be stored before answering 202. */
 export const UPLOAD_WAIT_MS = 20_000;
@@ -119,6 +109,23 @@ export function decodeIntakePdf(base64: string) {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+/** Bytes per `String.fromCharCode` call: well under any engine's argument limit. */
+const BASE64_CHUNK_BYTES = 0x8000;
+
+/**
+ * The PDF's bytes as standard, padded base64, which is what submit expects and
+ * `decodeIntakePdf` reads back. A plain `btoa` over a binary string built in
+ * chunks. Not std's `encodeBase64`: that needs `ArrayBuffer.prototype.transfer`,
+ * which Deno has but the Node 20 the tests run on in CI does not.
+ */
+export function encodeIntakePdf(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += BASE64_CHUNK_BYTES) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_BYTES));
+  }
+  return btoa(binary);
 }
 
 /** Store one claimed hand-over and set `policy.document`. Throws on any failure. */
@@ -255,13 +262,14 @@ function assertWholePdf(bytes: Uint8Array): void {
 /**
  * Hand a PDF over to the intake in one request, and store it if it can be.
  *
- * The file is staged in parts under its key (after clearing anything an
- * earlier attempt left there), submitted through the same SQL function an
- * agent calls, and then this request runs the worker itself, so the PDF is
- * normally stored and on the policy by the time it answers. When another
- * hand-over for the same client is being stored, it waits up to
- * `UPLOAD_WAIT_MS` and then reports where its own one stands; the worker
- * finishes it either way.
+ * The file is submitted whole, in one call to the same SQL function an agent
+ * calls: atomic, so two requests with one key (a retry overlapping the first
+ * try) settle on one hand-over, and any pieces an earlier attempt staged under
+ * the key are cleared rather than joined in. Then this request runs the worker
+ * itself, so the PDF is normally stored and on the policy by the time it
+ * answers. When another hand-over for the same client is being stored, it
+ * waits up to `UPLOAD_WAIT_MS` and then reports where its own one stands; the
+ * worker finishes it either way.
  */
 export async function uploadPolicyDocument(
   input: PolicyDocumentUpload,
@@ -286,18 +294,14 @@ export async function uploadPolicyDocument(
     };
   }
 
-  await discardStagedParts(idempotencyKey);
-  for (let seq = 0; seq * INTAKE_PART_BYTES < input.bytes.length; seq++) {
-    const part = input.bytes.subarray(seq * INTAKE_PART_BYTES, (seq + 1) * INTAKE_PART_BYTES);
-    await stageIntakePart(idempotencyKey, seq, encodeBase64(part));
-  }
-  const submitted = await submitStagedIntake({
+  const submitted = await submitIntake({
     clientId: input.clientId,
     policyId: input.policyId,
     documentType: input.documentType,
     fileName: input.fileName,
     idempotencyKey,
     submittedBy: input.submittedBy,
+    pdfBase64: encodeIntakePdf(input.bytes),
   });
 
   // Store it now rather than waiting for the wake-up submit sent. The claim

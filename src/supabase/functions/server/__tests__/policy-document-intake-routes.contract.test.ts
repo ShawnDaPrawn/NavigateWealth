@@ -7,13 +7,13 @@
  * What is pinned:
  *  - only the cron credential or an admin session reaches the worker, and an
  *    agent's token opens the upload but not the worker;
- *  - an upload is staged in parts small enough for SQL, submitted through the
- *    same SQL function an agent calls, and stored in the same request, with
- *    the document recording who handed it over (an agent by its token, never
- *    by the form);
- *  - pieces an earlier attempt left under a key are discarded, never joined
- *    into the upload; a PDF that stops short is refused at the door and never
- *    stored by the worker either;
+ *  - an upload is submitted whole, in one call to the same SQL function an
+ *    agent calls, and stored in the same request, with the document recording
+ *    who handed it over (an agent by its token, never by the form);
+ *  - two uploads racing with one key settle on one hand-over, stored once and
+ *    never mixed; pieces an earlier attempt left under a key are cleared,
+ *    never joined into the upload; a PDF that stops short is refused at the
+ *    door and never stored by the worker either;
  *  - a due hand-over lands at `{clientId}/{policyId}/{documentType}.pdf` and
  *    `policy.document` is set exactly as the app's upload sets it, leaving the
  *    rest of the policy alone;
@@ -165,24 +165,6 @@ const db = vi.hoisted(() => {
           error: null,
         };
       }
-      case 'policy_document_intake_put_part': {
-        const key = String(args.p_idempotency_key);
-        const submitted = state.rows.find((row) => row.idempotency_key === key);
-        if (submitted) {
-          return raise(
-            'policy_document_intake_put_part',
-            `"${key}" was already submitted (status ${submitted.status})`,
-          );
-        }
-        const data = String(args.p_data);
-        if (data.length < 1 || data.length > 1_000_000) {
-          return raise('policy_document_intake_put_part', 'data must be 1..1000000 characters');
-        }
-        const parts = state.parts.get(key) ?? new Map<number, string>();
-        parts.set(Number(args.p_seq), data);
-        state.parts.set(key, parts);
-        return { data: parts.size, error: null };
-      }
       case 'policy_document_intake_submit': {
         const key = String(args.p_idempotency_key);
         const earlier = state.rows.find((row) => row.idempotency_key === key);
@@ -289,22 +271,7 @@ const db = vi.hoisted(() => {
     },
   };
 
-  /** Only the upload's clearing of a key's leftover parts touches a table directly. */
-  const from = (table: string) => {
-    if (table !== 'policy_document_intake_parts') throw new Error(`unexpected table ${table}`);
-    return {
-      delete: () => ({
-        eq: async (column: string, key: string) => {
-          if (column !== 'idempotency_key') throw new Error(`unexpected column ${column}`);
-          state.calls.push(`discard parts ${key}`);
-          state.parts.delete(key);
-          return { error: null };
-        },
-      }),
-    };
-  };
-
-  return { state, client: { rpc, storage, from } };
+  return { state, client: { rpc, storage } };
 });
 
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({ createClient: () => db.client }));
@@ -336,7 +303,6 @@ vi.mock('../integrations-portfolio-table-auth.ts', () => agents);
 import app from '../policy-document-intake-routes.ts';
 import {
   INCOMPLETE_PDF_MESSAGE,
-  INTAKE_PART_BYTES,
   INTAKE_ROWS_PER_RUN,
   processPolicyDocumentIntake,
   uploadPolicyDocument,
@@ -858,20 +824,32 @@ describe('the upload', () => {
       });
     });
 
-    it('stages a large PDF in parts SQL can take, and stores it byte for byte', async () => {
-      const filler = 'y'.repeat(INTAKE_PART_BYTES * 2 + 1234);
-      const large = `%PDF-1.7\n${filler}\n%%EOF\n`;
+    it('hands a large PDF over in one submit, and stores it byte for byte', async () => {
+      // Far more than the ~2,000 characters per statement the SQL connector carried.
+      const large = `%PDF-1.7\n${'y'.repeat(3 * 1024 * 1024)}\n%%EOF\n`;
       const res = await upload(statementFields, { file: bytesOf(large) });
       expect(res.status).toBe(200);
       expect(
-        db.state.calls.filter((call) => call === 'policy_document_intake_put_part'),
-      ).toHaveLength(3);
+        db.state.calls.filter((call) => call === 'policy_document_intake_submit'),
+      ).toHaveLength(1);
+      expect(db.state.calls).not.toContain('policy_document_intake_put_part');
       const stored = db.state.objects.get(`${CLIENT}/${POLICY}/statement.pdf`)!;
       expect(stored.bytes.length).toBe(large.length);
       expect(Buffer.from(stored.bytes).toString('utf8')).toBe(large);
     });
 
-    it('discards pieces an earlier attempt left under the key, and never joins them in', async () => {
+    it('stores it without ArrayBuffer.prototype.transfer, which the Node 20 in CI lacks', async () => {
+      const proto = ArrayBuffer.prototype as { transfer?: unknown };
+      const saved = Object.getOwnPropertyDescriptor(proto, 'transfer');
+      delete proto.transfer;
+      try {
+        expect((await upload(statementFields)).status).toBe(200);
+      } finally {
+        if (saved) Object.defineProperty(proto, 'transfer', saved);
+      }
+    });
+
+    it('clears pieces an earlier attempt left under the key, and never joins them in', async () => {
       const key = 'agra678002-statement-2026-10-01';
       db.state.parts.set(
         key,
@@ -883,7 +861,6 @@ describe('the upload', () => {
       );
       const res = await upload({ ...statementFields, idempotencyKey: key });
       expect(res.status).toBe(200);
-      expect(db.state.calls).toContain(`discard parts ${key}`);
       const stored = db.state.objects.get(`${CLIENT}/${POLICY}/statement.pdf`)!;
       expect(Buffer.from(stored.bytes).toString('utf8')).toBe(STATEMENT);
       expect(db.state.parts.size).toBe(0);
@@ -924,7 +901,7 @@ describe('the upload', () => {
   });
 
   describe('refusing at the door', () => {
-    it('refuses a PDF that stops short, before anything is staged', async () => {
+    it('refuses a PDF that stops short, before anything is submitted', async () => {
       const res = await upload(statementFields, {
         file: bytesOf('%PDF-1.7\n% only the first piece'),
       });
@@ -1008,6 +985,59 @@ describe('the upload', () => {
         Object.assign(mine, { status: 'processed', storage_key: 'stored/by/the/worker.pdf' });
       });
       expect(result).toMatchObject({ status: 'processed', storageKey: 'stored/by/the/worker.pdf' });
+    });
+  });
+
+  describe('two uploads with one key at once', () => {
+    const KEY = 'agra678002-statement-2026-10-01';
+
+    // A retry overlapping the first try. Each request yields to the event loop
+    // while it waits, so the other one's worker gets to finish.
+    const race = (...files: string[]) =>
+      Promise.all(
+        files.map((text) =>
+          uploadPolicyDocument(
+            {
+              clientId: CLIENT,
+              policyId: POLICY,
+              documentType: 'statement',
+              fileName: 'statement.pdf',
+              bytes: bytesOf(text),
+              idempotencyKey: KEY,
+              submittedBy: 'agent:grok',
+            },
+            { sleep: () => new Promise((done) => setTimeout(done, 0)) },
+          ),
+        ),
+      );
+
+    it('settle on one hand-over, stored once', async () => {
+      const results = await race(STATEMENT, STATEMENT);
+      // Both looked the key up before either submitted: a real race.
+      expect(db.state.calls.slice(0, 4)).toEqual([
+        'policy_document_intake_status',
+        'policy_document_intake_status',
+        'policy_document_intake_submit',
+        'policy_document_intake_submit',
+      ]);
+      expect(results.map((result) => result.existed).sort()).toEqual([false, true]);
+      expect(results.map((result) => result.intakeId)).toEqual(['uploaded-1', 'uploaded-1']);
+      expect(results.map((result) => result.status)).toEqual(['processed', 'processed']);
+      expect(db.state.rows).toHaveLength(1);
+      expect(db.state.calls.filter((call) => call.startsWith('upload '))).toHaveLength(1);
+    });
+
+    it('never mix two different files: the first submit is stored whole', async () => {
+      db.state.parts.set(KEY, new Map([[0, b64('%PDF-1.7\n% a leftover piece')]]));
+      const other = `%PDF-1.7\n% a different statement\n${'z'.repeat(300)}\n%%EOF\n`;
+      const results = await race(STATEMENT, other);
+      const first = results.findIndex((result) => !result.existed);
+      expect(first).not.toBe(-1);
+      expect(results.filter((result) => result.existed)).toHaveLength(1);
+      expect(db.state.rows).toHaveLength(1);
+      const stored = db.state.objects.get(`${CLIENT}/${POLICY}/statement.pdf`)!;
+      expect(Buffer.from(stored.bytes).toString('utf8')).toBe([STATEMENT, other][first]);
+      expect(db.state.parts.size).toBe(0);
     });
   });
 });
