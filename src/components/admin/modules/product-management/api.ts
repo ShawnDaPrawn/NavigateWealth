@@ -448,11 +448,17 @@ export const productManagementApi = {
     return response.agents;
   },
 
-  /** The only call that ever returns a token in the clear. */
+  /**
+   * The only call that ever returns a token in the clear. Never retried: if
+   * the token was minted but the response was lost, a retry gets 409 for the
+   * name and the one response that held the token is gone. A failure here
+   * leaves the admin to look at the list and revoke-then-issue instead.
+   */
   issuePortfolioAgentToken: async (name: string): Promise<PortfolioAgentIssued> => {
     const response = await api.post<{ success: boolean } & PortfolioAgentIssued>(
       'integrations/portfolio-agents',
       { name },
+      { retryTransientFailures: false },
     );
     return { agent: response.agent, token: response.token };
   },
