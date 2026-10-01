@@ -241,6 +241,8 @@ export const integrationsKeys = {
   /** The provider/product book the Portfolio tab shows and a bot reads. */
   portfolioTable: (providerId: string | null, categoryId: string | null) =>
     [...integrationsKeys.all, 'portfolio-table', providerId, categoryId] as const,
+  /** Every outside agent's token for the portfolio table (super admin only). */
+  portfolioAgents: () => [...integrationsKeys.all, 'portfolio-agents'] as const,
 } as const;
 
 // ============================================================================

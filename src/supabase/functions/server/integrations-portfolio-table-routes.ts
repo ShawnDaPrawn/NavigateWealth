@@ -13,13 +13,21 @@
  * --------------------------------
  * The Portfolio tab and an integrating agent do exactly the same things here,
  * so they share the routes. The gate accepts, in order: the dedicated token
- * against an env var (development only), the same token against Vault (the
- * production path for a bot), the shared cron token, and finally an admin
- * session (the browser). Mirrors social-channel-assets-routes.ts.
+ * against an env var (development only), an agent's own token (the production
+ * path for a bot), the shared cron token, and finally an admin session (the
+ * browser).
+ *
+ * WHO WROTE IT
+ * ------------
+ * Each agent has its own token, and the token decides the actor recorded on a
+ * write (`agent:grok`); a `submittedBy` in the body cannot change it. The
+ * tokens are issued and revoked through `/integrations/portfolio-agents`,
+ * which only a super admin reaches — never with an agent token.
  *
  * The env branch is honoured ONLY when DENO_ENV is 'development', which is set
  * nowhere in deployment, so in production it can never act as a second
- * credential and rotating the Vault secret revokes everything.
+ * credential. Its writes are recorded as `agent:development`, a name no real
+ * agent can be issued.
  *
  * Kept in its own router, mounted ahead of `/integrations`, so the machine
  * gate cannot leak onto the client-scoped policy routes next door and so this
@@ -36,7 +44,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { validateBody, body } from './validate.ts';
-import { verifyPortfolioTableToken } from './integrations-portfolio-table-auth.ts';
+import { identifyPortfolioAgent } from './integrations-portfolio-table-auth.ts';
 import { PORTFOLIO_TOKEN_HEADER } from '../../../shared/integrations/portfolio-table.ts';
 import { MAX_INTEGRATION_UPLOAD_BYTES } from './integrations-spreadsheet.ts';
 import {
@@ -66,6 +74,9 @@ const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreads
  * Kept out of the gate body so `constantTimeEqual` stays inside the
  * route-auth detector's scan window of `app.use(`.
  */
+/** The actor the development-only override records; reserved, so never issued. */
+const DEVELOPMENT_AGENT = 'development';
+
 const developmentOverrideToken = (): string =>
   Deno.env.get('DENO_ENV') === 'development'
     ? (Deno.env.get('NW_PORTFOLIO_TABLE_TOKEN') || '').trim()
@@ -75,26 +86,34 @@ app.use('*', async (c: Context, next: Next) => {
   const dedicated = (c.req.header(PORTFOLIO_TOKEN_HEADER) || '').trim();
   const expected = developmentOverrideToken();
   if (expected !== '' && dedicated !== '' && constantTimeEqual(dedicated, expected)) {
-    c.set('portfolioActor', 'integration');
+    c.set('portfolioAgent', DEVELOPMENT_AGENT);
     return next();
   }
-  if (dedicated !== '' && (await verifyPortfolioTableToken(dedicated))) {
-    c.set('portfolioActor', 'integration');
+  const agent = dedicated === '' ? null : await identifyPortfolioAgent(dedicated);
+  if (agent) {
+    c.set('portfolioAgent', agent);
     return next();
   }
   if (await isAuthorizedCronRequest(c)) {
-    c.set('portfolioActor', 'scheduled');
+    c.set('portfolioScheduled', true);
     return next();
   }
   return requireAdmin(c, next);
 });
 
-/** Who is writing: the integration (named if it said so), a scheduled job, or the admin. */
+/**
+ * Who is writing. An agent is named by its token, never by the body: that is
+ * what makes the recorded actor authenticated. A scheduled job shares one cron
+ * credential, so its self-declared name is all there is; the admin is the
+ * signed-in user.
+ */
 function actorOf(c: Context, submittedBy?: string): string {
-  const machine = c.get('portfolioActor') as string | undefined;
-  const name = (submittedBy || '').trim();
-  if (machine === 'integration') return name ? `agent:${name}` : 'agent';
-  if (machine) return name ? `${machine}:${name}` : machine;
+  const agent = c.get('portfolioAgent') as string | undefined;
+  if (agent) return `agent:${agent}`;
+  if (c.get('portfolioScheduled')) {
+    const name = (submittedBy || '').trim();
+    return name ? `scheduled:${name}` : 'scheduled';
+  }
   const userId = c.get('userId') as string | undefined;
   return userId ? `admin:${userId}` : 'admin';
 }

@@ -7,8 +7,9 @@
  * sheet carries them, a policy number that belongs to someone else refused,
  * a locked field never overwritten, an invalid cell refusing its whole row,
  * and a dry run writing nothing. The gate is pinned the way the social
- * library's is: the token works without a session, a wrong one does not, and
- * a signed-in client never gets in.
+ * library's is: an agent's token works without a session, a wrong one does
+ * not, and a signed-in client never gets in. The actor on a write is named by
+ * the agent's token, never by the body (ROADMAP §9a).
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import * as XLSX from 'xlsx';
@@ -23,8 +24,10 @@ vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = { env: { get: () => 'test' } };
 });
 
+/** `the-real-token` belongs to the agent `grok`; nothing else is a token. */
+const identifyGrok = async (candidate: string) => (candidate === 'the-real-token' ? 'grok' : null);
 const auth = vi.hoisted(() => ({
-  verifyPortfolioTableToken: vi.fn(async (candidate: string) => candidate === 'the-real-token'),
+  identifyPortfolioAgent: vi.fn(async (_candidate: string): Promise<string | null> => null),
 }));
 const cron = vi.hoisted(() => ({ isAuthorizedCronRequest: vi.fn(async () => false) }));
 
@@ -151,7 +154,7 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   cron.isAuthorizedCronRequest.mockResolvedValue(false);
-  auth.verifyPortfolioTableToken.mockImplementation(async (c: string) => c === 'the-real-token');
+  auth.identifyPortfolioAgent.mockImplementation(identifyGrok);
   seed();
 });
 
@@ -183,10 +186,23 @@ describe('the gate', () => {
     expect((await request(app, `/?${SCOPE}`, { as: 'admin' })).status).toBe(200);
   });
 
-  it('lets an agent through on the integration token, with no session', async () => {
+  it('lets an agent through on its own token, with no session', async () => {
     const res = await app.request(`/?${SCOPE}`, { headers: { [TOKEN_HEADER]: 'the-real-token' } });
     expect(res.status).toBe(200);
-    expect(auth.verifyPortfolioTableToken).toHaveBeenCalledWith('the-real-token');
+    expect(auth.identifyPortfolioAgent).toHaveBeenCalledWith('the-real-token');
+  });
+
+  it('turns a revoked or unknown token away rather than treating it as a session', async () => {
+    // A revoked token identifies no live agent, so the gate falls through and
+    // the caller, with no session either, gets a 401.
+    auth.identifyPortfolioAgent.mockResolvedValue(null);
+    const res = await app.request(`/?${SCOPE}`, { headers: { [TOKEN_HEADER]: 'the-real-token' } });
+    expect(res.status).toBe(401);
+  });
+
+  it('never asks who a token belongs to when no token was sent', async () => {
+    await request(app, `/?${SCOPE}`, { as: 'admin' });
+    expect(auth.identifyPortfolioAgent).not.toHaveBeenCalled();
   });
 
   it('does not accept a wrong token as a credential', async () => {
@@ -208,6 +224,69 @@ describe('the gate', () => {
       (await postRows([{ clientName: 'x', policyNumber: 'y', values: {} }], {}, { as: 'client' }))
         .status,
     ).toBe(403);
+  });
+});
+
+describe('who a write is recorded against', () => {
+  /** Apply one changing row as the given caller; return the persisted run. */
+  const applyAs = async (init: { headers?: Record<string, string>; submittedBy?: string }) => {
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+      body: JSON.stringify({
+        providerId: 'p1',
+        categoryId: 'employee_benefits',
+        ...(init.submittedBy ? { submittedBy: init.submittedBy } : {}),
+        rows: [{ clientName: 'Thandi Nkosi', policyNumber: 'EB-001', values: { eb_4: 130000 } }],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const report = await res.json();
+    expect(report.summary.updated).toBe(1);
+    return kvStore.get(`sync-run:${report.runId}`) as { actor?: string };
+  };
+
+  it('names an agent by its token, whatever name the body claims', async () => {
+    const run = await applyAs({
+      headers: { [TOKEN_HEADER]: 'the-real-token' },
+      submittedBy: 'some-other-agent',
+    });
+    expect(run.actor).toBe('agent:grok');
+  });
+
+  it('names the admin by their session', async () => {
+    const run = await applyAs({
+      headers: { Authorization: 'Bearer t', 'x-test-role': 'admin', 'x-test-user': 'u-42' },
+      submittedBy: 'ignored',
+    });
+    expect(run.actor).toBe('admin:u-42');
+  });
+
+  it('keeps the self-declared name of a scheduled job, whose cron credential is shared', async () => {
+    cron.isAuthorizedCronRequest.mockResolvedValue(true);
+    const run = await applyAs({ submittedBy: 'nightly' });
+    expect(run.actor).toBe('scheduled:nightly');
+  });
+
+  it('records the development override as the reserved agent `development`', async () => {
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (key: string) =>
+          key === 'DENO_ENV'
+            ? 'development'
+            : key === 'NW_PORTFOLIO_TABLE_TOKEN'
+              ? 'local-dev-token'
+              : 'test',
+      },
+    });
+    try {
+      const run = await applyAs({ headers: { [TOKEN_HEADER]: 'local-dev-token' } });
+      expect(run.actor).toBe('agent:development');
+      // The override answered before any database lookup.
+      expect(auth.identifyPortfolioAgent).not.toHaveBeenCalled();
+    } finally {
+      vi.stubGlobal('Deno', { env: { get: () => 'test' } });
+    }
   });
 });
 
@@ -413,12 +492,16 @@ describe('POST / — applying rows by client name + policy number', () => {
       source: 'portfolio_table',
       fieldsApplied: ['eb_4'],
     });
-    // The run is kept as a record of what changed, and the header's history
-    // gains one entry naming who wrote.
-    expect(kvStore.get(`sync-run:${report.runId}`)).toMatchObject({ source: 'portfolio_table' });
+    // The run is kept as a record of what changed, naming the agent its token
+    // belongs to, and the header's history gains one entry naming who wrote.
+    // The body said `grokbot`; the token says `grok`, and the token wins.
+    expect(kvStore.get(`sync-run:${report.runId}`)).toMatchObject({
+      source: 'portfolio_table',
+      actor: 'agent:grok',
+    });
     const [historyKey] = historyEntries();
     expect(kvStore.get(historyKey)).toMatchObject({
-      fileName: 'Portfolio update via API (agent:grokbot)',
+      fileName: 'Portfolio update via API (agent:grok)',
       publishedRows: 1,
       rowCount: 2,
       status: 'success',

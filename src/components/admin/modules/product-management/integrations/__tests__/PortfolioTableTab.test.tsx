@@ -23,6 +23,9 @@ vi.mock('@/components/admin/modules/product-management/api', () => ({
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
+vi.mock('@/components/admin/modules/personnel', () => ({
+  useCurrentUserPermissions: () => ({ isSuperAdmin: false }),
+}));
 
 import { PortfolioTableTab } from '../PortfolioTableTab';
 
@@ -266,6 +269,17 @@ describe('PortfolioTableTab', () => {
     await waitFor(() =>
       expect(api.downloadPortfolioTable).toHaveBeenCalledWith('p1', 'employee_benefits'),
     );
+  });
+
+  it('mounts the agent tokens only once the endpoint panel is opened', async () => {
+    const { container } = renderTab();
+    await screen.findByText('Thandi Nkosi');
+    expect(screen.queryByText(/A super admin issues and revokes them here/)).toBeNull();
+
+    const details = container.querySelector('details') as HTMLDetailsElement;
+    details.open = true;
+    fireEvent(details, new Event('toggle'));
+    expect(await screen.findByText(/A super admin issues and revokes them here/)).toBeDefined();
   });
 
   it('asks for a product category before showing anything', () => {

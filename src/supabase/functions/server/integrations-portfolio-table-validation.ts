@@ -8,7 +8,11 @@
  */
 
 import { z } from 'npm:zod';
-import { PORTFOLIO_MAX_ROWS } from '../../../shared/integrations/portfolio-table.ts';
+import {
+  PORTFOLIO_MAX_ROWS,
+  normalisePortfolioAgentName,
+  portfolioAgentNameProblem,
+} from '../../../shared/integrations/portfolio-table.ts';
 
 const ID = z.string().trim().min(1).max(120);
 
@@ -59,4 +63,18 @@ export const PortfolioUploadFieldsSchema = z.object({
 export const PolicyPrintQuerySchema = z.object({
   policyId: ID,
   clientId: ID,
+});
+
+/**
+ * Issuing an agent token. The name is lowercased before it is checked, so
+ * "Grok" issues `grok`; the same rule is the CHECK on the table.
+ */
+export const PortfolioAgentIssueSchema = z.object({
+  name: z.preprocess(
+    normalisePortfolioAgentName,
+    z.string().superRefine((name, ctx) => {
+      const problem = portfolioAgentNameProblem(name);
+      if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
+    }),
+  ),
 });

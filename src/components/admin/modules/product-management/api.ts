@@ -1,6 +1,8 @@
 import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import type {
+  PortfolioAgent,
+  PortfolioAgentIssued,
   PortfolioApplyReport,
   PortfolioTable,
 } from '../../../../shared/integrations/portfolio-table';
@@ -434,6 +436,38 @@ export const productManagementApi = {
       `integrations/portfolio-table/print?policyId=${encodeURIComponent(policyId)}&clientId=${encodeURIComponent(clientId)}`,
     );
     return response.url;
+  },
+
+  // -- Portfolio agent tokens (super admin) --
+  // One token per outside agent; the agent's name is the actor on its writes.
+
+  listPortfolioAgents: async (): Promise<PortfolioAgent[]> => {
+    const response = await api.get<{ success: boolean; agents: PortfolioAgent[] }>(
+      'integrations/portfolio-agents',
+    );
+    return response.agents;
+  },
+
+  /**
+   * The only call that ever returns a token in the clear. Never retried: if
+   * the token was minted but the response was lost, a retry gets 409 for the
+   * name and the one response that held the token is gone. A failure here
+   * leaves the admin to look at the list and revoke-then-issue instead.
+   */
+  issuePortfolioAgentToken: async (name: string): Promise<PortfolioAgentIssued> => {
+    const response = await api.post<{ success: boolean } & PortfolioAgentIssued>(
+      'integrations/portfolio-agents',
+      { name },
+      { retryTransientFailures: false },
+    );
+    return { agent: response.agent, token: response.token };
+  },
+
+  revokePortfolioAgentToken: async (name: string): Promise<PortfolioAgent> => {
+    const response = await api.post<{ success: boolean; agent: PortfolioAgent }>(
+      `integrations/portfolio-agents/${encodeURIComponent(name)}/revoke`,
+    );
+    return response.agent;
   },
 
   fetchPortalFlow: async (providerId: string, categoryId: string): Promise<PortalProviderFlow> => {

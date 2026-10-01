@@ -21,8 +21,64 @@
  * not touch `Deno`, the KV store, React or the DOM.
  */
 
-/** Header an outside agent sends the Vault-held token in. */
+/** Header an outside agent sends its own token in. */
 export const PORTFOLIO_TOKEN_HEADER = 'x-nw-portfolio-token';
+
+// ---------------------------------------------------------------------------
+// Agent tokens — one per outside agent
+// ---------------------------------------------------------------------------
+
+/**
+ * An agent's name: the actor recorded on every write it makes (`agent:grok`).
+ * Lowercase letters, digits, `-` and `_`, 2 to 40 characters, starting with a
+ * letter or digit. Mirrored by the CHECK constraint on
+ * `public.portfolio_agent_tokens.agent_name`.
+ */
+export const PORTFOLIO_AGENT_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]{1,39}$/;
+
+/**
+ * Names an operator cannot issue. `development` is the actor the
+ * development-only env override records, so a real agent must not share it.
+ */
+export const PORTFOLIO_RESERVED_AGENT_NAMES: readonly string[] = ['development'];
+
+/** Every issued token starts with this, so a leaked one is recognisable. */
+export const PORTFOLIO_AGENT_TOKEN_PREFIX = 'nwpa_';
+
+/** An agent's token as the admin panel sees it: never the token or its hash. */
+export interface PortfolioAgent {
+  name: string;
+  createdAt: string;
+  /** `admin:<userId>`, or a note when the row was carried over by a migration. */
+  createdBy: string | null;
+  lastUsedAt: string | null;
+  /** Null while the token is live. */
+  revokedAt: string | null;
+  revokedBy: string | null;
+}
+
+/** The one response that carries a token in the clear: right after it is issued. */
+export interface PortfolioAgentIssued {
+  agent: PortfolioAgent;
+  token: string;
+}
+
+/** `Grok ` → `grok`: names are compared and stored lowercased. */
+export const normalisePortfolioAgentName = (value: unknown): string =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+/** Why a name cannot be issued, or null when it can. */
+export function portfolioAgentNameProblem(name: string): string | null {
+  if (!PORTFOLIO_AGENT_NAME_PATTERN.test(name)) {
+    return 'Use 2 to 40 lowercase letters, digits, "-" or "_", starting with a letter or digit.';
+  }
+  if (PORTFOLIO_RESERVED_AGENT_NAMES.includes(name)) {
+    return `"${name}" is reserved.`;
+  }
+  return null;
+}
 
 /** The worksheet the download writes and the upload reads first. */
 export const PORTFOLIO_SHEET_NAME = 'Portfolio';

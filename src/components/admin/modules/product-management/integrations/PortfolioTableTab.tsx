@@ -55,6 +55,7 @@ import {
 } from './portfolioFormat';
 import { PortfolioGrid } from './PortfolioGrid';
 import { PortfolioUploadReport } from './PortfolioUploadReport';
+import { PortfolioAgentsPanel } from './PortfolioAgentsPanel';
 
 interface PortfolioTableTabProps {
   provider: IntegrationProvider;
@@ -62,6 +63,10 @@ interface PortfolioTableTabProps {
 }
 
 function EndpointPanel({ endpointUrl }: { endpointUrl: string }) {
+  // The agent tokens are fetched the first time the panel is opened, not on
+  // every visit to the tab, and stay mounted after that so a freshly issued
+  // token is not lost by closing the panel before copying it.
+  const [opened, setOpened] = useState(false);
   const handleCopy = async () => {
     try {
       await copyToClipboard(endpointUrl);
@@ -72,7 +77,12 @@ function EndpointPanel({ endpointUrl }: { endpointUrl: string }) {
   };
 
   return (
-    <details className="group border-t border-gray-100 px-6 py-4">
+    <details
+      className="group border-t border-gray-100 px-6 py-4"
+      onToggle={(event) => {
+        if (event.currentTarget.open) setOpened(true);
+      }}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 [&::-webkit-details-marker]:hidden">
         <ChevronRight
           className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-90"
@@ -88,10 +98,8 @@ function EndpointPanel({ endpointUrl }: { endpointUrl: string }) {
         <p className="text-sm text-gray-600">
           An agent reads this table with a <code className="text-xs">GET</code> and posts
           corrections with a <code className="text-xs">POST</code> to the same address, sending its
-          token in the <code className="text-xs">{PORTFOLIO_TOKEN_HEADER}</code> header. The token
-          is kept in Supabase Vault;{' '}
-          <code className="text-xs">docs/runbooks/portfolio-table.md</code> has the full contract
-          and the SQL to read or rotate it.
+          own token in the <code className="text-xs">{PORTFOLIO_TOKEN_HEADER}</code> header.{' '}
+          <code className="text-xs">docs/runbooks/portfolio-table.md</code> has the full contract.
         </p>
         <div className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 py-1 pr-1 pl-3">
           <code
@@ -110,6 +118,11 @@ function EndpointPanel({ endpointUrl }: { endpointUrl: string }) {
             Copy
           </Button>
         </div>
+        {opened && (
+          <div className="border-t border-gray-100 pt-3">
+            <PortfolioAgentsPanel />
+          </div>
+        )}
       </div>
     </details>
   );

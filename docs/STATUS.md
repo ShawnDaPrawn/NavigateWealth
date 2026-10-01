@@ -148,10 +148,12 @@ stated prerequisite has already caused a production outage once.
   calls, applies directly after its own preview or `dryRun`. Both publish
   through `publishSyncRun`, so locked fields hold, provenance is recorded in
   `integrationSyncHistory` (source `portfolio_table` for the second path) and
-  client totals are recalculated the same way. Do not route agent writes
-  through the Review tab, or let either path write around `publishSyncRun`, in
-  passing: whether agent writes should wait for review is an owner decision,
-  listed in [`ROADMAP.md`](ROADMAP.md) §9a.
+  client totals are recalculated the same way. Each agent has its own token,
+  and the actor on its writes (`agent:<name>`) comes from that token, never
+  from the request body. Do not route agent writes through the Review tab,
+  let either path write around `publishSyncRun`, or take an agent's name from
+  the body, in passing: whether agent writes should wait for review is an
+  owner decision, listed in [`ROADMAP.md`](ROADMAP.md) §9a.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -175,7 +177,7 @@ but cannot complete them.
 | Social automation — Routines            | Open until the two weekly Routines (Sat 04:00 UTC generate, Sun 14:00 UTC schedule; connectors Buffer + Supabase) exist on the Claude and/or ChatGPT side. The playbooks they read are seeded by the migration.                                                                                                                                                                                                                                                                                                                                                                                        | `runbooks/social-automation.md`                                    |
 | Newsletter intake — Routine             | Open until the monthly routine exists. Owner's choice: a **ChatGPT** scheduled task on the HTTPS path (`POST /newsletter-intake/submit`, header `x-nw-newsletter-intake-token`, token in Vault as `navigatewealth_newsletter_intake_token`). Migrations `20260916211847` and `20260916212029` are applied; until the routine runs, admins upload the PDF by hand, which works today.                                                                                                                                                                                                                   | `runbooks/newsletter-intake.md`                                    |
 | Newsletter website archive              | Live. Published newsletters appear at Resources → Newsletters and at `/resources/newsletter/<slug>`. The public bucket `make-91ed8379-newsletters-public` is created lazily on the first publish — no operator step. Two public read routes were added, so `quality/baselines/route-auth-baseline` rose 129 → 131.                                                                                                                                                                                                                                                                                     | `runbooks/newsletter-intake.md`                                    |
-| Portfolio table — external agent        | Live and deployed. The Integrations **Portfolio** tab shows each provider/product policy book, downloads it and applies an amended upload (matched by client name + policy number, previewed first). `/integrations/portfolio-table` serves the same table to an outside agent; its token is in Vault as `navigatewealth_portfolio_table_token` (migration `portfolio_table_token_vault`, applied). Open until the owner pastes that token into the scheduled bot (Grok/ChatGPT) and its first dry run answers 200. Run the bot every few hours, not every few minutes: the known debt below says why. | `runbooks/portfolio-table.md`                                      |
+| Portfolio table — external agent        | Live and deployed. Each outside agent gets its own token: a super admin issues it under Integrations → Portfolio → Endpoint for external agents → Agent tokens, and the agent's name is recorded on every write it makes (a name in the body cannot change it). The original shared Vault token was carried over as the agent `shared` (migration `portfolio_agent_tokens`, applied). Open until the owner issues each bot (Grok/ChatGPT) its own token, sees its first dry run answer 200, and revokes `shared`. Run every bot every few hours, not every few minutes: the known debt below says why. | `runbooks/portfolio-table.md`                                      |
 
 ## Open security follow-ups
 
