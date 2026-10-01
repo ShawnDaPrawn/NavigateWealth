@@ -490,7 +490,7 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    swap, not a 175-file edit. One entity per epic; `clients` first (highest
    query pressure, most cross-feature reads). The `policies` step also retires
    the two whole-namespace reads of `policies:client:*`, behind the Review
-   tab's policy index and the portfolio table's book (§9a item 5).
+   tab's policy index and the portfolio table's book (§9a item 6).
    _Gate per entity:_ migration + RLS committed, backfill script, flag
    cutover, KV path retired.
 3. **KV stays** for genuinely schemaless/ephemeral state (drafts, rate-limit
@@ -715,32 +715,44 @@ who drives them and whether an adviser approves the change first.
 The owner is still building the native agent; nothing below changes it. What
 remains for the external path, in order:
 
-1. **Hand the token to the first agent** and check that its first `dryRun`
-   gets a 200 back. This is an operator step, listed in
-   [`STATUS.md`](STATUS.md). Items 2 to 4 wait for a real agent's traffic, so
+1. **Issue each agent its own token**, check that its first `dryRun` gets a
+   200 back, then revoke `shared`. This is an operator step, listed in
+   [`STATUS.md`](STATUS.md). Items 4 and 5 wait for a real agent's traffic, so
    they are designed against how it actually behaves.
-2. **One token per agent.** One Vault secret admits every agent today, and the
-   actor recorded on each write (`agent:<submittedBy>`) is whatever name the
-   agent sends. A secret per agent would make the recorded actor authenticated
-   and let one agent be revoked without rotating the others.
-   _Gate:_ the actor on a published run comes from the token, not the body.
-3. **Rate-limit the token tier.** Nothing bounds how often a token holder may
-   call, and every call reads the whole policy namespace (item 5). A per-token
+2. **One token per agent** — **DONE 2026-10-01** (migration
+   `20261001083546`). Tokens live in
+   `public.portfolio_agent_tokens` as SHA-256 hashes only; the gate names the
+   agent from its token, the persisted run records `actor: agent:<name>`, and a
+   `submittedBy` in the body no longer decides it. A super admin issues and
+   revokes tokens in the Portfolio tab (`/integrations/portfolio-agents`, which
+   no agent token can reach). The old shared secret was carried over as the
+   agent `shared`, so nothing configured with it broke.
+   _Gate (met):_ the actor on a published run comes from the token, not the
+   body, pinned by the portfolio-table contract tests.
+3. **Retire the shared Vault secret.** Nothing reads
+   `navigatewealth_portfolio_table_token` or
+   `public.verify_portfolio_table_token` since item 2 deployed; they stayed
+   only so the code live before it kept working. Once `shared` is revoked, a
+   migration drops the function and deletes the secret.
+   _Gate:_ neither exists in production, and no code names them.
+4. **Rate-limit the token tier.** Nothing bounds how often a token holder may
+   call, and every call reads the whole policy namespace (item 6). A per-token
    limit on the atomic Postgres limiter that auth already uses
-   (`20260821210412_atomic_auth_rate_limit.sql`) closes it.
-4. **Decide whether agent writes wait for review.** They apply directly today,
+   (`20260821210412_atomic_auth_rate_limit.sql`) closes it; the agent name the
+   gate now resolves is the natural key.
+5. **Decide whether agent writes wait for review.** They apply directly today,
    by design. If the owner wants an agent's changes approved like a portal
    run's, the endpoint can stage a run for the Review tab instead of
    publishing it, using the staged-run mechanism the portal path already has.
    This is an owner decision, not a defect.
-5. **Indexed reads.** `listPoliciesForProviderCategory` reads every
+6. **Indexed reads.** `listPoliciesForProviderCategory` reads every
    `policies:client:*` row to build one book. This rides on §6's `policies`
    cutover rather than being fixed separately:
    `repositories/integration-book-repository.ts` is the seam, and a book
    becomes one indexed query by provider and category.
    _Gate:_ no whole-namespace read behind the portfolio routes.
 
-- **Effort:** S/S/M/M; item 5 is part of §6, not extra work.
+- **Effort:** item 2 done; S/S/M for items 3 to 5; item 6 is part of §6, not extra work.
 
 ---
 

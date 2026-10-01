@@ -1,7 +1,7 @@
 # Migrations — repo vs. production
 
 **Reconciled 2026-08-24 against project `vpjmdsltwrnpefzcgdmz`. The folder now
-tells the truth.** Last appended to 2026-09-30 (`20260930141042`, applied and
+tells the truth.** Last appended to 2026-10-01 (`20261001083546`, applied and
 verified against the same project).
 
 Before this reconciliation the repo held four migration files, production had
@@ -45,6 +45,7 @@ select version, name from supabase_migrations.schema_migrations order by version
 | `20260917194649_social_channel_assets.sql`                    | ✅ `20260917194649`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (12 assertion groups), verified after (4 functions, RLS on, anon denied, the Vault token oracle answers only for the real secret)                                                                                                                                                                |
 | `20260930114009_portfolio_table_token_vault.sql`              | ✅ `20260930114009`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (5 assertions), verified after (Vault secret present, oracle true for the real secret and false for wrong/empty/null, `proacl = postgres, service_role`, `search_path = ''`)                                                                                                                     |
 | `20260930141042_rls_auth_uid_initplan.sql`                    | ✅ `20260930141042`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (per-user row visibility identical before/after on `events`, `reminders`, `fna_intake_sessions`, `tasks`), verified after (22 of 22 policies wrapped, 0 bare `auth.uid()`, file md5 matches the applied SQL, `auth_rls_initplan` and `unindexed_foreign_keys` gone from the performance advisor) |
+| `20261001083546_portfolio_agent_tokens.sql`                   | ✅ `20261001083546`  | Repo-authored, applied via `apply_migration` after a rolled-back smoke test (14 assertions), verified after (RLS on, anon/authenticated hold nothing, service_role select/insert/update, `shared` carried over and its hash equal to the Vault secret's, old oracle left for the live code)                                                                                  |
 
 `20260906005533` is stamped later than the day it was authored, and that is
 correct rather than drift: it had to be applied _after_ the Edge Function that

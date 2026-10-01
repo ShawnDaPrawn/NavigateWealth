@@ -828,6 +828,7 @@ export async function applyPortfolioRows(
     categoryId: book.categoryId,
     fileName,
     source: 'portfolio_table',
+    actor: params.actor,
     status: 'staged',
     createdAt: now,
     updatedAt: now,

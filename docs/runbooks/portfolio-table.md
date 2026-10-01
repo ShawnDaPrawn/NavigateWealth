@@ -100,7 +100,8 @@ Base: `https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed837
 
 Auth (any one of):
 
-- Header `x-nw-portfolio-token: <Vault token>` — the agent path (see below).
+- Header `x-nw-portfolio-token: <the agent's own token>` — the agent path (see
+  [Agent tokens](#agent-tokens)).
 - Shared cron header `x-nw-cron-auth` (Vault cron token).
 - An admin session bearer — how the Portfolio tab reads and writes.
 - Under `DENO_ENV=development` only, a matching `NW_PORTFOLIO_TABLE_TOKEN` env value.
@@ -174,7 +175,7 @@ curl -sS -X POST "$BASE/integrations/portfolio-table" \
   -H 'Content-Type: application/json' \
   -d '{
     "providerId": "…", "categoryId": "employee_benefits",
-    "dryRun": true, "submittedBy": "grokbot",
+    "dryRun": true,
     "rows": [
       { "clientName": "Thandi Nkosi", "policyNumber": "EB-001",
         "values": { "Cover Amount": 125000, "eb_5": 550 } },
@@ -187,6 +188,11 @@ curl -sS -X POST "$BASE/integrations/portfolio-table" \
 `values` keys may be a field id, a field name, or the spreadsheet column
 configured in Mapping Configuration. At most 1000 rows per request; the JSON
 body limit is 2 MB. Send the same request without `dryRun` to apply.
+
+Every write is recorded against the agent the token belongs to
+(`agent:grok`). A `submittedBy` field is still accepted, so an older agent's
+requests do not fail validation, but it does not change who the write is
+recorded against.
 
 Response (200 for both dry run and apply):
 
@@ -254,48 +260,76 @@ can lose an update — the same constraint every writer in this system has.
 Reading the book scans the whole policy namespace (like the template
 download), so a schedule of hours, not minutes, is the right cadence.
 
-## The token
+## Agent tokens
 
-The token the agent sends as `x-nw-portfolio-token` lives in **Supabase
-Vault** as `navigatewealth_portfolio_table_token` (migration
-`portfolio_table_token_vault`). The Edge Function verifies a candidate through
-the boolean oracle `public.verify_portfolio_table_token(candidate)`
-(service_role only), so the secret never leaves Postgres and no Edge Function
-secret has to be kept in step with it — the same mechanism as the cron,
-newsletter-intake and social-library tokens.
+**Every agent has its own token.** The agent's name is the actor recorded on
+everything it writes (`agent:grok`, on the persisted run and in the history
+entry), and it comes from the token: a name in the request body cannot change
+it. Revoking one agent leaves every other agent working.
 
-Read it (dashboard SQL editor, or the Supabase MCP as the service role):
+Tokens live in `public.portfolio_agent_tokens` (migration
+`portfolio_agent_tokens`), which stores only the SHA-256 of each token: the
+token itself is shown once, when it is issued, and never stored. The table is
+service-role only.
+
+### Issue, revoke, rotate
+
+In **Product Configuration → Integrations → Portfolio → Endpoint for external
+agents → Agent tokens**, as a **super admin**:
+
+- **Issue token**: type the agent's name (`grok`, `chatgpt`, `claude-routine`:
+  2 to 40 lowercase letters, digits, `-` or `_`) and copy the token from the
+  green box straight away. It starts `nwpa_` and is shown only that once.
+- **Revoke**: stops that token on the agent's next request. The row stays as
+  the record of the old token.
+- **Rotate**: revoke the name, then issue the same name a new token. The actor
+  on its writes stays the same.
+- If a token is lost, rotate it: there is no way to read a token back.
+
+The same three operations are `GET`, `POST { name }` and
+`POST /:name/revoke` on `/integrations/portfolio-agents`, which only a super
+admin's session reaches. An agent token never gets in there, so no agent can
+mint or revoke tokens.
+
+Emergency revoke without the UI (dashboard SQL editor):
 
 ```sql
-select decrypted_secret
-from vault.decrypted_secrets
-where name = 'navigatewealth_portfolio_table_token';
+update public.portfolio_agent_tokens
+set revoked_at = now(), revoked_by = 'sql'
+where agent_name = 'grok' and revoked_at is null;
 ```
 
-Rotate it — takes effect on the next request, no redeploy; every existing
-copy stops working:
+See which agents exist and when each last called (never the token or hash):
 
 ```sql
-select vault.update_secret(
-  (select id from vault.secrets where name = 'navigatewealth_portfolio_table_token'),
-  encode(extensions.gen_random_bytes(32), 'base64')
-);
+select agent_name, created_at, created_by, last_used_at, revoked_at
+from public.portfolio_agent_tokens
+order by created_at desc;
 ```
 
-Then paste the new value into the agent's configuration. The token is
-firm-wide and admin-equivalent on this surface: whoever holds it can read
-every client's policy values for every provider and write to them. Treat it
-as a credential, give it only to the one agent, and rotate it if in doubt.
+### The `shared` token
+
+Before tokens were per agent there was one shared secret, in Vault as
+`navigatewealth_portfolio_table_token`. The migration carried its hash over
+as the agent **`shared`**, so a bot already configured with it keeps working,
+now recorded as `agent:shared`. Give each bot its own token, then revoke
+`shared`. The Vault secret and its oracle `public.verify_portfolio_table_token`
+are no longer read by the Edge Function; a follow-up migration drops them
+([`ROADMAP.md`](../ROADMAP.md) §9a).
+
+Each token is admin-equivalent on this surface: whoever holds it can read
+every client's policy values for every provider and write to them. Give each
+token only to its one agent, and revoke it if in doubt.
 
 ### Setting a bot up
 
-As a scheduled ChatGPT task or Custom GPT Action, or a Grok agent with an HTTP
-tool: base URL as above, authentication **API Key**, header name
-`x-nw-portfolio-token`, value the Vault secret. Give it the loop above. A
-Claude Routine whose environment blocks egress to the Edge Function (see
-`social-automation.md`) cannot use this path today; it can read the same
-records through the Supabase connector, but there is no SQL write function for
-policies yet.
+Issue the bot its own token first. Then, as a scheduled ChatGPT task or
+Custom GPT Action, or a Grok agent with an HTTP tool: base URL as above,
+authentication **API Key**, header name `x-nw-portfolio-token`, value the
+token. Give it the loop above. A Claude Routine whose environment blocks
+egress to the Edge Function (see `social-automation.md`) cannot use this path
+today; it can read the same records through the Supabase connector, but there
+is no SQL write function for policies yet.
 
 ## The Portfolio tab
 
@@ -326,16 +360,18 @@ policies yet.
   `02 Jul 2018`) is shown as stored.
 - **Endpoint for external agents** at the bottom of the tab shows the exact
   URL for the selected provider/product, with a Copy button, and the header
-  name.
+  name. For a super admin it also lists the **agent tokens** (issued, last
+  used, live or revoked) with Issue and Revoke; anyone else sees who manages
+  them. The tokens are fetched only when the panel is opened.
 
 ## Failure modes
 
-| Symptom                                           | Cause and fix                                                                                                                                                |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `401` from the endpoint                           | Header differs from the Vault token (rotated?) — read it back with the SQL above and update the agent. An empty header never matches.                        |
-| `400 Invalid provider ID`                         | The `providerId` is not a provider record id; take it from `GET /providers`.                                                                                 |
-| Every row `unmatched`                             | Wrong category (a parent id, or the policies are filed under a sibling), or the policy numbers differ in more than case/spaces/dashes. Compare with `GET /`. |
-| Rows `client_mismatch`                            | The agent's client names are not the profile names. Send `policyId` + `clientId` from `GET /` instead, or fix the names; never drop the name check.          |
-| `updated` in the dry run, `unchanged` after apply | Every differing field was locked at publish time; the row's warnings name them.                                                                              |
-| The Integrations header shows no "last sync"      | The run changed nothing and hit no errors, so no history entry was written. That is by design.                                                               |
-| A value keeps reverting after the agent writes it | The native path (portal worker / Review tab) publishes its own value on its schedule. Decide which source owns that field, or lock it.                       |
+| Symptom                                           | Cause and fix                                                                                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `401` from the endpoint                           | The token is revoked, mistyped or never issued. Check the agent's row under Agent tokens; if it is lost or revoked, issue the name a new token. An empty header never matches. |
+| `400 Invalid provider ID`                         | The `providerId` is not a provider record id; take it from `GET /providers`.                                                                                                   |
+| Every row `unmatched`                             | Wrong category (a parent id, or the policies are filed under a sibling), or the policy numbers differ in more than case/spaces/dashes. Compare with `GET /`.                   |
+| Rows `client_mismatch`                            | The agent's client names are not the profile names. Send `policyId` + `clientId` from `GET /` instead, or fix the names; never drop the name check.                            |
+| `updated` in the dry run, `unchanged` after apply | Every differing field was locked at publish time; the row's warnings name them.                                                                                                |
+| The Integrations header shows no "last sync"      | The run changed nothing and hit no errors, so no history entry was written. That is by design.                                                                                 |
+| A value keeps reverting after the agent writes it | The native path (portal worker / Review tab) publishes its own value on its schedule. Decide which source owns that field, or lock it.                                         |

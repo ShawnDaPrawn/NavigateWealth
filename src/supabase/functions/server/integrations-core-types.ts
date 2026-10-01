@@ -111,6 +111,11 @@ export interface IntegrationSyncRun {
    * persisted as a record of what changed rather than as something to review.
    */
   source: 'spreadsheet' | 'portal' | 'portfolio_table';
+  /**
+   * Who submitted a 'portfolio_table' run: `agent:<name>` read from the
+   * agent's own token, `admin:<userId>`, or `scheduled[:<name>]`.
+   */
+  actor?: string;
   status: SyncRunStatus;
   createdAt: string;
   updatedAt: string;
