@@ -316,20 +316,22 @@ jobs:
         # the job fails if it RISES, so no new high/critical can be introduced
         # while the residual backlog is burned down.
         #
-        # Floor is currently 2, accepted on 2026-10-02 for GHSA-86w9-cpqp-85rv
-        # (counted twice: node-forge, and @signpdf/signer-p12 that depends on
-        # it). node-forge <= 1.4.0 accepts some malformed RSA PKCS#1 v1.5
-        # signatures when VERIFYING one (CWE-347), and no fixed release exists.
-        # It is not reachable here: forge only generates the e-sign key pair,
-        # self-signs its certificate and builds the P12 (esign-pdf-protect.ts),
-        # and the P12 signer only creates signatures. Nothing verifies an RSA
-        # signature with forge. Once node-forge ships a fix, upgrade it (and the
-        # Edge import of npm:node-forge@1.3.1) and put the floor back to 0; the
-        # job then reports the drop. docs/STATUS.md tracks it.
+        # Floor was 0 from the `sharp` ^0.35.3 upgrade (libvips CVEs) until
+        # 2026-10-02.
         #
-        # Before that the floor was 0, after `sharp` went to ^0.35.3 (libvips
-        # CVEs). Keep it as low as the accepted advisories allow, so any NEW
-        # high/critical fails the job.
+        # Floor is currently 2, ACCEPTED BY THE OWNER on 2026-10-02 (PR #402):
+        # GHSA-86w9-cpqp-85rv, high, in `node-forge`, counted twice (node-forge
+        # itself and @signpdf/signer-p12, which depends on it). The flaw is in
+        # RSA PKCS#1 v1.5 signature VERIFICATION, and no fixed release exists.
+        # Our only user, server/esign-pdf-protect.ts, creates signatures: key and
+        # self-signed certificate generation, PKCS#12 packaging, and P12Signer's
+        # pkcs7.createSignedData()/p7.sign(). Nothing here, nor in the signer,
+        # verifies a signature, so the advisory cannot be reached.
+        #
+        # The floor is a COUNT, so while it is 2 it would also hide two new
+        # findings once these two are gone. Put it back to 0 the moment
+        # node-forge ships a fix (the gate prints a notice when the count drops
+        # below the floor). Any third high/critical still fails the job.
         #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,

@@ -23,6 +23,12 @@ vi.mock('../../../../../utils/supabase/info', () => ({
   publicAnonKey: 'test-anon-key',
 }));
 
+// The bulk delete goes through the shared API client rather than raw fetch.
+const mockApiPost = vi.hoisted(() => vi.fn());
+vi.mock('../../../../../utils/api/client', () => ({
+  api: { post: (...args: unknown[]) => mockApiPost(...args) },
+}));
+
 vi.mock('../../../../../utils/supabase/client', () => ({
   createClient: () => ({
     auth: {
@@ -207,6 +213,49 @@ describe('ArticlesAPI', () => {
         expect.stringContaining('/articles/a-001'),
         expect.objectContaining({ method: 'DELETE' }),
       );
+    });
+  });
+
+  describe('bulkDeleteArticles', () => {
+    it('sends the ids in one request to the bulk endpoint', async () => {
+      mockApiPost.mockResolvedValue({
+        success: true,
+        data: { deleted: ['a1'], kept: ['p1'], notFound: [] },
+      });
+      const result = await ArticlesAPI.bulkDeleteArticles(['a1', 'p1']);
+      expect(mockApiPost).toHaveBeenCalledTimes(1);
+      expect(mockApiPost).toHaveBeenCalledWith('/publications/articles/bulk-delete', {
+        ids: ['a1', 'p1'],
+      });
+      expect(result).toEqual({ deleted: ['a1'], kept: ['p1'], notFound: [] });
+    });
+
+    it("splits a selection over the server's 200-id cap and merges the results", async () => {
+      const ids = Array.from({ length: 450 }, (_, i) => `a${i}`);
+      mockApiPost.mockImplementation(async (_path: string, body: { ids: string[] }) => ({
+        success: true,
+        data: { deleted: body.ids, kept: [], notFound: [] },
+      }));
+      const result = await ArticlesAPI.bulkDeleteArticles(ids);
+      expect(mockApiPost.mock.calls.map(([, body]) => body.ids.length)).toEqual([200, 200, 50]);
+      expect(result.deleted).toEqual(ids);
+    });
+  });
+
+  describe('bulkArchiveArticles', () => {
+    it('sends the ids to the bulk archive endpoint, chunked at 200', async () => {
+      const ids = Array.from({ length: 250 }, (_, i) => `a${i}`);
+      mockApiPost.mockImplementation(async (_path: string, body: { ids: string[] }) => ({
+        success: true,
+        data: { archived: body.ids, notFound: [] },
+      }));
+      const result = await ArticlesAPI.bulkArchiveArticles(ids);
+      expect(mockApiPost.mock.calls.map(([path]) => path)).toEqual([
+        '/publications/articles/bulk-archive',
+        '/publications/articles/bulk-archive',
+      ]);
+      expect(mockApiPost.mock.calls.map(([, body]) => body.ids.length)).toEqual([200, 50]);
+      expect(result).toEqual({ archived: ids, notFound: [] });
     });
   });
 

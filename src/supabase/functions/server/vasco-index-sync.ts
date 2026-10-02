@@ -88,3 +88,31 @@ export function removeArticleFromIndexInBackground(
     });
   return keepAlive(work);
 }
+
+/**
+ * Drop many deleted articles from the index as ONE background task.
+ *
+ * Sequential on purpose: each removal read-modify-writes the shared index
+ * document (`touchIndex`, `dropLegacyEntry`), so running a bulk delete's worth
+ * of them concurrently would lose updates. One failure does not stop the rest.
+ */
+export function removeArticlesFromIndexInBackground(
+  articleIds: readonly string[],
+  reason: string,
+): Promise<void> {
+  if (articleIds.length === 0) return Promise.resolve();
+  const work = (async () => {
+    for (const id of articleIds) {
+      try {
+        await removeArticleFromIndex(id);
+      } catch (err) {
+        log.warn('Article index removal failed (non-fatal)', {
+          id,
+          reason,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  })();
+  return keepAlive(work);
+}

@@ -47,6 +47,27 @@ export interface PaginatedResponse<T> {
   };
 }
 
+/**
+ * Result of `POST /articles/bulk-delete`. Published articles are never deleted
+ * by that endpoint; they come back in `kept`.
+ */
+export interface BulkDeleteArticlesResult {
+  /** Deleted by this request. */
+  deleted: string[];
+  /** Published (live) articles, left untouched. */
+  kept: string[];
+  /** Already gone before the request, so effectively deleted. */
+  notFound: string[];
+}
+
+/** Result of `POST /articles/bulk-archive`. */
+export interface BulkArchiveArticlesResult {
+  /** Archived by this request, or already archived before it. */
+  archived: string[];
+  /** No such article any more. */
+  notFound: string[];
+}
+
 // ============================================================================
 // VALIDATION TYPES
 // ============================================================================
