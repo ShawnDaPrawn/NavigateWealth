@@ -1,10 +1,11 @@
-# Policy document intake — attaching a policy PDF through SQL
+# Policy document intake — attaching a policy PDF with no login
 
 **What this is.** The way an agent with no Navigate Wealth login attaches a
-PDF (a policy schedule, a statement) to a client's policy. The update bot
-keeps policy values current through the **Supabase connector**, and SQL cannot
-put a file in Storage, so the bot hands the PDF over in a table and a worker in
-the Edge Function stores it. The result is exactly what the app's own upload
+PDF (a policy schedule, a statement) to a client's policy. An agent that can
+make an HTTPS request **uploads the file** ([below](#uploading-the-file-over-https));
+an agent that only has the **Supabase connector** hands the PDF over in a table,
+because SQL cannot put a file in Storage. Either way a worker in the Edge
+Function stores it. The result is exactly what the app's own upload
 produces: the PDF in the `make-91ed8379-policy-documents` bucket and
 `policy.document` describing it, which is what the Portfolio tab's
 **Policy Print** column and the client's policy view show.
@@ -28,6 +29,66 @@ and still needs a signed-in user. This is a second door to the same room.
 Migration `policy_document_intake` (in `supabase/migrations/`) creates
 everything on the database side. Every function in it is `SECURITY DEFINER`
 and executable by `service_role` only; anon and authenticated hold nothing.
+
+## Uploading the file over HTTPS
+
+Use this whenever the agent can make an HTTPS request. A PDF passed through
+the connector as base64 rarely fits in one SQL statement, and cutting it into
+parts by hand is where hand-overs go wrong: on 2026-10-01 the update bot staged
+three short pieces under `agra678002-statement-2026-10-01` and could not
+finish. Here the file travels whole, in one request.
+
+```bash
+curl -sS -X POST \
+  "https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/policy-document-intake/upload" \
+  -H "x-nw-portfolio-token: $AGENT_TOKEN" \
+  -F "file=@AG_InvestmentStatement_AGRA678002_2026-10-01.pdf;type=application/pdf" \
+  -F "clientId=8c4158a6-d7ea-43bf-8386-af0cabda8eee" \
+  -F "policyId=policy_1769783741137_mfqeoq" \
+  -F "documentType=statement" \
+  -F "idempotencyKey=agra678002-statement-2026-10-01-v2"
+```
+
+| Field            | Required | Notes                                                                                                  |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| `file`           | yes      | The whole PDF, up to 20 MB. Its name is recorded as the document's name.                               |
+| `clientId`       | yes      | As in [Finding the ids](#finding-the-ids).                                                             |
+| `policyId`       | yes      | The client must have this policy.                                                                      |
+| `documentType`   | no       | `policy_schedule` (default), `amendment`, `statement`, `benefit_summary` or `other`.                   |
+| `idempotencyKey` | no       | One per document. Sending it again returns that hand-over instead of storing twice. Made up if absent. |
+| `submittedBy`    | no       | Only used with the cron token, as a label. An agent is named by its token.                             |
+
+**Who may call it**, any one of:
+
+- `x-nw-portfolio-token: <the agent's own token>`, the same token the
+  portfolio table takes, issued by a super admin in the Portfolio tab
+  ([Agent tokens](portfolio-table.md#agent-tokens)). The document records
+  `intake:agent:<name>`, whatever the form says. **Use this.**
+- `x-nw-cron-auth: <the shared cron token>`, recorded as
+  `intake:scheduled:<submittedBy>`.
+- An admin session.
+
+**What happens.** The upload is checked at the door (a PDF that starts
+`%PDF-`, ends with `%%EOF` in its last 1 KB, and is at most 20 MB), then
+submitted whole, in one call to the same `policy_document_intake_submit` an
+agent calls, so the same checks run and the same row is queued. That call is
+atomic. Two requests racing with one key, such as a retry overlapping the
+first try, settle on one hand-over: the first is stored whole, and the other
+answers with its status. Anything an earlier attempt left staged under that
+key is cleared, never joined in. The request then runs the worker itself, so
+the PDF is normally on the policy by the time it answers:
+
+| Answer | Meaning                                                                                                                    |
+| ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | Stored. `storageKey` says where; `existed: true` means the key had been handed over before, and nothing was stored again.  |
+| `202`  | Queued, not stored yet: another hand-over for the same client is being stored. The worker finishes it; check its `status`. |
+| `400`  | Refused, with the reason: not a PDF, cut short, a client without that policy, a malformed field. Nothing was queued.       |
+| `413`  | Over 20 MB.                                                                                                                |
+| `422`  | The hand-over under that key failed for good; `error` says why. Send it again under a new key.                             |
+
+To check on a `202`, `select * from public.policy_document_intake_status('<idempotencyKey>');`
+or send the same request again (same key): it answers with the hand-over's
+status and stores nothing new.
 
 ## Limits
 
@@ -66,6 +127,9 @@ where k.key like 'policies:client:%'
 ```
 
 ## Handing a PDF over
+
+In SQL, for an agent that has only the connector. An agent that can make an
+HTTPS request should [upload the file](#uploading-the-file-over-https) instead.
 
 **In one statement:**
 
@@ -184,6 +248,7 @@ client's** policies that lands in between is overwritten. So:
 | `… client X has no policy Y`                               | Wrong ids, or swapped. Look them up with the query above.                                                                                                                                                                                       |
 | `… not a PDF (missing %PDF- header)` / `not valid base64`  | The bytes are not the PDF: an HTML error page, a base64 of something else, or a truncated string. In parts: a part missing or out of place.                                                                                                     |
 | `… staged parts must run 0..n with no gaps`                | A part is missing. Re-send it with `put_part`, then submit again.                                                                                                                                                                               |
+| `The PDF is incomplete: it has no %%EOF in its last 1 KB`  | The file was cut short: only some of its parts were staged, or the base64 was truncated. Nothing is stored. Hand the whole file over again under a new key, by HTTPS upload if the agent can.                                                   |
 | `… was already submitted` from `put_part`                  | That idempotency key was used. Check its status; a different document needs a new key.                                                                                                                                                          |
 | `existed = true` and nothing changed on the policy         | The key was used before. That earlier hand-over is the one the status refers to.                                                                                                                                                                |
 | Row stays `pending` with `attempts = 0`                    | Nothing woke the worker. Check `policy-document-intake-sweep` in `scheduled-jobs.md` (query A), that the Vault secret exists, and the pg_net response for the request id `kick()` returns (`select * from net._http_response where id = <id>`). |

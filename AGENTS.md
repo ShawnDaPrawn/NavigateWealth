@@ -52,7 +52,10 @@ When a change is ready to ship, do **all** of the following **in the same turn**
 
    ```bash
    npm run format            # prettier --write, then re-stage
-   npm run lint              # eslint  (baseline: 0 errors)
+   npm run lint              # eslint: 0 errors AND no new warnings. It exits 0
+                             # on a warning, but CI fails on any warning above
+                             # quality/baselines/eslint-warning-baseline (0):
+                             # read its "N problems" line, not the exit code.
    npm run typecheck         # SPA tsc (baseline: 0 errors)
    npm run typecheck:middleware
    npm run typecheck:deno    # must not exceed quality/baselines/deno-check-baseline
@@ -74,6 +77,14 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    added here were missing from this list for a while, which meant a run that
    looked complete locally could still fail after push — the exact failure mode
    this protocol exists to prevent.
+
+   **Run them on Node 20, as CI does.** `quality-check.yml` pins
+   `node-version: '20'`, but the sandbox's default `node` is 22, and Node 21+
+   has APIs that Node 20 lacks. Hit for real on 2026-10-01 (PR #403): std's
+   `encodeBase64` calls `ArrayBuffer.prototype.transfer`, and 11 upload tests
+   that passed locally answered 500 in CI. Node 20 is installed at
+   `/opt/node20`, so `export PATH=/opt/node20/bin:$PATH` before running the
+   gates.
 
    If a gate genuinely cannot run (e.g. a blocked `npm install`), **say so
    explicitly with the error** — do not commit unverified code and "let CI catch
