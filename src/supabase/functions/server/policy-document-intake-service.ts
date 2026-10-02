@@ -111,21 +111,42 @@ export function decodeIntakePdf(base64: string) {
   return bytes;
 }
 
-/** Bytes per `String.fromCharCode` call: well under any engine's argument limit. */
-const BASE64_CHUNK_BYTES = 0x8000;
+/** The standard base64 alphabet, as the bytes `encodeIntakePdf` writes. */
+const BASE64_CODES = new TextEncoder().encode(
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
+);
+const BASE64_PAD = 0x3d; // =
 
 /**
  * The PDF's bytes as standard, padded base64, which is what submit expects and
- * `decodeIntakePdf` reads back. A plain `btoa` over a binary string built in
- * chunks. Not std's `encodeBase64`: that needs `ArrayBuffer.prototype.transfer`,
- * which Deno has but the Node 20 the tests run on in CI does not.
+ * `decodeIntakePdf` reads back: every three bytes become four characters.
+ *
+ * Not std's `encodeBase64`, which needs `ArrayBuffer.prototype.transfer`: Deno
+ * has it, but the Node 20 that CI runs the tests on does not. Not `btoa` over
+ * a binary string either: building that string took 1.3 s of CPU for a 20 MB
+ * PDF in Deno, and an Edge Function gets 2 s of CPU per request. This loop
+ * takes about 0.1 s.
  */
 export function encodeIntakePdf(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += BASE64_CHUNK_BYTES) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_BYTES));
+  const out = new Uint8Array(Math.ceil(bytes.length / 3) * 4);
+  const whole = bytes.length - (bytes.length % 3);
+  let o = 0;
+  for (let i = 0; i < whole; i += 3) {
+    const n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+    out[o++] = BASE64_CODES[n >>> 18];
+    out[o++] = BASE64_CODES[(n >>> 12) & 63];
+    out[o++] = BASE64_CODES[(n >>> 6) & 63];
+    out[o++] = BASE64_CODES[n & 63];
   }
-  return btoa(binary);
+  if (whole < bytes.length) {
+    const two = bytes.length - whole === 2;
+    const n = (bytes[whole] << 16) | (two ? bytes[whole + 1] << 8 : 0);
+    out[o++] = BASE64_CODES[n >>> 18];
+    out[o++] = BASE64_CODES[(n >>> 12) & 63];
+    out[o++] = two ? BASE64_CODES[(n >>> 6) & 63] : BASE64_PAD;
+    out[o++] = BASE64_PAD;
+  }
+  return new TextDecoder().decode(out);
 }
 
 /** Store one claimed hand-over and set `policy.document`. Throws on any failure. */

@@ -835,7 +835,8 @@ describe('the upload', () => {
       expect(db.state.calls).not.toContain('policy_document_intake_put_part');
       const stored = db.state.objects.get(`${CLIENT}/${POLICY}/statement.pdf`)!;
       expect(stored.bytes.length).toBe(large.length);
-      expect(Buffer.from(stored.bytes).toString('utf8')).toBe(large);
+      // Compared as bytes: a failed diff of 3 MB of text would take minutes.
+      expect(Buffer.from(stored.bytes).equals(Buffer.from(large))).toBe(true);
     });
 
     it('stores it without ArrayBuffer.prototype.transfer, which the Node 20 in CI lacks', async () => {
