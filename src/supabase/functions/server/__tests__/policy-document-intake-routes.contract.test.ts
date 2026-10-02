@@ -723,9 +723,21 @@ describe('the bounds of a run', () => {
   });
 });
 
+/** `%PDF-` plus an early `%%EOF`, then a full 1 KB with no marker: cut off, not whole. */
+const eofOutsideTheTail = () => `%PDF-1.7\n%%EOF\n${' '.repeat(1024)}`;
+
 describe('a PDF that stops short', () => {
   it('is never stored by the worker, whichever door it came through', async () => {
     handOver({ pdf_base64: b64('%PDF-1.7\n% the first of three pieces, and no ending') });
+    const body = await (await runWorker()).json();
+    expect(body).toMatchObject({ claimed: 1, processed: 0, retrying: 1 });
+    expect(db.state.rows[0].error).toBe(INCOMPLETE_PDF_MESSAGE);
+    expect(db.state.objects.size).toBe(0);
+    expect(policy()?.document).toBeUndefined();
+  });
+
+  it('is never stored when the only %%EOF sits outside the last 1 KB', async () => {
+    handOver({ pdf_base64: b64(eofOutsideTheTail()) });
     const body = await (await runWorker()).json();
     expect(body).toMatchObject({ claimed: 1, processed: 0, retrying: 1 });
     expect(db.state.rows[0].error).toBe(INCOMPLETE_PDF_MESSAGE);
@@ -791,6 +803,35 @@ describe('the upload', () => {
       );
       expect(res.status).toBe(200);
       expect(db.state.rows[0].submitted_by).toBe('scheduled:update-bot');
+    });
+
+    it('records a cron caller with no label as scheduled, and a blank label the same way', async () => {
+      const headers = { 'x-nw-cron-auth': 'the-cron-token' };
+      const res = await upload(statementFields, { headers });
+      expect(res.status).toBe(200);
+      expect(db.state.rows[0].submitted_by).toBe('scheduled');
+
+      db.state.rows = [];
+      const blank = await upload(
+        { ...statementFields, idempotencyKey: 'cron-blank-label', submittedBy: '   ' },
+        { headers },
+      );
+      expect(blank.status).toBe(200);
+      expect(db.state.rows[0].submitted_by).toBe('scheduled');
+    });
+
+    it('names the caller from an agent token even when the cron header is sent too', async () => {
+      const res = await upload(
+        { ...statementFields, submittedBy: 'update-bot' },
+        {
+          headers: {
+            'x-nw-portfolio-token': 'agent-token-grok',
+            'x-nw-cron-auth': 'the-cron-token',
+          },
+        },
+      );
+      expect(res.status).toBe(200);
+      expect(db.state.rows[0].submitted_by).toBe('agent:grok');
     });
 
     it('lets an admin in, recorded as the signed-in user', async () => {
@@ -909,6 +950,14 @@ describe('the upload', () => {
       expect(res.status).toBe(400);
       expect(await res.json()).toEqual({ error: INCOMPLETE_PDF_MESSAGE });
       expect(db.state.calls).toEqual([]);
+    });
+
+    it('refuses a PDF whose only %%EOF is outside the last 1 KB, before anything is submitted', async () => {
+      const res = await upload(statementFields, { file: bytesOf(eofOutsideTheTail()) });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: INCOMPLETE_PDF_MESSAGE });
+      expect(db.state.calls).toEqual([]);
+      expect(db.state.objects.size).toBe(0);
     });
 
     it('refuses a file that is not a PDF, and an empty one', async () => {
