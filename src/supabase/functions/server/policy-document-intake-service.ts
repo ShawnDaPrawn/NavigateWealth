@@ -144,7 +144,7 @@ export function encodeIntakePdf(bytes: Uint8Array): string {
     out[o++] = BASE64_CODES[n >>> 18];
     out[o++] = BASE64_CODES[(n >>> 12) & 63];
     out[o++] = two ? BASE64_CODES[(n >>> 6) & 63] : BASE64_PAD;
-    out[o++] = BASE64_PAD;
+    out[o] = BASE64_PAD;
   }
   return new TextDecoder().decode(out);
 }

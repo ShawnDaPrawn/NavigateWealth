@@ -52,7 +52,10 @@ When a change is ready to ship, do **all** of the following **in the same turn**
 
    ```bash
    npm run format            # prettier --write, then re-stage
-   npm run lint              # eslint  (baseline: 0 errors)
+   npm run lint              # eslint: 0 errors AND no new warnings. It exits 0
+                             # on a warning, but CI fails on any warning above
+                             # quality/baselines/eslint-warning-baseline (0):
+                             # read its "N problems" line, not the exit code.
    npm run typecheck         # SPA tsc (baseline: 0 errors)
    npm run typecheck:middleware
    npm run typecheck:deno    # must not exceed quality/baselines/deno-check-baseline
