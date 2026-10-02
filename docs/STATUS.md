@@ -123,6 +123,13 @@ stated prerequisite has already caused a production outage once.
   `kv.getByPrefixWhereFieldEquals` against the partial index from migration
   `20260914083818`. `kv.getByPrefix` is for one-off admin reads, not for
   anything on a timer.
+- **A bulk action is one request, not a loop over the single-item endpoint.**
+  Looping `DELETE /articles/:id` over 120 drafts took 7.5 minutes, because
+  every id is a new URL and pays its own preflight and request floor
+  ([`INCIDENTS.md`](INCIDENTS.md) 2026-10-01). Articles now use
+  `POST /publications/articles/bulk-delete`, which never deletes a published
+  article (the guard runs inside the DELETE itself), and
+  `POST /publications/articles/bulk-archive`.
 - **The browser accelerators pause when the tab is hidden.** Five background
   pollers mount at `AdminDashboardPage` level for the whole admin session. The
   three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded
@@ -205,6 +212,7 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
 | M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                                                             |
 | M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                                                       |
 | —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                                                                 |
+| GHSA-86w9      | **Accepted by the owner, 2026-10-02.** `node-forge` (via `@signpdf/signer-p12`) has a high advisory in RSA signature _verification_ with no fixed release. `esign-pdf-protect.ts` only creates signatures, so it is unreachable; `npm-audit-baseline` was raised 0 → 2 to stop it blocking every PR. Put the floor back to 0 when `node-forge` ships a fix.    |
 
 ### Closed by the September 2026 auth review
 
