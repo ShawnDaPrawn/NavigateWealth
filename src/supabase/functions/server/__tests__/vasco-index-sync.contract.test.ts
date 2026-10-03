@@ -18,8 +18,11 @@ const rag = vi.hoisted(() => ({
 }));
 vi.mock('../vasco-rag-service.ts', () => rag);
 
-const { syncArticleIndexInBackground, removeArticleFromIndexInBackground } =
-  await import('../vasco-index-sync.ts');
+const {
+  syncArticleIndexInBackground,
+  removeArticleFromIndexInBackground,
+  removeArticlesFromIndexInBackground,
+} = await import('../vasco-index-sync.ts');
 
 const article = {
   id: 'a1',
@@ -93,5 +96,66 @@ describe('with the Supabase edge runtime', () => {
     expect(waitUntil).toHaveBeenCalledTimes(1);
     expect(rag.removeArticleFromIndex).toHaveBeenCalledWith('a1');
     await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
+  });
+
+  it('registers one waitUntil for a whole batch, and starts the next removal only after the previous one settles', async () => {
+    // Each removal read-modify-writes the shared index document. Running them
+    // together would drop updates, so a bulk delete must stay one task and
+    // one article at a time. The response still returns before that task ends.
+    const waitUntil = vi.fn();
+    g.EdgeRuntime = { waitUntil };
+    const releases: Array<() => void> = [];
+    rag.removeArticleFromIndex.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          releases.push(resolve);
+        }),
+    );
+
+    await removeArticlesFromIndexInBackground(['a', 'b'], 'article_bulk_deleted');
+
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    expect(rag.removeArticleFromIndex).toHaveBeenCalledTimes(1);
+    expect(rag.removeArticleFromIndex).toHaveBeenCalledWith('a');
+
+    releases[0]();
+    await vi.waitFor(() => expect(rag.removeArticleFromIndex).toHaveBeenCalledTimes(2));
+    expect(rag.removeArticleFromIndex).toHaveBeenNthCalledWith(2, 'b');
+
+    releases[1]();
+    await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
+  });
+});
+
+describe('removeArticlesFromIndexInBackground', () => {
+  it('does nothing for an empty list, and does not register a background task', async () => {
+    const waitUntil = vi.fn();
+    g.EdgeRuntime = { waitUntil };
+
+    await removeArticlesFromIndexInBackground([], 'article_bulk_deleted');
+
+    expect(rag.removeArticleFromIndex).not.toHaveBeenCalled();
+    expect(waitUntil).not.toHaveBeenCalled();
+  });
+
+  it('keeps going after one removal fails, and never runs two at once', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const finished: string[] = [];
+    rag.removeArticleFromIndex.mockImplementation(async (id: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      finished.push(id);
+      if (id === 'b') throw new Error('index write lost');
+    });
+
+    await expect(
+      removeArticlesFromIndexInBackground(['a', 'b', 'c'], 'article_bulk_deleted'),
+    ).resolves.toBeUndefined();
+
+    expect(finished).toEqual(['a', 'b', 'c']);
+    expect(maxInFlight).toBe(1);
   });
 });
