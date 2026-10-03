@@ -22,7 +22,7 @@ let resolveWith: { data: unknown; error: unknown } = { data: [], error: null };
 
 function builder() {
   const chain: Record<string, unknown> = {};
-  for (const method of ['select', 'gte', 'lt', 'eq', 'order']) {
+  for (const method of ['select', 'gte', 'lt', 'eq', 'order', 'delete', 'in', 'neq']) {
     chain[method] = (...args: unknown[]) => {
       recorded.push({ method, args });
       return chain;
@@ -42,7 +42,7 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
-import { getByPrefixWhereFieldEquals } from '../kv_store.tsx';
+import { getByPrefixWhereFieldEquals, mdelUnlessFieldEquals } from '../kv_store.tsx';
 
 const callsTo = (method: string) => recorded.filter((c) => c.method === method).map((c) => c.args);
 
@@ -109,6 +109,62 @@ describe('getByPrefixWhereFieldEquals', () => {
       /unsafe field name/,
     );
     // Rejected before any query was built.
+    expect(callsTo('from')).toEqual([]);
+  });
+});
+
+describe('mdelUnlessFieldEquals', () => {
+  it('deletes in one statement, keeping rows whose field equals the protected value', async () => {
+    // Bulk article delete depends on this exact filter. `.eq` would delete the
+    // published articles and keep the drafts. `.neq` is also false for NULL,
+    // so a row with no status is kept rather than removed.
+    resolveWith = { data: [{ key: 'article:draft-1' }], error: null };
+
+    await expect(
+      mdelUnlessFieldEquals(['article:draft-1', 'article:live-1'], 'status', 'published'),
+    ).resolves.toEqual(['article:draft-1']);
+
+    expect(callsTo('from')).toEqual([['kv_store_91ed8379']]);
+    expect(callsTo('delete')).toEqual([[]]);
+    expect(callsTo('in')).toEqual([['key', ['article:draft-1', 'article:live-1']]]);
+    expect(callsTo('neq')).toEqual([['value->>status', 'published']]);
+    // Without selecting the keys back, the caller cannot tell a protected row
+    // from a deleted one and would strip the tombstone off an article it removed.
+    expect(callsTo('select')).toEqual([['key']]);
+  });
+
+  it('returns an empty list when the delete matches nothing', async () => {
+    resolveWith = { data: null, error: null };
+    await expect(mdelUnlessFieldEquals(['article:live-1'], 'status', 'published')).resolves.toEqual(
+      [],
+    );
+  });
+
+  it('surfaces a PostgREST error instead of reporting that nothing was deleted', async () => {
+    // An empty result is what a fully protected batch looks like. Swallowing
+    // the error would tell bulk delete every article was kept, while the
+    // statement may have removed them.
+    resolveWith = { data: null, error: { message: 'statement timeout' } };
+    await expect(mdelUnlessFieldEquals(['article:draft-1'], 'status', 'published')).rejects.toThrow(
+      'statement timeout',
+    );
+  });
+
+  it('does not query when there is nothing to delete', async () => {
+    await expect(mdelUnlessFieldEquals([], 'status', 'published')).resolves.toEqual([]);
+    expect(callsTo('from')).toEqual([]);
+  });
+
+  it.each([
+    ['status; drop table', 'a semicolon'],
+    ['value->>status', 'an operator'],
+    ['a.b', 'a dot'],
+    ['', 'nothing at all'],
+    ['1status', 'a leading digit'],
+  ])('refuses a field name containing %s before querying', async (field) => {
+    await expect(mdelUnlessFieldEquals(['article:draft-1'], field, 'published')).rejects.toThrow(
+      /unsafe field name/,
+    );
     expect(callsTo('from')).toEqual([]);
   });
 });
