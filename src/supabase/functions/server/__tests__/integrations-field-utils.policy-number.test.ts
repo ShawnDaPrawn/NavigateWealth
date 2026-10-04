@@ -5,8 +5,8 @@ vi.mock('../kv_store.tsx', async () =>
 );
 
 import { kvStore } from './helpers/contract-harness.ts';
-import { getPolicyNumberForPolicy } from '../integrations-field-utils.ts';
-import type { KvPolicy } from '../integrations-types.ts';
+import { coerceFieldValue, getPolicyNumberForPolicy } from '../integrations-field-utils.ts';
+import type { KvPolicy, SchemaField } from '../integrations-types.ts';
 
 function prePolicy(data: Record<string, unknown>): KvPolicy {
   return { id: 'p1', clientId: 'c1', categoryId: 'retirement_pre', data } as unknown as KvPolicy;
@@ -47,5 +47,20 @@ describe('getPolicyNumberForPolicy — retired Investments field id', () => {
   it('prefers the Voluntary Investments policy-number field when both are set', async () => {
     const policy = voluntaryPolicy({ inv_1: 'OLD-2', inv_vol_1: 'UT-002' });
     expect(await getPolicyNumberForPolicy(policy, [])).toBe('UT-002');
+  });
+});
+
+describe('coerceFieldValue — spreadsheet date serials', () => {
+  const inception: SchemaField = { id: 'eb_1', name: 'Date of Inception', type: 'date' };
+
+  // Excel stores a date as a day count. An upload that keeps that number must
+  // land as a calendar date, not as 44927 written onto the policy.
+  it('turns the Excel serial for 1 January 2023 into YYYY-MM-DD', () => {
+    expect(coerceFieldValue(inception, 44927)).toEqual({ value: '2023-01-01' });
+  });
+
+  it('keeps a date that is already text, and rejects one that is not a date', () => {
+    expect(coerceFieldValue(inception, '2023-01-01')).toEqual({ value: '2023-01-01' });
+    expect(coerceFieldValue(inception, 'not-a-date').error).toMatch(/valid date/);
   });
 });
