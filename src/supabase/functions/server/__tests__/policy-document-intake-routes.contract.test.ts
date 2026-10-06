@@ -475,6 +475,60 @@ describe('storing a hand-over', () => {
     });
   });
 
+  it('keeps a policy update that lands while the PDF is uploading', async () => {
+    handOver();
+    // The update bot writes policies and hands over the PDF together. The
+    // upload is the slow part; a write that lands during it must survive.
+    db.state.onUpload = () => {
+      const book = policies() ?? [];
+      const target = book.find((p) => p.id === POLICY);
+      kvStore.set(`policies:client:${CLIENT}`, [
+        ...book.filter((p) => p.id !== POLICY),
+        {
+          ...target,
+          data: { ret_pre_1: 'AGRA678002', ret_pre_3: '600000.00', ret_pre_9: 'new beneficiary' },
+        },
+        { id: 'policy_added', clientId: CLIENT, providerName: 'Ninety One' },
+      ]);
+    };
+
+    const body = await (await runWorker()).json();
+    expect(body).toMatchObject({ claimed: 1, processed: 1 });
+    expect(policy()?.data).toEqual({
+      ret_pre_1: 'AGRA678002',
+      ret_pre_3: '600000.00',
+      ret_pre_9: 'new beneficiary',
+    });
+    expect(policy()?.document).toMatchObject({
+      storageKey: `${CLIENT}/${POLICY}/policy_schedule.pdf`,
+    });
+    expect(policies()?.find((p) => p.id === 'policy_added')).toMatchObject({
+      providerName: 'Ninety One',
+    });
+    expect(policies()?.find((p) => p.id === 'policy_other')).toBeTruthy();
+  });
+
+  it('does not resurrect a policy list that was replaced while the PDF was uploading', async () => {
+    handOver();
+    const replacement = [
+      {
+        id: 'policy_other',
+        clientId: CLIENT,
+        providerName: 'Sygnia',
+        categoryId: 'investments',
+        data: { kept: true },
+      },
+    ];
+    db.state.onUpload = () => {
+      kvStore.set(`policies:client:${CLIENT}`, replacement);
+    };
+
+    const body = await (await runWorker()).json();
+    expect(body.outcomes[0]).toMatchObject({ status: 'pending', error: 'Policy not found' });
+    expect(policies()).toEqual(replacement);
+    expect(db.state.objects.has(`${CLIENT}/${POLICY}/policy_schedule.pdf`)).toBe(false);
+  });
+
   it('replaces the document already at that key in place', async () => {
     const storageKey = `${CLIENT}/${POLICY}/policy_schedule.pdf`;
     db.state.objects.set(storageKey, {

@@ -195,13 +195,16 @@ while a retry is pending.
 
 ## Order with value updates
 
-The worker writes `policies:client:{clientId}` as a whole, read before the
-upload and written after it, like the app's upload. A change to the **same
-client's** policies that lands in between is overwritten. So:
+The PDF upload is the slow part. Afterwards the worker reads
+`policies:client:{clientId}` again and sets `document` on that current list,
+so a value update that lands while the bytes are uploading is kept. If the
+policy was removed in that time, the list is left as it is, the uploaded
+object is removed, and the attempt fails with `Policy not found`.
 
-1. Write the policy values first.
-2. Then hand the document over.
-3. Do not write that client's policies again until `status` is `processed`.
+A write that lands in the moment between that read and its write can still
+be overwritten. The worker notices when the list it wrote is no longer the
+one stored and patches the newer list, up to three times. Writing the values
+first, then handing the document over, remains the straightforward order.
 
 ## Retries, failures and wake-ups
 

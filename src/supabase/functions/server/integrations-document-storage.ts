@@ -261,15 +261,14 @@ export async function replacePolicyDocumentForPolicy(params: {
   }
 
   const policiesKey = `policies:client:${clientId}`;
-  const policies = ((await kv.get(policiesKey)) || []) as KvPolicy[];
-  const policyIndex = policies.findIndex((p: KvPolicy) => p.id === policyId);
+  const policiesBefore = await readClientPolicies(policiesKey);
+  const policyBefore = policiesBefore.find((p: KvPolicy) => p.id === policyId);
 
-  if (policyIndex === -1) {
+  if (!policyBefore) {
     throw new Error('Policy not found');
   }
 
-  const policy = policies[policyIndex];
-  const previousStorageKey = policy.document?.storageKey;
+  const previousStorageKey = policyBefore.document?.storageKey;
   const fileName = params.fileName || file.name || 'policy_schedule.pdf';
   const storageFileName = params.stableStorageKey
     ? `${documentType}.pdf`
@@ -308,24 +307,91 @@ export async function replacePolicyDocumentForPolicy(params: {
     }
   }
 
-  const docMeta: PolicyDocument = {
-    storageKey,
-    fileName,
-    fileSize: file.size,
-    mimeType: 'application/pdf',
-    provider: policy.providerName || '',
-    productType: POLICY_CATEGORY_LABELS[policy.categoryId] || policy.categoryId,
-    documentType,
-    uploadDate: new Date().toISOString(),
-    uploadedBy,
-  };
+  // The PDF upload is the slow part. The list read above is only there to
+  // refuse a missing policy before that, and to know which object to replace.
+  // Writing that list back would erase a policy update — or a removed policy —
+  // that landed while the bytes were in flight. The update bot does exactly
+  // that: it writes `policies:client:{clientId}` and hands over the PDF
+  // together. Attach the document to the list as it stands now.
+  try {
+    return await attachDocumentToCurrentPolicies({
+      policiesKey,
+      policyId,
+      storageKey,
+      fileName,
+      fileSize: file.size,
+      documentType,
+      uploadedBy,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Policy not found') {
+      await supabase.storage
+        .from(POLICY_DOC_BUCKET)
+        .remove([storageKey])
+        .catch(() => undefined);
+    }
+    throw error;
+  }
+}
 
-  policies[policyIndex] = {
-    ...policy,
-    document: docMeta,
-    updatedAt: new Date().toISOString(),
-  };
+/**
+ * How many times to re-read and patch after a write we cannot see again.
+ * Each pass reads the current list, so a write that landed after the previous
+ * pass is kept. The window that remains is one read plus one write.
+ */
+const DOCUMENT_ATTACH_ATTEMPTS = 3;
 
-  await kv.set(policiesKey, policies);
-  return docMeta;
+/** The client's policy list, or an empty list when the row is missing or not a list. */
+async function readClientPolicies(policiesKey: string): Promise<KvPolicy[]> {
+  const policies = ((await kv.get(policiesKey)) || []) as KvPolicy[];
+  return Array.isArray(policies) ? policies : [];
+}
+
+/**
+ * Set `document` on `policyId` inside the client's current policy list.
+ *
+ * Throws `Policy not found` when that policy is no longer in the list, and
+ * never writes a list it did not just read.
+ */
+async function attachDocumentToCurrentPolicies(params: {
+  policiesKey: string;
+  policyId: string;
+  storageKey: string;
+  fileName: string;
+  fileSize: number;
+  documentType: PolicyDocument['documentType'];
+  uploadedBy: string;
+}): Promise<PolicyDocument> {
+  for (let attempt = 0; attempt < DOCUMENT_ATTACH_ATTEMPTS; attempt++) {
+    const policies = await readClientPolicies(params.policiesKey);
+    const policyIndex = policies.findIndex((p: KvPolicy) => p.id === params.policyId);
+    if (policyIndex === -1) throw new Error('Policy not found');
+
+    const policy = policies[policyIndex];
+    const updatedAt = new Date().toISOString();
+    const docMeta: PolicyDocument = {
+      storageKey: params.storageKey,
+      fileName: params.fileName,
+      fileSize: params.fileSize,
+      mimeType: 'application/pdf',
+      provider: policy.providerName || '',
+      productType: POLICY_CATEGORY_LABELS[policy.categoryId] || policy.categoryId,
+      documentType: params.documentType,
+      uploadDate: new Date().toISOString(),
+      uploadedBy: params.uploadedBy,
+    };
+    const next = policies.slice();
+    next[policyIndex] = { ...policy, document: docMeta, updatedAt };
+    await kv.set(params.policiesKey, next);
+
+    const saved = (await readClientPolicies(params.policiesKey)).find(
+      (p: KvPolicy) => p.id === params.policyId,
+    );
+    // Our write is the one stored when this policy still carries the timestamp
+    // we just set. Anything newer is read again on the next pass and patched.
+    if (saved?.document?.storageKey === docMeta.storageKey && saved.updatedAt === updatedAt) {
+      return docMeta;
+    }
+  }
+  throw new Error('Policy changed while its document was being saved');
 }
