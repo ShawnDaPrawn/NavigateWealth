@@ -110,9 +110,9 @@
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "jsdom": "^29.0.2",
-    "lint-staged": "^15.5.2",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.60.0",
@@ -120,6 +120,7 @@
   },
   "overrides": {
     "quill": "2.0.2",
+    "source-map-js": "1.2.2",
     "uuid": ">=11.1.1"
   },
   "scripts": {
