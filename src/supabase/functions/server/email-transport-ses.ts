@@ -13,6 +13,7 @@
  *   NW_SES_ACCESS_KEY_ID      IAM user with ses:SendRawEmail / SendEmail only
  *   NW_SES_SECRET_ACCESS_KEY
  */
+import { sha256Hex } from './sha256.ts';
 
 export interface SesConfig {
   region: string;
@@ -145,11 +146,6 @@ export function buildMimeMessage(input: MimeMessageInput): string {
 }
 
 // ── SigV4 signing (WebCrypto, no SDK) ────────────────────────────────────────
-
-async function sha256Hex(data: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 async function hmac(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
   const cryptoKey = await crypto.subtle.importKey(

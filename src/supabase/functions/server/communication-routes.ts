@@ -24,7 +24,6 @@ import {
   EmailFooterSettingsSchema,
   CreateCampaignSchema,
 } from './communication-validation.ts';
-import { formatZodError } from './shared-validation-utils.ts';
 import type {
   MessageCreate,
   MessageCategory,
@@ -35,6 +34,7 @@ import type {
   CommunicationChannel,
   HistoryFilters,
 } from './communication-types.ts';
+import { validateBody, body } from './validate.ts';
 
 /** Accepted values for the history view's `?channel=` filter. */
 const CAMPAIGN_CHANNELS: CommunicationChannel[] = ['email', 'whatsapp', 'portal'];
@@ -65,24 +65,21 @@ const service = new CommunicationService();
 app.post(
   '/send',
   requireAdmin,
+  validateBody(SendMessageSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
-    const body = await c.req.json();
-    const parsed = SendMessageSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, SendMessageSchema);
 
     log.info('Admin: Sending message', { adminUserId });
 
     // sendDirectMessage, not sendMessage: it additionally files the campaign-
     // shaped history row that makes this individual send visible in the
     // Communication Centre's History view.
-    const result = await service.sendDirectMessage(adminUserId, parsed.data as MessageCreate);
+    const result = await service.sendDirectMessage(adminUserId, input as MessageCreate);
 
     log.success('Message send completed', {
       adminUserId,
-      recipients: parsed.data.recipients?.length,
+      recipients: input.recipients?.length,
       status: result.status,
     });
 
@@ -93,14 +90,14 @@ app.post(
       category: 'communication',
       action: 'message_sent',
       summary:
-        `Message sent to ${parsed.data.recipients?.length || 0} recipient(s) — ${result.status}` +
+        `Message sent to ${input.recipients?.length || 0} recipient(s) — ${result.status}` +
         (result.cc.length > 0 ? ` (cc: ${result.cc.length})` : ''),
       // A send nobody received is not an 'info' event in the audit trail.
       severity: result.status === 'completed' ? 'info' : 'warning',
       entityType: 'communication',
       entityId: result.messageId,
       metadata: {
-        recipientCount: parsed.data.recipients?.length,
+        recipientCount: input.recipients?.length,
         status: result.status,
         stats: result.stats,
         ccCount: result.cc.length,
@@ -259,17 +256,14 @@ app.get(
 app.post(
   '/groups',
   requireAdmin,
+  validateBody(CreateGroupSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
-    const body = await c.req.json();
-    const parsed = CreateGroupSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, CreateGroupSchema);
 
-    log.info('Admin: Creating group', { adminUserId, groupName: parsed.data.name });
+    log.info('Admin: Creating group', { adminUserId, groupName: input.name });
 
-    const group = await service.createGroup(parsed.data as GroupCreate);
+    const group = await service.createGroup(input as GroupCreate);
 
     log.success('Group created', { adminUserId, groupId: group.id });
 
@@ -278,7 +272,7 @@ app.post(
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'group_created',
-      summary: `Communication group created: ${parsed.data.name}`,
+      summary: `Communication group created: ${input.name}`,
       severity: 'info',
       entityType: 'group',
       entityId: group.id,
@@ -295,18 +289,15 @@ app.post(
 app.put(
   '/groups/:id',
   requireAdmin,
+  validateBody(UpdateGroupSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const groupId = c.req.param('id')!;
-    const body = await c.req.json();
-    const parsed = UpdateGroupSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, UpdateGroupSchema);
 
     log.info('Admin: Updating group', { adminUserId, groupId });
 
-    const group = await service.updateGroup(groupId, parsed.data as Partial<Group>);
+    const group = await service.updateGroup(groupId, input as Partial<Group>);
 
     AdminAuditService.record({
       actorId: adminUserId,
@@ -463,17 +454,14 @@ app.get(
 app.post(
   '/templates',
   requireAdmin,
+  validateBody(CreateTemplateSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
-    const body = await c.req.json();
-    const parsed = CreateTemplateSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, CreateTemplateSchema);
 
-    log.info('Admin: Creating template', { adminUserId, templateName: parsed.data.name });
+    log.info('Admin: Creating template', { adminUserId, templateName: input.name });
 
-    const template = await service.createTemplate(parsed.data);
+    const template = await service.createTemplate(input);
 
     log.success('Template created', { adminUserId, templateId: template.id });
 
@@ -482,7 +470,7 @@ app.post(
       actorRole: (c.get('userRole') as string | undefined) || 'admin',
       category: 'communication',
       action: 'template_created',
-      summary: `Email template created: ${parsed.data.name}`,
+      summary: `Email template created: ${input.name}`,
       severity: 'info',
       entityType: 'template',
       entityId: template.id,
@@ -518,18 +506,15 @@ app.get(
 app.put(
   '/templates/:id',
   requireAdmin,
+  validateBody(UpdateTemplateSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
     const templateId = c.req.param('id')!;
-    const body = await c.req.json();
-    const parsed = UpdateTemplateSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, UpdateTemplateSchema);
 
     log.info('Admin: Updating template', { adminUserId, templateId });
 
-    const template = await service.updateTemplate(templateId, parsed.data);
+    const template = await service.updateTemplate(templateId, input);
 
     AdminAuditService.record({
       actorId: adminUserId,
@@ -601,17 +586,14 @@ app.get(
 app.post(
   '/email-footer',
   requireAdmin,
+  validateBody(EmailFooterSettingsSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
-    const body = await c.req.json();
-    const parsed = EmailFooterSettingsSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, EmailFooterSettingsSchema);
 
     log.info('Admin: Saving email footer settings', { adminUserId });
 
-    await service.saveFooterSettings(parsed.data);
+    await service.saveFooterSettings(input);
 
     log.success('Email footer settings saved', { adminUserId });
 
@@ -689,17 +671,14 @@ app.get(
 app.post(
   '/campaigns',
   requireAdmin,
+  validateBody(CreateCampaignSchema),
   asyncHandler(async (c) => {
     const adminUserId = c.get('userId') as string;
-    const body = await c.req.json();
-    const parsed = CreateCampaignSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
-    }
+    const input = body(c, CreateCampaignSchema);
 
     log.info('Admin: Creating campaign', { adminUserId });
 
-    const campaign = await service.createCampaign(adminUserId, parsed.data as CampaignCreate);
+    const campaign = await service.createCampaign(adminUserId, input as CampaignCreate);
 
     log.success('Campaign created', { adminUserId, campaignId: campaign.id });
 

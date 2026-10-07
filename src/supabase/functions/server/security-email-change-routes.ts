@@ -40,9 +40,9 @@ import {
   sendEmailChangeInitiatedNotice,
   sendEmailChangeCodeEmail,
   sendEmailChangeCompletedNotice,
-  sha256Hex,
   type PendingEmailChangeRequest,
 } from './security-shared.ts';
+import { sha256Hex } from './sha256.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');

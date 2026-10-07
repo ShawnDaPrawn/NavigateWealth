@@ -34,6 +34,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import type { MiddlewareHandler } from 'npm:hono';
 import type { ContentfulStatusCode } from 'npm:hono/utils/http-status';
+import { sha256Hex } from './sha256.ts';
 
 const log = createModuleLogger('idempotency');
 
@@ -68,14 +69,6 @@ interface CachedRecord {
 interface InFlightMarker {
   startedAt: number;
   expiresAt: number;
-}
-
-async function sha256Hex(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 /** Compose the storage key. We bind the path so two endpoints can't
