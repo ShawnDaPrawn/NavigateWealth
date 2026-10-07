@@ -30,6 +30,14 @@ const auth = vi.hoisted(() => ({
   identifyPortfolioAgent: vi.fn(async (_candidate: string): Promise<string | null> => null),
 }));
 const cron = vi.hoisted(() => ({ isAuthorizedCronRequest: vi.fn(async () => false) }));
+const storage = vi.hoisted(() => ({
+  createSignedUrl: async (
+    key: string,
+  ): Promise<{ data: { signedUrl: string } | null; error: unknown }> => ({
+    data: { signedUrl: `https://signed.test/${key}` },
+    error: null,
+  }),
+}));
 
 vi.mock('../kv_store.tsx', async () => {
   const { makeKvMock } = await import('./helpers/contract-harness.ts');
@@ -51,10 +59,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
     storage: {
       from: () => ({
-        createSignedUrl: vi.fn(async (key: string) => ({
-          data: { signedUrl: `https://signed.test/${key}` },
-          error: null,
-        })),
+        createSignedUrl: (key: string) => storage.createSignedUrl(key),
       }),
     },
   }),
@@ -155,6 +160,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   cron.isAuthorizedCronRequest.mockResolvedValue(false);
   auth.identifyPortfolioAgent.mockImplementation(identifyGrok);
+  storage.createSignedUrl = async (key: string) => ({
+    data: { signedUrl: `https://signed.test/${key}` },
+    error: null,
+  });
   seed();
 });
 
@@ -371,6 +380,48 @@ describe('GET /providers — the catalogue', () => {
       policyCount: 1,
     });
   });
+
+  it('counts each live client once, and leaves out archived policies and policies with no provider', async () => {
+    const existing = kvStore.get('policies:client:c1') as unknown[];
+    kvStore.set('policies:client:c1', [
+      ...existing,
+      {
+        id: 'pol1b',
+        clientId: 'c1',
+        categoryId: 'employee_benefits',
+        providerId: 'p1',
+        data: { eb_1: 'EB-001B' },
+      },
+      {
+        id: 'archived',
+        clientId: 'c1',
+        categoryId: 'employee_benefits',
+        providerId: 'p1',
+        archived: true,
+        data: { eb_1: 'EB-OLD' },
+      },
+      {
+        id: 'no-provider',
+        clientId: 'c1',
+        categoryId: 'employee_benefits',
+        data: { eb_1: 'EB-NONE' },
+      },
+    ]);
+    kvStore.set('policies:client:not-a-book', { id: 'stray' });
+
+    const res = await request(app, '/providers');
+    expect(res.status).toBe(200);
+    const { providers } = (await res.json()) as {
+      providers: Array<{ categories: Array<Record<string, unknown>> }>;
+    };
+    // pol1 and pol1b are both Thandi's; pol2 is John's. The archived row and
+    // the row with no provider are not rows the table will return.
+    expect(providers[0].categories[0]).toMatchObject({
+      categoryId: 'employee_benefits',
+      policyCount: 3,
+      clientCount: 2,
+    });
+  });
 });
 
 describe('GET /print — the policy print', () => {
@@ -390,6 +441,13 @@ describe('GET /print — the policy print', () => {
       url: 'https://signed.test/c1/pol1/print.pdf',
       document: { fileName: 'print.pdf' },
     });
+  });
+
+  it('answers 500 when Storage cannot sign the print, rather than claiming there is no document', async () => {
+    storage.createSignedUrl = async () => ({ data: null, error: { message: 'unavailable' } });
+    const res = await request(app, '/print?policyId=pol1&clientId=c1');
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Failed to generate download URL' });
   });
 });
 
