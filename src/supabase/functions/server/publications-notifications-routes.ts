@@ -47,6 +47,7 @@ import {
   type DeletedArticleRecord,
 } from './publications-route-helpers.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const log = createModuleLogger('publications-notifications-routes');
 
@@ -484,7 +485,7 @@ notificationsRoutes.post(
 notificationsRoutes.post('/cron/process-notification-jobs', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const token = stripBearerPrefix(authHeader);
     const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
     if (!(await isAuthorizedPublicationsCronRequest(token, sharedCronToken))) {
       return c.json({ error: 'Unauthorized - cron auth required' }, 401);

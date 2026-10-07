@@ -29,6 +29,7 @@ import {
 import { triggerSiteRebuild } from './site-rebuild-trigger.ts';
 import { syncArticleIndexInBackground } from './vasco-index-sync.ts';
 import { requireAdmin } from './auth-mw.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const log = createModuleLogger('publications-tags-scheduling-routes');
 
@@ -144,7 +145,7 @@ tagsSchedulingRoutes.get('/articles/:articleId/tags', async (c) => {
 tagsSchedulingRoutes.post('/cron/process-scheduled', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const token = stripBearerPrefix(authHeader);
     const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
 
     if (!(await isAuthorizedPublicationsCronRequest(token, sharedCronToken))) {
