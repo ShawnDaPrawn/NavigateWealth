@@ -114,10 +114,6 @@ export interface ArticleTagLink {
 // HELPER FUNCTIONS
 // ============================================================================
 
-export function generateId(): string {
-  return crypto.randomUUID();
-}
-
 export function generateSlug(text: string): string {
   return text
     .toLowerCase()

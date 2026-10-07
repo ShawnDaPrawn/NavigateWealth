@@ -37,6 +37,7 @@ import {
   RECOVERY_RETENTION_DAYS,
 } from './esign-recovery-bin.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-firm-admin-routes');
 
@@ -49,11 +50,7 @@ firmAdminRoutes.get('/retention', requireAdmin, async (c) => {
     const policy = await getRetentionPolicy(firmId);
     return c.json({ policy });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Retention read failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Retention read failed');
   }
 });
 
@@ -71,11 +68,7 @@ firmAdminRoutes.put('/retention', requireAdmin, async (c) => {
     const saved = await setRetentionPolicy(firmId, body);
     return c.json({ policy: saved });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Retention write failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Retention write failed');
   }
 });
 
@@ -87,13 +80,7 @@ firmAdminRoutes.delete('/retention', requireAdmin, async (c) => {
     await deleteRetentionPolicy(firmId);
     return c.json({ ok: true });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Retention delete failed',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Retention delete failed');
   }
 });
 
@@ -104,11 +91,7 @@ firmAdminRoutes.post('/maintenance/retention-sweep', requireAdmin, async (c) => 
     const result = await runRetentionSweep();
     return c.json(result);
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Retention sweep failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Retention sweep failed');
   }
 });
 
@@ -126,11 +109,7 @@ firmAdminRoutes.get('/branding', requireAdmin, async (c) => {
     const record = await getFirmBranding(firmId);
     return c.json({ branding: record });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Branding read failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Branding read failed');
   }
 });
 
@@ -177,11 +156,7 @@ firmAdminRoutes.delete('/branding', requireAdmin, async (c) => {
     await deleteFirmBranding(firmId);
     return c.json({ ok: true });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Branding delete failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Branding delete failed');
   }
 });
 
@@ -204,13 +179,7 @@ firmAdminRoutes.get('/metrics', requireAdmin, async (c) => {
     return c.json(metrics);
   } catch (error: unknown) {
     log.error('Metrics aggregation error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to compute metrics',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to compute metrics');
   }
 });
 
@@ -228,13 +197,7 @@ firmAdminRoutes.get('/recovery-bin', requireAdmin, async (c) => {
     });
   } catch (error: unknown) {
     log.error('Recovery bin list error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to list recovery bin',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to list recovery bin');
   }
 });
 
@@ -283,13 +246,7 @@ firmAdminRoutes.post(
       const scoped = firmScopeResponse(c, error);
       if (scoped) return scoped;
       log.error('Restore envelope error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to restore envelope',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to restore envelope');
     }
   },
 );
@@ -332,13 +289,7 @@ firmAdminRoutes.delete(
       const scoped = firmScopeResponse(c, error);
       if (scoped) return scoped;
       log.error('Purge envelope error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to purge envelope',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to purge envelope');
     }
   },
 );
@@ -351,13 +302,7 @@ firmAdminRoutes.post('/maintenance/recovery-sweep', requireAdmin, async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('Recovery sweep error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to run recovery sweep',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to run recovery sweep');
   }
 });
 

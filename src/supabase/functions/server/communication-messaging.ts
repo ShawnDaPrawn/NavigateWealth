@@ -19,7 +19,7 @@ import type {
   SendMessageResult,
   Campaign,
 } from './communication-types.ts';
-import { generateId } from './communication-service-helpers.ts';
+
 import { deleteCampaign, getCampaign, saveCampaign } from './communication-repo.ts';
 import {
   describeDroppedRecipients,
@@ -114,7 +114,7 @@ export async function sendMessage(
     }
   }
 
-  const messageId = generateId();
+  const messageId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const results: RecipientDeliveryResult[] = [];
 

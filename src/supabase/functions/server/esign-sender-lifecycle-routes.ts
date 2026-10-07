@@ -1,7 +1,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { requireIdempotency } from './idempotency.ts';
 import {
@@ -22,6 +22,7 @@ import { rateLimit } from './esign-rate-limit.ts';
 import { sendSigningReminder, sendRecallNotification } from './email-service.ts';
 import { emitWebhookEvent } from './webhook-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-sender-lifecycle-routes');
 
@@ -191,13 +192,7 @@ app.delete('/envelopes/:envelopeId', requireAdmin, async (c) => {
     const scoped = firmScopeResponse(c, error);
     if (scoped) return scoped;
     log.error('Delete envelope error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to delete envelope',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to delete envelope');
   }
 });
 
@@ -339,13 +334,7 @@ app.post(
       const scoped = firmScopeResponse(c, error);
       if (scoped) return scoped;
       log.error('❌ Recall envelope error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to recall envelope',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to recall envelope');
     }
   },
 );
@@ -455,13 +444,7 @@ app.post(
       const scoped = firmScopeResponse(c, error);
       if (scoped) return scoped;
       log.error('❌ Send reminder error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to send reminders',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to send reminders');
     }
   },
 );

@@ -20,11 +20,7 @@ import {
   DecimalCurrencySchema,
   IsoDateSchema,
 } from './common-schemas.ts';
-
-// Inlined validation utilities to avoid bundler import issues
-function stripHtml(text: string): string {
-  return text.replace(/<[^>]*>?/gm, '');
-}
+import { stripHtml } from './shared-validation-utils.ts';
 
 // ============================================================================
 // ENUMS & SHARED TYPES

@@ -19,7 +19,6 @@ import {
   sendArticlePublishedNotificationsBlastThenRetryQueue,
 } from './publications-notification-service.ts';
 import {
-  generateId,
   generateSlug,
   kickArticleNotificationJob,
   isAuthorizedPublicationsCronRequest,
@@ -58,7 +57,7 @@ tagsSchedulingRoutes.post('/tags', requireAdmin, async (c) => {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
 

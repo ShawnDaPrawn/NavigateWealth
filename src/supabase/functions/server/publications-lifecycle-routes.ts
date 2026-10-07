@@ -25,7 +25,6 @@ import {
   markArticleEmailRead,
 } from './publications-email-engagement-service.ts';
 import {
-  generateId,
   generateSlug,
   type Article,
   type DeletedArticleRecord,
@@ -322,7 +321,7 @@ lifecycleRoutes.post('/articles/:id/duplicate', async (c) => {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 
-    const newId = generateId();
+    const newId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const duplicated: Article = {

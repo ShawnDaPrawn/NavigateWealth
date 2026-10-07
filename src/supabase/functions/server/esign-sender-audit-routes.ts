@@ -1,10 +1,11 @@
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getAuditTrail } from './esign-services.ts';
 import { requireOwnedEnvelope, firmScopeResponse } from './esign-route-helpers.ts';
 import { getDocumentUrl, getCertificateUrl } from './esign-storage.ts';
 import { getCertificate } from './esign-certificates.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-sender-audit-routes');
 
@@ -32,13 +33,7 @@ app.get('/envelopes/:envelopeId/audit', async (c) => {
     log.error('❌ Get audit trail error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to fetch audit trail',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to fetch audit trail');
   }
 });
 
@@ -65,13 +60,7 @@ app.get('/envelopes/:envelopeId/document', async (c) => {
     log.error('❌ Get document URL error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to get document URL',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to get document URL');
   }
 });
 
@@ -103,13 +92,7 @@ app.get('/envelopes/:envelopeId/certificate', async (c) => {
     log.error('❌ Get certificate URL error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to get certificate URL',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to get certificate URL');
   }
 });
 

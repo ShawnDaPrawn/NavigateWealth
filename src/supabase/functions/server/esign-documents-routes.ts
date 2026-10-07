@@ -59,6 +59,7 @@ import { getActiveConsent } from './esign-consent-registry.ts';
 import { sendEmail } from './email-service.ts';
 import { sendInviteSms } from './sms-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-documents-routes');
 
@@ -82,11 +83,7 @@ documentsRoutes.get('/envelopes/:envelopeId/manifest', requireAdmin, async (c) =
     const scoped = firmScopeResponse(c, err);
     if (scoped) return scoped;
     log.error('Get manifest error:', err);
-    const status = err instanceof AuthError ? err.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to load manifest' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(err, 'Failed to load manifest');
   }
 });
 
@@ -139,11 +136,7 @@ documentsRoutes.put(
       const scoped = firmScopeResponse(c, err);
       if (scoped) return scoped;
       log.error('Save manifest error:', err);
-      const status = err instanceof AuthError ? err.statusCode : 500;
-      return new Response(
-        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to save manifest' }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(err, 'Failed to save manifest');
     }
   },
 );
@@ -177,11 +170,7 @@ documentsRoutes.delete('/envelopes/:envelopeId/manifest', requireAdmin, async (c
     const scoped = firmScopeResponse(c, err);
     if (scoped) return scoped;
     log.error('Clear manifest error:', err);
-    const status = err instanceof AuthError ? err.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to clear manifest' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(err, 'Failed to clear manifest');
   }
 });
 
@@ -250,13 +239,7 @@ documentsRoutes.post(
       const scoped = firmScopeResponse(c, err);
       if (scoped) return scoped;
       log.error('Materialize preview error:', err);
-      const status = err instanceof AuthError ? err.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: err instanceof Error ? err.message : 'Failed to materialise preview',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(err, 'Failed to materialise preview');
     }
   },
 );
@@ -294,11 +277,7 @@ documentsRoutes.get('/envelopes/:envelopeId/documents', requireAdmin, async (c) 
     const scoped = firmScopeResponse(c, err);
     if (scoped) return scoped;
     log.error('List envelope documents error:', err);
-    const status = err instanceof AuthError ? err.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list documents' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(err, 'Failed to list documents');
   }
 });
 
@@ -394,11 +373,7 @@ documentsRoutes.post(
       const scoped = firmScopeResponse(c, err);
       if (scoped) return scoped;
       log.error('Add envelope document error:', err);
-      const status = err instanceof AuthError ? err.statusCode : 500;
-      return new Response(
-        JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to add document' }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(err, 'Failed to add document');
     }
   },
 );
@@ -487,11 +462,7 @@ documentsRoutes.put('/envelopes/:envelopeId/documents/order', requireAdmin, asyn
     const scoped = firmScopeResponse(c, err);
     if (scoped) return scoped;
     log.error('Reorder envelope documents error:', err);
-    const status = err instanceof AuthError ? err.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to reorder documents' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(err, 'Failed to reorder documents');
   }
 });
 
@@ -856,13 +827,7 @@ documentsRoutes.post(
       const scoped = firmScopeResponse(c, error);
       if (scoped) return scoped;
       log.error('❌ Send invites error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to send invites',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to send invites');
     }
   },
 );

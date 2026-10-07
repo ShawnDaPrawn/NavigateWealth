@@ -1,7 +1,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import {
@@ -28,6 +28,7 @@ import {
   getAttachmentUrl,
 } from './esign-storage.ts';
 import { generateCompletionCertificate } from './esign-certificates.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-signer-extras-routes');
 
@@ -232,11 +233,7 @@ app.get('/envelopes/:envelopeId/attachments', requireAdmin, async (c) => {
     log.error('List attachments error:', err);
     const forbidden = firmScopeResponse(c, err);
     if (forbidden) return forbidden;
-    const status = err instanceof AuthError ? err.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to list attachments' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(err, 'Failed to list attachments');
   }
 });
 

@@ -3,10 +3,6 @@ import { APIError } from './error.middleware.ts';
 
 const log = createModuleLogger('resources-service');
 
-export function generateId(): string {
-  return crypto.randomUUID();
-}
-
 export function legalDefinitionKey(slug: string): string {
   return `legal_document_definition:${slug}`;
 }
@@ -179,7 +175,7 @@ export function normalizeLegalDocumentContent(sourceHtml: string) {
     toc,
     blocks: [
       {
-        id: generateId(),
+        id: crypto.randomUUID(),
         type: 'text',
         data: { content: normalizedHtml },
       },

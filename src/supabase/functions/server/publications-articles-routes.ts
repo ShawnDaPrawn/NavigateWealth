@@ -24,7 +24,6 @@ import {
   sendArticlePublishedNotificationsBlastThenRetryQueue,
 } from './publications-notification-service.ts';
 import {
-  generateId,
   generateSlug,
   calculateReadingTime,
   kickArticleNotificationJob,
@@ -78,7 +77,7 @@ articlesRoutes.post('/articles', requireAdmin, async (c) => {
       );
     }
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const slug = customSlug || generateSlug(title);
     const now = new Date().toISOString();
     const reading_time_minutes = calculateReadingTime(articleBody);

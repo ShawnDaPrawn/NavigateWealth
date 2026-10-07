@@ -48,10 +48,6 @@ function clientIndexKey(clientId: string): string {
   return `notes:client:${clientId}`;
 }
 
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
 interface KvNote {
   id: string;
   title: string;
@@ -174,7 +170,7 @@ app.post(
     }
 
     const now = new Date().toISOString();
-    const id = generateId();
+    const id = crypto.randomUUID();
 
     const note: KvNote = {
       id,
@@ -450,7 +446,7 @@ app.post(
     }
 
     // Create the task — prefer AI summary over raw content for the description
-    const taskId = generateId();
+    const taskId = crypto.randomUUID();
     const now = new Date().toISOString();
     const taskDescription = existing.summary?.trim() || existing.content;
 

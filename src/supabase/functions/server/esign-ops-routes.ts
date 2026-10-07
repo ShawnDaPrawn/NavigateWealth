@@ -14,7 +14,7 @@
  * envelope) is the guard since tsc does not type-check edge code.
  */
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -32,6 +32,7 @@ import {
 } from './esign-services.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-ops-routes');
 
@@ -43,11 +44,7 @@ opsRoutes.get('/diagnostics/sms', requireAdmin, async (c) => {
     await getAuthContext(c);
     return c.json({ success: true, sms: getSmsProviderStatus() });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed');
   }
 });
 
@@ -80,11 +77,7 @@ opsRoutes.post('/maintenance/expiry-sweep', requireAdmin, async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('Expiry sweep error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Expiry sweep failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Expiry sweep failed');
   }
 });
 
@@ -170,11 +163,7 @@ opsRoutes.post('/maintenance/reminder-sweep', requireAdmin, async (c) => {
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
     log.error('Reminder sweep error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Reminder sweep failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Reminder sweep failed');
   }
 });
 
@@ -346,11 +335,7 @@ opsRoutes.post('/maintenance/bulk-remind', requireAdmin, rateLimit('SENDER_BULK'
     });
   } catch (error: unknown) {
     log.error('Bulk remind error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Bulk remind failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Bulk remind failed');
   }
 });
 
@@ -464,11 +449,7 @@ opsRoutes.post('/maintenance/bulk-void', requireAdmin, rateLimit('SENDER_BULK'),
     });
   } catch (error: unknown) {
     log.error('Bulk void error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Bulk void failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Bulk void failed');
   }
 });
 

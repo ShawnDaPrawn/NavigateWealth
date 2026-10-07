@@ -20,7 +20,6 @@ import { requireAdmin } from './auth-mw.ts';
 import { mgetBatched } from './kv-batch.ts';
 import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
 import {
-  generateId,
   generateSlug,
   type Article,
   type ArticleCategory,
@@ -141,7 +140,7 @@ adminRoutes.post('/initialize', requireAdmin, async (c) => {
       ];
 
       for (const cat of categories) {
-        const id = generateId();
+        const id = crypto.randomUUID();
         const category: ArticleCategory = {
           id,
           name: cat.name,
@@ -166,7 +165,7 @@ adminRoutes.post('/initialize', requireAdmin, async (c) => {
       ];
 
       for (const typ of types) {
-        const id = generateId();
+        const id = crypto.randomUUID();
         const type: ArticleType = {
           id,
           name: typ.name,

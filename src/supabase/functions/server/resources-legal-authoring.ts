@@ -16,7 +16,6 @@ import {
 } from '../../../shared/legal-documents-registry.ts';
 import {
   convertLegacyBlocksToLegalHtml,
-  generateId,
   incrementLegalVersion,
   legalDefinitionKey,
   legalVersionKey,
@@ -63,7 +62,7 @@ export async function createLegalDocumentDraft(
 
   const normalized = normalizeLegalDocumentContent(input.sourceHtml);
   const now = new Date().toISOString();
-  const versionId = generateId();
+  const versionId = crypto.randomUUID();
   const versions = await listLegalDocumentVersions(slug);
   const publishedVersion = definition.currentPublishedVersionId
     ? versions.find((version) => version.id === definition.currentPublishedVersionId) || null
@@ -308,7 +307,7 @@ export async function duplicateLegalDocumentVersionToDraft(
   }
 
   const now = new Date().toISOString();
-  const nextDraftId = generateId();
+  const nextDraftId = crypto.randomUUID();
   const normalizedLegacyCopy =
     sourceVersion.contentFormat === 'legacy_blocks'
       ? normalizeLegalDocumentContent(
@@ -400,7 +399,7 @@ export async function migrateLegacyLegalDocumentToDraft(slug: string, actorId: s
   );
   const normalized = normalizeLegalDocumentContent(htmlSource);
   const now = new Date().toISOString();
-  const versionId = generateId();
+  const versionId = crypto.randomUUID();
 
   const draftVersion: LegalDocumentVersion = {
     id: versionId,
@@ -521,7 +520,7 @@ export async function seedLegalDocuments(
       }
     }
 
-    const resourceId = generateId();
+    const resourceId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     // Default template blocks: title + effective date + placeholder body

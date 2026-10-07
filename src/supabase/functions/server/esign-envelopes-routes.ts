@@ -13,7 +13,7 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin, requireSuperAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { requireIdempotency } from './idempotency.ts';
@@ -40,6 +40,7 @@ import { analyzeUploadedPdf } from './esign-pdf-analysis.ts';
 import { PDFService } from './esign-pdf.service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-envelopes-routes');
 
@@ -193,13 +194,7 @@ envelopesRoutes.get('/envelopes', requireAdmin, async (c) => {
     return c.json({ envelopes: scoped });
   } catch (error: unknown) {
     log.error('❌ Get all envelopes error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to fetch envelopes',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to fetch envelopes');
   }
 });
 
@@ -253,11 +248,7 @@ envelopesRoutes.delete('/envelopes', requireSuperAdmin, async (c) => {
     return c.json({ success: true, message: 'All E-Signature data cleared' });
   } catch (error: unknown) {
     log.error('❌ Clear all data error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to clear data' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to clear data');
   }
 });
 
@@ -506,11 +497,7 @@ envelopesRoutes.post(
       });
     } catch (error: unknown) {
       log.error('❌ Upload error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({ error: error instanceof Error ? error.message : 'Upload failed' }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Upload failed');
     }
   },
 );
@@ -558,13 +545,7 @@ envelopesRoutes.get('/envelopes/:envelopeId', requireAdmin, async (c) => {
     });
   } catch (error: unknown) {
     log.error('❌ Get envelope error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to fetch envelope',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to fetch envelope');
   }
 });
 
@@ -635,13 +616,7 @@ envelopesRoutes.put('/envelopes/:envelopeId/draft-signers', requireAdmin, async 
     return c.json({ success: true, count: signers.length });
   } catch (error: unknown) {
     log.error('Save draft signers error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to save draft signers',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to save draft signers');
   }
 });
 
@@ -765,13 +740,7 @@ envelopesRoutes.patch('/envelopes/:envelopeId/draft-settings', requireAdmin, asy
     return c.json({ success: true, changed, envelope: updated });
   } catch (error: unknown) {
     log.error('Update draft settings error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to update draft settings',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to update draft settings');
   }
 });
 
