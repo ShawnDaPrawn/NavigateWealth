@@ -2,7 +2,7 @@
  * esign diagnostics / ops-sweep routes (Phase 5 decomposition).
  * =============================================================
  *
- * Extracted verbatim from esign-routes.tsx: the stuck-envelope alert sweep
+ * Extracted verbatim from esign-routes.ts: the stuck-envelope alert sweep
  * (manual + cron), audit-event search, and the synthetic-probe diagnostics
  * (status / manual run / cron). Mounted via
  * `esignRoutes.route('/', diagnosticsRoutes)`. The /cron/* variants

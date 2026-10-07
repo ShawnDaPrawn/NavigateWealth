@@ -30,7 +30,7 @@ vi.mock('../kv_store.tsx', async () =>
 vi.mock('../stderr-logger.ts', async () =>
   (await import('./helpers/contract-harness.ts')).makeLoggerMock(),
 );
-vi.mock('../email-service.tsx', () => ({ sendEmail: vi.fn(async () => true) }));
+vi.mock('../email-service.ts', () => ({ sendEmail: vi.fn(async () => true) }));
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
 const { PersonnelService } = await import('../client-management-personnel-service.ts');

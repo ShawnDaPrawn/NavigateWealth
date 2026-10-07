@@ -2,7 +2,7 @@
  * esign /api-keys/* routes — programmatic-access key management (Phase 5).
  * ========================================================================
  *
- * Extracted verbatim from esign-routes.tsx: per-firm API key mint / list /
+ * Extracted verbatim from esign-routes.ts: per-firm API key mint / list /
  * update / rotate / revoke, with plaintext tokens returned only once on
  * create and rotate. Mounted via `esignRoutes.route('/', apiKeysRoutes)`.
  * Self-contained — shared esign services + esign-route-helpers (resolveFirmId)

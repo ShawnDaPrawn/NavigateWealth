@@ -36,7 +36,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({ auth: { admin: {} } }),
 }));
 
-vi.mock('../email-service.tsx', () => ({ sendEmail: vi.fn(async () => true) }));
+vi.mock('../email-service.ts', () => ({ sendEmail: vi.fn(async () => true) }));
 
 import { PersonnelService } from '../client-management-personnel-service.ts';
 

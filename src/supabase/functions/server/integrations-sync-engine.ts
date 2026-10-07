@@ -2,7 +2,7 @@
  * Integration sync-run engine + portal job-items (Phase 5 decomposition).
  * =====================================================================
  *
- * Extracted verbatim from integrations.tsx. The spreadsheet/portal sync-run
+ * Extracted verbatim from integrations.ts. The spreadsheet/portal sync-run
  * builder + publisher (buildSyncRun / publishSyncRun / summariseSyncRows +
  * buildPolicyIndexes / listPoliciesForProviderCategory) and the portal
  * job-items lifecycle (queue build / load / persist, warning sanitisation,
@@ -11,7 +11,7 @@
  * getTemplateFieldBindings moves here too: its only non-route caller is the
  * portal category sync builder, and it cannot live in integrations-config-utils
  * without creating a config-utils <-> field-utils import cycle (field-utils
- * already imports config-utils). integrations.tsx imports it back for the
+ * already imports config-utils). integrations.ts imports it back for the
  * config/template/portal routes that still reference it.
  *
  * Behaviour-preserving move. These handlers write policy data, so the route

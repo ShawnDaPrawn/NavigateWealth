@@ -4,7 +4,7 @@
  * §4.2 — Services own business logic, KV access patterns, and cross-entity consistency.
  * §5.4 — KV key: newsletter:{email}
  *
- * Admin-facing operations extracted from newsletter.tsx.
+ * Admin-facing operations extracted from newsletter.ts.
  * Public-facing flows (subscribe/confirm/unsubscribe) remain in the route file
  * due to tight coupling with email template logic — extraction deferred to a
  * follow-up change.

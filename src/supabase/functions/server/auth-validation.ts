@@ -19,7 +19,7 @@
  * Everything else stays OPTIONAL, and every schema is `.passthrough()`. These
  * are a gate against missing/malformed required input, not a closed contract:
  * a caller sending an extra field must never start failing because of this
- * change. Sibling schemas live in `security-validation.ts` for `security.tsx`.
+ * change. Sibling schemas live in `security-validation.ts` for `security.ts`.
  */
 
 import { z } from 'npm:zod';

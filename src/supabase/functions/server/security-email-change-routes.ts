@@ -2,7 +2,7 @@
  * Security email-change routes (Phase 5 decomposition).
  * ======================================================
  *
- * Extracted verbatim from security.tsx. No logic changes.
+ * Extracted verbatim from security.ts. No logic changes.
  *
  * Routes owned here:
  *   POST /:userId/email-change/request  — initiate dual-verification email change

@@ -3,7 +3,7 @@
  * (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', lifecycleRoutes)`. Owns archive / unarchive /
  * unpublish / schedule / delete / duplicate / increment-views / view plus the
  * public email-open / email-read tracking pings. Behaviour-preserving; the

@@ -1,7 +1,7 @@
 /**
  * Integrations Module Validation Schemas
  *
- * P1 — Zod validation for integrations.tsx
+ * P1 — Zod validation for integrations.ts
  * Validates config, schema, and policy mutation inputs.
  */
 

@@ -2,7 +2,7 @@
  * publications-articles-routes.ts — article CRUD + publish + reshare (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', articlesRoutes)`. Owns the article create/read/update
  * surface plus publish (which kicks off the notification blast) and the
  * admin-only reshare. Behaviour-preserving; the publications route contract

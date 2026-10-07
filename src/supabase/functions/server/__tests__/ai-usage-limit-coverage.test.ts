@@ -104,7 +104,7 @@ function buildProviderModuleSet(files: string[]): Set<string> {
  * policy-extraction went unmetered.
  */
 const EXEMPT: Record<string, string> = {
-  'integrations.tsx':
+  'integrations.ts':
     'Mount-only parent. It reaches a provider solely by routing to ' +
     'integrations-policy-extraction-routes.ts, which carries the guards on its ' +
     'own spending endpoints. A guard here would double-charge every one of them ' +

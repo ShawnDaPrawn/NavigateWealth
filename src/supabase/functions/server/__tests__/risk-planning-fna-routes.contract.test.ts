@@ -1,5 +1,5 @@
 /**
- * risk-planning-fna-routes.tsx — Route Contract Tests
+ * risk-planning-fna-routes.ts — Route Contract Tests
  * ===================================================
  *
  * Twelve routes, 199 statements uncovered: the life, disability, severe-illness
@@ -57,7 +57,7 @@ vi.mock('../form-prefill-auto-populate.ts', () => prefill);
 import { kvStore } from './helpers/contract-harness.ts';
 import { resetFnaHarness, seedFnaUser, fnaAssignments } from './helpers/fna-routes-harness.ts';
 
-const app = (await import('../risk-planning-fna-routes.tsx')).default;
+const app = (await import('../risk-planning-fna-routes.ts')).default;
 
 const CLIENT_A = '11111111-2222-4333-8444-555555555555';
 const CLIENT_B = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';

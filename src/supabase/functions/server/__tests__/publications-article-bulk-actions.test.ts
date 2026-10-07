@@ -130,7 +130,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   }),
 }));
 
-import publications from '../publications-routes.tsx';
+import publications from '../publications-routes.ts';
 
 const article = (id: string, status: string) => ({
   id,

@@ -2,7 +2,7 @@
  * esign /me/* routes — sender self-service (Phase 5 decomposition).
  * =================================================================
  *
- * Extracted verbatim from esign-routes.tsx: the current user's notification
+ * Extracted verbatim from esign-routes.ts: the current user's notification
  * preferences (P5.2) and in-app notification bell (P5.7). Mounted back into
  * the esign app via `esignRoutes.route('/', meRoutes)` so the exact paths
  * (/me/notification-prefs, /me/notifications, ...) are preserved.

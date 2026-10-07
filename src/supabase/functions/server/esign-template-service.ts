@@ -17,7 +17,7 @@ import {
   extractPageCount,
   uploadDocument,
 } from './esign-storage.ts';
-import { createDocument } from './esign-services.tsx';
+import { createDocument } from './esign-services.ts';
 import type {
   EsignDocument,
   EsignEnvelope,

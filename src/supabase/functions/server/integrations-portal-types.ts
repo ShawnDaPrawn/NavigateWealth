@@ -2,7 +2,7 @@
  * Portal automation types (Phase 5 decomposition).
  * =================================================
  *
- * Extracted verbatim from integrations.tsx so the portal-automation routes,
+ * Extracted verbatim from integrations.ts so the portal-automation routes,
  * helpers, and (future) sub-routers can share a single canonical type surface
  * as that 6,600-line god-file is split apart. These are pure type declarations
  * (erased at runtime) — moving them changes no behaviour.

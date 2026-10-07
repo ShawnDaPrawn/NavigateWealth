@@ -3,7 +3,7 @@
  * (Phase 5 decomposition).
  * =======================================================================
  *
- * Extracted verbatim from esign-routes.tsx: firm-scoped retention policy +
+ * Extracted verbatim from esign-routes.ts: firm-scoped retention policy +
  * its sweep, signer-page branding, the metrics snapshot, and the recovery-bin
  * (soft-deleted envelope restore / hard-delete / purge sweep). Mounted via
  * `esignRoutes.route('/', firmAdminRoutes)`. Depends on shared esign services

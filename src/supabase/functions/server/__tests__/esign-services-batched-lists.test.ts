@@ -43,7 +43,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
 const kv = await import('../kv_store.tsx');
-const { getAllEnvelopes, getClientEnvelopes } = await import('../esign-services.tsx');
+const { getAllEnvelopes, getClientEnvelopes } = await import('../esign-services.ts');
 
 /**
  * Seed one envelope with `signerCount` signers, a document and `auditCount`

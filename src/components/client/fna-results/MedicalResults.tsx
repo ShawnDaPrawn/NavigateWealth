@@ -2,7 +2,7 @@
  * Client-Side Medical FNA Results Display
  * Read-only view of published Medical Needs Analysis
  *
- * Data source: /supabase/functions/server/medical-fna-routes.tsx
+ * Data source: /supabase/functions/server/medical-fna-routes.ts
  * Backend stores inputs with nested structures: currentPlan, healthNeeds, preferences
  * Results use: hospitalCover, dayToDayCare, chronicCover, affordability
  */

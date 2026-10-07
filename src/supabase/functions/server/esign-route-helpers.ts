@@ -3,9 +3,9 @@
  * ====================================================================
  *
  * Neutral home for the small helpers that were defined locally in
- * esign-routes.tsx but are called by many route handlers. Hoisting them here
+ * esign-routes.ts but are called by many route handlers. Hoisting them here
  * lets the per-group route sub-apps (esign-<group>-routes.ts) import them
- * without a circular dependency back into esign-routes.tsx. Behaviour-
+ * without a circular dependency back into esign-routes.ts. Behaviour-
  * preserving move (verbatim) — the route contract suite is the guard since
  * tsc does not type-check edge code.
  *

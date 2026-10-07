@@ -2,7 +2,7 @@
  * Client-Side Investment INA Results Display
  * Read-only view of published Goal-Based Investment Needs Analysis
  *
- * Data source: /supabase/functions/server/investment-ina-routes.tsx
+ * Data source: /supabase/functions/server/investment-ina-routes.ts
  * Backend stores inputs with: currentAge, clientRiskProfile, discretionaryInvestments,
  * totalDiscretionaryCapitalCurrent, totalDiscretionaryMonthlyContributions, goals,
  * longTermInflationRate, expectedRealReturns

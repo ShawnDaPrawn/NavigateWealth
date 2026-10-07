@@ -2,7 +2,7 @@
  * esign envelope CRUD + draft routes (Phase 5 decomposition).
  * ===========================================================
  *
- * Extracted verbatim from esign-routes.tsx: the envelope lifecycle surface —
+ * Extracted verbatim from esign-routes.ts: the envelope lifecycle surface —
  * the public /verify-hash document-hash check, list / wipe-all envelopes,
  * envelope upload (create from PDF), single-envelope fetch, and the draft
  * editing routes (draft-signers, draft-settings). Mounted via

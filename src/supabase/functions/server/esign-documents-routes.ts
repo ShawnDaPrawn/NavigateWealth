@@ -2,7 +2,7 @@
  * esign envelope documents + manifest routes (Phase 5 decomposition).
  * ===================================================================
  *
- * Extracted verbatim from esign-routes.tsx: prep-time document management for
+ * Extracted verbatim from esign-routes.ts: prep-time document management for
  * a draft envelope — manifest get/put/delete, materialise-preview, document
  * list/upload/delete/reorder, and the invite-send route (email + SMS signing
  * invitations). Mounted via `esignRoutes.route('/', documentsRoutes)`. Depends

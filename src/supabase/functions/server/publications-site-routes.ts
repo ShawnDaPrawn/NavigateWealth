@@ -3,7 +3,7 @@
  * press surface, and team/careers (job listings) management (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', siteRoutes)`. Carries the TeamMember / JobListing
  * interfaces it owns. Behaviour-preserving; the publications route contract
  * suite + `deno check` guard the move.

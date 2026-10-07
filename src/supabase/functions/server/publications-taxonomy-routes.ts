@@ -2,7 +2,7 @@
  * publications-taxonomy-routes.ts — article categories + types CRUD (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', taxonomyRoutes)`. Behaviour-preserving; the
  * publications route contract suite + `deno check` guard the move.
  */

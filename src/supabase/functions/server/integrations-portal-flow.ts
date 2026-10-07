@@ -2,11 +2,11 @@
  * Portal automation — flow resolution (Phase 5 decomposition).
  * ============================================================
  *
- * Extracted verbatim from integrations.tsx. Builds/loads/sanitises a provider's
+ * Extracted verbatim from integrations.ts. Builds/loads/sanitises a provider's
  * PortalProviderFlow (default flow, KV-stored flow + merge, sanitisation) and
  * the job/run scope-error checks. Deps: buildDefaultPortalFlow + the flow-config
  * normalisers + isRetirementPortalCategory (guards) + binding-utils + kv + types
- * — all already-extracted, so no circular import back into integrations.tsx.
+ * — all already-extracted, so no circular import back into integrations.ts.
  *
  * NOTE: prettier-ignored — providerPortalGolden asserts on the exact (>100-char)
  * portalFlowKey/getPortalJobScopeError/getSyncRunScopeError signatures; reflow

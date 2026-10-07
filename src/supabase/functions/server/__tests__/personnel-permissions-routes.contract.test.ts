@@ -60,7 +60,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
     }),
   }),
 }));
-vi.mock('../email-service.tsx', () => ({
+vi.mock('../email-service.ts', () => ({
   sendEmail: vi.fn(async () => ({ success: true })),
   createEmailTemplate: () => '<html></html>',
   getFooterSettings: vi.fn(async () => ({})),

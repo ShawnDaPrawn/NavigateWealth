@@ -1,7 +1,7 @@
 /**
  * Documents Module Validation Schemas
  *
- * P1 — Zod validation for documents.tsx
+ * P1 — Zod validation for documents.ts
  */
 
 import { z } from 'npm:zod';

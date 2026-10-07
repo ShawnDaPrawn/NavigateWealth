@@ -2,7 +2,7 @@
  * esign /v1/* routes — the stable public REST API (Phase 5).
  * ==========================================================
  *
- * Extracted verbatim from esign-routes.tsx: the API-key-authenticated public
+ * Extracted verbatim from esign-routes.ts: the API-key-authenticated public
  * surface (list/get envelopes, audit, signed-pdf, list/get templates, and
  * create-envelope-from-template). Mounted via
  * `esignRoutes.route('/', v1Routes)`. Authenticates with requireApiKey (from

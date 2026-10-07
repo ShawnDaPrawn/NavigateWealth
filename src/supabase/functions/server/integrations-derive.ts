@@ -2,7 +2,7 @@
  * Integration derived-data helpers (Phase 5 decomposition).
  * =========================================================
  *
- * Extracted verbatim from integrations.tsx (these lived after `export default
+ * Extracted verbatim from integrations.ts (these lived after `export default
  * app`). recalculateClientTotals re-aggregates a client's policy totals into the
  * client profile; computeClientTotals is its arithmetic, raising instead of
  * logging, for the client totals refresh worker. autoGenerateCustomKeysForSchema

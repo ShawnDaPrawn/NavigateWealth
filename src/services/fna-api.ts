@@ -26,7 +26,7 @@ export interface FNABase {
 }
 
 // ==================== RISK PLANNING FNA ====================
-// Source of truth: /supabase/functions/server/risk-planning-fna-routes.tsx
+// Source of truth: /supabase/functions/server/risk-planning-fna-routes.ts
 // KV key: risk_planning_fna:{fnaId}
 // Note: Uses "inputData" (not "inputs") and "calculations" (not "results")
 
@@ -102,7 +102,7 @@ export interface RiskPlanningFNA extends FNABase {
 }
 
 // ==================== RETIREMENT FNA ====================
-// Source of truth: /supabase/functions/server/retirement-fna-routes.tsx
+// Source of truth: /supabase/functions/server/retirement-fna-routes.ts
 // KV key: retirement_fna:{fnaId}
 // Response format: { success, data } wrapper
 
@@ -210,7 +210,7 @@ export interface TaxPlanningFNA extends FNABase {
 }
 
 // ==================== MEDICAL FNA ====================
-// Source of truth: /supabase/functions/server/medical-fna-routes.tsx
+// Source of truth: /supabase/functions/server/medical-fna-routes.ts
 // KV key: medical-fna:{fnaId}
 // Response format: { success, data } wrapper
 // Note: Backend stores inputs from autoPopulateFromProfile() which uses
@@ -341,7 +341,7 @@ export interface MedicalFNA extends FNABase {
 }
 
 // ==================== ESTATE PLANNING FNA ====================
-// Source of truth: /supabase/functions/server/estate-planning-fna-routes.tsx
+// Source of truth: /supabase/functions/server/estate-planning-fna-routes.ts
 // KV key: estate-planning-fna:client:{clientId}:{sessionId}
 // Response format: { success, data } wrapper
 
@@ -388,7 +388,7 @@ export interface EstatePlanningFNA extends FNABase {
 }
 
 // ==================== INVESTMENT INA ====================
-// Source of truth: /supabase/functions/server/investment-ina-routes.tsx
+// Source of truth: /supabase/functions/server/investment-ina-routes.ts
 // KV key: investment-ina:client:{clientId}:{sessionId}
 // Response format: { success, data } wrapper
 

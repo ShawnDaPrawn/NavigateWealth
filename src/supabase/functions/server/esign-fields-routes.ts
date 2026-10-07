@@ -2,7 +2,7 @@
  * esign /envelopes/:id/fields routes — signature-field CRUD (Phase 5).
  * ====================================================================
  *
- * Extracted verbatim from esign-routes.tsx: replace-all (PUT) / list (GET) /
+ * Extracted verbatim from esign-routes.ts: replace-all (PUT) / list (GET) /
  * patch-one / delete-one of an envelope's signature fields during form
  * preparation. Mounted via `esignRoutes.route('/', fieldsRoutes)`. Depends on
  * shared esign services + esign-route-helpers (getRequestMetadata); no local

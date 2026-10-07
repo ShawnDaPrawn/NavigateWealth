@@ -2,7 +2,7 @@
  * esign /webhooks/* routes — firm-scoped event subscriptions (Phase 5).
  * =====================================================================
  *
- * Extracted verbatim from esign-routes.tsx: webhook subscription CRUD, secret
+ * Extracted verbatim from esign-routes.ts: webhook subscription CRUD, secret
  * rotation, and the delivery / dead-letter / replay management surface.
  * Mounted back via `esignRoutes.route('/', webhooksRoutes)` so the exact
  * paths are preserved. Producers elsewhere still call `emitWebhookEvent`

@@ -2,7 +2,7 @@
  * Portal automation — request guards & category eligibility (Phase 5 decomposition).
  * =================================================================================
  *
- * Extracted verbatim from integrations.tsx. Worker-secret auth guard
+ * Extracted verbatim from integrations.ts. Worker-secret auth guard
  * (requirePortalWorker + helpers) and the category classification/eligibility
  * rules (which product categories support portal automation, retirement-annuity
  * marker detection, row category inference, artifact category matching). Pure +

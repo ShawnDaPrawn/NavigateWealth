@@ -33,7 +33,7 @@ quality-issues-payload.json
 # first make the corresponding guardrail test format-robust, then remove it here.
 
 # Pinned by src/shared/integrations/__tests__/providerPortalGolden.test.ts
-src/supabase/functions/server/integrations.tsx
+src/supabase/functions/server/integrations.ts
 src/supabase/functions/server/integrations-portal-guards.ts
 src/supabase/functions/server/integrations-portal-flow.ts
 src/supabase/functions/server/integrations-portal-routes.ts

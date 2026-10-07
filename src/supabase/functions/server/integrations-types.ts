@@ -2,7 +2,7 @@
  * Integration Domain Types (Server-Side)
  *
  * KV-persisted entity shapes for policies, schemas, providers,
- * and related structures used by integrations.tsx.
+ * and related structures used by integrations.ts.
  *
  * @module integrations-types
  */

@@ -4,7 +4,7 @@
  * (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', adminRoutes)`. Owns the lazy Supabase client
  * (storage + auth.admin) used only by this admin surface. Behaviour-preserving;
  * the publications route contract suite + `deno check` guard the move.

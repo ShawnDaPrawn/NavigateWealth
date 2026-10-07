@@ -31,7 +31,7 @@ const FNA_TYPES = [
     description: 'Life cover, disability, severe illness, and income protection needs analysis',
     endpoint: '/make-server-91ed8379/risk-planning-fna',
     status: 'active', // Changed from 'in-development' to 'active'
-    routeFile: 'risk-planning-fna-routes.tsx',
+    routeFile: 'risk-planning-fna-routes.ts',
     frontend: '/components/admin/modules/risk-planning-fna/',
   },
   {
@@ -40,7 +40,7 @@ const FNA_TYPES = [
     description: 'Medical scheme, gap cover, and medical savings plan analysis',
     endpoint: '/make-server-91ed8379/medical-fna',
     status: 'active',
-    routeFile: 'medical-fna-routes.tsx',
+    routeFile: 'medical-fna-routes.ts',
     frontend: '/components/admin/modules/medical-fna/',
   },
   {
@@ -49,7 +49,7 @@ const FNA_TYPES = [
     description: 'Retirement lump sum and annuity income needs analysis',
     endpoint: '/make-server-91ed8379/retirement-fna',
     status: 'active',
-    routeFile: 'retirement-fna-routes.tsx',
+    routeFile: 'retirement-fna-routes.ts',
     frontend: '/components/admin/modules/retirement-fna/',
   },
   {
@@ -58,7 +58,7 @@ const FNA_TYPES = [
     description: 'Estate duty, liquidity, and executor fees analysis',
     endpoint: '/make-server-91ed8379/estate-planning-fna',
     status: 'active',
-    routeFile: 'estate-planning-fna-routes.tsx',
+    routeFile: 'estate-planning-fna-routes.ts',
     frontend: '/components/admin/modules/estate-planning-fna/',
   },
   {
@@ -76,7 +76,7 @@ const FNA_TYPES = [
     description: 'Asset allocation, risk profile, and portfolio analysis',
     endpoint: '/make-server-91ed8379/ina/investment',
     status: 'active',
-    routeFile: 'investment-ina-routes.tsx',
+    routeFile: 'investment-ina-routes.ts',
     frontend: '/components/admin/modules/investment-ina/',
   },
   {

@@ -3,7 +3,7 @@
  * packet-runs (Phase 5 decomposition).
  * =====================================================================
  *
- * Extracted verbatim from esign-routes.tsx: CSV-driven campaigns (fan one
+ * Extracted verbatim from esign-routes.ts: CSV-driven campaigns (fan one
  * template out to N recipients), the standalone /documents/upload, and packets
  * + packet-runs (multi-template workflow bundles + their execution). Mounted
  * via `esignRoutes.route('/', campaignsRoutes)`. The campaign + packet domain

@@ -2,8 +2,8 @@
  * email-senders-esign.ts — e-signature flow emails (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from email-service.tsx; the SendGrid transport + template
- * engine live in email-core.ts. email-service.tsx re-exports this module so the
+ * Extracted verbatim from email-service.ts; the SendGrid transport + template
+ * engine live in email-core.ts. email-service.ts re-exports this module so the
  * email-service.ts proxy surface is unchanged.
  */
 import { createModuleLogger } from './stderr-logger.ts';
@@ -219,7 +219,7 @@ This notification was sent via Navigate Wealth's e-signature platform.
 }
 
 /**
- * Wrapper for sendEsignInvitation - maps parameter names used by esign-routes.tsx
+ * Wrapper for sendEsignInvitation - maps parameter names used by esign-routes.ts
  */
 export async function sendSigningInvitation(params: {
   signerEmail: string;
@@ -238,7 +238,7 @@ export async function sendSigningInvitation(params: {
 }
 
 /**
- * Wrapper for sendEsignReminder - maps parameter names used by esign-routes.tsx
+ * Wrapper for sendEsignReminder - maps parameter names used by esign-routes.ts
  */
 export async function sendSigningReminder(params: {
   signerEmail: string;
@@ -256,7 +256,7 @@ export async function sendSigningReminder(params: {
 }
 
 /**
- * Override sendRecallNotification to match the parameter names used by esign-routes.tsx
+ * Override sendRecallNotification to match the parameter names used by esign-routes.ts
  */
 export async function sendRecallNotificationWrapper(params: {
   signerEmail: string;

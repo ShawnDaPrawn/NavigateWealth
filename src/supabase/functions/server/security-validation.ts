@@ -1,7 +1,7 @@
 /**
  * Security Module Validation Schemas
  *
- * P1 — Zod validation for security.tsx
+ * P1 — Zod validation for security.ts
  */
 
 import { z } from 'npm:zod';

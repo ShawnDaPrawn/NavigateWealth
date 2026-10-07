@@ -1,6 +1,6 @@
 /**
  * Shared types, constants, and helper functions for security route sub-routers
- * (Phase 5 decomposition). Extracted verbatim from security.tsx.
+ * (Phase 5 decomposition). Extracted verbatim from security.ts.
  *
  * Imported by security-activity-routes.ts, security-password-routes.ts,
  * security-email-change-routes.ts, and security-2fa-routes.ts. No logic

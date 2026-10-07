@@ -2,7 +2,7 @@
  * Security 2FA + suspend routes (Phase 5 decomposition).
  * =======================================================
  *
- * Extracted verbatim from security.tsx. No logic changes.
+ * Extracted verbatim from security.ts. No logic changes.
  *
  * Routes owned here:
  *   POST /:userId/suspend         — suspend/unsuspend a user account (admin only)

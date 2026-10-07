@@ -2,7 +2,7 @@
  * esign ops/sweeps routes — admin maintenance + scheduled sweeps (Phase 5).
  * =========================================================================
  *
- * Extracted verbatim from esign-routes.tsx: the SMS diagnostics badge, the
+ * Extracted verbatim from esign-routes.ts: the SMS diagnostics badge, the
  * admin-triggered maintenance sweeps (expiry / reminder, dry-run-first) and
  * bulk operations (bulk-remind / bulk-void), plus the system /cron/* variants
  * authenticated by the Supabase service-role key. Mounted back into the esign

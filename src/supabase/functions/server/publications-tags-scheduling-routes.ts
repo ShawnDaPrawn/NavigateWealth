@@ -3,7 +3,7 @@
  * (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', tagsSchedulingRoutes)`. Owns tag CRUD/links and the
  * scheduled-publishing cron (which publishes due articles and kicks their
  * notification blast). Behaviour-preserving; the publications route contract

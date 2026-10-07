@@ -3,7 +3,7 @@
  * the publications Edge Function routes (Phase 5c decomposition).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx so the route sub-apps can
+ * Extracted verbatim from publications-routes.ts so the route sub-apps can
  * import them without a cycle back through the composition root: the article /
  * category / type / tag domain interfaces, the cron-auth constants +
  * isAuthorizedPublicationsCronRequest, and the pure id / slug / reading-time +

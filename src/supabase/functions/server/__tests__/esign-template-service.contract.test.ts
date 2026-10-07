@@ -30,7 +30,7 @@ vi.mock('../esign-documents.ts', () => ({ getEnvelopeDocuments: vi.fn(async () =
 vi.mock('../esign-pdf-transform.ts', () => ({
   applyManifest: vi.fn(async () => new Uint8Array(0)),
 }));
-vi.mock('../esign-services.tsx', () => ({ createDocument: vi.fn(async () => undefined) }));
+vi.mock('../esign-services.ts', () => ({ createDocument: vi.fn(async () => undefined) }));
 
 import * as kv from '../kv_store.tsx';
 import { kvStore } from './helpers/contract-harness.ts';
