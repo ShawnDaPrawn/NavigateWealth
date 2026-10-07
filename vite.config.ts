@@ -216,7 +216,6 @@ const PACKAGE_CHUNKS = new Map<string, string>([
   ['cmdk', 'vendor-ui'],
   ['input-otp', 'vendor-ui'],
   ['embla-carousel-react', 'vendor-ui'],
-  ['react-resizable-panels', 'vendor-ui'],
 
   ['lucide-react', 'vendor-foundation'],
   ['class-variance-authority', 'vendor-foundation'],

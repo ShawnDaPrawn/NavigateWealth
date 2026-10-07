@@ -36,6 +36,7 @@ import { RetirementInputs, RetirementResults, RetirementScenario, ProjectionYear
 import { api } from '../../../../../utils/api';
 import { navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { RetirementReportTemplate } from './RetirementReportTemplate';
+import { formatCurrencyWhole as formatCurrency } from '../../../../../utils/currencyFormatter';
 
 interface RetirementCalculatorProps {
   onBack: () => void;
@@ -499,15 +500,6 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
       console.error('PDF generation error:', error);
       toast.error('Failed to generate PDF');
     }
-  };
-
-  const formatCurrency = (val: number) => {
-    if (val === undefined || val === null || isNaN(val)) return 'R0';
-    const isNeg = val < 0;
-    const abs = Math.abs(val);
-    const intPart = Math.round(abs).toString();
-    const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return `${isNeg ? '-' : ''}R${withCommas}`;
   };
 
   const formatPercent = (val: number) => {

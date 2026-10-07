@@ -3,7 +3,6 @@
  * Displays unique initial states for each profile tab
  */
 
-import React from 'react';
 import { Button } from '../../ui/button';
 import { LucideIcon } from 'lucide-react';
 
@@ -23,7 +22,7 @@ interface EmptyStateProps {
   };
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({
+export const EmptyState = ({
   icon: Icon,
   title,
   description,
@@ -34,7 +33,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   buttonColor = 'bg-[#6d28d9]',
   buttonHoverColor = 'hover:bg-[#5b21b6]',
   secondaryAction,
-}) => {
+}: EmptyStateProps) => {
   return (
     <div className="text-center py-16 px-6 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-300">
       <div

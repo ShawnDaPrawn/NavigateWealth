@@ -10,27 +10,20 @@
  * to ensure consistent formatting. See Guidelines §5.3, §8.3.
  */
 
+import { formatCurrency as formatSharedCurrency } from '../shared/formatting/format';
+
 /**
  * Format a number as currency for display (read-only contexts)
  * Output: "R1,234,567.89"
  *
- * Uses manual formatting to guarantee consistent output across
- * all browser/platform Intl implementations.
+ * Delegates to the shared formatter, which is the same manual formatting
+ * (no Intl, so output is identical on every platform). Kept as a one-argument
+ * function on purpose: the shared version's second parameter is a currency
+ * code, so passing it straight to `.map()` would read the array index as one.
  */
 export function formatCurrency(amount: number): string {
-  if (amount === undefined || amount === null || isNaN(amount)) return 'R0.00';
-
-  const isNegative = amount < 0;
-  const absAmount = Math.abs(amount);
-
-  // Fixed 2 decimal places
-  const fixed = absAmount.toFixed(2);
-  const [intPart, decPart] = fixed.split('.');
-
-  // Add thousand separators (commas)
-  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-  return `${isNegative ? '-' : ''}R${withCommas}.${decPart}`;
+  if (amount === undefined || amount === null) return 'R0.00';
+  return formatSharedCurrency(amount);
 }
 
 /**

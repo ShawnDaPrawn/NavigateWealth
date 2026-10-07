@@ -14,13 +14,13 @@ interface DisplayFieldProps {
   className?: string;
 }
 
-export const DisplayField: React.FC<DisplayFieldProps> = ({
+export const DisplayField = ({
   label,
   value,
   type = 'text',
   badgeColor = 'bg-gray-100 text-gray-800',
   className = '',
-}) => {
+}: DisplayFieldProps) => {
   const renderValue = () => {
     if (type === 'boolean') {
       return (
@@ -67,11 +67,7 @@ interface DisplayGridProps {
   className?: string;
 }
 
-export const DisplayGrid: React.FC<DisplayGridProps> = ({
-  children,
-  columns = 2,
-  className = '',
-}) => {
+export const DisplayGrid = ({ children, columns = 2, className = '' }: DisplayGridProps) => {
   const gridCols = {
     1: 'grid-cols-1',
     2: 'grid-cols-1 md:grid-cols-2',

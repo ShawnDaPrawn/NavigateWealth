@@ -20,7 +20,7 @@ interface DocumentUploadProps {
   hint?: string;
 }
 
-export const DocumentUpload: React.FC<DocumentUploadProps> = ({
+export const DocumentUpload = ({
   label,
   fileName,
   fileSize,
@@ -31,7 +31,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   accept = '.pdf,.jpg,.jpeg,.png',
   maxSize = 5,
   hint = `Accepted formats: PDF, JPG, PNG (Max ${maxSize}MB)`,
-}) => {
+}: DocumentUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
