@@ -11,6 +11,7 @@ import {
   isResponsesOnlyModel,
 } from './ai-model-config.ts';
 import { getOpenAIKey } from './social-media-ai-shared.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('social-media-ai');
 
@@ -216,7 +217,7 @@ async function callOpenAI(
     const responsesResult = await callResponsesAPI(apiKey, userPrompt);
     return responsesResult;
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = getErrMsg(err);
     log.warn('Stored prompt failed, falling back to Chat Completions API', { error: msg });
   }
 
@@ -353,7 +354,7 @@ export async function generatePostText(
   } catch (parseErr: unknown) {
     log.error('Failed to parse OpenAI response as JSON', {
       rawContent: rawContent.slice(0, 500),
-      error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+      error: getErrMsg(parseErr),
     });
     throw new Error('AI generated an invalid response format. Please try again.', {
       cause: parseErr,
@@ -411,7 +412,7 @@ export async function generatePostText(
     // Non-critical — log but don't fail the request
     log.warn('Failed to save AI generation record', {
       generationId,
-      error: kvErr instanceof Error ? kvErr.message : String(kvErr),
+      error: getErrMsg(kvErr),
     });
   }
 

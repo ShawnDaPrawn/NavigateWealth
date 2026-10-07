@@ -32,6 +32,7 @@ import {
   type ClaimedClient,
   type TotalsWriteOutcome,
 } from './repositories/client-totals-refresh-repository.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('client-totals-refresh');
 
@@ -156,5 +157,5 @@ async function recordFailure(
 }
 
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return getErrMsg(error);
 }

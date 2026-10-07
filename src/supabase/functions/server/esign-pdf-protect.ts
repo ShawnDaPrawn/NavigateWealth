@@ -203,7 +203,7 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
     }
   } catch (err) {
     log.warn('get_esign_platform_cert threw — falling back to KV', {
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrMsg(err),
     });
   }
 
@@ -289,7 +289,7 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
       }
     } catch (err) {
       log.warn('Could not persist the new platform certificate to Vault', {
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrMsg(err),
       });
     }
 

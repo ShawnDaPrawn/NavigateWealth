@@ -39,6 +39,7 @@ import {
 import { analyzeUploadedPdf } from './esign-pdf-analysis.ts';
 import { PDFService } from './esign-pdf.service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('esign-envelopes-routes');
 
@@ -291,7 +292,7 @@ envelopesRoutes.post(
         return c.json(
           {
             error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
-            details: parseErr instanceof Error ? parseErr.message : String(parseErr),
+            details: getErrMsg(parseErr),
           },
           400,
         );

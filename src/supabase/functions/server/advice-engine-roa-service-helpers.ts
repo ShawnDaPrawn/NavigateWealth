@@ -29,6 +29,7 @@ import {
   validateEvidenceMetadata,
 } from './advice-engine-roa-utils.ts';
 import { buildDataQuality, buildSourceMap } from './advice-engine-roa-compilation.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('advice-engine-roa-service');
 
@@ -146,7 +147,7 @@ export async function createDocumentArtifacts(
       };
     } catch (error) {
       log.warn('RoA generated artefact storage upload failed — KV byte fallback', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
     }
 

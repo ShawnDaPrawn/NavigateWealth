@@ -49,6 +49,7 @@ import { resolveAllowedOrigins } from './cors-origin.ts';
 import { mountCoreRoutes } from './mount-core.ts';
 import { mountFnaRoutes } from './mount-fna.ts';
 import { mountModuleRoutes } from './mount-modules.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 /** Reported by all three health probes. Single source so they cannot drift. */
 export const SERVER_VERSION = '4.1.0';
@@ -472,7 +473,7 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     try {
       mount.register(app);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = getErrMsg(error);
       bootFailures.push({ name: mount.name, message });
       console.error(`[BOOT] Failed to register ${mount.name} routes:`, message);
     }

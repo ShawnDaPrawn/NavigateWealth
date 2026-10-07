@@ -33,6 +33,7 @@ import type {
   PostView,
   SocialMarketingStatus,
 } from './social-marketing-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('social-marketing-service');
 
@@ -52,7 +53,7 @@ export async function getStatus(): Promise<SocialMarketingStatus> {
   } catch (error) {
     return {
       configured: true,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     };
   }
 }
@@ -216,7 +217,7 @@ export async function composePost(input: ComposePostInput, actor: string): Promi
         dueAt: created.dueAt,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = getErrMsg(error);
       log.warn('Compose failed for channel', { channelId, platform, error: message });
       result.failed.push({ channelId, platform, error: message });
     }

@@ -21,6 +21,7 @@
  */
 
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('kba-service');
 
@@ -133,7 +134,7 @@ export async function runKbaCheck(input: KbaCheckInput): Promise<KbaCheckResult>
       provider: adapter.provider,
       status: 'error',
       verifiedAt: new Date().toISOString(),
-      details: { message: error instanceof Error ? error.message : String(error) },
+      details: { message: getErrMsg(error) },
     };
   }
 }

@@ -69,7 +69,7 @@ app.post('/upload', requireAdmin, async (c) => {
       return c.json(
         {
           error: 'Invalid form data. Ensure the request uses multipart/form-data encoding.',
-          details: parseErr instanceof Error ? parseErr.message : String(parseErr),
+          details: getErrMsg(parseErr),
         },
         400,
       );

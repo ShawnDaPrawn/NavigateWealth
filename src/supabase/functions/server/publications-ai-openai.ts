@@ -7,6 +7,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('publications-ai');
 import { BASE_SYSTEM_PROMPT } from './publications-ai-prompts.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 export async function callOpenAI(
   systemPrompt: string,
@@ -123,7 +124,7 @@ export async function callOpenAIWorkflow(
     return { text: text.trim(), tokensUsed };
   } catch (err) {
     // Network errors, timeouts, JSON parse failures — all fall back to Chat Completions
-    const errMsg = err instanceof Error ? err.message : String(err);
+    const errMsg = getErrMsg(err);
     log.error('OpenAI Responses API failed with exception — falling back to Chat Completions', {
       error: errMsg,
     });

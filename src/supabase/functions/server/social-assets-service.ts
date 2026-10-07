@@ -28,6 +28,7 @@ import type {
   SocialBatchSummary,
   SyncBufferReport,
 } from './social-assets-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('social-assets-service');
 
@@ -321,7 +322,7 @@ export async function renderPendingImages(options: {
       report.rendered += 1;
       report.details.push({ assetId: asset.id, channel: asset.channel, outcome: 'rendered' });
     } catch (renderError) {
-      const message = renderError instanceof Error ? renderError.message : String(renderError);
+      const message = getErrMsg(renderError);
       log.error('Asset image render failed', { assetId: asset.id, error: message });
       await supabase
         .from(ASSETS)
@@ -431,7 +432,7 @@ export async function syncBufferStatuses(options: {
         report.removed += 1;
         continue;
       }
-      const message = syncError instanceof Error ? syncError.message : String(syncError);
+      const message = getErrMsg(syncError);
       log.warn('Buffer status sync failed for asset', { assetId: asset.id, error: message });
       report.errors.push({ assetId: asset.id, error: message });
     }

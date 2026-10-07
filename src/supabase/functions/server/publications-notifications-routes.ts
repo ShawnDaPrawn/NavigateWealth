@@ -46,6 +46,7 @@ import {
   type Article,
   type DeletedArticleRecord,
 } from './publications-route-helpers.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('publications-notifications-routes');
 
@@ -287,7 +288,7 @@ notificationsRoutes.get(
       } catch (repairError) {
         log.warn('Failed to self-heal publish notification campaign from tracking', {
           articleId: id,
-          error: repairError instanceof Error ? repairError.message : String(repairError),
+          error: getErrMsg(repairError),
         });
       }
     }

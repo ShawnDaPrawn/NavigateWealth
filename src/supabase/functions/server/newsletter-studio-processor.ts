@@ -85,6 +85,7 @@ import type {
   NewsletterProcessorState,
   ProcessNewsletterCampaignsResult,
 } from './newsletter-studio-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 export {
   CAMPAIGN_LOCK_SETTLE_MS,
@@ -134,7 +135,7 @@ async function loadOptedOutEmails(): Promise<Set<string>> {
     return new Set(subscribers.filter((s) => s.active === false).map((s) => s.email.toLowerCase()));
   } catch (error) {
     log.warn('Opt-out re-check scan failed — proceeding with queue-time exclusions only', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return new Set();
   }
@@ -351,7 +352,7 @@ async function processOneCampaign(
   try {
     ctx = await loadSendContext(leased);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrMsg(error);
     log.error('Campaign paused — the newsletter PDF could not be loaded', {
       campaignId: leased.id,
       error: message,
@@ -533,7 +534,7 @@ async function finalizeCampaign(
     } catch (error) {
       log.error('Could not publish the finished campaign to the website', {
         campaignId: campaign.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
     }
   }
@@ -577,7 +578,7 @@ export async function processNewsletterCampaigns(
         result.intakeProcessed = swept.processed;
         result.errors.push(...swept.errors);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = getErrMsg(error);
         result.errors.push(`intake sweep: ${message}`);
         log.error('Intake sweep failed', { message });
       }
@@ -598,7 +599,7 @@ export async function processNewsletterCampaigns(
           await promoteDueScheduledCampaign(campaign);
           result.promotedScheduled++;
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message = getErrMsg(error);
           result.errors.push(`promote ${campaign.id}: ${message}`);
           log.error('Failed to promote scheduled campaign', { campaignId: campaign.id, message });
         }
@@ -633,7 +634,7 @@ export async function processNewsletterCampaigns(
           );
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = getErrMsg(error);
         result.errors.push(`campaign ${campaign.id}: ${message}`);
         log.error('Campaign tick failed', { campaignId: campaign.id, message });
         await releaseCampaignSafely(leased, 'queued', { lastError: message }).catch(() => {});
@@ -642,7 +643,7 @@ export async function processNewsletterCampaigns(
 
     await writeProcessorState(mode, result, null);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrMsg(error);
     result.errors.push(message);
     await writeProcessorState(mode, result, message).catch(() => {});
     throw error;

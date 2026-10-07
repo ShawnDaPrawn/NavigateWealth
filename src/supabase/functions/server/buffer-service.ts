@@ -25,6 +25,7 @@
 
 import { createModuleLogger } from './stderr-logger.ts';
 import { APIError } from './error.middleware.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('buffer-service');
 
@@ -187,7 +188,7 @@ export async function bufferGraphql<T>(
       body: JSON.stringify({ query, variables }),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrMsg(error);
     log.error('Buffer API unreachable', { error: message });
     throw new APIError(`Buffer API unreachable: ${message}`, 502, 'BUFFER_UNREACHABLE');
   }

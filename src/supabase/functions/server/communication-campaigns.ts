@@ -17,6 +17,7 @@ import type {
 import { resolveAdminDisplayNames, stripHtmlForSearch } from './communication-service-helpers.ts';
 import { getAllClients, sendMessage } from './communication-messaging.ts';
 import { classifyDeliveryFailure } from './email-delivery-classification.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('communication-service');
 
@@ -360,7 +361,7 @@ export async function sendCampaign(
         });
       }
     } catch (error) {
-      firstFailure = firstFailure || (error instanceof Error ? error.message : String(error));
+      firstFailure = firstFailure || getErrMsg(error);
       log.error('Failed to send to recipient', error as Error, { recipientId });
     }
   }

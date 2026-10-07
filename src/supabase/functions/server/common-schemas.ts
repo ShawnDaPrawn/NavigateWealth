@@ -27,7 +27,7 @@ import {
   sanitizeEmail,
   sanitizePhone,
   normalizeWhitespace,
-} from './validation-utils.ts';
+} from './shared-validation-utils.ts';
 
 // ============================================================================
 // PRIMITIVE SCHEMAS

@@ -34,6 +34,7 @@ import type {
   StoredAttachment,
 } from './communication-service-helpers.ts';
 import { uploadFile } from './communication-attachments.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('communication-service');
 
@@ -254,7 +255,7 @@ export async function sendMessage(
       outcome.portalDelivered = true;
       log.success('Message delivered', { recipientId });
     } catch (error) {
-      outcome.error = outcome.error || (error instanceof Error ? error.message : String(error));
+      outcome.error = outcome.error || getErrMsg(error);
       log.error('Failed to deliver message', error as Error, { recipientId });
     }
 

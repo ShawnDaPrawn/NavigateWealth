@@ -17,6 +17,7 @@ import {
   processArticleNotificationJobs,
   getArticleNotificationJob,
 } from './publications-notification-service.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('publications-route-helpers');
 
@@ -180,7 +181,7 @@ export async function isAuthorizedPublicationsCronRequest(
     );
   } catch (error) {
     log.warn('Unable to load publications cron auth token from KV', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return false;
   }
@@ -200,7 +201,7 @@ export async function kickArticleNotificationJob(jobId: string | null | undefine
   } catch (error) {
     log.warn('Failed to kick article notification job immediately', {
       jobId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return null;
   }

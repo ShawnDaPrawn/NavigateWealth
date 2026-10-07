@@ -598,9 +598,7 @@ documentsRoutes.post(
             },
           });
         } catch (matErr) {
-          log.warn(
-            `Multi-doc materialisation failed (sending primary only): ${matErr instanceof Error ? matErr.message : String(matErr)}`,
-          );
+          log.warn(`Multi-doc materialisation failed (sending primary only): ${getErrMsg(matErr)}`);
         }
       } else {
         try {
@@ -663,9 +661,7 @@ documentsRoutes.post(
           // Manifest application failure must not block sending — fall back
           // to the original document. The sender's intent (re-ordered pages)
           // is lost but the envelope is still sendable.
-          log.warn(
-            `Manifest materialisation failed (sending original): ${matErr instanceof Error ? matErr.message : String(matErr)}`,
-          );
+          log.warn(`Manifest materialisation failed (sending original): ${getErrMsg(matErr)}`);
         }
       }
 
@@ -724,9 +720,7 @@ documentsRoutes.post(
           }
         } catch (prefillErr) {
           // Non-blocking — see esign-prefill.ts contract notes.
-          log.warn(
-            `Prefill resolution failed: ${prefillErr instanceof Error ? prefillErr.message : String(prefillErr)}`,
-          );
+          log.warn(`Prefill resolution failed: ${getErrMsg(prefillErr)}`);
         }
       }
 
