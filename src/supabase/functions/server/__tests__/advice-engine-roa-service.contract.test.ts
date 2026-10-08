@@ -41,9 +41,9 @@ const storage = vi.hoisted(() => ({
   removeFails: false,
 }));
 vi.mock('../advice-engine/advice-engine-roa-storage.ts', async () => {
-  const real = await vi.importActual<typeof import('../advice-engine-roa-storage.ts')>(
-    '../advice-engine/advice-engine-roa-storage.ts',
-  );
+  const real = await vi.importActual<
+    typeof import('../advice-engine/advice-engine-roa-storage.ts')
+  >('../advice-engine/advice-engine-roa-storage.ts');
   return {
     ...real,
     ensureRoADocumentsBucket: vi.fn(async () => undefined),
