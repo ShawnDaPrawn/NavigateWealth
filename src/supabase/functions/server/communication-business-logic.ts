@@ -13,6 +13,7 @@ import * as repo from './communication-repo.ts';
 import { logger } from './stderr-logger.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
 import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 // --- Client Resolution ---
 
@@ -489,7 +490,7 @@ export async function processScheduledCampaigns() {
 
           sentCount++;
         } catch (e) {
-          firstFailure = firstFailure || (e instanceof Error ? e.message : String(e));
+          firstFailure = firstFailure || getErrMsg(e);
           logger.error(`Failed to send email to ${recipient.email}`, e as Error);
         }
       }
@@ -510,6 +511,6 @@ export async function processScheduledCampaigns() {
     }
     return { processed: results.length, results };
   } catch (err: unknown) {
-    return { error: err instanceof Error ? err.message : String(err) };
+    return { error: getErrMsg(err) };
   }
 }

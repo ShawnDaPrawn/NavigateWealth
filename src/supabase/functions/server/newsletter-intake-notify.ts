@@ -13,6 +13,7 @@ import { escapeHtml } from './newsletter-studio-render.ts';
 import { NEWSLETTER_REVIEW_TO_ENV } from './newsletter-intake-types.ts';
 import { SITE_ORIGIN } from '../../../utils/siteOrigin.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('newsletter-intake-notify');
 
@@ -113,7 +114,7 @@ export async function sendNewsletterDraftReviewNotification(
   } catch (error) {
     log.error('Draft review email failed', {
       campaignId: input.campaignId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return false;
   }

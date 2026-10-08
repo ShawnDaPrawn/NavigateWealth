@@ -31,6 +31,7 @@ import type {
   ChannelAssetPatch,
   ListChannelAssetsOptions,
 } from './social-channel-assets-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('social-channel-assets');
 
@@ -376,7 +377,7 @@ export async function deleteChannelAsset(id: string): Promise<void> {
     await removePublicObject(asset.storage_path).catch((err: unknown) => {
       log.warn('Asset row deleted but its file remains', {
         storagePath: asset.storage_path,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrMsg(err),
       });
     });
   }

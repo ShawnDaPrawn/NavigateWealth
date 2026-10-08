@@ -2,7 +2,7 @@
  * esign diagnostics / ops-sweep routes (Phase 5 decomposition).
  * =============================================================
  *
- * Extracted verbatim from esign-routes.tsx: the stuck-envelope alert sweep
+ * Extracted verbatim from esign-routes.ts: the stuck-envelope alert sweep
  * (manual + cron), audit-event search, and the synthetic-probe diagnostics
  * (status / manual run / cron). Mounted via
  * `esignRoutes.route('/', diagnosticsRoutes)`. The /cron/* variants
@@ -12,12 +12,13 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { runStuckAlertSweep } from './esign-stuck-alert-service.ts';
 import { searchAuditEvents } from './esign-audit-search-service.ts';
 import { runSyntheticProbe, getLatestProbe, getProbeHistory } from './esign-synthetic-probe.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-diagnostics-routes');
 
@@ -30,11 +31,7 @@ diagnosticsRoutes.post('/maintenance/stuck-alert-sweep', requireAdmin, async (c)
     return c.json(result);
   } catch (error: unknown) {
     log.error('Manual stuck-alert sweep failed:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Stuck sweep failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Stuck sweep failed');
   }
 });
 
@@ -80,11 +77,7 @@ diagnosticsRoutes.get('/audit/search', requireAdmin, async (c) => {
     return c.json(result);
   } catch (error: unknown) {
     log.error('Audit search failed:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Audit search failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Audit search failed');
   }
 });
 
@@ -100,13 +93,7 @@ diagnosticsRoutes.get('/diagnostics/synthetic', requireAdmin, async (c) => {
     const [latest, history] = await Promise.all([getLatestProbe(), getProbeHistory()]);
     return c.json({ latest, history });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to read probe state',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to read probe state');
   }
 });
 
@@ -121,11 +108,7 @@ diagnosticsRoutes.post('/diagnostics/synthetic/run', requireAdmin, async (c) => 
     const result = await runSyntheticProbe();
     return c.json(result);
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Probe failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Probe failed');
   }
 });
 

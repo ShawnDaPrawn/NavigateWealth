@@ -29,7 +29,7 @@ import { resolveTrustedRole } from './constants.ts';
 import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
-import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
+import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('tasks-digest');

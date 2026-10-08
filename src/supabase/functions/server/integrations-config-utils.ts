@@ -2,12 +2,12 @@
  * Integration config / field-binding utilities (Phase 5 decomposition).
  * =====================================================================
  *
- * Pure helpers extracted verbatim from integrations.tsx — settings/config
+ * Pure helpers extracted verbatim from integrations.ts — settings/config
  * normalisation and field-binding construction shared by the config, template,
  * and portal routes. No I/O (no kv/Deno/network), so they move cleanly and are
  * fully verified by typecheck. This is shared-utils groundwork so the portal
  * routes can later move to their own sub-router without a circular import back
- * into integrations.tsx.
+ * into integrations.ts.
  */
 import type { IntegrationConfig, IntegrationFieldBinding } from './integrations-core-types.ts';
 import type { SchemaField } from './integrations-types.ts';

@@ -1,6 +1,6 @@
 /**
  * documents-email-routes.ts — POST /:userId/email (Phase 7 max-lines split).
- * Extracted verbatim from documents.tsx; mounted via
+ * Extracted verbatim from documents.ts; mounted via
  * `app.route('/', documentsEmailRoutes)`. Builds an encrypted ZIP of the
  * selected client documents and emails it to the client. Behaviour-preserving;
  * getSupabase is duplicated (repo's per-module lazy-client pattern).
@@ -22,7 +22,7 @@ import {
   normalizeEmailList,
 } from './email-recipients.ts';
 import { encodeBase64 } from 'jsr:@std/encoding/base64';
-import type { DocumentMetadata } from './documents.tsx';
+import type { DocumentMetadata } from './documents.ts';
 import { requireAdmin } from './auth-mw.ts';
 
 const log = createModuleLogger('documents-email-routes');

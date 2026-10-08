@@ -35,6 +35,7 @@ import {
   PasswordResetSchema,
 } from './auth-validation.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { retryAfterSeconds } from './retry-after.ts';
 
 const authRoutes = new Hono();
 const log = createModuleLogger('auth-routes');
@@ -338,7 +339,7 @@ authRoutes.post('/login', validateBody(LoginSchema), async (c) => {
             errorMessage: limit.reason,
           });
         }
-        const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
+        const retryAfter = retryAfterSeconds(limit.resetAt);
         c.header('Retry-After', String(retryAfter));
         return c.json(
           {

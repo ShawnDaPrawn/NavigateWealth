@@ -185,7 +185,7 @@ describe('resolveAuthUser round trips', () => {
   });
 
   it('resolves once behind a router-wide requireAuth and a route requireAdmin', async () => {
-    // The shape a source scan cannot see, and the one documents.tsx and the
+    // The shape a source scan cannot see, and the one documents.ts and the
     // profile router use for their admin-only routes.
     const app = new Hono();
     app.use('*', requireAuth);

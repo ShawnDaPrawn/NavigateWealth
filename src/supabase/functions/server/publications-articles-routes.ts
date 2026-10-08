@@ -2,7 +2,7 @@
  * publications-articles-routes.ts — article CRUD + publish + reshare (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', articlesRoutes)`. Owns the article create/read/update
  * surface plus publish (which kicks off the notification blast) and the
  * admin-only reshare. Behaviour-preserving; the publications route contract
@@ -24,7 +24,6 @@ import {
   sendArticlePublishedNotificationsBlastThenRetryQueue,
 } from './publications-notification-service.ts';
 import {
-  generateId,
   generateSlug,
   calculateReadingTime,
   kickArticleNotificationJob,
@@ -78,7 +77,7 @@ articlesRoutes.post('/articles', requireAdmin, async (c) => {
       );
     }
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const slug = customSlug || generateSlug(title);
     const now = new Date().toISOString();
     const reading_time_minutes = calculateReadingTime(articleBody);

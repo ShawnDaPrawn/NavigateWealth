@@ -2,14 +2,14 @@
  * publications-taxonomy-routes.ts — article categories + types CRUD (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', taxonomyRoutes)`. Behaviour-preserving; the
  * publications route contract suite + `deno check` guard the move.
  */
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
-import { generateId, generateSlug } from './publications-route-helpers.ts';
+import { generateSlug } from './publications-route-helpers.ts';
 import type { Article, ArticleCategory, ArticleType } from './publications-route-helpers.ts';
 import { requireAdmin } from './auth-mw.ts';
 
@@ -78,7 +78,7 @@ taxonomyRoutes.post('/categories', requireAdmin, async (c) => {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
 
@@ -187,7 +187,7 @@ taxonomyRoutes.post('/types', requireAdmin, async (c) => {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
 

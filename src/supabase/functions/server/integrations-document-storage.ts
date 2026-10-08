@@ -2,7 +2,7 @@
  * Integration document storage helpers (Phase 5 decomposition).
  * =============================================================
  *
- * Extracted verbatim from integrations.tsx. Supabase Storage bucket
+ * Extracted verbatim from integrations.ts. Supabase Storage bucket
  * provisioning (legal-docs + policy-documents) and the upload/replace
  * helpers for estate documents and policy schedules, plus the
  * POLICY_CATEGORY_LABELS map used to stamp a document's productType.
@@ -10,7 +10,7 @@
  * Shared by the portal worker routes (estate-document / policy-document
  * upload) and the staying /policy-documents/* routes, so it lives in a
  * common module both import from (vs a circular import back into
- * integrations.tsx once the portal routes move to their own sub-app).
+ * integrations.ts once the portal routes move to their own sub-app).
  * Deps: createClient + kv + logger + getErrMsg + 2 types only.
  */
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';

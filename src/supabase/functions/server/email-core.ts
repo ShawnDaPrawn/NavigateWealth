@@ -2,11 +2,11 @@
  * email-core.ts — SendGrid transport + template/footer engine (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from email-service.tsx: the lazy SendGrid key, the
+ * Extracted verbatim from email-service.ts: the lazy SendGrid key, the
  * `sendEmail` transport (with overloads), the HTML/plain-text template builders
  * (createEmailTemplate / createPlainTextEmail), and the footer/template registry
  * (getEmailTemplate / getFooterSettings + DEFAULT_TEMPLATES / DEFAULT_FOOTER_SETTINGS).
- * The domain `send*` helpers in email-service.tsx import from here; email-service
+ * The domain `send*` helpers in email-service.ts import from here; email-service
  * re-exports this module so the email-service.ts proxy surface is unchanged.
  */
 import * as kv from './kv_store.tsx';

@@ -47,7 +47,7 @@ import {
   getFooterSettings,
   getEmailTemplate,
   createPlainTextEmail,
-} from './email-service.tsx';
+} from './email-service.ts';
 import { listSubscribers } from './newsletter-service.ts';
 
 const app = new Hono();

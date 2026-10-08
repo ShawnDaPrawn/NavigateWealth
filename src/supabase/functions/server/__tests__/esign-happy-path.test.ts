@@ -108,7 +108,7 @@ import {
   addFieldsToEnvelope,
   updateFieldValue,
   getAuditTrail,
-} from '../esign-services.tsx';
+} from '../esign-services.ts';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

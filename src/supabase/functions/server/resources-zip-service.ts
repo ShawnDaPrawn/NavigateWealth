@@ -13,7 +13,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { ZipWriter } from 'npm:@zip.js/zip.js';
 import { createModuleLogger } from './stderr-logger.ts';
 import { APIError } from './error.middleware.ts';
-import { generateId } from './resources-helpers.ts';
+
 import { assertPublicHttpUrlResolved } from './ssrf-guard.ts';
 
 const log = createModuleLogger('resources-zip');
@@ -136,7 +136,7 @@ export async function uploadTempFile(
 
   // Create a temp path: temp/{randomId}/{subcategory}/{filename}
   // We keep the structure here to make zipping easier later
-  const runId = generateId();
+  const runId = crypto.randomUUID();
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const folder = subcategory ? `${subcategory}/` : '';
   const path = `temp/${runId}/${folder}${safeName}`;
@@ -203,7 +203,7 @@ export async function generateEncryptedZip(
   await ensureBucket();
 
   // Create a temporary directory for this process
-  const processId = generateId();
+  const processId = crypto.randomUUID();
   const workDir = `/tmp/${processId}`;
   await Deno.mkdir(workDir, { recursive: true });
 

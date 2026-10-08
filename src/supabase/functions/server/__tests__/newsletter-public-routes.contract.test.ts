@@ -1,5 +1,5 @@
 /**
- * newsletter.tsx — the three public consent routes
+ * newsletter.ts — the three public consent routes
  * ================================================
  *
  * `/subscribe`, `/confirm` and `/unsubscribe` are the only newsletter paths a
@@ -68,7 +68,7 @@ vi.mock('../public-form-rate-limit.ts', () => ({
 }));
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
-const app = (await import('../newsletter.tsx')).default;
+const app = (await import('../newsletter.ts')).default;
 
 type Entry = Record<string, unknown>;
 

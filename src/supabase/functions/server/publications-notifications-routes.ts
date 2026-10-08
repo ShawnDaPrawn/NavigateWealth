@@ -3,7 +3,7 @@
  * article-notification job/campaign management surface (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', notificationsRoutes)`. Carries the two
  * notification-shaped response helpers it owns (completedBlast / campaign-first
  * engagement summary). Behaviour-preserving; the publications route contract
@@ -46,6 +46,7 @@ import {
   type Article,
   type DeletedArticleRecord,
 } from './publications-route-helpers.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('publications-notifications-routes');
 
@@ -287,7 +288,7 @@ notificationsRoutes.get(
       } catch (repairError) {
         log.warn('Failed to self-heal publish notification campaign from tracking', {
           articleId: id,
-          error: repairError instanceof Error ? repairError.message : String(repairError),
+          error: getErrMsg(repairError),
         });
       }
     }

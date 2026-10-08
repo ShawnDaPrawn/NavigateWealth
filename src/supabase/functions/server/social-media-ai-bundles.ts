@@ -17,6 +17,7 @@ import {
   type GenerateImageResult,
   type AIImageRecord,
 } from './social-media-ai-images.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('social-media-ai');
 
@@ -83,7 +84,7 @@ export async function generateBundle(
   } catch (kvErr: unknown) {
     log.warn('Failed to save AI bundle record', {
       bundleId,
-      error: kvErr instanceof Error ? kvErr.message : String(kvErr),
+      error: getErrMsg(kvErr),
     });
   }
 

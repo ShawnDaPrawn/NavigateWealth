@@ -76,6 +76,7 @@ import type {
   RoAGeneratedDocument,
   RoAValidationResult,
 } from './advice-engine-roa-draft-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('advice-engine-roa-service');
 
@@ -451,7 +452,7 @@ export class AdviceEngineRoAService {
       };
     } catch (error) {
       log.warn('RoA evidence storage upload failed — KV byte fallback', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
       kvPayload = {
         ...evidenceItem,
@@ -594,7 +595,7 @@ export class AdviceEngineRoAService {
           log.warn('RoA blob purge failed — KV rows still deleted, objects left behind', {
             draftId,
             objectPaths,
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrMsg(error),
           });
         }
       }
@@ -797,7 +798,7 @@ export class AdviceEngineRoAService {
       } catch (error) {
         log.warn('RoA generated document hydrate from storage failed', {
           blobPath,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrMsg(error),
         });
       }
     }

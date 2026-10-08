@@ -2,7 +2,7 @@
  * esign /me/* routes — sender self-service (Phase 5 decomposition).
  * =================================================================
  *
- * Extracted verbatim from esign-routes.tsx: the current user's notification
+ * Extracted verbatim from esign-routes.ts: the current user's notification
  * preferences (P5.2) and in-app notification bell (P5.7). Mounted back into
  * the esign app via `esignRoutes.route('/', meRoutes)` so the exact paths
  * (/me/notification-prefs, /me/notifications, ...) are preserved.
@@ -13,7 +13,7 @@
  * suite is the guard since tsc does not type-check edge code.
  */
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext } from './auth-mw.ts';
 import {
   getPreferences as getNotifPrefs,
   setPreferences as setNotifPrefs,
@@ -23,6 +23,7 @@ import {
   markRead as markInAppRead,
   markAllRead as markAllInAppRead,
 } from './esign-inapp-notifications.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const meRoutes = new Hono();
 
@@ -37,11 +38,7 @@ meRoutes.get('/me/notification-prefs', async (c) => {
     const prefs = await getNotifPrefs(ctx.user.id);
     return c.json({ success: true, preferences: prefs });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed');
   }
 });
 
@@ -58,11 +55,7 @@ meRoutes.put('/me/notification-prefs', async (c) => {
     });
     return c.json({ success: true, preferences: updated });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed');
   }
 });
 
@@ -80,11 +73,7 @@ meRoutes.get('/me/notifications', async (c) => {
     const result = await listInAppNotifications(ctx.user.id, { limit, unreadOnly });
     return c.json({ success: true, ...result });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed');
   }
 });
 
@@ -95,11 +84,7 @@ meRoutes.post('/me/notifications/:id/read', async (c) => {
     const ok = await markInAppRead(ctx.user.id, id);
     return c.json({ success: ok });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed');
   }
 });
 
@@ -109,11 +94,7 @@ meRoutes.post('/me/notifications/read-all', async (c) => {
     const updated = await markAllInAppRead(ctx.user.id);
     return c.json({ success: true, updated });
   } catch (error: unknown) {
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed');
   }
 });
 

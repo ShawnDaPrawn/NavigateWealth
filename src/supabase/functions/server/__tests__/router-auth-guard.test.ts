@@ -85,7 +85,7 @@ function listMountedModules(): string[] {
 
 /**
  * Depth-limited scan of a module + its local `./` imports AND `export … from`
- * re-exports (proxy modules like documents.ts re-export documents.tsx) for
+ * re-exports (proxy modules like documents.ts re-export documents.ts) for
  * auth markers.
  */
 function hasAuthMarker(file: string, depth: number, seen: Set<string>): boolean {

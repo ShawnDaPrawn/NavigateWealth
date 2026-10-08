@@ -2,7 +2,7 @@
  * esign /envelopes/:id/fields routes — signature-field CRUD (Phase 5).
  * ====================================================================
  *
- * Extracted verbatim from esign-routes.tsx: replace-all (PUT) / list (GET) /
+ * Extracted verbatim from esign-routes.ts: replace-all (PUT) / list (GET) /
  * patch-one / delete-one of an envelope's signature fields during form
  * preparation. Mounted via `esignRoutes.route('/', fieldsRoutes)`. Depends on
  * shared esign services + esign-route-helpers (getRequestMetadata); no local
@@ -12,13 +12,14 @@
 import { Hono } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { requireOwnedEnvelope, firmScopeResponse } from './esign-route-helpers.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { UpdateFieldsSchema } from './esign-validation.ts';
 import { getRequestMetadata, FieldRecord } from './esign-route-helpers.ts';
 import { logAuditEvent } from './esign-services.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-fields-routes');
 
@@ -115,11 +116,7 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', requireAdmin, async (c) => {
     log.error('❌ Update fields error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update fields' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to update fields');
   }
 });
 
@@ -151,11 +148,7 @@ fieldsRoutes.get('/envelopes/:envelopeId/fields', requireAdmin, async (c) => {
     log.error('❌ Get fields error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to fetch fields' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to fetch fields');
   }
 });
 
@@ -244,11 +237,7 @@ fieldsRoutes.patch('/envelopes/:envelopeId/fields/:fieldId', requireAdmin, async
     log.error('❌ Update field error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to update field' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to update field');
   }
 });
 
@@ -327,11 +316,7 @@ fieldsRoutes.delete('/envelopes/:envelopeId/fields/:fieldId', requireAdmin, asyn
     log.error('❌ Delete field error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to delete field' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to delete field');
   }
 });
 

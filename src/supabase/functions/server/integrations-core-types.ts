@@ -2,7 +2,7 @@
  * Core integration types (Phase 5 decomposition).
  * ================================================
  *
- * Extracted verbatim from integrations.tsx — config, field bindings, upload
+ * Extracted verbatim from integrations.ts — config, field bindings, upload
  * history, provider, and sync-run shapes shared across the integrations
  * routes/helpers and (future) sub-routers. Pure type declarations (erased at
  * runtime) — moving them changes no behaviour.

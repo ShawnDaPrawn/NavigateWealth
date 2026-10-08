@@ -2,7 +2,7 @@
  * Policy management routes (Phase 5 Slice D decomposition).
  * ==========================================================
  *
- * Extracted verbatim from integrations.tsx. No logic changes.
+ * Extracted verbatim from integrations.ts. No logic changes.
  *
  * Routes owned here:
  *   GET  /policies              — list policies for a client

@@ -8,7 +8,6 @@
  * - Query filters
  *
  * Phase 3 - Increment 3.3
- * VERSION: 3.3.8 - Inlined validation utilities to avoid bundler issues
  */
 
 import { z } from 'npm:zod';
@@ -24,15 +23,7 @@ import {
   IsoDateTimeSchema,
   AddressSchema,
 } from './common-schemas.ts';
-
-// Inlined validation utilities to avoid bundler import issues
-function stripHtml(text: string): string {
-  return text.replace(/<[^>]*>?/gm, '');
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, ' ').trim();
-}
+import { normalizeWhitespace, stripHtml } from './shared-validation-utils.ts';
 
 // ============================================================================
 // ENUMS & CONSTANTS

@@ -1,5 +1,5 @@
 /**
- * integrations.tsx — policy-extraction route contracts
+ * integrations.ts — policy-extraction route contracts
  * ====================================================
  *
  * Split out of integrations-routes.contract.test.ts, which had grown past the
@@ -180,7 +180,7 @@ vi.mock('../policy-extraction-service.ts', () => ({
   })),
 }));
 
-import integrationsApp from '../integrations.tsx';
+import integrationsApp from '../integrations.ts';
 
 const AUTH = { Authorization: 'Bearer test-token' };
 
@@ -188,7 +188,7 @@ beforeEach(() => {
   kvStore.clear();
 });
 
-describe('integrations.tsx policy-extraction route contracts', () => {
+describe('integrations.ts policy-extraction route contracts', () => {
   // ── POST /policy-extraction/extract ───────────────────────────────────────
   describe('POST /policy-extraction/extract', () => {
     it('returns 401 without an Authorization header', async () => {

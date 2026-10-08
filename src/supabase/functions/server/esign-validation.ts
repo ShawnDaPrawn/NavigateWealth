@@ -1,7 +1,7 @@
 /**
  * E-Signature Module Validation Schemas
  *
- * P1 — Zod validation for esign-routes.tsx
+ * P1 — Zod validation for esign-routes.ts
  * Compliance-critical: e-sign operations require strict input validation.
  */
 

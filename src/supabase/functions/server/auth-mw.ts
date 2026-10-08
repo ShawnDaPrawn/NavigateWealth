@@ -76,7 +76,7 @@ export class AuthError extends Error {
  *
  * EVERY caller now passes the `iat`. The first version of this made the
  * parameter optional and left four hand-rolled auth paths — `ai-advisor.ts`,
- * `ai-intelligence.tsx`, `tasks-digest-routes.ts` and the admin check in
+ * `ai-intelligence.ts`, `tasks-digest-routes.ts` and the admin check in
  * `auth-routes.ts` — calling it with one argument. All four already had the
  * raw token in scope, so that was not "cannot tell", it was "did not ask": a
  * revoked token kept working on those routes, the paid AI endpoints included.

@@ -7,6 +7,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getOpenAIKey, getSupabase } from './social-media-ai-shared.ts';
 import type { SocialAIPlatform } from './social-media-ai-text.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('social-media-ai');
 
@@ -162,7 +163,7 @@ async function resolveBrandContext(): Promise<BrandContext> {
     }
   } catch (brandErr: unknown) {
     log.warn('Failed to load brand context from KV, using defaults', {
-      error: brandErr instanceof Error ? brandErr.message : String(brandErr),
+      error: getErrMsg(brandErr),
     });
   }
 
@@ -465,7 +466,7 @@ export async function generateImage(
   } catch (kvErr: unknown) {
     log.warn('Failed to save AI image record', {
       generationId,
-      error: kvErr instanceof Error ? kvErr.message : String(kvErr),
+      error: getErrMsg(kvErr),
     });
   }
 

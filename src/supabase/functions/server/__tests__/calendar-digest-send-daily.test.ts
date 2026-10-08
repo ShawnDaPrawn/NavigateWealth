@@ -25,7 +25,7 @@ const sendEmail = vi.hoisted(() => vi.fn(async () => true));
 const queryResult = vi.hoisted(() => ({ data: [] as unknown[], error: null as unknown }));
 const selectArg = vi.hoisted(() => ({ value: '' }));
 
-vi.mock('../email-service.tsx', () => ({
+vi.mock('../email-service.ts', () => ({
   sendEmail: (...a: unknown[]) => sendEmail(...a),
   createEmailTemplate: (html: string) => html,
   getFooterSettings: async () => ({}),

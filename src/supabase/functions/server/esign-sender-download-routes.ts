@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   getRequestMetadata,
@@ -18,6 +18,7 @@ import { generateCompletionCertificate } from './esign-certificates.ts';
 import { buildEvidencePack } from './esign-evidence-export.ts';
 import { getReminderConfig, setReminderConfig } from './esign-automation.ts';
 import { corsResponseHeaders } from './cors-origin.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-sender-download-routes');
 
@@ -121,13 +122,7 @@ app.get('/envelopes/:envelopeId/download', async (c) => {
     log.error('❌ Download envelope error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to download envelope',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to download envelope');
   }
 });
 
@@ -169,13 +164,7 @@ app.get('/envelopes/:envelopeId/evidence-pack', requireAdmin, async (c) => {
     log.error('Evidence pack export error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to build evidence pack',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to build evidence pack');
   }
 });
 
@@ -198,13 +187,7 @@ app.get('/envelopes/:envelopeId/reminder-config', requireAdmin, async (c) => {
     log.error('Get reminder config error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to get reminder config',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to get reminder config');
   }
 });
 
@@ -260,13 +243,7 @@ app.put('/envelopes/:envelopeId/reminder-config', requireAdmin, async (c) => {
     log.error('Update reminder config error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to update reminder config',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to update reminder config');
   }
 });
 
@@ -320,13 +297,7 @@ app.patch('/envelopes/:envelopeId/signing-mode', requireAdmin, async (c) => {
     log.error('Update signing mode error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to update signing mode',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to update signing mode');
   }
 });
 
@@ -388,13 +359,7 @@ app.get('/envelopes/:envelopeId/audit/export', requireAdmin, async (c) => {
     log.error('Audit export error:', error);
     const forbidden = firmScopeResponse(c, error);
     if (forbidden) return forbidden;
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to export audit trail',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to export audit trail');
   }
 });
 

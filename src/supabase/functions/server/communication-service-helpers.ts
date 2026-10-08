@@ -5,10 +5,6 @@
 import * as kv from './kv_store.tsx';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
-export function generateId(): string {
-  return crypto.randomUUID();
-}
-
 export function splitFullName(fullName?: string): { firstName: string; surname: string } {
   const value = (fullName || '').trim();
   if (!value) {

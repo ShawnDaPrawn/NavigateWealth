@@ -21,10 +21,6 @@ import { ValidationError, NotFoundError } from './error.middleware.ts';
 const log = createModuleLogger('advice-engine-service');
 
 // Helper to generate unique ID
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
 // Helper to calculate age from date of birth
 function calculateAge(dob: string): number {
   if (!dob) return 0;
@@ -276,7 +272,7 @@ export class AdviceEngineService {
       throw new ValidationError('Client ID is required', 'clientId');
     }
 
-    const fnaId = generateId();
+    const fnaId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
     const version = await this.getNextVersionNumber(type, data.clientId);
 

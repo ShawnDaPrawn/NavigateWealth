@@ -1,5 +1,5 @@
 /**
- * ai-intelligence.tsx — who may use the AI Intelligence agent.
+ * ai-intelligence.ts — who may use the AI Intelligence agent.
  * ============================================================
  *
  * The router authenticates the token itself, then used to decide access from
@@ -57,7 +57,7 @@ vi.mock('../ai-usage-limit.ts', () => ({
 }));
 
 const { kvStore } = await import('./helpers/contract-harness.ts');
-const app = (await import('../ai-intelligence.tsx')).default;
+const app = (await import('../ai-intelligence.ts')).default;
 
 const status = (token: string) =>
   app.request('/status', { headers: { Authorization: `Bearer ${token}` } });

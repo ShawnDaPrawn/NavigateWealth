@@ -1,7 +1,7 @@
 /**
  * Publications Module Validation Schemas
  *
- * P1 — Zod validation for publications-routes.tsx
+ * P1 — Zod validation for publications-routes.ts
  */
 
 import { z } from 'npm:zod';

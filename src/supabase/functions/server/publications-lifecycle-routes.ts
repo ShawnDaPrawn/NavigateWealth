@@ -3,7 +3,7 @@
  * (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', lifecycleRoutes)`. Owns archive / unarchive /
  * unpublish / schedule / delete / duplicate / increment-views / view plus the
  * public email-open / email-read tracking pings. Behaviour-preserving; the
@@ -25,7 +25,6 @@ import {
   markArticleEmailRead,
 } from './publications-email-engagement-service.ts';
 import {
-  generateId,
   generateSlug,
   type Article,
   type DeletedArticleRecord,
@@ -322,7 +321,7 @@ lifecycleRoutes.post('/articles/:id/duplicate', async (c) => {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 
-    const newId = generateId();
+    const newId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const duplicated: Article = {

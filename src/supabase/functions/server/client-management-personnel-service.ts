@@ -8,7 +8,7 @@ import {
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { isSuperAdminEmail } from './constants.ts';
-import { sendEmail } from './email-service.tsx';
+import { sendEmail } from './email-service.ts';
 
 const log = createModuleLogger('personnel-service');
 

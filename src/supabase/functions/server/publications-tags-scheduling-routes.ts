@@ -3,7 +3,7 @@
  * (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', tagsSchedulingRoutes)`. Owns tag CRUD/links and the
  * scheduled-publishing cron (which publishes due articles and kicks their
  * notification blast). Behaviour-preserving; the publications route contract
@@ -19,7 +19,6 @@ import {
   sendArticlePublishedNotificationsBlastThenRetryQueue,
 } from './publications-notification-service.ts';
 import {
-  generateId,
   generateSlug,
   kickArticleNotificationJob,
   isAuthorizedPublicationsCronRequest,
@@ -58,7 +57,7 @@ tagsSchedulingRoutes.post('/tags', requireAdmin, async (c) => {
       return c.json({ success: false, error: 'Name is required' }, 400);
     }
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const slug = generateSlug(name);
     const now = new Date().toISOString();
 

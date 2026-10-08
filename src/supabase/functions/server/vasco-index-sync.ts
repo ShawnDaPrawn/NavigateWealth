@@ -20,6 +20,7 @@
 
 import { createModuleLogger } from './stderr-logger.ts';
 import { removeArticleFromIndex, syncArticle } from './vasco-rag-service.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('vasco-index-sync');
 
@@ -66,7 +67,7 @@ export function syncArticleIndexInBackground(
       log.warn('Article index sync failed (non-fatal — rebuild from AI Management → Knowledge)', {
         id: article.id,
         reason,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrMsg(err),
       });
     });
   return keepAlive(work);
@@ -83,7 +84,7 @@ export function removeArticleFromIndexInBackground(
       log.warn('Article index removal failed (non-fatal)', {
         id: articleId,
         reason,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrMsg(err),
       });
     });
   return keepAlive(work);
@@ -109,7 +110,7 @@ export function removeArticlesFromIndexInBackground(
         log.warn('Article index removal failed (non-fatal)', {
           id,
           reason,
-          error: err instanceof Error ? err.message : String(err),
+          error: getErrMsg(err),
         });
       }
     }

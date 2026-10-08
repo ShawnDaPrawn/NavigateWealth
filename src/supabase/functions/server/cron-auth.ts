@@ -39,6 +39,7 @@ import { type Context, type Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('cron-auth');
 
@@ -81,7 +82,7 @@ export async function isAuthorizedCronRequest(c: CronAuthContext): Promise<boole
       }
     } catch (error) {
       log.warn('verify_cron_auth_token threw', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
     }
   }

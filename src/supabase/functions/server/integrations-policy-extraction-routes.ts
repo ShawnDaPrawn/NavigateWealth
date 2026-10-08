@@ -2,7 +2,7 @@
  * Policy-extraction and provider-terminology routes (Phase 5 Slice F).
  * =====================================================================
  *
- * Extracted verbatim from integrations.tsx.
+ * Extracted verbatim from integrations.ts.
  *
  * ACCESS: every route is requireAdmin. They were requireAuth, which any
  * self-registered client passes, and they take a clientId from the caller:

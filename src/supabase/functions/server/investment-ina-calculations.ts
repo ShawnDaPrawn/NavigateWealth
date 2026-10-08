@@ -1,6 +1,6 @@
 /**
  * investment-ina-calculations.ts — INA goal-based investment math + domain types
- * (Phase 7 max-lines split). Extracted verbatim from investment-ina-routes.tsx;
+ * (Phase 7 max-lines split). Extracted verbatim from investment-ina-routes.ts;
  * the routes import the calc entrypoints from here.
  */
 import * as kv from './kv_store.tsx';

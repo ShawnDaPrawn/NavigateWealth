@@ -1,5 +1,5 @@
 /**
- * publications-routes.tsx — Route Contract / Characterization Tests (Phase 5c)
+ * publications-routes.ts — Route Contract / Characterization Tests (Phase 5c)
  * ===========================================================================
  *
  * Locks the HTTP-level contracts of the publications Edge Function's routes
@@ -124,14 +124,14 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   }),
 }));
 
-import publications from '../publications-routes.tsx';
+import publications from '../publications-routes.ts';
 
 beforeEach(() => {
   kvStore.clear();
   vi.clearAllMocks();
 });
 
-describe('publications-routes.tsx route contracts', () => {
+describe('publications-routes.ts route contracts', () => {
   it('GET / returns the publications service status envelope', async () => {
     const res = await publications.request('/');
     expect(res.status).toBe(200);

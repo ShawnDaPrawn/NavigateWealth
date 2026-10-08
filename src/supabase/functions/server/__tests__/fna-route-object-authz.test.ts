@@ -51,9 +51,9 @@ vi.mock('../net-worth-snapshot-service.ts', () => ({
   },
 }));
 
-import riskRoutes from '../risk-planning-fna-routes.tsx';
-import medicalRoutes from '../medical-fna-routes.tsx';
-import retirementRoutes from '../retirement-fna-routes.tsx';
+import riskRoutes from '../risk-planning-fna-routes.ts';
+import medicalRoutes from '../medical-fna-routes.ts';
+import retirementRoutes from '../retirement-fna-routes.ts';
 
 const OWNER = 'client-owner';
 const STRANGER = 'client-stranger';

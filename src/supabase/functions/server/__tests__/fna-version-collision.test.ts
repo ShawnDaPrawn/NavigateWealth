@@ -78,8 +78,8 @@ vi.mock('../form-prefill-auto-populate.ts', () => ({
 import { kvStore } from './helpers/contract-harness.ts';
 import { resetFnaHarness, seedFnaUser } from './helpers/fna-routes-harness.ts';
 
-const medicalRoutes = (await import('../medical-fna-routes.tsx')).default;
-const investmentRoutes = (await import('../investment-ina-routes.tsx')).default;
+const medicalRoutes = (await import('../medical-fna-routes.ts')).default;
+const investmentRoutes = (await import('../investment-ina-routes.ts')).default;
 const estateRoutes = (await import('../estate-planning-fna-session-routes.ts')).default;
 
 const ADMIN_TOKEN = 'admin-token';

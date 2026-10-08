@@ -6,7 +6,7 @@
  * from breaking the entire submissions module chunk.
  *
  * Uses pdf-lib with the Navigate Wealth branded template (same as
- * esign-certificates.tsx): purple header band, bordered section headings,
+ * esign-certificates.ts): purple header band, bordered section headings,
  * form-row layout with table borders, proper multi-page pagination,
  * and branded footer.
  *
@@ -266,7 +266,7 @@ export async function downloadSubmissionAsPdf(submission: Submission): Promise<v
   const CONTENT_TOP = PAGE_H - HEADER_H - 24;
   const MIN_CONTENT_Y = FOOTER_ZONE + 15;
 
-  // ── Brand colours (identical to esign-certificates.tsx) ────────────
+  // ── Brand colours (identical to esign-certificates.ts) ────────────
   const PURPLE = rgb(109 / 255, 40 / 255, 217 / 255);
   const PURPLE_LIGHT = rgb(139 / 255, 92 / 255, 246 / 255);
   const TEXT_COLOR = rgb(17 / 255, 24 / 255, 39 / 255);

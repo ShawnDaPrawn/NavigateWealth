@@ -48,7 +48,7 @@ const ROUTE_RE = /\b\w+\.route\(\s*'([^']*)'\s*,\s*(\w+)\s*\)/g;
  * this and watching it fail on 28 routes:
  *
  * 1. EXTENSION PROXIES. mount-core mounts `./security.ts`, but the module is
- *    `security.tsx` — `.ts` is a proxy that re-exports it (see the note at the
+ *    `security.ts` — `.ts` is a proxy that re-exports it (see the note at the
  *    top of mount-core). Matching on the literal filename misses every such
  *    module.
  * 2. NESTED ROUTERS, ARBITRARILY DEEP. The e-sign and publications families are

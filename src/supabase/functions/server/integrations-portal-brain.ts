@@ -2,7 +2,7 @@
  * Portal automation — brain (LLM-assisted selector decisions) + brain memory.
  * ===========================================================================
  *
- * Extracted verbatim from integrations.tsx (Phase 5 decomposition). Owns the
+ * Extracted verbatim from integrations.ts (Phase 5 decomposition). Owns the
  * portal "brain": memory load/save/summarise/remember, the brain-config + model
  * call (callPortalBrainModel), prompt building, and decision parsing. Self-
  * contained except for the KV store and the shared portal types; no I/O beyond

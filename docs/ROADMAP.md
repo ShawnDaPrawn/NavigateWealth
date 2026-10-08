@@ -47,7 +47,7 @@ The heavy lifting of the last two months is real and enforced in CI
   mounts, request-id in every log line via AsyncLocalStorage,
   `validateBody`/`validateOptionalBody`, a typed `repositories/` base with
   bounded reads, `src/shared/contracts` with its first real adopter.
-- **Structural wins**: `integrations.tsx` split into seven route modules,
+- **Structural wins**: `integrations.ts` split into seven route modules,
   Deno check burned to 0, `quality/baselines/eslint-warning-baseline` 55, eager entry −24%
   (A16), `react-toastify` deleted and banned (A12).
 
@@ -355,7 +355,7 @@ Current worst, re-measured: `resources-service.ts` (1,725),
 `ai-advisor.ts` (1,443), `communication-service.ts` (1,387),
 `integrations-portal-worker-routes.ts` (1,142). Split by responsibility, not
 line count — each becomes `*-routes` (transport) + `*-service` (logic) +
-`*-repository` (data), following the proven `integrations.tsx` playbook: one
+`*-repository` (data), following the proven `integrations.ts` playbook: one
 route group per PR, pure move first, same response shapes, contract test
 before and after. `quote-request-routes.ts` doubles as WS0's S10 fix — do the
 escaping first, split second.
@@ -566,7 +566,7 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
      77-entry lazy mount table and resolves every public route to its real URL.
      Writing it surfaced two things a hand-written list would have got wrong:
      mount-core mounts **extension proxies** (`./security.ts` for
-     `security.tsx`), and the e-sign / publications families nest **three levels
+     `security.ts`), and the e-sign / publications families nest **three levels
      deep** (`lazy → esign-routes → esign-sender-routes →
 esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
      than a fixed depth. 28 routes were unresolvable before those two fixes.
