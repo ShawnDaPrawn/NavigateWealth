@@ -1,0 +1,25 @@
+# Labels every pull request by the parts of the repository it touches, so the
+# PR list shows at a glance which ones change the Edge Function, the database,
+# the SPA, docs or tooling. The rules are in .github/labeler.yml.
+#
+# `pull_request_target` lets the action label PRs from any branch. It runs the
+# workflow and labeler config from `main` and never checks out or runs the
+# PR's own code, which is what makes that trigger safe here.
+name: Label pull requests
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          sync-labels: false
