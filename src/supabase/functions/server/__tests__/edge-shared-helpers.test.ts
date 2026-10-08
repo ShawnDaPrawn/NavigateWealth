@@ -80,4 +80,14 @@ describe('stripBearerPrefix', () => {
     expect(stripBearerPrefix(undefined)).toBeUndefined();
     expect(stripBearerPrefix('')).toBe('');
   });
+
+  it('does not treat "Bearer" as a prefix unless whitespace follows it', () => {
+    // /^Bearer\s+/i. Gluing the word to the token, or putting a space in
+    // front of it, is a different credential. Stripping either one would
+    // authenticate as someone else, or as no one.
+    expect(stripBearerPrefix('Bearerabc.def')).toBe('Bearerabc.def');
+    expect(stripBearerPrefix(' Bearer abc.def')).toBe(' Bearer abc.def');
+    expect(stripBearerPrefix('Bearer')).toBe('Bearer');
+    expect(stripBearerPrefix('Bearer ')).toBe('');
+  });
 });
