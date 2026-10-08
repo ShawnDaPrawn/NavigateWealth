@@ -22,14 +22,9 @@ import type { PortfolioSummary, ProductHolding } from './api';
 // Formatting (en-ZA locale per Guidelines §8.3)
 // ═══════════════════════════════════════════════════════
 
-export function formatCurrency(amount: number): string {
-  if (amount === undefined || amount === null || isNaN(amount)) return 'R0';
-  const isNeg = amount < 0;
-  const abs = Math.abs(amount);
-  const intPart = Math.round(abs).toString();
-  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${isNeg ? '-' : ''}R${withCommas}`;
-}
+import { formatCurrencyWhole as formatCurrency } from '../../../utils/currencyFormatter';
+
+export { formatCurrency };
 
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return 'Not set';

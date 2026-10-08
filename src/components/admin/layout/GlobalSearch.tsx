@@ -3,6 +3,7 @@
  */
 
 import * as React from 'react';
+import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue';
 import { Search, Users, UserCog, User, Loader2 } from 'lucide-react';
 import {
   CommandDialog,
@@ -35,17 +36,6 @@ function getStatusBadge(status: string | undefined | null) {
       className: 'bg-gray-100 text-gray-700 border-gray-200',
     }
   );
-}
-
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = React.useState(value);
-
-  React.useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
-
-  return debounced;
 }
 
 export function GlobalSearch() {

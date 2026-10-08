@@ -18,14 +18,14 @@ interface FormFieldProps {
   className?: string;
 }
 
-export const FormField: React.FC<FormFieldProps> = ({
+export const FormField = ({
   label,
   required = false,
   error,
   hint,
   children,
   className = '',
-}) => {
+}: FormFieldProps) => {
   return (
     <div className={`space-y-2 ${className}`}>
       <Label className="text-sm text-gray-700">
@@ -54,7 +54,7 @@ interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement
   disabled?: boolean;
 }
 
-export const TextField: React.FC<TextFieldProps> = ({
+export const TextField = ({
   label,
   value,
   onChange,
@@ -63,7 +63,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   hint,
   disabled = false,
   ...props
-}) => {
+}: TextFieldProps) => {
   return (
     <FormField label={label} required={required} error={error} hint={hint}>
       <Input
@@ -88,7 +88,7 @@ interface TextAreaFieldProps {
   rows?: number;
 }
 
-export const TextAreaField: React.FC<TextAreaFieldProps> = ({
+export const TextAreaField = ({
   label,
   value,
   onChange,
@@ -97,7 +97,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   hint,
   disabled = false,
   rows = 3,
-}) => {
+}: TextAreaFieldProps) => {
   return (
     <FormField label={label} required={required} error={error} hint={hint}>
       <Textarea

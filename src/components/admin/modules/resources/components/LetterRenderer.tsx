@@ -48,11 +48,11 @@ const renderPageContent = (blocks: FormBlock[], data: Record<string, unknown>) =
 // LETTER RENDERER COMPONENT
 // ============================================================================
 
-export const LetterRenderer: React.FC<LetterRendererProps> = ({
+export const LetterRenderer = ({
   data = {},
   blocks = [],
   letterMeta = {},
-}) => {
+}: LetterRendererProps) => {
   // Split blocks into pages at page_break markers. Declared before the early
   // return below so the hook always runs in the same order (rules-of-hooks);
   // guarded internally for the empty case.

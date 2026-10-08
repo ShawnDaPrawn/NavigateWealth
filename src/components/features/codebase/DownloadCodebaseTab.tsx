@@ -65,7 +65,7 @@ const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
 // COMPONENT
 // ============================================================================
 
-export const DownloadCodebaseTab: React.FC = () => {
+export const DownloadCodebaseTab = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopyInstall = (id: string) => {

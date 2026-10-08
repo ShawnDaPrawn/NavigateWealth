@@ -66,11 +66,11 @@ const renderPageContent = (blocks: FormBlock[], data: Record<string, unknown>) =
  * Dynamic Form Renderer Component
  * Renders forms from JSON schema with proper pagination
  */
-export const DynamicFormRenderer: React.FC<DynamicFormRendererProps> = ({
+export const DynamicFormRenderer = ({
   data = {},
   blocks = [],
   formName = 'Untitled Form',
-}) => {
+}: DynamicFormRendererProps) => {
   // Split blocks into pages. Declared before the early return below so the hook
   // always runs in the same order (rules-of-hooks); guarded internally for the
   // empty case.

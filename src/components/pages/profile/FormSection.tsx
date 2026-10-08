@@ -23,7 +23,7 @@ interface FormSectionProps {
   headerActions?: React.ReactNode;
 }
 
-export const FormSection: React.FC<FormSectionProps> = ({
+export const FormSection = ({
   title,
   description,
   icon,
@@ -36,7 +36,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
   isSaveDisabled = false,
   className = '',
   headerActions,
-}) => {
+}: FormSectionProps) => {
   return (
     <Card className={className}>
       <CardHeader>

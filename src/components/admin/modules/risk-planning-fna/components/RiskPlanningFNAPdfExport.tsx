@@ -7,6 +7,7 @@ import React from 'react';
 import { BasePdfLayout } from '../../../../shared/pdf';
 import type { RiskCalculations, Adjustments } from '../types';
 import { COMPLIANCE_DISCLAIMERS } from '../constants';
+import { formatCurrencyWhole as formatCurrency } from '../../../../../utils/currencyFormatter';
 
 interface RiskPlanningFNAPdfExportProps {
   calculations: RiskCalculations;
@@ -14,15 +15,6 @@ interface RiskPlanningFNAPdfExportProps {
   clientName?: string;
   clientId?: string;
 }
-
-const formatCurrency = (value: number): string => {
-  if (value === undefined || value === null || isNaN(value)) return 'R0';
-  const isNeg = value < 0;
-  const abs = Math.abs(value);
-  const intPart = Math.round(abs).toString();
-  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${isNeg ? '-' : ''}R${withCommas}`;
-};
 
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('en-GB', {
