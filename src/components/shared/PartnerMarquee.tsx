@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { Shield, Award, CheckCircle } from 'lucide-react';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from './ImageWithFallback';
 
 export interface PartnerLogo {
   id: string;

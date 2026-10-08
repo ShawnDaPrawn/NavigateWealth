@@ -31,7 +31,7 @@ export function mountCoreRoutes(app: Hono) {
   // gate can never leak onto the integrations family; the agent tokens it
   // checks are managed on a separate, super-admin-only router that no agent
   // token can reach.
-  lazy(app, '/integrations/honeycomb', () => import('./honeycomb-routes.ts'));
+  lazy(app, '/integrations/honeycomb', () => import('./honeycomb/honeycomb-routes.ts'));
   lazy(
     app,
     '/integrations/portfolio-table',

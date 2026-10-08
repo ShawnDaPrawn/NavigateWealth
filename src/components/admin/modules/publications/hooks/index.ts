@@ -5,30 +5,39 @@
  */
 
 // Query key registry
-export * from './queryKeys';
+export { newsletterKeys, publicationKeys } from './queryKeys';
 
 // Data fetching hooks
-export * from './useArticles';
-export * from './useArticle';
-export * from './useCategories';
-export * from './useTypes';
+export { useArticles } from './useArticles';
+export { useArticle } from './useArticle';
+export { useCategories } from './useCategories';
+export { useTypes } from './useTypes';
 
 // Form management hooks
-export * from './useArticleForm';
+export { useArticleForm } from './useArticleForm';
 
 // Action hooks
-export * from './useArticleActions';
-export * from './useDeleteArticles';
-export * from './useArchiveArticles';
-export * from './useCategoryActions';
-export * from './useTypeActions';
+export { useArticleActions } from './useArticleActions';
+export { useDeleteArticles } from './useDeleteArticles';
+export type { DeleteArticlesVariables } from './useDeleteArticles';
+export { useArchiveArticles } from './useArchiveArticles';
+export type { ArchiveArticlesVariables } from './useArchiveArticles';
+export { useCategoryActions } from './useCategoryActions';
+export { useTypeActions } from './useTypeActions';
 
 // Other hooks
-export * from './useMarketNews';
-export * from './usePublicationsInit';
-export * from './useScheduledPublishProcessor';
-export * from './useAutoContentProcessor';
+export { NEWS_KEYS, useMarketNews } from './useMarketNews';
+export { usePublicationsInit } from './usePublicationsInit';
+export { useScheduledPublishProcessor } from './useScheduledPublishProcessor';
+export { useAutoContentProcessor } from './useAutoContentProcessor';
 
 // Newsletter hooks
-export * from './useNewsletterSubscribers';
-export * from './useNewsletterMutations';
+export { useNewsletterSubscribers } from './useNewsletterSubscribers';
+export type { SubscriberStats } from './useNewsletterSubscribers';
+export {
+  useAddSubscriber,
+  useBulkUpload,
+  useRemoveSubscriber,
+  useResubscribe,
+  useUpdateSubscriber,
+} from './useNewsletterMutations';

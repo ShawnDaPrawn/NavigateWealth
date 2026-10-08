@@ -100,7 +100,7 @@ vi.mock('../auth-mw.ts', () => ({
 }));
 
 // ── Honeycomb service stub ────────────────────────────────────────────────────
-vi.mock('../honeycomb-service.ts', () => {
+vi.mock('../honeycomb/honeycomb-service.ts', () => {
   const r = {
     success: true,
     data: { test: 'data' },
@@ -145,7 +145,7 @@ vi.mock('../honeycomb-service.ts', () => {
   };
 });
 
-import honeycombApp from '../honeycomb-routes.ts';
+import honeycombApp from '../honeycomb/honeycomb-routes.ts';
 
 const AUTH = { Authorization: 'Bearer test-token' };
 const CLIENT_ID = 'client-001';

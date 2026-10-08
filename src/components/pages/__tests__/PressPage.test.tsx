@@ -19,7 +19,7 @@ vi.mock('../../modals/MediaAccessModal', () => ({
   MediaAccessModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="media-modal">MediaAccessModal</div> : null,
 }));
-vi.mock('../../figma/ImageWithFallback', () => ({
+vi.mock('../../shared/ImageWithFallback', () => ({
   ImageWithFallback: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 vi.mock('../../../utils/supabase/info', () => ({

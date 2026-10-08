@@ -20,7 +20,7 @@ import { Badge } from '../../../../ui/badge';
 import { StatusBadge } from './StatusBadge';
 import { formatDate, getArticleImageUrl } from '../utils';
 import type { Article } from '../types';
-import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
+import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 
 interface ArticleCardProps {
   /** The article data to display */

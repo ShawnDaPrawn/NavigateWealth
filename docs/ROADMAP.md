@@ -294,15 +294,13 @@ also gives those modules retry, 401-refresh, and typed `APIError` for free.
   remaining legitimate sites (signer-facing anon calls) are individually
   commented.
 
-### 4.5 Consolidate the app shell into `src/app/` (Stage A leftover)
+### 4.5 Consolidate the app shell into `src/app/` (Stage A leftover) — **DONE 2026-10-08**
 
-Still not done (no `src/app/` exists). Move `App.tsx`, `AppRoutes.tsx`,
-`src/router/`, and the provider tree into `src/app/` — a small, high-value
-discoverability move that was explicitly scoped as safe. Nothing else
-relocates.
-
-- **Effort:** S/M. **Gate:** build + tests green; imports updated; no
-  behaviour change.
+`src/app/` now holds `App.tsx`, `AppRoutes.tsx`, `AppProviders.tsx` and
+`router/createAppRouter.tsx`; `main.tsx` stays at `src/`. `AdminDataPrefetch`
+stays in `components/providers/` because admin modules and the API client use
+it, so it is not shell code. A pure move: imports rewritten, no behaviour
+change, build and tests green.
 
 ### 4.6 Shared contracts adoption (Stage C continuation)
 
@@ -784,7 +782,7 @@ under the AGENTS.md finalization protocol (verify locally → PR → auto-merge)
 | Order        | Do                                                                                                                  | Why now                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Now**      | WS0 punch list (0.1–0.9)                                                                                            | Open exposures; every item small and fully specified     |
-| **Next**     | ~~§5.4 `createApp()`~~ · ~~§8.1 blocking smoke~~ · §8.4 CI tail · §4.5 `src/app/` · §4.7 + §9 hygiene batch         | Cheap, independent, unlock testing + Stage E             |
+| **Next**     | ~~§5.4 `createApp()`~~ · ~~§8.1 blocking smoke~~ · §8.4 CI tail · ~~§4.5 `src/app/`~~ · §4.7 + §9 hygiene batch     | Cheap, independent, unlock testing + Stage E             |
 | **Then**     | §4.2 quote wizards · §4.4 raw-fetch convergence · §5.3 validation → 0 · §5.5 route-auth review · §5.1 auth 5→2      | Burns four ratchets hard; feeds P1.1                     |
 | **Then**     | §7.1 P1.1 → 0 · §7.2–7.3 public split + `verify_jwt=true`                                                           | The keystone's final flip; needs §5.5's inventory        |
 | **Parallel** | §4.1 boundaries → 0 · §4.3/§5.2 god-file splits · §4.6 contracts · §6 repositories → Postgres · §8.2 contract tests | Long-running strangler tracks; touch-it-you-fix-it       |

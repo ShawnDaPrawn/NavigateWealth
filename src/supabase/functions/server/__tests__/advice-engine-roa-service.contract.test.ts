@@ -40,9 +40,9 @@ const storage = vi.hoisted(() => ({
   removed: [] as string[],
   removeFails: false,
 }));
-vi.mock('../advice-engine-roa-storage.ts', async () => {
+vi.mock('../advice-engine/advice-engine-roa-storage.ts', async () => {
   const real = await vi.importActual<typeof import('../advice-engine-roa-storage.ts')>(
-    '../advice-engine-roa-storage.ts',
+    '../advice-engine/advice-engine-roa-storage.ts',
   );
   return {
     ...real,
@@ -64,7 +64,7 @@ vi.mock('../advice-engine-roa-storage.ts', async () => {
   };
 });
 
-vi.mock('../advice-engine-roa-document-gen.ts', () => ({
+vi.mock('../advice-engine/advice-engine-roa-document-gen.ts', () => ({
   createCanonicalRoAPdf: vi.fn(async () => new Uint8Array([1, 2, 3])),
   createCanonicalRoADocx: vi.fn(async () => new Uint8Array([4, 5, 6])),
 }));
@@ -72,7 +72,7 @@ vi.mock('../advice-engine-roa-document-gen.ts', () => ({
 import { kvStore } from './helpers/contract-harness.ts';
 
 const { AdviceEngineRoAService, CONVERSATION_PREFIX } =
-  await import('../advice-engine-roa-service.ts');
+  await import('../advice-engine/advice-engine-roa-service.ts');
 const { ValidationError, NotFoundError } = await import('../error.middleware.ts');
 
 const service = new AdviceEngineRoAService();

@@ -49,7 +49,7 @@ const svc = vi.hoisted(() => ({
 
 const cron = vi.hoisted(() => ({ authorized: false }));
 
-vi.mock('../social-assets-service.ts', () => svc);
+vi.mock('../social/social-assets-service.ts', () => svc);
 vi.mock('../stderr-logger.ts', async () =>
   (await import('./helpers/contract-harness.ts')).makeLoggerMock(),
 );
@@ -67,7 +67,7 @@ vi.mock('../ai-usage-limit.ts', () => ({
   aiUsageLimit: () => async (_c: unknown, next: () => Promise<void>) => next(),
 }));
 
-import app from '../social-assets-routes.ts';
+import app from '../social/social-assets-routes.ts';
 
 beforeEach(() => {
   vi.clearAllMocks();
