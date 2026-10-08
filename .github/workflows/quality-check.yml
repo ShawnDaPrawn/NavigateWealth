@@ -712,3 +712,26 @@ jobs:
             exit 1
           fi
           echo "Quality gates passed."
+
+      - name: Fail if a gate job itself failed
+        # The exit codes above cover every gate. A gate job can still fail on a
+        # step that is not a gate (the issue-snapshot publish, an artifact
+        # upload, an install that died before any export). In the single-job
+        # layout any such failure failed the required check, so it still does.
+        if: always()
+        shell: bash
+        env:
+          STATIC_CHECKS_RESULT: ${{ needs.static-checks.result }}
+          VITEST_RESULT: ${{ needs.vitest.result }}
+          BACKEND_COVERAGE_RESULT: ${{ needs.backend-coverage.result }}
+        run: |
+          failed=0
+          for pair in "static-checks:$STATIC_CHECKS_RESULT" "vitest:$VITEST_RESULT" "backend-coverage:$BACKEND_COVERAGE_RESULT"; do
+            job="${pair%%:*}"
+            result="${pair#*:}"
+            if [ "$result" != "success" ]; then
+              echo "::error::Gate job $job finished '$result', so the required check fails with it."
+              failed=1
+            fi
+          done
+          exit "$failed"
