@@ -15,6 +15,7 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { runKvCleanup, getLastCleanupRun } from './kv-cleanup-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('kv-cleanup');
@@ -130,7 +131,7 @@ app.post(
   '/cron',
   asyncHandler(async (c) => {
     const authHeader = c.req.header('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const token = stripBearerPrefix(authHeader);
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
 

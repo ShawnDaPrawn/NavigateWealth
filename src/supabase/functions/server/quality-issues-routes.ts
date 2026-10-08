@@ -32,6 +32,7 @@ import {
 import { mergeWorkflowState } from './quality-issues-automation.ts';
 import { buildCurrentSnapshot, runAutomationOnCurrentState } from './quality-issues-state.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('quality-issues');
@@ -45,10 +46,7 @@ function hasValidIngestToken(c: Context): boolean {
     return false;
   }
 
-  const bearerToken = c.req
-    .header('Authorization')
-    ?.replace(/^Bearer\s+/i, '')
-    .trim();
+  const bearerToken = stripBearerPrefix(c.req.header('Authorization'))?.trim();
   const headerToken = c.req.header('X-Quality-Ingest-Token')?.trim();
   // Constant-time, like every other shared-secret check here (M-1).
   return (

@@ -8,12 +8,14 @@
  *   - authErrorResponse: the e-sign catch-block response (70 call sites).
  *   - sha256Hex: idempotency body hashes, SES SigV4 and stored OTP hashes.
  *   - retryAfterSeconds: the Retry-After value on every rate-limited answer.
+ *   - stripBearerPrefix: the lenient Authorization-header read (10 call sites).
  */
 import { describe, expect, it } from 'vitest';
 import { AuthError } from '../auth-mw.ts';
 import { authErrorResponse } from '../esign-auth-error-response.ts';
 import { sha256Hex } from '../sha256.ts';
 import { retryAfterSeconds } from '../retry-after.ts';
+import { stripBearerPrefix } from '../bearer-token.ts';
 
 describe('authErrorResponse', () => {
   it("answers with an AuthError's own status and message", async () => {
@@ -58,5 +60,24 @@ describe('retryAfterSeconds', () => {
   it('never answers less than one second, even once the window has passed', () => {
     expect(retryAfterSeconds(new Date(now + 10), now)).toBe(1);
     expect(retryAfterSeconds(new Date(now - 5_000), now)).toBe(1);
+  });
+});
+
+describe('stripBearerPrefix', () => {
+  it('removes a leading Bearer in any letter case, with any whitespace after it', () => {
+    expect(stripBearerPrefix('Bearer abc.def')).toBe('abc.def');
+    expect(stripBearerPrefix('bearer abc')).toBe('abc');
+    expect(stripBearerPrefix('BEARER \tabc')).toBe('abc');
+  });
+
+  it('returns a header without the prefix whole, so a bare token still works', () => {
+    expect(stripBearerPrefix('abc.def')).toBe('abc.def');
+    expect(stripBearerPrefix('Basic dXNlcg==')).toBe('Basic dXNlcg==');
+  });
+
+  it('leaves trimming and a missing header to the caller', () => {
+    expect(stripBearerPrefix('Bearer abc  ')).toBe('abc  ');
+    expect(stripBearerPrefix(undefined)).toBeUndefined();
+    expect(stripBearerPrefix('')).toBe('');
   });
 });
