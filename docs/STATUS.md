@@ -44,7 +44,11 @@ Vercel. `AGENTS.md` carries the full protocol.
 Every PR is gated by `.github/workflows/quality-check.yml`: format, ESLint,
 three typechecks (SPA, middleware, Deno), dependency-cruiser boundaries, unit
 tests, coverage floors, and the production build. `e2e-smoke` is a required
-check as well.
+check as well. The gates run as three parallel jobs (`static-checks`,
+`vitest`, `backend-coverage`) and the required `quality-check` job collects
+their results and decides; a superseded PR run is cancelled. Both required
+checks take their Node version from `.nvmrc` (20). Vercel builds production on
+its own project setting (24.x), which `.nvmrc` does not change.
 
 Several gates are **ratchets** rather than pass/fail rules: a committed number
 records the current size of a known backlog, and CI fails if the real count
