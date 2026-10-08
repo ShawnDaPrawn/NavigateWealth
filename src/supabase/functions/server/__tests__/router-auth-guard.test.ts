@@ -22,7 +22,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -84,9 +84,8 @@ function listMountedModules(): string[] {
 }
 
 /**
- * Depth-limited scan of a module + its local `./` imports AND `export … from`
- * re-exports (proxy modules like documents.ts re-export documents.ts) for
- * auth markers.
+ * Depth-limited scan of a module + its local imports AND `export … from`
+ * re-exports (a proxy module re-exports another file) for auth markers.
  */
 function hasAuthMarker(file: string, depth: number, seen: Set<string>): boolean {
   if (depth < 0 || seen.has(file)) return false;
@@ -95,9 +94,14 @@ function hasAuthMarker(file: string, depth: number, seen: Set<string>): boolean 
   if (!existsSync(path)) return false;
   const src = readFileSync(path, 'utf8');
   if (AUTH_MARKERS.test(src)) return true;
-  // Follow both `import … from './x'` and `export … from './x'` (re-export proxies).
-  for (const m of src.matchAll(/(?:import|export)[^'"]*from '\.\/([^']+)'/g)) {
-    if (hasAuthMarker(m[1], depth - 1, seen)) return true;
+  // Follow both `import … from './x'` and `export … from './x'` (re-export
+  // proxies), resolved from the importing file's own folder so a module in a
+  // subfolder (advice-engine/, social/, …) reaches its `../` siblings. Only
+  // imports that stay inside the server tree are followed, as before.
+  for (const m of src.matchAll(/(?:import|export)[^'"]*from '(\.\.?\/[^']+)'/g)) {
+    const target = relative(SERVER_DIR, join(dirname(path), m[1]));
+    if (target.startsWith('..')) continue;
+    if (hasAuthMarker(target, depth - 1, seen)) return true;
   }
   return false;
 }

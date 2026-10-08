@@ -235,7 +235,7 @@ export default tseslint.config(
       'src/shared/**/*.{ts,tsx}',
       'src/services/**/*.ts',
       'src/config/**/*.ts',
-      'src/router/**/*.tsx',
+      'src/app/router/**/*.tsx',
     ],
     // Tests deliberately float promises; keep the gate on production code.
     ignores: ['**/*.test.{ts,tsx}', '**/__tests__/**'],

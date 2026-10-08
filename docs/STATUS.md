@@ -473,10 +473,13 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
-- **The Edge Function source is 480+ files flat in one directory**, organised by
-  filename prefix. The three subfolders that exist (`locked/`,
-  `quote-verticals/`, `repositories/`) show the shape it should take. Split one
-  prefix per PR; see [`ROADMAP.md`](ROADMAP.md).
+- **The Edge Function source is still mostly flat** (440+ files in one
+  directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
+  `social/` were the first prefixes moved into folders (2026-10-08), alongside
+  the older `locked/`, `quote-verticals/` and `repositories/`. Split one prefix
+  per PR, lowest fan-in first; `esign-*`, `integrations-*` and `client-*` have
+  the most inbound imports and test paths and are the expensive ones. See
+  [`ROADMAP.md`](ROADMAP.md).
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.

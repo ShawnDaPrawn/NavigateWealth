@@ -34,10 +34,10 @@ The frontend entry path is:
 
 ```text
 src/main.tsx
-  -> src/App.tsx
-  -> src/components/providers/AppProviders.tsx
-  -> src/router/createAppRouter.tsx
-  -> src/AppRoutes.tsx
+  -> src/app/App.tsx
+  -> src/app/AppProviders.tsx
+  -> src/app/router/createAppRouter.tsx
+  -> src/app/AppRoutes.tsx
 ```
 
 Important shell behavior:

@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
-import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
+import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 import { Provider, PRODUCT_CATEGORIES } from '../types';
 
 interface ProviderDeleteDialogProps {
