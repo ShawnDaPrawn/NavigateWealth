@@ -75,6 +75,25 @@ export function isWebLockStealAbort(reason: unknown): boolean {
 }
 
 /**
+ * "Object Not Found Matching Id:1, MethodName:update, ParamCount:4" is thrown
+ * by a script that an in-app browser (a social app's WebView, a reader mode,
+ * a translation overlay) injects into the page. Nothing in this codebase has a
+ * method of that shape, so the report can never lead to a fix here. It reached
+ * the Issue Manager from the public home page and the resources pages.
+ */
+export function isInjectedScriptObjectNotFound(reason: unknown): boolean {
+  const text =
+    typeof reason === 'string'
+      ? reason
+      : typeof reason === 'object' && reason !== null && 'message' in reason
+        ? String((reason as { message?: unknown }).message ?? '')
+        : '';
+  return /object not found matching id:\s*\d+,\s*methodname:\s*\w+,\s*paramcount:\s*\d+/i.test(
+    text,
+  );
+}
+
+/**
  * Safely extract error message from unknown error type
  */
 export function getErrorMessage(error: unknown): string {

@@ -14,7 +14,7 @@ import {
   reportRuntimeClientIssue,
   runtimeIssueFromUnknown,
 } from '../utils/quality/runtimeIssueReporter';
-import { isWebLockStealAbort } from '../utils/errorUtils';
+import { isInjectedScriptObjectNotFound, isWebLockStealAbort } from '../utils/errorUtils';
 import {
   isDefinitiveStaleChunkLoadFailure,
   isStaleChunkLoadFailure,
@@ -43,6 +43,14 @@ export default function App() {
     // cross-origin iframes, which is unavailable in sandboxed contexts (e.g. preview iframes).
     // This is non-fatal — widgets may still render correctly in production.
     const handleWindowError = (event: ErrorEvent) => {
+      // A script injected by an in-app browser, not ours: nothing to fix here.
+      if (
+        isInjectedScriptObjectNotFound(event.message) ||
+        isInjectedScriptObjectNotFound(event.error)
+      ) {
+        event.preventDefault();
+        return;
+      }
       const isStaleChunk =
         isStaleChunkLoadFailure(event.message) || isStaleChunkLoadFailure(event.error);
       if (isStaleChunk) {
@@ -85,6 +93,11 @@ export default function App() {
     // Also suppress unhandled promise rejections from TradingView scripts
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       if (isWebLockStealAbort(event.reason)) {
+        event.preventDefault();
+        return;
+      }
+
+      if (isInjectedScriptObjectNotFound(event.reason)) {
         event.preventDefault();
         return;
       }
