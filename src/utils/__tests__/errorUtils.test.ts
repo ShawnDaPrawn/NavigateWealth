@@ -8,6 +8,7 @@ import {
   isAPIError,
   isBackendErrorResponse,
   isError,
+  isInjectedScriptObjectNotFound,
   isPostgrestError,
   isWebLockStealAbort,
   logError,
@@ -51,6 +52,22 @@ describe('type guards', () => {
     ).toBe(true);
     expect(isWebLockStealAbort({ name: 'AbortError', message: 'unrelated' })).toBe(false);
     expect(isWebLockStealAbort('nope')).toBe(false);
+  });
+
+  it('isInjectedScriptObjectNotFound matches the in-app-browser script error only', () => {
+    expect(
+      isInjectedScriptObjectNotFound(
+        new Error('Object Not Found Matching Id:1, MethodName:update, ParamCount:4'),
+      ),
+    ).toBe(true);
+    expect(
+      isInjectedScriptObjectNotFound(
+        'Object Not Found Matching Id:12, MethodName:get, ParamCount:1',
+      ),
+    ).toBe(true);
+    expect(isInjectedScriptObjectNotFound(new Error('Object not found'))).toBe(false);
+    expect(isInjectedScriptObjectNotFound(null)).toBe(false);
+    expect(isInjectedScriptObjectNotFound(42)).toBe(false);
   });
 });
 
