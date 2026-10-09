@@ -8,6 +8,7 @@ import superAdmin from './client-management-super-admin-routes.ts';
 import userAdmin from './client-management-user-admin-routes.ts';
 import profileCrud from './client-management-profile-crud-routes.ts';
 import documents from './client-management-documents-routes.ts';
+import avatar from './client-management-avatar-routes.ts';
 import status from './client-management-status-routes.ts';
 import { requireAuth } from './auth-mw.ts';
 
@@ -21,6 +22,7 @@ router.route('/', superAdmin);
 router.route('/', userAdmin);
 router.route('/', profileCrud);
 router.route('/', documents);
+router.route('/', avatar);
 router.route('/', status);
 
 export default router;

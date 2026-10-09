@@ -7,7 +7,6 @@ import {
   SheetDescription,
 } from '../../../../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
 import { Badge } from '../../../../ui/badge';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +18,7 @@ import { NOTES_STALE_TIME } from '../../notes';
 import { noteKeys } from '../../../../../utils/queryKeys';
 import { esignApi, esignKeys, QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign';
 import { AskVascoPortalTab } from './AskVascoPortalTab';
+import { ClientAvatar } from './ClientAvatar';
 import { useOptionalUnsavedChangesRegistry } from '../../../../shared/unsaved-changes';
 
 const loadClientProfileViewerFull = () =>
@@ -128,7 +128,7 @@ type DrawerTab =
  * The Sheet's visual overlay and close-on-X behaviour are unaffected because
  * SheetOverlay always renders and onOpenChange remains wired.
  */
-function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProps) {
+function ClientDrawerInner({ client, open, onOpenChange, canEdit }: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
@@ -260,13 +260,13 @@ function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProp
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="/api/placeholder/40/40" />
-                <AvatarFallback>
-                  {client.firstName[0]}
-                  {client.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
+              <ClientAvatar
+                clientId={client.id}
+                firstName={client.firstName}
+                lastName={client.lastName}
+                className="h-12 w-12"
+                editable={canEdit}
+              />
               <div>
                 <div>
                   {client.firstName} {client.lastName}
