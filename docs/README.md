@@ -40,6 +40,7 @@ Written for someone acting under time pressure.
 - [`edge-function-metrics.md`](runbooks/edge-function-metrics.md) — reading the function's metrics
 - [`email-provider-cutover.md`](runbooks/email-provider-cutover.md) — switching email providers
 - [`goaml-morning-digest.md`](runbooks/goaml-morning-digest.md) — the 08:00 SAST GoAML digest automation
+- [`pr-guidelines-review.md`](runbooks/pr-guidelines-review.md) — the 07:00 SAST review of recent merged and open pull requests against the engineering guidelines
 - [`shared-household-mailboxes.md`](runbooks/shared-household-mailboxes.md) — households sharing one contact inbox
 - [`form-prefill.md`](runbooks/form-prefill.md) — form prefill operations
 - [`fna-intake.md`](runbooks/fna-intake.md) — adviser and support operations for client-led FNA intake
