@@ -260,18 +260,27 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                                 {client.email}
                               </div>
                               <div className="px-4">
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    client.status?.toLowerCase() === 'active'
-                                      ? 'text-green-600 border-green-200 bg-green-50'
-                                      : client.status?.toLowerCase() === 'suspended'
-                                        ? 'text-amber-600 border-amber-200 bg-amber-50'
-                                        : 'text-gray-600'
-                                  }
-                                >
-                                  {client.status || 'Active'}
-                                </Badge>
+                                {client.hasEmailOptIn === false ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-orange-700 border-orange-200 bg-orange-50"
+                                  >
+                                    Unsubscribed
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      client.status?.toLowerCase() === 'active'
+                                        ? 'text-green-600 border-green-200 bg-green-50'
+                                        : client.status?.toLowerCase() === 'suspended'
+                                          ? 'text-amber-600 border-amber-200 bg-amber-50'
+                                          : 'text-gray-600'
+                                    }
+                                  >
+                                    {client.status || 'Active'}
+                                  </Badge>
+                                )}
                               </div>
                               <div className="px-4 text-sm text-muted-foreground truncate">
                                 {client.category}
