@@ -31,11 +31,7 @@ const log = createModuleLogger('policy-document-intake-repository');
 
 /** The document types the table's CHECK allows — `PolicyDocument['documentType']`. */
 export type IntakeDocumentType =
-  | 'policy_schedule'
-  | 'amendment'
-  | 'statement'
-  | 'benefit_summary'
-  | 'other';
+  'policy_schedule' | 'amendment' | 'statement' | 'benefit_summary' | 'other';
 
 /** One claimed hand-over: what the worker needs to store it, and its claim. */
 export interface ClaimedIntake {

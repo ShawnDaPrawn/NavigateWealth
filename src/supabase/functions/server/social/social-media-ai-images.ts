@@ -64,12 +64,7 @@ const DALLE_PLATFORM_DIMENSIONS: Record<
 // ---------------------------------------------------------------------------
 
 export type ImageStyle =
-  | 'photorealistic'
-  | 'editorial'
-  | 'abstract'
-  | 'conceptual'
-  | 'lifestyle'
-  | 'data_visualisation';
+  'photorealistic' | 'editorial' | 'abstract' | 'conceptual' | 'lifestyle' | 'data_visualisation';
 
 export interface GenerateImageInput {
   /** Target platform(s) — determines DALL-E output dimensions */

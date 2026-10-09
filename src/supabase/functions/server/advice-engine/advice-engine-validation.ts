@@ -9,7 +9,7 @@
  * VERSION: 3.3.9 - Fix .partial() on refined schemas
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import {
   UuidSchema,
   NonEmptyStringSchema,

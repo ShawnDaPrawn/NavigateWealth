@@ -1,12 +1,7 @@
 export type TabStatus = 'pending' | 'approved' | 'rejected' | 'invited' | 'incomplete';
 
 export type ApplicationStatus =
-  | 'draft'
-  | 'submitted'
-  | 'approved'
-  | 'declined'
-  | 'in_progress'
-  | 'invited';
+  'draft' | 'submitted' | 'approved' | 'declined' | 'in_progress' | 'invited';
 
 export interface ApplicationData {
   // Personal

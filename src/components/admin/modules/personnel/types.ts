@@ -15,12 +15,7 @@ import type { AdminModule } from '../../layout/types';
  * User role types
  */
 export type UserRole =
-  | 'super_admin'
-  | 'admin'
-  | 'adviser'
-  | 'paraplanner'
-  | 'compliance'
-  | 'viewer';
+  'super_admin' | 'admin' | 'adviser' | 'paraplanner' | 'compliance' | 'viewer';
 
 /**
  * Personnel status types

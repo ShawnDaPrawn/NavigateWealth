@@ -5,7 +5,7 @@
  * covers everything that arrives as a form field or a SQL column.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import {
   DescriptionSchema,
   IssueMonthSchema,

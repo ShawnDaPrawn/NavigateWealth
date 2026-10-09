@@ -494,10 +494,7 @@ function analyzeMinorChildren(
 
   // Determine capital management structure
   let capitalManagementStructure:
-    | 'guardian_fund'
-    | 'testamentary_trust'
-    | 'inter_vivos_trust'
-    | 'none' = 'none';
+    'guardian_fund' | 'testamentary_trust' | 'inter_vivos_trust' | 'none' = 'none';
 
   if (inputs.hasTrusts) {
     capitalManagementStructure = 'inter_vivos_trust';

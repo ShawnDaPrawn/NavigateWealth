@@ -10,7 +10,7 @@
  */
 
 import type { Context } from 'npm:hono';
-import { ZodError } from 'npm:zod';
+import { ZodError } from 'npm:zod@4.6.5';
 import { logger } from './stderr-logger.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { scheduleRuntimeServerIssue } from './quality-issues-runtime-server.ts';

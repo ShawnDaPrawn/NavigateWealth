@@ -63,12 +63,7 @@ export interface PortalCredentialStatus {
  * them into "not connected" is what let a broken provider sit unnoticed.
  */
 export type PortalConnectionState =
-  | 'no_login_url'
-  | 'no_credentials'
-  | 'untested'
-  | 'testing'
-  | 'connected'
-  | 'failed';
+  'no_login_url' | 'no_credentials' | 'untested' | 'testing' | 'connected' | 'failed';
 
 /** The stored outcome of the last sign-in test for a provider + profile. */
 export interface PortalConnectionRecord {
@@ -177,13 +172,7 @@ export interface PortalDocumentArtifactStatus {
   id: string;
   label: string;
   status:
-    | 'not_requested'
-    | 'started'
-    | 'downloaded'
-    | 'validated'
-    | 'attached'
-    | 'failed'
-    | 'skipped';
+    'not_requested' | 'started' | 'downloaded' | 'validated' | 'attached' | 'failed' | 'skipped';
   fileName?: string;
   documentId?: string;
   error?: string;

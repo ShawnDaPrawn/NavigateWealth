@@ -7,7 +7,7 @@
  * An integrating agent should not have to guess.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 const CHANNEL = z.enum(['linkedin', 'instagram', 'x']);
 const STATUS = z.enum(['available', 'used', 'archived']);

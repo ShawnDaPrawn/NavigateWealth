@@ -14,12 +14,7 @@
 // ── Inbox Types ─────────────────────────────────────────────────────────────
 
 export type CommunicationCategory =
-  | 'General'
-  | 'Policy Update'
-  | 'Document Required'
-  | 'Appointment'
-  | 'Important'
-  | 'FNA Available';
+  'General' | 'Policy Update' | 'Document Required' | 'Appointment' | 'Important' | 'FNA Available';
 
 export type CommunicationPriority = 'normal' | 'high' | 'urgent';
 export type SenderRole = 'Adviser' | 'Administrator' | 'System';

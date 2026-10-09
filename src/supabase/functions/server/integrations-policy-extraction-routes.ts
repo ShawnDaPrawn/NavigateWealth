@@ -300,8 +300,7 @@ app.get('/policy-extraction/compare', requireAdmin, async (c) => {
 
     // Resolve right entry — 'current' means the live extraction's stored snapshot
     let rightSnapshot:
-      | Array<{ k: string; f: string; n: string; v: unknown; c: number }>
-      | undefined;
+      Array<{ k: string; f: string; n: string; v: unknown; c: number }> | undefined;
     let rightMeta: { confidence: number; extractedAt: string } | undefined;
 
     if (rightId === 'current') {

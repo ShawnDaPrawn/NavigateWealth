@@ -4,7 +4,7 @@
  * P1 — Zod validation for documents.ts
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const CreateDocumentLinkSchema = z.object({
   title: z.string().min(1, 'Document title is required').max(300),

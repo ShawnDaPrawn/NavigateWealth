@@ -175,8 +175,7 @@ const db = vi.hoisted(() => {
         const clientId = String(args.p_client_id);
         const policyId = String(args.p_policy_id);
         const book = state.kv.get(`policies:client:${clientId}`) as
-          | Array<{ id: string }>
-          | undefined;
+          Array<{ id: string }> | undefined;
         if (!Array.isArray(book) || !book.some((p) => p.id === policyId)) {
           return raise(
             'policy_document_intake_submit',

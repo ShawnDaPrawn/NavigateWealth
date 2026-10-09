@@ -14,7 +14,7 @@ import type {
   UserRole,
 } from './client-management-personnel-types.ts';
 import { formatZodError } from './shared-validation-utils.ts';
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 const app = new Hono();
 const log = createModuleLogger('personnel');

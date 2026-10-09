@@ -42,6 +42,21 @@ updates:
       # aliases updated in step, so it is a deliberate change, not a bot's.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # pdfjs-dist from 5.6.83 up to 6.2.108 carries GHSA-hq66-cqwq-w95j
+      # (arbitrary JavaScript on opening a malicious PDF); 5.5.x does not.
+      # Hold 5.5.x until the deliberate 6.x upgrade.
+      - dependency-name: 'pdfjs-dist'
+        versions: ['>=5.6.83 <6.2.108']
+      # CI and every quality gate run Node 20 (.nvmrc). These releases need
+      # Node 22: supabase-js 2.110+ declares engines >=22, and docx 9.7.2+
+      # depends on nanoid 6 (^22 || ^24 || >=26). Lift both ignores when
+      # .nvmrc and the workflows move to Node 22 together.
+      - dependency-name: '@supabase/supabase-js'
+        versions: ['>=2.110.0']
+      - dependency-name: '@jsr/supabase__supabase-js'
+        versions: ['>=2.110.0']
+      - dependency-name: 'docx'
+        versions: ['>=9.7.2']
 
   - package-ecosystem: github-actions
     directory: /

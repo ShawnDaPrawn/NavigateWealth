@@ -32,15 +32,10 @@ export interface ArticleNotificationRunResult {
 }
 
 export type ArticleNotificationJobStatus =
-  | 'queued'
-  | 'processing'
-  | 'completed'
-  | 'completed_with_failures';
+  'queued' | 'processing' | 'completed' | 'completed_with_failures';
 
 export type ArticleNotificationCampaignStatus =
-  | ArticleNotificationJobStatus
-  | 'no_recipients'
-  | 'queue_failed';
+  ArticleNotificationJobStatus | 'no_recipients' | 'queue_failed';
 
 export type ArticleNotificationJobKind = 'publish' | 'retry_undelivered';
 export type ArticleNotificationJobPhase = 'preparing' | 'sending' | 'completed';

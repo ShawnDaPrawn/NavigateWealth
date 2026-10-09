@@ -55,8 +55,7 @@ export class ClientsService {
     const ei = profile.employmentInformation as Record<string, unknown> | undefined;
     const fi = profile.financialInformation as Record<string, unknown> | undefined;
     const ai = (profile as Record<string, unknown>).additionalInformation as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     const gender = profile.gender || pi?.gender;
     const nationality = profile.nationality || pi?.nationality;
     const maritalStatus = profile.maritalStatus || pi?.maritalStatus;

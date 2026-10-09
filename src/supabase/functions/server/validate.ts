@@ -42,7 +42,7 @@
  */
 
 import type { Context, Next } from 'npm:hono';
-import type { z } from 'npm:zod';
+import type { z } from 'npm:zod@4.6.5';
 import { formatZodError } from './shared-validation-utils.ts';
 
 declare module 'npm:hono' {

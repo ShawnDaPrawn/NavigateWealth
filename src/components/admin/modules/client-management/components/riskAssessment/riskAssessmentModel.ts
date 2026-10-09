@@ -134,8 +134,7 @@ export function normaliseFormItem(item: Record<string, unknown>): FormField[] {
     item.name ||
     id) as string;
   const description = (item.description || item.hint || item.helpText || undefined) as
-    | string
-    | undefined;
+    string | undefined;
   const required = (item.required ?? item.isRequired ?? false) as boolean;
   const category = (item.category || item.section || item.group || undefined) as string | undefined;
 
