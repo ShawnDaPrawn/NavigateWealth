@@ -114,7 +114,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.0",
-    "vite": "^6.4.2"
+    "vite": "^6.4.4"
   },
   "overrides": {
     "quill": "2.0.2",
