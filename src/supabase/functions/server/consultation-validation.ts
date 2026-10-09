@@ -8,7 +8,7 @@
  * separately in the route handler because they depend on runtime SAST clock state.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const ConsultationRequestSchema = z.object({
   name: z

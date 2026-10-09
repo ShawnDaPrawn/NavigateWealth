@@ -62,12 +62,7 @@ const log = createModuleLogger('public-form-rate-limit');
 
 /** Which public form is being limited. Also the KV namespace segment. */
 export type PublicFormScope =
-  | 'contact'
-  | 'quote'
-  | 'consultation'
-  | 'csp-report'
-  | 'runtime-client'
-  | 'newsletter-unsubscribe';
+  'contact' | 'quote' | 'consultation' | 'csp-report' | 'runtime-client' | 'newsletter-unsubscribe';
 
 /** Submissions per email address per window. Matches the previous behaviour. */
 export const EMAIL_LIMIT_PER_HOUR = 5;

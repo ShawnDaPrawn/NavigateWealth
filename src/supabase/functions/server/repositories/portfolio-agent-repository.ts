@@ -134,8 +134,7 @@ export async function listAgents(): Promise<PortfolioAgent[]> {
 }
 
 export type IssueAgentTokenResult =
-  | { status: 'issued'; agent: PortfolioAgent; token: string }
-  | { status: 'exists' };
+  { status: 'issued'; agent: PortfolioAgent; token: string } | { status: 'exists' };
 
 /**
  * Mint a token for `name`. Refused (`exists`) while the name has a live token:
@@ -160,8 +159,7 @@ export async function issueAgentToken(
 }
 
 export type RevokeAgentTokenResult =
-  | { status: 'revoked'; agent: PortfolioAgent }
-  | { status: 'not_found' };
+  { status: 'revoked'; agent: PortfolioAgent } | { status: 'not_found' };
 
 /** Revoke `name`'s live token. The row stays, as the record of the old token. */
 export async function revokeAgentToken(

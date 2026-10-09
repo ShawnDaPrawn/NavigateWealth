@@ -33,12 +33,7 @@ export const BUFFER_API_URL_DEFAULT = 'https://api.buffer.com';
 
 /** Buffer's own status vocabulary for a post. */
 export type BufferPostStatus =
-  | 'draft'
-  | 'error'
-  | 'needs_approval'
-  | 'scheduled'
-  | 'sending'
-  | 'sent';
+  'draft' | 'error' | 'needs_approval' | 'scheduled' | 'sending' | 'sent';
 
 export type BufferShareMode = 'addToQueue' | 'shareNow' | 'shareNext' | 'customScheduled';
 export type BufferSchedulingType = 'automatic' | 'notification';
@@ -453,8 +448,7 @@ export async function createBufferPost(input: BufferCreatePostInput): Promise<Bu
 }
 
 type DeletePostPayload =
-  | { __typename: 'DeletePostSuccess'; id: string }
-  | { __typename: string; message?: string };
+  { __typename: 'DeletePostSuccess'; id: string } | { __typename: string; message?: string };
 
 export async function deleteBufferPost(postId: string): Promise<void> {
   const data = await bufferGraphql<{ deletePost: DeletePostPayload }>(DELETE_POST_MUTATION, {

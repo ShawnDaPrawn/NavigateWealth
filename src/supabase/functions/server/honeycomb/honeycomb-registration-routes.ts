@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { ZodError } from 'npm:zod';
+import { ZodError } from 'npm:zod@4.6.5';
 import { createModuleLogger } from '../stderr-logger.ts';
 import { getErrMsg } from '../shared-logger-utils.ts';
 import { formatZodError } from '../shared-validation-utils.ts';

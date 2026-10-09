@@ -336,25 +336,23 @@ app.get('/portal-jobs/history', requireAdmin, async (c) => {
       .map((record) => record as unknown as PortalSyncJob)
       .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''))
       .slice(0, limit)
-      .map(
-        (job): PortalJobHistoryEntry => ({
-          id: job.id,
-          status: job.status,
-          runMode: job.runMode,
-          createdAt: job.createdAt,
-          updatedAt: job.updatedAt,
-          completedAt: job.completedAt,
-          currentStep: job.currentStep,
-          message: job.message,
-          error: job.error,
-          warning: latestPortalWarning(job.warnings) || job.warning,
-          queueSummary: job.queueSummary,
-          stagedRunId: job.stagedRunId,
-          discoveryReportId: job.discoveryReportId,
-          actionsRunUrl: job.actionsRunUrl,
-          actionsDispatchError: job.actionsDispatchError,
-        }),
-      );
+      .map((job): PortalJobHistoryEntry => ({
+        id: job.id,
+        status: job.status,
+        runMode: job.runMode,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        completedAt: job.completedAt,
+        currentStep: job.currentStep,
+        message: job.message,
+        error: job.error,
+        warning: latestPortalWarning(job.warnings) || job.warning,
+        queueSummary: job.queueSummary,
+        stagedRunId: job.stagedRunId,
+        discoveryReportId: job.discoveryReportId,
+        actionsRunUrl: job.actionsRunUrl,
+        actionsDispatchError: job.actionsDispatchError,
+      }));
 
     return c.json({ success: true, jobs });
   } catch (e) {

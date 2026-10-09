@@ -112,13 +112,7 @@ export interface DocumentMetadata {
   title: string;
   uploadDate: string;
   productCategory:
-    | 'Life'
-    | 'Short-Term'
-    | 'Investment'
-    | 'Medical Aid'
-    | 'Retirement'
-    | 'Estate'
-    | 'General';
+    'Life' | 'Short-Term' | 'Investment' | 'Medical Aid' | 'Retirement' | 'Estate' | 'General';
   policyNumber: string;
   status: 'new' | 'viewed';
   isFavourite: boolean;

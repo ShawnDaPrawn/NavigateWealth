@@ -9,7 +9,7 @@
  * and quote-request routes.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // ── Valid enum values (mirrors submissions-service.ts types) ────────────────
 

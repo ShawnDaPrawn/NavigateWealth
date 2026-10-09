@@ -22,13 +22,7 @@ export type OverrideClassification =
 export type IPBenefitPeriod = '6-months' | '12-months' | '24-months';
 
 export type IPEscalationType =
-  | 'fixed-1'
-  | 'fixed-2'
-  | 'fixed-3'
-  | 'fixed-4'
-  | 'fixed-5'
-  | 'cpi-linked'
-  | 'level';
+  'fixed-1' | 'fixed-2' | 'fixed-3' | 'fixed-4' | 'fixed-5' | 'cpi-linked' | 'level';
 
 // ==================== INPUT TYPES ====================
 

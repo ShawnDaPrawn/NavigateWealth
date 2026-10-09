@@ -6,7 +6,7 @@
  * and applied in route handlers.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // ============================================================================
 // SHARED FIELD SCHEMAS

@@ -59,11 +59,7 @@ export interface GoamlScanDiff {
 }
 
 export type GoamlDigestOutcome =
-  | 'sent'
-  | 'skipped_duplicate'
-  | 'dry_run'
-  | 'template_disabled'
-  | 'login_failed_notified';
+  'sent' | 'skipped_duplicate' | 'dry_run' | 'template_disabled' | 'login_failed_notified';
 
 export interface GoamlDigestRecord {
   kind: 'snapshot' | 'send';

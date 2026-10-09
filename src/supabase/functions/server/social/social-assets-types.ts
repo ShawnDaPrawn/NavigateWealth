@@ -10,12 +10,7 @@
 export type SocialChannel = 'linkedin' | 'instagram' | 'x';
 
 export type SocialBatchStatus =
-  | 'generating'
-  | 'generated'
-  | 'selecting'
-  | 'scheduled'
-  | 'failed'
-  | 'cancelled';
+  'generating' | 'generated' | 'selecting' | 'scheduled' | 'failed' | 'cancelled';
 
 export type SocialAssetState =
   | 'generated'
@@ -30,12 +25,7 @@ export type SocialAssetState =
 export type SocialImageStatus = 'none' | 'pending' | 'rendering' | 'ready' | 'failed';
 
 export type SocialImageStyle =
-  | 'photorealistic'
-  | 'editorial'
-  | 'abstract'
-  | 'conceptual'
-  | 'lifestyle'
-  | 'data_visualisation';
+  'photorealistic' | 'editorial' | 'abstract' | 'conceptual' | 'lifestyle' | 'data_visualisation';
 
 export interface SocialAssetBatch {
   id: string;

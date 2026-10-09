@@ -411,18 +411,10 @@ export interface MarketingPost {
 export type SocialAIPlatform = 'linkedin' | 'instagram' | 'facebook' | 'x';
 
 export type ContentTone =
-  | 'professional'
-  | 'conversational'
-  | 'authoritative'
-  | 'friendly'
-  | 'educational';
+  'professional' | 'conversational' | 'authoritative' | 'friendly' | 'educational';
 
 export type ContentGoal =
-  | 'engagement'
-  | 'awareness'
-  | 'education'
-  | 'promotion'
-  | 'thought_leadership';
+  'engagement' | 'awareness' | 'education' | 'promotion' | 'thought_leadership';
 
 export interface GeneratePostTextInput {
   platforms: SocialAIPlatform[];
@@ -466,12 +458,7 @@ export interface AIGenerationRecord {
 // ============================================================================
 
 export type ImageStyle =
-  | 'photorealistic'
-  | 'editorial'
-  | 'abstract'
-  | 'conceptual'
-  | 'lifestyle'
-  | 'data_visualisation';
+  'photorealistic' | 'editorial' | 'abstract' | 'conceptual' | 'lifestyle' | 'data_visualisation';
 
 export interface GenerateImageInput {
   platform: SocialAIPlatform | 'instagram_story';

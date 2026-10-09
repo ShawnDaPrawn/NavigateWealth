@@ -4,7 +4,7 @@
  * P1 — Zod validation for security.ts
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const LogActivitySchema = z.object({
   type: z.string().min(1, 'Activity type is required').max(100),

@@ -10,12 +10,7 @@
 export type SocialChannel = 'linkedin' | 'instagram' | 'x';
 
 export type SocialBatchStatus =
-  | 'generating'
-  | 'generated'
-  | 'selecting'
-  | 'scheduled'
-  | 'failed'
-  | 'cancelled';
+  'generating' | 'generated' | 'selecting' | 'scheduled' | 'failed' | 'cancelled';
 
 export type SocialAssetState =
   | 'generated'

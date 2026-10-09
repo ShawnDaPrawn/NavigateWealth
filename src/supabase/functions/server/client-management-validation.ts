@@ -10,7 +10,7 @@
  * Phase 3 - Increment 3.3
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import {
   UuidSchema,
   EmailSchema,

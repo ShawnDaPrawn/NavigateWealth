@@ -181,8 +181,7 @@ interface CampaignSendContext {
  * fixed.
  */
 type DeliveryOutcome =
-  | { kind: 'sent' | 'retryable' | 'terminal' }
-  | { kind: 'sender_fault'; message: string };
+  { kind: 'sent' | 'retryable' | 'terminal' } | { kind: 'sender_fault'; message: string };
 
 function blankRecord(
   campaign: NewsletterCampaign,

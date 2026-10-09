@@ -26,7 +26,7 @@ export const FnaIntakeDomainSchema = z.enum([
 
 export const FnaIntakeSaveDraftSchema = z.object({
   inputs: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .refine((obj) => Object.keys(obj).length <= MAX_INTAKE_FIELDS, {
       message: `Intake may contain at most ${MAX_INTAKE_FIELDS} fields`,
     })

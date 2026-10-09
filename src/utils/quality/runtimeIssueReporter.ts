@@ -39,11 +39,7 @@ const MAX_REPORTS_PER_MINUTE = 20;
 const MAX_BREADCRUMBS = 20;
 
 export type RuntimeIssueKind =
-  | 'window-error'
-  | 'unhandled-rejection'
-  | 'react-error-boundary'
-  | 'handled-error'
-  | 'api-failure';
+  'window-error' | 'unhandled-rejection' | 'react-error-boundary' | 'handled-error' | 'api-failure';
 
 export interface RuntimeClientIssueInput {
   kind: RuntimeIssueKind;

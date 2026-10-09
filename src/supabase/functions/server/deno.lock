@@ -23,7 +23,7 @@
     "npm:pdf-lib@*": "1.17.1",
     "npm:pdf-lib@1.17.1": "1.17.1",
     "npm:pdfjs-dist@4.7.76": "4.7.76",
-    "npm:zod@*": "4.4.3"
+    "npm:zod@4.6.5": "4.6.5"
   },
   "jsr": {
     "@std/encoding@1.0.10": {
@@ -707,8 +707,8 @@
     "yallist@4.0.0": {
       "integrity": "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
     },
-    "zod@4.4.3": {
-      "integrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="
+    "zod@4.6.5": {
+      "integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="
     }
   },
   "workspace": {
@@ -718,7 +718,7 @@
       "npm:@types/node@*",
       "npm:hono@4.13.7",
       "npm:pdf-lib@1.17.1",
-      "npm:zod@3.24.1"
+      "npm:zod@4.6.5"
     ]
   }
 }
