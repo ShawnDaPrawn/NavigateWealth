@@ -34,7 +34,7 @@
     "@signpdf/placeholder-pdf-lib": "^3.3.0",
     "@signpdf/signer-p12": "^3.3.0",
     "@signpdf/signpdf": "^3.3.0",
-    "@supabase/supabase-js": "^2.117.2",
+    "@supabase/supabase-js": "~2.109.0",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-virtual": "^3.14.13",
     "@tiptap/core": "^3.31.4",
@@ -57,7 +57,7 @@
     "cmdk": "^1.1.1",
     "copy-to-clipboard": "^3.3.3",
     "date-fns": "^4.4.0",
-    "docx": "^9.8.1",
+    "docx": "9.7.1",
     "dompurify": "^3.4.11",
     "embla-carousel-react": "^8.6.0",
     "exceljs": "^4.4.0",
@@ -87,7 +87,7 @@
   },
   "optionalDependencies": {
     "@jsr/std__encoding": "^1.0.11",
-    "@jsr/supabase__supabase-js": "^2.117.2"
+    "@jsr/supabase__supabase-js": "~2.109.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
