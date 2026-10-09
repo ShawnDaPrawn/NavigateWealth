@@ -23,9 +23,7 @@ import {
   Link as Globe,
   Instagram,
   Linkedin,
-  Youtube,
   Facebook,
-  Twitter,
   Mail,
   Phone,
   MapPin,
@@ -33,6 +31,7 @@ import {
   FileText,
   BookOpen,
 } from 'lucide-react';
+import { XIcon } from '../../../../shared/XIcon';
 import { api } from '../../../../../utils/api';
 
 // ============================================================================
@@ -124,11 +123,11 @@ export const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
     category: 'social',
   },
   {
-    title: 'YouTube Channel',
-    url: 'https://www.youtube.com/@navigatewealth',
-    description: 'Watch our financial planning videos',
-    icon: <Youtube className="h-4 w-4" />,
-    category: 'content',
+    title: 'X',
+    url: 'https://x.com/navigatewealth',
+    description: 'Follow us on X',
+    icon: <XIcon className="h-4 w-4" />,
+    category: 'social',
   },
   {
     title: 'Email Us',
@@ -174,15 +173,9 @@ export const SOCIAL_PLATFORMS = [
     placeholder: 'https://facebook.com/navigatewealth',
   },
   {
-    key: 'youtube',
-    label: 'YouTube',
-    icon: <Youtube className="h-4 w-4" />,
-    placeholder: 'https://youtube.com/@navigatewealth',
-  },
-  {
     key: 'twitter',
-    label: 'X (Twitter)',
-    icon: <Twitter className="h-4 w-4" />,
+    label: 'X',
+    icon: <XIcon className="h-4 w-4" />,
     placeholder: 'https://x.com/navigatewealth',
   },
   {

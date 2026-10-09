@@ -396,7 +396,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                         <br />
                         <span style={{ color: '#6d28d9' }}>LinkedIn</span> |{' '}
                         <span style={{ color: '#6d28d9' }}>Instagram</span> |{' '}
-                        <span style={{ color: '#6d28d9' }}>YouTube</span>
+                        <span style={{ color: '#6d28d9' }}>X</span>
                       </p>
                       <p style={{ margin: '12px 0 0', color: '#9ca3af' }}>
                         &copy; {new Date().getFullYear()} Navigate Wealth. All rights reserved.
