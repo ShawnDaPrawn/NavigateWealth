@@ -100,13 +100,7 @@ export interface GroupCreate {
  *   - failed    — nothing was delivered for a non-terminal reason.
  */
 export type CampaignStatus =
-  | 'draft'
-  | 'scheduled'
-  | 'sending'
-  | 'completed'
-  | 'partial'
-  | 'failed'
-  | 'rejected';
+  'draft' | 'scheduled' | 'sending' | 'completed' | 'partial' | 'failed' | 'rejected';
 
 /**
  * `portal` is not something the campaign wizard can create — it is what a
@@ -196,13 +190,7 @@ export interface CachedRecipient {
 export type MessagePriority = 'low' | 'normal' | 'high' | 'urgent';
 
 export type MessageCategory =
-  | 'General'
-  | 'Account'
-  | 'Document'
-  | 'Compliance'
-  | 'Marketing'
-  | 'Campaign'
-  | 'System';
+  'General' | 'Account' | 'Document' | 'Compliance' | 'Marketing' | 'Campaign' | 'System';
 
 export interface Message {
   id: string;

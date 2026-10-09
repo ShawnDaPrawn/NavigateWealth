@@ -39,8 +39,7 @@ function hasValidOpenClawSecret(c: {
 
 async function appendEventSummary(summary: OpenClawEventSummary) {
   const current = (await kv.get(OPENCLAW_EVENT_HISTORY_KEY).catch(() => [])) as
-    | OpenClawEventSummary[]
-    | null;
+    OpenClawEventSummary[] | null;
   const history = Array.isArray(current) ? current : [];
   await kv.set(OPENCLAW_EVENT_HISTORY_KEY, [summary, ...history].slice(0, 100));
 }
@@ -70,8 +69,7 @@ app.get('/capabilities', requireAdmin, (c) => {
 
 app.get('/events/latest', requireAdmin, async (c) => {
   const events = (await kv.get(OPENCLAW_EVENT_HISTORY_KEY).catch(() => [])) as
-    | OpenClawEventSummary[]
-    | null;
+    OpenClawEventSummary[] | null;
   return c.json({ success: true, events: Array.isArray(events) ? events : [] });
 });
 

@@ -23,14 +23,7 @@ export type HistoryChannel = CommunicationChannel | 'portal';
  * every address was indistinguishable from one that landed.
  */
 export type CommunicationStatus =
-  | 'draft'
-  | 'scheduled'
-  | 'sending'
-  | 'sent'
-  | 'completed'
-  | 'partial'
-  | 'failed'
-  | 'rejected';
+  'draft' | 'scheduled' | 'sending' | 'sent' | 'completed' | 'partial' | 'failed' | 'rejected';
 
 /** Status values offered in the history filter, in reporting order. */
 export const COMMUNICATION_STATUS_FILTERS: ReadonlyArray<{
@@ -49,12 +42,7 @@ export type RecipientType = 'single' | 'multiple' | 'group';
 export type GroupType = 'system' | 'custom';
 export type SchedulingType = 'immediate' | 'scheduled';
 export type RecurringFrequency =
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'quarterly'
-  | 'annually'
-  | 'custom';
+  'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annually' | 'custom';
 export type EndConditionType = 'never' | 'after_occurrences' | 'on_date';
 
 // Client Types

@@ -1,10 +1,5 @@
 export type UserRole =
-  | 'super_admin'
-  | 'admin'
-  | 'adviser'
-  | 'paraplanner'
-  | 'compliance'
-  | 'viewer';
+  'super_admin' | 'admin' | 'adviser' | 'paraplanner' | 'compliance' | 'viewer';
 export type PersonnelStatus = 'active' | 'suspended' | 'pending';
 export type FSCAStatus = 'active' | 'debarred' | 'pending';
 

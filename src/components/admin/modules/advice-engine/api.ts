@@ -59,8 +59,7 @@ function normaliseClient(raw: Record<string, unknown>): Client {
     phone: (raw.phone || raw.phoneNumber || personal.cellphone) as string | undefined,
     id_number: (raw.id_number || raw.idNumber || personal.idNumber) as string | undefined,
     date_of_birth: (raw.date_of_birth || raw.dateOfBirth || personal.dateOfBirth) as
-      | string
-      | undefined,
+      string | undefined,
   };
 }
 

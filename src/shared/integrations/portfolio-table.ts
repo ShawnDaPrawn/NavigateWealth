@@ -154,13 +154,7 @@ export interface PortfolioRowInput {
 }
 
 export type PortfolioRowStatus =
-  | 'updated'
-  | 'unchanged'
-  | 'unmatched'
-  | 'client_mismatch'
-  | 'duplicate'
-  | 'invalid'
-  | 'failed';
+  'updated' | 'unchanged' | 'unmatched' | 'client_mismatch' | 'duplicate' | 'invalid' | 'failed';
 
 export interface PortfolioRowChange {
   fieldId: string;

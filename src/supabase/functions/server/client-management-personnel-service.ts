@@ -606,8 +606,7 @@ export const PersonnelService = {
 
         const currentAuthRole = user.user_metadata?.role as string | undefined;
         const currentAppRole = (user.app_metadata as Record<string, unknown> | undefined)?.role as
-          | string
-          | undefined;
+          string | undefined;
 
         // Already correct in BOTH metadata stores — skip. app_metadata is the
         // authoritative source for authorization (resolveTrustedRole), so a

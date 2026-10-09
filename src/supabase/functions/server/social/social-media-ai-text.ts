@@ -51,18 +51,10 @@ const PLATFORM_NAMES: Record<string, string> = {
 export type SocialAIPlatform = 'linkedin' | 'instagram' | 'facebook' | 'x';
 
 export type ContentTone =
-  | 'professional'
-  | 'conversational'
-  | 'authoritative'
-  | 'friendly'
-  | 'educational';
+  'professional' | 'conversational' | 'authoritative' | 'friendly' | 'educational';
 
 export type ContentGoal =
-  | 'engagement'
-  | 'awareness'
-  | 'education'
-  | 'promotion'
-  | 'thought_leadership';
+  'engagement' | 'awareness' | 'education' | 'promotion' | 'thought_leadership';
 
 export interface GeneratePostTextInput {
   /** Target platforms for content generation */

@@ -82,8 +82,7 @@ interface PolicyTableProps {
 /** Plain-language provenance for the most recent automated change, if any. */
 function describeLastSync(policy: PolicyRecord): string | null {
   const history = (policy as Record<string, unknown>).integrationSyncHistory as
-    | Array<{ publishedAt?: string; source?: string }>
-    | undefined;
+    Array<{ publishedAt?: string; source?: string }> | undefined;
   const latest = Array.isArray(history) && history.length > 0 ? history[history.length - 1] : null;
   if (!latest?.publishedAt) return null;
 
@@ -247,8 +246,7 @@ export function PolicyTable({
                           {/* AI extraction indicator */}
                           {(
                             (policy as Record<string, unknown>).extraction as
-                              | { status?: string }
-                              | undefined
+                              { status?: string } | undefined
                           )?.status === 'completed' &&
                             !policy.archived && (
                               <span title="AI data extracted" className="flex-shrink-0">

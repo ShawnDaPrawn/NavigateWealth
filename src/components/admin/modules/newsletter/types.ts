@@ -6,13 +6,7 @@
  */
 
 export type NewsletterCampaignStatus =
-  | 'draft'
-  | 'scheduled'
-  | 'queued'
-  | 'sending'
-  | 'paused'
-  | 'finished'
-  | 'cancelled';
+  'draft' | 'scheduled' | 'queued' | 'sending' | 'paused' | 'finished' | 'cancelled';
 
 export type NewsletterCampaignSource = 'admin' | 'routine';
 
@@ -71,11 +65,7 @@ export interface NewsletterCampaign {
 }
 
 export type NewsletterDeliveryStatus =
-  | 'pending'
-  | 'sending'
-  | 'sent'
-  | 'failed_retryable'
-  | 'failed_terminal';
+  'pending' | 'sending' | 'sent' | 'failed_retryable' | 'failed_terminal';
 
 export interface NewsletterCampaignRecipient {
   campaignId: string;
