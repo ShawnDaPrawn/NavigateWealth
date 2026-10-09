@@ -60,8 +60,10 @@ export const UpdateSettingsSchema = z
     channels: z.array(z.enum(CHANNELS)).min(1).max(3).optional(),
     posting_timezone: z.string().min(1).max(64).optional(),
     site_origin: z.string().url().max(200).optional(),
+    // partialRecord, not record: in zod 4 an enum-keyed record requires
+    // EVERY key, so setting slots for one channel was rejected with a 400.
     preferred_slots: z
-      .record(
+      .partialRecord(
         z.enum(CHANNELS),
         z.array(z.string().regex(SLOT_RE, 'slot must be "dow HH:MM"')).max(14),
       )
