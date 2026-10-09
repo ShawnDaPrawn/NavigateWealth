@@ -5,7 +5,7 @@
  * Compliance-critical: e-sign operations require strict input validation.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // --- Signers ---
 

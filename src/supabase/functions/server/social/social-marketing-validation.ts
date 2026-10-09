@@ -2,7 +2,7 @@
  * Social & Marketing — request schemas (Buffer-backed).
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 const BUFFER_ID = /^[a-f\d]{24}$/;
 

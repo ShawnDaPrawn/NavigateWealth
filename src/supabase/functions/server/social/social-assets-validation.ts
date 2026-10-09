@@ -8,7 +8,7 @@
  * explicitly.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 const CHANNELS = ['linkedin', 'instagram', 'x'] as const;
 const SLOT_RE = /^(mon|tue|wed|thu|fri|sat|sun)\s+([01]?\d|2[0-3]):[0-5]\d$/i;

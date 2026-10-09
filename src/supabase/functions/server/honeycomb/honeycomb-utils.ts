@@ -1,4 +1,4 @@
-import type { ZodError } from 'npm:zod';
+import type { ZodError } from 'npm:zod@4.6.5';
 import { getErrMsg } from '../shared-logger-utils.ts';
 
 export const HONEYCOMB_API_URL = 'https://publicapi.honeycombonline.co.za';

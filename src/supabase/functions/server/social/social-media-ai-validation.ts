@@ -6,7 +6,7 @@
  * @module social-media/ai-validation
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const GeneratePostTextSchema = z.object({
   platforms: z

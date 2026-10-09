@@ -5,7 +5,7 @@
  * Validates config, schema, and policy mutation inputs.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // --- Config ---
 

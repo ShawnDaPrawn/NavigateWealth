@@ -6,7 +6,7 @@
  * with field-by-field errors, before anything is submitted.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 const ID = z
   .string()

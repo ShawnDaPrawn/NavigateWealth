@@ -22,7 +22,7 @@
  * change. Sibling schemas live in `security-validation.ts` for `security.ts`.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 /** Reused so a change to the accepted email shape lands on every auth route at once. */
 const email = z.string().min(1, 'Email is required').max(320);
