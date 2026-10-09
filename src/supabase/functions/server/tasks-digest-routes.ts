@@ -30,6 +30,7 @@ import { enforceAccountSecurity, AuthError } from './auth-mw.ts';
 import { readTokenIssuedAt, readTokenSessionId } from './jwt-claims.ts';
 import type { RawKvTask, KvTask } from './tasks-types.ts';
 import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('tasks-digest');
@@ -139,7 +140,7 @@ async function requireCronOrAdminAuth(
   next: () => Promise<void>,
 ) {
   const authHeader = c.req.header('Authorization') || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const token = stripBearerPrefix(authHeader);
 
   // 1. Cron path — Vault-backed shared token first, service-role/super-admin
   //    bearer as the fallback. Shared with every other scheduled endpoint so

@@ -49,12 +49,12 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/clients', () => import('./client-management-routes.ts'));
   lazy(app, '/communication', () => import('./communication-routes.ts'));
   lazy(app, '/product-management', () => import('./product-management-routes.ts'));
-  lazy(app, '/social-marketing', () => import('./social-marketing-routes.ts'));
-  lazy(app, '/social-media-ai', () => import('./social-media-ai-routes.ts'));
-  lazy(app, '/social-assets', () => import('./social-assets-routes.ts'));
-  lazy(app, '/social-library', () => import('./social-channel-assets-routes.ts'));
+  lazy(app, '/social-marketing', () => import('./social/social-marketing-routes.ts'));
+  lazy(app, '/social-media-ai', () => import('./social/social-media-ai-routes.ts'));
+  lazy(app, '/social-assets', () => import('./social/social-assets-routes.ts'));
+  lazy(app, '/social-library', () => import('./social/social-channel-assets-routes.ts'));
   lazy(app, '/calendar', () => import('./calendar-routes.ts'));
-  lazy(app, '/advice-engine', () => import('./advice-engine-routes.ts'));
+  lazy(app, '/advice-engine', () => import('./advice-engine/advice-engine-routes.ts'));
   lazy(app, '/applications', () => import('./client-applications-routes.ts'));
   lazy(app, '/newsletter', () => import('./newsletter.ts'));
   lazy(app, '/newsletter-studio', () => import('./newsletter-studio-routes.ts'));

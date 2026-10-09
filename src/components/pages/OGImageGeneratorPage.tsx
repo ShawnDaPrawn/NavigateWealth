@@ -19,7 +19,7 @@
 
 import React, { useState } from 'react';
 import navigateWealthLogo from 'figma:asset/def9c4d4fdd055d486a64e8df869988fd6a2aca3.png';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Brand tokens (inline — these must not depend on CSS variables since the

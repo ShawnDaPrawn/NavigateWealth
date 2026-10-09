@@ -102,7 +102,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'risk-planning-fna-routes.ts GET /',
       'security.ts GET /',
       'setup.ts GET /',
-      'social-media-ai-routes.ts GET /',
+      'social/social-media-ai-routes.ts GET /',
       'submissions-routes.ts POST /',
       'tax-agent-routes.ts GET /',
       'tax-planning-fna-routes.ts GET /',
@@ -324,8 +324,8 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     reason:
       'Guarded by a file-local `requireCronOrAdmin` gate: `isAuthorizedCronRequest` (the Vault-backed cron token) first, then `requireAdmin`. The scheduled job has no session and an admin clicking "Run now" has no cron token, so one route serves both; the detector cannot see either identifier because the gate is a named function defined above the routes. Pinned by social-assets-routes.contract.test.ts, which asserts both tiers on both routes.',
     routes: [
-      'social-assets-routes.ts POST /jobs/render-images',
-      'social-assets-routes.ts POST /jobs/sync-buffer',
+      'social/social-assets-routes.ts POST /jobs/render-images',
+      'social/social-assets-routes.ts POST /jobs/sync-buffer',
     ],
   },
 ];

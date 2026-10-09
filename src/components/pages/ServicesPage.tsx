@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { SEO } from '../seo/SEO';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';

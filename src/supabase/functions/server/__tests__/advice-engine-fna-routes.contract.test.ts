@@ -61,7 +61,7 @@ const svc = vi.hoisted(() => ({
   aiAnalyze: vi.fn(),
 }));
 
-vi.mock('../advice-engine-service.ts', () => ({
+vi.mock('../advice-engine/advice-engine-service.ts', () => ({
   AdviceEngineService: class {
     createFNA = svc.createFNA;
     updateFNA = svc.updateFNA;
@@ -128,7 +128,7 @@ vi.mock('../auth-mw.ts', () => {
   };
 });
 
-const app = (await import('../advice-engine-fna-routes.ts')).default;
+const app = (await import('../advice-engine/advice-engine-fna-routes.ts')).default;
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 // Every id on these routes is validated as a UUID, so fixtures must be real.

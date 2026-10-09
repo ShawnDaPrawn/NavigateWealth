@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ROA_MODULE_CONTRACTS,
   validateRoAModuleContract,
-} from '../advice-engine-roa-contract-types.ts';
+} from '../advice-engine/advice-engine-roa-contract-types.ts';
 import {
   AdviceEngineRoAService,
   buildCanonicalRoACompilation,
   type RoADraftRecord,
-} from '../advice-engine-roa-service.ts';
+} from '../advice-engine/advice-engine-roa-service.ts';
 
 const conversationContract = DEFAULT_ROA_MODULE_CONTRACTS.find(
   (c) => c.id === 'new_life_assurance_proposal',
