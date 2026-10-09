@@ -44,7 +44,11 @@ Vercel. `AGENTS.md` carries the full protocol.
 Every PR is gated by `.github/workflows/quality-check.yml`: format, ESLint,
 three typechecks (SPA, middleware, Deno), dependency-cruiser boundaries, unit
 tests, coverage floors, and the production build. `e2e-smoke` is a required
-check as well.
+check as well. The gates run as three parallel jobs (`static-checks`,
+`vitest`, `backend-coverage`) and the required `quality-check` job collects
+their results and decides; a superseded PR run is cancelled. Both required
+checks take their Node version from `.nvmrc` (20). Vercel builds production on
+its own project setting (24.x), which `.nvmrc` does not change.
 
 Several gates are **ratchets** rather than pass/fail rules: a committed number
 records the current size of a known backlog, and CI fails if the real count
@@ -473,10 +477,13 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
-- **The Edge Function source is 480+ files flat in one directory**, organised by
-  filename prefix. The three subfolders that exist (`locked/`,
-  `quote-verticals/`, `repositories/`) show the shape it should take. Split one
-  prefix per PR; see [`ROADMAP.md`](ROADMAP.md).
+- **The Edge Function source is still mostly flat** (440+ files in one
+  directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
+  `social/` were the first prefixes moved into folders (2026-10-08), alongside
+  the older `locked/`, `quote-verticals/` and `repositories/`. Split one prefix
+  per PR, lowest fan-in first; `esign-*`, `integrations-*` and `client-*` have
+  the most inbound imports and test paths and are the expensive ones. See
+  [`ROADMAP.md`](ROADMAP.md).
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.

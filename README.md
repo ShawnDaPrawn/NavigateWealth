@@ -126,8 +126,8 @@ The main scripts in the current `package.json` are:
 ```text
 .
 |-- src/
-|   |-- App.tsx                         # App-level bootstrapping and global handlers
-|   |-- AppRoutes.tsx                   # Route definitions and lazy page loading
+|   |-- app/                            # The app shell: App.tsx (bootstrapping, global handlers),
+|   |                                   # AppProviders.tsx, AppRoutes.tsx (lazy routes), router/
 |   |-- assets/                         # Imported Figma/exported image assets
 |   |-- components/
 |   |   |-- admin/modules/              # Admin/adviser operational modules
@@ -136,7 +136,7 @@ The main scripts in the current `package.json` are:
 |   |   |-- client/                     # Client-facing FNA, communication, e-sign areas
 |   |   |-- layout/                     # Public/dashboard layout
 |   |   |-- pages/                      # Route-level public and portal pages
-|   |   |-- providers/                  # AppProviders and global provider wiring
+|   |   |-- providers/                  # AdminDataPrefetch (the app's providers are in src/app/)
 |   |   |-- shared/                     # Shared UI/application helpers
 |   |   `-- ui/                         # Reusable UI primitives
 |   |-- config/                         # Frontend environment helpers

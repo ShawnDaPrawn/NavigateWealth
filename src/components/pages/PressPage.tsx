@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { MediaAccessModal } from '../modals/MediaAccessModal';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import {

@@ -43,6 +43,7 @@ import {
 } from './repositories/two-factor-session-repository.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
@@ -62,7 +63,7 @@ const TWO_FACTOR_VERIFY_LIMIT = {
 
 /** The Bearer token on this request — already verified by the route's guard. */
 function bearerToken(c: Context): string | undefined {
-  return c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  return stripBearerPrefix(c.req.header('Authorization'));
 }
 
 /**

@@ -1,0 +1,47 @@
+# Path rules for .github/workflows/labeler.yml. A PR gets every label whose
+# rule matches at least one changed file. Labels that do not exist yet are
+# created the first time they are applied.
+
+edge-function:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/supabase/functions/**'
+          - 'supabase/functions/**'
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'supabase/migrations/**'
+          - 'supabase/cron/**'
+          - 'supabase/config.toml'
+
+spa:
+  - changed-files:
+      # Under src/ but not the Edge Function source.
+      - all-globs-to-any-file:
+          - 'src/**'
+          - '!src/supabase/functions/**'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '*.md'
+
+tooling:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - 'quality/**'
+          - '.husky/**'
+          - 'scripts/**'
+          - 'eslint.config.mjs'
+          - 'vite.config.ts'
+          - 'vitest.config.ts'
+          - 'tsconfig*.json'
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'package-lock.json'

@@ -33,7 +33,7 @@ vi.mock('../buffer-service.ts', () => buffer);
 const storage = vi.hoisted(() => ({
   publishPrivateImage: vi.fn(async () => 'https://cdn/public.png'),
 }));
-vi.mock('../social-assets-storage.ts', () => storage);
+vi.mock('../social/social-assets-storage.ts', () => storage);
 
 vi.mock('../stderr-logger.ts', async () =>
   (await import('./helpers/contract-harness.ts')).makeLoggerMock(),
@@ -46,7 +46,7 @@ import {
   getStatus,
   listChannels,
   listPosts,
-} from '../social-marketing-service.ts';
+} from '../social/social-marketing-service.ts';
 
 const linkedin = {
   id: 'li',

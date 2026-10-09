@@ -14,7 +14,7 @@ import { X, Calendar, Clock, User, AlertCircle } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
+import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 import { cn } from '../../../../ui/utils';
 import { getArticleImageUrl } from '../utils';
 

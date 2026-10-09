@@ -37,6 +37,7 @@ import {
   TWO_FACTOR_GRACE_MS,
   sessionTwoFactorVerifiedAt,
 } from './repositories/two-factor-session-repository.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
@@ -117,9 +118,7 @@ app.post('/:userId/password', requireAuth, async (c) => {
     // token revokes the OTHER sessions at GoTrue and they stay signed in here.
     // Admin reset: no token for the target user exists, so only the watermark
     // is written — which is exactly the case the watermark was added for.
-    const callerToken = isAdminReset
-      ? undefined
-      : c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+    const callerToken = isAdminReset ? undefined : stripBearerPrefix(c.req.header('Authorization'));
     const revocation = await revokeSessionsAfterCredentialChange({
       userId,
       actor: isAdminReset ? 'admin' : 'self',
@@ -343,7 +342,7 @@ app.get('/:userId/status', requirePrimaryAuth, async (c) => {
     // here, refused everywhere else. Only meaningful for the caller's own
     // account; an admin reading someone else's status has a different session.
     let sessionTwoFactorVerified = false;
-    const sessionId = readTokenSessionId(c.req.header('Authorization')?.replace(/^Bearer\s+/i, ''));
+    const sessionId = readTokenSessionId(stripBearerPrefix(c.req.header('Authorization')));
     if (c.get('userId') === userId && sessionId) {
       const verifiedAt = await sessionTwoFactorVerifiedAt(userId, sessionId);
       sessionTwoFactorVerified =

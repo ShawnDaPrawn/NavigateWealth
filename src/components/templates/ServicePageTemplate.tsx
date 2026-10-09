@@ -39,7 +39,7 @@ import {
   List,
   Calendar,
 } from 'lucide-react';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { TabStrip } from '../shared/TabStrip';
 import { PartnerMarquee, type PartnerLogo } from '../shared/PartnerMarquee';

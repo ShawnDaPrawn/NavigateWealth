@@ -7,23 +7,36 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A new push to a PR supersedes the run for the previous commit, so that run
+# is cancelled instead of queueing a full extra run behind it. Runs on main
+# are never cancelled: each merge gets its own complete result.
+concurrency:
+  group: quality-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The gates run as three parallel jobs, and `quality-check` — the job branch
+# protection requires — waits for all three and decides. Each job writes the
+# same quality-*.exit / *.count files the single job used to, exports them as
+# job outputs, and `quality-check` writes them back and runs the unchanged
+# "Enforce quality gates" script. A job that dies before exporting leaves its
+# outputs empty, which that script reads as a failure: the split fails closed.
 jobs:
-  quality-check:
+  static-checks:
     runs-on: ubuntu-latest
-    # The only workflow here that had no timeout, so a hung step inherited
-    # GitHub's 6-hour default: the PR sits un-mergeable for a working day and
-    # the run burns runner minutes nobody is watching. 45 is generous against a
-    # typical 13-20 minute run, so a merely slow runner still passes.
-    timeout-minutes: 45
-
-    env:
-      # A non-secret boolean — deliberately NOT the token itself. A step-level
-      # `if:` cannot read the `secrets` context but can read `env`, and job-level
-      # `env` reaches every step in the job, `npm ci` included. Putting the token
-      # here would hand it to every dependency's install script; this hands them
-      # the string "true" or "false".
-      QUALITY_ISSUES_TOKEN_PRESENT: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN != '' }}
-
+    timeout-minutes: 30
+    outputs:
+      build: ${{ steps.results.outputs.build }}
+      typecheck: ${{ steps.results.outputs.typecheck }}
+      lint: ${{ steps.results.outputs.lint }}
+      lint_warnings: ${{ steps.results.outputs.lint_warnings }}
+      format: ${{ steps.results.outputs.format }}
+      mw: ${{ steps.results.outputs.mw }}
+      deno: ${{ steps.results.outputs.deno }}
+      deno_count: ${{ steps.results.outputs.deno_count }}
+      depcruise: ${{ steps.results.outputs.depcruise }}
+      depcruise_count: ${{ steps.results.outputs.depcruise_count }}
+      bundle: ${{ steps.results.outputs.bundle }}
+      audit_count: ${{ steps.results.outputs.audit_count }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -31,7 +44,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          # .nvmrc is the one place the PR gates' Node version is set.
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -59,38 +73,6 @@ jobs:
           set +e
           npm run build 2>&1 | tee quality-build.log
           echo "${PIPESTATUS[0]}" > quality-build.exit
-          exit 0
-
-      - name: Run Vitest (with coverage gate)
-        # Runs the suite WITH coverage so the regression floor in
-        # vitest.config.ts is enforced: if coverage drops below the configured
-        # thresholds, Vitest exits non-zero and this step's exit code (gated in
-        # "Enforce quality gates") fails the job. Local `npm test` stays
-        # coverage-free for speed. Floors are intentionally set just below the
-        # current (low) coverage and ratchet up as characterization tests grow.
-        shell: bash
-        run: |
-          set +e
-          npm test -- --coverage --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
-          echo "${PIPESTATUS[0]}" > quality-test.exit
-          exit 0
-
-      - name: Run backend coverage (per-layer floor)
-        # Stage A / F4. The SPA Vitest step above excludes
-        # src/supabase/functions/** from coverage, so the ~136K-line Deno
-        # backend — auth decisions, client PII, e-signatures — had NO coverage
-        # measurement at all, and the single blended "~31%" described the SPA
-        # only. This measures and floors the backend separately, so the two
-        # layers are reported as two numbers.
-        #
-        # First honest measurement (2026-08-21): statements 13.43%,
-        # branches 9.38%, functions 12.88%, lines 13.79%. Floors sit just below
-        # in quality/vitest.config.server.ts and ratchet UP as backend tests land.
-        shell: bash
-        run: |
-          set +e
-          npm run test:coverage:server 2>&1 | tee quality-test-server.log
-          echo "${PIPESTATUS[0]}" > quality-test-server.exit
           exit 0
 
       - name: Run typecheck (blocking)
@@ -214,22 +196,6 @@ jobs:
           fi
           echo "$deno_count" > quality-typecheck-deno.count
           echo "Deno type-error count: $deno_count (ratchet floor: $(cat quality/baselines/deno-check-baseline 2>/dev/null || echo '?'))"
-          exit 0
-
-      - name: Run FNA intake test suite
-        shell: bash
-        run: |
-          set +e
-          npm test -- src/supabase/functions/server/__tests__/fna-intake- src/components/client/fna-intake/__tests__/ src/shared/fna-intake/__tests__/ 2>&1 | tee quality-fna-intake-test.log
-          echo "${PIPESTATUS[0]}" > quality-fna-intake-test.exit
-          exit 0
-
-      - name: Run form prefill test suite
-        shell: bash
-        run: |
-          set +e
-          npm test -- src/supabase/functions/server/__tests__/form-prefill- src/supabase/functions/server/__tests__/esign-prefill.test.ts src/components/admin/modules/risk-planning-fna/components/__tests__/Step1InformationGathering.prefill-guard.test.ts 2>&1 | tee quality-form-prefill-test.log
-          echo "${PIPESTATUS[0]}" > quality-form-prefill-test.exit
           exit 0
 
       - name: Run dependency-cruiser (blocking)
@@ -369,6 +335,170 @@ jobs:
       # which is exactly what publish-quality-report.mjs does and what catches a
       # dashboard about to go silently stale. Only a pull request that cannot be
       # given secrets in the first place — Dependabot's, and forks' — skips.
+
+      - name: Export gate results
+        id: results
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "build=$(cat quality-build.exit 2>/dev/null)"
+            echo "typecheck=$(cat quality-typecheck.exit 2>/dev/null)"
+            echo "lint=$(cat quality-lint.exit 2>/dev/null)"
+            echo "lint_warnings=$(cat quality-lint-warnings.count 2>/dev/null)"
+            echo "format=$(cat quality-format.exit 2>/dev/null)"
+            echo "mw=$(cat quality-typecheck-middleware.exit 2>/dev/null)"
+            echo "deno=$(cat quality-typecheck-deno.exit 2>/dev/null)"
+            echo "deno_count=$(cat quality-typecheck-deno.count 2>/dev/null)"
+            echo "depcruise=$(cat quality-depcruise.exit 2>/dev/null)"
+            echo "depcruise_count=$(cat quality-depcruise.count 2>/dev/null)"
+            echo "bundle=$(cat quality-bundle-size.exit 2>/dev/null)"
+            echo "audit_count=$(cat quality-npm-audit.count 2>/dev/null)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-reports-static
+          path: quality-*
+          if-no-files-found: ignore
+
+  vitest:
+    runs-on: ubuntu-latest
+    # The longest job: the whole suite with coverage takes about ten minutes.
+    timeout-minutes: 45
+
+    env:
+      # A non-secret boolean — deliberately NOT the token itself. A step-level
+      # `if:` cannot read the `secrets` context but can read `env`, and job-level
+      # `env` reaches every step in the job, `npm ci` included. Putting the token
+      # here would hand it to every dependency's install script; this hands them
+      # the string "true" or "false".
+      QUALITY_ISSUES_TOKEN_PRESENT: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN != '' }}
+
+    outputs:
+      test: ${{ steps.results.outputs.test }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # .nvmrc is the one place the PR gates' Node version is set.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (for the tests' fixtures; gated in static-checks)
+        # Some tests read what the build generates: figma-asset-weight.test.ts
+        # requires the WebP cache in CI. The build is GATED in static-checks;
+        # here it only has to exist, and its log feeds the issue snapshot.
+        shell: bash
+        env:
+          SEO_REQUIRE_ARTICLES: 'false'
+        run: |
+          set +e
+          npm run build 2>&1 | tee quality-build.log
+          echo "${PIPESTATUS[0]}" > quality-build.exit
+          exit 0
+
+      - name: Run Vitest (with coverage gate)
+        # Runs the suite WITH coverage so the regression floor in
+        # vitest.config.ts is enforced: if coverage drops below the configured
+        # thresholds, Vitest exits non-zero and this step's exit code (gated in
+        # "Enforce quality gates") fails the job. Local `npm test` stays
+        # coverage-free for speed. Floors are intentionally set just below the
+        # current (low) coverage and ratchet up as characterization tests grow.
+        shell: bash
+        run: |
+          set +e
+          npm test -- --coverage --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
+          echo "${PIPESTATUS[0]}" > quality-test.exit
+          exit 0
+
+      - name: Run FNA intake test suite
+        shell: bash
+        run: |
+          set +e
+          npm test -- src/supabase/functions/server/__tests__/fna-intake- src/components/client/fna-intake/__tests__/ src/shared/fna-intake/__tests__/ 2>&1 | tee quality-fna-intake-test.log
+          echo "${PIPESTATUS[0]}" > quality-fna-intake-test.exit
+          exit 0
+
+      - name: Run form prefill test suite
+        shell: bash
+        run: |
+          set +e
+          npm test -- src/supabase/functions/server/__tests__/form-prefill- src/supabase/functions/server/__tests__/esign-prefill.test.ts src/components/admin/modules/risk-planning-fna/components/__tests__/Step1InformationGathering.prefill-guard.test.ts 2>&1 | tee quality-form-prefill-test.log
+          echo "${PIPESTATUS[0]}" > quality-form-prefill-test.exit
+          exit 0
+
+      - name: Run dependency audit (for the issue snapshot; gated in static-checks)
+        # RATCHETED (2026-08-21, Stage A / F7): this used to be `|| true` with no
+        # threshold — a fresh critical CVE in a direct dependency could never fail
+        # a PR, on a platform holding client financial/medical PII, ID documents
+        # and digital signatures. Now the HIGH+CRITICAL count is compared against
+        # the committed floor in quality/baselines/npm-audit-baseline by "Enforce quality gates";
+        # the job fails if it RISES, so no new high/critical can be introduced
+        # while the residual backlog is burned down.
+        #
+        # Floor was 0 from the `sharp` ^0.35.3 upgrade (libvips CVEs) until
+        # 2026-10-02.
+        #
+        # Floor is currently 2, ACCEPTED BY THE OWNER on 2026-10-02 (PR #402):
+        # GHSA-86w9-cpqp-85rv, high, in `node-forge`, counted twice (node-forge
+        # itself and @signpdf/signer-p12, which depends on it). The flaw is in
+        # RSA PKCS#1 v1.5 signature VERIFICATION, and no fixed release exists.
+        # Our only user, server/esign-pdf-protect.ts, creates signatures: key and
+        # self-signed certificate generation, PKCS#12 packaging, and P12Signer's
+        # pkcs7.createSignedData()/p7.sign(). Nothing here, nor in the signer,
+        # verifies a signature, so the advisory cannot be reached.
+        #
+        # The floor is a COUNT, so while it is 2 it would also hide two new
+        # findings once these two are gone. Put it back to 0 the moment
+        # node-forge ships a fix (the gate prints a notice when the count drops
+        # below the floor). Any third high/critical still fails the job.
+        #
+        # `|| true` is retained on the audit command itself because npm audit
+        # exits non-zero whenever ANY vulnerability exists (including moderate/low,
+        # which are not gated) — the count, not the exit code, is authoritative.
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > quality-npm-audit-report.json
+          audit_high="$(node -e "
+            try {
+              const r = require('./quality-npm-audit-report.json');
+              const v = (r.metadata && r.metadata.vulnerabilities) || {};
+              console.log((v.high || 0) + (v.critical || 0));
+            } catch (e) { console.log('999999'); }
+          ")"
+          echo "$audit_high" > quality-npm-audit.count
+          echo "npm audit high+critical: $audit_high (ratchet floor: $(cat quality/baselines/npm-audit-baseline 2>/dev/null || echo '?'))"
+          exit 0
+
+      # Telemetry, not a gate. Dependabot pull requests run with the
+      # `dependabot` secrets scope, so `secrets.QUALITY_ISSUES_INGEST_TOKEN` is
+      # empty on them; publish-quality-report.mjs treats a missing token in CI
+      # as fatal (deliberately — a silently unpublished snapshot on main is a
+      # real failure), so this step failed and took the whole job red on every
+      # dependency PR, whatever the dependencies actually did.
+      #
+      # That defeats the stated point of dependabot.yml: "a breaking bump shows
+      # up as a red check, not as a surprise in production". It cannot, if the
+      # check is already red for an unrelated reason — #292 passed every gate
+      # and still reported failure. Skip the step when no token reached the
+      # runner; keep failing loudly when one did and the publish went wrong.
+      # Runs whenever a token is available, AND on every non-pull_request event
+      # even when one is not. That second clause is the point: on a push to
+      # `main` a deleted or misconfigured secret must still fail the job loudly,
+      # which is exactly what publish-quality-report.mjs does and what catches a
+      # dashboard about to go silently stale. Only a pull request that cannot be
+      # given secrets in the first place — Dependabot's, and forks' — skips.
+
       - name: Publish quality issue snapshot
         if: ${{ env.QUALITY_ISSUES_TOKEN_PRESENT == 'true' || github.event_name != 'pull_request' }}
         shell: bash
@@ -378,39 +508,120 @@ jobs:
           QUALITY_ISSUES_INGEST_TOKEN: ${{ secrets.QUALITY_ISSUES_INGEST_TOKEN }}
         run: node scripts/ops/publish-quality-report.mjs
 
+      - name: Export gate results
+        id: results
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "test=$(cat quality-test.exit 2>/dev/null)"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload quality reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: quality-reports
-          path: |
-            quality-build.log
-            quality-build.exit
-            quality-test.log
-            quality-test.exit
-            quality-typecheck.log
-            quality-typecheck.exit
-            quality-lint.log
-            quality-lint.exit
-            quality-format.log
-            quality-format.exit
-            quality-typecheck-middleware.log
-            quality-typecheck-middleware.exit
-            quality-typecheck-deno.log
-            quality-typecheck-deno.exit
-            quality-vitest-report.json
-            quality-npm-audit-report.json
-            quality-issues-payload.json
-            quality-depcruise.log
-            quality-depcruise.exit
-            quality-depcruise.count
-            quality-typecheck-deno.count
-            quality-npm-audit.count
-            quality-lint-warnings.count
-            quality-bundle-size.log
-            quality-bundle-size.exit
-            quality-test-server.log
-            quality-test-server.exit
+          name: quality-reports-vitest
+          path: quality-*
+          if-no-files-found: ignore
+
+  backend-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      server_cov: ${{ steps.results.outputs.server_cov }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # .nvmrc is the one place the PR gates' Node version is set.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend coverage (per-layer floor)
+        # Stage A / F4. The SPA Vitest step above excludes
+        # src/supabase/functions/** from coverage, so the ~136K-line Deno
+        # backend — auth decisions, client PII, e-signatures — had NO coverage
+        # measurement at all, and the single blended "~31%" described the SPA
+        # only. This measures and floors the backend separately, so the two
+        # layers are reported as two numbers.
+        #
+        # First honest measurement (2026-08-21): statements 13.43%,
+        # branches 9.38%, functions 12.88%, lines 13.79%. Floors sit just below
+        # in quality/vitest.config.server.ts and ratchet UP as backend tests land.
+        shell: bash
+        run: |
+          set +e
+          npm run test:coverage:server 2>&1 | tee quality-test-server.log
+          echo "${PIPESTATUS[0]}" > quality-test-server.exit
+          exit 0
+
+      - name: Export gate results
+        id: results
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "server_cov=$(cat quality-test-server.exit 2>/dev/null)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-reports-backend
+          path: quality-*
+          if-no-files-found: ignore
+
+  quality-check:
+    # The required check. Runs even when a gate job failed, so a red gate
+    # reports here as a failure rather than as a skipped check.
+    needs: [static-checks, vitest, backend-coverage]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Collect gate results
+        shell: bash
+        env:
+          BUILD: ${{ needs.static-checks.outputs.build }}
+          TYPECHECK: ${{ needs.static-checks.outputs.typecheck }}
+          LINT: ${{ needs.static-checks.outputs.lint }}
+          LINT_WARNINGS: ${{ needs.static-checks.outputs.lint_warnings }}
+          FORMAT: ${{ needs.static-checks.outputs.format }}
+          MW: ${{ needs.static-checks.outputs.mw }}
+          DENO: ${{ needs.static-checks.outputs.deno }}
+          DENO_COUNT: ${{ needs.static-checks.outputs.deno_count }}
+          DEPCRUISE: ${{ needs.static-checks.outputs.depcruise }}
+          DEPCRUISE_COUNT: ${{ needs.static-checks.outputs.depcruise_count }}
+          BUNDLE: ${{ needs.static-checks.outputs.bundle }}
+          AUDIT_COUNT: ${{ needs.static-checks.outputs.audit_count }}
+          TEST: ${{ needs.vitest.outputs.test }}
+          SERVER_COV: ${{ needs.backend-coverage.outputs.server_cov }}
+        run: |
+          printf '%s\n' "$BUILD" > quality-build.exit
+          printf '%s\n' "$TYPECHECK" > quality-typecheck.exit
+          printf '%s\n' "$LINT" > quality-lint.exit
+          printf '%s\n' "$LINT_WARNINGS" > quality-lint-warnings.count
+          printf '%s\n' "$FORMAT" > quality-format.exit
+          printf '%s\n' "$MW" > quality-typecheck-middleware.exit
+          printf '%s\n' "$DENO" > quality-typecheck-deno.exit
+          printf '%s\n' "$DENO_COUNT" > quality-typecheck-deno.count
+          printf '%s\n' "$DEPCRUISE" > quality-depcruise.exit
+          printf '%s\n' "$DEPCRUISE_COUNT" > quality-depcruise.count
+          printf '%s\n' "$BUNDLE" > quality-bundle-size.exit
+          printf '%s\n' "$AUDIT_COUNT" > quality-npm-audit.count
+          printf '%s\n' "$TEST" > quality-test.exit
+          printf '%s\n' "$SERVER_COV" > quality-test-server.exit
 
       - name: Enforce quality gates
         # Runs last so the dashboard snapshot is published and artifacts are
@@ -501,3 +712,26 @@ jobs:
             exit 1
           fi
           echo "Quality gates passed."
+
+      - name: Fail if a gate job itself failed
+        # The exit codes above cover every gate. A gate job can still fail on a
+        # step that is not a gate (the issue-snapshot publish, an artifact
+        # upload, an install that died before any export). In the single-job
+        # layout any such failure failed the required check, so it still does.
+        if: always()
+        shell: bash
+        env:
+          STATIC_CHECKS_RESULT: ${{ needs.static-checks.result }}
+          VITEST_RESULT: ${{ needs.vitest.result }}
+          BACKEND_COVERAGE_RESULT: ${{ needs.backend-coverage.result }}
+        run: |
+          failed=0
+          for pair in "static-checks:$STATIC_CHECKS_RESULT" "vitest:$VITEST_RESULT" "backend-coverage:$BACKEND_COVERAGE_RESULT"; do
+            job="${pair%%:*}"
+            result="${pair#*:}"
+            if [ "$result" != "success" ]; then
+              echo "::error::Gate job $job finished '$result', so the required check fails with it."
+              failed=1
+            fi
+          done
+          exit "$failed"
