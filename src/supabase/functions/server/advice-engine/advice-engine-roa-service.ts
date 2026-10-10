@@ -830,36 +830,34 @@ export class AdviceEngineRoAService {
     return records
       .map((record) => asRecord(record))
       .filter((record) => readString(record.id) && readString(record.fileName))
-      .map(
-        (record): RoAClientFileEntry => ({
-          id: readString(record.id),
-          clientId,
-          itemType: readString(record.itemType) === 'evidence' ? 'evidence' : 'generated-document',
-          title: readString(record.title, record.fileName),
-          fileName: readString(record.fileName),
-          contentType: readString(record.contentType) || undefined,
-          fileSize: typeof record.fileSize === 'number' ? record.fileSize : undefined,
-          draftId: readString(record.draftId) || undefined,
-          moduleId: readString(record.moduleId) || undefined,
-          requirementId: readString(record.requirementId) || undefined,
-          storagePath: readString(record.storagePath) || undefined,
-          sha256: readString(record.sha256) || undefined,
-          source: readString(record.source) || undefined,
-          createdAt: readString(record.createdAt) || new Date(0).toISOString(),
-          documentStatus:
-            readString(record.documentStatus) === 'final'
-              ? 'final'
-              : readString(record.documentStatus) === 'draft'
-                ? 'draft'
-                : undefined,
-          format:
-            readString(record.format) === 'docx'
-              ? 'docx'
-              : readString(record.format) === 'pdf'
-                ? 'pdf'
-                : undefined,
-        }),
-      )
+      .map((record): RoAClientFileEntry => ({
+        id: readString(record.id),
+        clientId,
+        itemType: readString(record.itemType) === 'evidence' ? 'evidence' : 'generated-document',
+        title: readString(record.title, record.fileName),
+        fileName: readString(record.fileName),
+        contentType: readString(record.contentType) || undefined,
+        fileSize: typeof record.fileSize === 'number' ? record.fileSize : undefined,
+        draftId: readString(record.draftId) || undefined,
+        moduleId: readString(record.moduleId) || undefined,
+        requirementId: readString(record.requirementId) || undefined,
+        storagePath: readString(record.storagePath) || undefined,
+        sha256: readString(record.sha256) || undefined,
+        source: readString(record.source) || undefined,
+        createdAt: readString(record.createdAt) || new Date(0).toISOString(),
+        documentStatus:
+          readString(record.documentStatus) === 'final'
+            ? 'final'
+            : readString(record.documentStatus) === 'draft'
+              ? 'draft'
+              : undefined,
+        format:
+          readString(record.format) === 'docx'
+            ? 'docx'
+            : readString(record.format) === 'pdf'
+              ? 'pdf'
+              : undefined,
+      }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 

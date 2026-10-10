@@ -7,7 +7,7 @@
  * Values are validated against the product structure later, per field.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import {
   PORTFOLIO_MAX_ROWS,
   normalisePortfolioAgentName,

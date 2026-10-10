@@ -10,7 +10,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Alert, AlertDescription } from '../../../../ui/alert';
@@ -55,26 +55,24 @@ export function Step3ManualAdjustment({
     premiumEscalation: 0.06,
   };
 
-  // Helper to handle percentage inputs
-  const handlePercentChange = (field: keyof RetirementFNAAdjustments, value: string) => {
-    const num = parseFloat(value);
-    if (!isNaN(num) && num >= 0 && num <= 100) {
-      setAdjustments((prev) => ({ ...prev, [field]: num / 100 }));
+  // Percentages are typed as 6.5 and stored as 0.065.
+  const handlePercentChange = (field: keyof RetirementFNAAdjustments, value?: number) => {
+    if (value !== undefined && value >= 0 && value <= 100) {
+      setAdjustments((prev) => ({ ...prev, [field]: value / 100 }));
       setHasChanges(true);
     }
   };
 
-  const handleNumberChange = (field: keyof RetirementFNAAdjustments, value: string) => {
-    const num = parseInt(value);
-    if (!isNaN(num) && num > 0) {
-      setAdjustments((prev) => ({ ...prev, [field]: num }));
+  const handleNumberChange = (field: keyof RetirementFNAAdjustments, value?: number) => {
+    if (value !== undefined && value > 0) {
+      setAdjustments((prev) => ({ ...prev, [field]: value }));
       setHasChanges(true);
     }
   };
 
   const getPercent = (field: keyof RetirementFNAAdjustments, fallback: number) => {
     const val = adjustments[field] !== undefined ? adjustments[field] : fallback;
-    return (Number(val) * 100).toFixed(1);
+    return Math.round(Number(val) * 10000) / 100;
   };
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -116,14 +114,11 @@ export function Step3ManualAdjustment({
                 Inflation Rate (CPI)
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="inflationRate"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="20"
+                  decimals={2}
                   value={getPercent('inflationRate', STANDARD_ASSUMPTIONS.inflationRate)}
-                  onChange={(e) => handlePercentChange('inflationRate', e.target.value)}
+                  onValueChange={(v) => handlePercentChange('inflationRate', v)}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -140,17 +135,14 @@ export function Step3ManualAdjustment({
                 Pre-Retirement Growth (Nominal)
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="preRetirementReturn"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="30"
+                  decimals={2}
                   value={getPercent(
                     'preRetirementReturn',
                     STANDARD_ASSUMPTIONS.preRetirementReturn,
                   )}
-                  onChange={(e) => handlePercentChange('preRetirementReturn', e.target.value)}
+                  onValueChange={(v) => handlePercentChange('preRetirementReturn', v)}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -167,17 +159,14 @@ export function Step3ManualAdjustment({
                 Post-Retirement Growth (Nominal)
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="postRetirementReturn"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="30"
+                  decimals={2}
                   value={getPercent(
                     'postRetirementReturn',
                     STANDARD_ASSUMPTIONS.postRetirementReturn,
                   )}
-                  onChange={(e) => handlePercentChange('postRetirementReturn', e.target.value)}
+                  onValueChange={(v) => handlePercentChange('postRetirementReturn', v)}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -194,14 +183,10 @@ export function Step3ManualAdjustment({
                 Income Replacement Ratio
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="replacementRatio"
-                  type="number"
-                  step="1"
-                  min="0"
-                  max="100"
                   value={getPercent('replacementRatio', STANDARD_ASSUMPTIONS.replacementRatio)}
-                  onChange={(e) => handlePercentChange('replacementRatio', e.target.value)}
+                  onValueChange={(v) => handlePercentChange('replacementRatio', v)}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -218,14 +203,11 @@ export function Step3ManualAdjustment({
                 Premium Escalation (Annual)
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="premiumEscalation"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="20"
+                  decimals={2}
                   value={getPercent('premiumEscalation', STANDARD_ASSUMPTIONS.premiumEscalation)}
-                  onChange={(e) => handlePercentChange('premiumEscalation', e.target.value)}
+                  onValueChange={(v) => handlePercentChange('premiumEscalation', v)}
                   className="pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -250,14 +232,11 @@ export function Step3ManualAdjustment({
                     <Label htmlFor="retirementAge" className="font-medium">
                       Target Retirement Age
                     </Label>
-                    <Input
+                    <NumberInputField
                       id="retirementAge"
-                      type="number"
-                      min="50"
-                      max="100"
                       placeholder="Use default from Step 1"
-                      value={adjustments.retirementAge || ''}
-                      onChange={(e) => handleNumberChange('retirementAge', e.target.value)}
+                      value={adjustments.retirementAge}
+                      onValueChange={(v) => handleNumberChange('retirementAge', v)}
                     />
                     <p className="text-xs text-muted-foreground">
                       Original plan: {inputs.retirementAge || 65} years
@@ -268,15 +247,12 @@ export function Step3ManualAdjustment({
                     <Label htmlFor="yearsInRetirement" className="font-medium">
                       Years in Retirement
                     </Label>
-                    <Input
+                    <NumberInputField
                       id="yearsInRetirement"
-                      type="number"
-                      min="10"
-                      max="50"
                       value={
                         adjustments.yearsInRetirement || STANDARD_ASSUMPTIONS.yearsInRetirement
                       }
-                      onChange={(e) => handleNumberChange('yearsInRetirement', e.target.value)}
+                      onValueChange={(v) => handleNumberChange('yearsInRetirement', v)}
                     />
                     <p className="text-xs text-muted-foreground">
                       Standard: {STANDARD_ASSUMPTIONS.yearsInRetirement} years

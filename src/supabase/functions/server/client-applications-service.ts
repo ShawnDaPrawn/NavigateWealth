@@ -35,13 +35,7 @@ const log = createModuleLogger('client-applications-service');
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type ApplicationLifecycleStatus =
-  | 'draft'
-  | 'in_progress'
-  | 'submitted'
-  | 'under_review'
-  | 'approved'
-  | 'declined'
-  | 'invited';
+  'draft' | 'in_progress' | 'submitted' | 'under_review' | 'approved' | 'declined' | 'invited';
 
 export interface CompletedBy {
   type: 'client' | 'admin';

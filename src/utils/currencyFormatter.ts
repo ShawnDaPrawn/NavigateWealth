@@ -136,3 +136,119 @@ export function cleanCurrencyInput(value: string | number | undefined | null): s
 
   return stringValue.replace(/[R\s,]/g, '');
 }
+
+// ── Typing into an amount field ──────────────────────────────────────────────
+//
+// The rules every currency (and numeric) input applies keystroke by keystroke,
+// so an amount looks the same while it is typed as when it is displayed:
+//
+//   - digits only, with a comma between every three digits of the rands;
+//   - one "." starts the cents, at most `decimals` digits after it;
+//   - no leading zeros: typing 265 into an empty or zero field gives 265, never
+//     0265, and "." on its own becomes "0.";
+//   - a leading "-" only where the field allows negative numbers.
+
+export interface AmountTypingOptions {
+  /** Digits allowed after the decimal point. 0 = whole numbers only. */
+  decimals?: number;
+  /** Comma between every three integer digits. */
+  grouping?: boolean;
+  /** Longest integer part accepted (keeps values inside float precision). */
+  maxIntegerDigits?: number;
+  /** Accept a leading "-". */
+  allowNegative?: boolean;
+}
+
+const DEFAULT_TYPING: Required<AmountTypingOptions> = {
+  decimals: 2,
+  grouping: true,
+  maxIntegerDigits: 13,
+  allowNegative: false,
+};
+
+function groupThousands(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * Formats what has been typed into an amount field.
+ * "0265" → "265" · "1234567.891" → "1,234,567.89" · "." → "0." · "12a3" → "123"
+ */
+export function formatAmountWhileTyping(input: string, options: AmountTypingOptions = {}): string {
+  const { decimals, grouping, maxIntegerDigits, allowNegative } = { ...DEFAULT_TYPING, ...options };
+  const sign = allowNegative && input.trimStart().startsWith('-') ? '-' : '';
+  const kept = input.replace(decimals > 0 ? /[^\d.]/g : /\D/g, '');
+  const dot = kept.indexOf('.');
+  let integer = (dot === -1 ? kept : kept.slice(0, dot)).replace(/^0+(?=\d)/, '');
+  integer = integer.slice(0, maxIntegerDigits);
+  if (dot === -1) return sign + (grouping ? groupThousands(integer) : integer);
+  const fraction = kept
+    .slice(dot + 1)
+    .replace(/\./g, '')
+    .slice(0, decimals);
+  return `${sign}${grouping ? groupThousands(integer || '0') : integer || '0'}.${fraction}`;
+}
+
+/** The number in a typed amount, or undefined while nothing has been typed. */
+export function parseTypedAmount(formatted: string): number | undefined {
+  const raw = formatted.replace(/,/g, '');
+  if (raw === '' || raw === '.' || raw === '-' || raw === '-.') return undefined;
+  const parsed = parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/** A stored value (number or numeric string) as the field shows it. */
+export function formatStoredAmount(
+  value: number | string | null | undefined,
+  options: AmountTypingOptions & { hideZero?: boolean; padDecimals?: boolean } = {},
+): string {
+  if (value === undefined || value === null || value === '') return '';
+  const decimals = options.decimals ?? DEFAULT_TYPING.decimals;
+  const parsed =
+    typeof value === 'number' ? value : parseFloat(String(value).replace(/[R\s,]/g, ''));
+  if (!Number.isFinite(parsed) || (parsed < 0 && !options.allowNegative)) return '';
+  if (parsed === 0 && options.hideZero) return '';
+  // Round first so float noise (0.1 + 0.2) never reaches the field.
+  const factor = 10 ** decimals;
+  const rounded = Math.round(parsed * factor) / factor;
+  return finishTypedAmount(formatAmountWhileTyping(String(rounded), options), {
+    decimals,
+    padDecimals: options.padDecimals,
+  });
+}
+
+/**
+ * Tidies an amount: a trailing "." or a lone "-" goes, and with `padDecimals`
+ * a started cents part is completed ("1,234.5" → "1,234.50"). Whole amounts
+ * stay whole.
+ */
+export function finishTypedAmount(
+  formatted: string,
+  {
+    decimals = DEFAULT_TYPING.decimals,
+    padDecimals = false,
+  }: AmountTypingOptions & {
+    padDecimals?: boolean;
+  } = {},
+): string {
+  if (formatted.endsWith('.')) formatted = formatted.slice(0, -1);
+  if (formatted === '-') return '';
+  const dot = formatted.indexOf('.');
+  if (!padDecimals || dot === -1) return formatted;
+  return formatted.padEnd(dot + 1 + decimals, '0');
+}
+
+/** How many digits, points and signs `text` contains — what a caret position means. */
+export function countAmountCharacters(text: string): number {
+  return text.replace(/[^\d.-]/g, '').length;
+}
+
+/** The caret position in `formatted` just after its first `count` digits/points. */
+export function caretAfterAmountCharacters(formatted: string, count: number): number {
+  if (count <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (formatted[i] !== ',' && ++seen === count) return i + 1;
+  }
+  return formatted.length;
+}

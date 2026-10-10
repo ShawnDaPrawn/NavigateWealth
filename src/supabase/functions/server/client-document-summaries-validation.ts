@@ -4,7 +4,7 @@
  * Every body-accepting route in this module validates through one of these.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 /**
  * POST /client-document-summaries/:clientId/generate

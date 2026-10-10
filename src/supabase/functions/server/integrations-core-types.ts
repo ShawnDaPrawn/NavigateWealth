@@ -63,12 +63,7 @@ export interface IntegrationProvider {
 
 export type SyncMatchStatus = 'matched' | 'unmatched' | 'duplicate' | 'invalid';
 export type SyncPublishStatus =
-  | 'pending'
-  | 'auto_eligible'
-  | 'held'
-  | 'published'
-  | 'skipped'
-  | 'failed';
+  'pending' | 'auto_eligible' | 'held' | 'published' | 'skipped' | 'failed';
 export type SyncRunStatus = 'staged' | 'published' | 'partially_published' | 'failed';
 
 export interface SyncDiff {

@@ -5,7 +5,7 @@
  * Includes "Immune System" runtime validation using Zod
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { APIError } from './error.middleware.ts';

@@ -4,7 +4,7 @@
  * Common regex patterns, validation functions, and sanitization helpers.
  */
 
-import { ZodError } from 'npm:zod';
+import { ZodError } from 'npm:zod@4.6.5';
 
 // ============================================================================
 // REGEX PATTERNS

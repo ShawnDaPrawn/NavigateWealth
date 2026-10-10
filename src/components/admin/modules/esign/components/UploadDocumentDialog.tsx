@@ -15,6 +15,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Upload, FileText, X, AlertCircle, Loader2 } from 'lucide-react';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
@@ -289,13 +290,10 @@ export function UploadDocumentDialog({
           {/* Expiry Days */}
           <div className="space-y-2">
             <Label htmlFor="expiryDays">Expires After (Days)</Label>
-            <Input
+            <NumberInputField
               id="expiryDays"
-              type="number"
-              min={1}
-              max={365}
               value={expiryDays}
-              onChange={(e) => setExpiryDays(parseInt(e.target.value) || 30)}
+              onValueChange={(v) => setExpiryDays(v || 30)}
               className={errors.expiryDays ? 'border-red-300' : ''}
             />
             {errors.expiryDays && (

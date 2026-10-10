@@ -189,8 +189,7 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
     const dateOfBirth = (profile.dateOfBirth || pi.dateOfBirth) as string | undefined;
     const occupation = (profile.occupation || ei.occupation) as string | undefined;
     const employmentStatus = (profile.employmentStatus || ei.employmentStatus) as
-      | string
-      | undefined;
+      string | undefined;
     const grossIncome = (profile.grossIncome || pi.grossIncome) as number | undefined;
     const netIncome = (profile.netIncome || pi.netIncome) as number | undefined;
     const netWorth = (profile.netWorth || fi.netWorth) as number | undefined;

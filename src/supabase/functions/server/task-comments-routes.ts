@@ -1,5 +1,5 @@
 import { Hono } from 'npm:hono';
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import { createModuleLogger } from './stderr-logger.ts';
 import { asyncHandler } from './error.middleware.ts';
 import { requireAdmin } from './auth-mw.ts';

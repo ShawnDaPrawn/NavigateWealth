@@ -76,6 +76,22 @@ export const TaxPlanningFnaAPI = {
   },
 
   /**
+   * Get one Tax Planning session by id
+   */
+  async getSessionById(sessionId: string): Promise<FinalTaxPlan> {
+    logger.debug('[TaxPlanningFnaAPI] Fetching session', { sessionId });
+    try {
+      const response = await api.get<{ success: boolean; data: FinalTaxPlan }>(
+        `/tax-planning-fna/${sessionId}`,
+      );
+      return response.data;
+    } catch (error) {
+      logger.error('Failed to fetch Tax Planning session', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get latest published Tax Planning session
    */
   async getLatestPublished(clientId: string): Promise<FinalTaxPlan | null> {

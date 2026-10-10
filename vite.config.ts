@@ -245,6 +245,15 @@ const SCOPE_CHUNKS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 function getManualChunk(id: string): string | undefined {
+  // Vite's preload helper is imported by every chunk that lazy-loads anything,
+  // and Rollup otherwise hoists it into whichever chunk it meets first. Once
+  // @zip.js/zip.js (2.23) started using import(), that was vendor-docx, so the
+  // entry imported 527 KB of Word export just to get this helper. vendor-react
+  // is eager anyway, so the helper costs nothing there.
+  if (id.includes('vite/preload-helper')) {
+    return 'vendor-react';
+  }
+
   const packageName = packageNameFromId(id);
   if (!packageName) {
     return undefined;

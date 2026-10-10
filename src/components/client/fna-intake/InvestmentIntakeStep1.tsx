@@ -5,6 +5,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { CurrencyInputField } from '@/components/ui/currency-input';
+import { NumberInputField } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import {
@@ -136,25 +138,19 @@ export function InvestmentIntakeStep1({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Target amount (R)</Label>
-                  <Input
-                    type="number"
+                  <Label>Target amount</Label>
+                  <CurrencyInputField
                     disabled={readOnly}
-                    value={goal.targetAmount || ''}
-                    onChange={(e) =>
-                      updateGoal(index, { targetAmount: Number(e.target.value) || 0 })
-                    }
+                    value={goal.targetAmount}
+                    onValueChange={(v) => updateGoal(index, { targetAmount: v ?? 0 })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Monthly contribution (R)</Label>
-                  <Input
-                    type="number"
+                  <Label>Monthly contribution</Label>
+                  <CurrencyInputField
                     disabled={readOnly}
-                    value={goal.monthlyContribution || ''}
-                    onChange={(e) =>
-                      updateGoal(index, { monthlyContribution: Number(e.target.value) || 0 })
-                    }
+                    value={goal.monthlyContribution}
+                    onValueChange={(v) => updateGoal(index, { monthlyContribution: v ?? 0 })}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -209,8 +205,7 @@ export function InvestmentIntakeStep1({
           </div>
           <div className="space-y-1.5">
             <Label>Investment time horizon (years)</Label>
-            <Input
-              type="number"
+            <NumberInputField
               disabled={readOnly}
               value={horizonYears}
               onChange={(e) => setHorizonYears(e.target.value)}

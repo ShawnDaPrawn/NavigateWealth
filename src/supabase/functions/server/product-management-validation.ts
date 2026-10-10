@@ -4,7 +4,7 @@
  * P1 — Zod validation for product-management-routes.ts
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const CreateProviderSchema = z
   .object({

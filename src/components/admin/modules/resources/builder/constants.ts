@@ -758,13 +758,7 @@ export const VALIDATION_RULE_PRESETS: Record<string, { label: string; rules: Val
 // ============================================================================
 
 export type ConditionOperator =
-  | 'equals'
-  | 'not_equals'
-  | 'contains'
-  | 'not_empty'
-  | 'is_empty'
-  | 'greater_than'
-  | 'less_than';
+  'equals' | 'not_equals' | 'contains' | 'not_empty' | 'is_empty' | 'greater_than' | 'less_than';
 
 export interface VisibilityCondition {
   /** The field key to evaluate */

@@ -28,6 +28,8 @@ export interface IntakeHandoffState {
 interface IntakeWizardHandoffProps {
   handoff: IntakeHandoffState | null;
   onClose: () => void;
+  /** Called with the published FNA's id, so the caller can land on it. */
+  onFNAComplete?: (fnaId: string, handoff: IntakeHandoffState) => void;
 }
 
 const WIZARDS: Record<FnaIntakeDomain, ComponentType<FNAWizardProps>> = {
@@ -48,7 +50,7 @@ function WizardFallback() {
   );
 }
 
-export function IntakeWizardHandoff({ handoff, onClose }: IntakeWizardHandoffProps) {
+export function IntakeWizardHandoff({ handoff, onClose, onFNAComplete }: IntakeWizardHandoffProps) {
   if (!handoff) return null;
 
   const { clientId, clientName, domain, inputs, initialStep } = handoff;
@@ -63,6 +65,7 @@ export function IntakeWizardHandoff({ handoff, onClose }: IntakeWizardHandoffPro
         clientName={clientName}
         startAtStep={initialStep}
         intakePrefill={inputs}
+        onFNAComplete={(fnaId) => onFNAComplete?.(fnaId, handoff)}
       />
     </Suspense>
   );

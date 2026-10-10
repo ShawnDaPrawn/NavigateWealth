@@ -38,11 +38,7 @@ export interface ArticleFilters {
  * Sort options for articles
  */
 export type ArticleSortField =
-  | 'created_at'
-  | 'updated_at'
-  | 'published_at'
-  | 'title'
-  | 'view_count';
+  'created_at' | 'updated_at' | 'published_at' | 'title' | 'view_count';
 
 export type ArticleSortOrder = 'asc' | 'desc';
 

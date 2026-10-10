@@ -1,11 +1,18 @@
 /**
  * QuoteFormFields — Renders product-specific form fields from config.
+ *
+ * 'number' fields are NumberInputField; 'currency' fields are
+ * CurrencyInputField and store the amount comma-grouped ("45,000"), like the
+ * quote wizards do.
  */
 
 import { Input } from '../../../ui/input';
+import { NumberInputField } from '../../../ui/number-input';
+import { CurrencyInputField } from '../../../ui/currency-input';
 import { Label } from '../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import type { QuoteFormField } from '../types';
+import { formatAmountInput } from './wizard/amountInput';
 
 interface QuoteFormFieldsProps {
   fields: QuoteFormField[];
@@ -38,11 +45,28 @@ export function QuoteFormFields({ fields, values, onChange }: QuoteFormFieldsPro
                 ))}
               </SelectContent>
             </Select>
+          ) : field.type === 'currency' ? (
+            <CurrencyInputField
+              id={field.id}
+              placeholder={field.placeholder}
+              value={values[field.id] || ''}
+              onChange={(e) => onChange(field.id, formatAmountInput(e.target.value))}
+              required={field.required}
+              className="bg-white border-gray-300 h-11"
+            />
+          ) : field.type === 'number' ? (
+            <NumberInputField
+              id={field.id}
+              placeholder={field.placeholder}
+              value={values[field.id] || ''}
+              onChange={(e) => onChange(field.id, e.target.value)}
+              required={field.required}
+              className="bg-white border-gray-300 h-11"
+            />
           ) : (
             <Input
               id={field.id}
-              type={field.type === 'number' ? 'text' : field.type}
-              inputMode={field.type === 'number' ? 'numeric' : undefined}
+              type={field.type}
               placeholder={field.placeholder}
               value={values[field.id] || ''}
               onChange={(e) => onChange(field.id, e.target.value)}

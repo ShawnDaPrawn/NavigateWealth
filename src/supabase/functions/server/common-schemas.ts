@@ -8,7 +8,7 @@
  * Phase 3 - Increment 3.1
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 import {
   EMAIL_REGEX,
   SA_PHONE_REGEX,

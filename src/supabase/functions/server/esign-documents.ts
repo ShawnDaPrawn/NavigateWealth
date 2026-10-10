@@ -38,8 +38,7 @@ export async function getEnvelopeDocuments(
   envelope: EsignEnvelope,
 ): Promise<EsignEnvelopeDocumentRef[]> {
   const stored = (await kv.get(EsignKeys.envelopeDocuments(envelope.id))) as
-    | EsignEnvelopeDocumentRef[]
-    | null;
+    EsignEnvelopeDocumentRef[] | null;
   if (Array.isArray(stored) && stored.length > 0) {
     return [...stored].sort((a, b) => a.order - b.order);
   }

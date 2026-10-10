@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { CurrencyInputField } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import {
@@ -119,7 +120,7 @@ export function EstateIntakeStep1({
         </CardHeader>
         <CardContent className="space-y-3">
           {assets.map((asset, index) => (
-            <div key={asset.id} className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
+            <div key={asset.id} className="grid gap-2 md:grid-cols-[1fr_180px_auto]">
               <Input
                 disabled={readOnly}
                 placeholder="Description (e.g. Primary residence)"
@@ -130,16 +131,13 @@ export function EstateIntakeStep1({
                   )
                 }
               />
-              <Input
-                type="number"
+              <CurrencyInputField
                 disabled={readOnly}
-                placeholder="Value (R)"
-                value={asset.value || ''}
-                onChange={(e) =>
+                aria-label="Asset value"
+                value={asset.value}
+                onValueChange={(v) =>
                   setAssets((prev) =>
-                    prev.map((a, i) =>
-                      i === index ? { ...a, value: Number(e.target.value) || 0 } : a,
-                    ),
+                    prev.map((a, i) => (i === index ? { ...a, value: v ?? 0 } : a)),
                   )
                 }
               />
@@ -175,7 +173,7 @@ export function EstateIntakeStep1({
         </CardHeader>
         <CardContent className="space-y-3">
           {liabilities.map((liability, index) => (
-            <div key={liability.id} className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
+            <div key={liability.id} className="grid gap-2 md:grid-cols-[1fr_180px_auto]">
               <Input
                 disabled={readOnly}
                 placeholder="Description (e.g. Home loan)"
@@ -186,16 +184,13 @@ export function EstateIntakeStep1({
                   )
                 }
               />
-              <Input
-                type="number"
+              <CurrencyInputField
                 disabled={readOnly}
-                placeholder="Balance (R)"
-                value={liability.value || ''}
-                onChange={(e) =>
+                aria-label="Outstanding balance"
+                value={liability.value}
+                onValueChange={(v) =>
                   setLiabilities((prev) =>
-                    prev.map((l, i) =>
-                      i === index ? { ...l, value: Number(e.target.value) || 0 } : l,
-                    ),
+                    prev.map((l, i) => (i === index ? { ...l, value: v ?? 0 } : l)),
                   )
                 }
               />

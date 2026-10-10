@@ -559,8 +559,11 @@ export function calculatePortfolioSummary(goalResults: GoalResult[]) {
 }
 
 /**
- * Format currency
+ * A whole-rand amount with comma thousands, without the "R" (callers add it):
+ * 2000000 → "2,000,000". Formatted by hand because en-ZA gives spaces in Deno.
  */
 export function formatCurrency(amount: number): string {
-  return Math.round(amount).toLocaleString('en-ZA');
+  return Math.round(amount)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }

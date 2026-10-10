@@ -76,12 +76,7 @@ export interface Article {
   notify_on_publish?: boolean; // New field to control email notifications on publish
   /** Optional press category — when set, the article appears on the public Press page */
   press_category?:
-    | 'company_news'
-    | 'product_launch'
-    | 'awards'
-    | 'team_news'
-    | 'industry_insights'
-    | null;
+    'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
 }
 
 export const PUBLICATIONS_CRON_AUTH_KEY = 'system:publications:cron_auth_token';

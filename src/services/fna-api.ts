@@ -446,12 +446,7 @@ export interface InvestmentINA extends FNABase {
 // ==================== UNION TYPE ====================
 
 export type AnyFNA =
-  | RiskPlanningFNA
-  | MedicalFNA
-  | RetirementFNA
-  | InvestmentINA
-  | TaxPlanningFNA
-  | EstatePlanningFNA;
+  RiskPlanningFNA | MedicalFNA | RetirementFNA | InvestmentINA | TaxPlanningFNA | EstatePlanningFNA;
 
 // ==================== API FUNCTIONS ====================
 

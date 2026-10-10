@@ -30,13 +30,7 @@
  * The admin sees it as "stopped" with the provider's message and a Retry.
  */
 export type NewsletterCampaignStatus =
-  | 'draft'
-  | 'scheduled'
-  | 'queued'
-  | 'sending'
-  | 'paused'
-  | 'finished'
-  | 'cancelled';
+  'draft' | 'scheduled' | 'queued' | 'sending' | 'paused' | 'finished' | 'cancelled';
 
 /** Statuses the processor is allowed to pick up. */
 export const ACTIVE_CAMPAIGN_STATUSES: NewsletterCampaignStatus[] = ['queued', 'sending'];
@@ -196,11 +190,7 @@ export interface NewsletterCampaignAudience {
 }
 
 export type NewsletterDeliveryStatus =
-  | 'pending'
-  | 'sending'
-  | 'sent'
-  | 'failed_retryable'
-  | 'failed_terminal';
+  'pending' | 'sending' | 'sent' | 'failed_retryable' | 'failed_terminal';
 
 export interface NewsletterRecipientClick {
   linkId: string;

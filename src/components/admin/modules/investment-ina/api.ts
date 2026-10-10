@@ -109,11 +109,14 @@ export const InvestmentINAFnaAPI = {
   /**
    * Get specific INA session by ID
    */
-  async getSessionById(sessionId: string): Promise<InvestmentINASession> {
+  async getSessionById(sessionId: string, clientId?: string): Promise<InvestmentINASession> {
     logger.debug('[InvestmentINAFnaAPI] Fetching session', { sessionId });
     try {
+      // `clientId` lets the server find a session whose id does not encode its
+      // client (one created from a client intake).
+      const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
       const response = await api.get<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}`,
+        `/ina/investment/session/${sessionId}${query}`,
       );
       return response.data;
     } catch (error) {

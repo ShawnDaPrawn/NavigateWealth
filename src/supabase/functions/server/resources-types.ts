@@ -61,10 +61,7 @@ export type LegalDocumentLifecycleStatus = 'draft' | 'published' | 'archived';
 export type LegalDocumentRenderMode = 'legacy_resource' | 'versioned_document';
 export type LegalDocumentContentFormat = 'legacy_blocks' | 'normalized_rich_text';
 export type LegalDocumentSection =
-  | 'legal-notices'
-  | 'privacy-data-protection'
-  | 'regulatory-disclosures'
-  | 'other';
+  'legal-notices' | 'privacy-data-protection' | 'regulatory-disclosures' | 'other';
 
 export interface LegalDocumentDefinition {
   id: string;

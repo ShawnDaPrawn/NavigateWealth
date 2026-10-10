@@ -20,13 +20,7 @@ export type ViewMode = 'list' | 'wizard-upload' | 'wizard-recipients' | 'prepare
 
 /** Logical status groups for the filter dropdown */
 export type StatusFilter =
-  | 'all'
-  | 'draft'
-  | 'pending'
-  | 'completed'
-  | 'rejected'
-  | 'expired'
-  | 'voided';
+  'all' | 'draft' | 'pending' | 'completed' | 'rejected' | 'expired' | 'voided';
 
 export const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All Statuses' },

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import {
   Select,
@@ -14,7 +13,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { TaxPlanningInputs } from '../types';
 import { ArrowRight, Info, User, Wallet, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
+import { CurrencyInputField } from '../../../../ui/currency-input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { useFormPrefill } from '../../form-prefill';
 import { FNAStepNavigation } from '../../fna';
 
@@ -79,18 +79,6 @@ export function Step1InputForm({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNumberChange = (field: keyof TaxPlanningInputs, value: string) => {
-    const num = parseFloat(value);
-    handleChange(field, isNaN(num) ? 0 : num);
-  };
-
-  const handleCurrencyChange = (field: keyof TaxPlanningInputs, value: string) => {
-    // Parse the string value back to a number for state
-    const cleanValue = cleanCurrencyInput(value);
-    const numericValue = cleanValue ? parseFloat(cleanValue) : 0;
-    handleChange(field, numericValue);
-  };
-
   const handleSubmit = () => {
     // Basic Validation
     if (formData.age < 0 || formData.age > 120) {
@@ -150,10 +138,9 @@ export function Step1InputForm({
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
               <div className="space-y-2">
                 <Label>Age (Years)</Label>
-                <Input
-                  type="number"
+                <NumberInputField
                   value={formData.age}
-                  onChange={(e) => handleNumberChange('age', e.target.value)}
+                  onValueChange={(v) => handleChange('age', v ?? 0)}
                 />
               </div>
 
@@ -195,10 +182,9 @@ export function Step1InputForm({
 
               <div className="space-y-2">
                 <Label>Medical Scheme Members</Label>
-                <Input
-                  type="number"
+                <NumberInputField
                   value={formData.medicalSchemeMembers}
-                  onChange={(e) => handleNumberChange('medicalSchemeMembers', e.target.value)}
+                  onValueChange={(v) => handleChange('medicalSchemeMembers', v ?? 0)}
                 />
               </div>
             </CardContent>
@@ -219,45 +205,40 @@ export function Step1InputForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Employment Income</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.employmentIncome)}
-                    onChange={(e) => handleCurrencyChange('employmentIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.employmentIncome}
+                    onValueChange={(v) => handleChange('employmentIncome', v ?? 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Variable (Bonus/Comm)</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.variableIncome)}
-                    onChange={(e) => handleCurrencyChange('variableIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.variableIncome}
+                    onValueChange={(v) => handleChange('variableIncome', v ?? 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Business / Director Fees</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.businessIncome)}
-                    onChange={(e) => handleCurrencyChange('businessIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.businessIncome}
+                    onValueChange={(v) => handleChange('businessIncome', v ?? 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Rental Income (Profit)</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.rentalIncome)}
-                    onChange={(e) => handleCurrencyChange('rentalIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.rentalIncome}
+                    onValueChange={(v) => handleChange('rentalIncome', v ?? 0)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Foreign Income</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.foreignIncome)}
-                    onChange={(e) => handleCurrencyChange('foreignIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.foreignIncome}
+                    onValueChange={(v) => handleChange('foreignIncome', v ?? 0)}
                   />
                 </div>
               </div>
@@ -277,28 +258,25 @@ export function Step1InputForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Interest Income (Local)</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.interestIncome)}
-                    onChange={(e) => handleCurrencyChange('interestIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.interestIncome}
+                    onValueChange={(v) => handleChange('interestIncome', v ?? 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Dividend Income</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.dividendIncome)}
-                    onChange={(e) => handleCurrencyChange('dividendIncome', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.dividendIncome}
+                    onValueChange={(v) => handleChange('dividendIncome', v ?? 0)}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Capital Gains (Realised)</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.capitalGainsRealised)}
-                    onChange={(e) => handleCurrencyChange('capitalGainsRealised', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.capitalGainsRealised}
+                    onValueChange={(v) => handleChange('capitalGainsRealised', v ?? 0)}
                   />
                 </div>
               </div>
@@ -318,10 +296,9 @@ export function Step1InputForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>RA / Pension Contributions (Annual)</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.raContributions)}
-                    onChange={(e) => handleCurrencyChange('raContributions', e.target.value)}
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.raContributions}
+                    onValueChange={(v) => handleChange('raContributions', v ?? 0)}
                   />
                   <p className="text-xs text-muted-foreground">
                     Total contributions to approved retirement funds
@@ -330,12 +307,9 @@ export function Step1InputForm({
 
                 <div className="space-y-2">
                   <Label>TFSA Lifetime Total</Label>
-                  <Input
-                    value={formatCurrencyInput(formData.tfsaContributionsLifetime)}
-                    onChange={(e) =>
-                      handleCurrencyChange('tfsaContributionsLifetime', e.target.value)
-                    }
-                    placeholder="R 0.00"
+                  <CurrencyInputField
+                    value={formData.tfsaContributionsLifetime}
+                    onValueChange={(v) => handleChange('tfsaContributionsLifetime', v ?? 0)}
                   />
                   <p className="text-xs text-muted-foreground">
                     Cumulative contributions since inception (Max R500k)

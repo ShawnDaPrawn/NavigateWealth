@@ -415,8 +415,10 @@ retirementFnaRoutes.get('/client/:clientId/latest-published', async (c) => {
 
     const latest = await kv.get(`retirement_fna:${clientId}:latest`);
 
-    // If not found, try to find from list
-    if (!latest) {
+    // `:latest` is the most recent FNA, not necessarily a published one (an
+    // intake draft used to be written there), so anything else falls back to
+    // the newest published FNA in the list.
+    if (!latest || latest.status !== 'published') {
       const listKey = `retirement_fna:${clientId}:list`;
       const list = (await kv.get(listKey)) || [];
 

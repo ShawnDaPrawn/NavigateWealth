@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent } from '../../ui/card';
 import {
   AlertDialog,
@@ -32,12 +31,6 @@ interface AssetsLiabilitiesSectionProps {
   liabilitiesInEditMode: Set<string>;
   assetToDelete: string | null;
   liabilityToDelete: string | null;
-  assetDisplayValues: { [id: string]: string };
-  liabilityDisplayValues: { [id: string]: { amount?: string; monthlyPayment?: string } };
-  setAssetDisplayValues: (value: React.SetStateAction<Record<string, string>>) => void;
-  setLiabilityDisplayValues: (
-    value: React.SetStateAction<Record<string, { amount?: string; monthlyPayment?: string }>>,
-  ) => void;
   addAsset: () => void;
   editAsset: (id: string) => void;
   saveAsset: (id: string) => void;
@@ -55,8 +48,6 @@ interface AssetsLiabilitiesSectionProps {
   setAssetToDelete: (value: string | null) => void;
   setLiabilityToDelete: (value: string | null) => void;
   formatCurrency: (value: number) => string;
-  formatCurrencyInput: (value: string) => string;
-  cleanCurrencyInput: (value: string) => string;
 }
 
 export function AssetsLiabilitiesSection({
@@ -69,10 +60,6 @@ export function AssetsLiabilitiesSection({
   liabilitiesInEditMode,
   assetToDelete,
   liabilityToDelete,
-  assetDisplayValues,
-  liabilityDisplayValues,
-  setAssetDisplayValues,
-  setLiabilityDisplayValues,
   addAsset,
   editAsset,
   saveAsset,
@@ -90,7 +77,6 @@ export function AssetsLiabilitiesSection({
   setAssetToDelete,
   setLiabilityToDelete,
   formatCurrency,
-  formatCurrencyInput,
 }: AssetsLiabilitiesSectionProps) {
   const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
   const linkedPolicyAssetTotal = derivedPolicyAssets.reduce((sum, asset) => sum + asset.value, 0);
@@ -155,11 +141,8 @@ export function AssetsLiabilitiesSection({
         possibleDuplicateCount={possibleDuplicateCount}
         totalAssets={totalAssets}
         assetsInEditMode={assetsInEditMode}
-        assetDisplayValues={assetDisplayValues}
-        setAssetDisplayValues={setAssetDisplayValues}
         assetEditGuard={assetEditGuard}
         formatCurrency={formatCurrency}
-        formatCurrencyInput={formatCurrencyInput}
         addAsset={addAsset}
         updateAsset={updateAsset}
         saveAsset={saveAsset}
@@ -171,11 +154,8 @@ export function AssetsLiabilitiesSection({
         liabilities={liabilities}
         totalLiabilities={totalLiabilities}
         liabilitiesInEditMode={liabilitiesInEditMode}
-        liabilityDisplayValues={liabilityDisplayValues}
-        setLiabilityDisplayValues={setLiabilityDisplayValues}
         liabilityEditGuard={liabilityEditGuard}
         formatCurrency={formatCurrency}
-        formatCurrencyInput={formatCurrencyInput}
         addLiability={addLiability}
         updateLiability={updateLiability}
         saveLiability={saveLiability}

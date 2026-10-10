@@ -1,31 +1,17 @@
 export type QualityIssueSeverity = 'error' | 'warning' | 'info';
 
 export type QualityIssueCategory =
-  | 'build'
-  | 'test'
-  | 'security'
-  | 'accessibility'
-  | 'runtime'
-  | 'configuration'
-  | 'unknown';
+  'build' | 'test' | 'security' | 'accessibility' | 'runtime' | 'configuration' | 'unknown';
 
 export type QualityIssuePriority = 'critical' | 'high' | 'medium' | 'low';
 
 export type QualityIssueSource =
-  | 'build'
-  | 'test'
-  | 'audit'
-  | 'accessibility'
-  | 'runtime-client'
-  | 'runtime-server';
+  'build' | 'test' | 'audit' | 'accessibility' | 'runtime-client' | 'runtime-server';
 
 export type QualityIssueStatus = 'open' | 'acknowledged' | 'resolved';
 
 export type QualityIssueAlertType =
-  | 'critical-open'
-  | 'past-response-target'
-  | 'reopened-regression'
-  | 'security-fix-available';
+  'critical-open' | 'past-response-target' | 'reopened-regression' | 'security-fix-available';
 
 export type QualityIssueAlertSeverity = 'critical' | 'warning';
 

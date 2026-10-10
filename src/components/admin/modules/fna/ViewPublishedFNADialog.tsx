@@ -49,7 +49,12 @@ interface ViewPublishedFNADialogProps {
    * compatibility across module ResultsView signatures.
    */
   ResultsView?: React.ComponentType<Record<string, unknown>>;
-  /** API base URL used to fetch the FNA when fnaId is provided */
+  /**
+   * Loads the FNA when fnaId is provided — FNAConfig.getById, which goes
+   * through the type's own API. Preferred over `apiBaseUrl`.
+   */
+  loadFn?: (fnaId: string) => Promise<Record<string, unknown> | null>;
+  /** Legacy: API base URL used to fetch `${apiBaseUrl}/${fnaId}` when no loadFn is given. */
   apiBaseUrl?: string;
   /** Async function to delete the FNA. When omitted and apiBaseUrl is
    *  not provided, the delete button is hidden. */
@@ -68,6 +73,7 @@ export function ViewPublishedFNADialog({
   currentStatus,
   onDeleted,
   ResultsView,
+  loadFn,
   apiBaseUrl,
   deleteFn,
 }: ViewPublishedFNADialogProps) {
@@ -93,6 +99,12 @@ export function ViewPublishedFNADialog({
 
     setIsLoading(true);
     try {
+      if (loadFn) {
+        const loaded = await loadFn(fnaId);
+        if (!loaded) throw new Error(`${fnaTypeName} ${fnaId} was not found`);
+        setFnaData(loaded);
+        return;
+      }
       if (!apiBaseUrl) {
         throw new Error(`Cannot fetch FNA: no apiBaseUrl provided for type "${fnaType}"`);
       }

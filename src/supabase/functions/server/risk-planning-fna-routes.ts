@@ -13,6 +13,7 @@ import { assertClientAccess, assertRecordClientAccess } from './client-access.ts
 import { CreateRiskPlanningFnaSchema, UpdateRiskPlanningFnaSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { nextVersion } from './fna-versioning.ts';
+import { formatRand } from './quote-verticals/formatRand.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
 
 const riskPlanningFnaRoutes = new Hono();
@@ -214,8 +215,8 @@ function calculateLifeCover(input: RiskCalcInputData) {
   const assumptions = [
     `Income multiple: ${incomeMultiple}Ã— (${numDependants} dependant${numDependants !== 1 ? 's' : ''}, ${isSingleIncome ? 'single-income' : 'dual-income'} household)`,
     `Estate costs: ${(ESTATE_COSTS_PERCENTAGE * 100).toFixed(2)}% of net estate value`,
-    `Funeral and final expenses: R${FUNERAL_FINAL_EXPENSES.toLocaleString()}`,
-    `Net annual income: R${netAnnualIncome.toLocaleString()}`,
+    `Funeral and final expenses: ${formatRand(FUNERAL_FINAL_EXPENSES)}`,
+    `Net annual income: ${formatRand(netAnnualIncome)}`,
   ];
 
   const riskNotes = [
@@ -271,7 +272,7 @@ function calculateDisabilityCover(input: RiskCalcInputData) {
 
   const assumptions = [
     `Disability income multiple: ${disabilityMultiple}Ã— (base 10Ã— + ${numDependants} dependant${numDependants !== 1 ? 's' : ''})`,
-    `Net annual income: R${netAnnualIncome.toLocaleString()}`,
+    `Net annual income: ${formatRand(netAnnualIncome)}`,
     'Additional costs: Home modifications, vehicle adaptation, medical equipment, care costs',
   ];
 
@@ -311,7 +312,7 @@ function calculateSevereIllnessCover(input: RiskCalcInputData) {
 
   const assumptions = [
     `Severe illness income multiple: ${incomeMultiple}Ã—`,
-    `Gross annual income: R${grossAnnualIncome.toLocaleString()}`,
+    `Gross annual income: ${formatRand(grossAnnualIncome)}`,
   ];
 
   const riskNotes = [
@@ -379,7 +380,7 @@ function calculateIncomeProtection(input: RiskCalcInputData) {
   };
 
   const assumptions = [
-    `Calculated need: R${calculatedNeed.toLocaleString()}/month (100% of net monthly income)`,
+    `Calculated need: ${formatRand(calculatedNeed)}/month (100% of net monthly income)`,
     `Benefit term: ${benefitTerm} years (to retirement)`,
   ];
 

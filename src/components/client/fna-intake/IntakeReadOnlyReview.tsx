@@ -4,6 +4,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { FnaIntakeDomain } from '@/services/fna-intake-api';
+import { formatNumber } from '@/shared/formatting';
 
 interface IntakeReadOnlyReviewProps {
   domain: FnaIntakeDomain;
@@ -12,7 +13,7 @@ interface IntakeReadOnlyReviewProps {
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'number') return value.toLocaleString();
+  if (typeof value === 'number') return formatNumber(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) {
     if (value.length === 0) return '—';

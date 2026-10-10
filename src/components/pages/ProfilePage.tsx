@@ -223,14 +223,6 @@ export function ProfilePage() {
               <PersonalInfoSection
                 profileData={pm.profileData}
                 handleInputChange={pm.handleInputChange}
-                grossIncomeDisplay={pm.grossIncomeDisplay}
-                setGrossIncomeDisplay={pm.setGrossIncomeDisplay}
-                netIncomeDisplay={pm.netIncomeDisplay}
-                setNetIncomeDisplay={pm.setNetIncomeDisplay}
-                grossAnnualIncomeDisplay={pm.grossAnnualIncomeDisplay}
-                setGrossAnnualIncomeDisplay={pm.setGrossAnnualIncomeDisplay}
-                netAnnualIncomeDisplay={pm.netAnnualIncomeDisplay}
-                setNetAnnualIncomeDisplay={pm.setNetAnnualIncomeDisplay}
                 incomeValidationError={pm.incomeValidationError}
                 setIncomeValidationError={pm.setIncomeValidationError}
                 setProfileData={pm.setProfileData}
@@ -371,10 +363,6 @@ export function ProfilePage() {
                 setAssetToDelete={pm.setAssetToDelete}
                 liabilityToDelete={pm.liabilityToDelete}
                 setLiabilityToDelete={pm.setLiabilityToDelete}
-                assetDisplayValues={pm.assetDisplayValues}
-                setAssetDisplayValues={pm.setAssetDisplayValues}
-                liabilityDisplayValues={pm.liabilityDisplayValues}
-                setLiabilityDisplayValues={pm.setLiabilityDisplayValues}
                 addAsset={pm.addAsset}
                 updateAsset={pm.updateAsset}
                 saveAsset={pm.saveAsset}

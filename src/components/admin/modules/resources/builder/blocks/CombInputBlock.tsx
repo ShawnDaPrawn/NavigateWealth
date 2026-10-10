@@ -2,6 +2,7 @@ import { Columns } from 'lucide-react';
 import { BlockDefinition } from '../registry';
 import { CombInputData } from '../types';
 import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Label } from '../../../../../ui/label';
 import { KeySelector } from '../components/KeySelector';
 
@@ -59,10 +60,9 @@ export const CombInputBlock: BlockDefinition = {
         </div>
         <div className="space-y-2">
           <Label className="text-xs">Character Count</Label>
-          <Input
-            type="number"
+          <NumberInputField
             value={(block.data as CombInputData).charCount || 13}
-            onChange={(e) => onChange('charCount', parseInt(e.target.value))}
+            onValueChange={(v) => onChange('charCount', v)}
           />
           <p className="text-[10px] text-gray-400">Default: 13 (SA ID Number)</p>
         </div>

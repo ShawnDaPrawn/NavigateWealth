@@ -33,6 +33,8 @@ export default defineConfig({
       { find: 'npm:docx', replacement: 'docx' },
       { find: 'npm:jspdf-autotable', replacement: 'jspdf-autotable' },
       { find: 'npm:jspdf', replacement: 'jspdf' },
+      // Pinned before unversioned, for the same prefix-order reason as pdf-lib.
+      { find: 'npm:zod@4.6.5', replacement: 'zod' },
       { find: 'npm:zod', replacement: 'zod' },
       { find: 'npm:hono', replacement: 'hono' },
       { find: 'npm:hono/cors', replacement: 'hono/cors' },

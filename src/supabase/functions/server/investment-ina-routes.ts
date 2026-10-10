@@ -200,10 +200,12 @@ investmentInaRoutes.get('/session/:sessionId', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
     const sessionId = c.req.param('sessionId')!;
 
-    // Extract clientId from sessionId (format: clientId-vN)
-    const clientId = sessionId.split('-v')[0];
-    // The KV key below is built from this same derived id, so authorizing the
-    // derived owner authorizes exactly the record that gets read.
+    // Wizard sessions are `clientId-vN-…`, so the owner is derived from the id.
+    // Sessions created from a client intake have a plain UUID id, so the
+    // caller names the client (`?clientId=`). Either way the KV key below is
+    // built from the id that is authorized, so authorizing that owner
+    // authorizes exactly the record that gets read.
+    const clientId = c.req.query('clientId') || sessionId.split('-v')[0];
     await assertClientAccess(user, clientId, 'investment-ina:session-read');
 
     const key = `investment-ina:client:${clientId}:${sessionId}`;
