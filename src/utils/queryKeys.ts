@@ -75,6 +75,7 @@ export const clientKeys = {
   details: () => [...clientKeys.all, 'detail'] as const,
   detail: (id: string) => [...clientKeys.details(), id] as const,
   profile: (id: string) => [...clientKeys.all, 'profile', id] as const,
+  avatar: (id: string) => [...clientKeys.all, 'avatar', id] as const,
   keys: (id: string) => [...clientKeys.all, 'keys', id] as const,
 
   // Client Key management (product data keys)

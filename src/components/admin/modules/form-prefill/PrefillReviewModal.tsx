@@ -13,11 +13,8 @@ import {
   DialogTitle,
 } from '../../../ui/dialog';
 import { Button } from '../../../ui/button';
-import { Badge } from '../../../ui/badge';
 import { Checkbox } from '../../../ui/checkbox';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
-import { Alert, AlertDescription } from '../../../ui/alert';
-import { ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import type { PrefillMatch, PrefillResolveResponse } from '../../../../shared/form-prefill/types';
 import { PREFILL_PROFILE_HINTS } from '../../../../shared/form-prefill/form-field-registry';
 
@@ -36,6 +33,7 @@ interface PrefillReviewModalProps {
 
 function formatValue(value: unknown): string {
   if (value === undefined || value === null) return '—';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 }
@@ -62,12 +60,12 @@ export function PrefillReviewModal({
   previewOnly = false,
 }: PrefillReviewModalProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [overwriteConflicts, setOverwriteConflicts] = useState(false);
 
-  const safeMatches = useMemo(() => result?.matches ?? [], [result?.matches]);
-  const conflictMatches = useMemo(() => safeMatches.filter((m) => m.conflict), [safeMatches]);
+  const matches = useMemo(() => result?.matches ?? [], [result?.matches]);
+  const readyMatches = useMemo(() => matches.filter((m) => !m.conflict), [matches]);
+  const conflictMatches = useMemo(() => matches.filter((m) => m.conflict), [matches]);
 
-  const profileCompletenessHints = useMemo(() => {
+  const missingLabels = useMemo(() => {
     if (!result) return [];
     const matchedKeys = new Set(result.matches.map((m) => m.canonicalKey));
     return Object.entries(PREFILL_PROFILE_HINTS)
@@ -77,9 +75,7 @@ export function PrefillReviewModal({
 
   useEffect(() => {
     if (!result) return;
-    const defaults = new Set(result.matches.filter((m) => !m.conflict).map((m) => m.formField));
-    setSelected(defaults);
-    setOverwriteConflicts(false);
+    setSelected(new Set(result.matches.filter((m) => !m.conflict).map((m) => m.formField)));
   }, [result]);
 
   const toggleField = (field: string, checked: boolean) => {
@@ -91,12 +87,24 @@ export function PrefillReviewModal({
     });
   };
 
-  const selectAllSafe = () => {
-    setSelected(new Set(safeMatches.filter((m) => !m.conflict).map((m) => m.formField)));
+  const allReadySelected =
+    readyMatches.length > 0 && readyMatches.every((m) => selected.has(m.formField));
+
+  const toggleAllReady = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const m of readyMatches) {
+        if (allReadySelected) next.delete(m.formField);
+        else next.add(m.formField);
+      }
+      return next;
+    });
   };
 
   const handleApply = () => {
-    onApply(Array.from(selected), overwriteConflicts);
+    // A conflicting row the admin ticked is an explicit decision to overwrite.
+    const overwrite = conflictMatches.some((m) => selected.has(m.formField));
+    onApply(Array.from(selected), overwrite);
     onOpenChange(false);
   };
 
@@ -104,168 +112,163 @@ export function PrefillReviewModal({
     ? `/admin?module=clients&clientId=${encodeURIComponent(clientId)}`
     : '/admin?module=clients';
 
+  const unmatchedCount = result?.unmatchedFormFields.length ?? 0;
+  const showMissing = missingLabels.length > 0 || unmatchedCount > 0;
+
+  const renderRow = (match: PrefillMatch) => {
+    const checked = selected.has(match.formField);
+    return (
+      <label
+        key={match.formField}
+        className={`flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/40 ${
+          match.conflict ? 'bg-amber-50/50' : ''
+        }`}
+      >
+        <Checkbox
+          className="mt-0.5"
+          checked={checked}
+          onCheckedChange={(v) => toggleField(match.formField, v === true)}
+        />
+        <div className="min-w-0 flex-1" title={match.formField}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-medium">{match.label}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {match.sourceDetail ?? SOURCE_LABELS[match.source] ?? match.source}
+            </span>
+          </div>
+          {match.conflict ? (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted-foreground line-through">
+                {formatValue(match.currentFormValue)}
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 text-amber-600" />
+              <span className="font-medium text-foreground">
+                {formatValue(match.proposedValue)}
+              </span>
+            </div>
+          ) : (
+            <div className="mt-0.5 text-sm text-foreground/80">
+              {formatValue(match.proposedValue)}
+            </div>
+          )}
+        </div>
+      </label>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="flex max-h-[90vh] max-w-xl flex-col gap-0 p-0">
+        <DialogHeader className="space-y-1 border-b px-6 py-4 pr-12">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <Sparkles className="h-5 w-5 text-purple-600" />
-            Review client data matches
+            Prefill from client record
           </DialogTitle>
           <DialogDescription>
-            Select which fields to prefill from the client record. Conflicting values are unchecked
-            by default.
+            {result
+              ? `${matches.length} field${matches.length === 1 ? '' : 's'} found. Choose what to fill in.`
+              : 'Choose which client details to fill in.'}
           </DialogDescription>
         </DialogHeader>
 
-        {loading && (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Loading matches…
-          </div>
-        )}
-
-        {!loading && result && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">{result.matches.length} matched</Badge>
-              <Badge variant="outline">{result.unmatchedFormFields.length} unmatched</Badge>
-              {conflictMatches.length > 0 && (
-                <Badge variant="destructive">{conflictMatches.length} conflicts</Badge>
-              )}
-              <Badge variant="outline">Resolver v{result.resolverVersion}</Badge>
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+          {loading && (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Loading matches…
             </div>
+          )}
 
-            {profileCompletenessHints.length > 0 && (
-              <Alert>
-                <AlertDescription className="space-y-2">
-                  <p>
-                    Profile may be incomplete — consider adding:{' '}
-                    {profileCompletenessHints.slice(0, 5).join(', ')}
-                    {profileCompletenessHints.length > 5 ? '…' : ''}.
-                  </p>
-                  <Link
-                    to={profileEditUrl}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                  >
-                    Edit client profile
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
-                </AlertDescription>
-              </Alert>
-            )}
+          {!loading && result && matches.length === 0 && (
+            <div className="rounded-lg border border-dashed px-4 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                No client data could be matched to this form. You can continue entering details
+                manually.
+              </p>
+              <Link
+                to={profileEditUrl}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                Update client profile
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )}
 
-            {result.matches.length === 0 ? (
-              <Alert>
-                <AlertDescription className="space-y-2">
-                  <p>
-                    No mappable client data was found for this form. You can continue entering
-                    details manually.
-                  </p>
-                  <Link
-                    to={profileEditUrl}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                  >
-                    Update client profile
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={selectAllSafe}>
-                    Select all safe
+          {!loading && readyMatches.length > 0 && (
+            <section className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Ready to fill</h3>
+                <div className="flex items-center gap-1">
+                  <Button type="button" size="sm" variant="ghost" onClick={toggleAllReady}>
+                    {allReadySelected ? 'Clear all' : 'Select all'}
                   </Button>
                   {onRefresh && (
                     <Button
                       type="button"
-                      size="sm"
+                      size="icon"
                       variant="ghost"
+                      className="h-8 w-8"
                       onClick={() => void onRefresh()}
+                      aria-label="Refresh matches"
+                      title="Refresh matches"
                     >
-                      <RefreshCw className="mr-1 h-4 w-4" />
-                      Refresh
+                      <RefreshCw className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
+              </div>
+              <div className="divide-y overflow-hidden rounded-lg border">
+                {readyMatches.map(renderRow)}
+              </div>
+            </section>
+          )}
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10" />
-                      <TableHead>Form field</TableHead>
-                      <TableHead>Proposed value</TableHead>
-                      <TableHead>Source</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {result.matches.map((match: PrefillMatch) => (
-                      <TableRow
-                        key={match.formField}
-                        className={match.conflict ? 'bg-amber-50/60' : undefined}
-                      >
-                        <TableCell>
-                          <Checkbox
-                            checked={selected.has(match.formField)}
-                            onCheckedChange={(v) => toggleField(match.formField, v === true)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{match.label}</div>
-                          <div className="text-xs text-muted-foreground">{match.formField}</div>
-                          {match.conflict && (
-                            <div className="text-xs text-amber-700 mt-1">
-                              Current: {formatValue(match.currentFormValue)}
-                            </div>
-                          )}
-                          {match.sourceDetail && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {match.sourceDetail}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{formatValue(match.proposedValue)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {SOURCE_LABELS[match.source] ?? match.source}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          {!loading && conflictMatches.length > 0 && (
+            <section className="space-y-2">
+              <div>
+                <h3 className="text-sm font-semibold text-amber-800">Needs your decision</h3>
+                <p className="text-xs text-muted-foreground">
+                  The form already has a different value. Tick a row to replace it.
+                </p>
+              </div>
+              <div className="divide-y overflow-hidden rounded-lg border border-amber-200">
+                {conflictMatches.map(renderRow)}
+              </div>
+            </section>
+          )}
 
-                {conflictMatches.length > 0 && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={overwriteConflicts}
-                      onCheckedChange={(v) => setOverwriteConflicts(v === true)}
-                    />
-                    Overwrite conflicting fields when applying selected rows
-                  </label>
+          {!loading && result && showMissing && (
+            <details className="group rounded-lg bg-muted/40 text-sm">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-muted-foreground">
+                <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+                {unmatchedCount > 0
+                  ? `${unmatchedCount} field${unmatchedCount === 1 ? '' : 's'} couldn’t be matched`
+                  : 'Client profile looks incomplete'}
+              </summary>
+              <div className="space-y-3 px-4 pb-4">
+                {unmatchedCount > 0 && (
+                  <p className="text-muted-foreground">{result.unmatchedFormFields.join(', ')}</p>
                 )}
-              </>
-            )}
+                {missingLabels.length > 0 && (
+                  <p className="text-muted-foreground">
+                    Missing from profile: {missingLabels.slice(0, 5).join(', ')}
+                    {missingLabels.length > 5 ? ` +${missingLabels.length - 5} more` : ''}
+                  </p>
+                )}
+                <Link
+                  to={profileEditUrl}
+                  className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                >
+                  Edit client profile
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </details>
+          )}
+        </div>
 
-            {result.unmatchedFormFields.length > 0 && (
-              <Alert>
-                <AlertDescription className="space-y-2">
-                  <p>Unmatched fields: {result.unmatchedFormFields.join(', ')}</p>
-                  <Link
-                    to={profileEditUrl}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                  >
-                    Add missing data in client profile
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 border-t px-6 py-4 sm:gap-0">
           <Button
             type="button"
             variant="ghost"
