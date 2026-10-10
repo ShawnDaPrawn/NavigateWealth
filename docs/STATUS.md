@@ -181,6 +181,22 @@ stated prerequisite has already caused a production outage once.
   blur-time `formatCurrencyInput` / `cleanCurrencyInput` helpers in a
   component, fail lint. See [`GUIDELINES.md`](GUIDELINES.md) §8.3. Do not
   reintroduce either to get a field working.
+- **The six FNA / INA wizards are one flow.** Risk Planning, Medical Aid,
+  Retirement, Tax Planning, Investment INA and Estate Planning run the same
+  four steps (Information Gathering, System Auto-Calculation, Adviser Manual
+  Adjustment, Finalise & Publish) inside `FNAWizardShell`, take the same
+  `FNAWizardProps`, and publish through `useFNAPublish`. Client values reach a
+  Step 1 form only through the shared review prefill, with shared facts
+  declared once in `FNA_CLIENT_KEYS`; no wizard reads the profile or policies
+  for them itself. Publishing lands the adviser on that category's FNA list in
+  Policy Details with the new FNA highlighted, whether the wizard was opened
+  from the category tab or from an accepted client intake. The FNA list and
+  "View" load through the registry (`FNAConfig.listForClient` / `getById`),
+  which calls each module's own API. Never build an FNA URL by hand: a
+  hand-written URL map is what sent the Investment INA and Estate lists and
+  "View" to routes that do not exist, so their published FNAs answered 404.
+  The rules, and the tests that hold them, are in
+  [`architecture/fna-wizards.md`](architecture/fna-wizards.md).
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -529,6 +545,20 @@ is work not yet done, not budget.
   read-modify-write that can drop an increment across isolates (A17). Moving
   them to per-fingerprint rows, as the public and CSP rows already are, is the
   next step.
+
+- **Managing a published FNA is uneven across the six types.** Every type's
+  FNAs list and open; what happens after that differs:
+  - Retirement has no server route for delete, unpublish, draft or archive,
+    so "Delete" in the FNA view dialog answers 404.
+  - Tax delete, publish and unpublish are client-side no-ops
+    (`tax-planning-fna/api.ts`): "Delete" reports success and deletes
+    nothing.
+  - Investment INA and Estate have no publish or unpublish route behind their
+    API methods. Nothing in the UI reaches them today.
+  - Publishing from an accepted intake creates a new FNA instead of finishing
+    the draft the intake made (`linkedFnaId` is carried but unused). Medical,
+    Investment, Estate and Tax lists therefore show that draft beside the
+    published FNA; Risk and Retirement intake drafts appear in no list.
 
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.
