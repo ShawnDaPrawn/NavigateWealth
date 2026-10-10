@@ -232,7 +232,16 @@ export interface FNAConfig {
   // ResultsView is rendered with dynamically-spread props, so each module's
   // specific prop type is intentionally erased here.
   ResultsView: React.ComponentType<any>;
-  // API functions
+  // API functions — each goes through the module's own API, which owns its
+  // routes. Nothing builds an FNA URL by hand (a hand-written URL map sent the
+  // Investment and Estate lists and "View" to routes that do not exist).
+  /** Every FNA of this type for the client, any status — the FNA list. */
+  listForClient: (clientId: string) => Promise<Record<string, unknown>[]>;
+  /**
+   * One FNA by id — what "View" opens. `clientId` is the client whose list it
+   * came from: some ids (FNAs created from a client intake) do not encode it.
+   */
+  getById: (fnaId: string, clientId: string) => Promise<Record<string, unknown> | null>;
   getLatestPublished: (clientId: string) => Promise<Record<string, unknown> | null>;
   deleteFNA: (fnaId: string) => Promise<void>;
   publishFNA: (fnaId: string) => Promise<Record<string, unknown>>;

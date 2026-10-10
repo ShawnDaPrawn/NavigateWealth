@@ -17,6 +17,7 @@ import { NotesAPI } from '../../notes';
 import { NOTES_STALE_TIME } from '../../notes';
 import { noteKeys } from '../../../../../utils/queryKeys';
 import { esignApi, esignKeys, QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign';
+import type { FNAListFocus } from '../../fna';
 import { AskVascoPortalTab } from './AskVascoPortalTab';
 import { ClientAvatar } from './ClientAvatar';
 import { useOptionalUnsavedChangesRegistry } from '../../../../shared/unsaved-changes';
@@ -58,6 +59,11 @@ interface ClientDrawerProps {
   canEdit?: boolean;
   /** Whether the current user can delete clients. Defaults to true for backwards compat. */
   canDelete?: boolean;
+  /**
+   * Open on Policy Details → this category's FNA list, with the FNA highlighted
+   * — where publishing an FNA from outside the drawer lands the adviser.
+   */
+  fnaFocus?: FNAListFocus;
 }
 
 export function ClientDrawer({
@@ -66,6 +72,7 @@ export function ClientDrawer({
   onOpenChange,
   canEdit = true,
   canDelete = true,
+  fnaFocus,
 }: ClientDrawerProps) {
   if (!client) return null;
 
@@ -77,6 +84,7 @@ export function ClientDrawer({
       onOpenChange={onOpenChange}
       canEdit={canEdit}
       canDelete={canDelete}
+      fnaFocus={fnaFocus}
     />
   );
 }
@@ -88,6 +96,7 @@ interface ClientDrawerInnerProps {
   onOpenChange: (open: boolean) => void;
   canEdit: boolean;
   canDelete: boolean;
+  fnaFocus?: FNAListFocus;
 }
 
 function TabPanelFallback() {
@@ -128,11 +137,17 @@ type DrawerTab =
  * The Sheet's visual overlay and close-on-X behaviour are unaffected because
  * SheetOverlay always renders and onOpenChange remains wired.
  */
-function ClientDrawerInner({ client, open, onOpenChange, canEdit }: ClientDrawerInnerProps) {
+function ClientDrawerInner({
+  client,
+  open,
+  onOpenChange,
+  canEdit,
+  fnaFocus,
+}: ClientDrawerInnerProps) {
   const queryClient = useQueryClient();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<DrawerTab>('overview');
+  const [activeTab, setActiveTab] = useState<DrawerTab>(fnaFocus ? 'policies' : 'overview');
   // Hardcoded for now as in original file
   const lastSanctionsCheck = '2024-01-15 14:30:00';
 
@@ -328,6 +343,7 @@ function ClientDrawerInner({ client, open, onOpenChange, canEdit }: ClientDrawer
           <TabsContent value="policies" className="space-y-4">
             <Suspense fallback={<TabPanelFallback />}>
               <PolicyDetailsSection
+                fnaFocus={fnaFocus}
                 selectedClient={
                   client as unknown as React.ComponentProps<
                     typeof PolicyDetailsSection

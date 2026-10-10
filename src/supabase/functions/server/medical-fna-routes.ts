@@ -669,7 +669,18 @@ medicalFnaRoutes.get('/:fnaId', async (c) => {
     const user = await authenticateUser(c.req.header('Authorization'));
 
     const fnaId = c.req.param('fnaId')!;
-    const fna = await kv.get(`medical-fna:${fnaId}`);
+    // Wizard FNAs live at `medical-fna:<id>`; FNAs created from a client
+    // intake live under the client (`medical-fna:client:<clientId>:<id>`), so
+    // with a `?clientId=` hint that key is tried too. The record's own
+    // clientId is authorized below either way.
+    const clientHint = c.req.query('clientId');
+    const keys = [`medical-fna:${fnaId}`];
+    if (clientHint) keys.push(`medical-fna:client:${clientHint}:${fnaId}`);
+    let fna = null;
+    for (const key of keys) {
+      fna = await kv.get(key);
+      if (fna) break;
+    }
 
     if (!fna) {
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);

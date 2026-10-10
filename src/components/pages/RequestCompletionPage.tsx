@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { NumberInputField } from '../ui/number-input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -152,8 +153,8 @@ export function RequestCompletionPage() {
         );
       case 'number':
         return (
-          <Input
-            type="number"
+          <NumberInputField
+            decimals={2}
             value={(value as string) || ''}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}

@@ -34,12 +34,6 @@ interface AssetsLiabilitiesSectionProps {
   setAssetToDelete: React.Dispatch<React.SetStateAction<string | null>>;
   liabilityToDelete: string | null;
   setLiabilityToDelete: React.Dispatch<React.SetStateAction<string | null>>;
-  assetDisplayValues: { [id: string]: string };
-  setAssetDisplayValues: React.Dispatch<React.SetStateAction<{ [id: string]: string }>>;
-  liabilityDisplayValues: { [id: string]: { amount?: string; monthlyPayment?: string } };
-  setLiabilityDisplayValues: React.Dispatch<
-    React.SetStateAction<{ [id: string]: { amount?: string; monthlyPayment?: string } }>
-  >;
   addAsset: () => void;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   saveAsset: (id: string) => void;
@@ -70,10 +64,6 @@ export function AssetsLiabilitiesSection({
   setAssetToDelete,
   liabilityToDelete,
   setLiabilityToDelete,
-  assetDisplayValues,
-  setAssetDisplayValues,
-  liabilityDisplayValues,
-  setLiabilityDisplayValues,
   addAsset,
   updateAsset,
   saveAsset,
@@ -210,8 +200,6 @@ export function AssetsLiabilitiesSection({
           possibleDuplicateCount={possibleDuplicateCount}
           totalAssets={totalAssets}
           assetsInEditMode={assetsInEditMode}
-          assetDisplayValues={assetDisplayValues}
-          setAssetDisplayValues={setAssetDisplayValues}
           assetEditGuard={assetEditGuard}
           addAsset={addAsset}
           updateAsset={updateAsset}
@@ -224,8 +212,6 @@ export function AssetsLiabilitiesSection({
           profileData={profileData}
           totalLiabilities={totalLiabilities}
           liabilitiesInEditMode={liabilitiesInEditMode}
-          liabilityDisplayValues={liabilityDisplayValues}
-          setLiabilityDisplayValues={setLiabilityDisplayValues}
           liabilityEditGuard={liabilityEditGuard}
           addLiability={addLiability}
           updateLiability={updateLiability}

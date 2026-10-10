@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { esignApi } from '../api';
 import type { ReminderConfig, SigningMode } from '../types';
 import { toast } from 'sonner';
@@ -197,14 +198,9 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
                     <Clock className="h-3 w-3" />
                     Interval (days)
                   </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={30}
+                  <NumberInputField
                     value={config.remind_interval_days}
-                    onChange={(e) =>
-                      handleUpdate({ remind_interval_days: parseInt(e.target.value) || 3 })
-                    }
+                    onValueChange={(v) => handleUpdate({ remind_interval_days: v || 3 })}
                     disabled={saving || !isActive}
                     className="h-8 text-sm"
                   />
@@ -238,12 +234,9 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
                   <RefreshCw className="h-3 w-3" />
                   Max Reminders
                 </Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
+                <NumberInputField
                   value={config.max_reminders}
-                  onChange={(e) => handleUpdate({ max_reminders: parseInt(e.target.value) || 5 })}
+                  onValueChange={(v) => handleUpdate({ max_reminders: v || 5 })}
                   disabled={saving || !isActive}
                   className="h-8 text-sm"
                 />
@@ -256,14 +249,9 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
                 <AlertTriangle className="h-3 w-3" />
                 Urgent reminder (days before expiry)
               </Label>
-              <Input
-                type="number"
-                min={1}
-                max={14}
+              <NumberInputField
                 value={config.remind_before_expiry_days}
-                onChange={(e) =>
-                  handleUpdate({ remind_before_expiry_days: parseInt(e.target.value) || 2 })
-                }
+                onValueChange={(v) => handleUpdate({ remind_before_expiry_days: v || 2 })}
                 disabled={saving || !isActive}
                 className="h-8 text-sm"
               />

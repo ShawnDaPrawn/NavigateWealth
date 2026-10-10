@@ -7,6 +7,7 @@
  */
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
+import { NumberInputField } from '../../../ui/number-input';
 import { Label } from '../../../ui/label';
 import { Badge } from '../../../ui/badge';
 import { Separator } from '../../../ui/separator';
@@ -127,14 +128,10 @@ export function StepBeneficiaries({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-700">Share %</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
+                  <NumberInputField
+                    decimals={2}
                     value={ben.sharePercentage}
-                    onChange={(e) =>
-                      updateBeneficiary(ben.id, 'sharePercentage', Number(e.target.value))
-                    }
+                    onValueChange={(v) => updateBeneficiary(ben.id, 'sharePercentage', v ?? 0)}
                     className="h-9 text-sm"
                   />
                 </div>

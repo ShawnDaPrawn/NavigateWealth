@@ -93,15 +93,7 @@ export interface ProfileManagerState {
   /** True when profileData has diverged from the last saved/loaded state */
   isDirty: boolean;
 
-  // Income display states
-  grossIncomeDisplay: string | null;
-  setGrossIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  netIncomeDisplay: string | null;
-  setNetIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  grossAnnualIncomeDisplay: string | null;
-  setGrossAnnualIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  netAnnualIncomeDisplay: string | null;
-  setNetAnnualIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
+  // Income validation
   incomeValidationError: string;
   setIncomeValidationError: React.Dispatch<React.SetStateAction<string>>;
 
@@ -145,8 +137,6 @@ export interface ProfileManagerState {
   assetsInEditMode: Set<string>;
   assetToDelete: string | null;
   setAssetToDelete: React.Dispatch<React.SetStateAction<string | null>>;
-  assetDisplayValues: { [id: string]: string };
-  setAssetDisplayValues: React.Dispatch<React.SetStateAction<{ [id: string]: string }>>;
   addAsset: () => void;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   saveAsset: (id: string) => void;
@@ -159,10 +149,6 @@ export interface ProfileManagerState {
   liabilitiesInEditMode: Set<string>;
   liabilityToDelete: string | null;
   setLiabilityToDelete: React.Dispatch<React.SetStateAction<string | null>>;
-  liabilityDisplayValues: { [id: string]: { amount?: string; monthlyPayment?: string } };
-  setLiabilityDisplayValues: React.Dispatch<
-    React.SetStateAction<{ [id: string]: { amount?: string; monthlyPayment?: string } }>
-  >;
   addLiability: () => void;
   updateLiability: (id: string, updates: Partial<Liability>) => void;
   saveLiability: (id: string) => void;
@@ -255,18 +241,6 @@ export function useProfileManager({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
 
-  // ── Display states for currency inputs ──────────────────────────
-  const [grossIncomeDisplay, setGrossIncomeDisplay] = useState<string | null>(null);
-  const [netIncomeDisplay, setNetIncomeDisplay] = useState<string | null>(null);
-  const [grossAnnualIncomeDisplay, setGrossAnnualIncomeDisplay] = useState<string | null>(null);
-  const [netAnnualIncomeDisplay, setNetAnnualIncomeDisplay] = useState<string | null>(null);
-
-  // ── Display states for asset and liability currency inputs ──────
-  const [assetDisplayValues, setAssetDisplayValues] = useState<{ [id: string]: string }>({});
-  const [liabilityDisplayValues, setLiabilityDisplayValues] = useState<{
-    [id: string]: { amount?: string; monthlyPayment?: string };
-  }>({});
-
   // ── Self-employed and proof-of-residence edit mode ──────────────
   const [selfEmployedInEditMode, setSelfEmployedInEditMode] = useState(false);
   const [proofOfResidenceInEditMode, setProofOfResidenceInEditMode] = useState(false);
@@ -310,13 +284,6 @@ export function useProfileManager({
     createItem: createAsset,
     validateItem: validateAsset,
     isItemEmpty: isAssetEmpty,
-    onCleanup: (id) => {
-      setAssetDisplayValues((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    },
   });
 
   const liabilityCrud = useEntityCrud<Liability>(profileData.liabilities, setProfileData, {
@@ -324,13 +291,6 @@ export function useProfileManager({
     createItem: createLiability,
     validateItem: validateLiability,
     isItemEmpty: isLiabilityEmpty,
-    onCleanup: (id) => {
-      setLiabilityDisplayValues((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    },
   });
 
   const chronicConditionCrud = useEntityCrud<ChronicCondition>(
@@ -629,12 +589,6 @@ export function useProfileManager({
     setProfileData({ ...originalData });
     setSaveSuccess(false);
     setIncomeValidationError('');
-    setGrossIncomeDisplay(null);
-    setNetIncomeDisplay(null);
-    setGrossAnnualIncomeDisplay(null);
-    setNetAnnualIncomeDisplay(null);
-    setAssetDisplayValues({});
-    setLiabilityDisplayValues({});
     setSelfEmployedInEditMode(false);
     setProofOfResidenceInEditMode(false);
     setProofOfBankToDelete(null);
@@ -673,15 +627,7 @@ export function useProfileManager({
     handleDiscard,
     isDirty,
 
-    // Income display states
-    grossIncomeDisplay,
-    setGrossIncomeDisplay,
-    netIncomeDisplay,
-    setNetIncomeDisplay,
-    grossAnnualIncomeDisplay,
-    setGrossAnnualIncomeDisplay,
-    netAnnualIncomeDisplay,
-    setNetAnnualIncomeDisplay,
+    // Income validation
     incomeValidationError,
     setIncomeValidationError,
 
@@ -725,8 +671,6 @@ export function useProfileManager({
     assetsInEditMode: assetCrud.inEditMode,
     assetToDelete: assetCrud.itemToDelete,
     setAssetToDelete: assetCrud.setItemToDelete,
-    assetDisplayValues,
-    setAssetDisplayValues,
     addAsset: assetCrud.add,
     updateAsset: assetCrud.update,
     saveAsset: assetCrud.save,
@@ -739,8 +683,6 @@ export function useProfileManager({
     liabilitiesInEditMode: liabilityCrud.inEditMode,
     liabilityToDelete: liabilityCrud.itemToDelete,
     setLiabilityToDelete: liabilityCrud.setItemToDelete,
-    liabilityDisplayValues,
-    setLiabilityDisplayValues,
     addLiability: liabilityCrud.add,
     updateLiability: liabilityCrud.update,
     saveLiability: liabilityCrud.save,

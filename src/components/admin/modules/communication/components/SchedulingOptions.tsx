@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock, Repeat } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import {
   Select,
   SelectTrigger,
@@ -183,13 +184,9 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                   {config.endCondition === 'after_occurrences' && (
                     <div className="space-y-2">
                       <Label>Number of occurrences</Label>
-                      <Input
-                        type="number"
-                        min={1}
+                      <NumberInputField
                         value={config.endOccurrences || ''}
-                        onChange={(e) =>
-                          updateScheduled({ endOccurrences: parseInt(e.target.value) })
-                        }
+                        onValueChange={(v) => updateScheduled({ endOccurrences: v })}
                       />
                     </div>
                   )}

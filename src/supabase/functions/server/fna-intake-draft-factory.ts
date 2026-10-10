@@ -57,8 +57,9 @@ async function createRetirementDraftFromIntake(
     intakeSessionId: session.id,
     intakeSource: 'client',
   };
+  // Not written to `:latest`: that pointer is what "latest published" reads,
+  // and a draft there showed as the client's current Retirement FNA.
   await kv.set(`retirement_fna:${fnaId}`, record);
-  await kv.set(`retirement_fna:${session.clientId}:latest`, record);
   return fnaId;
 }
 

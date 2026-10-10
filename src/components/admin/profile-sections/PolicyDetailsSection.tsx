@@ -16,13 +16,22 @@ import {
 } from 'lucide-react';
 import { PolicyCategoryTab } from './PolicyCategoryTab';
 import { PolicyOverviewTab } from './PolicyOverviewTab';
+import type { FNAListFocus } from '../modules/fna';
 
 interface PolicyDetailsSectionProps {
   selectedClient: { id: string; firstName?: string; lastName?: string; [key: string]: unknown };
+  /** Open on this category's FNA list (after an FNA is published elsewhere). */
+  fnaFocus?: FNAListFocus;
 }
 
-export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionProps) {
-  const [activePolicyTab, setActivePolicyTab] = useState('overview');
+export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetailsSectionProps) {
+  const [activePolicyTab, setActivePolicyTab] = useState(fnaFocus?.categorySubtabId ?? 'overview');
+
+  /** The focus props for one category tab: its FNA list open, the new FNA highlighted. */
+  const focusFor = (categorySubtabId: string) =>
+    fnaFocus?.categorySubtabId === categorySubtabId
+      ? { openFNAListOnMount: true, highlightFnaId: fnaFocus.fnaId }
+      : {};
 
   // Derive the actual client display name
   const clientDisplayName =
@@ -87,6 +96,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           iconColor="text-[#6d28d9]"
           description="Life insurance, disability cover, and income protection"
           clientId={selectedClient?.id || 'client_1'}
+          {...focusFor('risk-planning')}
         />
       )}
 
@@ -99,6 +109,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           iconColor="text-red-500"
           description="Healthcare coverage and medical scheme memberships"
           clientId={selectedClient?.id || 'client_1'}
+          {...focusFor('medical-aid')}
         />
       )}
 
@@ -111,6 +122,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           iconColor="text-green-600"
           description="Pension funds, retirement annuities, and preservation funds"
           clientId={selectedClient?.id || 'client_1'}
+          {...focusFor('retirement')}
         />
       )}
 
@@ -123,6 +135,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           iconColor="text-[#6d28d9]"
           description="Unit trusts, tax-free savings, and offshore investments"
           clientId={selectedClient?.id || 'client_1'}
+          {...focusFor('investments')}
         />
       )}
 
@@ -135,6 +148,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           iconColor="text-blue-600"
           description="Employer-sponsored benefits and group schemes"
           clientId={selectedClient?.id || 'client_1'}
+          {...focusFor('employee-benefits')}
         />
       )}
 
@@ -147,6 +161,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           iconColor="text-[#6d28d9]"
           description="Tax-efficient investment strategies and planning"
           clientId={selectedClient?.id || 'client_1'}
+          {...focusFor('tax-planning')}
         />
       )}
 
@@ -160,6 +175,7 @@ export function PolicyDetailsSection({ selectedClient }: PolicyDetailsSectionPro
           description="Wills, trusts, and estate management"
           clientId={selectedClient?.id || 'client_1'}
           clientDisplayName={clientDisplayName}
+          {...focusFor('estate-planning')}
         />
       )}
     </div>

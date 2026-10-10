@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '../../../../ui/dialog';
 import { Label } from '../../../../ui/label';
-import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -147,10 +147,8 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
           <div className="space-y-4">
             <div>
               <Label htmlFor="retention-completed">Completed envelopes (days)</Label>
-              <Input
+              <NumberInputField
                 id="retention-completed"
-                type="number"
-                min={1}
                 value={completed}
                 onChange={(e) => setCompleted(e.target.value)}
                 placeholder="e.g. 2555 (seven years)"
@@ -161,10 +159,8 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
             </div>
             <div>
               <Label htmlFor="retention-terminated">Terminated envelopes (days)</Label>
-              <Input
+              <NumberInputField
                 id="retention-terminated"
-                type="number"
-                min={1}
                 value={terminated}
                 onChange={(e) => setTerminated(e.target.value)}
                 placeholder="e.g. 365"
@@ -175,10 +171,8 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
             </div>
             <div>
               <Label htmlFor="retention-draft">Inactive drafts (days)</Label>
-              <Input
+              <NumberInputField
                 id="retention-draft"
-                type="number"
-                min={1}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="e.g. 90"

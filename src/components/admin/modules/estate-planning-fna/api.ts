@@ -98,11 +98,14 @@ export const EstatePlanningAPI = {
   /**
    * Get specific Estate Planning session by ID
    */
-  async getSessionById(sessionId: string): Promise<EstatePlanningSession> {
+  async getSessionById(sessionId: string, clientId?: string): Promise<EstatePlanningSession> {
     logger.debug('[EstatePlanningAPI] Fetching session', { sessionId });
     try {
+      // `clientId` lets the server find a session whose id does not encode its
+      // client (one created from a client intake).
+      const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
       const response = await api.get<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}`,
+        `/estate-planning-fna/session/${sessionId}${query}`,
       );
       return response.data;
     } catch (error) {

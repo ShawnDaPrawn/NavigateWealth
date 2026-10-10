@@ -42,6 +42,8 @@ import { useCurrentUserPermissions } from '../personnel';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
 import type { IntakeHandoffState } from './components/IntakeWizardHandoff';
+import { FNA_POLICY_CATEGORY, type FNAListFocus } from '../fna';
+import { useInvalidateFnaBatchStatus } from '@/shared/fna-intake/hooks/useFnaBatchStatus';
 
 // Heavy sub-components — lazy-loaded (only rendered on user action)
 const ClientDrawer = React.lazy(() =>
@@ -82,6 +84,12 @@ export function ClientManagementModule() {
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [intakeHandoff, setIntakeHandoff] = useState<IntakeHandoffState | null>(null);
+  // Set when a publish should open the drawer on that FNA's list; the nonce
+  // remounts the drawer so it opens there even if it was already open.
+  const [drawerFnaFocus, setDrawerFnaFocus] = useState<(FNAListFocus & { nonce: number }) | null>(
+    null,
+  );
+  const invalidateFnaBatchStatus = useInvalidateFnaBatchStatus();
   const [clientType, setClientType] = useState('personal');
   const { canDo } = useCurrentUserPermissions();
   const { pendingSelection, clearPendingSelection } = useAdminNavigation();
@@ -139,7 +147,23 @@ export function ClientManagementModule() {
   const canDeleteClient = canDo('clients', 'delete');
 
   const openClientDrawer = (client: Client) => {
+    setDrawerFnaFocus(null);
     setSelectedClient(client);
+    setDrawerOpen(true);
+  };
+
+  // A wizard opened from an accepted intake lands, on publish, where the FNA
+  // now lives: the client's Policy Details → that category → FNA list.
+  const handleIntakeFNAPublished = (fnaId: string, handoff: IntakeHandoffState) => {
+    invalidateFnaBatchStatus(handoff.clientId);
+    const target = safeClients.find((c) => c.id === handoff.clientId);
+    if (!target) return;
+    setDrawerFnaFocus({
+      categorySubtabId: FNA_POLICY_CATEGORY[handoff.domain],
+      fnaId,
+      nonce: Date.now(),
+    });
+    setSelectedClient(target);
     setDrawerOpen(true);
   };
 
@@ -500,8 +524,9 @@ export function ClientManagementModule() {
 
       <Suspense fallback={<LazyFallback />}>
         <ClientDrawer
-          key={selectedClient?.id ?? 'drawer-closed'}
+          key={`${selectedClient?.id ?? 'drawer-closed'}:${drawerFnaFocus?.nonce ?? 0}`}
           client={selectedClient}
+          fnaFocus={drawerFnaFocus ?? undefined}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           canEdit={canEditClient}
@@ -522,7 +547,11 @@ export function ClientManagementModule() {
       </Suspense>
 
       <Suspense fallback={<LazyFallback />}>
-        <IntakeWizardHandoff handoff={intakeHandoff} onClose={() => setIntakeHandoff(null)} />
+        <IntakeWizardHandoff
+          handoff={intakeHandoff}
+          onClose={() => setIntakeHandoff(null)}
+          onFNAComplete={handleIntakeFNAPublished}
+        />
       </Suspense>
     </div>
   );

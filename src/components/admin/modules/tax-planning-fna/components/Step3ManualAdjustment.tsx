@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
+import { NumberInputField } from '../../../../ui/number-input';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 import { TaxPlanningInputs, TaxCalculationResults, AdjustmentLog } from '../types';
 import { RefreshCw, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { FNAStepNavigation } from '../../fna';
+
+const COUNT_FIELDS = new Set<keyof TaxPlanningInputs>(['medicalSchemeMembers']);
 
 interface Step3Props {
   baselineInputs: TaxPlanningInputs;
@@ -63,35 +67,47 @@ export function Step3ManualAdjustment({
     setAdjustments((prev) => prev.filter((a) => a.field !== field));
   };
 
-  const formatMoney = (val: number) => `R ${Math.round(val).toLocaleString()}`;
+  const formatMoney = (val: number) => formatCurrencyWhole(val);
 
-  // Helper to render an override row
-  const RenderOverrideRow = ({
-    label,
-    field,
-  }: {
-    label: string;
-    field: keyof TaxPlanningInputs;
-  }) => {
+  /** Medical scheme members is a count; every other overridable input is rands. */
+  const formatFieldValue = (field: keyof TaxPlanningInputs, val: number) =>
+    COUNT_FIELDS.has(field) ? String(val) : formatMoney(val);
+
+  // A render function, not a component: a component declared in here would be a
+  // new type on every render, remounting the input and losing focus per keystroke.
+  const renderOverrideRow = (label: string, field: keyof TaxPlanningInputs) => {
     const isModified = adjustments.some((a) => a.field === field);
     const original = baselineInputs[field] as number;
     const current = adjustedInputs[field] as number;
+    const inputClass = `h-8 bg-white ${isModified ? 'border-amber-400 text-amber-700 font-semibold' : ''}`;
+    const onValueChange = (v: number | undefined) =>
+      handleOverride(field, v ?? 0, 'Manual override');
 
     return (
       <div
+        key={field}
         className={`grid grid-cols-12 gap-4 items-center p-3 rounded-md ${isModified ? 'bg-amber-50 border border-amber-100' : 'hover:bg-slate-50'}`}
       >
         <div className="col-span-4 text-sm font-medium text-slate-700">{label}</div>
 
-        <div className="col-span-3 text-sm text-slate-500">{formatMoney(original)}</div>
+        <div className="col-span-3 text-sm text-slate-500">{formatFieldValue(field, original)}</div>
 
         <div className="col-span-4">
-          <Input
-            className={`h-8 bg-white ${isModified ? 'border-amber-400 text-amber-700 font-semibold' : ''}`}
-            type="number"
-            value={current}
-            onChange={(e) => handleOverride(field, Number(e.target.value), 'Manual override')}
-          />
+          {COUNT_FIELDS.has(field) ? (
+            <NumberInputField
+              aria-label={label}
+              className={inputClass}
+              value={current}
+              onValueChange={onValueChange}
+            />
+          ) : (
+            <CurrencyInputField
+              aria-label={label}
+              className={inputClass}
+              value={current}
+              onValueChange={onValueChange}
+            />
+          )}
         </div>
 
         <div className="col-span-1 flex justify-end">
@@ -139,11 +155,11 @@ export function Step3ManualAdjustment({
               <CardDescription>Exclude once-off income or normalize earnings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-              <RenderOverrideRow label="Employment Income" field="employmentIncome" />
-              <RenderOverrideRow label="Variable (Bonus)" field="variableIncome" />
-              <RenderOverrideRow label="Business Income" field="businessIncome" />
-              <RenderOverrideRow label="Capital Gains" field="capitalGainsRealised" />
-              <RenderOverrideRow label="Foreign Income" field="foreignIncome" />
+              {renderOverrideRow('Employment Income', 'employmentIncome')}
+              {renderOverrideRow('Variable (Bonus)', 'variableIncome')}
+              {renderOverrideRow('Business Income', 'businessIncome')}
+              {renderOverrideRow('Capital Gains', 'capitalGainsRealised')}
+              {renderOverrideRow('Foreign Income', 'foreignIncome')}
             </CardContent>
           </Card>
 
@@ -153,8 +169,8 @@ export function Step3ManualAdjustment({
               <CardDescription>Test impact of contribution changes</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-              <RenderOverrideRow label="RA Contributions" field="raContributions" />
-              <RenderOverrideRow label="Medical Members" field="medicalSchemeMembers" />
+              {renderOverrideRow('RA Contributions', 'raContributions')}
+              {renderOverrideRow('Medical Members', 'medicalSchemeMembers')}
             </CardContent>
           </Card>
         </div>
@@ -265,8 +281,9 @@ export function Step3ManualAdjustment({
                       className="text-xs text-amber-800 flex justify-between border-b border-amber-200 pb-1"
                     >
                       <span>
-                        Changed <b>{adj.field}</b> from {formatMoney(Number(adj.originalValue))} to{' '}
-                        {formatMoney(Number(adj.newValue))}
+                        Changed <b>{adj.field}</b> from{' '}
+                        {formatFieldValue(adj.field, Number(adj.originalValue))} to{' '}
+                        {formatFieldValue(adj.field, Number(adj.newValue))}
                       </span>
                     </li>
                   ))}

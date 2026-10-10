@@ -97,7 +97,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Personal Policies</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormDescription className="text-xs">
                     Auto-populated from client key: risk_life_cover_total
@@ -113,7 +113,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Group Policies</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,7 +136,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Personal Policies</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormDescription className="text-xs">
                     Auto-populated from client key: risk_disability_total
@@ -152,7 +152,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Group Policies</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +175,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Personal Policies</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormDescription className="text-xs">
                     Auto-populated from client key: risk_severe_illness_total
@@ -191,7 +191,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Group Policies</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -215,7 +215,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Personal Policies (monthly)</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -228,7 +228,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Group Policies (monthly)</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -276,7 +276,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Personal Policies (monthly)</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -289,7 +289,7 @@ export function ExistingCoverForm({
                 <FormItem>
                   <FormLabel>Group Policies (monthly)</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" {...field} />
+                    <CurrencyInputField {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

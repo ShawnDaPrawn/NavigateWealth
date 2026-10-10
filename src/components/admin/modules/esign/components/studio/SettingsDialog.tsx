@@ -19,6 +19,7 @@ import {
 } from '../../../../../ui/dialog';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Textarea } from '../../../../../ui/textarea';
 import {
   Select,
@@ -87,16 +88,13 @@ export function SettingsDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="env-expiry">Expires in (days)</Label>
-              <Input
+              <NumberInputField
                 id="env-expiry"
-                type="number"
-                min={1}
-                max={365}
                 value={settingsDraft.expiryDays}
-                onChange={(e) =>
+                onValueChange={(v) =>
                   setSettingsDraft((d) => ({
                     ...d,
-                    expiryDays: Math.max(1, Math.min(365, parseInt(e.target.value || '30', 10))),
+                    expiryDays: Math.max(1, Math.min(365, v ?? 30)),
                   }))
                 }
               />

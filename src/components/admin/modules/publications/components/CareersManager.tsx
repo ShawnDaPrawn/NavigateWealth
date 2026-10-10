@@ -14,6 +14,7 @@ import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Skeleton } from '../../../../ui/skeleton';
 import {
@@ -680,12 +681,10 @@ export function CareersManager() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-sort">Display Order</Label>
-                <Input
+                <NumberInputField
                   id="jl-sort"
-                  type="number"
-                  min={1}
                   value={form.sortOrder}
-                  onChange={(e) => updateForm('sortOrder', parseInt(e.target.value) || 1)}
+                  onValueChange={(v) => updateForm('sortOrder', v || 1)}
                 />
               </div>
               <div className="space-y-1.5">
