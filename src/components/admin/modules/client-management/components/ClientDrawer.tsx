@@ -269,8 +269,9 @@ function ClientDrawerInner({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
       <SheetContent
-        className="w-[1400px] overflow-y-auto transition-[max-width] duration-300"
-        style={{ maxWidth: 'calc(100vw - var(--sidebar-width, 18rem))' }}
+        // Fill everything right of the admin sidebar on desktop. A fixed pixel
+        // width left the page behind visible when the browser was zoomed out.
+        className="w-full overflow-y-auto transition-[width] duration-300 sm:max-w-none lg:w-[calc(100vw-var(--sidebar-width,18rem))]"
       >
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
