@@ -70,7 +70,7 @@ export const DEFAULT_FOOTER_SETTINGS: EmailFooterSettings = {
   socialLinks: {
     linkedin: 'https://www.linkedin.com/company/navigatewealth/',
     instagram: 'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
-    youtube: 'https://www.youtube.com/@navigatewealth',
+    twitter: 'https://x.com/navigatewealth',
   },
   copyrightText: '© {{Year}} Navigate Wealth. All rights reserved.',
 };

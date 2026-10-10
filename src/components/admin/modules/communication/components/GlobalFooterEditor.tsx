@@ -21,7 +21,6 @@ const DEFAULT_SETTINGS: EmailFooterSettings = {
   socialLinks: {
     linkedin: '',
     instagram: '',
-    youtube: '',
     facebook: '',
     twitter: '',
   },
@@ -224,18 +223,6 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>YouTube URL</Label>
-                <Input
-                  value={settings.socialLinks?.youtube || ''}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      socialLinks: { ...settings.socialLinks, youtube: e.target.value },
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>Facebook URL</Label>
                 <Input
                   value={settings.socialLinks?.facebook || ''}
@@ -248,7 +235,7 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Twitter / X URL</Label>
+                <Label>X URL</Label>
                 <Input
                   value={settings.socialLinks?.twitter || ''}
                   onChange={(e) =>

@@ -3,7 +3,8 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { toast } from 'sonner';
-import { MapPin, Phone, Mail, Linkedin, ArrowRight, Youtube, Instagram } from 'lucide-react';
+import { MapPin, Phone, Mail, Linkedin, ArrowRight, Instagram } from 'lucide-react';
+import { XIcon, NAVIGATE_WEALTH_X_URL } from '../shared/XIcon';
 import { Logo } from './Logo';
 import { api } from '../../utils/api/client';
 
@@ -305,12 +306,12 @@ export function Footer() {
               asChild
             >
               <a
-                href="https://www.youtube.com/@navigatewealth"
+                href={NAVIGATE_WEALTH_X_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="YouTube"
+                aria-label="X"
               >
-                <Youtube className="h-5 w-5" />
+                <XIcon className="h-5 w-5" />
               </a>
             </Button>
           </div>
