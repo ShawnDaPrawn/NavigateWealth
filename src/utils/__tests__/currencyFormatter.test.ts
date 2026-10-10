@@ -141,6 +141,18 @@ describe('formatAmountWhileTyping', () => {
     expect(formatAmountWhileTyping('0042.5', { decimals: 0, grouping: false })).toBe('425');
     expect(formatAmountWhileTyping('12345', { decimals: 0, grouping: false })).toBe('12345');
   });
+
+  it('keeps a leading minus on a cents-only amount', () => {
+    expect(
+      formatAmountWhileTyping('-.5', { allowNegative: true, grouping: false, decimals: 2 }),
+    ).toBe('-0.5');
+    expect(parseTypedAmount('-0.5')).toBe(-0.5);
+    expect(parseTypedAmount('-.')).toBeUndefined();
+  });
+
+  it('stops after 13 integer digits so the amount stays inside float precision', () => {
+    expect(formatAmountWhileTyping('12345678901234567890')).toBe('1,234,567,890,123');
+  });
 });
 
 describe('parseTypedAmount', () => {
@@ -164,6 +176,14 @@ describe('formatStoredAmount', () => {
     expect(formatStoredAmount(0)).toBe('0');
     expect(formatStoredAmount(undefined)).toBe('');
     expect(formatStoredAmount('')).toBe('');
+    expect(formatStoredAmount('not-a-number')).toBe('');
+  });
+
+  it('hides a negative stored amount unless the field allows one', () => {
+    expect(formatStoredAmount(-1500)).toBe('');
+    expect(formatStoredAmount(-1500.4, { allowNegative: true, grouping: false, decimals: 0 })).toBe(
+      '-1500',
+    );
   });
 });
 
