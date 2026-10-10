@@ -42,7 +42,7 @@ import type {
 } from './integrations-types.ts';
 import { recalculateClientTotals } from './integrations-derive.ts';
 import { isValidDate } from './integrations-field-utils.ts';
-import { POLICY_DOC_BUCKET } from './integrations-document-storage.ts';
+import { POLICY_DOC_BUCKET, POLICY_CATEGORY_LABELS } from './integrations-document-storage.ts';
 import { requireClientAccess } from './client-access.ts';
 
 const app = new Hono();
@@ -121,6 +121,81 @@ app.get('/policies', requireAuth, async (c) => {
       categoryId: c.req.query('categoryId'),
     });
     return c.json({ policies: [] });
+  }
+});
+
+// Schema field names that make up the side-by-side comparison, in no
+// particular order (the panel sorts them itself).
+const COMPARISON_KEY_FIELD_NAMES = new Set([
+  'policy number',
+  'plan type',
+  'premium',
+  'cover amount',
+  'fund value',
+  'monthly contribution',
+  'inception date',
+  'expiry date',
+  'status',
+]);
+
+// GET /policies/compare?clientId=...
+// Cross-policy comparison for the admin client profile (PolicyComparisonPanel).
+app.get('/policies/compare', requireAuth, async (c) => {
+  try {
+    const clientId = c.req.query('clientId');
+    if (!clientId) {
+      return c.json({ error: 'Missing clientId' }, 400);
+    }
+    const denied = await requireClientAccess(c, clientId);
+    if (denied) return denied;
+
+    const stored = ((await kv.get(`policies:client:${clientId}`)) || []) as KvPolicy[];
+    const active = stored.filter((p) => !p.archived);
+
+    const schemaMap: Record<string, SchemaField[]> = {};
+    for (const schema of await getByPrefix('config:schema:')) {
+      const s = schema as KvSchema;
+      if (s && s.categoryId && s.fields) schemaMap[s.categoryId] = s.fields;
+    }
+    for (const [catId, schema] of Object.entries(DEFAULT_SCHEMAS)) {
+      if (!schemaMap[catId] && (schema as { fields?: SchemaField[] }).fields) {
+        schemaMap[catId] = (schema as { fields: SchemaField[] }).fields;
+      }
+    }
+
+    const policies = active.map((p) => {
+      const fields = schemaMap[p.categoryId] || [];
+      const data = p.data || {};
+      const keyFields = fields
+        .filter((f) => COMPARISON_KEY_FIELD_NAMES.has((f.name || '').trim().toLowerCase()))
+        .map((f) => ({
+          label: f.name.trim().replace(/\b\w/g, (ch) => ch.toUpperCase()),
+          fieldId: f.id,
+          fieldName: f.name,
+          value: data[f.id] ?? null,
+        }))
+        .filter((kf) => kf.value !== null && kf.value !== undefined && kf.value !== '');
+      return {
+        id: p.id,
+        providerId: p.providerId,
+        providerName: p.providerName,
+        categoryId: p.categoryId,
+        categoryLabel: POLICY_CATEGORY_LABELS[p.categoryId] || p.categoryId,
+        createdAt: p.createdAt,
+        hasDocument: !!p.document,
+        hasExtraction: p.extraction?.status === 'completed',
+        extractionConfidence:
+          p.extraction?.status === 'completed' ? (p.extraction.confidence ?? null) : null,
+        lockedFieldCount: (p.lockedFields || []).length,
+        keyFields,
+        totalFieldCount: Object.keys(data).length,
+      };
+    });
+
+    return c.json({ policies });
+  } catch (e) {
+    log.error('Error building policy comparison:', e as Error);
+    return c.json({ error: 'Failed to build policy comparison' }, 500);
   }
 });
 
