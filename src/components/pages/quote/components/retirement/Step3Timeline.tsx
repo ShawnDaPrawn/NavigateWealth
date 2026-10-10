@@ -6,6 +6,7 @@
  * its own props; only its address changed.
  */
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { type TimelineState } from './model';
 
@@ -30,10 +31,7 @@ export function Step3Timeline({
           <Label className="text-sm font-medium text-gray-700">
             Current age <span className="text-red-500">*</span>
           </Label>
-          <Input
-            type="number"
-            min={18}
-            max={100}
+          <NumberInputField
             placeholder="e.g. 38"
             value={timeline.current_age}
             onChange={(e) => onChange({ ...timeline, current_age: e.target.value })}
@@ -44,10 +42,7 @@ export function Step3Timeline({
           <Label className="text-sm font-medium text-gray-700">
             Planned retirement age <span className="text-red-500">*</span>
           </Label>
-          <Input
-            type="number"
-            min={55}
-            max={100}
+          <NumberInputField
             placeholder="e.g. 65"
             value={timeline.planned_retirement_age}
             onChange={(e) => onChange({ ...timeline, planned_retirement_age: e.target.value })}

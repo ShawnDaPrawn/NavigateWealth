@@ -2,7 +2,7 @@
  * Step2Contributions of the investment quote wizard. One step slice —
  * see InvestmentQuoteWizard.tsx for the state machine.
  */
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { TrendingUp, HelpCircle } from 'lucide-react';
 import {
@@ -118,20 +118,15 @@ export function Step2Contributions({
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-600">Lump sum amount (ZAR)</Label>
                 <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                      R
-                    </span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="e.g. 50,000"
+                  <div className="flex-1">
+                    <CurrencyInputField
+                      placeholder="50,000"
                       value={entry.lump_sum_amount}
                       onChange={(e) =>
                         updateEntry(typeId, { lump_sum_amount: formatCurrency(e.target.value) })
                       }
                       disabled={entry.lump_sum_adviser_assist}
-                      className="bg-white border-gray-300 h-10 pl-7"
+                      className="bg-white border-gray-300 h-10"
                     />
                   </div>
                   <button
@@ -164,20 +159,15 @@ export function Step2Contributions({
                   Monthly amount (ZAR /month)
                 </Label>
                 <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                      R
-                    </span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="e.g. 2,000"
+                  <div className="flex-1">
+                    <CurrencyInputField
+                      placeholder="2,000"
                       value={entry.monthly_amount}
                       onChange={(e) =>
                         updateEntry(typeId, { monthly_amount: formatCurrency(e.target.value) })
                       }
                       disabled={entry.monthly_adviser_assist}
-                      className="bg-white border-gray-300 h-10 pl-7"
+                      className="bg-white border-gray-300 h-10"
                     />
                   </div>
                   <button

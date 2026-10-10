@@ -23,6 +23,7 @@ import type {
   MedicalFNAAdjustments,
   MedicalFNAFinalNeeds,
 } from '../types';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 export interface MedicalFNAResultsViewProps {
   results?:
@@ -258,7 +259,9 @@ export function MedicalFNAResultsView({ results: propResults, fna }: MedicalFNAR
                 <div className="text-sm">
                   <div className="text-gray-600">
                     Existing MSA:{' '}
-                    <span className="font-medium text-gray-900">R {inputs.existingMSA || 0}</span>
+                    <span className="font-medium text-gray-900">
+                      {formatCurrencyWhole(inputs.existingMSA || 0)}
+                    </span>
                   </div>
                   <div className="text-gray-600">
                     Need Savings?{' '}

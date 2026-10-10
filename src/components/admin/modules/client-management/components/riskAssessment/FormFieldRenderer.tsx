@@ -4,6 +4,7 @@
  */
 import { Label } from '../../../../../ui/label';
 import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { CheckCircle } from 'lucide-react';
 
 import type { FormField } from './riskAssessmentModel';
@@ -53,9 +54,9 @@ export function FormFieldRenderer({
 
       {/* Number Input */}
       {field.type === 'number' && (
-        <Input
+        <NumberInputField
           id={field.id}
-          type="number"
+          decimals={2}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="0"

@@ -173,6 +173,14 @@ stated prerequisite has already caused a production outage once.
   intake an agent with no login uses (a file over HTTPS, or base64 in SQL).
   Both store through `replacePolicyDocumentForPolicy`; keep it that way rather
   than giving the intake its own write.
+- **Every typed number goes through the two shared numeric inputs.**
+  `NumberInputField` for plain numbers (what is typed shows as typed, no
+  leading 0) and `CurrencyInputField` for rands (the comma every three digits
+  and the "." for cents appear while typing, not after). This is an owner rule
+  (2026-10-09) and ESLint enforces it: a native `type="number"` input, or the
+  blur-time `formatCurrencyInput` / `cleanCurrencyInput` helpers in a
+  component, fail lint. See [`GUIDELINES.md`](GUIDELINES.md) §8.3. Do not
+  reintroduce either to get a field working.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.

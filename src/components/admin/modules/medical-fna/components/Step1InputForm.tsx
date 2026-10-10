@@ -25,6 +25,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Switch } from '../../../../ui/switch';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import {
@@ -160,11 +162,12 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Children</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    <NumberInputField
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onValueChange={(v) => field.onChange(v ?? 0)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -179,11 +182,12 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Adult Dependants</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    <NumberInputField
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onValueChange={(v) => field.onChange(v ?? 0)}
                     />
                   </FormControl>
                   <div className="text-xs text-muted-foreground">Parents, siblings, etc.</div>
@@ -325,11 +329,12 @@ export function Step1InputForm({
                 <FormItem>
                   <FormLabel>Est. Annual Day-to-Day Spend (R)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    <CurrencyInputField
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onValueChange={(v) => field.onChange(v ?? 0)}
                     />
                   </FormControl>
                   <div className="text-xs text-muted-foreground">
@@ -445,11 +450,12 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Total Monthly Premium (R)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      <CurrencyInputField
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onValueChange={(v) => field.onChange(v ?? 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -464,11 +470,12 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Medical Savings Account (MSA)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      <CurrencyInputField
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onValueChange={(v) => field.onChange(v ?? 0)}
                       />
                     </FormControl>
                     <div className="text-xs text-muted-foreground">
@@ -488,11 +495,12 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Current Late Joiner Penalty (R)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      <CurrencyInputField
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onValueChange={(v) => field.onChange(v ?? 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -507,11 +515,12 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Number of Dependents</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      <NumberInputField
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onValueChange={(v) => field.onChange(v ?? 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -553,12 +562,12 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Current Age</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={120}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      <NumberInputField
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onValueChange={(v) => field.onChange(v ?? 0)}
                       />
                     </FormControl>
                     <div className="text-xs text-muted-foreground">Client's current age</div>
@@ -574,12 +583,12 @@ export function Step1InputForm({
                   <FormItem>
                     <FormLabel>Years Without Medical Aid (After Age 35)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        placeholder="0"
+                      <NumberInputField
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value}
+                        onBlur={field.onBlur}
+                        onValueChange={(v) => field.onChange(v ?? 0)}
                       />
                     </FormControl>
                     <div className="text-xs text-muted-foreground">

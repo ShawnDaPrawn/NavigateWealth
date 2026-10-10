@@ -23,6 +23,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { Badge } from '../../../../ui/badge';
@@ -688,12 +689,9 @@ export function BulkSendDialog({
                 </div>
                 <div className="space-y-2">
                   <Label>Expiry (days)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={365}
+                  <NumberInputField
                     value={expiryDays}
-                    onChange={(e) => setExpiryDays(Math.max(1, parseInt(e.target.value, 10) || 30))}
+                    onValueChange={(v) => setExpiryDays(Math.max(1, v || 30))}
                   />
                 </div>
               </div>

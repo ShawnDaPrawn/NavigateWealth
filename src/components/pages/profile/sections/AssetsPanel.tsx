@@ -9,6 +9,7 @@ import { EmptyState } from '../EmptyState';
 import { emptyStateConfigs } from '../emptyStateConfigs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';
+import { CurrencyInputField } from '../../../ui/currency-input';
 import { Label } from '../../../ui/label';
 import { Button } from '../../../ui/button';
 import { Textarea } from '../../../ui/textarea';
@@ -21,11 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog';
-import {
-  formatCurrency,
-  formatCurrencyInput,
-  cleanCurrencyInput,
-} from '../../../../utils/currencyFormatter';
+import { formatCurrency } from '../../../../utils/currencyFormatter';
 import {
   TrendingUp,
   PieChart,
@@ -56,8 +53,6 @@ interface AssetsPanelProps {
   possibleDuplicateCount: number;
   totalAssets: number;
   assetsInEditMode: Set<string>;
-  assetDisplayValues: { [id: string]: string };
-  setAssetDisplayValues: React.Dispatch<React.SetStateAction<{ [id: string]: string }>>;
   assetEditGuard: ReturnType<typeof useInlineEditDialogClose>;
   addAsset: () => void;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
@@ -76,8 +71,6 @@ export function AssetsPanel({
   possibleDuplicateCount,
   totalAssets,
   assetsInEditMode,
-  assetDisplayValues,
-  setAssetDisplayValues,
   assetEditGuard,
   addAsset,
   updateAsset,
@@ -343,33 +336,10 @@ export function AssetsPanel({
                         <Label htmlFor={`asset-value-${asset.id}`}>
                           Current Estimated Value (R) *
                         </Label>
-                        <Input
+                        <CurrencyInputField
                           id={`asset-value-${asset.id}`}
-                          type="text"
-                          value={
-                            assetDisplayValues[asset.id] !== undefined
-                              ? assetDisplayValues[asset.id]
-                              : asset.value
-                                ? formatCurrencyInput(asset.value.toString())
-                                : ''
-                          }
-                          onChange={(e) => {
-                            const formattedDisplay = formatCurrencyInput(e.target.value);
-                            setAssetDisplayValues((prev) => ({
-                              ...prev,
-                              [asset.id]: formattedDisplay,
-                            }));
-                            const cleanValue = cleanCurrencyInput(formattedDisplay);
-                            updateAsset(asset.id, { value: parseFloat(cleanValue) || 0 });
-                          }}
-                          onBlur={() => {
-                            setAssetDisplayValues((prev) => {
-                              const nextValues = { ...prev };
-                              delete nextValues[asset.id];
-                              return nextValues;
-                            });
-                          }}
-                          placeholder="0.00"
+                          value={asset.value}
+                          onValueChange={(v) => updateAsset(asset.id, { value: v ?? 0 })}
                           className="mt-1.5"
                         />
                       </div>

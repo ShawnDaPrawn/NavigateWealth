@@ -13,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../../ui/dialog';
-import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
+import { NumberInputField } from '../../../../../ui/number-input';
 import {
   Select,
   SelectContent,
@@ -100,9 +100,9 @@ export function CreateCardDialog({
           <div className="space-y-2">
             <Label htmlFor="card-limit">Spending limit (optional)</Label>
             <div className="flex gap-2">
-              <Input
+              <NumberInputField
                 id="card-limit"
-                inputMode="decimal"
+                decimals={2}
                 value={limitAmount}
                 onChange={(e) => setLimitAmount(e.target.value)}
                 placeholder="0.00"

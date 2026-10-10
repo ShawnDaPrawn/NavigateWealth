@@ -10,6 +10,8 @@ import { useState } from 'react';
 import { AlertCircle, Plus, Target, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
+import { CurrencyInputField } from '../../../../../ui/currency-input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Label } from '../../../../../ui/label';
 import { Button } from '../../../../../ui/button';
 import {
@@ -38,11 +40,6 @@ export interface INASectionProps {
   updateInputs: (updates: Partial<InvestmentINAInputs>) => void;
 }
 
-function parseNumber(value: string, parse: (v: string) => number = parseFloat): number | undefined {
-  const parsed = parse(value);
-  return Number.isNaN(parsed) ? undefined : parsed;
-}
-
 export function ClientOverviewSection({ inputs, updateInputs }: INASectionProps) {
   return (
     <Card>
@@ -54,13 +51,10 @@ export function ClientOverviewSection({ inputs, updateInputs }: INASectionProps)
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ina-current-age">Current Age *</Label>
-            <Input
+            <NumberInputField
               id="ina-current-age"
-              type="number"
-              value={inputs.currentAge ?? ''}
-              onChange={(e) =>
-                updateInputs({ currentAge: parseNumber(e.target.value, (v) => parseInt(v, 10)) })
-              }
+              value={inputs.currentAge}
+              onValueChange={(v) => updateInputs({ currentAge: v })}
             />
           </div>
           <div className="space-y-2">
@@ -76,35 +70,26 @@ export function ClientOverviewSection({ inputs, updateInputs }: INASectionProps)
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ina-dependants">Household Dependants</Label>
-            <Input
+            <NumberInputField
               id="ina-dependants"
-              type="number"
               value={inputs.householdDependants ?? 0}
-              onChange={(e) =>
-                updateInputs({
-                  householdDependants: parseNumber(e.target.value, (v) => parseInt(v, 10)) ?? 0,
-                })
-              }
+              onValueChange={(v) => updateInputs({ householdDependants: v ?? 0 })}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ina-gross">Gross Monthly Income</Label>
-            <Input
+            <CurrencyInputField
               id="ina-gross"
-              type="number"
-              value={inputs.grossMonthlyIncome ?? ''}
-              onChange={(e) => updateInputs({ grossMonthlyIncome: parseNumber(e.target.value) })}
-              placeholder="R 0"
+              value={inputs.grossMonthlyIncome}
+              onValueChange={(v) => updateInputs({ grossMonthlyIncome: v })}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ina-net">Net Monthly Income</Label>
-            <Input
+            <CurrencyInputField
               id="ina-net"
-              type="number"
-              value={inputs.netMonthlyIncome ?? ''}
-              onChange={(e) => updateInputs({ netMonthlyIncome: parseNumber(e.target.value) })}
-              placeholder="R 0"
+              value={inputs.netMonthlyIncome}
+              onValueChange={(v) => updateInputs({ netMonthlyIncome: v })}
             />
           </div>
         </div>
@@ -383,12 +368,10 @@ function GoalEditorCard({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor={id('amount')}>Required Capital (Today&apos;s Rands) *</Label>
-            <Input
+            <CurrencyInputField
               id={id('amount')}
-              type="number"
               value={goal.goalAmountToday}
-              onChange={(e) => onUpdate({ goalAmountToday: parseNumber(e.target.value) ?? 0 })}
-              placeholder="R 0"
+              onValueChange={(v) => onUpdate({ goalAmountToday: v ?? 0 })}
             />
           </div>
           <div className="space-y-2">
@@ -404,14 +387,10 @@ function GoalEditorCard({
 
         <div className="space-y-2">
           <Label htmlFor={id('contribution')}>Current Monthly Contribution to Goal</Label>
-          <Input
+          <CurrencyInputField
             id={id('contribution')}
-            type="number"
             value={goal.currentContributionToGoal}
-            onChange={(e) =>
-              onUpdate({ currentContributionToGoal: parseNumber(e.target.value) ?? 0 })
-            }
-            placeholder="R 0"
+            onValueChange={(v) => onUpdate({ currentContributionToGoal: v ?? 0 })}
           />
         </div>
 

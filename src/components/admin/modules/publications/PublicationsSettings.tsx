@@ -3,6 +3,7 @@ import { Button } from '../../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
+import { NumberInputField } from '../../../ui/number-input';
 import {
   Settings,
   Database,
@@ -27,6 +28,8 @@ export function PublicationsSettings() {
   const [clearing, setClearing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Local only: settings persistence is not implemented yet (see the note under Save Settings).
+  const [articlesPerPage, setArticlesPerPage] = useState<number | undefined>(12);
 
   // ── Press Stats Config ──────────────────────────────────────────────────
   const [pressAum, setPressAum] = useState('R500 mil+');
@@ -228,11 +231,9 @@ export function PublicationsSettings() {
 
             <div>
               <Label>Articles per Page (Public)</Label>
-              <Input
-                type="number"
-                defaultValue="12"
-                min="6"
-                max="50"
+              <NumberInputField
+                value={articlesPerPage}
+                onValueChange={setArticlesPerPage}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>

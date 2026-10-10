@@ -6,10 +6,12 @@ import React, { useState } from 'react';
 import { Button } from '../../../../../ui/button';
 import { Label } from '../../../../../ui/label';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '../../../../../ui/select';
+import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { toast } from 'sonner';
 import { Check, Copy } from 'lucide-react';
 import { FieldWithCopy } from '../../../../FieldWithCopy';
 import { copyToClipboard } from '../../../../../../utils/clipboard';
+import { formatCurrencyDisplay } from '../../../../../../utils/currencyFormatter';
 
 // Wrapper component for input with copy button using the reusable FieldWithCopy
 export const InputWithCopy = ({
@@ -29,6 +31,64 @@ export const InputWithCopy = ({
     <div>
       <Label htmlFor={id}>{label}</Label>
       <FieldWithCopy id={id ?? fieldName} {...inputProps} value={value} className="mt-1.5" />
+    </div>
+  );
+};
+
+// Rand amount with copy button. CurrencyInputField formats as the adviser
+// types; the button copies the amount as shown when not editing ("45,000.00").
+export const CurrencyInputWithCopy = ({
+  label,
+  value,
+  id,
+  onValueChange,
+}: {
+  label: string;
+  value: number | undefined;
+  id: string;
+  onValueChange: (value: number | undefined) => void;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      const textToCopy = formatCurrencyDisplay(value);
+
+      if (!textToCopy) {
+        toast.error('Nothing to copy');
+        return;
+      }
+
+      await copyToClipboard(textToCopy);
+      setCopied(true);
+      toast.success('Copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_err) {
+      toast.error('Failed to copy');
+    }
+  };
+
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative mt-1.5">
+        <CurrencyInputField id={id} value={value} onValueChange={onValueChange} className="pr-10" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          tabIndex={-1}
+          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+          title="Copy to clipboard"
+        >
+          {copied ? (
+            <Check className="h-4 w-4 text-green-600" />
+          ) : (
+            <Copy className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+          )}
+        </Button>
+      </div>
     </div>
   );
 };

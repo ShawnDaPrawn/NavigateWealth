@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import {
   Select,
@@ -573,33 +575,26 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="currentAge">Current Age</Label>
-                    <Input
+                    <NumberInputField
                       id="currentAge"
-                      type="number"
                       value={inputs.currentAge}
-                      onChange={(e) => setInputs({ ...inputs, currentAge: Number(e.target.value) })}
+                      onValueChange={(v) => setInputs({ ...inputs, currentAge: v ?? 0 })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="retirementAge">Retirement Age</Label>
-                    <Input
+                    <NumberInputField
                       id="retirementAge"
-                      type="number"
                       value={inputs.retirementAge}
-                      onChange={(e) =>
-                        setInputs({ ...inputs, retirementAge: Number(e.target.value) })
-                      }
+                      onValueChange={(v) => setInputs({ ...inputs, retirementAge: v ?? 0 })}
                     />
                   </div>
                   <div className="col-span-2 space-y-2">
                     <Label htmlFor="lifeExpectancy">Life Expectancy (Age)</Label>
-                    <Input
+                    <NumberInputField
                       id="lifeExpectancy"
-                      type="number"
                       value={inputs.lifeExpectancyAge}
-                      onChange={(e) =>
-                        setInputs({ ...inputs, lifeExpectancyAge: Number(e.target.value) })
-                      }
+                      onValueChange={(v) => setInputs({ ...inputs, lifeExpectancyAge: v ?? 0 })}
                     />
                   </div>
                 </div>
@@ -613,35 +608,21 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="currentSavings">Current Retirement Capital</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-gray-500">R</span>
-                      <Input
-                        id="currentSavings"
-                        className="pl-8"
-                        type="number"
-                        value={inputs.currentSavings}
-                        onChange={(e) =>
-                          setInputs({ ...inputs, currentSavings: Number(e.target.value) })
-                        }
-                      />
-                    </div>
+                    <CurrencyInputField
+                      id="currentSavings"
+                      value={inputs.currentSavings}
+                      onValueChange={(v) => setInputs({ ...inputs, currentSavings: v ?? 0 })}
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="contribution">Contribution</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-gray-500">R</span>
-                        <Input
-                          id="contribution"
-                          className="pl-8"
-                          type="number"
-                          value={inputs.contributionAmount}
-                          onChange={(e) =>
-                            setInputs({ ...inputs, contributionAmount: Number(e.target.value) })
-                          }
-                        />
-                      </div>
+                      <CurrencyInputField
+                        id="contribution"
+                        value={inputs.contributionAmount}
+                        onValueChange={(v) => setInputs({ ...inputs, contributionAmount: v ?? 0 })}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="frequency">Frequency</Label>
@@ -667,12 +648,12 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="growthRate">Contribution Annual Growth (%)</Label>
-                    <Input
+                    <NumberInputField
                       id="growthRate"
-                      type="number"
+                      decimals={2}
                       value={inputs.contributionGrowthRate}
-                      onChange={(e) =>
-                        setInputs({ ...inputs, contributionGrowthRate: Number(e.target.value) })
+                      onValueChange={(v) =>
+                        setInputs({ ...inputs, contributionGrowthRate: v ?? 0 })
                       }
                     />
                     <p className="text-xs text-muted-foreground">
@@ -703,35 +684,29 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="nominalReturn">Nominal Return (%)</Label>
-                        <Input
+                        <NumberInputField
                           id="nominalReturn"
-                          type="number"
+                          decimals={2}
                           value={inputs.nominalReturn}
-                          onChange={(e) =>
-                            setInputs({ ...inputs, nominalReturn: Number(e.target.value) })
-                          }
+                          onValueChange={(v) => setInputs({ ...inputs, nominalReturn: v ?? 0 })}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="inflation">Inflation (%)</Label>
-                        <Input
+                        <NumberInputField
                           id="inflation"
-                          type="number"
+                          decimals={2}
                           value={inputs.inflation}
-                          onChange={(e) =>
-                            setInputs({ ...inputs, inflation: Number(e.target.value) })
-                          }
+                          onValueChange={(v) => setInputs({ ...inputs, inflation: v ?? 0 })}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="fees">Total Annual Fees (%)</Label>
-                        <Input
+                        <NumberInputField
                           id="fees"
-                          type="number"
+                          decimals={2}
                           value={inputs.annualFee}
-                          onChange={(e) =>
-                            setInputs({ ...inputs, annualFee: Number(e.target.value) })
-                          }
+                          onValueChange={(v) => setInputs({ ...inputs, annualFee: v ?? 0 })}
                         />
                       </div>
                     </div>

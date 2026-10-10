@@ -106,6 +106,56 @@ export default tseslint.config(
     },
   },
 
+  // 3b. Numeric inputs — ENFORCED. Every number the user types goes through
+  //     NumberInputField (plain numbers: what is typed is what shows, no
+  //     leading 0) or CurrencyInputField (rands: the comma every three digits
+  //     and the "." for cents appear in the box AS they are typed). A native
+  //     `type="number"` input keeps a stray 0 in front of the first digit
+  //     ("0265") and cannot show separators, so it is banned outright. The
+  //     blur-time helpers that formatted an amount only after it was typed are
+  //     banned from components for the same reason.
+  {
+    files: ['src/**/*.tsx'],
+    ignores: ['src/supabase/functions/**', '**/__tests__/**', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "JSXAttribute[name.name='type'][value.value='number'], JSXAttribute[name.name='type'] > JSXExpressionContainer > Literal[value='number']",
+          message:
+            'Use NumberInputField (components/ui/number-input) for numbers or CurrencyInputField (components/ui/currency-input) for rand amounts — never a native type="number" input.',
+        },
+      ],
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/supabase/functions/**'],
+              message:
+                'Frontend must not import Supabase Edge Function (Deno) source at runtime — call it over HTTP. Type-only imports are allowed (use `import type`).',
+              allowTypeImports: true,
+            },
+            {
+              group: ['**/utils/currencyFormatter', '@/utils/currencyFormatter'],
+              importNames: ['formatCurrencyInput', 'cleanCurrencyInput'],
+              message:
+                'Amount fields format while typing: use CurrencyInputField (components/ui/currency-input) instead of formatting on blur.',
+            },
+          ],
+          paths: [
+            {
+              name: 'react-toastify',
+              message:
+                'Use `import { toast } from "sonner"` — sonner is the app\'s toast system and its <Toaster> is the only one mounted (AppProviders.tsx). react-toastify toasts silently DO NOTHING: no <ToastContainer> is rendered anywhere and its CSS is never imported, so every call was a no-op. This bit ReminderSettingsPanel, where admins saving e-sign reminder settings got no success or failure feedback at all.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // 4. Supabase Edge Functions — Deno runtime (npm:/jsr: imports, Deno globals).
   {
     files: ['src/supabase/functions/**/*.{ts,tsx}'],

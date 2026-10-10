@@ -146,8 +146,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'monthlyIncome',
         label: 'Gross monthly income (R)',
-        type: 'text',
-        placeholder: 'e.g. 45 000',
+        type: 'currency',
+        placeholder: '45,000',
         required: false,
       },
     ],
@@ -200,8 +200,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'monthlyBudget',
         label: 'Monthly budget (R)',
-        type: 'text',
-        placeholder: 'e.g. 5 000',
+        type: 'currency',
+        placeholder: '5,000',
         required: false,
       },
     ],
@@ -235,15 +235,15 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'monthlyContribution',
         label: 'Monthly contribution budget (R)',
-        type: 'text',
-        placeholder: 'e.g. 5 000',
+        type: 'currency',
+        placeholder: '5,000',
         required: false,
       },
       {
         id: 'existingFunds',
         label: 'Existing retirement savings (R)',
-        type: 'text',
-        placeholder: 'e.g. 500 000',
+        type: 'currency',
+        placeholder: '500,000',
         required: false,
       },
     ],
@@ -276,8 +276,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'investmentAmount',
         label: 'Investment amount (R)',
-        type: 'text',
-        placeholder: 'e.g. 100 000',
+        type: 'currency',
+        placeholder: '100,000',
         required: true,
       },
       {
@@ -387,8 +387,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'annualIncome',
         label: 'Estimated annual income (R)',
-        type: 'text',
-        placeholder: 'e.g. 750 000',
+        type: 'currency',
+        placeholder: '750,000',
         required: true,
       },
       {
@@ -457,8 +457,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'estimatedEstateValue',
         label: 'Estimated estate value (R)',
-        type: 'text',
-        placeholder: 'e.g. 5 000 000',
+        type: 'currency',
+        placeholder: '5,000,000',
         required: false,
       },
       {

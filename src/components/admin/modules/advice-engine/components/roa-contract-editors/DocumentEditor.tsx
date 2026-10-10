@@ -9,6 +9,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Label } from '../../../../../ui/label';
 import { Textarea } from '../../../../../ui/textarea';
 import { renderRuntimeTemplate } from '../../roaModuleRuntime';
@@ -122,10 +123,9 @@ export function DocumentEditor({
               key={`${section.id}-${index}`}
               className="grid gap-3 rounded-md border p-3 md:grid-cols-[120px_1fr_1fr_auto_auto]"
             >
-              <Input
-                type="number"
+              <NumberInputField
                 value={section.order}
-                onChange={(event) => updateSection(index, { order: Number(event.target.value) })}
+                onValueChange={(v) => updateSection(index, { order: v ?? 0 })}
               />
               <Input
                 value={section.id}

@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../../../ui/card';
-import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import {
   Select,
@@ -20,6 +19,7 @@ import {
 } from '../../../../../ui/form';
 import { Separator } from '../../../../../ui/separator';
 import { CurrencyInputField } from '../../../../../ui/currency-input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { formatCurrency } from '../../utils';
 import { EMPLOYMENT_TYPE_LABELS } from '../../constants';
 import type { InformationGatheringFormValues } from '../../schema';
@@ -66,7 +66,7 @@ export function IncomeDetailsForm() {
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Gross Monthly Income</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" className="text-sm" {...field} />
+                    <CurrencyInputField className="text-sm" {...field} />
                   </FormControl>
                   <FormMessage className="text-xs" />
                 </FormItem>
@@ -88,7 +88,7 @@ export function IncomeDetailsForm() {
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Net Monthly Income</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" className="text-sm" {...field} />
+                    <CurrencyInputField className="text-sm" {...field} />
                   </FormControl>
                   <FormMessage className="text-xs" />
                 </FormItem>
@@ -111,7 +111,7 @@ export function IncomeDetailsForm() {
                   Annual Income Escalation Assumption (%)
                 </FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="6" className="text-sm" {...field} />
+                  <NumberInputField decimals={2} placeholder="6" className="text-sm" {...field} />
                 </FormControl>
                 <FormDescription className="text-xs">
                   Expected annual income increase percentage
@@ -136,7 +136,7 @@ export function IncomeDetailsForm() {
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Current Age</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="35" className="text-sm" {...field} />
+                    <NumberInputField placeholder="35" className="text-sm" {...field} />
                   </FormControl>
                   <FormMessage className="text-xs" />
                 </FormItem>
@@ -149,7 +149,7 @@ export function IncomeDetailsForm() {
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Retirement Age</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="65" className="text-sm" {...field} />
+                    <NumberInputField placeholder="65" className="text-sm" {...field} />
                   </FormControl>
                   <FormMessage className="text-xs" />
                 </FormItem>
@@ -196,7 +196,7 @@ export function IncomeDetailsForm() {
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Total Outstanding Debts</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" className="text-sm" {...field} />
+                    <CurrencyInputField className="text-sm" {...field} />
                   </FormControl>
                   <FormDescription className="text-xs">
                     All liabilities (home loan, car finance, credit cards, etc.)
@@ -212,7 +212,7 @@ export function IncomeDetailsForm() {
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Total Current Assets</FormLabel>
                   <FormControl>
-                    <CurrencyInputField placeholder="0" className="text-sm" {...field} />
+                    <CurrencyInputField className="text-sm" {...field} />
                   </FormControl>
                   <FormDescription className="text-xs">
                     All assets (property, investments, savings, etc.)
@@ -230,7 +230,7 @@ export function IncomeDetailsForm() {
               <FormItem>
                 <FormLabel className="text-sm font-medium">Estate Worth / Net Worth</FormLabel>
                 <FormControl>
-                  <CurrencyInputField placeholder="0" className="text-sm" {...field} />
+                  <CurrencyInputField className="text-sm" {...field} />
                 </FormControl>
                 <FormDescription className="text-xs">
                   Auto-calculated as Assets - Debts ({formatCurrency(calculatedEstateValue)}). You
@@ -252,7 +252,7 @@ export function IncomeDetailsForm() {
                   Total Household Monthly Expenditure
                 </FormLabel>
                 <FormControl>
-                  <CurrencyInputField placeholder="0" className="text-sm" {...field} />
+                  <CurrencyInputField className="text-sm" {...field} />
                 </FormControl>
                 <FormDescription className="text-xs">Monthly household expenses</FormDescription>
                 <FormMessage className="text-xs" />

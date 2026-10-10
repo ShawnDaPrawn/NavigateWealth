@@ -1,5 +1,5 @@
 import { Button } from '../../../../../ui/button';
-import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Badge } from '../../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Label } from '../../../../../ui/label';
@@ -31,7 +31,10 @@ export function TabCommission({ selectedPersonnel }: TabCommissionProps) {
           <div className="space-y-2">
             <Label>Standard Split (%)</Label>
             <div className="flex items-center gap-2">
-              <Input type="number" defaultValue={(selectedPersonnel.commissionSplit || 0) * 100} />
+              <NumberInputField
+                decimals={2}
+                value={(selectedPersonnel.commissionSplit || 0) * 100}
+              />
               <span className="text-muted-foreground">%</span>
             </div>
             <p className="text-xs text-muted-foreground">

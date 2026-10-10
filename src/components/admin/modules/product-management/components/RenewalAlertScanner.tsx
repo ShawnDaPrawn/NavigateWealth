@@ -12,7 +12,7 @@ import { useState, useCallback } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import {
   AlertDialog,
@@ -170,12 +170,9 @@ export function RenewalAlertScanner() {
           <div className="flex items-end gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs text-gray-600">Scan Window (days ahead)</Label>
-              <Input
-                type="number"
-                min={7}
-                max={365}
+              <NumberInputField
                 value={daysAhead}
-                onChange={(e) => setDaysAhead(Number(e.target.value) || 60)}
+                onValueChange={(v) => setDaysAhead(Math.min(v || 60, 365))}
                 className="w-24 h-9"
               />
             </div>

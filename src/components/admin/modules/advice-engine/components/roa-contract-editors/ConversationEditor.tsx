@@ -9,6 +9,7 @@ import { Button } from '../../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Label } from '../../../../../ui/label';
 import {
   Select,
@@ -131,12 +132,9 @@ export function ConversationEditor({
               key={`${section.id}-${index}`}
               className="grid gap-3 rounded-md border p-3 md:grid-cols-[100px_1fr_1fr_auto_auto]"
             >
-              <Input
-                type="number"
+              <NumberInputField
                 value={section.order}
-                onChange={(event) =>
-                  updateNarrativeSection(index, { order: Number(event.target.value) })
-                }
+                onValueChange={(v) => updateNarrativeSection(index, { order: v ?? 0 })}
                 placeholder="Order"
               />
               <Input
@@ -334,15 +332,14 @@ export function ConversationEditor({
           </div>
           <div className="space-y-2">
             <Label htmlFor="completion-min-turns">Minimum turns</Label>
-            <Input
+            <NumberInputField
               id="completion-min-turns"
-              type="number"
               value={conversation.completion.minTurns ?? 0}
-              onChange={(event) =>
+              onValueChange={(v) =>
                 updateConversation({
                   completion: {
                     ...conversation.completion,
-                    minTurns: Number(event.target.value) || 0,
+                    minTurns: v ?? 0,
                   },
                 })
               }

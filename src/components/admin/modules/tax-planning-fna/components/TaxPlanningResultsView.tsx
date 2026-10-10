@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { FileText, DollarSign, CheckCircle, Lock } from 'lucide-react';
 import { FinalTaxPlan } from '../types';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 interface TaxPlanningResultsViewProps {
   plan: FinalTaxPlan;
@@ -20,7 +21,7 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
 
   const { inputs, finalResults, recommendations, adjustments, adviserNotes, generatedAt } = plan;
 
-  const formatMoney = (val: number) => `R ${Math.round(val).toLocaleString()}`;
+  const formatMoney = (val: number) => formatCurrencyWhole(val);
   const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
 
   const acceptedRecs = recommendations.filter((r) => r.status === 'accepted');

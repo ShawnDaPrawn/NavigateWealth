@@ -5,7 +5,7 @@
  * the medical aid wizard: each step was already a self-contained function with
  * its own props; only its address changed.
  */
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { HelpCircle } from 'lucide-react';
 import {
@@ -70,20 +70,15 @@ export function Step2RAContribution({
             Monthly contribution amount (ZAR)
           </Label>
           <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                R
-              </span>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="e.g. 3,000"
+            <div className="flex-1">
+              <CurrencyInputField
+                placeholder="3,000"
                 value={state.monthly_amount}
                 onChange={(e) =>
                   onChange({ ...state, monthly_amount: formatCurrency(e.target.value) })
                 }
                 disabled={state.monthly_adviser_assist}
-                className="bg-white border-gray-300 h-10 pl-7"
+                className="bg-white border-gray-300 h-10"
               />
             </div>
             <button
@@ -114,20 +109,15 @@ export function Step2RAContribution({
             Lump sum contribution amount (ZAR)
           </Label>
           <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                R
-              </span>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="e.g. 100,000"
+            <div className="flex-1">
+              <CurrencyInputField
+                placeholder="100,000"
                 value={state.lump_sum_amount}
                 onChange={(e) =>
                   onChange({ ...state, lump_sum_amount: formatCurrency(e.target.value) })
                 }
                 disabled={state.lump_sum_adviser_assist}
-                className="bg-white border-gray-300 h-10 pl-7"
+                className="bg-white border-gray-300 h-10"
               />
             </div>
             <button

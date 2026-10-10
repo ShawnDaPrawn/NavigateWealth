@@ -10,6 +10,10 @@ import type {
   DiscretionaryInvestment,
   RiskProfile,
 } from '../types';
+import {
+  formatCurrency as formatCurrencyWithCents,
+  formatCurrencyWhole,
+} from '../../../../../utils/currencyFormatter';
 
 /**
  * Validate INA inputs
@@ -102,10 +106,7 @@ export function calculateYearsToGoal(targetYear: number): number {
  * Format currency (South African Rand)
  */
 export function formatCurrency(amount: number, decimals: number = 0): string {
-  return `R${amount.toLocaleString('en-ZA', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })}`;
+  return decimals > 0 ? formatCurrencyWithCents(amount) : formatCurrencyWhole(amount);
 }
 
 /**

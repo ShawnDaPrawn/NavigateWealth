@@ -7,6 +7,7 @@
  */
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Heart, Users, Plus, Minus } from 'lucide-react';
 import { MEMBERSHIP_TYPES, type MemberEntry, type MembersState } from './model';
@@ -120,10 +121,7 @@ export function Step1Members({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-gray-600">Or age</Label>
-              <Input
-                type="number"
-                min={0}
-                max={120}
+              <NumberInputField
                 placeholder="e.g. 34"
                 value={members.main.age}
                 onChange={(e) => updateMain('age', e.target.value)}
@@ -155,10 +153,7 @@ export function Step1Members({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-gray-600">Or age</Label>
-              <Input
-                type="number"
-                min={0}
-                max={120}
+              <NumberInputField
                 placeholder="e.g. 32"
                 value={members.spouse.age}
                 onChange={(e) => updateSpouse('age', e.target.value)}
@@ -212,10 +207,7 @@ export function Step1Members({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-gray-600">Or age</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={30}
+                  <NumberInputField
                     placeholder="e.g. 7"
                     value={child.age}
                     onChange={(e) => updateChild(i, 'age', e.target.value)}

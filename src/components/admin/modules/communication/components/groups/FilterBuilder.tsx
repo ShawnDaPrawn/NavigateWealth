@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
-import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
+import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import {
   Select,
@@ -64,12 +65,11 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
   };
 
   // --- Net Worth Filters ---
-  const updateNetWorthFilter = (index: number, field: 'min' | 'max', value: string) => {
+  const updateNetWorthFilter = (index: number, field: 'min' | 'max', value: number | undefined) => {
     const newFilters = [...(filterConfig.netWorthFilters || [])];
     if (!newFilters[index]) newFilters[index] = {};
 
-    const numVal = value ? Number(value) : undefined;
-    newFilters[index][field] = numVal;
+    newFilters[index][field] = value;
 
     if (newFilters[index].min === undefined && newFilters[index].max === undefined) {
       newFilters.splice(index, 1);
@@ -91,12 +91,11 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
   };
 
   // --- Age Filters ---
-  const updateAgeFilter = (index: number, field: 'min' | 'max', value: string) => {
+  const updateAgeFilter = (index: number, field: 'min' | 'max', value: number | undefined) => {
     const newFilters = [...(filterConfig.ageFilters || [])];
     if (!newFilters[index]) newFilters[index] = {};
 
-    const numVal = value ? Number(value) : undefined;
-    newFilters[index][field] = numVal;
+    newFilters[index][field] = value;
 
     if (newFilters[index].min === undefined && newFilters[index].max === undefined) {
       newFilters.splice(index, 1);
@@ -118,12 +117,11 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
   };
 
   // --- Income Filters ---
-  const updateIncomeFilter = (index: number, field: 'min' | 'max', value: string) => {
+  const updateIncomeFilter = (index: number, field: 'min' | 'max', value: number | undefined) => {
     const newFilters = [...(filterConfig.incomeFilters || [])];
     if (!newFilters[index]) newFilters[index] = {};
 
-    const numVal = value ? Number(value) : undefined;
-    newFilters[index][field] = numVal;
+    newFilters[index][field] = value;
 
     if (newFilters[index].min === undefined && newFilters[index].max === undefined) {
       newFilters.splice(index, 1);
@@ -145,12 +143,15 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
   };
 
   // --- Dependant Count Filters ---
-  const updateDependantCountFilter = (index: number, field: 'min' | 'max', value: string) => {
+  const updateDependantCountFilter = (
+    index: number,
+    field: 'min' | 'max',
+    value: number | undefined,
+  ) => {
     const newFilters = [...(filterConfig.dependantCountFilters || [])];
     if (!newFilters[index]) newFilters[index] = {};
 
-    const numVal = value ? Number(value) : undefined;
-    newFilters[index][field] = numVal;
+    newFilters[index][field] = value;
 
     if (newFilters[index].min === undefined && newFilters[index].max === undefined) {
       newFilters.splice(index, 1);
@@ -172,12 +173,15 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
   };
 
   // --- Retirement Age Filters ---
-  const updateRetirementAgeFilter = (index: number, field: 'min' | 'max', value: string) => {
+  const updateRetirementAgeFilter = (
+    index: number,
+    field: 'min' | 'max',
+    value: number | undefined,
+  ) => {
     const newFilters = [...(filterConfig.retirementAgeFilters || [])];
     if (!newFilters[index]) newFilters[index] = {};
 
-    const numVal = value ? Number(value) : undefined;
-    newFilters[index][field] = numVal;
+    newFilters[index][field] = value;
 
     if (newFilters[index].min === undefined && newFilters[index].max === undefined) {
       newFilters.splice(index, 1);
@@ -315,20 +319,20 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
                 <label className="text-xs font-medium">Min (R)</label>
-                <Input
-                  type="number"
+                <CurrencyInputField
+                  allowNegative
                   placeholder="Min Value"
                   value={filter.min ?? ''}
-                  onChange={(e) => updateNetWorthFilter(index, 'min', e.target.value)}
+                  onValueChange={(v) => updateNetWorthFilter(index, 'min', v)}
                 />
               </div>
               <div className="flex-1">
                 <label className="text-xs font-medium">Max (R)</label>
-                <Input
-                  type="number"
+                <CurrencyInputField
+                  allowNegative
                   placeholder="Max Value"
                   value={filter.max ?? ''}
-                  onChange={(e) => updateNetWorthFilter(index, 'max', e.target.value)}
+                  onValueChange={(v) => updateNetWorthFilter(index, 'max', v)}
                 />
               </div>
               <Button
@@ -365,18 +369,16 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
                 <label className="text-xs font-medium">Min Age</label>
-                <Input
-                  type="number"
+                <NumberInputField
                   value={filter.min ?? ''}
-                  onChange={(e) => updateAgeFilter(index, 'min', e.target.value)}
+                  onValueChange={(v) => updateAgeFilter(index, 'min', v)}
                 />
               </div>
               <div className="flex-1">
                 <label className="text-xs font-medium">Max Age</label>
-                <Input
-                  type="number"
+                <NumberInputField
                   value={filter.max ?? ''}
-                  onChange={(e) => updateAgeFilter(index, 'max', e.target.value)}
+                  onValueChange={(v) => updateAgeFilter(index, 'max', v)}
                 />
               </div>
               <Button
@@ -454,20 +456,18 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
                 <label className="text-xs font-medium">Min (R)</label>
-                <Input
-                  type="number"
+                <CurrencyInputField
                   placeholder="Min Income"
                   value={filter.min ?? ''}
-                  onChange={(e) => updateIncomeFilter(index, 'min', e.target.value)}
+                  onValueChange={(v) => updateIncomeFilter(index, 'min', v)}
                 />
               </div>
               <div className="flex-1">
                 <label className="text-xs font-medium">Max (R)</label>
-                <Input
-                  type="number"
+                <CurrencyInputField
                   placeholder="Max Income"
                   value={filter.max ?? ''}
-                  onChange={(e) => updateIncomeFilter(index, 'max', e.target.value)}
+                  onValueChange={(v) => updateIncomeFilter(index, 'max', v)}
                 />
               </div>
               <Button
@@ -562,20 +562,18 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
                 <label className="text-xs font-medium">Min Count</label>
-                <Input
-                  type="number"
+                <NumberInputField
                   placeholder="Min"
                   value={filter.min ?? ''}
-                  onChange={(e) => updateDependantCountFilter(index, 'min', e.target.value)}
+                  onValueChange={(v) => updateDependantCountFilter(index, 'min', v)}
                 />
               </div>
               <div className="flex-1">
                 <label className="text-xs font-medium">Max Count</label>
-                <Input
-                  type="number"
+                <NumberInputField
                   placeholder="Max"
                   value={filter.max ?? ''}
-                  onChange={(e) => updateDependantCountFilter(index, 'max', e.target.value)}
+                  onValueChange={(v) => updateDependantCountFilter(index, 'max', v)}
                 />
               </div>
               <Button
@@ -612,20 +610,18 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
                 <label className="text-xs font-medium">Min Age</label>
-                <Input
-                  type="number"
+                <NumberInputField
                   placeholder="Min"
                   value={filter.min ?? ''}
-                  onChange={(e) => updateRetirementAgeFilter(index, 'min', e.target.value)}
+                  onValueChange={(v) => updateRetirementAgeFilter(index, 'min', v)}
                 />
               </div>
               <div className="flex-1">
                 <label className="text-xs font-medium">Max Age</label>
-                <Input
-                  type="number"
+                <NumberInputField
                   placeholder="Max"
                   value={filter.max ?? ''}
-                  onChange={(e) => updateRetirementAgeFilter(index, 'max', e.target.value)}
+                  onValueChange={(v) => updateRetirementAgeFilter(index, 'max', v)}
                 />
               </div>
               <Button

@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '../../../../ui/dialog';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
@@ -129,22 +130,16 @@ export function AutomationSettingsDialog({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="assets-per-channel">Assets generated per channel</Label>
-                <Input
+                <NumberInputField
                   id="assets-per-channel"
-                  type="number"
-                  min={1}
-                  max={20}
                   value={form.assets_per_channel}
                   onChange={(e) => update('assets_per_channel', e.target.value)}
                 />
               </div>
               <div>
                 <Label htmlFor="posts-per-week">Posts scheduled per channel per week</Label>
-                <Input
+                <NumberInputField
                   id="posts-per-week"
-                  type="number"
-                  min={0}
-                  max={7}
                   value={form.posts_per_channel_per_week}
                   onChange={(e) => update('posts_per_channel_per_week', e.target.value)}
                 />

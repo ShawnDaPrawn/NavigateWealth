@@ -4,6 +4,7 @@ import {
   TaxCalculationResults,
   TaxRecommendation,
 } from '../types';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 /**
  * 2026/2027 Tax Brackets (Individuals)
@@ -207,7 +208,7 @@ export class TaxPlanningCalculationService {
         id: 'rec_ra',
         triggerType: 'RA_GAP',
         title: 'Maximize Retirement Contributions',
-        description: `You have R${Math.round(results.raGap).toLocaleString()} of unused tax-deductible capacity. Contributing this amount could save you R${Math.round(results.raTaxSavingPotential).toLocaleString()} in tax.`,
+        description: `You have ${formatCurrencyWhole(results.raGap)} of unused tax-deductible capacity. Contributing this amount could save you ${formatCurrencyWhole(results.raTaxSavingPotential)} in tax.`,
         impactValue: results.raTaxSavingPotential,
         status: 'pending',
       });
@@ -231,7 +232,7 @@ export class TaxPlanningCalculationService {
         id: 'rec_tfsa',
         triggerType: 'TFSA_CAPACITY',
         title: 'Utilize Tax-Free Savings Allowance',
-        description: `Ensure you are using your annual R${TC.TFSA_ANNUAL_LIMIT.toLocaleString()} TFSA allowance to build tax-free wealth for the long term.`,
+        description: `Ensure you are using your annual ${formatCurrencyWhole(TC.TFSA_ANNUAL_LIMIT)} TFSA allowance to build tax-free wealth for the long term.`,
         impactValue: 0,
         status: 'pending',
       });

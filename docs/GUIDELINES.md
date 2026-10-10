@@ -451,10 +451,16 @@ Destructive actions require confirmation and use warning colours
 Data Presentation:
 
 Financial data must be formatted consistently (currency, percentages)
-Dates follow a standard format across all modules (en-ZA locale: dd MMM yyyy)
-Status indicators use consistent colour coding and iconography
-Tables use consistent column sizing, sorting, and filtering patterns
-Status Indicator Standards:
+Rand amounts display as `R1,234,567` (whole rands) or `R1,234,567.89`: an "R", a comma every three digits, "." for cents. Use `formatCurrencyWhole` / `formatCurrency` from `src/utils/currencyFormatter.ts`; never `toLocaleString()` or `Intl.NumberFormat('en-ZA')`, which give spaces in some runtimes.
+Numeric input — ENFORCED by ESLint (`eslint.config.mjs` §3b). Every number a user types goes through one of two components:
+
+- `NumberInputField` (`components/ui/number-input`) for plain numbers — ages, counts, years, percentages. What is typed is what shows, digit by digit; no separators; no leading 0 (typing 265 into a field showing 0 gives 265, never 0265). `decimals` and `allowNegative` where the value needs them.
+- `CurrencyInputField` (`components/ui/currency-input`) for rand amounts. It shows its own "R", and the comma every three digits and the "." for cents appear in the box WHILE the user types — never only after the field loses focus. Two decimals at most; no leading 0.
+  A native `type="number"` input, and the blur-time helpers `formatCurrencyInput` / `cleanCurrencyInput` in a component, are lint errors.
+  Dates follow a standard format across all modules (en-ZA locale: dd MMM yyyy)
+  Status indicators use consistent colour coding and iconography
+  Tables use consistent column sizing, sorting, and filtering patterns
+  Status Indicator Standards:
 
 All status indicators across the admin panel must follow a consistent colour vocabulary:
 

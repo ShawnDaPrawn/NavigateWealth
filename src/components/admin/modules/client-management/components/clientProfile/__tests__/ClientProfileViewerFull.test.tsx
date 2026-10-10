@@ -82,10 +82,6 @@ vi.mock('@/components/admin/modules/client-management/hooks/useClientProfile', (
       proofOfResidenceToDelete: null,
       proofOfBankToDelete: null,
       assessmentStarted: false,
-      grossIncomeDisplay: '',
-      netIncomeDisplay: '',
-      assetDisplayValues: {},
-      liabilityDisplayValues: {},
       incomeValidationError: null,
     },
     actions: new Proxy(
