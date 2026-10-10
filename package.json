@@ -34,7 +34,7 @@
     "@signpdf/placeholder-pdf-lib": "^3.3.0",
     "@signpdf/signer-p12": "^3.3.0",
     "@signpdf/signpdf": "^3.3.0",
-    "@supabase/supabase-js": "~2.109.0",
+    "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-virtual": "^3.14.13",
     "@tiptap/core": "^3.31.4",
@@ -57,7 +57,7 @@
     "cmdk": "^1.1.1",
     "copy-to-clipboard": "^3.3.3",
     "date-fns": "^4.4.0",
-    "docx": "9.7.1",
+    "docx": "^9.8.1",
     "dompurify": "^3.4.11",
     "embla-carousel-react": "^8.6.0",
     "exceljs": "^4.4.0",
@@ -87,7 +87,7 @@
   },
   "optionalDependencies": {
     "@jsr/std__encoding": "^1.0.11",
-    "@jsr/supabase__supabase-js": "~2.109.0"
+    "@jsr/supabase__supabase-js": "^2.117.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -95,7 +95,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
-    "@types/node": "^20.19.43",
+    "@types/node": "^22.20.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react-swc": "^3.10.2",

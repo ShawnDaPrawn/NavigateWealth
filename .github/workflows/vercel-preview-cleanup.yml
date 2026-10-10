@@ -91,7 +91,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version-file: .nvmrc
 
       # Not a gate. A fork PR, or a repository where the one-time setup above
       # has not been done, should leave a readable note and pass — a red X on
