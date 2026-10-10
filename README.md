@@ -40,7 +40,7 @@ Primary advice domains represented in the UI and backend include risk planning, 
 
 ### Prerequisites
 
-- Node.js 20 is recommended because GitHub Actions uses Node 20.
+- Node.js 22 (the version in `.nvmrc`) is recommended, because GitHub Actions uses it.
 - npm is used for dependency management.
 - No local Supabase backend is required for normal frontend development.
 - Deno is required only when running the Edge Function typecheck.
