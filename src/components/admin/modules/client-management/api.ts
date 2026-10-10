@@ -43,6 +43,30 @@ export const clientApi = {
     }
   },
 
+  /** Signed URL for the client's profile photo, or null when none is set. */
+  getClientAvatarUrl: async (userId: string): Promise<string | null> => {
+    const result = await api.get<{ url: string | null }>(
+      `/profile/avatar/${encodeURIComponent(userId)}`,
+    );
+    return result.url;
+  },
+
+  /** Set or replace the client's profile photo. Returns the new signed URL. */
+  uploadClientAvatar: async (userId: string, file: Blob): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file, 'avatar');
+    const result = await api.post<{ url: string | null }>(
+      `/profile/avatar/${encodeURIComponent(userId)}`,
+      formData,
+    );
+    return result.url;
+  },
+
+  /** Remove the client's profile photo. */
+  deleteClientAvatar: async (userId: string): Promise<void> => {
+    await api.delete(`/profile/avatar/${encodeURIComponent(userId)}`);
+  },
+
   /**
    * Update client personal profile
    */
