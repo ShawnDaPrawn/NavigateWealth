@@ -38,11 +38,41 @@ The pieces every wizard uses, all exported from the `fna` module barrel:
   client intake is supplied, in which case Step 2 with the calculation already
   run.
 
+Amounts on every step use the shared numeric inputs: `CurrencyInputField` for
+rands (the comma every three digits and the "." for cents appear as they are
+typed, never a stray leading 0) and `NumberInputField` for ages, counts, years
+and percentages. Rands display as `R1,234,567` through `formatCurrencyWhole`.
+See GUIDELINES §8.3.
+
 Every wizard takes the same props, `FNAWizardProps`, so the FNA registry
 (`profile-sections/fna-config.ts`) and the intake hand-off
 (`client-management/components/IntakeWizardHandoff.tsx`) treat all six
 identically. The registry mounts a wizard only while it is open, so each
 session starts on Step 1 with fresh state.
+
+## Publishing lands on the FNA list
+
+Publishing ends with `onFNAComplete(fnaId)`. Wherever the wizard was opened,
+the adviser lands on the client's Policy Details → that analysis's category →
+FNA list, with the new FNA highlighted:
+
+- From a policy category tab, `PolicyCategoryTab` opens its own FNA list.
+- From an accepted client intake, `ClientManagementModule` opens the client
+  drawer with `fnaFocus` (`FNA_POLICY_CATEGORY` maps the analysis to its
+  category).
+
+The list and "View" load through the registry — `FNAConfig.listForClient` and
+`FNAConfig.getById` — which call each module's own API. Nothing builds an FNA
+URL by hand: a hand-written URL map sent the Investment and Estate list and
+"View" to routes that do not exist, so their published FNAs answered 404.
+`getById` also passes the client id, because an FNA created from a client
+intake has an id that does not name its client. Every category with an FNA,
+Estate Planning included, has an "FNA" button that opens the list.
+
+`src/components/admin/profile-sections/__tests__/fna-config.routes.test.ts`
+pins the list and view path for every type, and
+`src/supabase/functions/server/__tests__/fna-view-by-id.contract.test.ts` pins
+that the server opens each kind of id.
 
 ## One way to read the client
 

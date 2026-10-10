@@ -333,6 +333,22 @@ describe('reads', () => {
     expect(data?.id).toBe(fna.id);
   });
 
+  it('GET /client/:clientId/latest-published never returns a draft held in the pointer', async () => {
+    // An intake hand-off used to write its draft into `:latest`, and the card
+    // then showed that draft as the client's current Retirement FNA.
+    const published = await create();
+    await req(`/${published.id}/publish`, { method: 'PUT' });
+    kvStore.set(`retirement_fna:${CLIENT_A}:latest`, {
+      id: 'intake-draft',
+      clientId: CLIENT_A,
+      status: 'draft',
+    });
+
+    const res = await req(`/client/${CLIENT_A}/latest-published`);
+    const { data } = (await json(res)) as unknown as { data: { id: string } | null };
+    expect(data?.id).toBe(published.id);
+  });
+
   it('GET /client/:clientId/latest-published returns null when nothing is published', async () => {
     await create();
     const res = await req(`/client/${CLIENT_A}/latest-published`);

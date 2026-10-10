@@ -34,11 +34,14 @@ export const MedicalFnaAPI = {
   /**
    * Get a specific Medical FNA session
    */
-  async getMedicalFNA(fnaId: string): Promise<MedicalFNASession> {
+  async getMedicalFNA(fnaId: string, clientId?: string): Promise<MedicalFNASession> {
     logger.debug('[MedicalFnaAPI] Fetching FNA', { fnaId });
     try {
+      // `clientId` lets the server find an FNA created from a client intake,
+      // which is stored under the client.
+      const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
       const response = await api.get<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/${fnaId}`,
+        `/medical-fna/${fnaId}${query}`,
       );
       return response.data;
     } catch (error) {

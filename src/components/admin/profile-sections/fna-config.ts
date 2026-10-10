@@ -43,6 +43,8 @@ const asRecordOrNull = <T>(p: Promise<T | null>): Promise<Record<string, unknown
   p as unknown as Promise<Record<string, unknown> | null>;
 const asRecord = <T>(p: Promise<T>): Promise<Record<string, unknown>> =>
   p as unknown as Promise<Record<string, unknown>>;
+const asRecords = <T>(p: Promise<T[]>): Promise<Record<string, unknown>[]> =>
+  p as unknown as Promise<Record<string, unknown>[]>;
 
 /**
  * The registry conforms to the contract the shared FNA module publishes, so
@@ -59,6 +61,8 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Risk Planning FNA',
     Wizard: LazyRiskPlanningFNAWizard,
     ResultsView: LazyRiskPlanningFNAResultsView,
+    listForClient: (clientId) => asRecords(RiskPlanningFnaAPI.listForClient(clientId)),
+    getById: (fnaId) => asRecord(RiskPlanningFnaAPI.getById(fnaId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(RiskPlanningFnaAPI.getLatestPublished(clientId)),
     deleteFNA: (fnaId) => RiskPlanningFnaAPI.delete(fnaId),
@@ -72,6 +76,8 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Medical FNA',
     Wizard: LazyMedicalFNAWizard,
     ResultsView: LazyMedicalFNAResultsView,
+    listForClient: (clientId) => asRecords(MedicalFNAApiService.getClientMedicalFNAs(clientId)),
+    getById: (fnaId, clientId) => asRecord(MedicalFNAApiService.getMedicalFNA(fnaId, clientId)),
     getLatestPublished: (clientId) =>
       MedicalFNAApiService.getLatestPublished(clientId) as unknown as Promise<Record<
         string,
@@ -92,6 +98,8 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Retirement FNA',
     Wizard: LazyRetirementFNAWizard,
     ResultsView: LazyRetirementFNAResultsView,
+    listForClient: (clientId) => asRecords(RetirementFnaAPI.getAllForClient(clientId)),
+    getById: (fnaId) => asRecord(RetirementFnaAPI.getById(fnaId)),
     getLatestPublished: (clientId) => asRecordOrNull(RetirementFnaAPI.getLatestPublished(clientId)),
     deleteFNA: (fnaId) => RetirementFnaAPI.delete(fnaId),
     publishFNA: (fnaId) => asRecord(RetirementFnaAPI.publish(fnaId)),
@@ -104,6 +112,9 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Estate Planning FNA',
     Wizard: LazyEstatePlanningFNAWizard,
     ResultsView: LazyEstatePlanningResultsView,
+    listForClient: (clientId) => asRecords(EstatePlanningApiService.getAllSessions(clientId)),
+    getById: (sessionId, clientId) =>
+      asRecord(EstatePlanningApiService.getSessionById(sessionId, clientId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(EstatePlanningApiService.getLatestPublished(clientId)),
     deleteFNA: (sessionId) => EstatePlanningApiService.deleteSession(sessionId),
@@ -117,6 +128,9 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Investment INA',
     Wizard: LazyInvestmentINAWizard,
     ResultsView: LazyInvestmentINAResultsView,
+    listForClient: (clientId) => asRecords(InvestmentINAApiService.getAllSessions(clientId)),
+    getById: (sessionId, clientId) =>
+      asRecord(InvestmentINAApiService.getSessionById(sessionId, clientId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(InvestmentINAApiService.getLatestPublished(clientId)),
     deleteFNA: (sessionId) => InvestmentINAApiService.deleteSession(sessionId),
@@ -130,6 +144,8 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     name: 'Tax Planning FNA',
     Wizard: LazyTaxPlanningFNAWizard,
     ResultsView: LazyTaxPlanningResultsView,
+    listForClient: (clientId) => asRecords(TaxPlanningFnaAPI.getAllSessions(clientId)),
+    getById: (sessionId) => asRecord(TaxPlanningFnaAPI.getSessionById(sessionId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(TaxPlanningFnaAPI.getLatestPublished(clientId)),
     deleteFNA: async () => {
