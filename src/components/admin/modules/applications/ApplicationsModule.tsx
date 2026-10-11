@@ -3,7 +3,7 @@
  * Refactored: Unified navigation via stats cards, cleaner header layout
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../ui/button';
 import { toast } from 'sonner';
@@ -52,13 +52,20 @@ export function ApplicationsModule() {
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
   const [completeOnBehalfApp, setCompleteOnBehalfApp] = useState<Application | null>(null);
 
+  // Read through a ref, not a dependency: depending on `applications.length`
+  // changed this callback's identity when the first response arrived, which
+  // re-ran the load effect and fetched the whole list a second time on every
+  // open of the module.
+  const hasApplicationsRef = useRef(false);
+
   const loadApplications = useCallback(async () => {
     try {
       setRefreshing(true);
-      if (!applications.length) setLoading(true);
+      if (!hasApplicationsRef.current) setLoading(true);
 
       const data = await applicationsApi.getApplications(activeTab);
       setApplications(data);
+      hasApplicationsRef.current = data.length > 0;
     } catch (error) {
       console.error('Error loading applications:', error);
       toast.error('Failed to load applications');
@@ -66,7 +73,7 @@ export function ApplicationsModule() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, applications.length]);
+  }, [activeTab]);
 
   const loadStats = useCallback(async () => {
     try {

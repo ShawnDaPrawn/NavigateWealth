@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../components/auth/AuthContext';
 import { AdminDataPrefetch } from '../components/providers/AdminDataPrefetch';
+import { QueryCachePersistence } from '../components/providers/QueryCachePersistence';
 import { Toaster } from '../components/ui/sonner';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { OfflineScreen } from '../components/shared/OfflineScreen';
@@ -14,12 +15,17 @@ import { createClient } from '../utils/supabase/client';
 import { createAppRouter } from './router/createAppRouter';
 import { AppRoutes } from './AppRoutes';
 import { logger } from '../utils/logger';
+import { MAX_AGE_MS } from '../utils/query/persistedQueryCache';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30000, // 30 seconds
-      gcTime: 5 * 60 * 1000, // 5 minutes — evict inactive query data to free memory
+      // Keep data for the working day rather than 5 minutes, so returning to a
+      // module shows its last copy at once while it refreshes. It must also be
+      // at least the persisted cache's MAX_AGE_MS: a query evicted from memory
+      // is dropped from the next save too (see utils/query/persistedQueryCache).
+      gcTime: MAX_AGE_MS,
       retry: (failureCount, error) => {
         // Never retry 401/403 auth errors — the API client already attempted
         // a session refresh. Retrying wastes network calls and delays the
@@ -107,6 +113,9 @@ export function AppProviders() {
         {/* Starts the admin dashboard's fetches alongside profile hydration
             instead of after it. Renders nothing; see AdminDataPrefetch. */}
         <AdminDataPrefetch />
+        {/* Restores a staff user's saved query cache as soon as the session is
+            known, and wipes it on sign-out. Renders nothing. */}
+        <QueryCachePersistence />
         <ErrorBoundary fallbackTitle="Authentication Error">
           <AuthProvider>
             <RouterProvider router={router} />

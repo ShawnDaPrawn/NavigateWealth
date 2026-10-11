@@ -273,8 +273,18 @@ function getManualChunk(id: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Identifies the deploy. The persisted query cache discards everything saved
+ * by a different build, so a response shape that changed in this deploy is
+ * never rendered from an old copy (src/utils/query/persistedQueryCache.ts).
+ */
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || 'local';
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), figmaAssetResolver(), connectionHints()],
+  define: {
+    'import.meta.env.VITE_NW_BUILD_ID': JSON.stringify(BUILD_ID),
+  },
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {

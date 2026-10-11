@@ -87,6 +87,9 @@ module.exports = {
           // index.ts (without x) is also a valid barrel
           '^src/components/admin/modules/[^/]+/index\\.ts$',
           '^@/components/admin/modules/[^/]+/index\\.ts$',
+          // The second public entry: shell.ts (see the outsider rule below).
+          '^src/components/admin/modules/[^/]+/shell\\.ts$',
+          '^@/components/admin/modules/[^/]+/shell\\.ts$',
         ],
       },
     },
@@ -119,6 +122,14 @@ module.exports = {
           '^@/components/admin/modules/[^/]+/index\\.tsx?$',
           '^src/components/admin/modules/[^/]+/index\\.ts$',
           '^@/components/admin/modules/[^/]+/index\\.ts$',
+          // … nor the module's shell entry. `shell.ts` is the second public
+          // entry: the light subset (skeletons, background hooks) the admin
+          // frame needs before the module is opened. The frame cannot use the
+          // barrel for these because it also `import()`s the barrel, and a
+          // module imported both ways is never split into its own chunk.
+          // See the "Shell entries" note in moduleLoaders.ts.
+          '^src/components/admin/modules/[^/]+/shell\\.ts$',
+          '^@/components/admin/modules/[^/]+/shell\\.ts$',
         ],
       },
     },
