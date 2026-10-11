@@ -467,7 +467,9 @@ retirementFnaRoutes.put('/:fnaId/unpublish', async (c) => {
   }
 });
 
-// SAVE AS DRAFT — keeps the FNA as a draft (a published FNA is unpublished).
+// SAVE AS DRAFT — keeps the FNA as a draft. A published FNA is unpublished,
+// publication stamp included, exactly as the unpublish route does it: the FNA
+// list shows a "Published" date whenever `publishedAt` is set.
 retirementFnaRoutes.put('/:fnaId/draft', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
@@ -476,7 +478,13 @@ retirementFnaRoutes.put('/:fnaId/draft', async (c) => {
     if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
     await assertRecordClientAccess(user, session, 'retirement-fna:draft');
 
-    const updated = { ...session, status: 'draft', updatedAt: new Date().toISOString() };
+    const updated = {
+      ...session,
+      status: 'draft',
+      publishedAt: undefined,
+      publishedBy: undefined,
+      updatedAt: new Date().toISOString(),
+    };
     await saveFna(fnaId, updated);
     await clearLatestIfThis(updated.clientId, fnaId);
 

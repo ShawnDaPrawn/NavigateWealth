@@ -220,10 +220,13 @@ describe('after publish', () => {
     expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(second.id);
   });
 
-  it('draft keeps the FNA as a draft', async () => {
+  it('draft returns a published FNA to a draft, publication stamp included', async () => {
     const fna = await published();
+    expect(record(fna.id)?.publishedAt).toBeTruthy();
     expect((await req(`/${fna.id}/draft`, { method: 'PUT' })).status).toBe(200);
     expect(record(fna.id)?.status).toBe('draft');
+    expect(record(fna.id)?.publishedAt).toBeUndefined();
+    expect(record(fna.id)?.publishedBy).toBeUndefined();
     expect(latest(CLIENT_A)).toBeUndefined();
   });
 
