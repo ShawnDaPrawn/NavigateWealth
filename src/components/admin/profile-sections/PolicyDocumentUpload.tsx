@@ -30,7 +30,9 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
+import { invalidateClientPolicies } from '../../../shared/api/clientPolicies';
 import { createClient } from '../../../utils/supabase/client';
 import { ExtractionHistoryPanel } from './ExtractionHistoryPanel';
 import { PolicyDocumentViewer } from './PolicyDocumentViewer';
@@ -88,6 +90,7 @@ export function PolicyDocumentUpload({
   onDocumentChange,
   onApplyExtractedData,
 }: PolicyDocumentUploadProps) {
+  const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -332,6 +335,8 @@ export function PolicyDocumentUpload({
         appliedFields?: string[];
         skippedLockedFields?: string[];
       }>('/integrations/policy-extraction/apply', { policyId, clientId, fieldsToApply });
+      // The applied values are now on the policy: refresh every cached view.
+      void invalidateClientPolicies(queryClient, clientId);
       const appliedCount = result.appliedFields?.length || selectedFields.size;
       const skippedCount = result.skippedLockedFields?.length || 0;
 

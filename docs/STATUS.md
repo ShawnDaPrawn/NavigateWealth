@@ -574,6 +574,12 @@ is work not yet done, not budget.
   shown at once and always refetched on use (`utils/query/persistedQueryCache.ts`;
   wiped on sign-out and on every deploy), the sidebar badge counts fetch in
   parallel and share the dashboard's `/admin/stats`, and two duplicate list
-  fetches are gone. Next: move the remaining effect-based loaders onto the
-  cache, then a lean function for the hot admin reads (largest single lever),
-  then fewer calls per screen.
+  fetches are gone. A client's policies and the policy schemas are now one
+  shared query each (`shared/api/clientPolicies.ts`): the Overview tab and all
+  seven Policies-tab sections read them (seven policy requests and up to
+  thirteen schema requests per client become one of each), policies refetch on
+  every open (`staleTime: 0`), and every write that changes them — the policy
+  form, delete/archive/reinstate, applying extracted document values, the
+  provider-spreadsheet publish and the portfolio-table apply — invalidates
+  them. Next: the remaining effect-based loaders, then a lean function for the
+  hot admin reads (largest single lever), then fewer calls per screen.

@@ -15,6 +15,7 @@ import { productManagementApi } from '../api';
 import { ProductCategoryId, ProductField, SaveSchemaRequest } from '../types';
 import { DEFAULT_SCHEMAS } from '../defaults';
 import { productKeys } from './queryKeys';
+import { invalidatePolicySchemas } from '../../../../../shared/api/clientPolicies';
 
 export function useProductSchema(selectedCategory: ProductCategoryId | '') {
   const queryClient = useQueryClient();
@@ -64,6 +65,9 @@ export function useProductSchema(selectedCategory: ProductCategoryId | '') {
       };
       await productManagementApi.saveSchema(payload);
       await queryClient.invalidateQueries({ queryKey: productKeys.schema(selectedCategory) });
+      // The client Overview and Policies tabs read every schema from one
+      // cached batch query; a changed column must reach them too.
+      void invalidatePolicySchemas(queryClient);
       setHasUnsavedChanges(false);
       toast.success('Product structure saved', { id: toastId });
       return true;
@@ -82,6 +86,9 @@ export function useProductSchema(selectedCategory: ProductCategoryId | '') {
   const reloadSchema = useCallback(async () => {
     if (selectedCategory) {
       await queryClient.invalidateQueries({ queryKey: productKeys.schema(selectedCategory) });
+      // The client Overview and Policies tabs read every schema from one
+      // cached batch query; a changed column must reach them too.
+      void invalidatePolicySchemas(queryClient);
     }
   }, [selectedCategory, queryClient]);
 

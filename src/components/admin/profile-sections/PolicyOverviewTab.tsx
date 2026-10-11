@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
@@ -19,11 +20,18 @@ import {
   Building2,
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
-import { api } from '../../../utils/api';
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { calculateGoalStatus } from '../../../shared/goals';
+import {
+  clientGoalsQueryOptions,
+  clientPoliciesQueryOptions,
+  filterPoliciesForCategory,
+  policySchemasQueryOptions,
+  type PolicySchemaFieldRow,
+} from '../../../shared/api/clientPolicies';
+import { fnaKeys } from '../../../utils/queryKeys';
 import type { Goal } from '../../../shared/goals';
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
 
@@ -161,6 +169,46 @@ interface OverviewSectionProps {
   variant: 'full' | 'embedded';
 }
 
+const EMPTY_POLICIES: PolicyRecord[] = [];
+const EMPTY_GOALS: Goal[] = [];
+
+/** Sections whose table splits into sub-categories, each with its own schema. */
+const COMPOSITE_SUBCATEGORIES: Record<string, readonly string[]> = {
+  retirement_planning: ['retirement_pre', 'retirement_post', 'retirement_post_fixed'],
+  investments: ['investments_voluntary', 'investments_guaranteed'],
+  employee_benefits: ['employee_benefits_risk', 'employee_benefits_retirement'],
+};
+
+/** A category's columns: the stored schema, else the built-in default. */
+function schemaFieldsFor(
+  schemas: Record<string, PolicySchemaFieldRow[]> | undefined,
+  categoryId: string,
+): SchemaField[] {
+  return (schemas?.[categoryId] ??
+    DEFAULT_SCHEMAS[categoryId]?.fields ??
+    []) as unknown as SchemaField[];
+}
+
+/** The latest published FNA's results for a section, unwrapped per FNA type. */
+async function fetchLatestFnaResults(
+  sectionId: string,
+  clientId: string,
+): Promise<Record<string, unknown> | null> {
+  const fnaConfig = getFNAConfig(sectionId);
+  if (!fnaConfig) return null;
+  const fnaData = await fnaConfig.getLatestPublished(clientId);
+  if (!fnaData) return null;
+  let results: unknown;
+  if (sectionId === 'medical-aid') {
+    results = fnaData.results || fnaData; // Medical puts results at top or inside
+  } else if (sectionId === 'investments') {
+    results = fnaData.results || (fnaData as { session?: { results?: unknown } }).session?.results;
+  } else {
+    results = fnaData.results;
+  }
+  return (results as Record<string, unknown> | undefined) ?? null;
+}
+
 function OverviewSection({
   index,
   section,
@@ -169,159 +217,78 @@ function OverviewSection({
   onAddPolicy,
   variant,
 }: OverviewSectionProps) {
-  const [policies, setPolicies] = useState<PolicyRecord[]>([]);
-  const [tableStructure, setTableStructure] = useState<SchemaField[]>([]);
-  const [fnaResults, setFnaResults] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [subCategorySchemas, setSubCategorySchemas] = useState<Record<string, SchemaField[]>>({});
   const Icon = section.icon;
   const isEmbedded = variant === 'embedded';
 
-  // Goal State (for Investments category)
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [linkedGoalsMap, setLinkedGoalsMap] = useState<Record<string, LinkedGoalStatus>>({});
+  // Four independent reads, in parallel. They used to run one after another —
+  // schema, then sub-schemas, then policies, then goals, then the FNA — so each
+  // section waited for up to five Edge Function round trips (~2 s each from
+  // South Africa) before it could draw. Schemas and policies come from the
+  // shared queries the Overview tab also uses (one request per client for all
+  // seven sections); policies refetch on every open and on every write
+  // (shared/api/clientPolicies.ts).
+  const schemasQuery = useQuery(policySchemasQueryOptions());
+  const policiesQuery = useQuery(clientPoliciesQueryOptions(clientId));
+  const goalsQuery = useQuery({
+    ...clientGoalsQueryOptions<Goal>(clientId),
+    enabled: section.categoryId === 'investments',
+  });
+  const fnaQuery = useQuery({
+    queryKey: [...fnaKeys.latestPublished(clientId), section.id],
+    queryFn: () => fetchLatestFnaResults(section.id, clientId),
+    enabled: hasFNASupport(section.id),
+    staleTime: 0,
+  });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Helper to fetch schema with retry for cold-start resilience
-      const fetchSchemaForCategory = async (catId: string, retries = 2): Promise<SchemaField[]> => {
-        for (let attempt = 0; attempt <= retries; attempt++) {
-          try {
-            const data = await api.get<{ fields?: SchemaField[] } | SchemaField[]>(
-              `/integrations/schemas?categoryId=${catId}`,
-            );
-            if (data && !Array.isArray(data) && data.fields) return data.fields;
-            if (Array.isArray(data)) return data;
-            break;
-          } catch (err) {
-            // Retry on transient network errors (cold-start / Failed to fetch)
-            if (attempt < retries) {
-              await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
-              continue;
-            }
-            console.warn(`Error loading schema for ${catId} after ${retries + 1} attempts:`, err);
-          }
-        }
-        // Final fallback to client-side defaults
-        return (DEFAULT_SCHEMAS[catId]?.fields || []) as unknown as SchemaField[];
-      };
+  const tableStructure = useMemo(
+    () => schemaFieldsFor(schemasQuery.data, section.categoryId),
+    [schemasQuery.data, section.categoryId],
+  );
+  const subCategorySchemas = useMemo<Record<string, SchemaField[]>>(
+    () =>
+      Object.fromEntries(
+        (COMPOSITE_SUBCATEGORIES[section.categoryId] ?? []).map((subCategoryId) => [
+          subCategoryId,
+          schemaFieldsFor(schemasQuery.data, subCategoryId),
+        ]),
+      ),
+    [schemasQuery.data, section.categoryId],
+  );
+  const policies = useMemo(
+    () =>
+      filterPoliciesForCategory(
+        (policiesQuery.data ?? EMPTY_POLICIES) as unknown as PolicyRecord[],
+        section.categoryId,
+      ),
+    [policiesQuery.data, section.categoryId],
+  );
+  const goals = goalsQuery.data ?? EMPTY_GOALS;
+  const fnaResults = fnaQuery.data ?? null;
+  const loading = schemasQuery.isPending || policiesQuery.isPending;
+  const hasError = policiesQuery.isError && !policiesQuery.data;
 
-      // 1. Fetch Main Schema
-      const mainFields = await fetchSchemaForCategory(section.categoryId);
-      setTableStructure(mainFields);
-
-      // 2. Fetch Sub-Schemas for Composite Categories in parallel
-      if (section.categoryId === 'retirement_planning') {
-        const [preFields, postFields, fixedFields] = await Promise.all([
-          fetchSchemaForCategory('retirement_pre'),
-          fetchSchemaForCategory('retirement_post'),
-          fetchSchemaForCategory('retirement_post_fixed'),
-        ]);
-        setSubCategorySchemas({
-          retirement_pre: preFields,
-          retirement_post: postFields,
-          retirement_post_fixed: fixedFields,
-        });
-      } else if (section.categoryId === 'investments') {
-        const [volFields, guaFields] = await Promise.all([
-          fetchSchemaForCategory('investments_voluntary'),
-          fetchSchemaForCategory('investments_guaranteed'),
-        ]);
-        setSubCategorySchemas({
-          investments_voluntary: volFields,
-          investments_guaranteed: guaFields,
-        });
-      } else if (section.categoryId === 'employee_benefits') {
-        const [riskFields, retFields] = await Promise.all([
-          fetchSchemaForCategory('employee_benefits_risk'),
-          fetchSchemaForCategory('employee_benefits_retirement'),
-        ]);
-        setSubCategorySchemas({
-          employee_benefits_risk: riskFields,
-          employee_benefits_retirement: retFields,
-        });
-      }
-
-      // 3. Fetch Policies
-      const policiesData = await api.get<{ policies?: PolicyRecord[] }>(
-        `/integrations/policies?clientId=${clientId}&categoryId=${section.categoryId}`,
-      );
-      setPolicies(policiesData.policies || []);
-
-      // 4. Fetch Goals (for Investments)
-      if (section.categoryId === 'investments') {
-        try {
-          const goalsData = await api.get<{ goals?: Goal[] }>(`/goals/${clientId}`);
-          setGoals(goalsData.goals || []);
-        } catch (err) {
-          console.warn('Error fetching goals:', err);
-        }
-      }
-
-      // 5. Fetch FNA Data
-      if (hasFNASupport(section.id)) {
-        const fnaConfig = getFNAConfig(section.id);
-        if (fnaConfig) {
-          try {
-            const fnaData = await fnaConfig.getLatestPublished(clientId);
-            // Normalize results extraction based on FNA type
-            let results = null;
-            if (fnaData) {
-              if (section.id === 'medical-aid') {
-                results = fnaData.results || fnaData; // Medical puts results at top or inside
-              } else if (section.id === 'investments') {
-                results =
-                  fnaData.results ||
-                  (fnaData as { session?: { results?: unknown } }).session?.results;
-              } else {
-                results = fnaData.results;
-              }
-            }
-            setFnaResults(results as Record<string, unknown> | null);
-          } catch (err) {
-            console.warn(`Could not load FNA for ${section.label}`, err);
-          }
-        }
-      }
-    } catch (err) {
-      console.error(`Error loading data for ${section.label}:`, err);
-      setHasError(true);
-    } finally {
-      setLoading(false);
+  // Goal status for each investment policy linked to a goal
+  const linkedGoalsMap = useMemo<Record<string, LinkedGoalStatus>>(() => {
+    if (section.categoryId !== 'investments' || goals.length === 0 || policies.length === 0) {
+      return {};
     }
-  }, [clientId, section.categoryId, section.id, section.label]);
+    const map: Record<string, LinkedGoalStatus> = {};
+    policies.forEach((policy) => {
+      // Find if policy is linked to any goal
+      const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
 
-  useEffect(() => {
-    loadData();
-  }, [clientId, section.categoryId, loadData]);
-
-  // Update Linked Goals Map when policies or goals change
-  useEffect(() => {
-    if (section.categoryId === 'investments' && goals.length > 0 && policies.length > 0) {
-      const map: Record<string, LinkedGoalStatus> = {};
-
-      policies.forEach((policy) => {
-        // Find if policy is linked to any goal
-        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
-
-        if (linkedGoal) {
-          const calc = calculateGoalStatus(linkedGoal, policies);
-          map[policy.id] = {
-            name: linkedGoal.name,
-            status: calc.status,
-            targetAmount: linkedGoal.targetAmount,
-            requiredMonthly: calc.requiredMonthlyContribution,
-            targetDate: linkedGoal.targetDate,
-          };
-        }
-      });
-
-      setLinkedGoalsMap(map);
-    } else {
-      setLinkedGoalsMap({});
-    }
+      if (linkedGoal) {
+        const calc = calculateGoalStatus(linkedGoal, policies);
+        map[policy.id] = {
+          name: linkedGoal.name,
+          status: calc.status,
+          targetAmount: linkedGoal.targetAmount,
+          requiredMonthly: calc.requiredMonthlyContribution,
+          targetDate: linkedGoal.targetDate,
+        };
+      }
+    });
+    return map;
   }, [goals, policies, section.categoryId]);
 
   const formatFieldValue = (field: SchemaField, value: unknown): React.ReactNode => {

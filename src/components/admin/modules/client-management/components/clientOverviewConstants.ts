@@ -23,8 +23,6 @@ import {
   Clock,
   UserPlus,
 } from 'lucide-react';
-import { api } from '../../../../../utils/api/client';
-import type { SchemaField } from './clientOverview/policyFields';
 
 // ── Dashboard display mode ──────────────────────────────────────────────
 
@@ -164,36 +162,3 @@ export const CATEGORY_GROUP_MAP: Record<string, string> = {
   tax_planning: 'tax',
   estate_planning: 'estate',
 };
-
-// ── Schema cache + batch fetch ───────────────────────────────────────────
-
-/** Module-level schema cache — schemas are config and rarely change,
- *  so we cache them for the lifetime of the session to avoid repeated calls. */
-let _schemaCache: Record<string, SchemaField[]> | null = null;
-
-/**
- * Fetch ALL schemas in a single batch call and cache the result.
- * Collapses ~13 individual schema calls into 1 KV batch read on the server.
- */
-export async function fetchAllSchemas(): Promise<Record<string, SchemaField[]>> {
-  if (_schemaCache) return _schemaCache;
-
-  try {
-    const data = await api.get<{ schemas?: Record<string, { fields?: SchemaField[] }> }>(
-      '/integrations/schemas/batch',
-    );
-    const schemas = data?.schemas || {};
-    const result: Record<string, SchemaField[]> = {};
-    for (const [catId, schema] of Object.entries(schemas)) {
-      const fields = (schema as { fields?: SchemaField[] })?.fields;
-      if (Array.isArray(fields) && fields.length > 0) {
-        result[catId] = fields;
-      }
-    }
-    _schemaCache = result;
-    return result;
-  } catch {
-    // Batch endpoint unavailable — return empty, normalization will be skipped
-  }
-  return {};
-}
