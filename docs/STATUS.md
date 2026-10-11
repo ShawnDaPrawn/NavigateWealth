@@ -578,7 +578,8 @@ is work not yet done, not budget.
   shared query each (`shared/api/clientPolicies.ts`): the Overview tab and all
   seven Policies-tab sections read them (seven policy requests and up to
   thirteen schema requests per client become one of each), policies refetch on
-  every open (`staleTime: 0`), and every write that changes them — the policy
+  every open (a fetch under 5 s old is reused, so one screen does not fetch
+  twice), and every write that changes them — the policy
   form, delete/archive/reinstate, applying extracted document values, the
   provider-spreadsheet publish and the portfolio-table apply — invalidates
   them. Next: the remaining effect-based loaders, then a lean function for the

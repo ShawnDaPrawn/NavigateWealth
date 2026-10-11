@@ -14,6 +14,7 @@ import {
   invalidateAllClientPolicies,
   invalidateClientPolicies,
   policySchemasQueryOptions,
+  POLICIES_FRESH_MS,
 } from '../clientPolicies';
 import { clientPolicyKeys } from '@/utils/queryKeys';
 
@@ -73,8 +74,12 @@ describe('fetchClientPolicies', () => {
     expect(mockGet).toHaveBeenCalledWith('/integrations/policies?clientId=c1&includeArchived=true');
   });
 
-  it('is always refetched when a screen opens', () => {
-    expect(clientPoliciesQueryOptions('c1').staleTime).toBe(0);
+  it('is refetched whenever a screen opens, bar a few seconds to cover one screen', () => {
+    // Long enough that the Overview's embedded Policies view, mounting the
+    // moment the Overview's own fetch lands, does not fetch again; short
+    // enough that every separate open refetches.
+    expect(clientPoliciesQueryOptions('c1').staleTime).toBe(POLICIES_FRESH_MS);
+    expect(POLICIES_FRESH_MS).toBeLessThanOrEqual(5_000);
     expect(clientPoliciesQueryOptions('c1').queryKey).toEqual(clientPolicyKeys.list('c1', false));
     expect(clientPoliciesQueryOptions('c1', { archived: true }).queryKey).toEqual(
       clientPolicyKeys.list('c1', true),

@@ -26,6 +26,7 @@ vi.mock('../fna-config', () => ({
 
 import { PolicyOverviewTab } from '../PolicyOverviewTab';
 import { invalidateClientPolicies } from '@/shared/api/clientPolicies';
+import { clientPolicyKeys } from '@/utils/queryKeys';
 
 const SCHEMAS = {
   schemas: {
@@ -91,5 +92,42 @@ describe('PolicyOverviewTab shared queries', () => {
 
     await waitFor(() => expect(screen.getByText('Cover B')).toBeTruthy());
     expect(screen.queryByText('Cover A')).toBeNull();
+  });
+
+  const SEEDED = [{ id: 'p-risk', categoryId: 'risk_planning', data: { cover: 'Seeded' } }];
+  const policyRequests = () =>
+    mockGet.mock.calls.filter((call) => String(call[0]).startsWith('/integrations/policies?'));
+
+  it('reuses a policies fetch that has just landed (the Overview mounting it embedded)', async () => {
+    // The client Overview fetches policies, then mounts this view the moment
+    // they arrive. That mount must not fetch the same policies again.
+    const queryClient = makeTestQueryClient();
+    queryClient.setQueryData(clientPolicyKeys.list('client-1', false), SEEDED);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PolicyOverviewTab clientId="client-1" variant="embedded" />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText('Seeded')).toBeTruthy();
+    expect(policyRequests()).toHaveLength(0);
+  });
+
+  it('refetches a copy older than a few seconds when the view opens', async () => {
+    const queryClient = makeTestQueryClient();
+    queryClient.setQueryData(clientPolicyKeys.list('client-1', false), SEEDED, {
+      updatedAt: Date.now() - 60_000,
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PolicyOverviewTab clientId="client-1" variant="embedded" />
+      </QueryClientProvider>,
+    );
+
+    // The server's value replaces the old copy (painting the old copy first is
+    // pinned in persistedQueryCache.test.ts).
+    await waitFor(() => expect(screen.getByText('Cover A')).toBeTruthy());
+    expect(screen.queryByText('Seeded')).toBeNull();
+    expect(policyRequests()).toHaveLength(1);
   });
 });

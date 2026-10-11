@@ -9,9 +9,13 @@
  * category rules.
  *
  * FRESHNESS — policy values are the figures advisers act on, so:
- * - `staleTime: 0`. Whatever is cached is shown at once, and every screen that
- *   opens refetches it in the background. A value changed elsewhere (a portal
- *   refresh, a bulk upload, a colleague) is on screen within one request.
+ * - Whatever is cached is shown at once, and every screen that opens refetches
+ *   it in the background, unless the copy is under `POLICIES_FRESH_MS` (5 s)
+ *   old. That window exists only so one screen opening does not fetch twice:
+ *   the client Overview mounts its embedded Policies view the moment its own
+ *   fetch lands, and a zero window made that mount fetch again. A value
+ *   changed elsewhere (a portal refresh, a bulk upload, a colleague) is on
+ *   screen the next time the client is opened.
  * - Every write in the app calls `invalidateClientPolicies`, so a screen that
  *   is already open updates as soon as the write returns.
  */
@@ -42,12 +46,15 @@ export async function fetchClientPolicies(
   return data?.policies ?? [];
 }
 
+/** See FRESHNESS above: long enough to cover one screen's own mounts, no longer. */
+export const POLICIES_FRESH_MS = 5_000;
+
 export function clientPoliciesQueryOptions(clientId: string, options: { archived?: boolean } = {}) {
   const archived = options.archived ?? false;
   return {
     queryKey: clientPolicyKeys.list(clientId, archived),
     queryFn: () => fetchClientPolicies(clientId, archived),
-    staleTime: 0,
+    staleTime: POLICIES_FRESH_MS,
   };
 }
 
