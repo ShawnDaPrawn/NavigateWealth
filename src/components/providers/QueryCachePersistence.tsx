@@ -6,6 +6,22 @@
  * the in-memory cache. The cache itself, and how it stays fresh, is described
  * in `src/utils/query/persistedQueryCache.ts`.
  *
+ * TWO SIGNALS FOR "SIGNED OUT", ON PURPOSE
+ * ----------------------------------------
+ * Supabase's `SIGNED_OUT` event only fires when its sign-out succeeds. When it
+ * fails — offline, or a session that already expired server-side — auth-js
+ * returns the error and emits nothing, while `AuthContext.logout` still clears
+ * the user and tells the person they are signed out. So this component also
+ * follows `AuthContext`'s user: when it goes from someone to no one (logout,
+ * the session-expired event, a logout broadcast from another tab), the cache is
+ * wiped whatever Supabase did. It must therefore render inside `AuthProvider`.
+ *
+ * And when a session event names a DIFFERENT user from the last one, with no
+ * sign-out in between, the previous user's data is wiped before anything is
+ * restored or saved for the new one — whether or not the previous user was
+ * staff, since a client's queries would otherwise be saved under the staff
+ * user's entry.
+ *
  * AUTH-LOCK RULES (same as AdminDataPrefetch, for the same reason)
  * ----------------------------------------------------------------
  * auth-js holds its lock for the whole of every `onAuthStateChange` callback,
@@ -19,26 +35,30 @@
  * through the server's own role checks.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../auth/AuthContext';
 import { onAuthStateChange } from '../../utils/auth';
 import { buildAppUserFromAuthSessionFallback } from '../../utils/auth/profileService';
 import {
   NOOP_STORAGE,
   createIndexedDbStorage,
   createQueryCachePersister,
+  type QueryCachePersister,
 } from '../../utils/query/persistedQueryCache';
 
 const STAFF_ROLES = new Set(['admin', 'super_admin', 'super-admin']);
 
 export function QueryCachePersistence() {
   const queryClient = useQueryClient();
+  const persisterRef = useRef<QueryCachePersister | null>(null);
 
   useEffect(() => {
     const persister = createQueryCachePersister({
       queryClient,
       storage: createIndexedDbStorage() ?? NOOP_STORAGE,
     });
+    persisterRef.current = persister;
     // Whoever is signed in, staff or not: their data leaves memory on sign-out.
     let signedInUserId: string | null = null;
 
@@ -48,22 +68,24 @@ export function QueryCachePersistence() {
       signedInUserId = authUser?.id ?? null;
 
       setTimeout(() => {
-        if (!authUser) {
-          if (previousUserId) void persister.signOut();
-          return;
-        }
+        void (async () => {
+          if (!authUser) {
+            if (previousUserId) await persister.signOut();
+            return;
+          }
 
-        const isStaff =
-          !!supabaseUser &&
-          STAFF_ROLES.has(
-            buildAppUserFromAuthSessionFallback(authUser.id, authUser.email, supabaseUser).role,
-          );
+          if (previousUserId && previousUserId !== authUser.id) {
+            // A different user took over this tab with no sign-out between.
+            await persister.signOut();
+          }
 
-        if (isStaff) {
-          void persister.start(authUser.id);
-        } else if (previousUserId && previousUserId !== authUser.id) {
-          void persister.signOut();
-        }
+          const isStaff =
+            !!supabaseUser &&
+            STAFF_ROLES.has(
+              buildAppUserFromAuthSessionFallback(authUser.id, authUser.email, supabaseUser).role,
+            );
+          if (isStaff) await persister.start(authUser.id);
+        })();
       }, 0);
     });
 
@@ -80,8 +102,19 @@ export function QueryCachePersistence() {
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', flush);
+      persisterRef.current = null;
     };
   }, [queryClient]);
+
+  // The app's own sign-out signal — see "two signals" in the header.
+  const { user } = useAuth();
+  const appUserId = user?.id ?? null;
+  const previousAppUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = previousAppUserIdRef.current;
+    previousAppUserIdRef.current = appUserId;
+    if (previous && !appUserId) void persisterRef.current?.signOut();
+  }, [appUserId]);
 
   return null;
 }

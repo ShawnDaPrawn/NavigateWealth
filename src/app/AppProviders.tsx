@@ -113,11 +113,13 @@ export function AppProviders() {
         {/* Starts the admin dashboard's fetches alongside profile hydration
             instead of after it. Renders nothing; see AdminDataPrefetch. */}
         <AdminDataPrefetch />
-        {/* Restores a staff user's saved query cache as soon as the session is
-            known, and wipes it on sign-out. Renders nothing. */}
-        <QueryCachePersistence />
         <ErrorBoundary fallbackTitle="Authentication Error">
           <AuthProvider>
+            {/* Restores a staff user's saved query cache as soon as the session
+                is known, and wipes it on sign-out. Inside AuthProvider because
+                it also follows the app's own logout, which can happen without
+                a Supabase SIGNED_OUT event. Renders nothing. */}
+            <QueryCachePersistence />
             <RouterProvider router={router} />
           </AuthProvider>
         </ErrorBoundary>

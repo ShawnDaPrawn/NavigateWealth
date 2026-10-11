@@ -3,9 +3,11 @@
  *
  * The persister's own behaviour (restore, freshness, deletion) is pinned in
  * `utils/query/__tests__/persistedQueryCache.test.ts`. This file pins the
- * wiring: staff sessions persist, client sessions do not, any sign-out wipes,
- * a public visitor's first "no session" event wipes nothing, and the auth
- * callback itself does no work (see the auth-lock rules in the header).
+ * wiring: staff sessions persist, client sessions do not, any sign-out wipes —
+ * including the app's own logout when Supabase emits nothing — a user switch
+ * wipes the previous user first, a public visitor's first "no session" event
+ * wipes nothing, and the auth callback itself does no work (see the auth-lock
+ * rules in the header).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
@@ -14,6 +16,11 @@ import { makeTestQueryClient } from '../../../test/utils';
 
 const mockUnsubscribe = vi.fn();
 const persister = { start: vi.fn(), signOut: vi.fn(), flush: vi.fn(), userId: null };
+const mockAuth: { user: { id: string } | null } = { user: null };
+
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => mockAuth,
+}));
 let authCallback: ((authUser: unknown, meta: unknown) => unknown) | null = null;
 
 vi.mock('../../../utils/auth', () => ({
@@ -39,18 +46,21 @@ const ADMIN_SESSION_USER = { id: 'admin-1', user_metadata: { role: 'admin' }, ap
 const CLIENT = { id: 'client-1', email: 'client@example.com' };
 const CLIENT_SESSION_USER = { id: 'client-1', user_metadata: { role: 'client' }, app_metadata: {} };
 
+const queryClient = makeTestQueryClient();
+const tree = () => (
+  <QueryClientProvider client={queryClient}>
+    <QueryCachePersistence />
+  </QueryClientProvider>
+);
+
 function mount() {
-  return render(
-    <QueryClientProvider client={makeTestQueryClient()}>
-      <QueryCachePersistence />
-    </QueryClientProvider>,
-  );
+  return render(tree());
 }
 
 async function emit(authUser: unknown, meta: Record<string, unknown>) {
   const result = authCallback?.(authUser, meta);
   await act(async () => {
-    vi.runAllTimers();
+    await vi.runAllTimersAsync();
   });
   return result;
 }
@@ -62,6 +72,7 @@ beforeEach(() => {
   persister.signOut.mockReset();
   persister.flush.mockReset();
   mockUnsubscribe.mockReset();
+  mockAuth.user = null;
 });
 
 afterEach(() => {
@@ -100,6 +111,41 @@ describe('QueryCachePersistence', () => {
     mount();
     await emit(ADMIN, { event: 'SIGNED_IN', supabaseUser: ADMIN_SESSION_USER });
     await emit(CLIENT, { event: 'SIGNED_IN', supabaseUser: CLIENT_SESSION_USER });
+    expect(persister.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('wipes the previous user before restoring for a new staff user', async () => {
+    // A client session replaced directly by a staff one never started the
+    // persister, so without this the client's queries would be saved under
+    // the staff user's entry.
+    mount();
+    await emit(CLIENT, { event: 'SIGNED_IN', supabaseUser: CLIENT_SESSION_USER });
+    await emit(ADMIN, { event: 'SIGNED_IN', supabaseUser: ADMIN_SESSION_USER });
+
+    expect(persister.signOut).toHaveBeenCalledTimes(1);
+    expect(persister.start).toHaveBeenCalledWith('admin-1');
+    expect(persister.signOut.mock.invocationCallOrder[0]).toBeLessThan(
+      persister.start.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('does not wipe on a token refresh for the same user', async () => {
+    mount();
+    await emit(ADMIN, { event: 'SIGNED_IN', supabaseUser: ADMIN_SESSION_USER });
+    await emit(ADMIN, { event: 'TOKEN_REFRESHED', supabaseUser: ADMIN_SESSION_USER });
+    expect(persister.signOut).not.toHaveBeenCalled();
+  });
+
+  it('wipes when the app signs out even though Supabase emitted nothing', async () => {
+    // A failed Supabase sign-out (offline, expired session) emits no
+    // SIGNED_OUT, but AuthContext still clears the user.
+    mockAuth.user = { id: 'admin-1' };
+    const { rerender } = mount();
+    expect(persister.signOut).not.toHaveBeenCalled();
+
+    mockAuth.user = null;
+    rerender(tree());
+
     expect(persister.signOut).toHaveBeenCalledTimes(1);
   });
 
