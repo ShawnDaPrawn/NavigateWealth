@@ -13,6 +13,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { invalidateAllClientPolicies } from '../../../../../shared/api/clientPolicies';
 import { toast } from 'sonner';
 import {
   AlertCircle,
@@ -193,6 +194,8 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
       setPendingFile(null);
       toast.success(`Updated ${plural(result.summary.updated, 'policy', 'policies')}.`);
       invalidateBook();
+      // Every client whose row changed: their Overview and Policies tabs refetch.
+      void invalidateAllClientPolicies(queryClient);
     },
     onError: (err: Error) => toast.error(err.message || 'Failed to apply the spreadsheet'),
   });

@@ -10,7 +10,9 @@ import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-rea
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
+import { invalidateClientPolicies } from '../../../shared/api/clientPolicies';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import {
   AlertDialog,
@@ -73,6 +75,7 @@ export function PolicyCategoryTab({
   openFNAListOnMount = false,
   highlightFnaId,
 }: PolicyCategoryTabProps) {
+  const queryClient = useQueryClient();
   // Policy State
   const [policies, setPolicies] = useState<PolicyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -286,6 +289,7 @@ export function PolicyCategoryTab({
       toast.success('Policy deleted successfully', { id: toastId });
       setDeletingPolicy(null);
       loadPolicies();
+      void invalidateClientPolicies(queryClient, clientId);
     } catch (err: unknown) {
       console.error('Error deleting policy:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to delete policy');
@@ -310,6 +314,7 @@ export function PolicyCategoryTab({
       toast.success('Policy archived successfully', { id: toastId });
       setArchivingPolicy(null);
       loadPolicies();
+      void invalidateClientPolicies(queryClient, clientId);
     } catch (err: unknown) {
       console.error('Error archiving policy:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to archive policy');
@@ -328,6 +333,7 @@ export function PolicyCategoryTab({
 
       toast.success('Policy reinstated successfully', { id: toastId });
       loadPolicies();
+      void invalidateClientPolicies(queryClient, clientId);
     } catch (err: unknown) {
       console.error('Error reinstating policy:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to reinstate policy');

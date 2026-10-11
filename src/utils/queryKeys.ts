@@ -439,6 +439,36 @@ export const resourceKeys = {
 } as const;
 
 // ============================================================================
+// CLIENT POLICIES & POLICY SCHEMAS
+// ============================================================================
+
+/**
+ * A client's policies, as `/integrations/policies?clientId=` returns them.
+ *
+ * Every screen that shows a client's policy values reads through these keys
+ * (shared/api/clientPolicies.ts), and every write invalidates
+ * `client(clientId)`, which covers both the active and the archived list.
+ */
+export const clientPolicyKeys = {
+  all: ['client-policies'] as const,
+  client: (clientId: string) => [...clientPolicyKeys.all, clientId] as const,
+  list: (clientId: string, archived: boolean) =>
+    [...clientPolicyKeys.client(clientId), { archived }] as const,
+} as const;
+
+/** Every category's policy table schema, from `/integrations/schemas/batch`. */
+export const policySchemaKeys = {
+  all: ['policy-schemas'] as const,
+  batch: () => [...policySchemaKeys.all, 'batch'] as const,
+} as const;
+
+/** A client's financial goals (`/goals/:clientId`). */
+export const clientGoalKeys = {
+  all: ['client-goals'] as const,
+  client: (clientId: string) => [...clientGoalKeys.all, clientId] as const,
+} as const;
+
+// ============================================================================
 // FNA — FINANCIAL NEEDS ANALYSIS (all sub-types)
 // ============================================================================
 

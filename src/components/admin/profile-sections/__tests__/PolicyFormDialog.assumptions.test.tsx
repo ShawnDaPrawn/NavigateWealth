@@ -17,7 +17,7 @@
  * identity, so they keep holding if the fix is implemented some other way.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@/test/utils';
+import { renderWithQueryClient, screen, fireEvent, waitFor } from '@/test/utils';
 
 const RETIREMENT_FIELDS = [
   {
@@ -62,7 +62,9 @@ vi.mock('../PolicyDocumentUpload', () => ({
 import { PolicyFormDialog } from '../PolicyFormDialog';
 
 function renderDialog() {
-  return render(
+  // The dialog invalidates the client's cached policies after a save, so it
+  // needs a QueryClient, as it always has one in the app.
+  return renderWithQueryClient(
     <PolicyFormDialog
       isOpen
       onClose={() => {}}

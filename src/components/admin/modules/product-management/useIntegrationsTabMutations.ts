@@ -20,6 +20,7 @@ import {
 } from './types';
 import { productManagementApi } from './api';
 import { integrationsKeys } from '../../../../utils/queryKeys';
+import { invalidateAllClientPolicies } from '../../../../shared/api/clientPolicies';
 import {
   buildIntegrationBindingsForFields,
   buildLegacyFieldMappingFromBindings,
@@ -161,6 +162,8 @@ export function useIntegrationsTabMutations({
       queryClient.invalidateQueries({
         queryKey: integrationsKeys.history(selectedProviderId, selectedCategoryId),
       });
+      // Published rows are now on clients' policies: their views refetch.
+      void invalidateAllClientPolicies(queryClient);
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to publish staged rows');

@@ -3,7 +3,9 @@ import { Button } from '../../../ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { Goal } from '../../../../shared/goals';
 import { GoalCard } from './GoalCard';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../utils/api';
+import { invalidateClientGoals } from '../../../../shared/api/clientPolicies';
 import { GoalFormDialog } from './GoalFormDialog';
 
 interface GoalDashboardProps {
@@ -21,6 +23,7 @@ export function GoalDashboard({
   schemas = {},
   mainSchema = [],
 }: GoalDashboardProps) {
+  const queryClient = useQueryClient();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -59,6 +62,7 @@ export function GoalDashboard({
     // Persist
     try {
       await api.post(`/goals/${clientId}`, { goals: updatedGoals });
+      void invalidateClientGoals(queryClient, clientId);
     } catch (e) {
       console.error('Failed to save goals', e);
       // Revert on error would go here
@@ -74,6 +78,7 @@ export function GoalDashboard({
 
     try {
       await api.post(`/goals/${clientId}`, { goals: updatedGoals });
+      void invalidateClientGoals(queryClient, clientId);
     } catch (e) {
       console.error('Failed to delete goal', e);
     }
