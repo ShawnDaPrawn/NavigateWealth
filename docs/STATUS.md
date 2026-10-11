@@ -190,9 +190,10 @@ stated prerequisite has already caused a production outage once.
   declared once in `FNA_CLIENT_KEYS`; no wizard reads the profile or policies
   for them itself. Publishing lands the adviser on that category's FNA list in
   Policy Details with the new FNA highlighted, whether the wizard was opened
-  from the category tab or from an accepted client intake. The FNA list and
-  "View" load through the registry (`FNAConfig.listForClient` / `getById`),
-  which calls each module's own API. Never build an FNA URL by hand: a
+  from the category tab or from an accepted client intake. The FNA list,
+  "View", publish, unpublish and delete go through the registry
+  (`FNAConfig.listForClient`, `getById`, `publishFNA`, `unpublishFNA`,
+  `deleteFNA`), which calls each module's own API. Never build an FNA URL by hand: a
   hand-written URL map is what sent the Investment INA and Estate lists and
   "View" to routes that do not exist, so their published FNAs answered 404.
   The rules, and the tests that hold them, are in
@@ -546,19 +547,17 @@ is work not yet done, not budget.
   them to per-fingerprint rows, as the public and CSP rows already are, is the
   next step.
 
-- **Managing a published FNA is uneven across the six types.** Every type's
-  FNAs list and open; what happens after that differs:
-  - Retirement has no server route for delete, unpublish, draft or archive,
-    so "Delete" in the FNA view dialog answers 404.
-  - Tax delete, publish and unpublish are client-side no-ops
-    (`tax-planning-fna/api.ts`): "Delete" reports success and deletes
-    nothing.
-  - Investment INA and Estate have no publish or unpublish route behind their
-    API methods. Nothing in the UI reaches them today.
-  - Publishing from an accepted intake creates a new FNA instead of finishing
-    the draft the intake made (`linkedFnaId` is carried but unused). Medical,
-    Investment, Estate and Tax lists therefore show that draft beside the
-    published FNA; Risk and Retirement intake drafts appear in no list.
+- **What is left after an FNA's lifecycle was made whole.** Every type now
+  lists, opens, publishes, unpublishes and deletes through a real route (see
+  [`architecture/fna-wizards.md`](architecture/fna-wizards.md)). Still open:
+  - "Delete" means two things: on a Risk FNA it archives (the record is kept,
+    off the list); on the other five it removes the record.
+  - An intake draft whose wizard was closed without publishing can be viewed
+    ("not calculated yet") and deleted, but not continued: the accepted intake
+    has left the queue, so finishing it means running the FNA again.
+  - Four Risk and four Retirement intake drafts made before 2026-10-10 are on
+    no client's FNA list, because the intake did not list them then. They are
+    invisible until a one-off backfill adds them.
 
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.

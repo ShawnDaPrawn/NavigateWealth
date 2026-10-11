@@ -88,7 +88,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
     const toastId = toast.loading(`Deleting ${config.name}...`);
 
     try {
-      await config.deleteFNA(fna.id as string);
+      await config.deleteFNA(fna.id as string, clientId);
       toast.success(`${config.name} deleted successfully`, { id: toastId });
       setDeleteDialogOpen(false);
       setFna(null);
@@ -101,7 +101,7 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
     } finally {
       setDeleting(false);
     }
-  }, [fna, config, loadFNA]);
+  }, [fna, config, clientId, loadFNA]);
 
   /**
    * Handle publish FNA (called from PublishFNADialog)
@@ -109,10 +109,10 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
   const handlePublishFNA = useCallback(
     async (fnaId: string) => {
       if (!config) return;
-      await config.publishFNA(fnaId);
+      await config.publishFNA(fnaId, clientId);
       loadFNA();
     },
-    [config, loadFNA],
+    [config, clientId, loadFNA],
   );
 
   /**
@@ -121,10 +121,10 @@ export function useFNAManagement({ config, clientId, enabled = true }: UseFNAMan
   const handleUnpublishFNA = useCallback(
     async (fnaId: string) => {
       if (!config) return;
-      await config.unpublishFNA(fnaId);
+      await config.unpublishFNA(fnaId, clientId);
       loadFNA();
     },
-    [config, loadFNA],
+    [config, clientId, loadFNA],
   );
 
   return {

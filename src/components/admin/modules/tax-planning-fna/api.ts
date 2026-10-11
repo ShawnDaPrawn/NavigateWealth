@@ -15,6 +15,11 @@ import type {
   FinalTaxPlan,
 } from './types';
 
+/** `?clientId=…`, for a session whose id does not name its client. */
+function clientQuery(clientId?: string): string {
+  return clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
+}
+
 export const TaxPlanningFnaAPI = {
   /**
    * Auto-populate Tax Planning inputs from client profile
@@ -117,31 +122,45 @@ export const TaxPlanningFnaAPI = {
   },
 
   /**
-   * Delete Tax Planning session
-   * Note: Not yet implemented on the backend — stubbed to prevent breaking consumers
+   * Delete a Tax Planning session. `clientId` lets the server find a session
+   * whose id does not name its client (one made from a client intake).
    */
-  async deleteSession(sessionId: string): Promise<void> {
-    logger.warn('[TaxPlanningFnaAPI] Delete not implemented for Tax Planning sessions', {
-      sessionId,
-    });
+  async deleteSession(sessionId: string, clientId?: string): Promise<void> {
+    logger.debug('[TaxPlanningFnaAPI] Deleting session', { sessionId });
+    try {
+      await api.delete(`/tax-planning-fna/${sessionId}${clientQuery(clientId)}`);
+    } catch (error) {
+      logger.error('Failed to delete Tax Planning session', error);
+      throw error;
+    }
   },
 
-  /**
-   * Publish Tax Planning session
-   * Legacy support — use saveSession with status='published' for new code
-   */
-  async publishSession(sessionId: string): Promise<void> {
-    logger.warn('[TaxPlanningFnaAPI] Use saveSession with status="published" instead', {
-      sessionId,
-    });
+  /** Publish a Tax Planning session, so the client sees it. */
+  async publishSession(sessionId: string, clientId?: string): Promise<FinalTaxPlan> {
+    logger.debug('[TaxPlanningFnaAPI] Publishing session', { sessionId });
+    try {
+      const response = await api.put<{ success: boolean; data: FinalTaxPlan }>(
+        `/tax-planning-fna/${sessionId}/publish${clientQuery(clientId)}`,
+      );
+      return response.data;
+    } catch (error) {
+      logger.error('Failed to publish Tax Planning session', error);
+      throw error;
+    }
   },
 
-  /**
-   * Unpublish Tax Planning session
-   * Legacy support — not yet implemented
-   */
-  async unpublishSession(sessionId: string): Promise<void> {
-    logger.warn('[TaxPlanningFnaAPI] Unpublish not yet implemented', { sessionId });
+  /** Return a published Tax Planning session to a draft. */
+  async unpublishSession(sessionId: string, clientId?: string): Promise<FinalTaxPlan> {
+    logger.debug('[TaxPlanningFnaAPI] Unpublishing session', { sessionId });
+    try {
+      const response = await api.put<{ success: boolean; data: FinalTaxPlan }>(
+        `/tax-planning-fna/${sessionId}/unpublish${clientQuery(clientId)}`,
+      );
+      return response.data;
+    } catch (error) {
+      logger.error('Failed to unpublish Tax Planning session', error);
+      throw error;
+    }
   },
 };
 

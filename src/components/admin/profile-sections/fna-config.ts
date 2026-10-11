@@ -83,13 +83,11 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
         string,
         unknown
       > | null>,
-    deleteFNA: (fnaId) => MedicalFNAApiService.deleteMedicalFNA(fnaId),
-    publishFNA: (fnaId) =>
-      MedicalFNAApiService.publishMedicalFNA(fnaId) as unknown as Promise<Record<string, unknown>>,
-    unpublishFNA: (fnaId) =>
-      MedicalFNAApiService.unpublishMedicalFNA(fnaId) as unknown as Promise<
-        Record<string, unknown>
-      >,
+    deleteFNA: (fnaId, clientId) => MedicalFNAApiService.deleteMedicalFNA(fnaId, clientId),
+    publishFNA: (fnaId, clientId) =>
+      asRecord(MedicalFNAApiService.publishMedicalFNA(fnaId, clientId)),
+    unpublishFNA: (fnaId, clientId) =>
+      asRecord(MedicalFNAApiService.unpublishMedicalFNA(fnaId, clientId)),
     resultsPropsKey: 'results',
   },
 
@@ -117,9 +115,11 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
       asRecord(EstatePlanningApiService.getSessionById(sessionId, clientId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(EstatePlanningApiService.getLatestPublished(clientId)),
-    deleteFNA: (sessionId) => EstatePlanningApiService.deleteSession(sessionId),
-    publishFNA: (sessionId) => asRecord(EstatePlanningApiService.publishSession(sessionId)),
-    unpublishFNA: (sessionId) => asRecord(EstatePlanningApiService.unpublishSession(sessionId)),
+    deleteFNA: (sessionId, clientId) => EstatePlanningApiService.deleteSession(sessionId, clientId),
+    publishFNA: (sessionId, clientId) =>
+      asRecord(EstatePlanningApiService.publishSession(sessionId, clientId)),
+    unpublishFNA: (sessionId, clientId) =>
+      asRecord(EstatePlanningApiService.unpublishSession(sessionId, clientId)),
     resultsPropsKey: 'fna',
   },
 
@@ -133,9 +133,11 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
       asRecord(InvestmentINAApiService.getSessionById(sessionId, clientId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(InvestmentINAApiService.getLatestPublished(clientId)),
-    deleteFNA: (sessionId) => InvestmentINAApiService.deleteSession(sessionId),
-    publishFNA: (sessionId) => asRecord(InvestmentINAApiService.publishSession(sessionId)),
-    unpublishFNA: (sessionId) => asRecord(InvestmentINAApiService.unpublishSession(sessionId)),
+    deleteFNA: (sessionId, clientId) => InvestmentINAApiService.deleteSession(sessionId, clientId),
+    publishFNA: (sessionId, clientId) =>
+      asRecord(InvestmentINAApiService.publishSession(sessionId, clientId)),
+    unpublishFNA: (sessionId, clientId) =>
+      asRecord(InvestmentINAApiService.unpublishSession(sessionId, clientId)),
     resultsPropsKey: 'session',
   },
 
@@ -148,17 +150,11 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     getById: (sessionId) => asRecord(TaxPlanningFnaAPI.getSessionById(sessionId)),
     getLatestPublished: (clientId) =>
       asRecordOrNull(TaxPlanningFnaAPI.getLatestPublished(clientId)),
-    deleteFNA: async () => {
-      /* tax sessions managed via saveSession */
-    },
-    publishFNA: async (sessionId) => {
-      await TaxPlanningFnaAPI.publishSession(sessionId);
-      return {};
-    },
-    unpublishFNA: async (sessionId) => {
-      await TaxPlanningFnaAPI.unpublishSession(sessionId);
-      return {};
-    },
+    deleteFNA: (sessionId, clientId) => TaxPlanningFnaAPI.deleteSession(sessionId, clientId),
+    publishFNA: (sessionId, clientId) =>
+      asRecord(TaxPlanningFnaAPI.publishSession(sessionId, clientId)),
+    unpublishFNA: (sessionId, clientId) =>
+      asRecord(TaxPlanningFnaAPI.unpublishSession(sessionId, clientId)),
     resultsPropsKey: 'fna',
   },
 };

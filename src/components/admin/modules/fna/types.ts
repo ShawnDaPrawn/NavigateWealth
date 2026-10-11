@@ -243,9 +243,14 @@ export interface FNAConfig {
    */
   getById: (fnaId: string, clientId: string) => Promise<Record<string, unknown> | null>;
   getLatestPublished: (clientId: string) => Promise<Record<string, unknown> | null>;
-  deleteFNA: (fnaId: string) => Promise<void>;
-  publishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
-  unpublishFNA: (fnaId: string) => Promise<Record<string, unknown>>;
+  /**
+   * Delete, publish and unpublish one FNA. Like `getById`, each takes the
+   * client the FNA belongs to, because an FNA created from a client intake
+   * has an id that does not name its client.
+   */
+  deleteFNA: (fnaId: string, clientId: string) => Promise<void>;
+  publishFNA: (fnaId: string, clientId: string) => Promise<Record<string, unknown>>;
+  unpublishFNA: (fnaId: string, clientId: string) => Promise<Record<string, unknown>>;
   // Results props mapping
   resultsPropsKey?: string;
 }
