@@ -2,7 +2,7 @@
  * FNA Intake Queue — admin review of client-submitted intakes
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
@@ -22,7 +22,7 @@ import {
 } from '../../../../../shared/form-prefill/intake-field-mapping';
 import { FNAIntakeStatusBadge } from '@/shared/fna-intake/components/FNAIntakeStatusBadge';
 import { PrefillReviewModal } from '../../form-prefill';
-import { clientApi } from '../api';
+import { useClientList } from '../hooks/useClientList';
 import type { IntakeHandoffState } from './IntakeWizardHandoff';
 import {
   FNAIntakeQueueSkeleton,
@@ -47,7 +47,6 @@ const DOMAIN_LABELS: Record<string, string> = {
 export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<FnaIntakeSession[]>([]);
-  const [clientNames, setClientNames] = useState<Record<string, string>>({});
   const [actingId, setActingId] = useState<string | null>(null);
   const [pendingSession, setPendingSession] = useState<FnaIntakeSession | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
@@ -70,32 +69,21 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
     void load();
   }, [load]);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const response = await clientApi.getClients({ perPage: 500 });
-        const map: Record<string, string> = {};
-        for (const entry of response.clients ?? []) {
-          const e = entry as {
-            id: string;
-            email?: string;
-            fullName?: string;
-            firstName?: string;
-            lastName?: string;
-          };
-          const name =
-            e.fullName ||
-            [e.firstName, e.lastName].filter(Boolean).join(' ').trim() ||
-            e.email ||
-            e.id;
-          map[e.id] = name;
-        }
-        setClientNames(map);
-      } catch {
-        // Queue still works with client IDs if lookup fails
-      }
-    })();
-  }, []);
+  // Names come from the client list the module already holds (same query key
+  // as the list itself), so opening the queue costs no extra request. It used
+  // to fetch the whole directory a second time and then read a field the
+  // endpoint does not return, so every row fell back to the raw client id.
+  const { clients } = useClientList();
+  const clientNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const client of clients) {
+      map[client.id] =
+        [client.firstName, client.lastName].filter(Boolean).join(' ').trim() ||
+        client.email ||
+        client.id;
+    }
+    return map;
+  }, [clients]);
 
   const clientNameFor = useCallback(
     (clientId: string) => clientNames[clientId] ?? clientId,

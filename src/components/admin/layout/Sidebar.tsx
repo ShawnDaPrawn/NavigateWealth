@@ -24,7 +24,7 @@ import {
   operationsModules,
 } from './config';
 import { useAuth } from '../../auth/AuthContext';
-import { useCurrentUserPermissions } from '../modules/personnel';
+import { useCurrentUserPermissions } from '../modules/personnel/shell';
 import { preloadAdminModule } from '../moduleLoaders';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';

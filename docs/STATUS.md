@@ -561,3 +561,19 @@ is work not yet done, not budget.
 
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.
+
+- **Admin screens wait ~2 s per Edge Function call, and the size of the
+  function is most of it.** Measured 2026-10-11
+  ([`edge-function-latency.md`](runbooks/edge-function-latency.md), corrected
+  section at the top): almost every request starts a fresh worker, and a
+  fresh worker of `make-server-91ed8379` costs ~1.4 s before any code runs
+  against ~0.25 s for a one-file function in the same project. Landed so far
+  (Phase 1, frontend): the admin frame no longer downloads every module up
+  front (1,094 → 435 KB gzip on first load; `admin-shell-static-graph.test.ts`
+  guards it), staff sessions keep a per-user query cache in IndexedDB that is
+  shown at once and always refetched on use (`utils/query/persistedQueryCache.ts`;
+  wiped on sign-out and on every deploy), the sidebar badge counts fetch in
+  parallel and share the dashboard's `/admin/stats`, and two duplicate list
+  fetches are gone. Next: move the remaining effect-based loaders onto the
+  cache, then a lean function for the hot admin reads (largest single lever),
+  then fewer calls per screen.

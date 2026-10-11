@@ -17,8 +17,8 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchClientList } from '../modules/client-management';
-import { personnelApi } from '../modules/personnel';
+import { fetchClientList } from '../modules/client-management/shell';
+import { personnelApi } from '../modules/personnel/shell';
 import type { Client } from '../modules/client-management';
 import type { Personnel } from '../modules/personnel';
 import { clientKeys, personnelKeys } from '../../../utils/queryKeys';

@@ -24,6 +24,30 @@
  * already export a lazy component (wrapping that again is React error #306, per
  * the note in AdminDashboardPage). They export a `preload…` of their own
  * instead, which is what this calls.
+ *
+ * SHELL ENTRIES
+ * -------------
+ * Warming and lazy-loading only split anything if the admin frame — the page,
+ * the layout, the sidebar, global search, the badge counts — never imports a
+ * module barrel statically. Rollup cannot move a module into its own chunk
+ * when it is imported both statically and through `import()`: one static
+ * `import { XSkeleton } from './modules/x'` and the whole of module x lands in
+ * the page's chunk, so every admin visit downloads it and the `import()` above
+ * fetches nothing new. Until 2026-10 that was true of every module: the page
+ * pulled in all of them (3.8 MB of JS, including TipTap, Quill and recharts)
+ * before the sidebar could paint.
+ *
+ * So each module the frame needs something from has a second public entry,
+ * `modules/<m>/shell.ts`: its skeleton, any background hook the page mounts,
+ * and the odd light helper. Rules for a shell entry:
+ *
+ *   - re-export only from files that are themselves light — never the module
+ *     component, never a file that imports an editor, chart or PDF library;
+ *   - never re-export from the barrel (`./index`), which would undo the point;
+ *   - the frame imports from `shell`, everything else keeps using the barrel.
+ *
+ * `admin-shell-static-graph.test.ts` walks the frame's static imports and fails
+ * if any module barrel is reachable from it.
  */
 
 import type { AdminModule } from './layout/types';
