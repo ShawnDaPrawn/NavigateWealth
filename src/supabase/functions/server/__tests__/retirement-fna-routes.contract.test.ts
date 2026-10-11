@@ -203,6 +203,9 @@ describe('after publish', () => {
     const res = await req(`/${fna.id}/unpublish`, { method: 'PUT' });
     expect(res.status).toBe(200);
     expect(record(fna.id)?.status).toBe('draft');
+    expect(record(fna.id)?.publishedAt).toBeUndefined();
+    expect(record(fna.id)?.publishedBy).toBeUndefined();
+    expect(list(CLIENT_A)).toContain(fna.id);
     expect(latest(CLIENT_A)).toBeUndefined();
     const after = await req(`/client/${CLIENT_A}/latest-published`);
     expect(await json(after)).toEqual({ success: true, data: null });
@@ -218,6 +221,32 @@ describe('after publish', () => {
     const second = await published();
     await req(`/${first.id}/unpublish`, { method: 'PUT' });
     expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(second.id);
+  });
+
+  it('draft clears a leftover publication stamp on a record that is already a draft', async () => {
+    // A draft save used to change only `status`, so a draft could keep
+    // `publishedAt` and the list still said "Published". Saving it again has
+    // to clear that stamp, drop a `:latest` pointer at it, and leave it listed.
+    const fna = await create();
+    kvStore.set(`retirement_fna:${fna.id}`, {
+      ...record(String(fna.id)),
+      status: 'draft',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+      publishedBy: 'admin-1',
+    });
+    kvStore.set(`retirement_fna:${CLIENT_A}:latest`, {
+      id: fna.id,
+      clientId: CLIENT_A,
+      status: 'draft',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+    });
+
+    expect((await req(`/${fna.id}/draft`, { method: 'PUT' })).status).toBe(200);
+    expect(record(String(fna.id))?.status).toBe('draft');
+    expect(record(String(fna.id))?.publishedAt).toBeUndefined();
+    expect(record(String(fna.id))?.publishedBy).toBeUndefined();
+    expect(latest(CLIENT_A)).toBeUndefined();
+    expect(list(CLIENT_A)).toContain(fna.id);
   });
 
   it('draft returns a published FNA to a draft, publication stamp included', async () => {

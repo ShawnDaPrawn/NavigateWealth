@@ -8,10 +8,11 @@ import { fireEvent, render, screen, waitFor } from '@/test/utils';
 import type { FNAWizardProps } from '../../../fna';
 
 const deleteFNA = vi.fn();
+let publishedId = 'published-1';
 
 function FakeWizard({ onFNAComplete, clientId, intakePrefill }: FNAWizardProps) {
   return (
-    <button type="button" onClick={() => onFNAComplete?.('published-1')}>
+    <button type="button" onClick={() => onFNAComplete?.(publishedId)}>
       Publish for {clientId} ({Object.keys(intakePrefill ?? {}).join(',')})
     </button>
   );
@@ -37,6 +38,7 @@ const HANDOFF = {
 
 beforeEach(() => {
   deleteFNA.mockReset();
+  publishedId = 'published-1';
 });
 
 describe('IntakeWizardHandoff', () => {
@@ -72,6 +74,21 @@ describe('IntakeWizardHandoff', () => {
     fireEvent.click(screen.getByRole('button'));
 
     await waitFor(() => expect(onFNAComplete).toHaveBeenCalledWith('published-1', HANDOFF));
+  });
+
+  it('does not delete the FNA when publishing kept the intake draft id', async () => {
+    // Some wizards publish the draft in place. Deleting that id would remove
+    // the FNA that was just published.
+    publishedId = HANDOFF.linkedFnaId;
+    const onFNAComplete = vi.fn();
+
+    render(
+      <IntakeWizardHandoff handoff={HANDOFF} onClose={vi.fn()} onFNAComplete={onFNAComplete} />,
+    );
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => expect(onFNAComplete).toHaveBeenCalledWith(HANDOFF.linkedFnaId, HANDOFF));
+    expect(deleteFNA).not.toHaveBeenCalled();
   });
 
   it('leaves things alone when the intake has no draft', async () => {
