@@ -37,6 +37,25 @@ export async function createFnaDraftFromIntake(
   }
 }
 
+/**
+ * Risk and Retirement keep each FNA at `<prefix>:<id>` and the client's FNAs in
+ * an id list at `<prefix>:<clientId>:list`. The record and its list entry are
+ * written together.
+ */
+async function saveWithListEntry(
+  prefix: 'retirement_fna' | 'risk_planning_fna',
+  clientId: string,
+  fnaId: string,
+  record: Record<string, unknown>,
+): Promise<void> {
+  const listKey = `${prefix}:${clientId}:list`;
+  const list = ((await kv.get(listKey)) as string[] | null) || [];
+  await kv.mset(
+    [`${prefix}:${fnaId}`, listKey],
+    [record, list.includes(fnaId) ? list : [...list, fnaId]],
+  );
+}
+
 async function createRetirementDraftFromIntake(
   session: FnaIntakeSession,
   admin: IntakeDraftCreator,
@@ -58,8 +77,10 @@ async function createRetirementDraftFromIntake(
     intakeSource: 'client',
   };
   // Not written to `:latest`: that pointer is what "latest published" reads,
-  // and a draft there showed as the client's current Retirement FNA.
-  await kv.set(`retirement_fna:${fnaId}`, record);
+  // and a draft there showed as the client's current Retirement FNA. It IS put
+  // on the client's list, which is what the FNA list reads — without it the
+  // draft appeared nowhere.
+  await saveWithListEntry('retirement_fna', session.clientId, fnaId, record);
   return fnaId;
 }
 
@@ -103,7 +124,9 @@ async function createRiskDraftFromIntake(session: FnaIntakeSession, admin: Intak
     intakeSessionId: session.id,
     intakeSource: 'client',
   };
-  await kv.set(`risk_planning_fna:${fnaId}`, record);
+  // On the client's list, which is what the FNA list reads — without it the
+  // draft appeared nowhere.
+  await saveWithListEntry('risk_planning_fna', session.clientId, fnaId, record);
   return fnaId;
 }
 

@@ -12,6 +12,13 @@ import { SaveInvestmentSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { versionSuffix } from './fna-versioning.ts';
 import {
+  readSession,
+  removeSession,
+  sessionOwner,
+  withPublished,
+  writeSession,
+} from './fna-client-scoped-sessions.ts';
+import {
   getNextVersionNumber,
   autoPopulateFromProfile,
   calculateInvestmentINA,
@@ -20,6 +27,8 @@ import {
 
 const investmentInaRoutes = new Hono();
 const log = createModuleLogger('investment-ina-routes');
+const PREFIX = 'investment-ina';
+const NOT_FOUND = 'Investment INA session not found';
 
 // Root handlers
 investmentInaRoutes.get('/', (c) => c.json({ service: 'investment-ina', status: 'active' }));
@@ -193,33 +202,19 @@ investmentInaRoutes.get('/client/:clientId/latest-published', async (c) => {
 
 /**
  * GET /investment-ina/session/:sessionId
- * Get specific INA session by ID
+ * Get specific INA session by ID. `?clientId=` names the client of a session
+ * whose id does not (one made from a client intake) — see
+ * fna-client-scoped-sessions.ts.
  */
 investmentInaRoutes.get('/session/:sessionId', async (c) => {
   try {
     const user = await authenticateUser(c.req.header('Authorization'));
     const sessionId = c.req.param('sessionId')!;
-
-    // Wizard sessions are `clientId-vN-…`, so the owner is derived from the id.
-    // Sessions created from a client intake have a plain UUID id, so the
-    // caller names the client (`?clientId=`). Either way the KV key below is
-    // built from the id that is authorized, so authorizing that owner
-    // authorizes exactly the record that gets read.
-    const clientId = c.req.query('clientId') || sessionId.split('-v')[0];
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
     await assertClientAccess(user, clientId, 'investment-ina:session-read');
 
-    const key = `investment-ina:client:${clientId}:${sessionId}`;
-    const session = await kv.get(key);
-
-    if (!session) {
-      return c.json(
-        {
-          success: false,
-          error: 'Investment INA session not found',
-        },
-        404,
-      );
-    }
+    const session = await readSession(PREFIX, clientId, sessionId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
 
     return c.json({ success: true, data: session });
   } catch (error: unknown) {
@@ -229,22 +224,71 @@ investmentInaRoutes.get('/session/:sessionId', async (c) => {
 });
 
 /**
+ * PUT /investment-ina/session/:sessionId/publish
+ * Publish a session, so the client sees it.
+ */
+investmentInaRoutes.put('/session/:sessionId/publish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const sessionId = c.req.param('sessionId')!;
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'investment-ina:session-publish');
+
+    const session = await readSession(PREFIX, clientId, sessionId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
+
+    const updated = withPublished(session, true, user.id);
+    await writeSession(PREFIX, clientId, sessionId, updated);
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    log.error('❌ Error publishing Investment INA session:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
+
+/**
+ * PUT /investment-ina/session/:sessionId/unpublish
+ * Return a published session to a draft.
+ */
+investmentInaRoutes.put('/session/:sessionId/unpublish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const sessionId = c.req.param('sessionId')!;
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'investment-ina:session-unpublish');
+
+    const session = await readSession(PREFIX, clientId, sessionId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
+    if (session.status !== 'published') {
+      return c.json({ success: false, error: 'Investment INA session is not published' }, 400);
+    }
+
+    const updated = withPublished(session, false, user.id);
+    await writeSession(PREFIX, clientId, sessionId, updated);
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    log.error('❌ Error unpublishing Investment INA session:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
+
+/**
  * DELETE /investment-ina/session/:sessionId
- * Delete an Investment INA session
+ * Delete an Investment INA session. 404 when there is none: this used to
+ * answer success for any id, so deleting an intake draft (whose id does not
+ * name its client) reported success and deleted nothing.
  */
 investmentInaRoutes.delete('/session/:sessionId', async (c) => {
   try {
     log.info('📥 DELETE /investment-ina/session/:sessionId');
     const user = await authenticateUser(c.req.header('Authorization'));
-
     const sessionId = c.req.param('sessionId')!;
-
-    // Extract clientId from sessionId (format: clientId-vN)
-    const clientId = sessionId.split('-v')[0];
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
     await assertClientAccess(user, clientId, 'investment-ina:session-delete');
 
-    const key = `investment-ina:client:${clientId}:${sessionId}`;
-    await kv.del(key);
+    if (!(await removeSession(PREFIX, clientId, sessionId))) {
+      return c.json({ success: false, error: NOT_FOUND }, 404);
+    }
 
     log.info('✅ Investment INA session deleted:', { sessionId });
     return c.json({ success: true });

@@ -204,7 +204,7 @@ describe('useFNAManagement — handleDeleteFNA', () => {
       await result.current.handleDeleteFNA();
     });
 
-    expect(deleteFNA).toHaveBeenCalledWith('fna-5');
+    expect(deleteFNA).toHaveBeenCalledWith('fna-5', 'client-1');
     expect(toast.success).toHaveBeenCalledWith(
       expect.stringContaining('Test FNA'),
       expect.anything(),
@@ -245,7 +245,7 @@ describe('useFNAManagement — handlePublishFNA / handleUnpublishFNA', () => {
       await result.current.handlePublishFNA('fna-7');
     });
 
-    expect(publishFNA).toHaveBeenCalledWith('fna-7');
+    expect(publishFNA).toHaveBeenCalledWith('fna-7', 'client-1');
     expect(getLatestPublished).toHaveBeenCalledTimes(2);
   });
 
@@ -262,7 +262,7 @@ describe('useFNAManagement — handlePublishFNA / handleUnpublishFNA', () => {
       await result.current.handleUnpublishFNA('fna-8');
     });
 
-    expect(unpublishFNA).toHaveBeenCalledWith('fna-8');
+    expect(unpublishFNA).toHaveBeenCalledWith('fna-8', 'client-1');
     expect(getLatestPublished).toHaveBeenCalledTimes(2);
   });
 

@@ -473,32 +473,47 @@ medicalFnaRoutes.post('/calculate/:fnaId', async (c) => {
 });
 
 /**
+ * One Medical FNA by id, with the key it is stored under.
+ *
+ * Wizard FNAs live at `medical-fna:<id>`. FNAs created from a client intake
+ * live under the client (`medical-fna:client:<clientId>:<id>`), so with a
+ * `clientId` hint that key is tried too. Every route below writes back to the
+ * key the record was found at, and authorizes against the record's own client.
+ */
+async function findMedicalFna(
+  fnaId: string,
+  clientHint?: string | null,
+): Promise<{ key: string; fna: Record<string, any> } | null> {
+  const keys = [`medical-fna:${fnaId}`];
+  if (clientHint) keys.push(`medical-fna:client:${clientHint}:${fnaId}`);
+  for (const key of keys) {
+    const fna = await kv.get(key);
+    if (fna) return { key, fna };
+  }
+  return null;
+}
+
+/**
  * PUT /medical-fna/draft/:fnaId
  * Save Medical FNA as draft
  */
 medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ PUT /medical-fna/draft/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
-
-    const fnaId = c.req.param('fnaId')!;
-    const fna = await kv.get(`medical-fna:${fnaId}`);
-
-    if (!fna) {
-      return c.json({ success: false, error: 'Medical FNA not found' }, 404);
-    }
+    const found = await findMedicalFna(c.req.param('fnaId')!, c.req.query('clientId'));
+    if (!found) return c.json({ success: false, error: 'Medical FNA not found' }, 404);
+    const { key, fna } = found;
 
     await assertRecordClientAccess(user, fna, 'medical-fna:draft');
 
     fna.status = 'draft';
     fna.updatedAt = new Date().toISOString();
+    await kv.set(key, fna);
 
-    await kv.set(`medical-fna:${fnaId}`, fna);
-
-    log.info('✅ Medical FNA saved as draft');
+    log.info('Medical FNA saved as draft');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
-    log.error('âŒ Error saving Medical FNA draft:', error);
+    log.error('Error saving Medical FNA draft:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -509,30 +524,15 @@ medicalFnaRoutes.put('/draft/:fnaId', async (c) => {
  */
 medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ POST /medical-fna/publish/:fnaId - ROUTE HIT');
-    log.info('ðŸ“‹ Request details:', {
-      path: c.req.path,
-      method: c.req.method,
-      headers: Object.fromEntries(c.req.raw.headers.entries()),
-    });
-
+    // Request headers are not logged: they carry the caller's bearer token.
     const user = await authenticateUser(c.req.header('Authorization'));
-    log.info('✅ User authenticated:', { userId: user.id });
-
     const fnaId = c.req.param('fnaId')!;
-    log.info('ðŸ“Œ FNA ID from params:', { fnaId });
-
-    const fna = await kv.get(`medical-fna:${fnaId}`);
-    log.info('ðŸ” KV lookup result:', {
-      found: !!fna,
-      key: `medical-fna:${fnaId}`,
-      status: fna?.status,
-    });
-
-    if (!fna) {
-      log.error('âŒ Medical FNA not found in KV store:', { fnaId });
+    const found = await findMedicalFna(fnaId, c.req.query('clientId'));
+    if (!found) {
+      log.error('Medical FNA not found:', { fnaId });
       return c.json({ success: false, error: 'Medical FNA not found' }, 404);
     }
+    const { key, fna } = found;
 
     await assertRecordClientAccess(user, fna, 'medical-fna:publish');
 
@@ -540,27 +540,18 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
     fna.publishedAt = new Date().toISOString();
     fna.publishedBy = user.id;
     fna.updatedAt = new Date().toISOString();
+    await kv.set(key, fna);
 
-    await kv.set(`medical-fna:${fnaId}`, fna);
+    log.info('Medical FNA published:', { fnaId, clientId: fna.clientId, publishedBy: user.id });
 
-    log.info('✅ Medical FNA published successfully:', {
-      fnaId,
-      clientId: fna.clientId,
-      publishedBy: user.id,
-    });
-
-    // Phase 4: Auto-snapshot net worth on FNA publish (fire-and-forget, Â§13)
+    // Phase 4: Auto-snapshot net worth on FNA publish (fire-and-forget, §13)
     if (fna.clientId) {
       snapshotService.autoSnapshotFromKV(fna.clientId, 'medical-fna-publish').catch(() => {});
     }
 
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
-    log.error('âŒ Error publishing Medical FNA:', {
-      error: getErrMsg(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-    });
+    log.error('Error publishing Medical FNA:', { error: getErrMsg(error) });
     return fnaErrorResponse(c, error);
   }
 });
@@ -571,27 +562,21 @@ medicalFnaRoutes.post('/publish/:fnaId', async (c) => {
  */
 medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
   try {
-    log.info('ðŸ”¥ POST /medical-fna/unpublish/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
-
-    const fnaId = c.req.param('fnaId')!;
-    const fna = await kv.get(`medical-fna:${fnaId}`);
-
-    if (!fna) {
-      return c.json({ success: false, error: 'Medical FNA not found' }, 404);
-    }
+    const found = await findMedicalFna(c.req.param('fnaId')!, c.req.query('clientId'));
+    if (!found) return c.json({ success: false, error: 'Medical FNA not found' }, 404);
+    const { key, fna } = found;
 
     await assertRecordClientAccess(user, fna, 'medical-fna:unpublish');
 
     fna.status = 'draft';
     fna.updatedAt = new Date().toISOString();
+    await kv.set(key, fna);
 
-    await kv.set(`medical-fna:${fnaId}`, fna);
-
-    log.info('✅ Medical FNA unpublished');
+    log.info('Medical FNA unpublished');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
-    log.error('âŒ Error unpublishing Medical FNA:', error);
+    log.error('Error unpublishing Medical FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -602,27 +587,21 @@ medicalFnaRoutes.post('/unpublish/:fnaId', async (c) => {
  */
 medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ PUT /medical-fna/archive/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
-
-    const fnaId = c.req.param('fnaId')!;
-    const fna = await kv.get(`medical-fna:${fnaId}`);
-
-    if (!fna) {
-      return c.json({ success: false, error: 'Medical FNA not found' }, 404);
-    }
+    const found = await findMedicalFna(c.req.param('fnaId')!, c.req.query('clientId'));
+    if (!found) return c.json({ success: false, error: 'Medical FNA not found' }, 404);
+    const { key, fna } = found;
 
     await assertRecordClientAccess(user, fna, 'medical-fna:archive');
 
     fna.status = 'archived';
     fna.updatedAt = new Date().toISOString();
+    await kv.set(key, fna);
 
-    await kv.set(`medical-fna:${fnaId}`, fna);
-
-    log.info('✅ Medical FNA archived');
+    log.info('Medical FNA archived');
     return c.json({ success: true, data: fna });
   } catch (error: unknown) {
-    log.error('âŒ Error archiving Medical FNA:', error);
+    log.error('Error archiving Medical FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
@@ -633,65 +612,41 @@ medicalFnaRoutes.put('/archive/:fnaId', async (c) => {
  */
 medicalFnaRoutes.delete('/delete/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ DELETE /medical-fna/delete/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
+    // The record has to be read before it can be deleted, so there is an
+    // owner to check against.
+    const found = await findMedicalFna(c.req.param('fnaId')!, c.req.query('clientId'));
+    if (!found) return c.json({ success: false, error: 'Medical FNA not found' }, 404);
 
-    const fnaId = c.req.param('fnaId')!;
+    await assertRecordClientAccess(user, found.fna, 'medical-fna:delete');
 
-    // The record has to be read before it can be deleted: this handler went
-    // straight to kv.del, so there was nothing to check an owner against.
-    const fna = await kv.get(`medical-fna:${fnaId}`);
+    await kv.del(found.key);
 
-    if (!fna) {
-      return c.json({ success: false, error: 'Medical FNA not found' }, 404);
-    }
-
-    await assertRecordClientAccess(user, fna, 'medical-fna:delete');
-
-    await kv.del(`medical-fna:${fnaId}`);
-
-    log.info('✅ Medical FNA deleted');
+    log.info('Medical FNA deleted');
     return c.json({ success: true, data: null });
   } catch (error: unknown) {
-    log.error('âŒ Error deleting Medical FNA:', error);
+    log.error('Error deleting Medical FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });
 
 /**
  * GET /medical-fna/:fnaId
- * Get a specific Medical FNA session
+ * Get a specific Medical FNA session. `?clientId=` also finds an FNA created
+ * from a client intake (see findMedicalFna).
  * MUST BE LAST - Generic catch-all route
  */
 medicalFnaRoutes.get('/:fnaId', async (c) => {
   try {
-    log.info('ðŸ“¥ GET /medical-fna/:fnaId');
     const user = await authenticateUser(c.req.header('Authorization'));
+    const found = await findMedicalFna(c.req.param('fnaId')!, c.req.query('clientId'));
+    if (!found) return c.json({ success: false, error: 'Medical FNA not found' }, 404);
 
-    const fnaId = c.req.param('fnaId')!;
-    // Wizard FNAs live at `medical-fna:<id>`; FNAs created from a client
-    // intake live under the client (`medical-fna:client:<clientId>:<id>`), so
-    // with a `?clientId=` hint that key is tried too. The record's own
-    // clientId is authorized below either way.
-    const clientHint = c.req.query('clientId');
-    const keys = [`medical-fna:${fnaId}`];
-    if (clientHint) keys.push(`medical-fna:client:${clientHint}:${fnaId}`);
-    let fna = null;
-    for (const key of keys) {
-      fna = await kv.get(key);
-      if (fna) break;
-    }
+    await assertRecordClientAccess(user, found.fna, 'medical-fna:read');
 
-    if (!fna) {
-      return c.json({ success: false, error: 'Medical FNA not found' }, 404);
-    }
-
-    await assertRecordClientAccess(user, fna, 'medical-fna:read');
-
-    log.info('✅ Medical FNA retrieved');
-    return c.json({ success: true, data: fna });
+    return c.json({ success: true, data: found.fna });
   } catch (error: unknown) {
-    log.error('âŒ Error fetching Medical FNA:', error);
+    log.error('Error fetching Medical FNA:', error);
     return fnaErrorResponse(c, error);
   }
 });

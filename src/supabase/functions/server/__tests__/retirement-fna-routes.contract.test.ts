@@ -160,6 +160,10 @@ describe('authorization', () => {
     ['PUT', (id: string) => `/${id}/inputs`, { currentAge: 50 }],
     ['POST', (id: string) => `/${id}/calculate`, undefined],
     ['PUT', (id: string) => `/${id}/publish`, undefined],
+    ['PUT', (id: string) => `/${id}/unpublish`, undefined],
+    ['PUT', (id: string) => `/${id}/draft`, undefined],
+    ['PUT', (id: string) => `/${id}/archive`, undefined],
+    ['DELETE', (id: string) => `/${id}`, undefined],
   ];
 
   it.each(RECORD_SCOPED)(
@@ -177,6 +181,68 @@ describe('authorization', () => {
 
   it('admits the client for their own sessions', async () => {
     expect((await req(`/client/${CLIENT_A}`, { as: 'clientA' })).status).toBe(200);
+  });
+});
+
+// ============================================================================
+// AFTER PUBLISH — unpublish, draft, archive, delete
+// ============================================================================
+//
+// The SPA called all four and the server had none of them, so "Delete" in the
+// FNA view dialog answered 404 for every Retirement FNA.
+
+describe('after publish', () => {
+  async function published() {
+    const fna = await create();
+    await req(`/${fna.id}/publish`, { method: 'PUT' });
+    return fna;
+  }
+
+  it('unpublish returns the FNA to a draft and stops :latest serving it', async () => {
+    const fna = await published();
+    const res = await req(`/${fna.id}/unpublish`, { method: 'PUT' });
+    expect(res.status).toBe(200);
+    expect(record(fna.id)?.status).toBe('draft');
+    expect(latest(CLIENT_A)).toBeUndefined();
+    const after = await req(`/client/${CLIENT_A}/latest-published`);
+    expect(await json(after)).toEqual({ success: true, data: null });
+  });
+
+  it('unpublish refuses an FNA that is not published', async () => {
+    const fna = await create();
+    expect((await req(`/${fna.id}/unpublish`, { method: 'PUT' })).status).toBe(400);
+  });
+
+  it('unpublish leaves :latest alone when it points at another FNA', async () => {
+    const first = await published();
+    const second = await published();
+    await req(`/${first.id}/unpublish`, { method: 'PUT' });
+    expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(second.id);
+  });
+
+  it('draft keeps the FNA as a draft', async () => {
+    const fna = await published();
+    expect((await req(`/${fna.id}/draft`, { method: 'PUT' })).status).toBe(200);
+    expect(record(fna.id)?.status).toBe('draft');
+    expect(latest(CLIENT_A)).toBeUndefined();
+  });
+
+  it('archive keeps the record but takes it off the list and the pointer', async () => {
+    const fna = await published();
+    expect((await req(`/${fna.id}/archive`, { method: 'PUT' })).status).toBe(200);
+    expect(record(fna.id)?.status).toBe('archived');
+    expect(list(CLIENT_A)).not.toContain(fna.id);
+    expect(latest(CLIENT_A)).toBeUndefined();
+  });
+
+  it('delete removes the record, its list entry and the pointer', async () => {
+    const keep = await create();
+    const fna = await published();
+    const res = await req(`/${fna.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(200);
+    expect(record(fna.id)).toBeUndefined();
+    expect(list(CLIENT_A)).toEqual([keep.id]);
+    expect(latest(CLIENT_A)).toBeUndefined();
   });
 });
 

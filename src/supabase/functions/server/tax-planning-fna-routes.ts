@@ -11,10 +11,19 @@ import { assertClientAccess, assertRecordClientAccess } from './client-access.ts
 import { SaveTaxPlanningSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { nextVersion, versionSuffix } from './fna-versioning.ts';
+import {
+  readSession,
+  removeSession,
+  sessionOwner,
+  withPublished,
+  writeSession,
+} from './fna-client-scoped-sessions.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 
 const taxPlanningRoutes = new Hono();
 const log = createModuleLogger('tax-planning-fna-routes');
+const PREFIX = 'tax-planning-fna';
+const NOT_FOUND = 'Tax Planning FNA not found';
 
 const getSupabase = () =>
   createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -422,6 +431,71 @@ taxPlanningRoutes.delete('/tax-docs/:clientId/:docId', async (c) => {
 
 // ==================== LEGACY FNA ROUTES (CATCH-ALL) ====================
 // Kept for backward compatibility with previously published FNAs
+
+/**
+ * PUT /:fnaId/publish, PUT /:fnaId/unpublish, DELETE /:fnaId
+ *
+ * The SPA's Tax API stubbed all three as no-ops, so "Delete" reported success
+ * and deleted nothing. `?clientId=` names the client of a session whose id
+ * does not (one made from a client intake) — see fna-client-scoped-sessions.ts.
+ */
+taxPlanningRoutes.put('/:fnaId/publish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const clientId = sessionOwner(fnaId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'tax-planning-fna:publish');
+
+    const session = await readSession(PREFIX, clientId, fnaId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
+
+    const updated = withPublished(session, true, user.id);
+    await writeSession(PREFIX, clientId, fnaId, updated);
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    log.error('Error publishing Tax Planning FNA:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
+
+taxPlanningRoutes.put('/:fnaId/unpublish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const clientId = sessionOwner(fnaId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'tax-planning-fna:unpublish');
+
+    const session = await readSession(PREFIX, clientId, fnaId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
+    if (session.status !== 'published') {
+      return c.json({ success: false, error: 'Tax Planning FNA is not published' }, 400);
+    }
+
+    const updated = withPublished(session, false, user.id);
+    await writeSession(PREFIX, clientId, fnaId, updated);
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    log.error('Error unpublishing Tax Planning FNA:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
+
+taxPlanningRoutes.delete('/:fnaId', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const clientId = sessionOwner(fnaId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'tax-planning-fna:delete');
+
+    if (!(await removeSession(PREFIX, clientId, fnaId))) {
+      return c.json({ success: false, error: NOT_FOUND }, 404);
+    }
+    return c.json({ success: true });
+  } catch (error: unknown) {
+    log.error('Error deleting Tax Planning FNA:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
 
 /**
  * GET /:fnaId

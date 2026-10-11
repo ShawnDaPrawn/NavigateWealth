@@ -395,12 +395,132 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
     session.publishedBy = user.id;
     session.updatedAt = new Date().toISOString();
 
-    await kv.set(`retirement_fna:${fnaId}`, session);
-
-    // Update latest pointer
-    await kv.set(`retirement_fna:${session.clientId}:latest`, session);
+    // The record and the client's `:latest` pointer, written together.
+    await kv.mset(
+      [`retirement_fna:${fnaId}`, `retirement_fna:${session.clientId}:latest`],
+      [session, session],
+    );
 
     return c.json({ success: true, data: session });
+  } catch (error: unknown) {
+    return fnaErrorResponse(c, error);
+  }
+});
+
+/**
+ * Stop the client's `:latest` pointer serving an FNA that is no longer
+ * published (withdrawn, archived or deleted). Latest-published falls back to
+ * the newest published FNA in the list when the pointer is gone.
+ */
+async function clearLatestIfThis(clientId: string, fnaId: string): Promise<void> {
+  const latestKey = `retirement_fna:${clientId}:latest`;
+  const latest = await kv.get(latestKey);
+  if (latest && latest.id === fnaId) await kv.del(latestKey);
+}
+
+/** Take an FNA off the client's list, so it no longer shows in their FNA list. */
+async function removeFromList(clientId: string, fnaId: string): Promise<void> {
+  const listKey = `retirement_fna:${clientId}:list`;
+  const list = ((await kv.get(listKey)) as string[] | null) || [];
+  if (list.includes(fnaId)) {
+    await kv.set(
+      listKey,
+      list.filter((id) => id !== fnaId),
+    );
+  }
+}
+
+/** One FNA by id, or null. Callers check access against its own client. */
+async function loadFna(fnaId: string) {
+  return await kv.get(`retirement_fna:${fnaId}`);
+}
+
+async function saveFna(fnaId: string, session: Record<string, unknown>): Promise<void> {
+  await kv.set(`retirement_fna:${fnaId}`, session);
+}
+
+// UNPUBLISH — back to a draft; the client no longer sees it.
+retirementFnaRoutes.put('/:fnaId/unpublish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const session = await loadFna(fnaId);
+    if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+    await assertRecordClientAccess(user, session, 'retirement-fna:unpublish');
+    if (session.status !== 'published') {
+      return c.json({ success: false, error: 'FNA is not published' }, 400);
+    }
+
+    const updated = {
+      ...session,
+      status: 'draft',
+      publishedAt: undefined,
+      publishedBy: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    await saveFna(fnaId, updated);
+    await clearLatestIfThis(updated.clientId, fnaId);
+
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    return fnaErrorResponse(c, error);
+  }
+});
+
+// SAVE AS DRAFT — keeps the FNA as a draft (a published FNA is unpublished).
+retirementFnaRoutes.put('/:fnaId/draft', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const session = await loadFna(fnaId);
+    if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+    await assertRecordClientAccess(user, session, 'retirement-fna:draft');
+
+    const updated = { ...session, status: 'draft', updatedAt: new Date().toISOString() };
+    await saveFna(fnaId, updated);
+    await clearLatestIfThis(updated.clientId, fnaId);
+
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    return fnaErrorResponse(c, error);
+  }
+});
+
+// ARCHIVE — kept on record, but off the client's list and never "latest".
+retirementFnaRoutes.put('/:fnaId/archive', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const session = await loadFna(fnaId);
+    if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+    await assertRecordClientAccess(user, session, 'retirement-fna:archive');
+
+    const now = new Date().toISOString();
+    const updated = { ...session, status: 'archived', archivedAt: now, updatedAt: now };
+    await saveFna(fnaId, updated);
+    await clearLatestIfThis(updated.clientId, fnaId);
+    await removeFromList(updated.clientId, fnaId);
+
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    return fnaErrorResponse(c, error);
+  }
+});
+
+// DELETE — removes the FNA, its list entry and any `:latest` pointer to it.
+retirementFnaRoutes.delete('/:fnaId', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const fnaId = c.req.param('fnaId')!;
+    const session = await loadFna(fnaId);
+    if (!session) return c.json({ success: false, error: 'Session not found' }, 404);
+    await assertRecordClientAccess(user, session, 'retirement-fna:delete');
+
+    await kv.del(`retirement_fna:${fnaId}`);
+    await clearLatestIfThis(session.clientId, fnaId);
+    await removeFromList(session.clientId, fnaId);
+
+    return c.json({ success: true, data: null });
   } catch (error: unknown) {
     return fnaErrorResponse(c, error);
   }

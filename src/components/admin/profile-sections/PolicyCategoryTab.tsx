@@ -780,7 +780,7 @@ export function PolicyCategoryTab({
           fnaId={selectedHistoricalFnaId}
           ResultsView={fnaConfig.ResultsView}
           loadFn={(fnaId) => fnaConfig.getById(fnaId, clientId)}
-          deleteFn={fnaConfig.deleteFNA}
+          deleteFn={(fnaId) => fnaConfig.deleteFNA(fnaId, clientId)}
           onDeleted={() => {
             // Refresh the FNA management view
             setRefreshFNAManagementTrigger((prev) => prev + 1);
