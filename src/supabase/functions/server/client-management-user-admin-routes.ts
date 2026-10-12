@@ -185,7 +185,7 @@ app.get('/all-users', requireAdmin, async (c) => {
 const AUTH_USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 app.get('/client-record/:userId', requireAdmin, async (c) => {
-  const userId = c.req.param('userId');
+  const userId = c.req.param('userId') ?? '';
   // Every client is an auth user, whose id is a UUID. Anything else is not a
   // client (and the auth client throws on it rather than answering 404).
   if (!AUTH_USER_ID.test(userId)) {
