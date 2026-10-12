@@ -601,3 +601,17 @@ is work not yet done, not budget.
   start-up calls off every admin page load. Next: the remaining effect-based
   loaders, then a lean function for the hot admin reads (largest single
   lever), then fewer calls per screen.
+- **A client profile never opens on old data (owner's rule, 2026-10-12).**
+  Opening one resets every cached query whose key names the client (the
+  in-memory copy and anything the IndexedDB cache restored) and fetches the
+  client's record fresh from `GET /profile/client-record/:userId`, the same
+  entry `/all-users` returns for one user. The drawer shows "Opening client
+  profile" until that record arrives (one round trip; the Overview's profile,
+  policies and FNA-status reads start at the same moment), and shows an
+  error or "Client not available" rather than ever falling back to the
+  client-list row or a cached copy. Before this, the header, status, ID number
+  and email came from a list row up to five minutes old, and the profile was
+  read from a five-minute cache with no refresh at all. Pinned by
+  `ClientDrawer.freshOnOpen.test.tsx` (fails on the old drawer) and
+  `useFreshClientOnOpen.test.tsx`. A new drawer query must keep the client id
+  in its key, or the reset cannot find it.

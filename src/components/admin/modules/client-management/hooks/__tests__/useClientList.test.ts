@@ -46,6 +46,7 @@ vi.mock('../queryKeys', () => ({
   clientKeys: {
     all: ['clients'],
     lists: () => ['clients', 'list'],
+    details: () => ['clients', 'detail'],
   },
 }));
 
@@ -141,12 +142,17 @@ describe('useClientList', () => {
   // ── refetch tests ───────────────────────────────────────────────────────────
 
   describe('refetch', () => {
-    it('calls queryClient.invalidateQueries when refetch is called', async () => {
+    it('refreshes the list and every open profile record, nothing else', async () => {
       const { result } = renderHook(() => useClientList());
       await act(async () => {
         await result.current.refetch();
       });
-      expect(mockInvalidateQueries).toHaveBeenCalledTimes(1);
+      // An open client profile shows its own fresh record (clientKeys.detail),
+      // which must follow every change the list follows.
+      expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
+      expect(mockInvalidateQueries).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: ['clients', 'detail'] }),
+      );
     });
 
     it('passes the lists queryKey to invalidateQueries', async () => {

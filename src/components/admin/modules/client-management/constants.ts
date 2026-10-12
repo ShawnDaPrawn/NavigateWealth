@@ -3,6 +3,7 @@ import { SUPER_ADMIN_EMAIL } from '../../../../utils/auth/constants';
 export const ENDPOINTS = {
   ALL_USERS: 'profile/all-users',
   PERSONAL_INFO: 'profile/personal-info',
+  CLIENT_RECORD: (userId: string) => `profile/client-record/${encodeURIComponent(userId)}`,
   USER_METADATA: (userId: string) => `profile/users/${userId}/metadata`,
   CLIENT_CLEANUP: 'clients/maintenance/cleanup',
   KV_CLEANUP: 'kv-cleanup/run',

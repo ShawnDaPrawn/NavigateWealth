@@ -356,7 +356,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         profilePayload as ProfileData,
       );
       setProfileData(profilePayload as ProfileData);
-      await queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: clientKeys.lists() }),
+        // The open profile's own record (header name, ID number, email).
+        queryClient.invalidateQueries({ queryKey: clientKeys.detail(userId) }),
+      ]);
 
       toast.success('Profile updated successfully');
       setLoadedProfileSnapshot(createProfileSnapshot(profilePayload as ProfileData));

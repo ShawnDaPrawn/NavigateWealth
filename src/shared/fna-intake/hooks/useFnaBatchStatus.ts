@@ -18,10 +18,10 @@ interface BatchFNAStatusResponse {
   data: BatchFNAStatusItem[];
 }
 
-export function useFnaBatchStatus(clientId: string | undefined, options?: { enabled?: boolean }) {
-  return useQuery<BatchFNAStatusItem[], Error>({
-    queryKey: fnaKeys.batchStatus(clientId ?? ''),
-    queryFn: async () => {
+export function fnaBatchStatusQueryOptions(clientId: string) {
+  return {
+    queryKey: fnaKeys.batchStatus(clientId),
+    queryFn: async (): Promise<BatchFNAStatusItem[]> => {
       const response = await api.get<BatchFNAStatusResponse>(
         `/fna/batch-status/client/${clientId}`,
       );
@@ -30,9 +30,15 @@ export function useFnaBatchStatus(clientId: string | undefined, options?: { enab
       }
       return response.data;
     },
-    enabled: options?.enabled ?? !!clientId,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  };
+}
+
+export function useFnaBatchStatus(clientId: string | undefined, options?: { enabled?: boolean }) {
+  return useQuery<BatchFNAStatusItem[], Error>({
+    ...fnaBatchStatusQueryOptions(clientId ?? ''),
+    enabled: options?.enabled ?? !!clientId,
   });
 }
 
