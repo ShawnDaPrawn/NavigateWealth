@@ -618,11 +618,13 @@ Authenticated with the Vault-backed `x-nw-cron-auth` token. `POST
 /kv-cleanup/cron` moved from the inline service-role compare to
 `requireCronAuth` in the same change (#451), so it accepts that token; a job
 pointed at a function deployed before that change would 401 every night.
-Installed from `supabase/cron/kv-cleanup-jobs.sql` once that deploy was green,
-and verified the way this runbook demands: one `net.http_post` through the
-job's exact command answered 200 with `"success": true` and a live cleanup
-(3 stale rate-limit keys; the rest had gone in that morning's run). As with
-every job here, read query C after a scheduled run, not only query A.
+Installed from `supabase/cron/kv-cleanup-jobs.sql` once that deploy was green.
+One `net.http_post` through the job's exact command then answered 200 with
+`"success": true` and a live cleanup (3 stale rate-limit keys; the rest had
+gone in that morning's run). That proves the route, the token and the
+command, not that pg_cron fires the row: the job counts as verified only once
+its first scheduled run (23:30 UTC, 2026-10-12) shows in query A and its
+response in query C is 200.
 
 ## What these queries cost, and the two jobs that keep them cheap
 
