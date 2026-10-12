@@ -28,8 +28,6 @@ export { useTypeActions } from './useTypeActions';
 // Other hooks
 export { NEWS_KEYS, useMarketNews } from './useMarketNews';
 export { usePublicationsInit } from './usePublicationsInit';
-export { useScheduledPublishProcessor } from './useScheduledPublishProcessor';
-export { useAutoContentProcessor } from './useAutoContentProcessor';
 
 // Newsletter hooks
 export { useNewsletterSubscribers } from './useNewsletterSubscribers';

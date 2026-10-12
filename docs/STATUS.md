@@ -134,12 +134,21 @@ stated prerequisite has already caused a production outage once.
   `POST /publications/articles/bulk-delete`, which never deletes a published
   article (the guard runs inside the DELETE itself), and
   `POST /publications/articles/bulk-archive`.
-- **The browser accelerators pause when the tab is hidden.** Five background
-  pollers mount at `AdminDashboardPage` level for the whole admin session. The
-  three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded
-  tab issues nothing. pg_cron is the authoritative driver in every case, which
-  is what makes pausing safe. The two remaining ones carry once-per-period
-  logic and are left on plain intervals deliberately.
+- **No scheduled work runs in the admin browser tab.** Until 2026-10-12 six
+  pollers mounted on `AdminDashboardPage` for the whole admin session
+  (scheduled publishing, auto-content, article and newsletter delivery, the
+  overdue-task digest, and client and KV maintenance), so every open admin
+  tab spent its first minute firing them. They are gone. Five duplicated a
+  pg_cron job and are now driven by it alone. The sixth, KV cleanup, had no
+  cron job: `kv-cleanup-nightly` (01:30 SAST,
+  `supabase/cron/kv-cleanup-jobs.sql`) replaces it, and until that job is
+  installed KV cleanup does not run at all (see Open operator items). What
+  changed for users: article and newsletter emails advance on the 2-minute
+  cron tick only (Newsletter Studio no longer promises that an open page
+  sends), the overdue digest goes out on weekdays only (as the cron has always
+  sent it), and client data maintenance is weekly (Sunday night) rather than
+  daily. A job that must run belongs in a cron job, not in whoever has a tab
+  open.
 - **The delivery cron cadence and the studio's stale threshold move
   together.** The two email-delivery jobs tick every 2 minutes. With an idle
   heartbeat skipped for up to 2 minutes, a healthy job can show a 4-minute-old
@@ -216,6 +225,7 @@ but cannot complete them.
 | `SUPER_ADMIN_PASSWORD` rotation         | Until the September 2026 auth review this one secret could reset any account's password through `/auth/ensure-dev-user`. Those routes are gone and it now only authenticates cron calls, but anyone who ever held it held the platform: rotate it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `cron-auth.ts`                                                     |
 | Supabase password policy                | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Archived ledger § 3.6                                              |
 | `NW_ALLOWED_ORIGINS`                    | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Archived ledger § 3.2                                              |
+| KV cleanup — nightly job                | Open until `supabase/cron/kv-cleanup-jobs.sql` is run after the deploy that moved `POST /kv-cleanup/cron` to `requireCronAuth` (2026-10-12), and query C shows its first run answering 200. Until then nothing runs KV cleanup: its browser poller is gone. Nothing to substitute; an agent with the Supabase MCP can install and verify it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `runbooks/scheduled-jobs.md`                                       |
 | Social automation — cron jobs           | Open until `supabase/cron/social-automation-jobs.sql` is run after the `/social-assets` Edge Function deploys, and query C shows both paths answering 200.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `runbooks/social-automation.md`                                    |
 | Social automation — X channel in Buffer | Open until the X account is connected in Buffer (third channel slot). The scheduling routine skips X until then.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `runbooks/social-automation.md`                                    |
 | Social automation — Routines            | Open until the two weekly Routines (Sat 04:00 UTC generate, Sun 14:00 UTC schedule; connectors Buffer + Supabase) exist on the Claude and/or ChatGPT side. The playbooks they read are seeded by the migration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `runbooks/social-automation.md`                                    |
@@ -572,7 +582,9 @@ is work not yet done, not budget.
   front (1,094 → 435 KB gzip on first load; `admin-shell-static-graph.test.ts`
   guards it), staff sessions keep a per-user query cache in IndexedDB that is
   shown at once and always refetched on use (`utils/query/persistedQueryCache.ts`;
-  wiped on sign-out and on every deploy), the sidebar badge counts fetch in
+  wiped on sign-out and on every deploy; the refetch is forced even for
+  queries marked `refetchOnMount: false`, permissions among them, which until
+  2026-10-12 kept showing the restored copy for the whole session), the sidebar badge counts fetch in
   parallel and share the dashboard's `/admin/stats`, and two duplicate list
   fetches are gone. A client's policies and the policy schemas are now one
   shared query each (`shared/api/clientPolicies.ts`): the Overview tab and all
@@ -582,5 +594,8 @@ is work not yet done, not budget.
   twice), and every write that changes them — the policy
   form, delete/archive/reinstate, applying extracted document values, the
   provider-spreadsheet publish and the portfolio-table apply — invalidates
-  them. Next: the remaining effect-based loaders, then a lean function for the
-  hot admin reads (largest single lever), then fewer calls per screen.
+  them. The six background job pollers no longer run in the admin tab (see
+  "No scheduled work runs in the admin browser tab"), which takes their
+  start-up calls off every admin page load. Next: the remaining effect-based
+  loaders, then a lean function for the hot admin reads (largest single
+  lever), then fewer calls per screen.

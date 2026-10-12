@@ -2,9 +2,10 @@
  * Tests for useVisibilityAwarePoll.
  *
  * The point of this hook is what it does NOT do: a hidden tab must issue no
- * requests. Two admin accelerators poll every 15 seconds, so a backgrounded
- * tab that kept ticking cost hundreds of Edge Function invocations an hour
- * (docs/INCIDENTS.md, 2026-09-13). These tests pin that, and pin that becoming
+ * requests. Two admin accelerators polled every 15 seconds (until they were
+ * removed on 2026-10-12), and a backgrounded tab that kept ticking cost
+ * hundreds of Edge Function invocations an hour (docs/INCIDENTS.md,
+ * 2026-09-13). These tests pin that, and pin that becoming
  * visible again resumes promptly rather than after a full interval.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';

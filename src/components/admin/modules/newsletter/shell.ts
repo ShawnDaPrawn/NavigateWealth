@@ -5,4 +5,3 @@
  * `src/components/admin/moduleLoaders.ts`.
  */
 export { NewsletterSkeleton } from './components/NewsletterSkeleton';
-export { useNewsletterCampaignProcessor } from './hooks/useNewsletterCampaignProcessor';

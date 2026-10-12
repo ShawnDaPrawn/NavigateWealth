@@ -503,6 +503,7 @@ here so the next audit starts from a complete set.
 | `db-maintenance-vacuum-system-tables`   | `20 2 * * *`   | SQL only: `vacuum (analyze)` on the two tables below | migration `20260913181044`                         |
 | `policy-document-intake-sweep`          | `*/2 * * * *`  | `/policy-document-intake/process`, only when due     | migration `policy_document_intake`                 |
 | `client-totals-refresh-sweep`           | `*/2 * * * *`  | `/client-totals-refresh/process`, only when takeable | migration `client_totals_refresh`                  |
+| `kv-cleanup-nightly`                    | `30 23 * * *`  | `/kv-cleanup/cron`                                   | `supabase/cron/kv-cleanup-jobs.sql`                |
 
 Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
 renders as its activity timeline, for every document batch uploaded in the last
@@ -601,6 +602,23 @@ guarded by the Vault cron token (or an admin session for the "Run now" buttons).
 only once the Edge Function carrying `/social-assets` is live — a job pointing at a 404 is
 finding 2 of the 2026-08-25 audit all over again — and confirm with query C that the paths
 answer 200.
+
+### `kv-cleanup-nightly` (added 2026-10-12)
+
+The KV store cleanup (`kv-cleanup-service.ts`): rate-limit entries older than an
+hour, newsletter confirmations past their 48-hour window, contact, consultation
+and quote submissions older than 90 days, and audit entries older than 365 days.
+01:30 SAST, clear of the 02:00/02:20 UTC maintenance jobs. Until this job, nothing scheduled the
+cleanup at all: its only runner was a poller in the admin browser tab, so it ran
+only on days someone opened the portal. That poller and the five other
+browser-tab job runners were removed in the same change; every job they
+duplicated is driven by pg_cron alone now.
+
+Authenticated with the Vault-backed `x-nw-cron-auth` token. `POST
+/kv-cleanup/cron` moved from the inline service-role compare to
+`requireCronAuth` in the same change, so it accepts that token; installing the
+job against a function deployed before that change would 401 every night. As
+with every job here, read query C after the first run, not only query A.
 
 ## What these queries cost, and the two jobs that keep them cheap
 

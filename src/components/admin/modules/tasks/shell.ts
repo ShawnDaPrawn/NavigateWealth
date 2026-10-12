@@ -5,4 +5,3 @@
  * `src/components/admin/moduleLoaders.ts`.
  */
 export { TasksSkeleton } from './components/TasksSkeleton';
-export { useOverdueDigestProcessor } from './hooks/useOverdueDigestProcessor';

@@ -238,8 +238,8 @@ export function ScheduleDialog({
           </div>
           {!schedulerLive ? (
             <Notice tone="warn" icon={AlertTriangle} title="Scheduled sends need the delivery job">
-              The background job has not checked in, so this send will only start while an admin has
-              the studio open. Ask an operator to install it for unattended delivery.
+              The background delivery job has not checked in, so this send will not start on its own
+              until it does. Ask an operator to check the job.
             </Notice>
           ) : null}
         </div>

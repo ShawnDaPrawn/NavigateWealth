@@ -57,7 +57,8 @@ const SECRET_CHECKING_FILES = [
   'cron-auth.ts',
   'integrations-portal-guards.ts',
   'quality-issues-routes.ts',
-  'kv-cleanup-routes.ts',
+  // kv-cleanup-routes.ts left this list on 2026-10-12: its cron route now uses
+  // requireCronAuth, so the comparison happens in cron-auth.ts (listed above).
   'publications-route-helpers.ts',
   'esign-ops-routes.ts',
 ];

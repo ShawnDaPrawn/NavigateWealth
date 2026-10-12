@@ -160,6 +160,56 @@ describe('createQueryCachePersister', () => {
     expect(seen.at(-1)).toEqual({ premium: 250 });
   });
 
+  it('refetches a restored copy even for a query that never refetches on mount', async () => {
+    // Permissions, personnel and other reference data use
+    // `refetchOnMount: false`. Without this, a reload would show their saved
+    // copy, up to a day old, for the whole session.
+    const { storage } = mapStorage({
+      [entryKey('adviser-1')]: savedEntry(['permissions', 'adviser-1'], { canEdit: false }),
+    });
+    const client = newClient();
+    await createQueryCachePersister({ queryClient: client, storage, now: () => NOW }).start(
+      'adviser-1',
+    );
+
+    const queryFn = vi.fn(async () => ({ canEdit: true }));
+    const options = {
+      queryKey: ['permissions', 'adviser-1'],
+      queryFn,
+      staleTime: 5 * 60 * 1000,
+      refetchOnMount: false as const,
+    };
+    const first = new QueryObserver(client, options).subscribe(() => {});
+    await vi.waitFor(() =>
+      expect(client.getQueryData(['permissions', 'adviser-1'])).toEqual({ canEdit: true }),
+    );
+    first();
+    expect(queryFn).toHaveBeenCalledTimes(1);
+
+    // Once replaced, the query's own setting applies again: the next screen
+    // reuses the fresh value instead of fetching it a second time.
+    const second = new QueryObserver(client, options).subscribe(() => {});
+    await Promise.resolve();
+    await Promise.resolve();
+    second();
+    expect(queryFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refetch a restored query no screen uses', async () => {
+    const { storage } = mapStorage({
+      [entryKey('adviser-1')]: savedEntry(['reports', 'annual'], { rows: 3 }),
+    });
+    const client = newClient();
+    const refetch = vi.spyOn(client, 'refetchQueries');
+    await createQueryCachePersister({ queryClient: client, storage, now: () => NOW }).start(
+      'adviser-1',
+    );
+    await Promise.resolve();
+
+    expect(refetch).not.toHaveBeenCalled();
+    expect(client.getQueryData(['reports', 'annual'])).toEqual({ rows: 3 });
+  });
+
   it('never lets a saved copy overwrite newer data already in memory', async () => {
     const { storage } = mapStorage({
       [entryKey('adviser-1')]: savedEntry(['stats'], { total: 1 }),

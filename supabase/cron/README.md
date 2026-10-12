@@ -118,6 +118,23 @@ Newsletter Studio admin module.
   Edge Function logs show `POST /newsletter-studio/cron/process` returning 200 (remember
   `cron.job_run_details` stays green even when the HTTP call fails).
 
+## KV Cleanup Cron Setup
+
+Use `supabase/cron/kv-cleanup-jobs.sql` to create the nightly KV store cleanup.
+
+- `kv-cleanup-nightly`
+  - Runs every day at 23:30 UTC (01:30 SAST).
+  - Deletes transient KV rows: rate-limit entries older than an hour, newsletter
+    confirmations past their 48-hour window, contact, consultation and quote submissions
+    older than 90 days, and audit entries older than 365 days (`kv-cleanup-service.ts`).
+  - Replaces the admin-tab poller that was its only runner until 2026-10-12.
+- Nothing to substitute: the job authenticates with the shared `x-nw-cron-auth` token
+  already provisioned in Vault by migration `20260825085409_cron_auth_vault_token.sql`, and
+  `POST /kv-cleanup/cron` checks it through `requireCronAuth`. Install it only once a function
+  carrying that route change is deployed, or every run answers 401.
+- Verify after the first run with query C in `docs/runbooks/scheduled-jobs.md`
+  (`cron.job_run_details` stays green even when the HTTP call fails).
+
 ## Client Document Summaries Cron Setup
 
 Use `supabase/cron/client-document-summaries-jobs.sql` to create the weekly job that keeps

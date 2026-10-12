@@ -98,7 +98,6 @@ export {
   useArchiveTask,
   useUnarchiveTask,
   useTaskBoard,
-  useOverdueDigestProcessor,
   taskKeys,
 } from './hooks';
 

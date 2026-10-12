@@ -1,5 +1,4 @@
-import React, { useState, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'react-router';
+import React, { useState, useMemo, useCallback, Suspense } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
@@ -30,6 +29,7 @@ import {
 import { DataTable, Column } from '../../components/DataTable';
 import { Client, ClientFilters } from './types';
 import { useClientList } from './hooks/useClientList';
+import { useClientDeepLink } from './hooks/useClientDeepLink';
 import {
   calculateGrowthStats,
   filterClients,
@@ -94,8 +94,6 @@ export function ClientManagementModule() {
   const { canDo } = useCurrentUserPermissions();
   const { pendingSelection, clearPendingSelection } = useAdminNavigation();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
-  const [searchParams] = useSearchParams();
-  const clientIdFromUrl = searchParams.get('clientId');
 
   // Defensive: ensure clients is always an array (§10 — never swallow errors silently)
   const safeClients = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
@@ -132,14 +130,13 @@ export function ClientManagementModule() {
     }
   }, [pendingSelection, loading, safeClients, clearPendingSelection]);
 
-  // Deep link: /admin?module=clients&clientId=… (prefill banner, external form link, submissions)
-  React.useEffect(() => {
-    if (!clientIdFromUrl || loading || safeClients.length === 0) return;
-    const target = safeClients.find((c) => c.id === clientIdFromUrl);
-    if (!target) return;
+  // Deep link: /admin?module=clients&clientId=… (prefill banner, external form
+  // link, submissions). Opens the drawer once, then drops the id from the URL.
+  const openDeepLinkedClient = useCallback((target: Client) => {
     setSelectedClient(target);
     setDrawerOpen(true);
-  }, [clientIdFromUrl, loading, safeClients]);
+  }, []);
+  useClientDeepLink(safeClients, loading, openDeepLinkedClient);
 
   const canCreate = canDo('clients', 'create');
   const canExport = canDo('clients', 'export');

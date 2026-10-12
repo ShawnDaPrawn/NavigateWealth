@@ -818,7 +818,7 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
             </li>
             <li>
               Enabled pipelines run automatically based on their <strong>schedule interval</strong>{' '}
-              — checked every 15 minutes while the admin panel is open
+              — checked by a server job four times each weekday (06:00, 10:00, 14:00 and 18:00 SAST)
             </li>
           </ul>
         </div>

@@ -5,5 +5,4 @@
  * `src/components/admin/moduleLoaders.ts`.
  */
 export { ClientManagementSkeleton } from './components/ClientManagementSkeleton';
-export { useMaintenanceCronProcessor } from './hooks/useMaintenanceCronProcessor';
 export { fetchClientList } from './hooks/useClientList';
