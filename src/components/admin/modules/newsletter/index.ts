@@ -7,7 +7,6 @@
  */
 export { NewsletterModule } from './NewsletterModule';
 export { NewsletterSkeleton } from './components/NewsletterSkeleton';
-export { useNewsletterCampaignProcessor } from './hooks/useNewsletterCampaignProcessor';
 export { newsletterStudioApi } from './api';
 export type {
   NewsletterCampaign,

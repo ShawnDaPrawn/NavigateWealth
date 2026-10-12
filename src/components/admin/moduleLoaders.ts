@@ -38,8 +38,8 @@
  * before the sidebar could paint.
  *
  * So each module the frame needs something from has a second public entry,
- * `modules/<m>/shell.ts`: its skeleton, any background hook the page mounts,
- * and the odd light helper. Rules for a shell entry:
+ * `modules/<m>/shell.ts`: its skeleton and the odd light helper. Rules for a
+ * shell entry:
  *
  *   - re-export only from files that are themselves light — never the module
  *     component, never a file that imports an editor, chart or PDF library;

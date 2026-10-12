@@ -5,6 +5,3 @@
  * `src/components/admin/moduleLoaders.ts`.
  */
 export { PublicationsSkeleton } from './components/PublicationsSkeleton';
-export { useArticleNotificationProcessor } from './hooks/useArticleNotificationProcessor';
-export { useAutoContentProcessor } from './hooks/useAutoContentProcessor';
-export { useScheduledPublishProcessor } from './hooks/useScheduledPublishProcessor';

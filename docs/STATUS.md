@@ -134,12 +134,18 @@ stated prerequisite has already caused a production outage once.
   `POST /publications/articles/bulk-delete`, which never deletes a published
   article (the guard runs inside the DELETE itself), and
   `POST /publications/articles/bulk-archive`.
-- **The browser accelerators pause when the tab is hidden.** Five background
-  pollers mount at `AdminDashboardPage` level for the whole admin session. The
-  three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded
-  tab issues nothing. pg_cron is the authoritative driver in every case, which
-  is what makes pausing safe. The two remaining ones carry once-per-period
-  logic and are left on plain intervals deliberately.
+- **No scheduled work runs in the admin browser tab.** Until 2026-10-12 six
+  pollers mounted on `AdminDashboardPage` for the whole admin session
+  (scheduled publishing, auto-content, article and newsletter delivery, the
+  overdue-task digest, and client and KV maintenance), each a duplicate of a
+  pg_cron job, so every open admin tab spent its first minute firing them.
+  They are gone. Every one of those jobs is driven by pg_cron alone; the KV
+  cleanup, which had no cron job, got `kv-cleanup-nightly` (01:30 SAST,
+  `supabase/cron/kv-cleanup-jobs.sql`). What changed for users: article and
+  newsletter emails advance on the 2-minute cron tick only, the overdue digest
+  goes out on weekdays only (as the cron has always sent it), and client data
+  maintenance is weekly (Sunday night) rather than daily. A job that must run
+  belongs in a cron job, not in whoever has a tab open.
 - **The delivery cron cadence and the studio's stale threshold move
   together.** The two email-delivery jobs tick every 2 minutes. With an idle
   heartbeat skipped for up to 2 minutes, a healthy job can show a 4-minute-old
@@ -582,5 +588,8 @@ is work not yet done, not budget.
   twice), and every write that changes them — the policy
   form, delete/archive/reinstate, applying extracted document values, the
   provider-spreadsheet publish and the portfolio-table apply — invalidates
-  them. Next: the remaining effect-based loaders, then a lean function for the
-  hot admin reads (largest single lever), then fewer calls per screen.
+  them. The six background job pollers no longer run in the admin tab (see
+  "No scheduled work runs in the admin browser tab"), which takes their
+  start-up calls off every admin page load. Next: the remaining effect-based
+  loaders, then a lean function for the hot admin reads (largest single
+  lever), then fewer calls per screen.

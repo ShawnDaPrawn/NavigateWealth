@@ -132,7 +132,7 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
     kind: 'shared-secret',
     classification: 'guarded',
     reason:
-      'Machine endpoint authenticated by a shared secret rather than a user session. Seven of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move eight routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
+      'Machine endpoint authenticated by a shared secret rather than a user session. Eight of these now use the named `requireCronAuth` / `isAuthorizedCronRequest` middleware from cron-auth.ts (a Vault-backed token verified through a SECURITY DEFINER oracle, with a service-role/super-admin bearer fallback); the rest still compare an inline secret in the handler. Either way the detector cannot see the guard: it matches a fixed set of middleware identifiers, and `requireCronAuth` is not one of them. Adding it to AUTH_MARKERS would move eight routes out of the unguarded count legitimately, but that is its own change with its own blast radius — not something to fold into a feature commit.',
     routes: [
       'calendar-digest-routes.ts POST /send-birthdays',
       'calendar-digest-routes.ts POST /send-daily',
@@ -140,6 +140,9 @@ export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
       'client-document-summaries-routes.ts POST /maintenance/weekly-scan',
       'client-management-routes.ts POST /cron/cleanup',
       'esign-ops-routes.ts POST /cron/expiry-sweep',
+      // Moved from an inline service-role compare (which the detector could see)
+      // to requireCronAuth on 2026-10-12, when pg_cron started calling it nightly.
+      'kv-cleanup-routes.ts POST /cron',
       'newsletter-studio-routes.ts POST /cron/process',
       'openclaw-routes.ts POST /events',
       'quality-issues-routes.ts POST /ingest-ci-report',
