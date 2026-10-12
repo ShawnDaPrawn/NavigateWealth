@@ -34,11 +34,15 @@ import type { Client } from '../../types';
 const ID = 'c-aaron';
 
 let surname = 'Teng';
-let recordStatus: 'ok' | 'missing' | 'down' = 'ok';
+let recordStatus: 'ok' | 'missing' | 'no-route' | 'down' = 'ok';
 
 function respond(url: string) {
   if (url === `profile/client-record/${ID}`) {
-    if (recordStatus === 'missing') return Promise.reject(new APIError('Not found', 404));
+    if (recordStatus === 'missing') {
+      return Promise.reject(new APIError('Client not found', 404, 'CLIENT_NOT_FOUND'));
+    }
+    // What a server without the route (mid-deploy) answers: a 404 with no code.
+    if (recordStatus === 'no-route') return Promise.reject(new APIError('Not Found', 404));
     if (recordStatus === 'down') return Promise.reject(new APIError('Unavailable', 503));
     return Promise.resolve({
       success: true,
@@ -178,6 +182,12 @@ describe('useFreshClientOnOpen', () => {
     recordStatus = 'missing';
     const { result } = setup(makeTestQueryClient());
     await waitFor(() => expect(result.current.status).toBe('missing'));
+  });
+
+  it('reads a bare 404 (a server without the route, mid-deploy) as an error, not missing', async () => {
+    recordStatus = 'no-route';
+    const { result } = setup(makeTestQueryClient());
+    await waitFor(() => expect(result.current.status).toBe('error'));
   });
 
   it('shows an error and a retry, never an older copy, when the load fails', async () => {

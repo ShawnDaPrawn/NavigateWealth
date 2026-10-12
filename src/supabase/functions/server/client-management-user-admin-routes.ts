@@ -179,17 +179,23 @@ app.get('/all-users', requireAdmin, async (c) => {
  * name, status or email (2026-10-12). One user costs a fraction of the list
  * (three reads instead of two per user plus the full auth directory).
  *
- * 404 when there is no such user, or Client Management would not list them
- * (personnel, declined or rejected).
+ * 404 with code CLIENT_NOT_FOUND when there is no such user, or Client
+ * Management would not list them (personnel, declined or rejected).
  */
 const AUTH_USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The one 404 that means "no such client". Any other 404 (a route this
+ * deployment does not have yet, say) must not read as a missing client.
+ */
+const CLIENT_NOT_FOUND = { error: 'Client not found', code: 'CLIENT_NOT_FOUND' } as const;
 
 app.get('/client-record/:userId', requireAdmin, async (c) => {
   const userId = c.req.param('userId') ?? '';
   // Every client is an auth user, whose id is a UUID. Anything else is not a
   // client (and the auth client throws on it rather than answering 404).
   if (!AUTH_USER_ID.test(userId)) {
-    return c.json({ error: 'Client not found' }, 404);
+    return c.json(CLIENT_NOT_FOUND, 404);
   }
   try {
     const supabase = createServiceClient();
@@ -203,7 +209,7 @@ app.get('/client-record/:userId', requireAdmin, async (c) => {
     if (error || !data?.user) {
       const status = (error as { status?: number } | null)?.status;
       if (!error || status === 404 || status === 400 || status === 422) {
-        return c.json({ error: 'Client not found' }, 404);
+        return c.json(CLIENT_NOT_FOUND, 404);
       }
       log.error('Error fetching user from Supabase Auth', error);
       return c.json({ error: 'Failed to fetch client' }, 500);
@@ -211,7 +217,7 @@ app.get('/client-record/:userId', requireAdmin, async (c) => {
 
     const user = data.user as AuthUserBrief;
     if (!shouldLoadClientManagementProfile(user, personnelIds)) {
-      return c.json({ error: 'Client not found' }, 404);
+      return c.json(CLIENT_NOT_FOUND, 404);
     }
 
     const entry = toClientDirectoryEntry(user, recordKv);
@@ -223,7 +229,7 @@ app.get('/client-record/:userId', requireAdmin, async (c) => {
         applicationStatus: entry.application_status,
       })
     ) {
-      return c.json({ error: 'Client not found' }, 404);
+      return c.json(CLIENT_NOT_FOUND, 404);
     }
 
     return c.json({ success: true, user: entry });

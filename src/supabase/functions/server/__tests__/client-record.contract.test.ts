@@ -147,7 +147,11 @@ describe('GET /client-record/:userId', () => {
   });
 
   it('answers 404 for a user that does not exist', async () => {
-    expect((await getRecord('00000000-0000-4000-8000-000000000000')).status).toBe(404);
+    const res = await getRecord('00000000-0000-4000-8000-000000000000');
+    expect(res.status).toBe(404);
+    // The code is how the page tells "no such client" from a route it is
+    // newer than (mid-deploy), which must not read as a missing client.
+    expect(await res.json()).toMatchObject({ code: 'CLIENT_NOT_FOUND' });
   });
 
   it('answers 404 for an id that is not an auth user id at all', async () => {

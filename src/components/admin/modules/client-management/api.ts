@@ -24,16 +24,20 @@ export const clientApi = {
 
   /**
    * One client's current entry: the same shape as one GET /all-users element.
-   * Resolves null when Client Management no longer lists the client (404).
+   * Resolves null only when the server says the client is not listed
+   * (CLIENT_NOT_FOUND). Any other failure throws, a bare 404 included: during
+   * a deploy the page can be newer than the server, and a missing route must
+   * read as "could not load", never as "this client does not exist".
    */
   getClientRecord: async (userId: string): Promise<ApiUser | null> => {
     try {
       const response = await api.get<{ success: boolean; user?: ApiUser }>(
         ENDPOINTS.CLIENT_RECORD(userId),
       );
-      return response.user ?? null;
+      if (!response.user) throw new Error('Client record response had no user');
+      return response.user;
     } catch (error) {
-      if (error instanceof APIError && error.statusCode === 404) return null;
+      if (error instanceof APIError && error.code === 'CLIENT_NOT_FOUND') return null;
       throw error;
     }
   },

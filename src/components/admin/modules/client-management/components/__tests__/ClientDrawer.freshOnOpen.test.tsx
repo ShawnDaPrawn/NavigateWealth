@@ -124,7 +124,7 @@ describe('ClientDrawer opens on fresh data only', () => {
     mockGet.mockImplementation(async (url: string) => {
       if (url === `profile/client-record/${ID}`) {
         const { APIError } = await import('@/utils/api/client');
-        throw new APIError('Not found', 404);
+        throw new APIError('Client not found', 404, 'CLIENT_NOT_FOUND');
       }
       return respond(url);
     });
