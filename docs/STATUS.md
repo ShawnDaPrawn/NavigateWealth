@@ -578,7 +578,9 @@ is work not yet done, not budget.
   front (1,094 → 435 KB gzip on first load; `admin-shell-static-graph.test.ts`
   guards it), staff sessions keep a per-user query cache in IndexedDB that is
   shown at once and always refetched on use (`utils/query/persistedQueryCache.ts`;
-  wiped on sign-out and on every deploy), the sidebar badge counts fetch in
+  wiped on sign-out and on every deploy; the refetch is forced even for
+  queries marked `refetchOnMount: false`, permissions among them, which until
+  2026-10-12 kept showing the restored copy for the whole session), the sidebar badge counts fetch in
   parallel and share the dashboard's `/admin/stats`, and two duplicate list
   fetches are gone. A client's policies and the policy schemas are now one
   shared query each (`shared/api/clientPolicies.ts`): the Overview tab and all

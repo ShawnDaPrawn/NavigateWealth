@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
+import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
 
@@ -138,18 +139,9 @@ export function AdminDashboardPage() {
   const handleModuleChange = useCallback(
     (module: string) => {
       const applyModuleChange = () => {
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev);
-            if (module === 'dashboard') {
-              next.delete('module');
-            } else {
-              next.set('module', module);
-            }
-            return next;
-          },
-          { replace: true },
-        );
+        // A fresh address bar: deep-link params belong to the module they
+        // were opened in (see moduleSearchParams).
+        setSearchParams(moduleSearchParams(module), { replace: true });
 
         if (module !== 'tasks') {
           setDeepLinkTaskId(null);

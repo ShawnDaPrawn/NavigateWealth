@@ -13,10 +13,12 @@
  * HOW FRESHNESS IS KEPT (the rule the owner set: "if policy values change,
  * that must be updated")
  * -----------------------------------------------------------------------
- * 1. A restored entry keeps its ORIGINAL `dataUpdatedAt`. It is therefore older
- *    than any query's `staleTime`, so the moment a screen mounts it, React
- *    Query refetches it. The saved copy is only ever on screen for the length
- *    of that one request, and is then replaced in place.
+ * 1. Every restored copy is refetched the first time a screen uses it, and the
+ *    saved copy is only ever on screen for the length of that one request.
+ *    This is enforced here, not left to each query's settings: a query marked
+ *    `refetchOnMount: false` (permissions, personnel, reference data) would
+ *    otherwise keep showing a copy up to `MAX_AGE_MS` old for the whole
+ *    session, because that flag means "never refetch when a screen opens".
  * 2. Nothing older than `MAX_AGE_MS` is restored at all.
  * 3. A new deploy discards the whole cache (`buster` = build id), so a changed
  *    response shape can never be rendered by code that expects the old one.
@@ -165,6 +167,27 @@ export function createQueryCachePersister(options: {
   let unsubscribe: (() => void) | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let dirty = false;
+  /** Restored queries no screen has used yet: query hash → restored `dataUpdatedAt`. */
+  let awaitingRefetch = new Map<string, number>();
+
+  /**
+   * Refetch a query that is still showing its restored copy, whatever its own
+   * `refetchOnMount` or `staleTime` say. Runs once per restored query.
+   */
+  const refreshRestored = (query: Query) => {
+    const restoredUpdatedAt = awaitingRefetch.get(query.queryHash);
+    if (restoredUpdatedAt === undefined) return;
+    awaitingRefetch.delete(query.queryHash);
+    if (query.state.dataUpdatedAt !== restoredUpdatedAt) return; // already replaced
+    // After the observer has finished subscribing, so a fetch it starts on its
+    // own is joined (`cancelRefetch: false`) rather than run twice.
+    queueMicrotask(() => {
+      void queryClient.refetchQueries(
+        { predicate: (candidate) => candidate === query, type: 'active' },
+        { cancelRefetch: false },
+      );
+    });
+  };
 
   const save = async () => {
     timer = null;
@@ -192,6 +215,7 @@ export function createQueryCachePersister(options: {
   const stopSaving = () => {
     unsubscribe?.();
     unsubscribe = null;
+    awaitingRefetch = new Map();
     if (timer !== null) clearTimeout(timer);
     timer = null;
     dirty = false;
@@ -227,19 +251,25 @@ export function createQueryCachePersister(options: {
           // so a fetch that finished first always wins.
           hydrate(queryClient, entry.state);
           // Then mark every query that is now showing a restored copy as
-          // invalidated. Age alone is not enough: a query with a long
-          // staleTime, saved a minute before a reload, would otherwise be
-          // treated as fresh and not refetched — and a reload must always
-          // bring current values (policy figures included). Invalidated
-          // queries refetch the moment a screen uses them; nothing is fetched
-          // here for screens that are not open.
+          // invalidated, so it reads as stale everywhere (window focus
+          // included), and remember it so the first screen to use it
+          // refetches it (`refreshRestored`). Age alone is not enough: a
+          // reload must always bring current values (policy figures and
+          // permissions included). Nothing is fetched here for screens that
+          // are not open.
           const restoredAt = new Map(
             entry.state.queries.map((query) => [query.queryHash, query.state.dataUpdatedAt]),
           );
+          const awaiting = new Map<string, number>();
           await queryClient.invalidateQueries({
-            predicate: (query) => restoredAt.get(query.queryHash) === query.state.dataUpdatedAt,
+            predicate: (query) => {
+              const restored = restoredAt.get(query.queryHash) === query.state.dataUpdatedAt;
+              if (restored) awaiting.set(query.queryHash, query.state.dataUpdatedAt);
+              return restored;
+            },
             refetchType: 'none',
           });
+          if (userId === nextUserId) awaitingRefetch = awaiting;
         } else if (entry) {
           await storage.delete(entryKey(nextUserId));
         }
@@ -249,8 +279,15 @@ export function createQueryCachePersister(options: {
 
       if (userId !== nextUserId) return;
       unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+        if (event.type === 'observerAdded') refreshRestored(event.query);
+        if (event.type === 'removed') awaitingRefetch.delete(event.query.queryHash);
         if (event.type === 'updated' || event.type === 'removed') scheduleSave();
       });
+      // A screen that mounted while the saved copy was being read is already
+      // observing its query; it gets no `observerAdded` from here on.
+      for (const query of queryClient.getQueryCache().getAll()) {
+        if (query.getObserversCount() > 0) refreshRestored(query);
+      }
     },
 
     async signOut() {
