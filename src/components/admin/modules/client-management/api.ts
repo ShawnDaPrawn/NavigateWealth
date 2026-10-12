@@ -23,6 +23,22 @@ export const clientApi = {
     fetchClientDirectory<ApiUser>(params),
 
   /**
+   * One client's current entry: the same shape as one GET /all-users element.
+   * Resolves null when Client Management no longer lists the client (404).
+   */
+  getClientRecord: async (userId: string): Promise<ApiUser | null> => {
+    try {
+      const response = await api.get<{ success: boolean; user?: ApiUser }>(
+        ENDPOINTS.CLIENT_RECORD(userId),
+      );
+      return response.user ?? null;
+    } catch (error) {
+      if (error instanceof APIError && error.statusCode === 404) return null;
+      throw error;
+    }
+  },
+
+  /**
    * Fetch client personal profile
    * Returns { success: false, data: null } for clients without a profile (404).
    * This is a valid state — not all clients have profiles yet.

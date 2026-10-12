@@ -96,6 +96,21 @@ export async function fetchClientList(): Promise<Client[]> {
   });
 }
 
+/**
+ * One client's current record, built exactly as a list row is. An open client
+ * profile shows this, never the list row it was opened from (which can be
+ * minutes old). Resolves null when Client Management no longer lists them.
+ */
+export async function fetchClientRecord(clientId: string): Promise<Client | null> {
+  const user = await clientApi.getClientRecord(clientId);
+  if (!user) return null;
+  const client = transformApiUser(user);
+  parseContract(BaseClientSchema, client, {
+    endpoint: 'GET profile/client-record/:userId → Client',
+  });
+  return client;
+}
+
 export function useClientList() {
   const queryClient = useQueryClient();
 
@@ -105,8 +120,13 @@ export function useClientList() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // An open profile shows its own fresh record (clientKeys.detail), which has
+  // to follow every change the list follows.
   const refetch = useCallback(() => {
-    return queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: clientKeys.details() }),
+    ]);
   }, [queryClient]);
 
   return { clients, loading, refetch };

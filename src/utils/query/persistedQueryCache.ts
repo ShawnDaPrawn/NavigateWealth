@@ -26,6 +26,10 @@
  *    the next save writes the new value.
  * 5. `refetchOnWindowFocus` stays on, so a value changed by a colleague is
  *    picked up as soon as the tab is looked at again.
+ * 6. A client profile is stricter still: it never paints a cached copy at all.
+ *    Opening one resets every query that names the client and waits for the
+ *    client's record from the server (client-management
+ *    `hooks/useFreshClientOnOpen.ts`).
  *
  * PRIVACY
  * -------
