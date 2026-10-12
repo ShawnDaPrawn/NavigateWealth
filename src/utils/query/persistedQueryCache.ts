@@ -139,7 +139,9 @@ export function isRestorable(
 ): entry is PersistedEntry {
   if (!entry || typeof entry !== 'object') return false;
   if (entry.buster !== BUILD_ID) return false;
-  if (typeof entry.savedAt !== 'number' || now - entry.savedAt > MAX_AGE_MS) return false;
+  // NaN and Infinity are typeof 'number' but are not a time. `now - NaN > age`
+  // is false, so without this check a corrupt entry would be restored.
+  if (!Number.isFinite(entry.savedAt) || now - entry.savedAt > MAX_AGE_MS) return false;
   return Array.isArray(entry.state?.queries);
 }
 
@@ -177,10 +179,19 @@ export function createQueryCachePersister(options: {
         savedAt: now(),
         state: snapshot(queryClient),
       };
-      // The user may have signed out while the snapshot was taken.
+      // Sign-out may have landed before the write. `set` itself also yields,
+      // so a delete from sign-out can finish first and this write would put
+      // the signed-out user's cache back. The check below removes it.
       if (userId === owner) await storage.set(entryKey(owner), entry);
     } catch (error) {
       logger.debug('Query cache save skipped', { error });
+    }
+    if (userId !== owner) {
+      try {
+        await storage.delete(entryKey(owner));
+      } catch (error) {
+        logger.debug('Query cache delete failed', { error });
+      }
     }
   };
 
