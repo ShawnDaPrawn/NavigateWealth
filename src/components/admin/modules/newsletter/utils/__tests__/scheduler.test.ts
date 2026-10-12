@@ -25,7 +25,7 @@ describe('schedulerHealth', () => {
     expect(schedulerHealth(null, NOW).level).toBe('unknown');
   });
 
-  it('reports missing when only the browser accelerator has ever run', () => {
+  it('reports missing when only manual runs have ever happened', () => {
     expect(schedulerHealth(state({ mode: 'manual', lastCronRunAt: null }), NOW).level).toBe(
       'missing',
     );

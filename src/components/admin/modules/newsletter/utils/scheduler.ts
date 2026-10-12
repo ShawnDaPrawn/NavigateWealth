@@ -1,9 +1,11 @@
 /**
  * Newsletter Studio — how healthy is background delivery right now?
  *
- * The processor state records the last browser-accelerator run and, separately,
- * the last run made by the pg_cron job. Only the cron job delivers unattended,
- * so the health signal is about that job specifically.
+ * The processor state records the last run of any kind (a manual "Run a
+ * delivery pass now" included) and, separately, the last run made by the
+ * pg_cron job. Only the cron job delivers unattended, and since 2026-10-12
+ * nothing in the browser runs delivery on a timer either, so the health signal
+ * is about that job specifically.
  */
 import type { NewsletterProcessorState } from '../types';
 
@@ -53,7 +55,7 @@ export function schedulerHealth(
       level: 'missing',
       label: 'Scheduler not installed',
       detail:
-        'The scheduled delivery job has never checked in. Campaigns only send while an admin has the studio open until an operator installs it.',
+        'The scheduled delivery job has never checked in. Campaigns do not send on their own until an operator installs it.',
     };
   }
   const age = now - new Date(processor.lastCronRunAt).getTime();
