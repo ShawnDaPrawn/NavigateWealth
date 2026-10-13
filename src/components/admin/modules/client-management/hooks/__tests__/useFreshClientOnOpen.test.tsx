@@ -64,14 +64,17 @@ function respond(url: string) {
   return Promise.reject(new Error(`unexpected request ${url}`));
 }
 
-function setup(queryClient: QueryClient, initiallyOpen = true) {
+function setup(queryClient: QueryClient, initiallyOpen = true, clientId = ID) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return renderHook(({ open }: { open: boolean }) => useFreshClientOnOpen(ID, open), {
-    wrapper,
-    initialProps: { open: initiallyOpen },
-  });
+  return renderHook(
+    ({ open, id }: { open: boolean; id: string }) => useFreshClientOnOpen(id, open),
+    {
+      wrapper,
+      initialProps: { open: initiallyOpen, id: clientId },
+    },
+  );
 }
 
 const OLD = Date.now() - 60_000;
@@ -153,9 +156,9 @@ describe('useFreshClientOnOpen', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(recordRequests()).toHaveLength(1);
 
-    rerender({ open: false });
+    rerender({ open: false, id: ID });
     surname = 'Teng-Smith';
-    rerender({ open: true });
+    rerender({ open: true, id: ID });
 
     // The record from the first open is not good enough for the second.
     expect(result.current.status).toBe('loading');
@@ -166,7 +169,11 @@ describe('useFreshClientOnOpen', () => {
 
   it('brings the list row behind the profile up to date', async () => {
     const queryClient = makeTestQueryClient();
-    queryClient.setQueryData(clientKeys.lists(), [listRow('Old')], { updatedAt: OLD });
+    queryClient.setQueryData(
+      clientKeys.lists(),
+      [listRow('Old'), { id: 'c-bea', firstName: 'Bea', lastName: 'Ngcobo' } as Client],
+      { updatedAt: OLD },
+    );
 
     const { result } = setup(queryClient);
     await waitFor(() => expect(result.current.status).toBe('ready'));
@@ -174,8 +181,83 @@ describe('useFreshClientOnOpen', () => {
     await waitFor(() =>
       expect(queryClient.getQueryData<Client[]>(clientKeys.lists())?.[0]?.lastName).toBe('Teng'),
     );
+    // The other row stays. Opening one profile does not rebuild the list.
+    expect(queryClient.getQueryData<Client[]>(clientKeys.lists())).toEqual([
+      expect.objectContaining({ id: ID, lastName: 'Teng' }),
+      expect.objectContaining({ id: 'c-bea', lastName: 'Ngcobo' }),
+    ]);
     // The list keeps its own refresh schedule.
     expect(queryClient.getQueryState(clientKeys.lists())?.dataUpdatedAt).toBe(OLD);
+  });
+
+  it('does not add a list row for a client the list does not contain', async () => {
+    const queryClient = makeTestQueryClient();
+    queryClient.setQueryData(
+      clientKeys.lists(),
+      [{ id: 'c-bea', firstName: 'Bea', lastName: 'Ngcobo' } as Client],
+      { updatedAt: OLD },
+    );
+
+    const { result } = setup(queryClient);
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    expect(queryClient.getQueryData(clientKeys.lists())).toEqual([
+      expect.objectContaining({ id: 'c-bea', lastName: 'Ngcobo' }),
+    ]);
+  });
+
+  it('does not paint another client from cache when the open profile changes', async () => {
+    const now = vi.spyOn(Date, 'now');
+    let clock = 1_700_000_000_000;
+    now.mockImplementation(() => clock);
+    const otherId = 'c-bea';
+    try {
+      const queryClient = makeTestQueryClient();
+      const { result, rerender } = setup(queryClient);
+      await waitFor(() => expect(result.current.status).toBe('ready'));
+
+      // Newer than this open, so a hook that keeps the first open's clock
+      // would treat it as fresh.
+      clock += 5_000;
+      queryClient.setQueryData(
+        clientKeys.detail(otherId),
+        { id: otherId, firstName: 'Bea', lastName: 'Cached' } as Client,
+        { updatedAt: clock },
+      );
+      clock += 5_000;
+      mockGet.mockImplementation((url: string) => {
+        if (url === `profile/client-record/${otherId}`) {
+          return Promise.resolve({
+            success: true,
+            user: {
+              id: otherId,
+              email: 'bea@example.com',
+              created_at: '2026-01-02T00:00:00.000Z',
+              profile: { firstName: 'Bea', lastName: 'Ngcobo' },
+              application_status: 'approved',
+            },
+          });
+        }
+        return respond(url);
+      });
+
+      rerender({ open: true, id: otherId });
+      expect(result.current.status).toBe('loading');
+      await waitFor(() => expect(result.current.status).toBe('ready'));
+      expect(result.current).toMatchObject({ client: { id: otherId, lastName: 'Ngcobo' } });
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('reads a record response with no user as an error, not a missing client', async () => {
+    mockGet.mockImplementation((url: string) => {
+      if (url === `profile/client-record/${ID}`) return Promise.resolve({ success: true });
+      return respond(url);
+    });
+
+    const { result } = setup(makeTestQueryClient());
+    await waitFor(() => expect(result.current.status).toBe('error'));
   });
 
   it('reads as missing when Client Management no longer lists the client', async () => {
