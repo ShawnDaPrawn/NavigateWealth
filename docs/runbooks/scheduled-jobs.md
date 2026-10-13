@@ -621,10 +621,15 @@ pointed at a function deployed before that change would 401 every night.
 Installed from `supabase/cron/kv-cleanup-jobs.sql` once that deploy was green.
 One `net.http_post` through the job's exact command then answered 200 with
 `"success": true` and a live cleanup (3 stale rate-limit keys; the rest had
-gone in that morning's run). That proves the route, the token and the
-command, not that pg_cron fires the row: the job counts as verified only once
-its first scheduled run (23:30 UTC, 2026-10-12) shows in query A and its
-response in query C is 200.
+gone in that morning's run). That proved the route, the token and the
+command, not that pg_cron fires the row, so the job counted as verified only
+after its first scheduled run. It is, on 2026-10-12 at 23:30 UTC:
+
+- query A showed run 943518 `succeeded`;
+- query C showed `POST /kv-cleanup/cron` answering 200 at 23:30:05;
+- the job's own `net._http_response` row (id 739859) held the body:
+  `"success": true`, 5 stale rate-limit keys deleted;
+- `system:kv_cleanup:last_run` recorded 23:30:05 UTC.
 
 ## What these queries cost, and the two jobs that keep them cheap
 
