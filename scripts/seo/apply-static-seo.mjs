@@ -202,7 +202,7 @@ ${ogImageDimensionTags(ogImageUrl)}      <meta property="og:image:alt" content="
       <meta name="twitter:title" content="${escapeHtml(route.title)}" />
       <meta name="twitter:description" content="${escapeHtml(route.description)}" />
       <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}" />
-      <meta name="twitter:site" content="@NavigateWealthSA" />
+      <meta name="twitter:site" content="@Navigate_ZA" />
       <script id="seo-structured-data" type="application/ld+json">${json}</script>
       <!-- static-seo:end -->`;
 }
