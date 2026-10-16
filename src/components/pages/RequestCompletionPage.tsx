@@ -17,6 +17,7 @@ import { Logo } from '../layout/Logo';
 import { Badge } from '../ui/badge';
 import { InteractiveFormRenderer } from '../admin/modules/resources';
 import { PageLoader } from '../ui/page-loader';
+import { COMPANY } from '@/config/companyFacts';
 
 // Minimal type definitions for request completion (module has been deleted)
 interface RequestInstance {
@@ -288,15 +289,15 @@ export function RequestCompletionPage() {
               <div className="text-right text-xs text-gray-600 space-y-1">
                 <div className="flex items-center justify-end gap-1">
                   <MapPin className="h-3 w-3" />
-                  <span>Cape Town, South Africa</span>
+                  <span>{COMPANY.headquarters}</span>
                 </div>
                 <div className="flex items-center justify-end gap-1">
                   <Phone className="h-3 w-3" />
-                  <span>+27 (0) 21 123 4567</span>
+                  <span>(+27) 12-667-2505</span>
                 </div>
                 <div className="flex items-center justify-end gap-1">
                   <Mail className="h-3 w-3" />
-                  <span>info@navigatewealth.co.za</span>
+                  <span>info@navigatewealth.co</span>
                 </div>
               </div>
             </div>

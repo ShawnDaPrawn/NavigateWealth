@@ -24,11 +24,11 @@ import {
   HeadphonesIcon,
   Monitor,
   Calendar,
-  Banknote,
   ChevronRight,
   Sparkles,
   Briefcase,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -107,11 +107,8 @@ const practiceStages = [
   { icon: Award, title: 'Retirement', description: 'Legacy secured' },
 ];
 
-const stats = [
-  { value: '25+', label: 'Years Advisory Experience', icon: Award },
-  { value: 'R1B+', label: 'Practice Transitions Managed', icon: Banknote },
-  { value: '100%', label: 'Client Retention Rate', icon: Shield },
-];
+// Checkable facts only — see src/config/companyFacts.ts.
+const stats = TRUST_FACTS.slice(0, 3);
 
 const digitalFeatures = [
   {

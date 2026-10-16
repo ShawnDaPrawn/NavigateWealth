@@ -7,7 +7,9 @@ import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Linkedin, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { OptimizedImage } from '../shared/OptimizedImage';
+import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { COMPANY, FOUNDER } from '@/config/companyFacts';
 
 // ============================================================================
 // Types
@@ -42,6 +44,52 @@ async function fetchTeamMembers(): Promise<TeamMember[]> {
   return [];
 }
 
+/**
+ * Navigate Wealth is founder-led, so the founder is always shown — from
+ * companyFacts, not the API — and the page never claims a team it does not
+ * name. Anyone added later through the admin Team manager appears below.
+ */
+function FounderProfile() {
+  return (
+    <Card className="border border-gray-100 shadow-lg overflow-hidden">
+      <CardContent className="p-0">
+        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="bg-gray-100 aspect-square md:aspect-auto">
+            <ResponsiveImage
+              imageKey={FOUNDER.imageKey}
+              alt={`${FOUNDER.name}, ${FOUNDER.title} of ${COMPANY.tradingName}`}
+              className="w-full h-full object-cover"
+              sizes="(min-width: 768px) 40vw, 100vw"
+              width={1254}
+              height={1254}
+              loading="eager"
+              fetchPriority="high"
+            />
+          </div>
+          <div className="p-8 lg:p-10 flex flex-col justify-center space-y-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-black">{FOUNDER.name}</h2>
+              <p className="text-purple-600 font-medium">
+                {FOUNDER.title}, {COMPANY.tradingName}
+              </p>
+            </div>
+            <p className="text-gray-600 leading-relaxed">{FOUNDER.note[0]}</p>
+            <p className="text-gray-600 leading-relaxed">{FOUNDER.note[1]}</p>
+            <div>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white" asChild>
+                <Link to="/about#founder">
+                  Read the full note from {FOUNDER.name.split(' ')[0]}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -54,7 +102,8 @@ export function TeamPage() {
     let cancelled = false;
     fetchTeamMembers().then((members) => {
       if (!cancelled) {
-        setTeamMembers(members);
+        const founderName = FOUNDER.name.toLowerCase();
+        setTeamMembers(members.filter((m) => m.name?.trim().toLowerCase() !== founderName));
         setLoading(false);
       }
     });
@@ -87,7 +136,7 @@ export function TeamPage() {
           <div className="flex flex-col items-center text-center py-20 lg:py-28">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
               <span className="text-[12px] font-medium text-gray-400 tracking-wide">
-                Expert Team
+                Founder-led practice
               </span>
             </div>
 
@@ -95,39 +144,30 @@ export function TeamPage() {
               <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                 Meet Our{' '}
                 <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">
-                  Team
+                  Founder
                 </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Our experienced team of financial professionals is dedicated to helping you achieve
-                your wealth management goals with personalized strategies and exceptional service.
+                {COMPANY.tradingName} is a founder-led practice. {FOUNDER.name} founded the firm in{' '}
+                {COMPANY.foundedYear} and works with clients directly.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Team Grid */}
+      {/* Founder, then anyone added through the admin Team manager */}
       <section className="py-20 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="max-w-5xl mx-auto">
+            <FounderProfile />
+          </div>
+
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
             </div>
-          ) : teamMembers.length === 0 ? (
-            <div className="max-w-xl mx-auto text-center space-y-4 py-8">
-              <p className="text-gray-600 leading-relaxed">
-                Team profiles are being updated. Contact us to meet an adviser and discuss your
-                financial plan.
-              </p>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white" asChild>
-                <Link to="/contact">
-                  Contact Us
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          ) : (
+          ) : teamMembers.length === 0 ? null : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {teamMembers.map((member, index) => (
                 <Card
@@ -226,22 +266,22 @@ export function TeamPage() {
       {/* Our Approach */}
       <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-black mb-8">Our Team Approach</h2>
+          <h2 className="text-4xl font-bold text-black mb-8">How We Work</h2>
           <p className="text-xl text-gray-600 mb-12 leading-relaxed">
-            We believe in collaborative wealth management. Our team works together to provide you
-            with comprehensive solutions that address all aspects of your financial life.
+            As a founder-led practice, we keep advice personal and joined-up, with solutions that
+            address all aspects of your financial life.
           </p>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
             {[
               {
-                title: 'Collaborative Planning',
+                title: 'Direct Access',
                 description:
-                  'Multiple experts review your situation to ensure comprehensive coverage.',
+                  'You deal directly with the person advising you, from first meeting on.',
               },
               {
                 title: 'Continuous Education',
-                description: 'Our team stays current with market trends and regulatory changes.',
+                description: 'We stay current with market trends and regulatory changes.',
               },
               {
                 title: 'Client-Centric Focus',

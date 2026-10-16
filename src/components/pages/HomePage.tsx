@@ -29,24 +29,21 @@ import {
   ArrowRight,
   Shield,
   Target,
-  TrendingUp,
   Gift,
   CheckCircle,
   Phone,
   Mail,
   MapPin,
-  Star,
   Zap,
-  Heart,
-  Globe,
   Loader2,
 } from 'lucide-react';
 import { seoData, homePageStructuredData, heroSlides, providers, services } from './homePageData';
+import { TRUST_FACTS } from '@/config/companyFacts';
+import { PublishedReviews } from '../shared/PublishedReviews';
 import {
   ServicesPreviewSection,
   WhyNavigateSection,
   ProvidersCarouselSection,
-  ReviewsSection,
 } from './homePageSections';
 
 export function HomePage() {
@@ -355,14 +352,9 @@ export function HomePage() {
             {/* Stats strip */}
             <div className="relative z-10 border-t border-white/[0.06]">
               <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.06]">
-                {[
-                  { label: 'Years Experience', value: '15+', icon: Star },
-                  { label: 'Product Partners', value: '12+', icon: Globe },
-                  { label: 'Happy Clients', value: '100+', icon: Heart },
-                  { label: 'Assets Under Advice', value: 'R500M+', icon: TrendingUp },
-                ].map((stat) => (
+                {TRUST_FACTS.map((stat) => (
                   <div
-                    key={stat.label}
+                    key={stat.value}
                     className="flex items-center gap-3 py-5 lg:py-6 justify-center"
                   >
                     <div className="w-9 h-9 rounded-lg bg-purple-500/[0.08] flex items-center justify-center flex-shrink-0">
@@ -395,7 +387,7 @@ export function HomePage() {
           onViewAll={() => setProvidersModalOpen(true)}
         />
 
-        <ReviewsSection />
+        <PublishedReviews />
 
         {/* Featured Insights — dynamically populated from published featured articles */}
         <Suspense fallback={null}>

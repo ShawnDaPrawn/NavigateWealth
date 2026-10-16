@@ -703,22 +703,6 @@ export function ProductQuotePage() {
               </div>
             </div>
 
-            {/* Testimonial / social proof */}
-            <div className="bg-gradient-to-br from-primary/5 to-primary/[0.02] rounded-2xl border border-primary/10 p-6">
-              <div className="flex items-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} className="h-4 w-4 text-amber-400 fill-amber-400" />
-                ))}
-              </div>
-              <p className="text-sm text-gray-700 italic leading-relaxed mb-3">
-                "Navigate Wealth compared multiple options and found us the best cover at a lower
-                premium than we were paying. The process was smooth and completely free."
-              </p>
-              <p className="text-xs font-semibold text-gray-900">
-                — Satisfied client, Johannesburg
-              </p>
-            </div>
-
             {/* Trust bar */}
             <TrustBar />
           </div>
