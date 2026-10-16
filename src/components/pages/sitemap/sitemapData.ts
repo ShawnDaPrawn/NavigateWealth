@@ -55,10 +55,10 @@ export const sitemapSections: SitemapSection[] = [
         status: 'public',
       },
       {
-        title: 'Our Team',
+        title: 'Our Founder',
         path: '/team',
-        description: 'Meet our experienced financial advisers and wealth management professionals.',
-        lastModified: '2026-03-01',
+        description: 'Meet Shawn Francisco, founder of Navigate Wealth.',
+        lastModified: '2026-10-16',
         status: 'public',
       },
       {
@@ -242,8 +242,8 @@ export const sitemapSections: SitemapSection[] = [
       {
         title: 'Careers',
         path: '/careers',
-        description: 'Join our team of financial professionals and wealth management experts.',
-        lastModified: '2026-03-01',
+        description: 'Career opportunities at an independent, founder-led advisory practice.',
+        lastModified: '2026-10-16',
         status: 'public',
       },
       {

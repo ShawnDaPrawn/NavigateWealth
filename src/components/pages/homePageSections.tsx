@@ -1,21 +1,21 @@
 /**
  * Static marketing sections of the home page: the services preview, the
- * "Why us?" panel, the provider logo carousel, and the customer reviews.
+ * "Why us?" panel and the provider logo carousel. Client reviews moved to the
+ * shared PublishedReviews section, which only shows traceable reviews.
  * The carousel takes its position/handlers from HomePage; everything else
  * renders the shared static data.
  */
 import { Link } from 'react-router';
 import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { Card } from '../ui/card';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { ProviderLogo } from '../shared/ProviderLogo';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
-import { Avatar, AvatarFallback } from '../ui/avatar';
 // WORKAROUND: consultationImage reused as retirementPlanningImage — same asset hash.
 // If a distinct retirement image is added in Figma, replace this alias.
 import { prefetchImages } from '../../hooks/useImagePrefetch';
 import { getOptimizedImageUrl } from '../../utils/optimizedImages';
-import { ArrowRight, Star, ChevronLeft, ChevronRight, Zap, Heart, Globe } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Zap, Heart, Globe } from 'lucide-react';
 import { services, providers } from './homePageData';
 
 export function ServicesPreviewSection({ onOpenCashback }: { onOpenCashback: () => void }) {
@@ -280,98 +280,6 @@ export function ProvidersCarouselSection({
             View All Partners
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export function ReviewsSection() {
-  return (
-    <section className="py-20 section-dark-gray">
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-        <div className="text-center mb-16">
-          <h2 className="text-white mb-4">What Our Clients Say</h2>
-          <p className="text-gray-300 max-w-3xl mx-auto">
-            Don't just take our word for it. Here's what our valued clients have to say about their
-            experience with Navigate Wealth.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-          {/* Review 1 */}
-          <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                "Navigate Wealth transformed our financial planning approach. Their independent
-                advice and personalized strategies helped us achieve our retirement goals faster
-                than we thought possible."
-              </p>
-              <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/20 text-primary">SM</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="text-white font-medium">Sarah Mitchell</div>
-                  <div className="text-gray-400 text-sm">Retired Teacher</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Review 2 */}
-          <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                "The team's expertise in risk management saved our family from financial
-                uncertainty. Their comprehensive approach covers all aspects of our financial
-                well-being."
-              </p>
-              <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/20 text-primary">DT</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="text-white font-medium">David Thompson</div>
-                  <div className="text-gray-400 text-sm">Business Owner</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Review 3 */}
-          <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                "Professional, knowledgeable, and truly independent. Navigate Wealth helped us
-                navigate complex investment decisions with confidence and clarity."
-              </p>
-              <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/20 text-primary">LP</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="text-white font-medium">Lisa Patel</div>
-                  <div className="text-gray-400 text-sm">Medical Professional</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </section>

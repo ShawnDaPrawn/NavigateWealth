@@ -209,6 +209,16 @@ stated prerequisite has already caused a production outage once.
   "View" to routes that do not exist, so their published FNAs answered 404.
   The rules, and the tests that hold them, are in
   [`architecture/fna-wizards.md`](architecture/fna-wizards.md).
+- **The public site states only checkable facts about the firm.** In October
+  2026 a directory listing was declined because the About, Press and Careers
+  pages carried unbacked, contradictory figures (55+/25+/15+ years, 200+ vs
+  195+ clients, "20+ team members", a Cape Town office) and untraceable
+  testimonials. Every claim now comes from `src/config/companyFacts.ts` (FSP,
+  FSCA date, CIPC number, founder), and reviews render only from
+  `src/config/publishedReviews.ts`, each with a public link and date; the
+  section is hidden while that list is empty. `companyFacts.test.ts` fails if a
+  public page reintroduces the removed figures. Navigate Wealth is presented as
+  founder-led (Shawn Francisco); do not reintroduce headcounts.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -514,6 +524,13 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
+- **The client portal's My Adviser page shows placeholder data.**
+  `MyAdviserPage.tsx` renders a hard-coded adviser ("Sarah Johnson", Cape Town
+  office, ratings and meeting history) to any client with an adviser assigned.
+  It needs the real assigned adviser wired in; it is exempted by name in
+  `companyFacts.test.ts` until then. Relatedly, the admin Publications →
+  Settings "Press Page Stats" panel and `/publications/press/{config,stats}`
+  are no longer read by the Press page and can be removed.
 - **The Edge Function source is still mostly flat** (440+ files in one
   directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
   `social/` were the first prefixes moved into folders (2026-10-08), alongside

@@ -20,8 +20,6 @@ import {
   Home,
   Baby,
   GraduationCap,
-  Banknote,
-  Globe,
   Smartphone,
   HeadphonesIcon,
   Monitor,
@@ -29,6 +27,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ---------------------------------------------------------------------------
 // Data — identical content to legacy, restructured for the new layout
@@ -104,11 +103,8 @@ const lifeMilestones = [
   { icon: GraduationCap, title: 'Retirement', description: 'Enjoying freedom' },
 ];
 
-const stats = [
-  { value: 'R500M+', label: 'Assets Under Advisement', icon: Banknote },
-  { value: '100+', label: 'Clients Across SA & Abroad', icon: Globe },
-  { value: 'R1B+', label: 'Life Assurance Coverage', icon: Shield },
-];
+// Checkable facts only — see src/config/companyFacts.ts.
+const stats = TRUST_FACTS.slice(0, 3);
 
 const digitalFeatures = [
   {

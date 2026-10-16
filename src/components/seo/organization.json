@@ -1,7 +1,13 @@
 {
   "name": "Navigate Wealth",
   "legalName": "Wealthfront (Pty) Ltd trading as Navigate Wealth",
-  "description": "Independent financial advisory firm providing comprehensive wealth management services across South Africa.",
+  "description": "Independent, founder-led financial advisory practice providing comprehensive wealth management services across South Africa. Authorised Financial Services Provider (FSP 54606).",
+  "foundingDate": "2024",
+  "founder": {
+    "@type": "Person",
+    "name": "Shawn Francisco",
+    "jobTitle": "Founder"
+  },
   "telephone": "+27126672505",
   "email": "info@navigatewealth.co",
   "priceRange": "$$",

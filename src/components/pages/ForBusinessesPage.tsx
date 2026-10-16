@@ -18,7 +18,6 @@ import {
   CheckCircle,
   TrendingUp,
   Trophy,
-  BarChart3,
   FileText,
   Smartphone,
   HeadphonesIcon,
@@ -28,6 +27,7 @@ import {
   Sparkles,
   PieChart,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -99,11 +99,8 @@ const businessStages = [
   { icon: Globe, title: 'Global', description: 'International' },
 ];
 
-const stats = [
-  { value: '500+', label: 'Business Clients', icon: Building },
-  { value: 'R2B+', label: 'Corporate Assets Managed', icon: BarChart3 },
-  { value: '50+', label: 'Partner Providers', icon: Shield },
-];
+// Checkable facts only — see src/config/companyFacts.ts.
+const stats = TRUST_FACTS.slice(0, 3);
 
 const digitalFeatures = [
   {

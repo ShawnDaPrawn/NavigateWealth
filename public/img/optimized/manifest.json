@@ -785,6 +785,52 @@
       ]
     },
     {
+      "key": "founder-shawn-francisco",
+      "source": "src/assets/founder-shawn-francisco.jpg",
+      "outputs": [
+        {
+          "format": "avif",
+          "width": 480,
+          "path": "public/img/optimized/founder-shawn-francisco-480.avif"
+        },
+        {
+          "format": "webp",
+          "width": 480,
+          "path": "public/img/optimized/founder-shawn-francisco-480.webp"
+        },
+        {
+          "format": "avif",
+          "width": 768,
+          "path": "public/img/optimized/founder-shawn-francisco-768.avif"
+        },
+        {
+          "format": "webp",
+          "width": 768,
+          "path": "public/img/optimized/founder-shawn-francisco-768.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1024,
+          "path": "public/img/optimized/founder-shawn-francisco-1024.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1024,
+          "path": "public/img/optimized/founder-shawn-francisco-1024.webp"
+        },
+        {
+          "format": "avif",
+          "width": 1440,
+          "path": "public/img/optimized/founder-shawn-francisco-1440.avif"
+        },
+        {
+          "format": "webp",
+          "width": 1440,
+          "path": "public/img/optimized/founder-shawn-francisco-1440.webp"
+        }
+      ]
+    },
+    {
       "key": "95a72733c6fb1b2e130e44b33bbad76a781daa85",
       "source": "src/assets/95a72733c6fb1b2e130e44b33bbad76a781daa85.png",
       "outputs": [

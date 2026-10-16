@@ -10,6 +10,7 @@ import { ConsultationModal } from '../modals/ConsultationModal';
 import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';
 import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
+import { TRUST_FACTS } from '@/config/companyFacts';
 import {
   TrendingUp,
   Shield,
@@ -27,7 +28,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  Star,
 } from 'lucide-react';
 
 // Figma asset images — same images used on Homepage for visual consistency
@@ -223,13 +223,6 @@ const WHY_US = [
   },
 ];
 
-const STATS = [
-  { label: 'Years Experience', value: '15+', icon: Star },
-  { label: 'Product Partners', value: '12+', icon: Globe },
-  { label: 'Happy Clients', value: '100+', icon: Heart },
-  { label: 'Assets Under Advice', value: 'R500M+', icon: TrendingUp },
-];
-
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function ServicesPage() {
@@ -355,9 +348,9 @@ export function ServicesPage() {
           <div className="relative z-10 border-t border-white/[0.06]">
             <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
               <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/[0.06]">
-                {STATS.map((stat) => (
+                {TRUST_FACTS.map((stat) => (
                   <div
-                    key={stat.label}
+                    key={stat.value}
                     className="flex items-center gap-3 py-6 lg:py-7 justify-center group"
                   >
                     <div className="w-9 h-9 rounded-lg bg-purple-500/[0.08] flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/[0.14] transition-colors">

@@ -35,6 +35,15 @@ const TARGETS = [
   { hash: 'f9768bc43fd98373704bc54f70b3ea6ec0c8f020', label: 'risk-hero' },
   { hash: 'd0fa22ed135e395dabc605d8378a0fbcd5642ed7', label: 'medical-hero' },
   { hash: 'e687c01861aee919fa24cf06bfbd5e069af5249c', label: 'employee-benefits-hero' },
+
+  // Founder portrait (About + Team pages). A photo, not a Figma export, so it
+  // names its own source file rather than a `<hash>.png`.
+  {
+    hash: 'founder-shawn-francisco',
+    source: 'founder-shawn-francisco.jpg',
+    label: 'founder-shawn-francisco',
+    key: 'founder-shawn-francisco',
+  },
 ];
 
 // Responsive widths to generate. Should cover mobile → desktop cards/hero.
@@ -169,8 +178,8 @@ async function isUpToDate(out, src) {
   }
 }
 
-async function buildOne({ hash, label, key, widths = WIDTHS }) {
-  const input = srcPathForHash(hash);
+async function buildOne({ hash, source, label, key, widths = WIDTHS }) {
+  const input = source ? path.join(SRC_DIR, source) : srcPathForHash(hash);
   if (!(await fileExists(input))) {
     throw new Error(`Missing source image: ${path.relative(PROJECT_ROOT, input)}`);
   }

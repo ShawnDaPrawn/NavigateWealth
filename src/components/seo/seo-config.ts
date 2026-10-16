@@ -34,16 +34,16 @@ export const seoPages: Record<string, SEOPageData> = {
   about: {
     title: 'About Us | Navigate Wealth',
     description:
-      'Learn about Navigate Wealth, our mission, values, and the experienced team of independent financial advisors committed to helping you achieve financial independence.',
+      'About Navigate Wealth, an independent, founder-led financial advisory practice (FSP 54606). Read a note from our founder, Shawn Francisco.',
     keywords:
-      'about navigate wealth, financial advisors team, independent financial planning, South Africa wealth management',
+      'about navigate wealth, founder-led financial advice, Shawn Francisco, independent financial planning, South Africa wealth management',
     canonicalUrl: `${BASE_URL}/about`,
     ogType: 'website',
   },
   contact: {
     title: 'Contact Us | Navigate Wealth',
     description:
-      'Get in touch with Navigate Wealth for a free consultation. Our independent financial advisors are ready to help you plan your financial future.',
+      "Get in touch with Navigate Wealth for a free consultation. We're ready to help you plan your financial future.",
     keywords:
       'contact navigate wealth, financial advisor consultation, free consultation, South Africa financial planning',
     canonicalUrl: `${BASE_URL}/contact`,
@@ -133,27 +133,27 @@ export const seoPages: Record<string, SEOPageData> = {
   careers: {
     title: 'Careers | Join Our Team | Navigate Wealth',
     description:
-      'Explore career opportunities at Navigate Wealth. Join a dynamic team of independent financial advisors committed to helping South Africans achieve financial independence.',
+      'Explore careers at Navigate Wealth, an independent, founder-led financial advisory practice helping South Africans achieve financial independence.',
     keywords:
       'Navigate Wealth careers, financial advisor jobs, wealth management careers, financial planning jobs South Africa, independent financial advisor vacancy',
     canonicalUrl: `${BASE_URL}/careers`,
     ogType: 'website',
   },
   team: {
-    title: 'Our Team | Meet the Advisors | Navigate Wealth',
+    title: 'Meet Our Founder | Navigate Wealth',
     description:
-      'Meet the experienced team of independent financial advisors at Navigate Wealth. Qualified professionals dedicated to your financial success across South Africa.',
+      'Meet Shawn Francisco, founder of Navigate Wealth — an independent, founder-led financial advisory practice authorised by the FSCA (FSP 54606).',
     keywords:
-      'Navigate Wealth team, financial advisors, certified financial planner, wealth management team, South Africa financial advisors',
+      'Navigate Wealth founder, Shawn Francisco, founder-led financial advice, independent financial advisor, South Africa',
     canonicalUrl: `${BASE_URL}/team`,
     ogType: 'website',
   },
   'why-us': {
     title: 'Why Choose Navigate Wealth | Independent Financial Advisory',
     description:
-      'Discover why Navigate Wealth is the trusted choice for independent financial advice in South Africa. Our independence, personalised approach, and commitment to long-term relationships set us apart.',
+      'Why choose Navigate Wealth: genuinely independent financial advice in South Africa, a personal founder-led approach, and long-term client relationships.',
     keywords:
-      'why Navigate Wealth, independent financial advisor, best financial planner South Africa, trusted wealth management, personalised financial advice',
+      'why Navigate Wealth, independent financial advisor, founder-led financial advice, personalised financial advice, South Africa',
     canonicalUrl: `${BASE_URL}/why-us`,
     ogType: 'website',
   },

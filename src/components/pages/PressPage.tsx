@@ -10,10 +10,12 @@ import { MediaAccessModal } from '../modals/MediaAccessModal';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
+import { COMPANY, FOUNDER } from '@/config/companyFacts';
 import {
   Newspaper,
   Calendar,
-  TrendingUp,
+  Shield,
+  UserCheck,
   Users,
   ArrowRight,
   Download,
@@ -28,14 +30,6 @@ import {
 // ============================================================================
 // Types
 // ============================================================================
-
-interface PressStats {
-  aum: string;
-  activeClients: number;
-  activeClientsLabel: string;
-  yearsInBusiness: string;
-  combinedExperience: string;
-}
 
 interface PressArticle {
   id: string;
@@ -87,23 +81,6 @@ const CATEGORY_TABS = [
 // Data fetching
 // ============================================================================
 
-async function fetchPressStats(): Promise<PressStats> {
-  try {
-    const res = await fetch(`${BASE_URL}/press/stats`, { headers: AUTH_HEADERS });
-    const json = await res.json();
-    if (json.success && json.data) return json.data;
-  } catch {
-    /* fall through */
-  }
-  return {
-    aum: 'R500 mil+',
-    activeClients: 0,
-    activeClientsLabel: '—',
-    yearsInBusiness: '2+',
-    combinedExperience: '55+',
-  };
-}
-
 async function fetchPressArticles(): Promise<PressArticle[]> {
   try {
     const res = await fetch(`${BASE_URL}/press/articles`, { headers: AUTH_HEADERS });
@@ -124,19 +101,12 @@ export function PressPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isMediaAccessModalOpen, setIsMediaAccessModalOpen] = useState(false);
 
-  // Real data
-  const [stats, setStats] = useState<PressStats | null>(null);
   const [articles, setArticles] = useState<PressArticle[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isLoadingArticles, setIsLoadingArticles] = useState(true);
 
   const seoData = getSEOData('press');
 
   useEffect(() => {
-    fetchPressStats().then((s) => {
-      setStats(s);
-      setIsLoadingStats(false);
-    });
     fetchPressArticles().then((a) => {
       setArticles(a);
       setIsLoadingArticles(false);
@@ -148,20 +118,14 @@ export function PressPage() {
     setIsMediaAccessModalOpen(true);
   };
 
-  // Derive company stats from real data
-  const companyStats = useMemo(
-    () => [
-      { label: 'Assets Under Management', value: stats?.aum || 'R500 mil+', icon: TrendingUp },
-      { label: 'Active Clients', value: stats?.activeClientsLabel || '—', icon: Users },
-      { label: 'Years in Business', value: stats?.yearsInBusiness || '2+', icon: Calendar },
-      {
-        label: 'Combined Years Experience',
-        value: stats?.combinedExperience || '55+',
-        icon: Building,
-      },
-    ],
-    [stats],
-  );
+  // Checkable company facts only — see src/config/companyFacts.ts for why the
+  // headline client, experience and asset figures were removed.
+  const companyFacts = [
+    { label: 'FSCA-authorised FSP', value: COMPANY.fspNumber, icon: Shield },
+    { label: 'Licensed by the FSCA', value: COMPANY.fscaAuthorisedOn, icon: Calendar },
+    { label: 'Company founded', value: String(COMPANY.foundedYear), icon: Building },
+    { label: `Led by ${FOUNDER.name}`, value: 'Founder-led', icon: UserCheck },
+  ];
 
   // Filter articles by selected category tab + search query
   const filteredArticles = useMemo(() => {
@@ -194,28 +158,24 @@ export function PressPage() {
       title: 'Brand Assets',
       description: 'Logo packages, brand guidelines, and visual identity resources',
       type: 'ZIP',
-      size: '3.2 MB',
       icon: Building,
     },
     {
-      title: 'Executive Photos',
-      description: 'High-resolution leadership team photography',
+      title: 'Founder Photos',
+      description: `High-resolution photography of our founder, ${FOUNDER.name}`,
       type: 'ZIP',
-      size: '8.7 MB',
       icon: Users,
     },
     {
       title: 'Company Fact Sheet',
-      description: 'Key statistics, milestones, and company overview',
+      description: 'Licensing details, milestones, and company overview',
       type: 'PDF',
-      size: '1.4 MB',
       icon: FileText,
     },
     {
       title: 'Product Brochures',
       description: 'Comprehensive service and solution overviews',
       type: 'PDF',
-      size: '4.1 MB',
       icon: Newspaper,
     },
   ];
@@ -273,8 +233,8 @@ export function PressPage() {
                 </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Stay informed with the latest developments, announcements, and industry recognition
-                from South Africa's leading independent financial advisory firm.
+                The latest announcements and company news from Navigate Wealth, an independent,
+                founder-led financial advisory practice.
               </p>
             </div>
 
@@ -296,18 +256,14 @@ export function PressPage() {
       <section className="py-12 sm:py-16 section-white border-b border-gray-200">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
-            {companyStats.map((stat, index) => (
+            {companyFacts.map((stat, index) => (
               <div key={index} className="text-center space-y-2 sm:space-y-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-xl bg-purple-100 flex items-center justify-center">
                   <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
                 <div>
                   <div className="text-xl sm:text-2xl font-semibold text-gray-900">
-                    {isLoadingStats ? (
-                      <span className="inline-block w-16 h-6 bg-gray-200 rounded animate-pulse" />
-                    ) : (
-                      stat.value
-                    )}
+                    {stat.value}
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
                 </div>
@@ -483,7 +439,6 @@ export function PressPage() {
                     <Badge variant="outline" className="text-xs border-gray-300">
                       {asset.type}
                     </Badge>
-                    <span>{asset.size}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 pt-0">
@@ -511,8 +466,7 @@ export function PressPage() {
             <div className="text-center mb-10 sm:mb-12">
               <h2 className="text-black text-2xl sm:text-3xl font-medium mb-4">Media Contact</h2>
               <p className="text-gray-600 text-base sm:text-xl">
-                For press inquiries, interviews, and additional information, contact our media
-                relations team.
+                For press inquiries, interviews, and additional information, contact us directly.
               </p>
             </div>
 
@@ -521,7 +475,7 @@ export function PressPage() {
                 <CardHeader className="p-6">
                   <CardTitle className="text-xl text-gray-900 flex items-center">
                     <Mail className="h-5 w-5 text-purple-600 mr-3" />
-                    Media Relations
+                    Press Enquiries
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 pt-0 space-y-4">
@@ -549,17 +503,39 @@ export function PressPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 pt-0 space-y-3">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Legal entity</span>
+                    <span className="font-medium text-gray-900 text-right">
+                      {COMPANY.legalName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">Founder</span>
+                    <span className="font-medium text-gray-900 text-right">{FOUNDER.name}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
                     <span className="text-gray-600">Founded</span>
-                    <span className="font-medium text-gray-900">2024</span>
+                    <span className="font-medium text-gray-900 text-right">
+                      {COMPANY.foundedYear}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">FSCA authorised</span>
+                    <span className="font-medium text-gray-900 text-right">
+                      {COMPANY.fscaAuthorisedOn}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
                     <span className="text-gray-600">Headquarters</span>
-                    <span className="font-medium text-gray-900">Pretoria, South Africa</span>
+                    <span className="font-medium text-gray-900 text-right">
+                      {COMPANY.headquarters}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">FSP License</span>
-                    <span className="font-medium text-gray-900">54606</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-600">FSP Licence</span>
+                    <span className="font-medium text-gray-900 text-right">
+                      {COMPANY.fspNumber}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Website</span>
