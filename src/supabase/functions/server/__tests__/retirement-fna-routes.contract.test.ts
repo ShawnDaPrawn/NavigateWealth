@@ -220,6 +220,34 @@ describe('after publish', () => {
     expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(second.id);
   });
 
+  it('unpublish of the current FNA keeps an older published FNA as :latest', async () => {
+    // Batch status (client portal and the adviser overview) reads only this
+    // pointer. Deleting it when a newer plan is withdrawn hid the older plan
+    // that was still published, and offered the client a fresh discovery.
+    const older = await published();
+    const newer = await published();
+    expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(newer.id);
+
+    const res = await req(`/${newer.id}/unpublish`, { method: 'PUT' });
+    expect(res.status).toBe(200);
+    expect(record(newer.id)?.status).toBe('draft');
+    expect((latest(CLIENT_A) as unknown as { id: string; status: string }).id).toBe(older.id);
+    expect((latest(CLIENT_A) as unknown as { status: string }).status).toBe('published');
+
+    const after = await req(`/client/${CLIENT_A}/latest-published`);
+    expect(((await json(after)) as unknown as { data: { id: string } }).data.id).toBe(older.id);
+  });
+
+  it('delete of the current FNA keeps an older published FNA as :latest', async () => {
+    const older = await published();
+    const newer = await published();
+    const res = await req(`/${newer.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(200);
+    expect(record(newer.id)).toBeUndefined();
+    expect(list(CLIENT_A)).toEqual([older.id]);
+    expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(older.id);
+  });
+
   it('draft returns a published FNA to a draft, publication stamp included', async () => {
     const fna = await published();
     expect(record(fna.id)?.publishedAt).toBeTruthy();

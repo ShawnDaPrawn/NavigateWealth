@@ -409,13 +409,29 @@ retirementFnaRoutes.put('/:fnaId/publish', async (c) => {
 
 /**
  * Stop the client's `:latest` pointer serving an FNA that is no longer
- * published (withdrawn, archived or deleted). Latest-published falls back to
- * the newest published FNA in the list when the pointer is gone.
+ * published (withdrawn, archived or deleted).
+ *
+ * The pointer is not only a cache for GET latest-published. The client portal
+ * and the adviser overview read it through batch status and do not scan the
+ * list, so deleting it hides every older FNA that is still published. Point it
+ * at the same FNA latest-published would fall back to — the last published one
+ * still on the list — and delete it only when nothing published remains.
  */
 async function clearLatestIfThis(clientId: string, fnaId: string): Promise<void> {
   const latestKey = `retirement_fna:${clientId}:latest`;
   const latest = await kv.get(latestKey);
-  if (latest && latest.id === fnaId) await kv.del(latestKey);
+  if (!latest || latest.id !== fnaId) return;
+
+  const list = ((await kv.get(`retirement_fna:${clientId}:list`)) as string[] | null) || [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i] === fnaId) continue;
+    const session = await loadFna(list[i]);
+    if (session?.status === 'published') {
+      await kv.set(latestKey, session);
+      return;
+    }
+  }
+  await kv.del(latestKey);
 }
 
 /** Take an FNA off the client's list, so it no longer shows in their FNA list. */
