@@ -83,6 +83,21 @@ describe.each([
     const res = await app.request(`/session/${INTAKE_ID}?clientId=${CLIENT_A}`, as('adviserB'));
     expect(res.status).toBe(403);
   });
+
+  it('does not open a session stored under a different client than the hint', async () => {
+    const id = `${CLIENT_A}-v2-abc`;
+    kvStore.set(`${prefix}:client:${CLIENT_A}:${id}`, { id, clientId: CLIENT_A });
+    kvStore.set(`${prefix}:client:${CLIENT_A}:${INTAKE_ID}`, { id: INTAKE_ID, clientId: CLIENT_A });
+
+    // The hint is the client that gets authorized AND the client the key is
+    // built from. Naming B must not read A's wizard session or A's intake.
+    expect((await app.request(`/session/${id}?clientId=${CLIENT_B}`, as('adviserB'))).status).toBe(
+      404,
+    );
+    expect(
+      (await app.request(`/session/${INTAKE_ID}?clientId=${CLIENT_B}`, as('adviserB'))).status,
+    ).toBe(404);
+  });
 });
 
 describe('Medical FNA by id', () => {
@@ -109,5 +124,14 @@ describe('Medical FNA by id', () => {
     });
     const res = await medical.request(`/${INTAKE_ID}?clientId=${CLIENT_A}`, as('adviserB'));
     expect(res.status).toBe(403);
+  });
+
+  it('does not open an intake stored under a different client than the hint', async () => {
+    kvStore.set(`medical-fna:client:${CLIENT_A}:${INTAKE_ID}`, {
+      id: INTAKE_ID,
+      clientId: CLIENT_A,
+    });
+    const res = await medical.request(`/${INTAKE_ID}?clientId=${CLIENT_B}`, as('adviserB'));
+    expect(res.status).toBe(404);
   });
 });
