@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useClientProfile } from '../useClientProfile';
 import type { Client } from '../../types';
 
@@ -387,6 +387,32 @@ describe('useClientProfile', () => {
     });
     expect(mockUpdateClientProfile).toHaveBeenCalled();
     expect(returnValue).toBe(true);
+    // The open profile's header reads clientKeys.detail, so a save that only
+    // refreshes the list leaves the old name on screen.
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['clients', 'user-001'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['clients'] });
+  });
+
+  it('handleSave does not write a legacy nested personalInformation back', async () => {
+    mockFetchQuery.mockResolvedValue({
+      firstName: 'Aaron',
+      lastName: 'Teng',
+      personalInformation: { firstName: 'Individual', lastName: 'Legacy' },
+    });
+    mockUpdateClientProfile.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useClientProfile(MINIMAL_CLIENT));
+    await waitFor(() => expect(result.current.state.profileData.firstName).toBe('Aaron'));
+
+    await act(async () => {
+      await result.current.actions.handleSave();
+    });
+
+    const payload = mockUpdateClientProfile.mock.calls[0]?.[1] as {
+      firstName?: string;
+      personalInformation?: unknown;
+    };
+    expect(payload.firstName).toBe('Aaron');
+    expect(payload.personalInformation).toBeUndefined();
   });
 
   it('handleSave returns false when updateClientProfile throws', async () => {
