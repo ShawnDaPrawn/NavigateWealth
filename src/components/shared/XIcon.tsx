@@ -7,4 +7,4 @@ export function XIcon({ className }: { className?: string }) {
   );
 }
 
-export const NAVIGATE_WEALTH_X_URL = 'https://x.com/navigatewealth';
+export const NAVIGATE_WEALTH_X_URL = 'https://x.com/Navigate_ZA';

@@ -124,7 +124,7 @@ export const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
   },
   {
     title: 'X',
-    url: 'https://x.com/navigatewealth',
+    url: 'https://x.com/Navigate_ZA',
     description: 'Follow us on X',
     icon: <XIcon className="h-4 w-4" />,
     category: 'social',
@@ -176,7 +176,7 @@ export const SOCIAL_PLATFORMS = [
     key: 'twitter',
     label: 'X',
     icon: <XIcon className="h-4 w-4" />,
-    placeholder: 'https://x.com/navigatewealth',
+    placeholder: 'https://x.com/Navigate_ZA',
   },
   {
     key: 'email',

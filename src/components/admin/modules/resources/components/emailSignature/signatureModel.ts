@@ -97,7 +97,7 @@ export const DEFAULT_DATA: SignatureData = {
   address: '',
   linkedinUrl: 'https://www.linkedin.com/company/navigatewealth/',
   instagramUrl: 'https://www.instagram.com/navigate_wealth',
-  xUrl: 'https://x.com/navigatewealth',
+  xUrl: 'https://x.com/Navigate_ZA',
   disclaimerText:
     'This email and any attachments are confidential and intended solely for the addressee. If you are not the intended recipient, please notify the sender immediately and delete this email. Navigate Wealth is an authorised financial services provider (FSP No. 54606).',
   logoUrl: '',

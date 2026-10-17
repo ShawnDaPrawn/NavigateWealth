@@ -144,7 +144,7 @@ export function SEO({
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);
     setMeta('name', 'twitter:image', resolvedImage);
-    setMeta('name', 'twitter:site', '@NavigateWealthSA');
+    setMeta('name', 'twitter:site', '@Navigate_ZA');
 
     // Canonical link
     if (canonicalUrl) {
