@@ -524,13 +524,20 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
-- **The client portal's My Adviser page shows placeholder data.**
-  `MyAdviserPage.tsx` renders a hard-coded adviser ("Sarah Johnson", Cape Town
-  office, ratings and meeting history) to any client with an adviser assigned.
-  It needs the real assigned adviser wired in; it is exempted by name in
-  `companyFacts.test.ts` until then. Relatedly, the admin Publications →
-  Settings "Press Page Stats" panel and `/publications/press/{config,stats}`
-  are no longer read by the Press page and can be removed.
+- **Company facts live in one place; three copies sit outside the code.**
+  Address (First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21
+  Business Park, Pretoria, 0157), phone, `info@` as the only mailbox, office
+  hours 08:30–16:30, English and Afrikaans, in-person or online meetings, and
+  tax through Profin Accounting are in `src/config/companyFacts.ts`
+  (owner-confirmed, October 2026). Three copies are data, not code, and still
+  need an operator: the live Ask Vasco prompt (`ai:prompt:vasco-public:public:active`
+  in KV — the code seed was updated, the live prompt must be republished from
+  the admin AI prompt editor); published articles whose bodies say "our team of
+  experienced financial advisors" or carry the "Navigate Wealth Editorial Team"
+  byline; and the cached e-sign platform certificate, whose subject still reads
+  the old organisation and city until it is rotated (new signatures already
+  use Pretoria). The admin Publications → Settings "Press Page Stats" panel and
+  `/publications/press/{config,stats}` are no longer read and can be removed.
 - **The Edge Function source is still mostly flat** (440+ files in one
   directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
   `social/` were the first prefixes moved into folders (2026-10-08), alongside

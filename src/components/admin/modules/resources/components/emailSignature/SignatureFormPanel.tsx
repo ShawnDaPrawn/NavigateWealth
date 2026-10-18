@@ -110,7 +110,7 @@ export function SignatureFormPanel({
               <Input
                 value={data.email}
                 onChange={(e) => updateField('email', e.target.value)}
-                placeholder="john@navigatewealth.co.za"
+                placeholder="name@navigatewealth.co"
                 className="h-9"
               />
             </div>
@@ -119,7 +119,7 @@ export function SignatureFormPanel({
               <Input
                 value={data.website}
                 onChange={(e) => updateField('website', e.target.value)}
-                placeholder="www.navigatewealth.co.za"
+                placeholder="www.navigatewealth.co"
                 className="h-9"
               />
             </div>

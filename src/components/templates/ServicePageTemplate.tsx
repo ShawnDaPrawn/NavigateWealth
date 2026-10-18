@@ -47,6 +47,8 @@ import { FAQSection } from '../shared/FAQSection';
 import { useTabScroll } from '../shared/useTabScroll';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
+import { toast } from 'sonner';
+import { splitFullName, submitContactEnquiry } from '../../services/contactEnquiry';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -213,6 +215,7 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
     message: '',
   });
   const [thankYouOpen, setThankYouOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [consultationOpen, setConsultationOpen] = useState(false);
 
   // Tab navigation — individuals
@@ -239,9 +242,32 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
   const handleInputChange = (field: string, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.contactNumber) return;
+    if (!formData.name || !formData.email || !formData.contactNumber || isSubmitting) return;
+
+    const selectedValue = formData[config.form.selectFieldName] ?? '';
+    const selectedLabel =
+      config.form.selectOptions.find((opt) => opt.value === selectedValue)?.label ?? '';
+
+    setIsSubmitting(true);
+    const result = await submitContactEnquiry({
+      ...splitFullName(formData.name),
+      email: formData.email.trim(),
+      phone: formData.contactNumber.trim(),
+      service: selectedLabel
+        ? `${config.structuredDataServiceName} — ${selectedLabel}`
+        : config.structuredDataServiceName,
+      message: formData.message.trim(),
+      clientType: 'call-back request',
+    });
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+
     setThankYouOpen(true);
     setFormData({
       name: '',
@@ -795,8 +821,8 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
                     you back
                   </h2>
                   <p className="text-sm text-gray-300 leading-relaxed mb-8">
-                    Complete the form and a {config.form.specialistType} specialist will contact you
-                    with personalised options tailored to your needs.
+                    Complete the form and we will contact you about your{' '}
+                    {config.form.specialistType} needs, with personalised options.
                   </p>
                   <div className="space-y-4">
                     {[
@@ -805,11 +831,15 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
                         label: 'Free consultation',
                         sub: 'No cost, no commitment',
                       },
-                      { icon: Shield, label: 'Expert advice', sub: 'From accredited specialists' },
+                      {
+                        icon: Shield,
+                        label: 'Independent advice',
+                        sub: 'FSCA-authorised, not tied to one provider',
+                      },
                       {
                         icon: TrendingUp,
-                        label: 'Market-wide search',
-                        sub: 'Best options at the right price',
+                        label: 'Provider comparison',
+                        sub: 'Options compared across our partners',
                       },
                     ].map(({ icon: Icon, label, sub }) => (
                       <div key={label} className="flex items-start gap-3">
@@ -924,9 +954,11 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
                     <Button
                       type="submit"
                       size="lg"
+                      disabled={isSubmitting}
                       className="w-full bg-primary text-white hover:bg-primary/90 hover:scale-[1.01] transition-all duration-200 shadow-md font-medium text-sm"
                     >
-                      <Phone className="mr-2 h-4 w-4" /> Call Me Back
+                      <Phone className="mr-2 h-4 w-4" />{' '}
+                      {isSubmitting ? 'Sending…' : 'Call Me Back'}
                     </Button>
                   </div>
                 </form>

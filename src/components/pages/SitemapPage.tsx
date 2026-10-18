@@ -397,8 +397,8 @@ export function SitemapPage() {
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-sm text-slate-600">
-                Our team is here to help you navigate our services and find the right financial
-                solution for your goals.
+                We are here to help you navigate our services and find the right financial solution
+                for your goals.
               </p>
               <div className="space-y-3">
                 <Link
@@ -406,7 +406,7 @@ export function SitemapPage() {
                   className="flex items-center gap-2 text-sm font-medium text-purple-700 transition-colors hover:text-purple-900"
                 >
                   <Phone className="h-4 w-4" aria-hidden="true" />
-                  Contact our team
+                  Contact us
                 </Link>
                 <Link
                   to="/get-quote"

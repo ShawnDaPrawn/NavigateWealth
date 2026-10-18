@@ -252,7 +252,7 @@ function HandoffModal({
               </Button>
 
               <p className="text-center text-[10px] text-gray-400">
-                Your information will be shared with Navigate Wealth&apos;s advisory team only.
+                Your information will be shared with Navigate Wealth only.
               </p>
             </form>
           </>
@@ -544,7 +544,7 @@ export function AskVascoPage() {
             </h1>
             <p className="mb-8 text-sm leading-relaxed text-gray-600">
               Our AI financial navigator is being prepared for launch. In the meantime, explore our
-              services or get in touch with our team.
+              services or get in touch with us.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Button

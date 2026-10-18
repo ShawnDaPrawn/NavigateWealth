@@ -377,7 +377,7 @@ export async function downloadSubmissionAsPdf(submission: Submission): Promise<v
       { x: MARGIN, y: FOOTER_TEXT_Y, size: 6.5, font: italicFont, color: MUTED },
     );
     page.drawText(
-      'First Floor, Milestone Place, Block A, 25 Sovereign Dr, Route 21 Business Park, Irene, 0157',
+      'First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157',
       { x: MARGIN, y: FOOTER_TEXT_Y - 10, size: 6, font: italicFont, color: MUTED },
     );
     const pageText = `Page ${pageNum} of ${totalPages}`;

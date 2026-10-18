@@ -178,7 +178,7 @@ export function WhyUsPage() {
           <div className="flex flex-col items-center text-center py-20 lg:py-28">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
               <span className="text-[12px] font-medium text-gray-400 tracking-wide">
-                Independent Financial Advisers
+                Independent Financial Advice
               </span>
             </div>
 
@@ -304,8 +304,8 @@ export function WhyUsPage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-gray-900 mb-6">The Navigate Wealth Advantage</h2>
             <p className="text-gray-600 text-lg">
-              Experience the difference that comes from working with advisers who put your interests
-              first.
+              Experience the difference that comes from working with an adviser who puts your
+              interests first.
             </p>
           </div>
 
@@ -397,8 +397,8 @@ export function WhyUsPage() {
                   <div className="bg-[rgba(25,15,46,0.95)] backdrop-blur-sm rounded-xl p-6">
                     <h3 className="text-white mb-4">Ready to Get Started?</h3>
                     <p className="text-white/90 mb-6">
-                      Book a complimentary consultation to discuss your financial goals with one of
-                      our qualified advisers.
+                      Book a complimentary consultation to discuss your financial goals, in person
+                      or online.
                     </p>
                     <Button
                       className="w-full bg-primary text-white hover:bg-primary/90"

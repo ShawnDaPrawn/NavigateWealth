@@ -93,7 +93,6 @@ export function Footer() {
       { label: 'Sitemap', path: '/sitemap' },
       { label: 'Market Updates', path: '/resources?section=market-updates' },
       { label: 'Newsletters', path: '/resources?section=newsletters' },
-      { label: 'Design System', path: '/design-system' },
     ],
     legal: [
       { label: 'Privacy and Data', path: '/legal?section=privacy-data-protection' },
@@ -117,7 +116,8 @@ export function Footer() {
               <div className="flex items-center space-x-3 text-gray-300">
                 <MapPin className="h-8 w-8 text-primary" />
                 <span className="text-sm">
-                  Milestone Place Block A, 25 Sovereign Dr Route 21 Business Park, Pretoria, 0178
+                  First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park,
+                  Pretoria, 0157
                 </span>
               </div>
               <div className="flex items-center space-x-3 text-gray-300">
@@ -331,8 +331,8 @@ export function Footer() {
             making any financial decision, you should consider your personal circumstances and,
             where appropriate, seek professional advice. Navigate Wealth will not be liable for any
             losses or damages arising from the use of this website or any reliance on the
-            information provided herein. For tailored advice, please contact our qualified advisor/s
-            directly. Full terms and conditions are available upon request.
+            information provided herein. For tailored advice, please contact us directly. Full terms
+            and conditions are available on our Legal page.
           </p>
         </div>
       </div>

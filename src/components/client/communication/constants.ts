@@ -103,8 +103,8 @@ export const ITEMS_PER_PAGE = 10;
 export const CONTACT = {
   email: 'info@navigatewealth.co',
   emailHref: 'mailto:info@navigatewealth.co',
-  phoneNumber: '012 667 2025',
-  phoneTel: 'tel:0126672025',
+  phoneNumber: '012 667 2505',
+  phoneTel: 'tel:+27126672505',
 } as const;
 
 // ── Retention ───────────────────────────────────────────────────────────────

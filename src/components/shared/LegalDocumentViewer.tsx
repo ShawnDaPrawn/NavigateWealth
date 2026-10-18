@@ -191,7 +191,7 @@ export function useLegalDocumentViewer() {
 
       if (!data.available || !data.document) {
         toast.info('This document is not yet available. Please check back later.', {
-          description: 'The compliance team is working on making this document available.',
+          description: 'This document is being prepared and will be available soon.',
         });
         return;
       }
@@ -479,7 +479,7 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
                       Document content not yet available
                     </p>
                     <p className="mt-2 text-sm">
-                      The compliance team is preparing this document for client viewing.
+                      This document is being prepared for client viewing.
                     </p>
                   </div>
                 </div>

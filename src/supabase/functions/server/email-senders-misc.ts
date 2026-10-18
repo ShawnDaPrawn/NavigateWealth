@@ -297,7 +297,7 @@ What Happens Next?
 - We will contact you within 24 business hours
 - There is no obligation — this is a complimentary consultation
 
-If your matter is urgent, please call us directly at 012 667 2025 or email info@navigatewealth.co.
+If your matter is urgent, please call us directly at 012 667 2505 or email info@navigatewealth.co.
 
 Best regards,
 The Navigate Wealth Team

@@ -261,7 +261,7 @@ export function MedicalAidPage() {
           statusLabel: 'Healthcare Status',
           statusValue: 'Individuals & Businesses',
           stats: [
-            { value: '2+', label: 'Leading Schemes' },
+            { value: String(partnerLogos.length), label: 'Medical Schemes' },
             { value: '3', label: 'Individual Plans' },
             { value: '3', label: 'Business Solutions' },
           ],
@@ -363,7 +363,7 @@ export function MedicalAidPage() {
         approach: {
           serviceName: 'How We Find Your Ideal Plan',
           headerDescription:
-            'A proven 3-step process to match you with the right medical aid solution.',
+            'A clear 3-step process to match you with the right medical aid solution.',
           steps: [
             {
               step: '1',

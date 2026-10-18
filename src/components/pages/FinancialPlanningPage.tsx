@@ -174,7 +174,7 @@ const individualProducts: Record<string, CoverContent> = {
     title: 'Tax Planning & Optimisation',
     description: 'Minimise your tax burden through strategic planning and investment structuring.',
     benefitsDescription:
-      'Tax planning is integral to every financial decision. We work alongside your tax practitioner to ensure your investments, retirement savings, and estate plan are structured to minimise income tax, capital gains tax, and estate duty — all while remaining fully compliant with SARS regulations.',
+      'Tax planning is integral to every financial decision. Working with our tax partner, Profin Accounting, we make sure your investments, retirement savings, and estate plan are structured to minimise income tax, capital gains tax, and estate duty — all while remaining compliant with SARS requirements.',
     features: [
       {
         title: 'Tax-Efficient Structures',
@@ -355,7 +355,7 @@ export function FinancialPlanningPage() {
           statusValue: 'Individuals & Businesses',
           stats: [
             { value: '6', label: 'Planning Areas' },
-            { value: '7+', label: 'Partner Providers' },
+            { value: String(partnerLogos.length), label: 'Partner Providers' },
             { value: '3', label: 'Business Solutions' },
           ],
           quoteLink: '/get-quote',
@@ -467,7 +467,7 @@ export function FinancialPlanningPage() {
         approach: {
           serviceName: 'How We Build Your Financial Plan',
           headerDescription:
-            'A proven methodology to create a comprehensive strategy that aligns your money with your life goals.',
+            'A structured methodology to create a comprehensive strategy that aligns your money with your life goals.',
           steps: [
             {
               step: '1',
@@ -489,7 +489,7 @@ export function FinancialPlanningPage() {
               title: 'Design & Recommend',
               icon: MessageSquare,
               description:
-                'We design a personalised financial strategy across all six planning areas, selecting the best products from the full market.',
+                'We design a personalised financial strategy across all six planning areas, selecting suitable products from the providers we work with.',
               details: [
                 'Integrated strategy design',
                 'Product and provider selection',

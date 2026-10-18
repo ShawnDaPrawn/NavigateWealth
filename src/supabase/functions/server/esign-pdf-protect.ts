@@ -110,11 +110,11 @@ function generateP12(passphrase: string): {
 
   const attrs = [
     { shortName: 'CN', value: 'Navigate Wealth E-Signature Platform' },
-    { shortName: 'O', value: 'Navigate Wealth (Pty) Ltd' },
+    { shortName: 'O', value: 'Wealthfront (Pty) Ltd t/a Navigate Wealth' },
     { shortName: 'OU', value: 'E-Signature Services' },
     { shortName: 'C', value: 'ZA' },
-    { shortName: 'ST', value: 'Western Cape' },
-    { shortName: 'L', value: 'Cape Town' },
+    { shortName: 'ST', value: 'Gauteng' },
+    { shortName: 'L', value: 'Pretoria' },
   ];
 
   cert.setSubject(attrs);
@@ -331,7 +331,7 @@ export async function signAndProtectPdf(
   const {
     reason = 'Document electronically signed and sealed via Navigate Wealth',
     contactInfo = 'Navigate Wealth E-Signature Platform',
-    location = 'Cape Town, South Africa',
+    location = 'Pretoria, South Africa',
     envelopeId,
     envelopeTitle,
   } = options;

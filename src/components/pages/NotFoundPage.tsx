@@ -126,7 +126,7 @@ export function NotFoundPage() {
           {/* Additional Help */}
           <div className="mt-12 pt-8 border-t border-gray-200">
             <p className="text-gray-600 text-sm">
-              Still need help? Our team is here to assist you.{' '}
+              Still need help? We are here to assist you.{' '}
               <Link
                 to="/contact"
                 className="text-primary hover:text-primary/80 font-medium transition-colors"

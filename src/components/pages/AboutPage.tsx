@@ -116,7 +116,7 @@ export function AboutPage() {
         },
         {
           title: 'Fit and Proper Advice',
-          text: 'Advice is given by representatives who meet the FSCA’s Fit and Proper requirements for honesty, qualifications, experience and continuous professional development.',
+          text: 'Everyone who gives advice at Navigate Wealth meets the FSCA’s Fit and Proper requirements for honesty, qualifications, experience and continuous professional development.',
           icon: Users,
         },
         {
@@ -191,7 +191,7 @@ export function AboutPage() {
                 <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                   Your Trusted{' '}
                   <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">
-                    Financial Partners
+                    Financial Partner
                   </span>
                 </h1>
                 <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
@@ -404,9 +404,7 @@ export function AboutPage() {
 
           <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <div className="max-w-4xl mx-auto text-center text-gray-900">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Join Our Team or Stay Informed
-              </h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">Work With Us or Stay Informed</h2>
               <p className="text-xl text-gray-600 mb-8">
                 Discover exciting career opportunities with Navigate Wealth or stay up to date with
                 our latest news, announcements, and industry insights.

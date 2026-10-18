@@ -106,7 +106,7 @@ articlesRoutes.post('/articles', requireAdmin, async (c) => {
       category_id,
       type_id,
       author_id,
-      author_name: author_name || 'Navigate Wealth Editorial Team',
+      author_name: author_name || 'Navigate Wealth',
       hero_image_url,
       thumbnail_image_url,
       reading_time_minutes,

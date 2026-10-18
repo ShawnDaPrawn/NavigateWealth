@@ -306,7 +306,7 @@ export function EmployeeBenefitsPage() {
           quoteLink: '/get-quote/employee-benefits/contact',
           heroStyle: 'unified',
           stats: [
-            { value: '13+', label: 'Trusted Providers' },
+            { value: String(partnerLogos.length), label: 'Product Providers' },
             { value: '5', label: 'Employee Benefits' },
             { value: '3', label: 'Business Solutions' },
           ],
@@ -413,7 +413,7 @@ export function EmployeeBenefitsPage() {
         approach: {
           serviceName: 'How We Design Your Benefits',
           headerDescription:
-            'At Navigate Wealth, we follow a proven methodology to design, implement, and manage employee benefit solutions that attract and retain talent.',
+            'At Navigate Wealth, we follow a structured methodology to design, implement, and manage employee benefit solutions that attract and retain talent.',
           steps: [
             {
               step: '1',

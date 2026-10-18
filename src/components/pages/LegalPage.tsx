@@ -210,8 +210,8 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
       {/* Footer */}
       <div className="mt-12 pt-4 border-t border-gray-200 text-center">
         <p className="text-xs text-gray-400">
-          Wealthfront (Pty) Ltd t/a &ldquo;Navigate Wealth&rdquo; &bull; FSP No. 51816 &bull; Reg.
-          No. 2021/218961/07
+          Wealthfront (Pty) Ltd t/a &ldquo;Navigate Wealth&rdquo; &bull; FSP No. 54606 &bull; Reg.
+          No. 2024/071953/07
         </p>
       </div>
     </div>
@@ -414,7 +414,7 @@ export function LegalPage() {
               <div class="footer-page">Page 1 of 1</div>
               <div class="footer-text">
                 Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services Provider – FSP 54606.
-                Registration Number: 2024/071953/07. Located at Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
+                Registration Number: 2024/071953/07. Located at First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157.
                 For inquiries, please contact us at Tel: (012) 667 2505.
               </div>
             </div>
@@ -617,7 +617,7 @@ export function LegalPage() {
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center">
                       <Mail className="h-4 w-4 mr-2" />
-                      <span>info@navigatewealth.co.za</span>
+                      <span>info@navigatewealth.co</span>
                     </div>
                     <div className="flex items-center">
                       <Phone className="h-4 w-4 mr-2" />
@@ -664,7 +664,7 @@ export function LegalPage() {
               <h3 className="text-black mb-4">Need Legal Assistance?</h3>
               <p className="text-gray-600 mb-6">
                 If you have questions about any of our legal documents or need clarification on our
-                policies, please don't hesitate to contact our legal team.
+                policies, please don't hesitate to contact us.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <div className="flex items-center text-gray-600">
@@ -713,7 +713,7 @@ export function LegalPage() {
                 <div className="p-12 text-center text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-40" />
                   <p className="font-medium">Document content not yet available</p>
-                  <p className="text-sm mt-1">The compliance team is preparing this document.</p>
+                  <p className="text-sm mt-1">This document is being prepared.</p>
                 </div>
               )}
             </div>

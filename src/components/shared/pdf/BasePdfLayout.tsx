@@ -853,9 +853,9 @@ const PdfPage = ({
             </div>
             <div className="footer-text">
               Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial Services
-              Provider – FSP 54606. Registration Number: 2024/071953/07. Located at Route 21
-              Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. For inquiries,
-              please contact us at Tel: (012) 667 2505.
+              Provider – FSP 54606. Registration Number: 2024/071953/07. Located at First Floor,
+              Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157.
+              For inquiries, please contact us at Tel: (012) 667 2505.
             </div>
           </div>
         </footer>

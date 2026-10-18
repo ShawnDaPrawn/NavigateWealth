@@ -114,7 +114,7 @@ const values = [
   },
   {
     title: 'Professional Growth',
-    description: 'We invest in our people and support continuous learning and development.',
+    description: 'We support continuous learning, CPD and professional development.',
     icon: GraduationCap,
   },
   {
@@ -606,8 +606,8 @@ export function CareersPage() {
               Everything You Need to Thrive
             </h2>
             <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
-              We believe that taking care of our team is the foundation of exceptional client
-              service. Here's what you can expect.
+              We believe that taking care of the people who work with us is the foundation of
+              exceptional client service. Here's what you can expect.
             </p>
           </div>
 

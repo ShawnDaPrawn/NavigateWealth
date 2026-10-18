@@ -63,8 +63,7 @@ export function GetQuotePage() {
           </h1>
           <p className="text-white/70 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
             Tap a category below to go straight to the next step, where you&apos;ll share your
-            details so we can match you with the best options from South Africa&apos;s leading
-            financial providers.
+            details so we can match you with suitable options from the providers we work with.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-6">
@@ -72,7 +71,7 @@ export function GetQuotePage() {
               { icon: Clock, label: '24hr response' },
               { icon: Users, label: 'Independent advice' },
               { icon: Shield, label: 'FSCA regulated' },
-              { icon: Sparkles, label: 'Best-in-class partners' },
+              { icon: Sparkles, label: 'Established partners' },
             ].map(({ icon: Ic, label }) => (
               <span key={label} className="flex items-center gap-1.5 text-white/60 text-xs">
                 <Ic className="h-3.5 w-3.5" />

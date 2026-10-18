@@ -18,7 +18,6 @@ import {
   UserCheck,
   Users,
   ArrowRight,
-  Download,
   Building,
   FileText,
   Search,
@@ -68,14 +67,10 @@ const PRESS_CATEGORY_LABEL_MAP: Record<string, string> = {
   industry_insights: 'Industry Insights',
 };
 
-const CATEGORY_TABS = [
-  'All',
-  'Company News',
-  'Product Launch',
-  'Awards',
-  'Team News',
-  'Industry Insights',
-];
+// "Awards" and "Team News" are kept in the label maps above so any article
+// already tagged with them still shows its badge, but they are not offered as
+// tabs: an empty "Awards" tab reads as a claim the firm has awards.
+const CATEGORY_TABS = ['All', 'Company News', 'Product Launch', 'Industry Insights'];
 
 // ============================================================================
 // Data fetching
@@ -229,7 +224,7 @@ export function PressPage() {
               <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                 Navigate Wealth{' '}
                 <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">
-                  in the News
+                  Press Centre
                 </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
@@ -244,8 +239,8 @@ export function PressPage() {
                 className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200 px-8 h-12 shadow-lg shadow-purple-600/20"
                 onClick={handleDownloadClick}
               >
-                Download Media Kit
-                <Download className="ml-2 h-5 w-5" />
+                Request Media Kit
+                <Mail className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -342,7 +337,7 @@ export function PressPage() {
               </p>
               <div className="space-y-4">
                 <p className="text-sm text-gray-500">
-                  For immediate assistance or inquiries, please contact our team directly.
+                  For immediate assistance or inquiries, please contact us directly.
                 </p>
                 <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3" asChild>
                   <Link to="/contact">
@@ -419,8 +414,8 @@ export function PressPage() {
           <div className="text-center mb-10 sm:mb-12">
             <h2 className="text-white text-2xl sm:text-3xl font-medium mb-4">Media Resources</h2>
             <p className="text-white/90 text-base sm:text-xl max-w-2xl mx-auto">
-              Access our comprehensive media kit including brand assets, executive materials, and
-              company information.
+              Our media kit, with brand assets, founder photos and company information, is sent on
+              request.
             </p>
           </div>
 
@@ -449,8 +444,8 @@ export function PressPage() {
                     className="bg-purple-600 hover:bg-purple-700 text-white w-full group"
                     onClick={handleDownloadClick}
                   >
-                    Download
-                    <Download className="ml-2 h-4 w-4 group-hover:translate-y-0.5 transition-transform" />
+                    Request
+                    <Mail className="ml-2 h-4 w-4" />
                   </Button>
                 </CardContent>
               </Card>
@@ -485,7 +480,7 @@ export function PressPage() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 mb-1">Phone</p>
-                    <p className="text-gray-600">(+27) 012-667-2505</p>
+                    <p className="text-gray-600">+27 12 667 2505</p>
                   </div>
                   <div className="pt-2 border-t border-gray-100">
                     <p className="text-sm text-gray-500">

@@ -18,7 +18,7 @@ import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { ArrowRight, ChevronLeft, ChevronRight, Zap, Heart, Globe } from 'lucide-react';
 import { services, providers } from './homePageData';
 
-export function ServicesPreviewSection({ onOpenCashback }: { onOpenCashback: () => void }) {
+export function ServicesPreviewSection() {
   return (
     <section className="py-24 section-white">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -91,29 +91,17 @@ export function ServicesPreviewSection({ onOpenCashback }: { onOpenCashback: () 
 
                   {/* Clean Action Button */}
                   <div className="mt-4 pt-2">
-                    {service.title === 'Cashback' ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full group/btn border-gray-200 text-gray-700 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
-                        onClick={() => onOpenCashback()}
-                      >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full group/btn border-gray-200 text-gray-700 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
+                      asChild
+                    >
+                      <Link to={service.link}>
                         <span>Learn More</span>
                         <ArrowRight className="ml-2 h-3 w-3 group-hover/btn:translate-x-0.5 transition-transform duration-200" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full group/btn border-gray-200 text-gray-700 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
-                        asChild
-                      >
-                        <Link to={service.link}>
-                          <span>Learn More</span>
-                          <ArrowRight className="ml-2 h-3 w-3 group-hover/btn:translate-x-0.5 transition-transform duration-200" />
-                        </Link>
-                      </Button>
-                    )}
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -188,8 +176,8 @@ export function ProvidersCarouselSection({
         <div className="text-center mb-16">
           <h2 className="text-black mb-4">Trusted Partners</h2>
           <p className="text-gray-600 max-w-3xl mx-auto">
-            Navigate Wealth only works with the best product providers to ensure that you receive
-            the highest quality financial solutions.
+            Navigate Wealth works with established South African product providers, so you can
+            compare quality solutions side by side.
           </p>
         </div>
 

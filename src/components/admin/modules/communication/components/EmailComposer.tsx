@@ -45,10 +45,9 @@ interface EmailComposerProps {
 
 // Default sender addresses — static configuration (Guidelines §5.3)
 // TODO: Replace with backend settings endpoint when sender address management is implemented
+// info@ is the only mailbox in use (owner, October 2026).
 const DEFAULT_FROM_ADDRESSES = [
-  { id: '1', name: 'Navigate Wealth - General', email: 'info@navigatewealth.co.za' },
-  { id: '2', name: 'Navigate Wealth - Support', email: 'support@navigatewealth.co.za' },
-  { id: '3', name: 'Navigate Wealth - Advisory', email: 'advisory@navigatewealth.co.za' },
+  { id: '1', name: 'Navigate Wealth', email: 'info@navigatewealth.co' },
 ];
 
 export function EmailComposer({

@@ -72,7 +72,7 @@ export const sitemapSections: SitemapSection[] = [
       {
         title: 'Contact Us',
         path: '/contact',
-        description: 'Get in touch with our team for personalised financial advice.',
+        description: 'Get in touch for personalised financial advice.',
         lastModified: '2026-03-01',
         status: 'public',
       },
@@ -203,7 +203,7 @@ export const sitemapSections: SitemapSection[] = [
       {
         title: 'Market Insights',
         path: '/resources?section=insights',
-        description: 'The latest market analysis and financial insights from our experts.',
+        description: 'The latest market analysis and financial insights from Navigate Wealth.',
         status: 'public',
       },
       {
@@ -249,7 +249,7 @@ export const sitemapSections: SitemapSection[] = [
       {
         title: 'Press & Media',
         path: '/press',
-        description: 'Latest news, press releases, and media coverage.',
+        description: 'Press releases, company announcements and media kit requests.',
         lastModified: '2026-03-01',
         status: 'public',
       },

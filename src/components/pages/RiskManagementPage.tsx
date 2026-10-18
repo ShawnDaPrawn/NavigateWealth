@@ -320,7 +320,7 @@ export function RiskManagementPage() {
           statusLabel: 'Cover Status',
           statusValue: 'Individuals & Businesses',
           stats: [
-            { value: '7+', label: 'Trusted Insurers' },
+            { value: String(partnerLogos.length), label: 'Insurers Compared' },
             { value: '5', label: 'Cover Types' },
             { value: '3', label: 'Business Solutions' },
           ],
@@ -423,7 +423,7 @@ export function RiskManagementPage() {
         approach: {
           serviceName: 'How We Protect You',
           headerDescription:
-            'At Navigate Wealth, we follow a proven 3-step methodology to ensure you receive the most appropriate risk management solution that aligns with your needs and budget.',
+            'At Navigate Wealth, we follow a clear 3-step methodology to ensure you receive the most appropriate risk management solution that aligns with your needs and budget.',
           steps: [
             {
               step: '1',

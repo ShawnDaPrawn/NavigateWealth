@@ -346,7 +346,7 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
             </Label>
             <Textarea
               id="ai-image-subject"
-              placeholder="e.g., A diverse group of professionals reviewing financial plans at a modern Cape Town office with Table Mountain visible through floor-to-ceiling windows"
+              placeholder="e.g., A diverse group of professionals reviewing financial plans at a modern Pretoria office with Table Mountain visible through floor-to-ceiling windows"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               rows={3}

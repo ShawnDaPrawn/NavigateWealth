@@ -212,7 +212,7 @@ export function ProductsServicesPage() {
                   Welcome back,{' '}
                   <span className="font-semibold text-gray-900">{user?.email || 'User'}</span>!
                   Select any module below to explore your products, view recommendations, and manage
-                  your financial services. Our team is here to guide you every step of the way.
+                  your financial services. We are here to guide you every step of the way.
                 </p>
               </div>
 

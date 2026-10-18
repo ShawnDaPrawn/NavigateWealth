@@ -81,9 +81,8 @@ function SuccessScreen({ serviceName }: { serviceName: string }) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Quote Request Received!</h1>
           <p className="text-gray-600 leading-relaxed">
-            Thank you for your {serviceName.toLowerCase()} quote request. One of our qualified
-            advisers will be in touch within <strong>24 business hours</strong> with a personalised,
-            no-obligation quote.
+            Thank you for your {serviceName.toLowerCase()} quote request. We will be in touch within{' '}
+            <strong>24 hours on business days</strong> with a personalised, no-obligation quote.
           </p>
         </div>
         <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-left space-y-2">
@@ -664,7 +663,7 @@ export function ProductQuotePage() {
                   },
                   {
                     icon: Users,
-                    label: `${serviceConfig.providers.length > 0 ? serviceConfig.providers.length + '+ ' : ''}Trusted Partners`,
+                    label: `${serviceConfig.providers.length > 0 ? serviceConfig.providers.length + ' ' : ''}Trusted Partner${serviceConfig.providers.length === 1 ? '' : 's'}`,
                     desc: 'Compare the best options available',
                   },
                   {
@@ -675,12 +674,12 @@ export function ProductQuotePage() {
                   {
                     icon: Phone,
                     label: 'Free Consultation',
-                    desc: 'No cost, no obligation — ever',
+                    desc: 'No cost, no obligation',
                   },
                   {
                     icon: Star,
-                    label: 'Expert Advisers',
-                    desc: 'Qualified professionals with years of experience',
+                    label: 'Independent Advice',
+                    desc: 'FSCA-authorised, not tied to one provider',
                   },
                   {
                     icon: Lock,

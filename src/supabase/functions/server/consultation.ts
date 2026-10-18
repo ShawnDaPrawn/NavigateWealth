@@ -118,7 +118,7 @@ function validateBookingDateTime(dateStr: string, timeStr: string): string | nul
     return `Booking date is too soon. The earliest available date is ${minDateStr}. Selected: ${dateStr}`;
   }
 
-  // Validate time format and business hours (08:00–16:30)
+  // Validate time format and office hours (08:30–16:30)
   if (timeStr) {
     const timeMatch = timeStr.match(/^(\d{2}):(\d{2})$/);
     if (!timeMatch) {
@@ -128,8 +128,8 @@ function validateBookingDateTime(dateStr: string, timeStr: string): string | nul
     const hour = parseInt(timeMatch[1], 10);
     const minute = parseInt(timeMatch[2], 10);
 
-    if (hour < 8 || (hour === 16 && minute > 30) || hour > 16) {
-      return `Booking time must be between 08:00 and 16:30. Selected: ${timeStr}`;
+    if (hour < 8 || (hour === 8 && minute < 30) || (hour === 16 && minute > 30) || hour > 16) {
+      return `Booking time must be between 08:30 and 16:30. Selected: ${timeStr}`;
     }
   }
 
@@ -361,7 +361,9 @@ app.post(
     const meetingTypeText =
       meetingType === 'virtual'
         ? 'Virtual Meeting (Video Call)'
-        : 'Telephonic Meeting (Phone Call)';
+        : meetingType === 'in_person'
+          ? 'In-Person Meeting (Pretoria office)'
+          : 'Telephonic Meeting (Phone Call)';
 
     // SECURITY (SECURITY-AUDIT S10): name/email/phone/notes come from an anonymous
     // visitor and are interpolated into both the client and staff emails as HTML.
@@ -420,9 +422,9 @@ app.post(
     
     <div style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 8px; margin: 24px 0;">
       <h3 style="margin-top: 0; font-size: 18px; color: #166534;">What Happens Next?</h3>
-      <p style="color: #15803d; margin: 8px 0;">&#10003; Our bookings agent will contact you within 24 hours</p>
+      <p style="color: #15803d; margin: 8px 0;">&#10003; We will contact you within 24 hours on business days</p>
       <p style="color: #15803d; margin: 8px 0;">&#10003; We'll confirm your appointment time based on your preferences</p>
-      <p style="color: #15803d; margin: 8px 0;">&#10003; You'll receive meeting access details for your ${meetingType === 'virtual' ? 'video' : 'phone'} consultation</p>
+      <p style="color: #15803d; margin: 8px 0;">&#10003; ${meetingType === 'in_person' ? "You'll receive directions to our office at Route 21 Business Park, Pretoria" : `You'll receive meeting access details for your ${meetingType === 'virtual' ? 'video' : 'phone'} consultation`}</p>
       <p style="color: #15803d; margin: 8px 0;">&#10003; This consultation is completely free with no obligation</p>
     </div>
     

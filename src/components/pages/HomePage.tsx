@@ -8,12 +8,8 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { FAQSection } from '../shared/FAQSection';
-const VideoModal = React.lazy(() =>
-  import('../modals/VideoModal').then((m) => ({ default: m.VideoModal })),
-);
 const ProvidersModal = React.lazy(() =>
   import('../modals/ProvidersModal').then((m) => ({ default: m.ProvidersModal })),
 );
@@ -21,7 +17,7 @@ const FeaturedInsights = React.lazy(() =>
   import('../shared/FeaturedInsights').then((m) => ({ default: m.FeaturedInsights })),
 );
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { submitContactEnquiry } from '../../services/contactEnquiry';
 import saFlag from 'figma:asset/543ae964645db88228743731ee3eebbbc2e3686e.png';
 // WORKAROUND: consultationImage reused as retirementPlanningImage — same asset hash.
 // If a distinct retirement image is added in Figma, replace this alias.
@@ -29,7 +25,6 @@ import {
   ArrowRight,
   Shield,
   Target,
-  Gift,
   CheckCircle,
   Phone,
   Mail,
@@ -49,9 +44,6 @@ import {
 export function HomePage() {
   const [currentProviderIndex, setCurrentProviderIndex] = useState(0);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [videoModalOpen, setVideoModalOpen] = useState(false);
-  const [explainerVideoModalOpen, setExplainerVideoModalOpen] = useState(false);
-  const [cashbackModalOpen, setCashbackModalOpen] = useState(false);
   const [providersModalOpen, setProvidersModalOpen] = useState(false);
   const [ctaSubmitting, setCtaSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -140,7 +132,8 @@ export function HomePage() {
     e.preventDefault();
 
     // Validate required fields
-    if (!formData.firstName || !formData.lastName || !formData.email) {
+    // The endpoint requires a phone number, so the form does too.
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone.trim()) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -148,36 +141,21 @@ export function HomePage() {
     setCtaSubmitting(true);
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/contact-form/submit`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
-            email: formData.email.trim(),
-            phone: formData.phone.trim() || '',
-            service: formData.services,
-            message: '',
-            clientType: '',
-          }),
-        },
-      );
+      const result = await submitContactEnquiry({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        service: formData.services,
+      });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('Home CTA submission error:', result);
-        toast.error(result.error || 'Something went wrong. Please try again.');
+      if (!result.ok) {
+        toast.error(result.error);
         return;
       }
 
       toast.success('Thank you for your interest!', {
-        description: `Hi ${formData.firstName}, we've received your inquiry about ${formData.services}. Our team will contact you within 24 hours to discuss your financial goals.`,
+        description: `Hi ${formData.firstName}, we've received your inquiry about ${formData.services}. We will contact you within 24 hours on business days to discuss your financial goals.`,
         duration: 6000,
       });
 
@@ -375,7 +353,7 @@ export function HomePage() {
           </div>
         </section>
 
-        <ServicesPreviewSection onOpenCashback={() => setCashbackModalOpen(true)} />
+        <ServicesPreviewSection />
 
         <WhyNavigateSection />
 
@@ -424,8 +402,8 @@ export function HomePage() {
                     <br className="hidden sm:block" /> Your Financial Future
                   </h2>
                   <p className="text-gray-400 text-base max-w-lg leading-relaxed">
-                    Our independent advisers evaluate solutions from 30+ trusted partners to
-                    recommend what's truly best for your goals.
+                    We compare solutions from the providers we work with and recommend what suits
+                    your goals.
                   </p>
                 </div>
 
@@ -481,7 +459,7 @@ export function HomePage() {
                       <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
                         Office
                       </div>
-                      <div className="text-sm text-white font-medium">Irene, Centurion</div>
+                      <div className="text-sm text-white font-medium">Pretoria</div>
                     </div>
                   </div>
                 </div>
@@ -544,11 +522,12 @@ export function HomePage() {
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="phone" className="text-xs font-medium text-gray-700">
-                        Phone Number
+                        Phone Number *
                       </Label>
                       <Input
                         id="phone"
                         type="tel"
+                        required
                         value={formData.phone}
                         onChange={(e) => handleInputChange('phone', e.target.value)}
                         placeholder="+27 12 345 6789"
@@ -604,67 +583,14 @@ export function HomePage() {
                   </Button>
 
                   <p className="text-[11px] text-gray-400 text-center leading-relaxed pt-1">
-                    By submitting, you agree to be contacted by our team. Your data is secure and
-                    will never be shared with third parties.
+                    By submitting, you agree to be contacted by Navigate Wealth. We use your details
+                    only to respond to your enquiry, in line with POPIA and our Privacy Notice.
                   </p>
                 </form>
               </div>
             </div>
           </div>
         </section>
-
-        {/* Video Modals */}
-        <Suspense fallback={null}>
-          <VideoModal
-            isOpen={videoModalOpen}
-            onClose={() => setVideoModalOpen(false)}
-            title="Meet Our Team"
-            videoUrl="/videos/team-introduction.mp4"
-            description="Get to know the dedicated team behind Navigate Wealth"
-          />
-
-          <VideoModal
-            isOpen={explainerVideoModalOpen}
-            onClose={() => setExplainerVideoModalOpen(false)}
-            title="How Navigate Wealth Works"
-            videoUrl="/videos/explainer.mp4"
-            description="Learn how our comprehensive financial planning process works"
-          />
-        </Suspense>
-
-        {/* Cashback Modal */}
-        <Dialog open={cashbackModalOpen} onOpenChange={setCashbackModalOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogTitle>Monthly Cashback Rewards</DialogTitle>
-            <DialogDescription>
-              Earn cashback rewards on your financial products and policies
-            </DialogDescription>
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center space-x-2 p-4 bg-primary/5 rounded-lg">
-                <Gift className="h-6 w-6 text-primary" />
-                <div>
-                  <h4 className="font-medium text-gray-900">Earn While You Save</h4>
-                  <p className="text-sm text-gray-600">
-                    Get monthly cashback on all your policies and financial products.
-                  </p>
-                </div>
-              </div>
-              <p className="text-gray-600">
-                Our cashback program rewards you for making smart financial decisions. Earn monthly
-                returns on qualifying policies including life insurance, investments, and retirement
-                planning products.
-              </p>
-              <div className="flex gap-3 pt-2">
-                <Button className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-                  <Link to="/services">Learn More</Link>
-                </Button>
-                <Button variant="outline" onClick={() => setCashbackModalOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* Providers Modal */}
         <Suspense fallback={null}>

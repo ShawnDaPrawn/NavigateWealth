@@ -331,7 +331,7 @@ export function RetirementPlanningPage() {
           quoteLink: '/get-quote/retirement-planning/contact',
           heroStyle: 'unified',
           stats: [
-            { value: '13+', label: 'Trusted Providers' },
+            { value: String(partnerLogos.length), label: 'Product Providers' },
             { value: '5', label: 'Individual Products' },
             { value: '4', label: 'Business Solutions' },
           ],
@@ -435,7 +435,7 @@ export function RetirementPlanningPage() {
         approach: {
           serviceName: 'How We Plan Your Retirement',
           headerDescription:
-            'At Navigate Wealth, we follow a proven methodology to ensure your retirement strategy provides the income and security you need for a comfortable retirement.',
+            'At Navigate Wealth, we follow a structured methodology to ensure your retirement strategy provides the income and security you need for a comfortable retirement.',
           steps: [
             {
               step: '1',
