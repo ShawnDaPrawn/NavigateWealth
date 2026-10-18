@@ -524,20 +524,34 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
-- **Company facts live in one place; three copies sit outside the code.**
-  Address (First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21
-  Business Park, Pretoria, 0157), phone, `info@` as the only mailbox, office
-  hours 08:30–16:30, English and Afrikaans, in-person or online meetings, and
-  tax through Profin Accounting are in `src/config/companyFacts.ts`
-  (owner-confirmed, October 2026). Three copies are data, not code, and still
-  need an operator: the live Ask Vasco prompt (`ai:prompt:vasco-public:public:active`
-  in KV — the code seed was updated, the live prompt must be republished from
-  the admin AI prompt editor); published articles whose bodies say "our team of
-  experienced financial advisors" or carry the "Navigate Wealth Editorial Team"
-  byline; and the cached e-sign platform certificate, whose subject still reads
-  the old organisation and city until it is rotated (new signatures already
-  use Pretoria). The admin Publications → Settings "Press Page Stats" panel and
+- **Company facts live in one place; the copies outside the code were
+  reconciled on 2026-10-18.** Address (First Floor, Milestone Place Block A,
+  25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157), phone, `info@` as
+  the only mailbox, office hours 08:30–16:30, English and Afrikaans, in-person
+  or online meetings, and tax through Profin Accounting are in
+  `src/config/companyFacts.ts` (owner-confirmed, October 2026). Three copies are
+  data, not code:
+  - **Ask Vasco prompt: republished.** `ai:prompt:vasco-public:public:active`
+    and `:draft` now hold the code seed. The previous prompt, which was the
+    untouched old seed, is kept as a version, so the admin AI prompt editor
+    can roll back to it.
+  - **E-sign platform certificate: retired, replacement pending.** The
+    certificate from 2026-02-25 (serial `01c959c39a345859c3`) carried the old
+    organisation name and city. Its Vault and KV copies now have `expiresAt`
+    2026-10-18; the original date is kept in `originalExpiresAt`. The next
+    envelope completion generates a replacement with the Pretoria subject and
+    stores it in Vault. This generation path was checked locally under Deno
+    2.8.1 on 2026-10-18: a key in about 0.4 s, the right subject, and a sealed
+    PDF. Completions are rare (the last was in May 2026), so confirm the first
+    one logs "Platform signing certificate generated". To undo before then,
+    set `expiresAt` back to `originalExpiresAt` in both copies.
+  - **Articles: left as they are.** Some published articles say "our team of
+    experienced financial advisors" or carry the "Navigate Wealth Editorial
+    Team" byline. The owner decided not to change them.
+
+  The admin Publications → Settings "Press Page Stats" panel and
   `/publications/press/{config,stats}` are no longer read and can be removed.
+
 - **The Edge Function source is still mostly flat** (440+ files in one
   directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
   `social/` were the first prefixes moved into folders (2026-10-08), alongside
