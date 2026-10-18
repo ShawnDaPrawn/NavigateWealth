@@ -622,10 +622,11 @@ export const FormCanvas = ({
                     <br />
                     t/a Navigate Wealth
                     <br />
-                    Route 21 Corporate Park
+                    First Floor, Milestone Place Block A
                     <br />
-                    25 Sovereign Drive, Milestone Place A<br />
-                    Centurion, 0178
+                    25 Sovereign Drive, Route 21 Business Park
+                    <br />
+                    Pretoria, 0157
                     <br />
                     <br />
                     Tel: (012) 667 2505
@@ -860,8 +861,8 @@ export const FormCanvas = ({
                     Registration Number: 2024/071953/07.
                   </div>
                   <div className="lf-col">
-                    Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
-                    Tel: (012) 667 2505 | Email: info@navigatewealth.co
+                    First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business
+                    Park, Pretoria, 0157. Tel: (012) 667 2505 | Email: info@navigatewealth.co
                   </div>
                   <div className="lf-page">
                     Page {pageIndex + 1}/{pages.length}
@@ -877,8 +878,8 @@ export const FormCanvas = ({
                   <div className="footer-text">
                     Wealthfront (Pty) Ltd, trading as Navigate Wealth, is an Authorised Financial
                     Services Provider – FSP 54606. Registration Number: 2024/071953/07. Located at
-                    Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178.
-                    For inquiries, please contact us at Tel: (012) 667 2505.
+                    First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business
+                    Park, Pretoria, 0157. For inquiries, please contact us at Tel: (012) 667 2505.
                   </div>
                 </div>
               </footer>

@@ -187,10 +187,10 @@ export function mapPortfolioToReportData(
 
   // ── Adviser details from server (resolved from personnel profile) ──
   const adviser = summary.adviserDetails ?? {
-    name: 'Your Navigate Wealth Adviser',
-    email: 'support@navigatewealth.co.za',
-    phone: '+27 10 000 0000',
-    fspReference: 'FSP 00000',
+    name: 'Navigate Wealth',
+    email: 'info@navigatewealth.co',
+    phone: '+27 12 667 2505',
+    fspReference: 'FSP 54606',
   };
 
   // ── Product Holdings ──

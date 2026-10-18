@@ -76,7 +76,7 @@ export function SignaturePreviewPanel({
                         <div className="flex gap-2">
                           <span className="text-muted-foreground w-10 shrink-0">From:</span>
                           <span className="font-medium text-foreground truncate">
-                            {data.fullName} &lt;{data.email || 'email@navigatewealth.co.za'}&gt;
+                            {data.fullName} &lt;{data.email || 'email@navigatewealth.co'}&gt;
                           </span>
                         </div>
                         <div className="flex gap-2">

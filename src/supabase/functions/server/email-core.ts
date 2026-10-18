@@ -64,7 +64,7 @@ export interface EmailFooterSettings {
 export const DEFAULT_FOOTER_SETTINGS: EmailFooterSettings = {
   companyName: 'Navigate Wealth',
   address:
-    'First Floor, Milestone Place, Block A<br />25 Sovereign Dr, Route 21 Business Park<br />Irene, 0157',
+    'First Floor, Milestone Place Block A<br />25 Sovereign Drive, Route 21 Business Park<br />Pretoria, 0157',
   contactEmail: 'info@navigatewealth.co',
   contactPhone: '',
   socialLinks: {
@@ -133,7 +133,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     subtitle: 'Thank you for submitting your application',
     greeting: 'Dear {{ .Name }},',
     bodyHtml:
-      '<p>We have received your application and it is currently being reviewed by our team. We will get back to you shortly.</p>',
+      '<p>We have received your application and it is currently being reviewed. We will get back to you shortly.</p>',
     buttonLabel: 'View Application Status',
     buttonUrl: '{{ .ApplicationLink }}',
     footerNote: '',
@@ -303,11 +303,11 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     subtitle: 'We have received your message',
     greeting: 'Dear {{ .Name }},',
     bodyHtml:
-      '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and one of our team members will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
+      '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
     buttonLabel: 'Explore Our Services',
     buttonUrl: 'https://www.navigatewealth.co/services',
     footerNote:
-      'If you have any immediate questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.',
+      'If you have any immediate questions, contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">012 667 2505</a>.',
   },
   application_invite: {
     id: 'application_invite',

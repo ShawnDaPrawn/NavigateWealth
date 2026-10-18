@@ -32,10 +32,13 @@ export interface PartnerMarqueeProps {
   trustBadges?: { icon: React.ComponentType<{ className?: string }>; text: string }[];
 }
 
+// These describe Navigate Wealth, not the partners: not every partner is
+// FSCA-regulated (medical schemes answer to the Council for Medical Schemes,
+// estate partners are attorneys, the tax partner is an accounting firm).
 const DEFAULT_TRUST_BADGES = [
-  { icon: Shield, text: 'Financial Sector Conduct Authority regulated' },
-  { icon: Award, text: 'Industry-leading partner network' },
-  { icon: CheckCircle, text: 'Market-wide comparison on your behalf' },
+  { icon: Shield, text: 'Advice from an FSCA-authorised FSP (54606)' },
+  { icon: Award, text: 'Established South African providers' },
+  { icon: CheckCircle, text: 'Options compared on your behalf' },
 ];
 
 /** Threshold: if partners count is at or below this, display static centered layout */
@@ -62,7 +65,7 @@ export function PartnerMarquee({
           </div>
           <div className="flex items-center gap-2 text-sm text-white/60 shrink-0">
             <Shield className="h-4 w-4 text-primary" />
-            <span>All FSCA regulated</span>
+            <span>Independent comparison</span>
           </div>
         </div>
 

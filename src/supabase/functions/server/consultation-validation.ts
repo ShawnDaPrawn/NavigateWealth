@@ -25,8 +25,8 @@ export const ConsultationRequestSchema = z.object({
     .min(1, 'Phone number is required')
     .max(30)
     .refine((val) => /^[\d\s\-+()]{7,}$/.test(val), 'Phone number must contain at least 7 digits'),
-  meetingType: z.enum(['virtual', 'telephonic'], {
-    message: 'Meeting type must be "virtual" or "telephonic"',
+  meetingType: z.enum(['virtual', 'telephonic', 'in_person'], {
+    message: 'Meeting type must be "virtual", "telephonic" or "in_person"',
   }),
   preferredDate1: z.string().min(1, 'At least one preferred date is required'),
   preferredTime1: z.string().min(1, 'At least one preferred time is required'),

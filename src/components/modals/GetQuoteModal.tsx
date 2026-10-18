@@ -328,7 +328,7 @@ export function GetQuoteModal({
                 <Label htmlFor="no-preference" className="flex-1 cursor-pointer">
                   <div className="font-medium">No Preference</div>
                   <div className="text-sm text-gray-600">
-                    Let our advisers recommend the best option for you
+                    Let us recommend the option that suits you
                   </div>
                 </Label>
               </div>
@@ -366,8 +366,8 @@ export function GetQuoteModal({
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold text-black">Thank You!</h3>
               <p className="text-gray-600 leading-relaxed">
-                Thank you for requesting a quote for {productName}. One of our licensed advisers
-                will review your request and contact you shortly with options and pricing.
+                Thank you for requesting a quote for {productName}. We will review your request and
+                contact you shortly with options and pricing.
               </p>
             </div>
 
@@ -378,7 +378,7 @@ export function GetQuoteModal({
                   <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
                     1
                   </div>
-                  <span>Our team reviews your quote request within 24 hours</span>
+                  <span>We review your quote request within 24 hours on business days</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-medium text-purple-600">
@@ -430,7 +430,7 @@ export function GetQuoteModal({
           </Button>
           <DialogTitle className="text-left pr-8">Get a Quote - {productName}</DialogTitle>
           <DialogDescription className="text-left pr-8 text-gray-600">
-            Complete this quick form to get a personalized quote from our licensed advisers.
+            Complete this quick form to get a personalised quote from Navigate Wealth.
           </DialogDescription>
         </DialogHeader>
 

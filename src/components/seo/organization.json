@@ -13,12 +13,20 @@
   "priceRange": "$$",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "Milestone Place Block A, 25 Sovereign Dr Route 21 Business Park",
+    "streetAddress": "First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park",
     "addressLocality": "Pretoria",
     "addressRegion": "Gauteng",
-    "postalCode": "0178",
+    "postalCode": "0157",
     "addressCountry": "ZA"
   },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "08:30",
+      "closes": "16:30"
+    }
+  ],
   "areaServed": {
     "@type": "Country",
     "name": "South Africa"

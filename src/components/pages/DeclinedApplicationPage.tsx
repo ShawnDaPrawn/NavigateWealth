@@ -40,7 +40,7 @@ export function DeclinedApplicationPage() {
   const [reviewNotes, setReviewNotes] = useState<string>('');
 
   useEffect(() => {
-    setReviewNotes('Please contact our team for more information about your application.');
+    setReviewNotes('Please contact us for more information about your application.');
   }, [user]);
 
   const handleContactSupport = () => {
@@ -96,8 +96,8 @@ export function DeclinedApplicationPage() {
           <AlertTriangle className="h-5 w-5 text-red-600" />
           <AlertDescription className="text-red-900 text-sm">
             <strong className="block mb-1">Application Status: Declined</strong>
-            Your application has been reviewed by our team and we're unable to approve it at this
-            time. Please see the details below and contact us if you have any questions.
+            Your application has been reviewed and we're unable to approve it at this time. Please
+            see the details below and contact us if you have any questions.
           </AlertDescription>
         </Alert>
 
@@ -134,7 +134,7 @@ export function DeclinedApplicationPage() {
               {[
                 {
                   step: '1',
-                  title: 'Contact Our Team',
+                  title: 'Contact Us',
                   desc: 'Reach out to our support team to discuss your application and get clarification on the decision.',
                 },
                 {
@@ -145,7 +145,7 @@ export function DeclinedApplicationPage() {
                 {
                   step: '3',
                   title: 'Explore Alternatives',
-                  desc: 'Our team can discuss alternative options that may better suit your current situation.',
+                  desc: 'We can discuss alternative options that may better suit your current situation.',
                 },
               ].map((item) => (
                 <div key={item.step} className="flex items-start gap-3">
@@ -176,8 +176,8 @@ export function DeclinedApplicationPage() {
               <Alert className="border-purple-200 bg-white/80">
                 <Info className="h-4 w-4 text-purple-700" />
                 <AlertDescription className="text-gray-700 text-sm">
-                  Our team is available during business hours:
-                  <strong> Monday - Friday, 9:00 AM - 5:00 PM SAST</strong>
+                  We are available during office hours:
+                  <strong> Monday – Friday, 08:30 – 16:30 SAST</strong>
                 </AlertDescription>
               </Alert>
 

@@ -263,7 +263,7 @@ export function RequestCompletionPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              We have notified the team and will review your information shortly.
+              We have been notified and will review your information shortly.
             </p>
           </CardContent>
         </Card>
@@ -396,11 +396,13 @@ export function RequestCompletionPage() {
                 <ul className="list-disc list-inside space-y-1 text-gray-500">
                   <li>Please complete all required fields marked with an asterisk (*)</li>
                   <li>All information provided will be treated as confidential</li>
-                  <li>For assistance, please contact us at info@navigatewealth.co.za</li>
+                  <li>For assistance, please contact us at {COMPANY.email}</li>
                 </ul>
               </div>
               <div className="text-xs text-gray-400 pt-2 border-t border-gray-200">
-                <p>Navigate Wealth Financial Services (Pty) Ltd | Authorized FSP</p>
+                <p>
+                  {COMPANY.legalName} t/a {COMPANY.tradingName} | Authorised FSP {COMPANY.fspNumber}
+                </p>
                 <p className="mt-1">
                   This document is for information purposes only and does not constitute financial
                   advice.

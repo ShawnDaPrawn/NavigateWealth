@@ -38,7 +38,7 @@ import {
   FileText,
   Calculator,
   Briefcase,
-  Gift,
+  Compass,
   Stethoscope,
 } from 'lucide-react';
 
@@ -111,13 +111,13 @@ export const services = [
     link: '/employee-benefits',
   },
   {
-    title: 'Cashback',
+    title: 'Financial Planning',
     description:
-      'Earn monthly cashback rewards on all policies and get rewarded for smart financial planning decisions.',
-    icon: Gift,
+      'Holistic financial planning that aligns every part of your financial life with your personal goals.',
+    icon: Compass,
     image: southAfricanCurrencyImage,
     imageKey: 'financial-planning',
-    link: '/services',
+    link: '/financial-planning',
   },
   {
     title: 'Medical Aid',

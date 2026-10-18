@@ -315,7 +315,7 @@ export function AIAdvisorPage() {
     <Alert className="border-amber-200 bg-amber-50">
       <AlertCircle className="h-4 w-4 text-amber-600" />
       <AlertDescription className="text-sm text-amber-900">
-        <strong>Action Required:</strong> OpenAI API key needs to be updated.
+        The AI advisor is temporarily unavailable. Please try again later, or contact us directly.
       </AlertDescription>
     </Alert>
   ) : null;

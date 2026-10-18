@@ -145,14 +145,14 @@ const individualProducts: Record<string, CoverContent> = {
   compliance: {
     title: 'Tax Compliance & Returns',
     description:
-      'Professional tax return preparation and comprehensive SARS compliance management.',
+      'Tax return preparation and SARS compliance management, through our partner Profin Accounting.',
     benefitsDescription:
       'Tax compliance services ensure accurate and timely submission of all tax returns while maintaining full compliance with SARS regulations. Our comprehensive approach includes ongoing compliance monitoring, professional return preparation, and proactive communication with SARS when necessary.',
     features: [
       { title: 'Return Preparation', description: 'Professional annual return filing' },
       { title: 'Timely Submission', description: 'Never miss a SARS deadline' },
       { title: 'Compliance Monitoring', description: 'Ongoing regulatory compliance checks' },
-      { title: 'Audit Support', description: 'SARS audit representation and support' },
+      { title: 'Audit Support', description: 'SARS audit support through Profin Accounting' },
     ],
     benefits: [
       'Professional return preparation',
@@ -279,7 +279,7 @@ export function TaxPlanningPage() {
           quoteLink: '/get-quote/tax-planning/contact',
           heroStyle: 'unified',
           stats: [
-            { value: '1+', label: 'Trusted Partner' },
+            { value: 'Profin', label: 'Tax Partner' },
             { value: '5', label: 'Individual Services' },
             { value: '3', label: 'Business Solutions' },
           ],
@@ -360,7 +360,7 @@ export function TaxPlanningPage() {
           },
           {
             name: 'Tax Compliance & Returns',
-            description: 'Professional tax return preparation and SARS compliance.',
+            description: 'Tax return preparation and SARS compliance through Profin Accounting.',
           },
           {
             name: 'Corporate Tax Strategies',

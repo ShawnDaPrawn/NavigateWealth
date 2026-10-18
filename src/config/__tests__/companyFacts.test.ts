@@ -37,18 +37,26 @@ describe('company facts agree with the structured data', () => {
     expect(organization.legalName).toContain(COMPANY.legalName);
   });
 
+  it('carries the confirmed address, phone, email and office hours', () => {
+    expect(organization.address.postalCode).toBe(COMPANY.address.postalCode);
+    expect(organization.address.addressLocality).toBe(COMPANY.address.city);
+    expect(organization.telephone).toBe(COMPANY.phone.tel.replace('tel:', ''));
+    expect(organization.email).toBe(COMPANY.email);
+    expect(organization.openingHoursSpecification[0]).toMatchObject({
+      opens: COMPANY.officeHours.open,
+      closes: COMPANY.officeHours.close,
+    });
+    expect(organization.availableLanguage).toEqual([...COMPANY.languages]);
+  });
+
   it('leads the trust strip with the FSCA authorisation', () => {
     expect(TRUST_FACTS[0].value).toBe(`FSP ${COMPANY.fspNumber}`);
     expect(TRUST_FACTS.length).toBeGreaterThanOrEqual(3);
   });
 });
 
-/**
- * Client-portal page with placeholder adviser data, not part of the public
- * marketing site. Replacing it needs real adviser data wired in, which is
- * separate work; it is listed here so the exemption is visible, not silent.
- */
-const EXEMPT = new Set(['MyAdviserPage.tsx']);
+/** Pages excluded from the scan. Empty: the client portal is held to the same rule. */
+const EXEMPT = new Set<string>();
 
 /** Labels and phrasings of the figures that were removed. Case-sensitive on purpose. */
 const FORBIDDEN: readonly RegExp[] = [
@@ -68,6 +76,13 @@ const FORBIDDEN: readonly RegExp[] = [
   /Cape Town/,
   /\b\d[\d,]*\+ (clients|years)/i,
   /What Our Clients Say/,
+  // October 2026 consistency pass: one founder-led practice, no "+" counts,
+  // no cashback (not built), no placeholder adviser.
+  /\bour team\b/i,
+  /\bour (advisers|advisors|experts)\b/i,
+  /\b\d+\+ (Trusted|Leading|Fund|Partner|Product)/,
+  /Cashback/,
+  /Sarah Johnson/,
 ];
 
 const publicPageFiles = [

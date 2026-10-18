@@ -29,6 +29,23 @@ export const COMPANY = {
   fscaAuthorisedOn: '4 February 2025',
   headquarters: 'Pretoria, South Africa',
   office: 'Route 21 Business Park, Pretoria',
+  /** Confirmed by the owner, October 2026: Pretoria, postal code 0157. */
+  address: {
+    street: 'First Floor, Milestone Place Block A, 25 Sovereign Drive',
+    park: 'Route 21 Business Park',
+    city: 'Pretoria',
+    postalCode: '0157',
+    region: 'Gauteng',
+  },
+  addressOneLine:
+    'First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157',
+  phone: { display: '+27 12 667 2505', tel: 'tel:+27126672505' },
+  /** The only public mailbox. enquiries@, media@ and support@ are not in use. */
+  email: 'info@navigatewealth.co',
+  officeHours: { label: 'Mon – Fri, 08:30 – 16:30', open: '08:30', close: '16:30' },
+  languages: ['English', 'Afrikaans'],
+  /** Tax work is done in partnership with this firm, not in-house. */
+  taxPartner: 'Profin Accounting',
 } as const;
 
 export const FOUNDER = {

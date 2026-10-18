@@ -93,7 +93,7 @@ export const DEFAULT_DATA: SignatureData = {
   email: '',
   phone: '',
   mobile: '',
-  website: 'www.navigatewealth.co.za',
+  website: 'www.navigatewealth.co',
   address: '',
   linkedinUrl: 'https://www.linkedin.com/company/navigatewealth/',
   instagramUrl: 'https://www.instagram.com/navigate_wealth',

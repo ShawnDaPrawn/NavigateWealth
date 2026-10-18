@@ -183,7 +183,7 @@ export function EditorTabContent({
             <TextField
               label="Author Name"
               name="author_name"
-              value={formData.author_name || 'Navigate Wealth Editorial Team'}
+              value={formData.author_name || 'Navigate Wealth'}
               onChange={(value) => updateField('author_name', value)}
               placeholder="Author name"
             />

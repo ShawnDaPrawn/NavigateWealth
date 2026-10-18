@@ -165,8 +165,8 @@ export function ProvidersModal({ isOpen, onClose }: ProvidersModalProps) {
               Our Trusted Partners
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-600">
-              Navigate Wealth partners with South Africa's leading financial product providers to
-              ensure you have access to the best solutions in the market.
+              Navigate Wealth works with established South African product providers, so you can
+              compare real options side by side.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -200,11 +200,11 @@ export function ProvidersModal({ isOpen, onClose }: ProvidersModalProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900">
-                Independent. Unbiased. Best-in-Class.
+                Independent. Unbiased. Personal.
               </p>
               <p className="text-xs text-gray-500 leading-relaxed mt-0.5">
-                Our independence means we evaluate solutions from all partners to recommend what's
-                truly best for you.
+                Our independence means we evaluate solutions across our partners to recommend what
+                suits you.
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-2 flex-shrink-0">

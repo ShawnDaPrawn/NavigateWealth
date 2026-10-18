@@ -72,7 +72,7 @@ function fieldByPlaceholder(container: HTMLElement, placeholder: string): HTMLIn
 }
 
 const NAME_FIELD = 'e.g. John Smith';
-const EMAIL_FIELD = 'john@navigatewealth.co.za';
+const EMAIL_FIELD = 'name@navigatewealth.co';
 
 describe('the preview is gated on a name being entered', () => {
   it('renders no signature at all with the default (empty) name', () => {

@@ -102,7 +102,6 @@ const SERVICES: ServiceItem[] = [
     image: investmentConsultationImage,
     imageKey: 'investment-consultation',
     path: '/investment-management',
-    badge: 'Most Popular',
     quoteSlug: 'investment-management',
   },
   {
@@ -128,7 +127,12 @@ const SERVICES: ServiceItem[] = [
     title: 'Tax Planning',
     description:
       'Advanced strategies to minimise liabilities and ensure compliance, leveraging tax-efficient structures and allowances.',
-    highlights: ['Tax Optimisation', 'Section 12J', 'Tax-Free Savings', 'Estate Duty Planning'],
+    highlights: [
+      'Tax Optimisation',
+      'Tax-Free Savings',
+      'Estate Duty Planning',
+      'Profin partnership',
+    ],
     image: taxPlanningImage,
     imageKey: 'tax-planning',
     path: '/tax-planning',
@@ -177,14 +181,14 @@ const PROCESS_STEPS = [
     step: '02',
     title: 'Analysis',
     description:
-      'Our team conducts a comprehensive financial needs analysis and develops a customised strategy tailored to your needs.',
+      'We conduct a comprehensive financial needs analysis and develop a customised strategy tailored to your needs.',
     icon: Target,
   },
   {
     step: '03',
     title: 'Implementation',
     description:
-      'We source the best products from 12+ providers and implement your financial plan with complete transparency.',
+      'We compare products across the providers we work with and implement your financial plan with complete transparency.',
     icon: CheckCircle,
   },
   {
@@ -201,13 +205,13 @@ const WHY_US = [
     icon: Globe,
     title: 'Fiercely Independent',
     description:
-      'We are not tied to any single provider. Our independence means unbiased advice and access to the best products across 12+ top-tier partners.',
+      'We are not tied to any single provider. Our independence means unbiased advice and a choice of products across the providers we work with.',
   },
   {
     icon: Heart,
     title: 'Client-First Philosophy',
     description:
-      'Every recommendation is tailored to your unique goals, values, and timeline — never driven by commission or product quotas.',
+      'Every recommendation is tailored to your goals, values, and timeline, with all fees and commissions disclosed upfront.',
   },
   {
     icon: Zap,
@@ -219,7 +223,7 @@ const WHY_US = [
     icon: Shield,
     title: 'FSCA Regulated',
     description:
-      'Licensed under FSP 54606, we adhere to the highest standards of governance, compliance, and fiduciary responsibility.',
+      'Authorised by the FSCA under FSP 54606, we operate under the FAIS Act and its General Code of Conduct.',
   },
 ];
 
@@ -238,7 +242,7 @@ export function ServicesPage() {
     <div className="contents">
       <SEO
         title="Our Services | Navigate Wealth"
-        description="Comprehensive wealth management services from Navigate Wealth — risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits."
+        description="Comprehensive wealth management services from Navigate Wealth — financial planning, risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits."
         keywords={[
           'financial services',
           'wealth management',
@@ -300,8 +304,8 @@ export function ServicesPage() {
 
               <p className="text-gray-400 text-base lg:text-lg max-w-2xl mx-auto leading-relaxed">
                 From investment management to estate planning, we provide independent, unbiased
-                financial advice backed by 12+ trusted product partners — so you always get the best
-                solution for your goals.
+                financial advice, compared across the product providers we work with, to find the
+                right solution for your goals.
               </p>
 
               {/* CTA row */}
@@ -331,7 +335,7 @@ export function ServicesPage() {
                 {[
                   { icon: Shield, text: 'FSCA Regulated · FSP 54606' },
                   { icon: Globe, text: 'Fiercely Independent' },
-                  { icon: CheckCircle, text: '12+ Trusted Partners' },
+                  { icon: CheckCircle, text: 'Founder-led' },
                 ].map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-center gap-1.5 text-gray-500">
                     <Icon className="h-3.5 w-3.5 text-purple-400/70 flex-shrink-0" />
@@ -642,7 +646,7 @@ export function ServicesPage() {
                     <div className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
                       Office
                     </div>
-                    <div className="text-sm text-white font-medium">Irene, Centurion</div>
+                    <div className="text-sm text-white font-medium">Pretoria</div>
                   </div>
                 </div>
               </div>

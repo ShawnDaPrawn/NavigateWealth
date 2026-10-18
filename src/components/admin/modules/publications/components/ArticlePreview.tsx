@@ -315,7 +315,7 @@ export function ArticlePreview({ article, categories, types, onClose }: ArticleP
               <div className="flex items-center gap-5 text-sm text-white/70 flex-wrap">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  <span>{article.author_name || 'Navigate Wealth Editorial Team'}</span>
+                  <span>{article.author_name || 'Navigate Wealth'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />

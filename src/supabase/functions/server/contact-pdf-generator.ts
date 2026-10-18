@@ -322,7 +322,7 @@ export function generateContactPdf(data: ContactPdfData): string {
     stream += `0.42 0.45 0.50 rg\n`;
     stream += `/F1 7 Tf\n`;
     stream += `${margin} ${footerY - 14} Td\n`;
-    stream += `(First Floor, Milestone Place, Block A, 25 Sovereign Dr, Route 21 Business Park, Irene, 0157) Tj\n`;
+    stream += `(First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157) Tj\n`;
     stream += `ET\n`;
 
     // --- Assemble PDF objects ------------------------------------------------

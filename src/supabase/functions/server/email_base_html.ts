@@ -190,9 +190,9 @@ export const BASE_EMAIL_TEMPLATE = `<!DOCTYPE html>
           </p>
 
           <p style="margin:8px 0 0;">
-            First Floor, Milestone Place, Block A<br />
-            25 Sovereign Dr, Route 21 Business Park<br />
-            Irene, 0157
+            First Floor, Milestone Place Block A<br />
+            25 Sovereign Drive, Route 21 Business Park<br />
+            Pretoria, 0157
           </p>
 
           <p style="margin:8px 0 0;">

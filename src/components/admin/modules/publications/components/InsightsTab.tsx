@@ -309,7 +309,7 @@ export const InsightsTab = memo(function InsightsTab({
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                       <div className="flex items-center space-x-2 text-sm text-gray-500">
                         <User className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{article.author_name || 'Editorial Team'}</span>
+                        <span className="truncate">{article.author_name || 'Navigate Wealth'}</span>
                       </div>
                       {article.slug || article.id ? (
                         <Link to={`/resources/article/${article.slug || article.id}`}>

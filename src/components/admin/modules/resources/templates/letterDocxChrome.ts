@@ -116,7 +116,7 @@ export function buildLetterheadHeader(): Header {
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: 'Route 21 Corporate Park',
+                    text: 'First Floor, Milestone Place Block A',
                     size: 17,
                     font: 'Calibri',
                     color: '4B5563',
@@ -128,7 +128,7 @@ export function buildLetterheadHeader(): Header {
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: '25 Sovereign Drive, Milestone Place A',
+                    text: '25 Sovereign Drive, Route 21 Business Park',
                     size: 17,
                     font: 'Calibri',
                     color: '4B5563',
@@ -140,7 +140,7 @@ export function buildLetterheadHeader(): Header {
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: 'Centurion, 0178',
+                    text: 'Pretoria, 0157',
                     size: 17,
                     font: 'Calibri',
                     color: '4B5563',
@@ -229,7 +229,7 @@ export function buildLetterFooter(): Footer {
   const line2 = new Paragraph({
     children: [
       new TextRun({
-        text: 'Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. Tel: (012) 667 2505 | Email: info@navigatewealth.co',
+        text: 'First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157. Tel: (012) 667 2505 | Email: info@navigatewealth.co',
         size: 15,
         font: 'Calibri',
         color: TEXT_LIGHT,

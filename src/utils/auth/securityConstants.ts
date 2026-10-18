@@ -16,10 +16,11 @@ export const PASSWORD_REQUIREMENTS = {
 };
 
 export const CONTACT_INFO = {
-  SUPPORT_EMAIL: 'support@navigatewealth.co',
+  SUPPORT_EMAIL: 'info@navigatewealth.co',
   PHONE: '(+27) 12-667-2505',
   PHONE_HREF: 'tel:+27126672505',
-  ADDRESS: 'Milestone Place Block A, 25 Sovereign Dr, Route 21 Business Park, Pretoria',
+  ADDRESS:
+    'First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157',
 };
 
 export const SECURITY_COLORS = {

@@ -62,25 +62,25 @@ describe('PressPage', () => {
         <PressPage />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/in the News/i)).toBeDefined();
+    expect(screen.getByText(/Press Centre/i)).toBeDefined();
   });
 
-  it('renders Download Media Kit button', () => {
+  it('renders Request Media Kit button', () => {
     render(
       <MemoryRouter>
         <PressPage />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Download Media Kit/i)).toBeDefined();
+    expect(screen.getByText(/Request Media Kit/i)).toBeDefined();
   });
 
-  it('opens media modal when Download Media Kit is clicked', () => {
+  it('opens media modal when Request Media Kit is clicked', () => {
     render(
       <MemoryRouter>
         <PressPage />
       </MemoryRouter>,
     );
-    const btn = screen.getByText(/Download Media Kit/i);
+    const btn = screen.getByText(/Request Media Kit/i);
     fireEvent.click(btn);
     expect(screen.getByTestId('media-modal')).toBeDefined();
   });
@@ -93,7 +93,10 @@ describe('PressPage', () => {
     );
     expect(screen.getByText('All')).toBeDefined();
     expect(screen.getByText('Company News')).toBeDefined();
-    expect(screen.getByText('Awards')).toBeDefined();
+    expect(screen.getByText('Industry Insights')).toBeDefined();
+    // No "Awards" or "Team News" tab: an empty one reads as a claim.
+    expect(screen.queryByText('Awards')).toBeNull();
+    expect(screen.queryByText('Team News')).toBeNull();
   });
 
   it('renders Media Resources section', () => {

@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Shield, Mail, ArrowRight, AlertCircle } from 'lucide-react';
+import { Mail, ArrowRight, Newspaper } from 'lucide-react';
+import { COMPANY } from '@/config/companyFacts';
 
 interface MediaAccessModalProps {
   isOpen: boolean;
@@ -9,56 +10,42 @@ interface MediaAccessModalProps {
 }
 
 export function MediaAccessModal({ isOpen, onClose }: MediaAccessModalProps) {
-  const handleContactClick = () => {
-    // Close modal and redirect to contact page
-    onClose();
-    window.location.href = '/contact';
-  };
+  const mediaRequestHref = `mailto:${COMPANY.email}?subject=${encodeURIComponent('Media kit request')}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl bg-white">
         <DialogHeader className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-orange-100 flex items-center justify-center">
-            <Shield className="h-8 w-8 text-orange-600" />
+          <div className="w-16 h-16 mx-auto rounded-full bg-purple-100 flex items-center justify-center">
+            <Newspaper className="h-8 w-8 text-purple-600" />
           </div>
-          <DialogTitle className="text-2xl text-gray-900">Authorization Required</DialogTitle>
+          <DialogTitle className="text-2xl text-gray-900">Request Media Materials</DialogTitle>
           <DialogDescription className="text-lg text-gray-600 leading-relaxed">
-            Access to our media resources is restricted to authorized personnel only.
+            Our media materials are sent on request, so we know who is using them.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start space-x-3">
-            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-orange-800 font-medium mb-1">Media Kit Access Restricted</p>
-              <p className="text-orange-700 text-sm">
-                Our brand assets, executive photos, and company materials are available to
-                authorized media professionals, journalists, and business partners only.
-              </p>
-            </div>
-          </div>
-
           <Card className="border-gray-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg text-gray-900 flex items-center">
                 <Mail className="h-5 w-5 text-purple-600 mr-3" />
-                Request Media Access
+                How to Request
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Contact our media relations team to request access to our press resources.
+                Email us with your organisation and the materials you need: logo and brand
+                guidelines, founder photos, or the company fact sheet.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <p className="font-medium text-gray-900 mb-1">Email</p>
-                  <p className="text-purple-600">media@navigatewealth.co</p>
+                  <p className="text-purple-600">{COMPANY.email}</p>
                 </div>
                 <div>
                   <p className="font-medium text-gray-900 mb-1">Phone</p>
-                  <p className="text-gray-600">(+27) 012-667-2505</p>
+                  <p className="text-gray-600">{COMPANY.phone.display}</p>
                 </div>
               </div>
 
@@ -69,12 +56,11 @@ export function MediaAccessModal({ isOpen, onClose }: MediaAccessModalProps) {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={handleContactClick}
-                    className="bg-purple-600 hover:bg-purple-700 text-white flex-1"
-                  >
-                    Contact Media Team
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                  <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white flex-1">
+                    <a href={mediaRequestHref}>
+                      Email Your Request
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
                   </Button>
                   <Button
                     onClick={onClose}
@@ -89,9 +75,7 @@ export function MediaAccessModal({ isOpen, onClose }: MediaAccessModalProps) {
           </Card>
 
           <div className="text-center">
-            <p className="text-sm text-gray-500">
-              Response time: Within 24 hours during business days
-            </p>
+            <p className="text-sm text-gray-500">Response time: within 24 hours on business days</p>
           </div>
         </div>
       </DialogContent>

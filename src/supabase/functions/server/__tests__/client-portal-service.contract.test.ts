@@ -529,7 +529,7 @@ describe('client identity', () => {
 });
 
 describe('adviser resolution', () => {
-  const PLATFORM_NAME = 'Your Navigate Wealth Adviser';
+  const PLATFORM_NAME = 'Navigate Wealth';
 
   it('falls back to platform details when the profile has no application', async () => {
     seedProfile();

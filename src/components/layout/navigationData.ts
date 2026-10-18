@@ -173,7 +173,7 @@ export const companyPanel: MegaPanelConfig = {
   tagline: 'Get to know Navigate Wealth.',
   image: {
     key: 'company-menu',
-    alt: 'Navigate Wealth team collaborating in a meeting',
+    alt: 'Financial advice consultation in a meeting room',
   },
   panelClassName: 'w-[560px] md:w-[560px] max-w-[calc(100%-1rem)]',
   imageClassName: 'w-[240px]',

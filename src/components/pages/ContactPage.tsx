@@ -21,7 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ThankYouModal } from '../modals/ThankYouModal';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { submitContactEnquiry } from '../../services/contactEnquiry';
 import { toast } from 'sonner';
 
 export function ContactPage() {
@@ -47,6 +47,14 @@ export function ContactPage() {
 
   // Contact page structured data
   const contactPageStructuredData = createContactPageSchema();
+
+  // ?type=business|advisors preselects the audience (used by the Solutions pages).
+  useEffect(() => {
+    const type = new URLSearchParams(location.search).get('type');
+    if (type === 'business' || type === 'advisors' || type === 'individuals') {
+      setActiveClientType(type);
+    }
+  }, [location.search]);
 
   // Legacy invite links used ?subject=consultation — send them to the dedicated flow (UTMs preserved).
   useEffect(() => {
@@ -88,32 +96,19 @@ export function ContactPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/contact-form/submit`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
-            email: formData.email.trim(),
-            phone: formData.phone.trim(),
-            service: formData.service,
-            message: formData.message.trim(),
-            clientType: activeClientType,
-            website: formData.website, // honeypot
-          }),
-        },
-      );
+      const result = await submitContactEnquiry({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        service: formData.service,
+        message: formData.message.trim(),
+        clientType: activeClientType,
+        website: formData.website, // honeypot
+      });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('Contact form submission error:', result);
-        toast.error(result.error || 'Something went wrong. Please try again.');
+      if (!result.ok) {
+        toast.error(result.error);
         return;
       }
 
@@ -131,9 +126,6 @@ export function ContactPage() {
         message: '',
         website: '',
       });
-    } catch (error) {
-      console.error('Contact form network error:', error);
-      toast.error('Unable to submit your enquiry. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -178,13 +170,13 @@ export function ContactPage() {
       icon: UserCheck,
       phone: '+27 (0)12 667 2505',
       email: 'info@navigatewealth.co',
-      description: 'Partnership opportunities and support for financial advisors.',
+      description: 'Succession planning and practice transitions for financial advisers.',
       services: [
-        'Advisor Support Services',
-        'Practice Management',
-        'Technology Solutions',
-        'Training & Development',
-        'Compliance Support',
+        'Succession Planning',
+        'Practice Valuation',
+        'Practice Sales',
+        'Client Transitions',
+        'Legacy Planning',
       ],
     },
   };
@@ -229,7 +221,7 @@ export function ContactPage() {
                 </h1>
                 <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
                   Ready to take control of your financial future? Schedule a complimentary
-                  consultation with our wealth management experts.
+                  consultation, in person at our Pretoria office or online, in English or Afrikaans.
                 </p>
               </div>
 
@@ -241,7 +233,7 @@ export function ContactPage() {
                   </div>
                   <div className="text-left">
                     <p className="text-[11px] text-gray-500">Switchboard</p>
-                    <p className="text-sm text-white font-medium">012 667 2025</p>
+                    <p className="text-sm text-white font-medium">012 667 2505</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 bg-white/[0.06] border border-white/[0.08] rounded-xl px-4 py-3">
@@ -263,11 +255,11 @@ export function ContactPage() {
           <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <div className="text-center mb-12">
               <Badge className="bg-primary/10 text-primary border-primary/20 mb-6">
-                Choose Your Team
+                How Can We Help?
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Get In Touch</h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Select the option that best describes you to connect with the right team member.
+                Select the option that best describes you so we can prepare for your enquiry.
               </p>
             </div>
 
@@ -505,7 +497,7 @@ export function ContactPage() {
                               ) : (
                                 <div className="contents">
                                   <Calendar className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-200" />
-                                  Contact {type.label} Team
+                                  Send Enquiry
                                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
                                 </div>
                               )}

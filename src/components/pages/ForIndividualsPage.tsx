@@ -40,7 +40,7 @@ const services = [
       "Access South Africa's leading medical schemes and products with comprehensive gap cover protection.",
     icon: Heart,
     link: '/medical-aid',
-    features: ['Top medical schemes', 'Gap cover options', 'Specialist networks'],
+    features: ['Medical scheme comparison', 'Gap cover options', 'Specialist networks'],
     accent: 'from-rose-500 to-pink-600',
     accentLight: 'bg-rose-50 text-rose-600',
   },
@@ -348,12 +348,12 @@ export function ForIndividualsPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center space-y-6 sm:space-y-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight">
-              Independent Advice Backed by Scale
+              Independent Advice, Personally Delivered
             </h2>
             <p className="text-base sm:text-lg text-white/80 leading-relaxed">
-              Our clients benefit from Navigate Wealth's scale and experience. These numbers mean we
-              have negotiating power with providers, while you still receive the personalised
-              attention of a boutique, independent adviser.
+              Navigate Wealth is a founder-led, independent practice. We compare products across the
+              providers we work with, and you receive the personal attention of an adviser who knows
+              your situation.
             </p>
             <div className="pt-4">
               <Button

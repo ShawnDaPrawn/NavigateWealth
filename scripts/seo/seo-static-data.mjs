@@ -258,7 +258,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-07-01',
     title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
-      'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity from specialists.',
+      'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity through our estate planning partners.',
     keywords:
       'estate planning South Africa, wills, trusts, succession planning, estate duty, inheritance, business succession, Navigate Wealth',
     ogType: 'website',
@@ -272,7 +272,7 @@ export const publicSeoRoutes = [
     description:
       'Independent financial planning in South Africa. Strategies covering investments, retirement, tax, estate planning & debt management.',
     keywords:
-      'financial planning South Africa, comprehensive financial plan, wealth strategy, retirement planning, investment strategy, tax planning, estate planning, debt management, certified financial planner, Navigate Wealth',
+      'financial planning South Africa, comprehensive financial plan, wealth strategy, retirement planning, investment strategy, tax planning, estate planning, debt management, Navigate Wealth',
     ogType: 'website',
     schema: 'service',
     serviceType: 'Financial Planning',
@@ -306,7 +306,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Get a Free Quote | Navigate Wealth',
     description:
-      'Request a free, no-obligation quote for financial planning, insurance, investments, retirement or medical aid. We compare the market to find your best fit.',
+      'Request a free, no-obligation quote for insurance, investments, retirement or medical aid. We compare the providers we work with to find your fit.',
     keywords:
       'free financial quote, insurance quote South Africa, investment quote, retirement planning quote, medical aid quote, Navigate Wealth',
     ogType: 'website',
@@ -348,11 +348,11 @@ export const publicSeoRoutes = [
   {
     path: '/solutions/advisers',
     lastmod: '2026-03-01',
-    title: 'For Financial Advisers | Partner with Navigate Wealth',
+    title: 'For Advisers | Succession Planning | Navigate Wealth',
     description:
-      'Join Navigate Wealth as an independent financial adviser — access our technology platform, compliance support, product range and national network.',
+      'Succession planning for South African financial advisers: practice valuation, practice sales, client transitions and legacy planning, from Navigate Wealth.',
     keywords:
-      'financial adviser partnership, independent adviser network, financial services franchise, adviser support platform, Navigate Wealth partnership, South Africa',
+      'financial adviser succession planning, practice valuation, sell financial advisory practice, client transitions, legacy planning, Navigate Wealth, South Africa',
     ogType: 'website',
     schema: 'webpage',
   },
@@ -370,7 +370,7 @@ export const publicSeoRoutes = [
   {
     path: '/careers',
     lastmod: '2026-10-16',
-    title: 'Careers | Join Our Team | Navigate Wealth',
+    title: 'Careers | Navigate Wealth',
     description:
       'Explore careers at Navigate Wealth, an independent, founder-led financial advisory practice helping South Africans achieve financial independence.',
     keywords:
@@ -383,9 +383,9 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Press & Media | Navigate Wealth',
     description:
-      'Navigate Wealth press releases, media coverage and announcements. Access our media kit, brand assets and the latest news from our advisory firm.',
+      'Navigate Wealth press releases and company announcements. Request our media kit, with brand assets, founder photos and company information.',
     keywords:
-      'Navigate Wealth press, media coverage, financial advisor news, press releases, media kit, South Africa financial services news',
+      'Navigate Wealth press, press releases, company announcements, media kit, South Africa financial services news',
     ogType: 'website',
     schema: 'webpage',
   },

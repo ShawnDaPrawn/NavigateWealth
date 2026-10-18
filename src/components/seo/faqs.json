@@ -2,11 +2,11 @@
   "common": [
     {
       "question": "What services does Navigate Wealth offer?",
-      "answer": "Navigate Wealth offers comprehensive financial planning services including investment management, retirement planning, risk management, tax planning, estate planning, and employee benefits consulting."
+      "answer": "Navigate Wealth offers financial planning, investment management, retirement planning, risk management (life, disability and severe illness cover), medical aid advice, tax planning in partnership with Profin Accounting, estate planning, and employee benefits consulting."
     },
     {
       "question": "Is Navigate Wealth an independent financial advisor?",
-      "answer": "Yes. Navigate Wealth is a fully independent financial advisory firm. We are not tied to any single product provider, which means we can recommend the best solutions from across the market for your unique needs."
+      "answer": "Yes. Navigate Wealth is an independent, founder-led financial advisory practice (FSP 54606). We are not tied to any single product provider, which means we can compare solutions from the range of providers we work with and recommend what suits your needs."
     },
     {
       "question": "How do I get started with Navigate Wealth?",
@@ -14,11 +14,11 @@
     },
     {
       "question": "Does Navigate Wealth operate across South Africa?",
-      "answer": "Yes. While our offices are based in South Africa, we serve clients nationwide through both in-person and virtual consultations."
+      "answer": "Yes. Our office is in Pretoria, and we serve clients nationwide through in-person meetings at our office as well as virtual and telephonic consultations, in English or Afrikaans."
     },
     {
       "question": "What makes Navigate Wealth different from other financial advisors?",
-      "answer": "Our independence, personalised approach, and commitment to long-term relationships set us apart. We focus on understanding your unique circumstances and goals, leveraging a wide range of product providers to build a strategy that truly works for you."
+      "answer": "Our independence and personalised approach set us apart. As a founder-led practice, you deal directly with the person advising you. We focus on understanding your circumstances and goals, and compare a range of product providers to build a strategy that works for you."
     }
   ],
   "risk-management": [
@@ -44,7 +44,7 @@
     },
     {
       "question": "Which insurers does Navigate Wealth work with?",
-      "answer": "Navigate Wealth works with all major South African insurers including Discovery, Sanlam, Momentum, Liberty, Old Mutual, BrightRock, and Hollard. As an independent advisory firm, we are not tied to any single provider and search the full market to find the most appropriate cover at the best premium for your needs."
+      "answer": "Navigate Wealth compares cover from South African insurers including Discovery, Sanlam, Momentum, Liberty, Old Mutual, BrightRock, and Hollard. As an independent advisory practice, we are not tied to any single provider, so we can recommend the cover and premium that best suit your needs."
     }
   ],
   "medical-aid": [
@@ -66,7 +66,7 @@
     },
     {
       "question": "Which medical aid schemes does Navigate Wealth work with?",
-      "answer": "Navigate Wealth works with leading South African medical aid schemes including Discovery Health, Momentum Health, and others. As independent advisors, we compare options across the market to find the best plan for your healthcare needs and budget."
+      "answer": "Navigate Wealth works with South African medical schemes including Discovery Health and Momentum Health. As independent advisers, we compare the options available to find the plan that suits your healthcare needs and budget."
     }
   ],
   "investment-management": [
@@ -132,7 +132,7 @@
     },
     {
       "question": "Does Navigate Wealth provide tax advice?",
-      "answer": "Navigate Wealth provides tax-efficient financial planning and structuring advice. We work alongside your tax practitioner to ensure your investments, retirement savings, and estate plan are structured to minimise your overall tax burden while remaining fully compliant with SARS regulations."
+      "answer": "Navigate Wealth provides tax-efficient financial planning and structuring advice, and offers tax services in partnership with Profin Accounting. Together we make sure your investments, retirement savings, and estate plan are structured to minimise your overall tax burden while remaining compliant with SARS requirements."
     }
   ],
   "estate-planning": [
@@ -194,7 +194,7 @@
     },
     {
       "question": "What qualifications should a financial planner have?",
-      "answer": "In South Africa, look for a Certified Financial Planner (CFP®) designation, which requires rigorous education, examination, experience, and ongoing professional development. Advice at Navigate Wealth is given by representatives who meet the Financial Sector Conduct Authority's (FSCA) Fit and Proper requirements, and our authorisation (FSP 54606) can be confirmed on the FSCA's public register."
+      "answer": "Anyone giving financial advice in South Africa must be an authorised financial services provider, or act for one, and meet the FSCA's Fit and Proper requirements for honesty, qualifications, experience and continuous professional development. Designations such as Certified Financial Planner (CFP®) show additional study. Everyone who gives advice at Navigate Wealth meets the Fit and Proper requirements, and our authorisation (FSP 54606) can be confirmed on the FSCA's public register."
     },
     {
       "question": "How often should I review my financial plan?",

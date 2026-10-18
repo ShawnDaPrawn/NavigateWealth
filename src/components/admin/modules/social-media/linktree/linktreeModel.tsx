@@ -131,7 +131,7 @@ export const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
   },
   {
     title: 'Email Us',
-    url: 'mailto:info@navigatewealth.co.za',
+    url: 'mailto:info@navigatewealth.co',
     description: 'Get in touch via email',
     icon: <Mail className="h-4 w-4" />,
     category: 'contact',
@@ -145,8 +145,8 @@ export const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
   },
   {
     title: 'Office Location',
-    url: 'https://maps.google.com/?q=Route+21+Corporate+Park+Centurion',
-    description: 'Route 21 Corporate Park, Centurion',
+    url: 'https://maps.google.com/?q=Milestone+Place+25+Sovereign+Drive+Route+21+Business+Park+Pretoria',
+    description: 'Route 21 Business Park, Pretoria',
     icon: <MapPin className="h-4 w-4" />,
     category: 'contact',
   },
@@ -182,7 +182,7 @@ export const SOCIAL_PLATFORMS = [
     key: 'email',
     label: 'Email',
     icon: <Mail className="h-4 w-4" />,
-    placeholder: 'mailto:info@navigatewealth.co.za',
+    placeholder: 'mailto:info@navigatewealth.co',
   },
 ] as const;
 

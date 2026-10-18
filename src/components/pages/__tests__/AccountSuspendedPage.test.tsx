@@ -15,7 +15,7 @@ describe('AccountSuspendedPage', () => {
 
   it('renders support contact information', () => {
     render(<AccountSuspendedPage />);
-    expect(screen.getByText(/Call Our Team/i)).toBeDefined();
+    expect(screen.getByText(/Call Us/i)).toBeDefined();
   });
 
   it('renders with custom reason', () => {

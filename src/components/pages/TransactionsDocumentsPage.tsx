@@ -11,7 +11,6 @@ import {
   FileText,
   Download,
   ArrowUpRight,
-  ArrowDownLeft,
   CreditCard,
   Shield,
   Heart,
@@ -298,119 +297,15 @@ export function TransactionsDocumentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    {
-                      id: 'TXN-2024-001',
-                      type: 'Deposit',
-                      description: 'Monthly Investment Contribution',
-                      account: 'Investment Portfolio',
-                      amount: '+R 15,000.00',
-                      date: 'Jan 30, 2024',
-                      time: '09:30 AM',
-                      status: 'Completed',
-                      reference: 'AUTO-INV-001',
-                    },
-                    {
-                      id: 'TXN-2024-002',
-                      type: 'Purchase',
-                      description: 'Satrix Top 40 ETF Units',
-                      account: 'Investment Portfolio',
-                      amount: '-R 25,000.00',
-                      date: 'Jan 29, 2024',
-                      time: '10:15 AM',
-                      status: 'Completed',
-                      reference: 'TRADE-001',
-                    },
-                    {
-                      id: 'TXN-2024-003',
-                      type: 'Deposit',
-                      description: 'Auto-save Transfer',
-                      account: 'Cashback Account',
-                      amount: '+R 5,000.00',
-                      date: 'Jan 28, 2024',
-                      time: '12:00 PM',
-                      status: 'Completed',
-                      reference: 'AUTO-SAVE-001',
-                    },
-                    {
-                      id: 'TXN-2024-004',
-                      type: 'Fee',
-                      description: 'Monthly Management Fee',
-                      account: 'Investment Portfolio',
-                      amount: '-R 124.50',
-                      date: 'Jan 28, 2024',
-                      time: '11:00 AM',
-                      status: 'Completed',
-                      reference: 'FEE-001',
-                    },
-                    {
-                      id: 'TXN-2024-005',
-                      type: 'Dividend',
-                      description: 'Naspers Dividend Payment',
-                      account: 'Investment Portfolio',
-                      amount: '+R 1,234.00',
-                      date: 'Jan 25, 2024',
-                      time: '02:30 PM',
-                      status: 'Completed',
-                      reference: 'DIV-001',
-                    },
-                  ].map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                              transaction.type === 'Deposit'
-                                ? 'bg-green-100 text-green-700'
-                                : transaction.type === 'Purchase'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : transaction.type === 'Fee'
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-purple-100 text-purple-700'
-                            }`}
-                          >
-                            {transaction.type === 'Deposit' ? (
-                              <ArrowDownLeft className="h-4 w-4" />
-                            ) : transaction.type === 'Purchase' ? (
-                              <ArrowUpRight className="h-4 w-4" />
-                            ) : (
-                              <CreditCard className="h-4 w-4" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium text-black text-sm">
-                              {transaction.description}
-                            </div>
-                            <div className="text-xs text-gray-500">{transaction.account}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className={`font-medium text-sm ${
-                              transaction.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                            }`}
-                          >
-                            {transaction.amount}
-                          </div>
-                          <Badge className="bg-green-100 text-green-800 text-xs mt-1">
-                            {transaction.status}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="space-x-4">
-                          <span>ID: {transaction.id}</span>
-                          <span>Ref: {transaction.reference}</span>
-                        </div>
-                        <span>
-                          {transaction.date} at {transaction.time}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                  {/* Transaction history is not connected to provider data yet. This list
+                      used to show hard-coded example transactions to every client. */}
+                  <div className="text-center py-10 text-sm text-gray-500">
+                    <p className="font-medium text-gray-700 mb-1">No transactions to show yet</p>
+                    <p>
+                      Transaction history from your product providers will appear here. For a
+                      statement now, see the Documents tab or contact us.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
