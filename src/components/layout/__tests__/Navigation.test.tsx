@@ -77,7 +77,7 @@ describe('Navigation mega menus', () => {
     renderNavigation();
 
     openMenu(/^Company$/);
-    await screen.findByAltText('Navigate Wealth team collaborating in a meeting');
+    await screen.findByAltText('Financial advice consultation in a meeting room');
 
     for (const item of companyItems) {
       const link = getPanelLink(new RegExp(item.label.replace('?', '\\?')));
