@@ -249,9 +249,61 @@ Admin Dashboard: https://www.navigatewealth.co/admin
 }
 
 /**
+ * clientType the Careers form sends (src/components/modals/CVUploadModal.tsx).
+ * Applicants get their own acknowledgement: the generic one promises a
+ * "complimentary consultation" and points at the services page.
+ */
+export const JOB_APPLICATION_CLIENT_TYPE = 'job application';
+
+async function sendJobApplicationAcknowledgment(data: ContactFormData): Promise<boolean> {
+  const footerSettings = await getFooterSettings();
+  const fullName = `${data.firstName} ${data.lastName}`.trim();
+  const safeName = escapeHtml(fullName);
+
+  const bodyContent = `
+    <p>Thank you for your interest in working with Navigate Wealth. We have received your details.</p>
+    <p>If you have not already, please email your CV to <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> with your name in the subject line. We will be in touch if there is a suitable opportunity.</p>
+    <p>Kind regards,<br><strong>Navigate Wealth</strong></p>
+  `;
+
+  const html = createEmailTemplate(bodyContent, {
+    title: 'Thank You for Your Interest',
+    subtitle: 'We have received your details',
+    greeting: `Dear ${safeName},`,
+    buttonUrl: 'https://www.navigatewealth.co/careers',
+    buttonLabel: 'View Careers',
+    footerNote:
+      'Questions? Contact us at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">012 667 2505</a>.',
+    footerSettings,
+  });
+
+  const text = `
+Dear ${fullName},
+
+Thank you for your interest in working with Navigate Wealth. We have received your details.
+
+If you have not already, please email your CV to info@navigatewealth.co with your name in the subject line. We will be in touch if there is a suitable opportunity.
+
+Kind regards,
+Navigate Wealth
+  `.trim();
+
+  return await sendEmail({
+    to: data.email,
+    subject: 'We received your application — Navigate Wealth',
+    html,
+    text,
+  });
+}
+
+/**
  * Send acknowledgment email to the person who submitted the contact form.
  */
 export async function sendContactFormAcknowledgment(data: ContactFormData): Promise<boolean> {
+  if (data.clientType === JOB_APPLICATION_CLIENT_TYPE) {
+    return sendJobApplicationAcknowledgment(data);
+  }
+
   const template = await getEmailTemplate('contact_form_acknowledgment');
 
   if (!template.enabled) {
@@ -268,11 +320,11 @@ export async function sendContactFormAcknowledgment(data: ContactFormData): Prom
     ${resolve(template.bodyHtml)}
     <div style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 8px; margin: 24px 0;">
       <h3 style="margin-top: 0; font-size: 18px; color: #166534;">What Happens Next?</h3>
-      <p style="color: #15803d; margin: 8px 0;">&#10003; A member of our team will review your enquiry</p>
-      <p style="color: #15803d; margin: 8px 0;">&#10003; We will contact you within 24 business hours</p>
+      <p style="color: #15803d; margin: 8px 0;">&#10003; We will review your enquiry</p>
+      <p style="color: #15803d; margin: 8px 0;">&#10003; We will contact you within 24 hours on business days</p>
       <p style="color: #15803d; margin: 8px 0;">&#10003; There is no obligation — this is a complimentary consultation</p>
     </div>
-    <p>Best regards,<br><strong>The Navigate Wealth Team</strong></p>
+    <p>Best regards,<br><strong>Navigate Wealth</strong></p>
   `;
 
   const subject = resolve(template.subject);
@@ -290,17 +342,17 @@ export async function sendContactFormAcknowledgment(data: ContactFormData): Prom
   const text = `
 Dear ${fullName},
 
-Thank you for contacting Navigate Wealth. We have received your enquiry and one of our team members will be in touch with you shortly.
+Thank you for contacting Navigate Wealth. We have received your enquiry and will be in touch with you shortly.
 
 What Happens Next?
-- A member of our team will review your enquiry
-- We will contact you within 24 business hours
+- We will review your enquiry
+- We will contact you within 24 hours on business days
 - There is no obligation — this is a complimentary consultation
 
 If your matter is urgent, please call us directly at 012 667 2505 or email info@navigatewealth.co.
 
 Best regards,
-The Navigate Wealth Team
+Navigate Wealth
   `.trim();
 
   return await sendEmail({

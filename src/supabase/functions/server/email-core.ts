@@ -133,7 +133,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     subtitle: 'Thank you for submitting your application',
     greeting: 'Dear {{ .Name }},',
     bodyHtml:
-      '<p>We have received your application and it is currently being reviewed by our team. We will get back to you shortly.</p>',
+      '<p>We have received your application and it is currently being reviewed. We will get back to you shortly.</p>',
     buttonLabel: 'View Application Status',
     buttonUrl: '{{ .ApplicationLink }}',
     footerNote: '',
@@ -303,7 +303,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     subtitle: 'We have received your message',
     greeting: 'Dear {{ .Name }},',
     bodyHtml:
-      '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and one of our team members will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
+      '<p>Thank you for contacting Navigate Wealth. We have received your enquiry and will be in touch with you shortly.</p><p>If your matter is urgent, please do not hesitate to call us directly.</p>',
     buttonLabel: 'Explore Our Services',
     buttonUrl: 'https://www.navigatewealth.co/services',
     footerNote:
