@@ -209,6 +209,23 @@ function isExtensionNoise(v: NormalizedViolation): boolean {
   });
 }
 
+/**
+ * An `eval` that no script asked for.
+ *
+ * Every script we ship has a URL, so when our own code evaluates a string the
+ * browser names that file as the source. A blocked `eval` with NO source file
+ * came from code with no URL of its own: a function an automation tool pushed
+ * into the page over the DevTools protocol, or an extension's main-world
+ * injection. The first one confirmed (2026-10-19, after 'report-sample' was
+ * added) sampled `() => { utils.preloadCache() }` — a Puppeteer-style
+ * `page.evaluate` body that appears nowhere in this repository or its
+ * dependencies — from a client claiming a two-year-old Chrome. It had re-opened
+ * the same Issue Manager row nineteen times over eight days.
+ */
+function isUnattributedEval(v: NormalizedViolation): boolean {
+  return v.directive.startsWith('script-src') && v.blockedUrl === 'eval' && !v.sourceFile;
+}
+
 function isAcceptedBlockedImage(v: NormalizedViolation): boolean {
   if (!v.directive.startsWith('img-src')) return false;
   try {
@@ -254,7 +271,7 @@ app.post(
 
     const payload = await c.req.json().catch(() => null);
     const violations = normalize(payload).filter(
-      (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v),
+      (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v) && !isUnattributedEval(v),
     );
 
     if (violations.length === 0) {
