@@ -28,6 +28,7 @@
 import { supabaseUrl } from '../supabase/info';
 import { createClient } from '../supabase/client';
 import { setLoggerErrorSink } from '../logger';
+import { isAutomatedUserAgent } from '../../shared/quality/automatedUserAgent';
 
 const API_BASE = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
 const REPORT_ENDPOINT = `${API_BASE}/quality-issues/runtime-client`;
@@ -180,7 +181,15 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 export async function reportRuntimeClientIssue(issue: RuntimeClientIssueInput): Promise<void> {
-  if (typeof window === 'undefined' || !shouldSend(issue)) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  // Crawler renderers routinely refuse our cross-origin API calls; what they
+  // index comes from the prerendered HTML. See automatedUserAgent.ts.
+  if (isAutomatedUserAgent(window.navigator?.userAgent)) {
+    return;
+  }
+  if (!shouldSend(issue)) {
     return;
   }
 

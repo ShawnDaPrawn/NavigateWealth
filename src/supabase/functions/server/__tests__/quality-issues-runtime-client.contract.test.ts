@@ -198,6 +198,50 @@ describe('public (signed-out) ingest', () => {
     expect(res.status).toBe(204);
     expect(publicIssues()).toHaveLength(0);
   });
+
+  // The recurring "GET /publications/articles failed: Network request failed"
+  // finding was Googlebot and Bingbot rendering the site, not visitors.
+  const articlesFetchFailure = {
+    kind: 'api-failure',
+    message: 'Failed to fetch',
+    method: 'GET',
+    path: '/publications/articles',
+    href: 'https://www.navigatewealth.co/',
+  };
+
+  it('drops a crawler report identified by the agent it sent', async () => {
+    const res = await postPublic({
+      ...articlesFetchFailure,
+      userAgent:
+        'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/153.0.8010.36 Safari/537.36',
+    });
+    expect(res.status).toBe(204);
+    expect(publicIssues()).toHaveLength(0);
+  });
+
+  it('drops a crawler report identified by its request header', async () => {
+    const res = await app.request('/runtime-client/public', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': '203.0.113.20',
+        'User-Agent':
+          'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/136.0.0.0 Safari/537.36',
+      },
+      body: JSON.stringify(articlesFetchFailure),
+    });
+    expect(res.status).toBe(204);
+    expect(publicIssues()).toHaveLength(0);
+  });
+
+  it('still files the same failure from an ordinary browser', async () => {
+    await postPublic({
+      ...articlesFetchFailure,
+      userAgent:
+        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36',
+    });
+    expect(publicIssues()).toHaveLength(1);
+  });
 });
 
 describe('stripSensitiveUrl', () => {

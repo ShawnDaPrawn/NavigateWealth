@@ -299,6 +299,11 @@ jobs:
         # node-forge ships a fix (the gate prints a notice when the count drops
         # below the floor). Any third high/critical still fails the job.
         #
+        # The same acceptance is recorded in quality/accepted-advisories.json,
+        # which keeps it out of the Issue Manager snapshot (it used to reopen
+        # as a "regression" and mint a task on every push to main). That file
+        # does not affect this count.
+        #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,
         # which are not gated) — the count, not the exit code, is authoritative.
@@ -434,6 +439,11 @@ jobs:
         # findings once these two are gone. Put it back to 0 the moment
         # node-forge ships a fix (the gate prints a notice when the count drops
         # below the floor). Any third high/critical still fails the job.
+        #
+        # The same acceptance is recorded in quality/accepted-advisories.json,
+        # which keeps it out of the Issue Manager snapshot (it used to reopen
+        # as a "regression" and mint a task on every push to main). That file
+        # does not affect this count.
         #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,

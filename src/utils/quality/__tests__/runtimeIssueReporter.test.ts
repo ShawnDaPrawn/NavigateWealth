@@ -141,6 +141,25 @@ describe('reportRuntimeClientIssue', () => {
       reportRuntimeClientIssue({ kind: 'window-error', message: 'unique-fail-test' }),
     ).resolves.toBeUndefined();
   });
+
+  it('stays quiet inside a search-engine crawler', async () => {
+    // Googlebot's renderer refusing our API call was the Issue Manager's most
+    // repeated "Network request failed" finding.
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    const agent = vi
+      .spyOn(window.navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/153.0.8010.36 Safari/537.36',
+      );
+    await reportRuntimeClientIssue({
+      kind: 'api-failure',
+      message: 'Failed to fetch',
+      method: 'GET',
+      path: '/publications/articles',
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    agent.mockRestore();
+  });
 });
 
 // ── Handled errors ────────────────────────────────────────────────────────────

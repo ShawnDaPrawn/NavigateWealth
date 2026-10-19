@@ -1,3 +1,5 @@
+// FIRST, before anything that could build a Zod schema. See zodJitless.ts.
+import './utils/zodJitless';
 import { createRoot } from 'react-dom/client';
 import App from './app/App.tsx';
 import './index.css';
