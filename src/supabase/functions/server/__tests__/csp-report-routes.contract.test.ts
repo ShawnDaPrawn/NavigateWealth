@@ -356,6 +356,38 @@ describe('extension noise is discarded', () => {
   });
 });
 
+describe('crawler renderers are not visitors', () => {
+  const evalOnEstatePlanning = legacy({
+    'document-uri': 'https://www.navigatewealth.co/estate-planning',
+    'blocked-uri': 'eval',
+  });
+
+  function postAs(userAgent: string) {
+    return app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/csp-report', 'User-Agent': userAgent },
+      body: JSON.stringify(evalOnEstatePlanning),
+    });
+  }
+
+  it('drops a report sent by a search-engine crawler', async () => {
+    const res = await postAs(
+      'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/153.0.8010.36 Safari/537.36',
+    );
+    expect(res.status).toBe(204);
+    expect(stored()).toHaveLength(0);
+  });
+
+  it('records the same report from a browser, naming the browser', async () => {
+    const browser =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
+    await postAs(browser);
+
+    const [issue] = stored() as { message: string }[];
+    expect(issue.message).toContain(`Last reported by: ${browser}`);
+  });
+});
+
 describe('severity tracks the policy that fired', () => {
   it('marks a report-only violation as a warning', async () => {
     await post(legacy({ disposition: 'report' }));

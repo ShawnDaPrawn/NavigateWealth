@@ -274,12 +274,114 @@ function collectTestIssues() {
   ];
 }
 
+// ----------------------------------------------------------------------------
+// Accepted advisories (quality/accepted-advisories.json)
+// ----------------------------------------------------------------------------
+//
+// An advisory the owner accepted as unreachable used to be published on every
+// push to main anyway. Each publish moved its lastSeenAt past the Issue
+// Manager's resolvedAt, so closing it only reopened it as a "regression" and
+// minted a fresh remediation task — GHSA-86w9 (node-forge) did exactly that
+// from 2026-10-02 onwards. Accepted findings are now left out of the snapshot
+// and listed in the payload's `acceptedRisks` instead. The npm audit ratchet is
+// separate and still counts them.
+
+const ACCEPTED_ADVISORIES_PATH = 'quality/accepted-advisories.json';
+
+/** Accepted entries that are well-formed and not past their review date. */
+function loadAcceptedAdvisories(today = now.slice(0, 10)) {
+  const register = readJson(ACCEPTED_ADVISORIES_PATH);
+  return toArray(register?.advisories).flatMap((entry) => {
+    const id = toOptionalString(entry?.id)?.toUpperCase();
+    const reviewBy = toOptionalString(entry?.reviewBy);
+    const packages = toArray(entry?.packages).filter((name) => typeof name === 'string');
+    if (!id || !reviewBy || packages.length === 0) return [];
+    if (reviewBy < today) {
+      console.warn(
+        `Accepted advisory ${id} passed its review date (${reviewBy}); publishing it again. ` +
+          `Re-check reachability, then extend or remove it in ${ACCEPTED_ADVISORIES_PATH}.`,
+      );
+      return [];
+    }
+    return [{ ...entry, id, reviewBy, packages }];
+  });
+}
+
+function advisoryKey(advisory) {
+  return (
+    extractIdentifierFromUrl(advisory?.url) ||
+    toOptionalString(advisory?.source) ||
+    ''
+  ).toUpperCase();
+}
+
+/**
+ * Every advisory id behind a vulnerability, following `via` package names
+ * (`@signpdf/signer-p12` → `node-forge` → GHSA-…). Null when one cannot be
+ * identified, which means "not provably accepted".
+ */
+function advisoryIdsBehind(report, name, seen = new Set()) {
+  if (seen.has(name)) return [];
+  seen.add(name);
+  const vulnerability = report?.vulnerabilities?.[name];
+  if (!vulnerability) return null;
+
+  const ids = [];
+  for (const entry of toArray(vulnerability.via)) {
+    if (typeof entry === 'string') {
+      const nested = advisoryIdsBehind(report, entry, seen);
+      if (nested === null) return null;
+      ids.push(...nested);
+    } else if (entry && typeof entry === 'object') {
+      const id = advisoryKey(entry);
+      if (!id) return null;
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * The register entries covering this vulnerability, or null when any part of
+ * it is not covered. A published fix always wins: the acceptance lapses so the
+ * "security fix available" alert can fire.
+ */
+function findAcceptance(report, name, vulnerability, accepted) {
+  if (accepted.length === 0) return null;
+  if (normalizeFixAvailable(vulnerability.fixAvailable).fixAvailable) return null;
+  const ids = advisoryIdsBehind(report, name);
+  if (!ids || ids.length === 0) return null;
+  const entries = [...new Set(ids)].map((id) =>
+    accepted.find((entry) => entry.id === id && entry.packages.includes(name)),
+  );
+  return entries.every(Boolean) ? entries : null;
+}
+
+const acceptedRisks = [];
+
 function collectAuditIssues() {
   const report = readJson('quality-npm-audit-report.json');
   const vulnerabilities = report?.vulnerabilities;
   if (!vulnerabilities || typeof vulnerabilities !== 'object') return [];
+  const accepted = loadAcceptedAdvisories();
 
   return Object.entries(vulnerabilities).flatMap(([name, vulnerability]) => {
+    const acceptance = findAcceptance(report, name, vulnerability, accepted);
+    if (acceptance) {
+      for (const entry of acceptance) {
+        acceptedRisks.push({
+          packageName: name,
+          severity: vulnerability.severity,
+          advisoryId: entry.id,
+          acceptedBy: entry.acceptedBy,
+          acceptedOn: entry.acceptedOn,
+          reviewBy: entry.reviewBy,
+          reference: entry.reference,
+        });
+      }
+      return [];
+    }
+
     const packageVersion = getPackageVersion(report, name);
     const fix = normalizeFixAvailable(vulnerability.fixAvailable);
     const advisoryEntries = toArray(vulnerability.via).filter(
@@ -360,9 +462,19 @@ const payload = {
   branch: process.env.GITHUB_REF_NAME,
   commitSha: process.env.GITHUB_SHA,
   issues,
+  // Not stored by the ingest route; kept so the CI artifact and log show what
+  // was deliberately left out, and why.
+  acceptedRisks,
 };
 
 writeFileSync('quality-issues-payload.json', JSON.stringify(payload, null, 2));
+
+for (const risk of acceptedRisks) {
+  console.log(
+    `Accepted risk, not published: ${risk.packageName} ${risk.advisoryId} (${risk.severity}) — ` +
+      `accepted ${risk.acceptedOn || '?'} by ${risk.acceptedBy || '?'}, review by ${risk.reviewBy}.`,
+  );
+}
 
 if (!token) {
   if (isCi) {

@@ -29,7 +29,14 @@
  * tick with "Signature is valid" out of the box.
  */
 
-import forge from 'npm:node-forge@1.3.1';
+// 1.4.0, not 1.3.1: 1.3.1 carried seven advisories that 1.4.0 fixes, among
+// them two DoS bugs (unbounded ASN.1 recursion, an infinite loop in
+// BigInteger.modInverse) on exactly the paths used here — RSA key generation
+// and parsing the PKCS#12 handed to P12Signer. The one advisory left on 1.4.0,
+// GHSA-86w9-cpqp-85rv, is in RSA signature VERIFICATION, which this module
+// never performs (it only creates signatures); see the npm-audit floor note in
+// .github/workflows/quality-check.yml and quality/accepted-advisories.json.
+import forge from 'npm:node-forge@1.4.0';
 import { SignPdf } from 'npm:@signpdf/signpdf';
 import { P12Signer } from 'npm:@signpdf/signer-p12';
 import { pdflibAddPlaceholder } from 'npm:@signpdf/placeholder-pdf-lib';

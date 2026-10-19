@@ -50,6 +50,7 @@ import {
 } from '../../../shared/quality/qualityIssues.ts';
 import { CSP_VIOLATION_KEY_PREFIX, MAX_CSP_VIOLATION_ISSUES } from './quality-issues-normalize.ts';
 import { CSP_REPORT_IP_LIMIT_PER_HOUR, checkIpOnlyRateLimit } from './public-form-rate-limit.ts';
+import { isAutomatedUserAgent } from '../../../shared/quality/automatedUserAgent.ts';
 
 const app = new Hono();
 const log = createModuleLogger('csp-report');
@@ -242,6 +243,15 @@ app.post(
       return c.body(null, 204);
     }
 
+    // A crawler's renderer (Googlebot, Bingbot, …) is not a visitor, and what
+    // it reports is not evidence about what our visitors' browsers do: a
+    // violation our own code causes shows up from real browsers too, with a
+    // source file to act on. Same rule, same helper, as the runtime ingest.
+    const userAgent = c.req.header('user-agent') ?? '';
+    if (isAutomatedUserAgent(userAgent)) {
+      return c.body(null, 204);
+    }
+
     const payload = await c.req.json().catch(() => null);
     const violations = normalize(payload).filter(
       (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v),
@@ -250,6 +260,10 @@ app.post(
     if (violations.length === 0) {
       return c.body(null, 204);
     }
+
+    // Kept on the row so a report with no source file can still be traced to a
+    // browser family. Origin-free and capped; a user agent carries no token.
+    const browser = text(userAgent, 200);
 
     const now = new Date().toISOString();
 
@@ -295,6 +309,7 @@ app.post(
           v.sourceFile ? `Source: ${v.sourceFile}` : '',
           v.sample ? `Sample: ${v.sample}` : '',
           `Disposition: ${enforced ? 'enforce' : v.disposition}`,
+          browser ? `Last reported by: ${browser}` : '',
         ]
           .filter(Boolean)
           .join('\n'),

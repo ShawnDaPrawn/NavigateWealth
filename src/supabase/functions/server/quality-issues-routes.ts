@@ -14,6 +14,7 @@ import {
   checkIpOnlyRateLimit,
 } from './public-form-rate-limit.ts';
 import { buildRuntimeClientIssue, trimRuntimeIssues } from './quality-issues-runtime-client.ts';
+import { isAutomatedUserAgent } from '../../../shared/quality/automatedUserAgent.ts';
 
 import {
   ISSUE_WORKFLOW_KEY,
@@ -244,6 +245,18 @@ app.post(
 
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object' || typeof body.message !== 'string') {
+      return c.body(null, 204);
+    }
+
+    // Crawler renderers (Googlebot, Bingbot, …) refuse or cut off our API
+    // calls as a matter of course; filing those reopened the same "Network
+    // request failed" issue over and over. The browser reporter now stays quiet
+    // for them too — this catches bundles cached before that shipped. Either
+    // the header or the reported agent is enough. See automatedUserAgent.ts.
+    if (
+      isAutomatedUserAgent(c.req.header('user-agent')) ||
+      isAutomatedUserAgent(typeof body.userAgent === 'string' ? body.userAgent : undefined)
+    ) {
       return c.body(null, 204);
     }
 

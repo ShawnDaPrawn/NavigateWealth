@@ -1,0 +1,27 @@
+{
+  "$comment": [
+    "Dependency advisories the owner has accepted as not reachable in production.",
+    "scripts/ops/publish-quality-report.mjs leaves a finding listed here out of the",
+    "Issue Manager snapshot, so it stops reopening as a regression and re-creating a",
+    "remediation task on every push to main. It does NOT touch the npm audit ratchet:",
+    "quality/baselines/npm-audit-baseline still counts these, and the justification",
+    "for that floor stays in .github/workflows/quality-check.yml.",
+    "",
+    "An acceptance lapses on its own, and the finding is published again, when:",
+    "  - npm audit reports a fix for the package (fixAvailable), or",
+    "  - reviewBy has passed (re-check reachability, then extend or remove), or",
+    "  - the package is not one of the entry's `packages`.",
+    "Every entry needs who accepted it, when, why, and where that was recorded."
+  ],
+  "advisories": [
+    {
+      "id": "GHSA-86w9-cpqp-85rv",
+      "packages": ["node-forge", "@signpdf/signer-p12"],
+      "acceptedBy": "Repository owner",
+      "acceptedOn": "2026-10-02",
+      "reviewBy": "2027-01-04",
+      "reference": "PR #402; docs/STATUS.md (GHSA-86w9 row)",
+      "reason": "The flaw is in node-forge RSA PKCS#1 v1.5 signature VERIFICATION and no fixed release exists (latest is 1.4.0). The only user, src/supabase/functions/server/esign-pdf-protect.ts, creates signatures (key and self-signed certificate generation, PKCS#12 packaging, P12Signer's pkcs7 sign) and never verifies one, so the vulnerable path cannot be reached. @signpdf/signer-p12 is flagged only because it depends on node-forge."
+    }
+  ]
+}
