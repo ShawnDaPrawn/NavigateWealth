@@ -360,6 +360,7 @@ describe('crawler renderers are not visitors', () => {
   const evalOnEstatePlanning = legacy({
     'document-uri': 'https://www.navigatewealth.co/estate-planning',
     'blocked-uri': 'eval',
+    'source-file': 'https://www.navigatewealth.co/assets/vendor-forms-DjFrCnjF.js',
   });
 
   function postAs(userAgent: string) {
@@ -385,6 +386,70 @@ describe('crawler renderers are not visitors', () => {
 
     const [issue] = stored() as { message: string }[];
     expect(issue.message).toContain(`Last reported by: ${browser}`);
+  });
+});
+
+describe('code an automation tool injected is not ours', () => {
+  it('drops a source-less eval whose sample is a serialized function', async () => {
+    // Captured 2026-10-19 once 'report-sample' was on: a Puppeteer-style
+    // page.evaluate body, from a client claiming Chrome 118. Nothing in this
+    // repository or its dependencies calls utils.preloadCache().
+    await post(
+      legacy({
+        'document-uri': 'https://www.navigatewealth.co/resources',
+        'blocked-uri': 'eval',
+        'script-sample': '() => {\n  utils.preloadCache()\n}',
+      }),
+    );
+
+    expect(stored()).toHaveLength(0);
+  });
+
+  it('still records an eval made by one of our scripts', async () => {
+    await post(
+      legacy({
+        'document-uri': 'https://www.navigatewealth.co/admin',
+        'blocked-uri': 'eval',
+        'source-file': 'https://www.navigatewealth.co/assets/vendor-forms-DjFrCnjF.js',
+      }),
+    );
+
+    const [issue] = stored() as { message: string }[];
+    expect(issue.message).toContain('Source: https://www.navigatewealth.co/assets/vendor-forms');
+  });
+
+  it('still records an inline-script violation, which never has a source file', async () => {
+    await post(legacy({ 'blocked-uri': 'inline' }));
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  // A missing source file alone is not proof of automation: some browsers omit
+  // it for genuine evals, and those reports decide whether script-src can be
+  // enforced. Only the serialized-function sample marks injected code.
+  it('still records a source-less eval that carries no sample', async () => {
+    await post(
+      legacy({
+        'document-uri': 'https://www.navigatewealth.co/estate-planning',
+        'blocked-uri': 'eval',
+      }),
+    );
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  it('still records a source-less eval whose sample is ordinary code', async () => {
+    await post(legacy({ 'blocked-uri': 'eval', 'script-sample': 'var total = a + b;' }));
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  it('still records a source-less Function-constructor eval (how first-party JIT shows up)', async () => {
+    await post(
+      legacy({ 'blocked-uri': 'eval', 'script-sample': '(function anonymous(payload,ctx\n) {' }),
+    );
+
+    expect(stored()).toHaveLength(1);
   });
 });
 

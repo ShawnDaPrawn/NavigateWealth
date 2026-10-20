@@ -170,10 +170,26 @@ function getPackageVersion(report, packageName) {
   return toOptionalString(report?.dependencies?.[packageName]?.version);
 }
 
+/**
+ * Lines that state WHY a Vitest run failed, in preference to the first line
+ * that merely mentions an error. On 2026-10-19 the generic match landed on the
+ * AbortError a passing test deliberately provokes in a child process
+ * (postDeploySmoke.test.ts), so the Issue Manager blamed post-deploy-smoke.mjs
+ * for a failure it had nothing to do with.
+ */
+const DECISIVE_FAILURE_LINE =
+  /^\s*FAIL\s|Unhandled (Errors?|Rejection)|ERROR: Coverage|does not meet .*threshold|Test Files .*failed/i;
+
 function excerptLog(log) {
   const lines = log.split(/\r?\n/).filter(Boolean);
+  const decisiveIndex = lines.findIndex((line) => DECISIVE_FAILURE_LINE.test(line));
   const errorIndex = lines.findIndex((line) => /error|failed|✗/i.test(line));
-  const start = errorIndex >= 0 ? Math.max(0, errorIndex - 2) : Math.max(0, lines.length - 8);
+  const start =
+    decisiveIndex >= 0
+      ? decisiveIndex
+      : errorIndex >= 0
+        ? Math.max(0, errorIndex - 2)
+        : Math.max(0, lines.length - 8);
   return lines
     .slice(start, start + 10)
     .join('\n')
@@ -255,6 +271,34 @@ function collectTestIssues() {
         }),
       );
     }
+  }
+
+  // A test FILE can fail with no failing test in it: an import that does not
+  // resolve, a throw in a describe body or a hook. Vitest marks the file failed
+  // and lists no assertions, which used to fall through to the generic "Test
+  // run failed" below with an excerpt that named the wrong thing. Name the file.
+  for (const testResult of report?.testResults || []) {
+    if (testResult.status !== 'failed') continue;
+    const hasFailedAssertion = (testResult.assertionResults || []).some(
+      (assertion) => assertion.status === 'failed',
+    );
+    if (hasFailedAssertion) continue;
+    const file = String(testResult.name || '').replace(/^.*?\/(src|scripts|e2e)\//, '$1/');
+    issues.push(
+      createIssue({
+        id: issueId(['test', 'suite', file || 'unknown']),
+        source: 'test',
+        severity: 'error',
+        component: 'test-suite',
+        environment: process.env.GITHUB_REF_NAME || 'local',
+        title: `Test file failed to run: ${file || 'unknown file'}`,
+        message:
+          String(testResult.message || '').slice(0, 1600) ||
+          'Vitest marked this file failed without a failing test.',
+        filePath: file || testResult.name,
+        ruleId: 'vitest',
+      }),
+    );
   }
 
   if (issues.length > 0) return issues;
