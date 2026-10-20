@@ -210,20 +210,36 @@ function isExtensionNoise(v: NormalizedViolation): boolean {
 }
 
 /**
- * An `eval` that no script asked for.
+ * Code an automation tool injected and then evaluated.
  *
- * Every script we ship has a URL, so when our own code evaluates a string the
- * browser names that file as the source. A blocked `eval` with NO source file
- * came from code with no URL of its own: a function an automation tool pushed
- * into the page over the DevTools protocol, or an extension's main-world
- * injection. The first one confirmed (2026-10-19, after 'report-sample' was
- * added) sampled `() => { utils.preloadCache() }` — a Puppeteer-style
- * `page.evaluate` body that appears nowhere in this repository or its
- * dependencies — from a client claiming a two-year-old Chrome. It had re-opened
- * the same Issue Manager row nineteen times over eight days.
+ * Tools that drive a browser over the DevTools protocol (Puppeteer, Playwright
+ * and the scrapers built on them) run their own functions in the page by
+ * SERIALIZING them and evaluating the text. The browser then reports a blocked
+ * `eval` with no source file — the code has no URL — and, with
+ * `'report-sample'` on, a sample that is literally a function's source. The
+ * first one captured (2026-10-19) sampled `() => { utils.preloadCache() }`,
+ * which appears nowhere in this repository or its dependencies, from a client
+ * claiming a two-year-old Chrome. It had re-opened the same Issue Manager row
+ * nineteen times in eight days.
+ *
+ * Both signals are required. A missing source file alone is NOT enough: some
+ * browsers omit it for genuine evals, and those reports are the evidence that
+ * decides whether `script-src` can be enforced. A sample alone is not enough
+ * either. `new Function(...)` samples as `function anonymous(`, which is how
+ * first-party code (Zod's JIT, before zodJitless.ts) shows up, so that shape is
+ * excluded explicitly.
  */
-function isUnattributedEval(v: NormalizedViolation): boolean {
-  return v.directive.startsWith('script-src') && v.blockedUrl === 'eval' && !v.sourceFile;
+const SERIALIZED_FUNCTION_SAMPLE =
+  /^\s*(?:async\s*)?(?:\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>|function\s*\*?\s*[A-Za-z_$]?[\w$]*\s*\()/;
+
+function isInjectedFunctionEval(v: NormalizedViolation): boolean {
+  return (
+    v.directive.startsWith('script-src') &&
+    v.blockedUrl === 'eval' &&
+    !v.sourceFile &&
+    SERIALIZED_FUNCTION_SAMPLE.test(v.sample) &&
+    !/^\s*\(?\s*function anonymous\b/.test(v.sample)
+  );
 }
 
 function isAcceptedBlockedImage(v: NormalizedViolation): boolean {
@@ -271,7 +287,7 @@ app.post(
 
     const payload = await c.req.json().catch(() => null);
     const violations = normalize(payload).filter(
-      (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v) && !isUnattributedEval(v),
+      (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v) && !isInjectedFunctionEval(v),
     );
 
     if (violations.length === 0) {
