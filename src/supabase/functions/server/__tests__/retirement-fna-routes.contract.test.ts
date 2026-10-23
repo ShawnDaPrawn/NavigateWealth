@@ -203,6 +203,9 @@ describe('after publish', () => {
     const res = await req(`/${fna.id}/unpublish`, { method: 'PUT' });
     expect(res.status).toBe(200);
     expect(record(fna.id)?.status).toBe('draft');
+    expect(record(fna.id)?.publishedAt).toBeUndefined();
+    expect(record(fna.id)?.publishedBy).toBeUndefined();
+    expect(list(CLIENT_A)).toContain(fna.id);
     expect(latest(CLIENT_A)).toBeUndefined();
     const after = await req(`/client/${CLIENT_A}/latest-published`);
     expect(await json(after)).toEqual({ success: true, data: null });
@@ -218,6 +221,60 @@ describe('after publish', () => {
     const second = await published();
     await req(`/${first.id}/unpublish`, { method: 'PUT' });
     expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(second.id);
+  });
+
+  it('draft clears a leftover publication stamp on a record that is already a draft', async () => {
+    // A draft save used to change only `status`, so a draft could keep
+    // `publishedAt` and the list still said "Published". Saving it again has
+    // to clear that stamp, drop a `:latest` pointer at it, and leave it listed.
+    const fna = await create();
+    kvStore.set(`retirement_fna:${fna.id}`, {
+      ...record(String(fna.id)),
+      status: 'draft',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+      publishedBy: 'admin-1',
+    });
+    kvStore.set(`retirement_fna:${CLIENT_A}:latest`, {
+      id: fna.id,
+      clientId: CLIENT_A,
+      status: 'draft',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+    });
+
+    expect((await req(`/${fna.id}/draft`, { method: 'PUT' })).status).toBe(200);
+    expect(record(String(fna.id))?.status).toBe('draft');
+    expect(record(String(fna.id))?.publishedAt).toBeUndefined();
+    expect(record(String(fna.id))?.publishedBy).toBeUndefined();
+    expect(latest(CLIENT_A)).toBeUndefined();
+    expect(list(CLIENT_A)).toContain(fna.id);
+  });
+
+  it('unpublish of the current FNA keeps an older published FNA as :latest', async () => {
+    // Batch status (client portal and the adviser overview) reads only this
+    // pointer. Deleting it when a newer plan is withdrawn hid the older plan
+    // that was still published, and offered the client a fresh discovery.
+    const older = await published();
+    const newer = await published();
+    expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(newer.id);
+
+    const res = await req(`/${newer.id}/unpublish`, { method: 'PUT' });
+    expect(res.status).toBe(200);
+    expect(record(newer.id)?.status).toBe('draft');
+    expect((latest(CLIENT_A) as unknown as { id: string; status: string }).id).toBe(older.id);
+    expect((latest(CLIENT_A) as unknown as { status: string }).status).toBe('published');
+
+    const after = await req(`/client/${CLIENT_A}/latest-published`);
+    expect(((await json(after)) as unknown as { data: { id: string } }).data.id).toBe(older.id);
+  });
+
+  it('delete of the current FNA keeps an older published FNA as :latest', async () => {
+    const older = await published();
+    const newer = await published();
+    const res = await req(`/${newer.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(200);
+    expect(record(newer.id)).toBeUndefined();
+    expect(list(CLIENT_A)).toEqual([older.id]);
+    expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(older.id);
   });
 
   it('draft returns a published FNA to a draft, publication stamp included', async () => {

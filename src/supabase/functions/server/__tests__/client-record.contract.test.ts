@@ -40,6 +40,8 @@ type AuthUser = {
 const auth = vi.hoisted(() => ({
   users: new Map<string, unknown>(),
   outage: false,
+  /** When set, getUserById returns no user and this error (null means no error). */
+  lookupError: undefined as { status?: number; message: string } | null | undefined,
 }));
 vi.mock('../client-management-utils.ts', () => ({
   createServiceClient: () => ({
@@ -48,6 +50,9 @@ vi.mock('../client-management-utils.ts', () => ({
         getUserById: vi.fn(async (id: string) => {
           if (auth.outage) {
             return { data: { user: null }, error: { status: 503, message: 'unavailable' } };
+          }
+          if (auth.lookupError !== undefined) {
+            return { data: { user: null }, error: auth.lookupError };
           }
           const user = auth.users.get(id);
           return user
@@ -86,6 +91,7 @@ beforeEach(() => {
   kvStore.clear();
   auth.users.clear();
   auth.outage = false;
+  auth.lookupError = undefined;
 });
 
 describe('GET /client-record/:userId', () => {
@@ -173,5 +179,70 @@ describe('GET /client-record/:userId', () => {
     addClient(AARON, { firstName: 'Aaron', lastName: 'Teng' });
     auth.outage = true;
     expect((await getRecord(AARON.id)).status).toBe(500);
+  });
+
+  it('returns a client who has no profile row yet', async () => {
+    addClient({ ...AARON, user_metadata: { name: 'Aaron Teng' } }, null);
+    const res = await getRecord(AARON.id);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      user: {
+        id: AARON.id,
+        email: AARON.email,
+        name: 'Aaron Teng',
+        profile: null,
+        application_status: 'not_started',
+        application_number: null,
+        deleted: false,
+        suspended: false,
+      },
+    });
+  });
+
+  it('answers 404 when the account is rejected even if the application was approved', async () => {
+    addClient(AARON, {
+      firstName: 'Aaron',
+      lastName: 'Teng',
+      applicationStatus: 'approved',
+      accountStatus: 'Rejected',
+    });
+    const res = await getRecord(AARON.id);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ code: 'CLIENT_NOT_FOUND' });
+  });
+
+  it('answers 404 for a staff role even without a personnel profile', async () => {
+    addClient(
+      { ...AARON, user_metadata: { role: 'adviser', firstName: 'Aaron', surname: 'Teng' } },
+      { firstName: 'Aaron', lastName: 'Teng' },
+    );
+    const res = await getRecord(AARON.id);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ code: 'CLIENT_NOT_FOUND' });
+  });
+
+  it.each([400, 422])(
+    'answers 404 CLIENT_NOT_FOUND when auth rejects the id with %s',
+    async (status) => {
+      auth.lookupError = { status, message: 'not a user' };
+      const res = await getRecord(AARON.id);
+      expect(res.status).toBe(404);
+      expect(await res.json()).toMatchObject({ code: 'CLIENT_NOT_FOUND' });
+    },
+  );
+
+  it('answers 404 when auth returns no user and no error', async () => {
+    auth.lookupError = null;
+    const res = await getRecord(AARON.id);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ code: 'CLIENT_NOT_FOUND' });
+  });
+
+  it('answers 500, not "not found", when auth fails for another reason', async () => {
+    auth.lookupError = { status: 401, message: 'unauthorized' };
+    const res = await getRecord(AARON.id);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Failed to fetch client' });
   });
 });

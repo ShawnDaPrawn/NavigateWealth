@@ -63,6 +63,18 @@ describe('isPlainData', () => {
     expect(isPlainData({ format: () => 'x' })).toBe(false);
     expect(isPlainData({ big: BigInt(1) })).toBe(false);
   });
+
+  it('stops on a cycle or a nest deeper than 64 instead of walking forever', () => {
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
+    expect(() => isPlainData(cycle)).not.toThrow();
+    expect(isPlainData(cycle)).toBe(false);
+
+    let deep: unknown = 'leaf';
+    for (let i = 0; i < 64; i += 1) deep = { child: deep };
+    expect(isPlainData(deep)).toBe(true);
+    expect(isPlainData({ child: deep })).toBe(false);
+  });
 });
 
 describe('isRestorable', () => {
@@ -81,8 +93,17 @@ describe('isRestorable', () => {
     expect(isRestorable(entry({ buster: 'some-other-build' }), NOW)).toBe(false);
   });
 
-  it('refuses an entry older than the maximum age', () => {
-    expect(isRestorable(entry({}), NOW + MAX_AGE_MS + 1)).toBe(false);
+  it('refuses an entry older than the maximum age, and keeps one exactly that old', () => {
+    // `>` not `>=`: a copy saved 24 h ago to the millisecond is still restored.
+    expect(isRestorable(entry({ savedAt: NOW - MAX_AGE_MS }), NOW)).toBe(true);
+    expect(isRestorable(entry({ savedAt: NOW - MAX_AGE_MS - 1 }), NOW)).toBe(false);
+  });
+
+  it('refuses an entry whose saved time is not a number', () => {
+    expect(isRestorable(entry({ savedAt: Number.NaN }), NOW)).toBe(false);
+    expect(
+      isRestorable({ ...entry({}), savedAt: 'yesterday' } as unknown as PersistedEntry, NOW),
+    ).toBe(false);
   });
 
   it('refuses nothing and garbage', () => {
@@ -252,6 +273,94 @@ describe('createQueryCachePersister', () => {
 
     expect(client.getQueryData(['clients'])).toBeUndefined();
     expect(map.size).toBe(0);
+  });
+
+  it('saves the latest value once, on the clock started by the first change', async () => {
+    // The window must not reset on every keystroke, and the snapshot is taken
+    // when the save runs, so a change that lands just before it still lands.
+    vi.useFakeTimers();
+    const { map, storage } = mapStorage();
+    const client = newClient();
+    const persister = createQueryCachePersister({
+      queryClient: client,
+      storage,
+      now: () => NOW,
+      saveDelayMs: 1000,
+    });
+
+    await persister.start('adviser-1');
+    client.setQueryData(['policies', 'client-9'], { premium: 100 });
+    await vi.advanceTimersByTimeAsync(900);
+    client.setQueryData(['policies', 'client-9'], { premium: 250 });
+    await vi.advanceTimersByTimeAsync(100);
+
+    const saved = map.get(entryKey('adviser-1'));
+    expect(saved?.state.queries).toHaveLength(1);
+    expect(saved?.state.queries[0]?.state.data).toEqual({ premium: 250 });
+  });
+
+  it('does not restore a copy once the user has signed out mid-read', async () => {
+    const saved = savedEntry(['clients'], ['visible to adviser-1 only']);
+    let releaseGet: (() => void) | undefined;
+    const storage: CacheStorage = {
+      get: async () => {
+        await new Promise<void>((resolve) => {
+          releaseGet = resolve;
+        });
+        return saved;
+      },
+      set: async () => {},
+      delete: async () => {},
+      keys: async () => [],
+    };
+    const client = newClient();
+    const persister = createQueryCachePersister({ queryClient: client, storage, now: () => NOW });
+
+    const started = persister.start('adviser-1');
+    await vi.waitFor(() => expect(releaseGet).toBeTypeOf('function'));
+    await persister.signOut();
+    releaseGet?.();
+    await started;
+
+    expect(client.getQueryData(['clients'])).toBeUndefined();
+    expect(persister.userId).toBeNull();
+  });
+
+  it('does not write a save back after sign-out has deleted it', async () => {
+    // storage.set yields. Sign-out lands in that gap and deletes the entry;
+    // the save that was already past its owner check must not put it back.
+    let releaseSet: (() => void) | undefined;
+    const map = new Map<string, PersistedEntry>();
+    const storage: CacheStorage = {
+      get: async () => undefined,
+      set: (key, value) =>
+        new Promise<void>((resolve) => {
+          releaseSet = () => {
+            map.set(key, value);
+            resolve();
+          };
+        }),
+      delete: async (key) => void map.delete(key),
+      keys: async () => [...map.keys()],
+    };
+    const client = newClient();
+    const persister = createQueryCachePersister({
+      queryClient: client,
+      storage,
+      now: () => NOW,
+      saveDelayMs: 60_000,
+    });
+
+    await persister.start('adviser-1');
+    client.setQueryData(['clients'], ['visible to adviser-1 only']);
+    const flushed = persister.flush();
+    await vi.waitFor(() => expect(releaseSet).toBeTypeOf('function'));
+    await persister.signOut();
+    releaseSet?.();
+    await flushed;
+
+    expect(map.size).toBe(0);
+    expect(client.getQueryData(['clients'])).toBeUndefined();
   });
 
   it('saves changes for the signed-in user after the debounce', async () => {

@@ -55,6 +55,23 @@ describe('useClientDeepLink', () => {
     expect(search()).toBe('?module=clients');
   });
 
+  it('does not open a cached client while the list is still loading', () => {
+    const stale = { id: 'c-aaron', firstName: 'Aaron', lastName: 'Cached' } as Client;
+    const { openClient, search, rerender } = setup(
+      '/admin?module=clients&clientId=c-aaron',
+      [stale],
+      true,
+    );
+    expect(openClient).not.toHaveBeenCalled();
+    expect(search()).toBe('?module=clients&clientId=c-aaron');
+
+    const fresh = { id: 'c-aaron', firstName: 'Aaron', lastName: 'Teng' } as Client;
+    rerender({ clients: [fresh], loading: false });
+    expect(openClient).toHaveBeenCalledTimes(1);
+    expect(openClient).toHaveBeenCalledWith(fresh);
+    expect(search()).toBe('?module=clients');
+  });
+
   it('keeps a link to a client not in the list yet, for a refreshed list to honour', () => {
     const { openClient, search, rerender } = setup('/admin?module=clients&clientId=c-new', [aaron]);
     expect(openClient).not.toHaveBeenCalled();
