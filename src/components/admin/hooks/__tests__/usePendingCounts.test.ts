@@ -160,6 +160,33 @@ describe('usePendingCounts', () => {
     expect(result.issues).toEqual({ count: 2 });
   });
 
+  it('keeps the counts that succeeded when one endpoint fails, and drops non-finite numbers', async () => {
+    // allSettled, not Promise.all: a down tasks route must not blank the badges
+    // that already answered. Infinity and NaN are not counts.
+    mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
+    mockGetStats.mockResolvedValue({ submitted_for_review: Number.POSITIVE_INFINITY });
+    mockGetIncompleteCount.mockReturnValue(2);
+    mockApiGet.mockImplementation((url: string) => {
+      if (url === '/tasks/stats') return Promise.reject(new Error('tasks down'));
+      if (url === '/submissions/count/new') return Promise.resolve({ count: 5 });
+      if (url === '/quality-issues') {
+        return Promise.resolve({ snapshot: { summary: { open: Number.NaN } } });
+      }
+      return Promise.reject(new Error(`unexpected ${url}`));
+    });
+    const capturedConfig = vi.fn();
+    mockUseQuery.mockImplementation((config) => {
+      capturedConfig(config);
+      return { data: buildEmptyCounts() };
+    });
+    renderHook(() => usePendingCounts());
+    const result = await capturedConfig.mock.calls[0][0].queryFn();
+    expect(result.applications).toEqual({ count: 2 });
+    expect(result.tasks).toEqual({ count: 0 });
+    expect(result.submissions).toEqual({ count: 5 });
+    expect(result.issues).toEqual({ count: 0 });
+  });
+
   it('queryFn handles API errors gracefully (returns zeroed counts)', async () => {
     mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
     mockApiGet.mockRejectedValue(new Error('Network error'));
