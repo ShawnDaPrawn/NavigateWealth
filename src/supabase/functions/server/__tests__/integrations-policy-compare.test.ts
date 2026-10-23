@@ -20,6 +20,12 @@ const SCHEMA = vi.hoisted(() => ({
   ],
 }));
 
+/** What `getByPrefix('config:schema:')` reads. Empty means "no stored schema". */
+const schemaQuery = vi.hoisted(() => ({
+  data: [] as { value: unknown }[] | null,
+  error: null as { message: string } | null,
+}));
+
 const storage = vi.hoisted(() => ({
   replacePolicyDocumentForPolicy: vi.fn(async () => ({ storageKey: 'new-key' })),
   remove: vi.fn(async () => ({ error: null })),
@@ -55,7 +61,11 @@ vi.mock('../fna-intake-adviser-resolver.ts', () => ({
 }));
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
-    from: () => ({ select: () => ({ like: () => ({ data: [{ value: SCHEMA }], error: null }) }) }),
+    from: () => ({
+      select: () => ({
+        like: () => ({ data: schemaQuery.data, error: schemaQuery.error }),
+      }),
+    }),
     storage: {
       from: () => ({ createSignedUrl: storage.createSignedUrl, remove: storage.remove }),
     },
@@ -82,6 +92,8 @@ const policyRoutes = (await import('../integrations-policy-routes.ts')).default;
 beforeEach(() => {
   kvStore.clear();
   vi.clearAllMocks();
+  schemaQuery.data = [{ value: SCHEMA }];
+  schemaQuery.error = null;
   kvStore.set('policies:client:client-a', [
     {
       id: 'p1',
@@ -129,5 +141,136 @@ describe('GET /policies/compare', () => {
   it('refuses another client', async () => {
     const res = await compare('client', 'client-b');
     expect(res.status).toBe(403);
+  });
+
+  it('lets the client and their assigned adviser compare, and refuses a different adviser', async () => {
+    expect((await compare('client', 'client-a')).status).toBe(200);
+    expect((await compare('adviser', 'adviser-of-a')).status).toBe(200);
+    expect((await compare('adviser', 'adviser-of-b')).status).toBe(403);
+  });
+
+  it('keeps a zero amount, matches a key field by folded name, and drops blanks', async () => {
+    schemaQuery.data = [
+      {
+        value: {
+          categoryId: 'risk_planning',
+          fields: [
+            { id: 'cover', name: '  cover amount ' },
+            { id: 'prem', name: 'PREMIUM' },
+            { id: 'status', name: 'Status' },
+            { id: 'who', name: 'Beneficiary' },
+          ],
+        },
+      },
+    ];
+    kvStore.set('policies:client:client-a', [
+      {
+        id: 'p1',
+        clientId: 'client-a',
+        categoryId: 'risk_planning',
+        providerName: 'Acme Life',
+        data: { cover: 0, prem: 1200, status: '', who: 'spouse' },
+      },
+    ]);
+
+    const res = await compare('admin', 'admin-1');
+    expect(res.status).toBe(200);
+    const { policies } = (await res.json()) as {
+      policies: { keyFields: { label: string; value: unknown }[]; totalFieldCount: number }[];
+    };
+    expect(policies[0].keyFields).toEqual([
+      { label: 'Cover Amount', fieldId: 'cover', fieldName: '  cover amount ', value: 0 },
+      { label: 'PREMIUM', fieldId: 'prem', fieldName: 'PREMIUM', value: 1200 },
+    ]);
+    expect(policies[0].totalFieldCount).toBe(4);
+  });
+
+  it('reports extraction only once it completed, and keeps a confidence of 0', async () => {
+    kvStore.set('policies:client:client-a', [
+      {
+        id: 'done',
+        clientId: 'client-a',
+        categoryId: 'not_a_category',
+        providerName: 'Done Co',
+        data: {},
+        extraction: { status: 'completed', confidence: 0 },
+      },
+      {
+        id: 'pending',
+        clientId: 'client-a',
+        categoryId: 'risk_planning',
+        providerName: 'Pending Co',
+        data: {},
+        extraction: { status: 'pending', confidence: 0.9 },
+      },
+    ]);
+
+    const res = await compare('admin', 'admin-1');
+    const { policies } = (await res.json()) as {
+      policies: {
+        id: string;
+        categoryLabel: string;
+        hasDocument: boolean;
+        hasExtraction: boolean;
+        extractionConfidence: number | null;
+      }[];
+    };
+    expect(policies.map((p) => p.id)).toEqual(['done', 'pending']);
+    expect(policies[0]).toMatchObject({
+      categoryLabel: 'not_a_category',
+      hasDocument: false,
+      hasExtraction: true,
+      extractionConfidence: 0,
+    });
+    expect(policies[1]).toMatchObject({
+      hasExtraction: false,
+      extractionConfidence: null,
+    });
+  });
+
+  it('falls back to the built-in schema, and a stored schema replaces that default', async () => {
+    schemaQuery.data = [];
+    kvStore.set('policies:client:client-a', [
+      {
+        id: 'builtin',
+        clientId: 'client-a',
+        categoryId: 'risk_planning',
+        providerName: 'Acme Life',
+        data: { rp_1: 'POL-1', rp_6: 0, rp_2: 1_000_000, rp_7: 'private note' },
+      },
+    ]);
+
+    const builtin = await compare('admin', 'admin-1');
+    const builtinBody = (await builtin.json()) as {
+      policies: { keyFields: { label: string; value: unknown }[] }[];
+    };
+    expect(builtinBody.policies[0].keyFields).toEqual([
+      { label: 'Policy Number', fieldId: 'rp_1', fieldName: 'Policy Number', value: 'POL-1' },
+      { label: 'Premium', fieldId: 'rp_6', fieldName: 'Premium', value: 0 },
+    ]);
+
+    schemaQuery.data = [
+      { value: { categoryId: 'risk_planning', fields: [{ id: 'n', name: 'Notes' }] } },
+    ];
+    kvStore.set('policies:client:client-a', [
+      {
+        id: 'custom',
+        clientId: 'client-a',
+        categoryId: 'risk_planning',
+        providerName: 'Acme Life',
+        data: { n: 'x', rp_6: 99 },
+      },
+    ]);
+    const custom = await compare('admin', 'admin-1');
+    const customBody = (await custom.json()) as { policies: { keyFields: unknown[] }[] };
+    expect(customBody.policies[0].keyFields).toEqual([]);
+  });
+
+  it('answers 500 when the schema read fails, rather than an empty comparison', async () => {
+    schemaQuery.error = { message: 'db down' };
+    schemaQuery.data = null;
+    const res = await compare('admin', 'admin-1');
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Failed to build policy comparison' });
   });
 });
