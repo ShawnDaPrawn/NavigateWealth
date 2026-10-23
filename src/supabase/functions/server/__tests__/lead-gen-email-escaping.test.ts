@@ -33,9 +33,11 @@ vi.mock('../email-core.ts', () => ({
     return true;
   }),
   // Pass the body through unchanged so the assertions see exactly what the
-  // builder produced rather than the surrounding chrome.
+  // builder produced rather than the surrounding chrome. The greeting is part
+  // of that output: the careers acknowledgement puts the visitor's name there
+  // and nowhere else, and the real template renders it.
   createEmailTemplate: (body: string, opts: Record<string, unknown>) =>
-    `${body}<!--subtitle:${opts.subtitle ?? ''}--><!--title:${opts.title ?? ''}-->`,
+    `${opts.greeting ?? ''}${body}<!--subtitle:${opts.subtitle ?? ''}--><!--title:${opts.title ?? ''}-->`,
   createPlainTextEmail: (body: string) => body,
   getFooterSettings: async () => ({}),
   getEmailTemplate: async () => ({
@@ -216,5 +218,34 @@ describe('contact acknowledgement by enquiry type', () => {
     expect(sent[0].html).toContain('complimentary consultation');
     expect(sent[0].html).not.toMatch(/our team|Navigate Wealth Team/);
     expect(sent[0].text).not.toMatch(/our team|Navigate Wealth Team/);
+  });
+
+  it('escapes an applicant name in the careers acknowledgement and leaves the plain text raw', async () => {
+    await sendContactFormAcknowledgment({
+      firstName: XSS,
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      phone: '0123456789',
+      clientType: 'job application',
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).not.toContain('<script>');
+    expect(sent[0].html).toContain('&lt;script&gt;');
+    expect(sent[0].text).toContain(XSS);
+    expect(sent[0].text).not.toContain('&lt;script&gt;');
+  });
+
+  it('does not treat a near miss on the client type as a job application', async () => {
+    await sendContactFormAcknowledgment({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      phone: '0123456789',
+      clientType: 'Job application',
+    });
+
+    expect(sent[0].html).toContain('complimentary consultation');
+    expect(sent[0].subject).not.toBe('We received your application — Navigate Wealth');
   });
 });

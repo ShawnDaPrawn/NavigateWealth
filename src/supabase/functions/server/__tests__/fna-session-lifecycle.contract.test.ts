@@ -67,7 +67,12 @@ beforeEach(() => {
   fnaAssignments.set(CLIENT_B, 'adviser-of-b');
 });
 
-type Status = { status?: string; publishedBy?: string };
+type Status = {
+  status?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+  inputs?: { currentAge?: number };
+};
 
 // [label, app, KV prefix, path for one session, publish/unpublish verb]
 const CASES = [
@@ -87,10 +92,24 @@ describe.each(CASES)('%s', (_label, app, prefix, at) => {
     expect(stored(WIZARD_ID)).toMatchObject({ status: 'published', publishedBy: 'admin-1' });
   });
 
-  it('unpublishes a published session back to a draft', async () => {
-    kvStore.set(key(WIZARD_ID), { id: WIZARD_ID, clientId: CLIENT_A, status: 'published' });
+  it('unpublishes a published session back to a draft and clears the publication stamp', async () => {
+    // The FNA list and the client overview both treat any `publishedAt` as
+    // "Published on …", including on a draft. Unpublish has to remove the
+    // stamp, not only flip the status, and it must keep the answers.
+    kvStore.set(key(WIZARD_ID), {
+      id: WIZARD_ID,
+      clientId: CLIENT_A,
+      status: 'published',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+      publishedBy: 'someone-else',
+      inputs: { currentAge: 45 },
+    });
     expect((await req(app, 'PUT', `${at(WIZARD_ID)}/unpublish`)).status).toBe(200);
-    expect(stored(WIZARD_ID)?.status).toBe('draft');
+    const after = stored(WIZARD_ID);
+    expect(after?.status).toBe('draft');
+    expect(after?.publishedAt).toBeUndefined();
+    expect(after?.publishedBy).toBeUndefined();
+    expect(after?.inputs).toEqual({ currentAge: 45 });
   });
 
   it('refuses to unpublish a session that is not published', async () => {
@@ -106,6 +125,52 @@ describe.each(CASES)('%s', (_label, app, prefix, at) => {
 
   it('answers 404 when there is nothing to delete, instead of a false success', async () => {
     expect((await req(app, 'DELETE', at(WIZARD_ID))).status).toBe(404);
+  });
+
+  it('answers 404 when publishing a session that is not stored, and writes nothing', async () => {
+    expect((await req(app, 'PUT', `${at(WIZARD_ID)}/publish`)).status).toBe(404);
+    expect(stored(WIZARD_ID)).toBeUndefined();
+  });
+
+  it('a blank clientId still uses the client encoded in the wizard id', async () => {
+    // `?clientId=` is an empty string. Treating that as the owner would build
+    // `prefix:client::id` and refuse the real session (admins are not allowed
+    // an empty client id).
+    kvStore.set(key(WIZARD_ID), { id: WIZARD_ID, clientId: CLIENT_A, status: 'draft' });
+    expect((await req(app, 'PUT', `${at(WIZARD_ID)}/publish?clientId=`)).status).toBe(200);
+    expect(stored(WIZARD_ID)?.status).toBe('published');
+    expect(kvStore.has(`${prefix}:client::${WIZARD_ID}`)).toBe(false);
+  });
+
+  it("naming another client does not publish or delete this client's session", async () => {
+    // The wizard id encodes client A. An admin may act for client B too, so a
+    // hint must select B's key and miss — not fall back to the client in the
+    // id and publish A's record.
+    kvStore.set(key(WIZARD_ID), {
+      id: WIZARD_ID,
+      clientId: CLIENT_A,
+      status: 'published',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+      publishedBy: 'admin-1',
+    });
+    const q = `?clientId=${CLIENT_B}`;
+
+    expect((await req(app, 'PUT', `${at(WIZARD_ID)}/publish${q}`)).status).toBe(404);
+    expect((await req(app, 'DELETE', `${at(WIZARD_ID)}${q}`)).status).toBe(404);
+    expect(stored(WIZARD_ID)).toMatchObject({
+      status: 'published',
+      publishedAt: '2020-01-01T00:00:00.000Z',
+      publishedBy: 'admin-1',
+    });
+    expect(kvStore.has(`${prefix}:client:${CLIENT_B}:${WIZARD_ID}`)).toBe(false);
+  });
+
+  it('an intake id without its client is not deleted', async () => {
+    // A UUID does not encode a client. Deleting it with no hint used to report
+    // success and delete nothing; it must not now succeed by scanning.
+    kvStore.set(key(INTAKE_ID), { id: INTAKE_ID, clientId: CLIENT_A, status: 'draft' });
+    expect((await req(app, 'DELETE', at(INTAKE_ID))).status).toBe(404);
+    expect(stored(INTAKE_ID)?.status).toBe('draft');
   });
 
   it('publishes and deletes an intake draft when the client is named', async () => {
@@ -159,6 +224,29 @@ describe('Medical FNA created from a client intake', () => {
 
   it('is not found without the client named', async () => {
     expect((await req(medical, 'DELETE', `/delete/${INTAKE_ID}`)).status).toBe(404);
+  });
+
+  it('does not publish an intake FNA onto the wizard key when the client is omitted', async () => {
+    expect((await req(medical, 'POST', `/publish/${INTAKE_ID}`)).status).toBe(404);
+    expect(stored()?.status).toBe('draft');
+    expect(kvStore.has(`medical-fna:${INTAKE_ID}`)).toBe(false);
+  });
+
+  it("a client hint does not publish another client's wizard FNA", async () => {
+    // The wizard key is tried before the client key. The hint must not retarget
+    // that record: adviser B is refused on client A's FNA, and nothing is
+    // written under B.
+    const wizardKey = `medical-fna:${WIZARD_ID}`;
+    kvStore.set(wizardKey, { id: WIZARD_ID, clientId: CLIENT_A, status: 'draft' });
+    const res = await req(
+      medical,
+      'POST',
+      `/publish/${WIZARD_ID}?clientId=${CLIENT_B}`,
+      'adviserB',
+    );
+    expect(res.status).toBe(403);
+    expect((kvStore.get(wizardKey) as Status).status).toBe('draft');
+    expect(kvStore.has(`medical-fna:client:${CLIENT_B}:${WIZARD_ID}`)).toBe(false);
   });
 
   it("still authorizes the record's own client", async () => {

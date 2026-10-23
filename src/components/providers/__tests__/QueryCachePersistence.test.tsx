@@ -86,6 +86,18 @@ describe('QueryCachePersistence', () => {
     expect(persister.start).toHaveBeenCalledWith('admin-1');
   });
 
+  it('restores and saves for a super-admin session', async () => {
+    mount();
+    await emit(
+      { id: 'super-1', email: 'owner@navigatewealth.co' },
+      {
+        event: 'INITIAL_SESSION',
+        supabaseUser: { id: 'super-1', user_metadata: { role: 'super_admin' }, app_metadata: {} },
+      },
+    );
+    expect(persister.start).toHaveBeenCalledWith('super-1');
+  });
+
   it('keeps nothing on the device for a client session', async () => {
     mount();
     await emit(CLIENT, { event: 'INITIAL_SESSION', supabaseUser: CLIENT_SESSION_USER });
