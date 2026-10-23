@@ -530,11 +530,17 @@ describe('client identity', () => {
 
 describe('adviser resolution', () => {
   const PLATFORM_NAME = 'Navigate Wealth';
+  /** The card every client used to see was a made-up adviser. These are the real firm details. */
+  const PLATFORM_ADVISER = {
+    name: PLATFORM_NAME,
+    email: 'info@navigatewealth.co',
+    phone: '+27 12 667 2505',
+    fspReference: 'FSP 54606',
+  };
 
-  it('falls back to platform details when the profile has no application', async () => {
+  it('falls back to the firm contact when the profile has no application', async () => {
     seedProfile();
-    const summary = await getPortfolioSummary(CLIENT);
-    expect(summary.adviserDetails.name).toContain(PLATFORM_NAME);
+    expect((await getPortfolioSummary(CLIENT)).adviserDetails).toEqual(PLATFORM_ADVISER);
   });
 
   it('falls back when the application is missing', async () => {
@@ -612,15 +618,38 @@ describe('adviser resolution', () => {
     expect((await getPortfolioSummary(CLIENT)).adviserDetails.phone).toBe('082 123 4567');
   });
 
-  it('never surfaces a blank adviser name', async () => {
-    // A personnel record with no name must not produce an empty contact card.
+  it('fills a hollow personnel record from the firm contact', async () => {
+    // A personnel row with no name, email, phone, or FSP must not blank the card
+    // or bring back the old placeholder number.
     kvStore.set(`user_profile:${CLIENT}:personal_info`, {
       applicationId: 'app-1',
       personalInformation: { firstName: 'Thabo' },
     });
     kvStore.set('application:app-1', { id: 'app-1', adviserId: 'adv-1' });
-    kvStore.set('personnel:profile:adv-1', { email: 'someone@navigatewealth.co' });
-    expect((await getPortfolioSummary(CLIENT)).adviserDetails.name).toContain(PLATFORM_NAME);
+    kvStore.set('personnel:profile:adv-1', {});
+    expect((await getPortfolioSummary(CLIENT)).adviserDetails).toEqual(PLATFORM_ADVISER);
+  });
+
+  it('still shows the firm contact when the application read fails', async () => {
+    kvStore.set(`user_profile:${CLIENT}:personal_info`, {
+      applicationId: 'app-1',
+      personalInformation: { firstName: 'Thabo' },
+    });
+    const kv = await import('../kv_store.tsx');
+    const get = vi.mocked(kv.get);
+    const original = get.getMockImplementation();
+    get.mockImplementation(async (key: string) => {
+      if (key.startsWith('application:')) throw new Error('kv down');
+      const value = kvStore.get(key) ?? null;
+      return value == null ? value : JSON.parse(JSON.stringify(value));
+    });
+    try {
+      const summary = await getPortfolioSummary(CLIENT);
+      expect(summary.adviserDetails).toEqual(PLATFORM_ADVISER);
+      expect(summary.clientData.firstName).toBe('Thabo');
+    } finally {
+      if (original) get.mockImplementation(original);
+    }
   });
 });
 
