@@ -61,6 +61,7 @@ import type {
   PipelineRunLog,
   PipelineTriggerResult,
 } from './auto-content-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 export type {
   CalendarEvent,
@@ -351,8 +352,8 @@ export const AutoContentService = {
           status: 'error',
           articlesGenerated: 0,
           articleIds: [],
-          summary: `Error: ${err instanceof Error ? err.message : String(err)}`,
-          errors: [err instanceof Error ? err.message : String(err)],
+          summary: `Error: ${getErrMsg(err)}`,
+          errors: [getErrMsg(err)],
           durationMs: 0,
         });
       }
@@ -658,7 +659,7 @@ export const AutoContentService = {
       };
       await kv.set(configKey(pipelineId), updatedConfig);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = getErrMsg(err);
       errors.push(msg);
       log.error(`Error generating article from source "${source.name}":`, err);
     }
@@ -848,7 +849,7 @@ export const AutoContentService = {
     } catch (error) {
       log.error('Feed discovery failed', {
         url,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
       return [];
     }

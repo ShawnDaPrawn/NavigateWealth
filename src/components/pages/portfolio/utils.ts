@@ -22,14 +22,9 @@ import type { PortfolioSummary, ProductHolding } from './api';
 // Formatting (en-ZA locale per Guidelines §8.3)
 // ═══════════════════════════════════════════════════════
 
-export function formatCurrency(amount: number): string {
-  if (amount === undefined || amount === null || isNaN(amount)) return 'R0';
-  const isNeg = amount < 0;
-  const abs = Math.abs(amount);
-  const intPart = Math.round(abs).toString();
-  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${isNeg ? '-' : ''}R${withCommas}`;
-}
+import { formatCurrencyWhole as formatCurrency } from '../../../utils/currencyFormatter';
+
+export { formatCurrency };
 
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return 'Not set';
@@ -192,10 +187,10 @@ export function mapPortfolioToReportData(
 
   // ── Adviser details from server (resolved from personnel profile) ──
   const adviser = summary.adviserDetails ?? {
-    name: 'Your Navigate Wealth Adviser',
-    email: 'support@navigatewealth.co.za',
-    phone: '+27 10 000 0000',
-    fspReference: 'FSP 00000',
+    name: 'Navigate Wealth',
+    email: 'info@navigatewealth.co',
+    phone: '+27 12 667 2505',
+    fspReference: 'FSP 54606',
   };
 
   // ── Product Holdings ──

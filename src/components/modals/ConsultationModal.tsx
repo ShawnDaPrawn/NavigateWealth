@@ -33,11 +33,13 @@ import {
   ArrowLeft,
   Video,
   PhoneCall,
+  MapPin,
   MessageSquare,
   Shield,
   Sparkles,
   Loader2,
 } from 'lucide-react';
+import { COMPANY } from '@/config/companyFacts';
 import { toast } from 'sonner';
 import { format, startOfDay, addDays, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
@@ -94,8 +96,42 @@ const isBookingDateDisabled = (date: Date): boolean => {
 const isPastCalendarDay = (date: Date): boolean =>
   isBefore(startOfDay(date), startOfDay(getCurrentSASTTime()));
 
+type MeetingTypeId = 'virtual' | 'telephonic' | 'in_person';
+
+/** Meeting formats offered. In-person meetings are at the Pretoria office. */
+const MEETING_TYPES: readonly {
+  id: MeetingTypeId;
+  icon: typeof Video;
+  title: string;
+  subtitle: string;
+  detail: string;
+}[] = [
+  {
+    id: 'virtual',
+    icon: Video,
+    title: 'Virtual Meeting',
+    subtitle: 'Video call via Microsoft Teams or Zoom',
+    detail: 'Best for screen sharing and document review',
+  },
+  {
+    id: 'telephonic',
+    icon: PhoneCall,
+    title: 'Telephonic Meeting',
+    subtitle: 'Voice call via telephone',
+    detail: 'Quick and convenient for initial consultations',
+  },
+  {
+    id: 'in_person',
+    icon: MapPin,
+    title: 'In-Person Meeting',
+    subtitle: `At our office, ${COMPANY.office}`,
+    detail: 'Meet face to face to go through your plans',
+  },
+];
+
 /**
- * Generates 30-minute time slots within business hours (08:00 – 16:30 SAST).
+ * Generates 30-minute time slots within office hours (08:30 – 16:30 SAST).
+ * The last slot starts at 16:00 so a meeting ends by closing time.
  *
  * Because the earliest bookable date is always at least two business days
  * out, there is no need to filter past slots for the current time.
@@ -104,6 +140,7 @@ const generateTimeSlots = (): string[] => {
   const slots: string[] = [];
   for (let hour = 8; hour <= 16; hour++) {
     for (const minute of [0, 30]) {
+      if (hour === 8 && minute === 0) continue;
       if (hour === 16 && minute > 0) break;
       slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
     }
@@ -143,9 +180,10 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
   const modalOpen = open !== undefined ? open : isOpen || false;
 
   const [currentStep, setCurrentStep] = useState<Step>('meeting-type');
-  const [selectedMeetingType, setSelectedMeetingType] = useState<'virtual' | 'telephonic'>(
-    'virtual',
-  );
+  const [selectedMeetingType, setSelectedMeetingType] = useState<MeetingTypeId>('virtual');
+  const selectedMeeting =
+    MEETING_TYPES.find((m) => m.id === selectedMeetingType) ?? MEETING_TYPES[0];
+  const SelectedMeetingIcon = selectedMeeting.icon;
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -293,13 +331,13 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Consultation Booked!</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Request Received!</h3>
               <p className="text-sm text-gray-500 max-w-sm mb-2">
                 We've received your request and sent a confirmation to{' '}
                 <span className="font-medium text-gray-700">{formData.email}</span>.
               </p>
               <p className="text-sm text-gray-500 max-w-sm mb-8">
-                Our bookings agent will contact you within 24 hours to finalize your appointment.
+                We will contact you within 24 hours on business days to confirm your appointment.
               </p>
             </motion.div>
 
@@ -310,14 +348,8 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
               className="bg-gray-50 rounded-xl p-5 w-full max-w-sm space-y-3 mb-8"
             >
               <div className="flex items-center gap-3 text-sm">
-                {selectedMeetingType === 'virtual' ? (
-                  <Video className="h-4 w-4 text-primary flex-shrink-0" />
-                ) : (
-                  <PhoneCall className="h-4 w-4 text-primary flex-shrink-0" />
-                )}
-                <span className="text-gray-700">
-                  {selectedMeetingType === 'virtual' ? 'Virtual Meeting' : 'Telephonic Meeting'}
-                </span>
+                <SelectedMeetingIcon className="h-4 w-4 text-primary flex-shrink-0" />
+                <span className="text-gray-700">{selectedMeeting.title}</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <CalendarIcon className="h-4 w-4 text-primary flex-shrink-0" />
@@ -347,7 +379,7 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
                   Schedule Your Free Consultation
                 </DialogTitle>
                 <DialogDescription className="text-center text-sm text-gray-500">
-                  Book a complimentary session with a qualified financial adviser
+                  Book a complimentary session, in person or online
                 </DialogDescription>
               </DialogHeader>
 
@@ -404,24 +436,7 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
                       </div>
 
                       <div className="grid gap-2.5 sm:gap-3">
-                        {(
-                          [
-                            {
-                              id: 'virtual' as const,
-                              icon: Video,
-                              title: 'Virtual Meeting',
-                              subtitle: 'Video call via Microsoft Teams or Zoom',
-                              detail: 'Best for screen sharing and document review',
-                            },
-                            {
-                              id: 'telephonic' as const,
-                              icon: PhoneCall,
-                              title: 'Telephonic Meeting',
-                              subtitle: 'Voice call via telephone',
-                              detail: 'Quick and convenient for initial consultations',
-                            },
-                          ] as const
-                        ).map((opt) => {
+                        {MEETING_TYPES.map((opt) => {
                           const selected = selectedMeetingType === opt.id;
                           return (
                             <button
@@ -475,7 +490,7 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
                         <div>
                           <p className="text-xs font-semibold text-blue-900">Business Hours</p>
                           <p className="text-xs text-blue-700 mt-0.5">
-                            Monday – Friday, 08:00 – 16:30 (SAST). Bookings require at least one
+                            Monday – Friday, 08:30 – 16:30 (SAST). Bookings require at least one
                             full business day's notice.
                           </p>
                         </div>
@@ -753,20 +768,14 @@ export function ConsultationModal({ isOpen, onClose, open, onOpenChange }: Consu
                         {/* Meeting type */}
                         <div className="flex items-center gap-3 px-5 py-3.5">
                           <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                            {selectedMeetingType === 'virtual' ? (
-                              <Video className="h-4 w-4 text-primary" />
-                            ) : (
-                              <PhoneCall className="h-4 w-4 text-primary" />
-                            )}
+                            <SelectedMeetingIcon className="h-4 w-4 text-primary" />
                           </div>
                           <div>
                             <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
                               Meeting Type
                             </p>
                             <p className="text-sm font-medium text-gray-900">
-                              {selectedMeetingType === 'virtual'
-                                ? 'Virtual Meeting'
-                                : 'Telephonic Meeting'}
+                              {selectedMeeting.title}
                             </p>
                           </div>
                         </div>

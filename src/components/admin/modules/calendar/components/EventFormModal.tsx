@@ -40,6 +40,7 @@ import {
 } from '../../../../ui/dialog';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
@@ -751,17 +752,14 @@ export function EventFormModal({
                   {repeatUnit && (
                     <div className="flex h-10 items-center gap-2 text-sm text-gray-600">
                       <span>every</span>
-                      <Input
+                      <NumberInputField
                         aria-label="Repeat interval"
-                        type="number"
-                        min={1}
-                        max={99}
                         value={form.recurrence.interval}
-                        onChange={(e) =>
+                        onValueChange={(v) =>
                           patch({
                             recurrence: {
                               ...form.recurrence,
-                              interval: Math.min(99, Math.max(1, parseInt(e.target.value) || 1)),
+                              interval: Math.min(99, Math.max(1, v || 1)),
                             },
                           })
                         }

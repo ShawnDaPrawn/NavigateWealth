@@ -6,9 +6,18 @@ import { assertClientAccess } from './client-access.ts';
 import { SaveSessionSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { nextVersion, versionSuffix } from './fna-versioning.ts';
+import {
+  readSession,
+  removeSession,
+  sessionOwner,
+  withPublished,
+  writeSession,
+} from './fna-client-scoped-sessions.ts';
 
 const app = new Hono();
 const log = createModuleLogger('estate-planning-fna-session-routes');
+const PREFIX = 'estate-planning-fna';
+const NOT_FOUND = 'Estate Planning session not found';
 
 interface EstateDep {
   name?: string;
@@ -319,61 +328,87 @@ app.get('/client/:clientId/latest-published', async (c) => {
   }
 });
 
+// `?clientId=` names the client of a session whose id does not (one made from
+// a client intake) — see fna-client-scoped-sessions.ts.
 app.get('/session/:sessionId', async (c) => {
   try {
     log.info('📥 GET /estate-planning-fna/session/:sessionId');
     const user = await authenticateUser(c.req.header('Authorization'));
-
     const sessionId = c.req.param('sessionId')!;
-    const clientId = sessionId.split('-v')[0];
-    // The KV key below is built from this same derived id, so authorizing the
-    // derived owner authorizes exactly the record that gets touched.
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
     await assertClientAccess(user, clientId, 'estate-planning-fna:session-read');
 
-    const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
-    const session = await kv.get(key);
-
-    if (!session) {
-      return c.json(
-        {
-          success: false,
-          error: 'Estate Planning session not found',
-        },
-        404,
-      );
-    }
+    const session = await readSession(PREFIX, clientId, sessionId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
 
     log.info('✅ Estate Planning session retrieved:', { sessionId });
-
-    return c.json({
-      success: true,
-      data: session,
-    });
+    return c.json({ success: true, data: session });
   } catch (error: unknown) {
     log.error('❌ Error fetching Estate Planning session:', error);
     return fnaErrorResponse(c, error);
   }
 });
 
+// Publish a session, so the client sees it.
+app.put('/session/:sessionId/publish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const sessionId = c.req.param('sessionId')!;
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'estate-planning-fna:session-publish');
+
+    const session = await readSession(PREFIX, clientId, sessionId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
+
+    const updated = withPublished(session, true, user.id);
+    await writeSession(PREFIX, clientId, sessionId, updated);
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    log.error('❌ Error publishing Estate Planning session:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
+
+// Return a published session to a draft.
+app.put('/session/:sessionId/unpublish', async (c) => {
+  try {
+    const user = await authenticateUser(c.req.header('Authorization'));
+    const sessionId = c.req.param('sessionId')!;
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
+    await assertClientAccess(user, clientId, 'estate-planning-fna:session-unpublish');
+
+    const session = await readSession(PREFIX, clientId, sessionId);
+    if (!session) return c.json({ success: false, error: NOT_FOUND }, 404);
+    if (session.status !== 'published') {
+      return c.json({ success: false, error: 'Estate Planning session is not published' }, 400);
+    }
+
+    const updated = withPublished(session, false, user.id);
+    await writeSession(PREFIX, clientId, sessionId, updated);
+    return c.json({ success: true, data: updated });
+  } catch (error: unknown) {
+    log.error('❌ Error unpublishing Estate Planning session:', error);
+    return fnaErrorResponse(c, error);
+  }
+});
+
+// Delete a session. 404 when there is none: this used to answer success for
+// any id, so deleting an intake draft (whose id does not name its client)
+// reported success and deleted nothing.
 app.delete('/session/:sessionId', async (c) => {
   try {
     log.info('📥 DELETE /estate-planning-fna/session/:sessionId');
     const user = await authenticateUser(c.req.header('Authorization'));
-
     const sessionId = c.req.param('sessionId')!;
-    const clientId = sessionId.split('-v')[0];
-    // The KV key below is built from this same derived id, so authorizing the
-    // derived owner authorizes exactly the record that gets touched.
+    const clientId = sessionOwner(sessionId, c.req.query('clientId'));
     await assertClientAccess(user, clientId, 'estate-planning-fna:session-delete');
 
-    const key = `estate-planning-fna:client:${clientId}:${sessionId}`;
-    await kv.del(key);
+    if (!(await removeSession(PREFIX, clientId, sessionId))) {
+      return c.json({ success: false, error: NOT_FOUND }, 404);
+    }
 
     log.info('✅ Estate Planning session deleted:', { sessionId });
-
-    return c.json({
-      success: true,
-    });
+    return c.json({ success: true });
   } catch (error: unknown) {
     log.error('❌ Error deleting Estate Planning session:', error);
     return fnaErrorResponse(c, error);

@@ -22,6 +22,7 @@
  */
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('newsletter-intake-auth');
 
@@ -67,7 +68,7 @@ export async function verifyNewsletterIntakeToken(candidate: string): Promise<bo
     return data === true;
   } catch (error) {
     log.warn('verify_newsletter_intake_token threw', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return false;
   }

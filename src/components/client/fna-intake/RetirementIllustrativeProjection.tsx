@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import type { RetirementFNAInputs } from '@/components/admin/modules/retirement-fna';
+import { formatCurrencyWhole } from '@/utils/currencyFormatter';
 
 interface RetirementIllustrativeProjectionProps {
   inputs: Partial<RetirementFNAInputs>;
@@ -52,9 +53,9 @@ export function RetirementIllustrativeProjection({
       <Info className="h-4 w-4 text-amber-700" />
       <AlertDescription className="text-sm text-amber-900">
         <strong>Illustrative only — not advice.</strong> If you continued contributing approximately{' '}
-        R{projection.monthlyContribution.toLocaleString()} per month for{' '}
-        {projection.yearsToRetirement} years (assuming ~7% growth), your fund might reach roughly R
-        {projection.estimatedBalance.toLocaleString()}. Your adviser will model formal scenarios
+        {formatCurrencyWhole(projection.monthlyContribution)} per month for{' '}
+        {projection.yearsToRetirement} years (assuming ~7% growth), your fund might reach roughly{' '}
+        {formatCurrencyWhole(projection.estimatedBalance)}. Your adviser will model formal scenarios
         before publishing recommendations.
       </AlertDescription>
     </Alert>

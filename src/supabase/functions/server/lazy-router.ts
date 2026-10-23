@@ -28,6 +28,7 @@
 
 import { Hono } from 'npm:hono';
 import type { Context } from 'npm:hono';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const PREFIX = '/make-server-91ed8379';
 
@@ -167,7 +168,7 @@ export function lazy(app: Hono, path: string, load: () => Promise<{ default: Laz
         return c.json(
           {
             error: `Failed to load module: ${path}`,
-            details: err instanceof Error ? err.message : String(err),
+            details: getErrMsg(err),
           },
           500,
         );

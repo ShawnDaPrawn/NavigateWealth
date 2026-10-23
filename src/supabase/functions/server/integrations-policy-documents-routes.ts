@@ -2,7 +2,7 @@
  * Policy-document routes (Phase 5 Slice E decomposition).
  * =========================================================
  *
- * Extracted verbatim from integrations.tsx.
+ * Extracted verbatim from integrations.ts.
  *
  * Every route calls requireClientAccess on the clientId it was given — the
  * same check the sibling `/policies` routes make. These took the clientId from

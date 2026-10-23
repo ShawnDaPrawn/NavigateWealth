@@ -51,7 +51,6 @@ import {
   postArticleEmailEngagementEvent,
 } from './articleDetail/articleHelpers';
 import { type ArticleDisplay } from './articleDetail/articleTypes';
-import { DEMO_ARTICLES } from './articleDetail/demoArticles';
 import { useArticleBySlug } from './articleDetail/useArticleBySlug';
 
 export function ArticleDetailPage() {
@@ -64,9 +63,9 @@ export function ArticleDetailPage() {
   // Fetch article
   const { article: apiArticle, isLoading, error, refetch } = useArticleBySlug(slug);
 
-  // Fallback to demo
-  const article: ArticleDisplay | null =
-    apiArticle || (slug ? (DEMO_ARTICLES[slug] ?? null) : null);
+  // Only published articles render. There is no demo fallback: the old one
+  // served placeholder articles under made-up authors at guessable URLs.
+  const article: ArticleDisplay | null = apiArticle || null;
 
   // Scroll to top on slug change
   useEffect(() => {
@@ -257,7 +256,7 @@ export function ArticleDetailPage() {
   const publishedDate = article.published_at ? formatDate(article.published_at) : '';
   const updatedDate = article.updated_at ? formatDate(article.updated_at) : '';
   const readingTime = article.reading_time_minutes || estimateReadingTime(articleBody);
-  const authorName = article.author_name || 'Navigate Wealth Editorial Team';
+  const authorName = article.author_name || 'Navigate Wealth';
 
   // Sanitise and enhance HTML
   const sanitisedHtml = DOMPurify.sanitize(articleBody);

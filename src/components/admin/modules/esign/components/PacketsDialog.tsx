@@ -28,6 +28,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { Badge } from '../../../../ui/badge';
@@ -348,12 +349,9 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">Expiry (days)</Label>
-            <Input
-              type="number"
-              min={1}
-              max={365}
+            <NumberInputField
               value={runExpiry}
-              onChange={(e) => setRunExpiry(Math.max(1, parseInt(e.target.value, 10) || 30))}
+              onValueChange={(v) => setRunExpiry(Math.max(1, v || 30))}
               className="h-8 text-xs"
             />
           </div>

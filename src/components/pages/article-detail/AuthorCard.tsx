@@ -17,7 +17,7 @@ interface AuthorCardProps {
 
 /** Default bio when no custom bio is provided */
 const DEFAULT_BIO =
-  'Wealthfront Pty Ltd t/a Navigate Wealth — our editorial team brings you expert insights and analysis on financial markets, investment strategies, and wealth management to help you make informed decisions about your financial future.';
+  'Wealthfront (Pty) Ltd t/a Navigate Wealth, an independent, founder-led financial advisory practice (FSP 54606). Insights and analysis on financial markets, investment strategies, and wealth management to help you make informed decisions about your financial future.';
 
 export function AuthorCard({ name, bio, imageUrl }: AuthorCardProps) {
   return (

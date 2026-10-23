@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
 import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
+import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { Textarea } from '../../../../../ui/textarea';
 import {
   Select,
@@ -207,12 +209,20 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
             className={`min-h-[100px] ${isRequired && !stringValue ? 'border-orange-300' : ''}`}
           />
         );
-      case 'number':
       case 'currency':
+        return (
+          <CurrencyInputField
+            value={stringValue}
+            onChange={(e) => handleFieldChange(field.key, e.target.value)}
+            placeholder={field.placeholder}
+            className={isRequired && !stringValue ? 'border-orange-300' : ''}
+          />
+        );
+      case 'number':
       case 'percentage':
         return (
-          <Input
-            type="number"
+          <NumberInputField
+            decimals={2}
             value={stringValue}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             placeholder={field.placeholder}

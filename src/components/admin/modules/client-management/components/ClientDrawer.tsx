@@ -1,4 +1,5 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
+import { AlertTriangle, Loader2, UserX } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -7,7 +8,6 @@ import {
   SheetDescription,
 } from '../../../../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
 import { Badge } from '../../../../ui/badge';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,8 +18,12 @@ import { NotesAPI } from '../../notes';
 import { NOTES_STALE_TIME } from '../../notes';
 import { noteKeys } from '../../../../../utils/queryKeys';
 import { esignApi, esignKeys, QUERY_GC_TIME, QUERY_STALE_TIME } from '../../esign';
+import type { FNAListFocus } from '../../fna';
 import { AskVascoPortalTab } from './AskVascoPortalTab';
+import { ClientAvatar } from './ClientAvatar';
 import { useOptionalUnsavedChangesRegistry } from '../../../../shared/unsaved-changes';
+import { Button } from '../../../../ui/button';
+import { useFreshClientOnOpen, type FreshClientState } from '../hooks/useFreshClientOnOpen';
 
 const loadClientProfileViewerFull = () =>
   import('./clientProfile/ClientProfileViewerFull').then((m) => ({
@@ -58,6 +62,11 @@ interface ClientDrawerProps {
   canEdit?: boolean;
   /** Whether the current user can delete clients. Defaults to true for backwards compat. */
   canDelete?: boolean;
+  /**
+   * Open on Policy Details → this category's FNA list, with the FNA highlighted
+   * — where publishing an FNA from outside the drawer lands the adviser.
+   */
+  fnaFocus?: FNAListFocus;
 }
 
 export function ClientDrawer({
@@ -66,6 +75,7 @@ export function ClientDrawer({
   onOpenChange,
   canEdit = true,
   canDelete = true,
+  fnaFocus,
 }: ClientDrawerProps) {
   if (!client) return null;
 
@@ -77,6 +87,7 @@ export function ClientDrawer({
       onOpenChange={onOpenChange}
       canEdit={canEdit}
       canDelete={canDelete}
+      fnaFocus={fnaFocus}
     />
   );
 }
@@ -88,6 +99,7 @@ interface ClientDrawerInnerProps {
   onOpenChange: (open: boolean) => void;
   canEdit: boolean;
   canDelete: boolean;
+  fnaFocus?: FNAListFocus;
 }
 
 function TabPanelFallback() {
@@ -128,13 +140,19 @@ type DrawerTab =
  * The Sheet's visual overlay and close-on-X behaviour are unaffected because
  * SheetOverlay always renders and onOpenChange remains wired.
  */
-function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProps) {
-  const queryClient = useQueryClient();
+function ClientDrawerInner({
+  client: listClient,
+  open,
+  onOpenChange,
+  canEdit,
+  fnaFocus,
+}: ClientDrawerInnerProps) {
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<DrawerTab>('overview');
-  // Hardcoded for now as in original file
-  const lastSanctionsCheck = '2024-01-15 14:30:00';
+  const [activeTab, setActiveTab] = useState<DrawerTab>(fnaFocus ? 'policies' : 'overview');
+  // Never the list row: everything below the shell reads the record fetched by
+  // this open (useFreshClientOnOpen explains why).
+  const fresh = useFreshClientOnOpen(listClient.id, open);
 
   const handleTabChange = (value: string) => {
     const nextTab = value as DrawerTab;
@@ -169,6 +187,147 @@ function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProp
     }, 3000);
   };
 
+  useEffect(() => {
+    if (!open) setActiveTab('overview');
+  }, [open]);
+
+  // Keep the profile on screen while the drawer animates closed. A new open
+  // forgets it, so it can never stand in for the record that open fetches.
+  const readyClient = fresh.status === 'ready' ? fresh.client : null;
+  const [closingClient, setClosingClient] = useState<Client | null>(null);
+  useEffect(() => {
+    if (readyClient) setClosingClient(readyClient);
+  }, [readyClient]);
+  useLayoutEffect(() => {
+    if (open) setClosingClient(null);
+  }, [open]);
+  const workspaceClient = readyClient ?? (open ? null : closingClient);
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
+      <SheetContent
+        // Fill everything right of the admin sidebar on desktop. A fixed pixel
+        // width left the page behind visible when the browser was zoomed out.
+        className="w-full overflow-y-auto transition-[width] duration-300 sm:max-w-none lg:w-[calc(100vw-var(--sidebar-width,18rem))]"
+      >
+        {workspaceClient ? (
+          <ClientWorkspace
+            client={workspaceClient}
+            open={open}
+            canEdit={canEdit}
+            fnaFocus={fnaFocus}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            sanctionsScreeningRunning={sanctionsScreeningRunning}
+            onRunSanctionsScreening={handleSanctionsScreening}
+          />
+        ) : (
+          <ClientDrawerPending
+            state={fresh.status === 'ready' ? { status: 'loading' } : fresh}
+            onClose={() => onOpenChange(false)}
+          />
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** What the drawer shows until this open's record has arrived. Never client data. */
+function ClientDrawerPending({
+  state,
+  onClose,
+}: {
+  state: Exclude<FreshClientState, { status: 'ready' }>;
+  onClose: () => void;
+}) {
+  if (state.status === 'missing') {
+    return (
+      <>
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <UserX className="h-5 w-5 text-muted-foreground" aria-hidden />
+            Client not available
+          </SheetTitle>
+          <SheetDescription>
+            This client is no longer listed in Client Management. They may have been removed or
+            their application declined.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="mt-6">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  if (state.status === 'error') {
+    return (
+      <>
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-600" aria-hidden />
+            Could not load this client
+          </SheetTitle>
+          <SheetDescription>
+            The latest details could not be loaded. Nothing is shown rather than an older copy.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="mt-6 flex gap-2">
+          <Button onClick={state.retry}>Try again</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle className="flex items-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden />
+          Opening client profile
+        </SheetTitle>
+        <SheetDescription>Loading the latest details from the server.</SheetDescription>
+      </SheetHeader>
+      <div className="mt-6 space-y-3" aria-hidden>
+        <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
+        <div className="h-40 w-full animate-pulse rounded-lg bg-muted/70" />
+        <div className="h-40 w-full animate-pulse rounded-lg bg-muted/50" />
+      </div>
+    </>
+  );
+}
+
+interface ClientWorkspaceProps {
+  client: Client;
+  open: boolean;
+  canEdit: boolean;
+  fnaFocus?: FNAListFocus;
+  activeTab: DrawerTab;
+  onTabChange: (value: string) => void;
+  sanctionsScreeningRunning: boolean;
+  onRunSanctionsScreening: () => void;
+}
+
+/** The profile itself. Mounted only with the record fetched by this open. */
+function ClientWorkspace({
+  client,
+  open,
+  canEdit,
+  fnaFocus,
+  activeTab,
+  onTabChange,
+  sanctionsScreeningRunning,
+  onRunSanctionsScreening,
+}: ClientWorkspaceProps) {
+  const queryClient = useQueryClient();
+  // Hardcoded for now as in original file
+  const lastSanctionsCheck = '2024-01-15 14:30:00';
+
   const { data: communications = [] } = useQuery({
     queryKey: clientKeys.communicationLogs(client.id),
     queryFn: () => communicationApi.getClientLogs(client.id),
@@ -178,10 +337,7 @@ function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProp
   const communicationCount = communications.length;
 
   useEffect(() => {
-    if (!open) {
-      setActiveTab('overview');
-      return;
-    }
+    if (!open) return;
 
     let cancelled = false;
     const wait = (ms: number) =>
@@ -189,6 +345,8 @@ function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProp
         window.setTimeout(resolve, ms);
       });
 
+    // The profile, policies and FNA status were already started when the
+    // profile opened (useFreshClientOnOpen); these warm the other tabs.
     const preloadSequence: Array<() => Promise<unknown>> = [
       () => queryClient.prefetchQuery(getClientProfileQueryOptions(client.id)),
       () => loadClientProfileViewerFull(),
@@ -252,144 +410,140 @@ function ClientDrawerInner({ client, open, onOpenChange }: ClientDrawerInnerProp
   }, [client.email, client.id, open, queryClient]);
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
-      <SheetContent
-        className="w-[1400px] overflow-y-auto transition-[max-width] duration-300"
-        style={{ maxWidth: 'calc(100vw - var(--sidebar-width, 18rem))' }}
-      >
-        <SheetHeader>
-          <SheetTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="/api/placeholder/40/40" />
-                <AvatarFallback>
-                  {client.firstName[0]}
-                  {client.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
+    <>
+      <SheetHeader>
+        <SheetTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ClientAvatar
+              clientId={client.id}
+              firstName={client.firstName}
+              lastName={client.lastName}
+              className="h-12 w-12"
+              editable={canEdit}
+            />
+            <div>
               <div>
-                <div>
-                  {client.firstName} {client.lastName}
-                </div>
-                <div className="text-sm text-muted-foreground font-normal">
-                  {client.preferredName !== client.firstName && `"${client.preferredName}" • `}
-                  Client ID: {client.id}
-                </div>
+                {client.firstName} {client.lastName}
+              </div>
+              <div className="text-sm text-muted-foreground font-normal">
+                {client.preferredName !== client.firstName && `"${client.preferredName}" • `}
+                Client ID: {client.id}
               </div>
             </div>
-          </SheetTitle>
-          <SheetDescription>Complete client profile and management tools</SheetDescription>
-        </SheetHeader>
+          </div>
+        </SheetTitle>
+        <SheetDescription>Complete client profile and management tools</SheetDescription>
+      </SheetHeader>
 
-        {/* MAIN TABS - Level 1: Primary Navigation
+      {/* MAIN TABS - Level 1: Primary Navigation
             Uses ShadCN Tabs component with rounded, filled style
             See: /components/admin/TAB_DESIGN_STANDARDS.md */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
-          <TabsList className="grid w-full grid-cols-10">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="personal">Personal Details</TabsTrigger>
-            <TabsTrigger value="policies">Policy Details</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="askVasco">Ask Vasco</TabsTrigger>
-            <TabsTrigger value="esign">E-Sign</TabsTrigger>
-            <TabsTrigger value="compliance">Compliance</TabsTrigger>
-            <TabsTrigger value="communication">
-              <span className="inline-flex items-center gap-1.5">
-                Communication
-                {communicationCount > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="h-5 min-w-[20px] px-1.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-700 border-0 leading-none"
-                  >
-                    {communicationCount}
-                  </Badge>
-                )}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={onTabChange} className="mt-6">
+        <TabsList className="grid w-full grid-cols-10">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="personal">Personal Details</TabsTrigger>
+          <TabsTrigger value="policies">Policy Details</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="askVasco">Ask Vasco</TabsTrigger>
+          <TabsTrigger value="esign">E-Sign</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
+          <TabsTrigger value="communication">
+            <span className="inline-flex items-center gap-1.5">
+              Communication
+              {communicationCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="h-5 min-w-[20px] px-1.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-700 border-0 leading-none"
+                >
+                  {communicationCount}
+                </Badge>
+              )}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+        </TabsList>
 
-          {/* 0. Overview — Client-side dashboard view */}
-          <TabsContent value="overview" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <ClientOverviewTab client={client} />
-            </Suspense>
-          </TabsContent>
+        {/* 0. Overview — Client-side dashboard view */}
+        <TabsContent value="overview" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <ClientOverviewTab client={client} />
+          </Suspense>
+        </TabsContent>
 
-          {/* 1. Personal Details Section */}
-          <TabsContent value="personal" className="space-y-4 h-[calc(100vh-300px)]">
-            <Suspense fallback={<TabPanelFallback />}>
-              <ClientProfileViewerFull clientData={client} />
-            </Suspense>
-          </TabsContent>
+        {/* 1. Personal Details Section */}
+        <TabsContent value="personal" className="space-y-4 h-[calc(100vh-300px)]">
+          <Suspense fallback={<TabPanelFallback />}>
+            <ClientProfileViewerFull clientData={client} />
+          </Suspense>
+        </TabsContent>
 
-          {/* 2. Policy Details Section */}
-          <TabsContent value="policies" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <PolicyDetailsSection
-                selectedClient={
-                  client as unknown as React.ComponentProps<
-                    typeof PolicyDetailsSection
-                  >['selectedClient']
-                }
-              />
-            </Suspense>
-          </TabsContent>
+        {/* 2. Policy Details Section */}
+        <TabsContent value="policies" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <PolicyDetailsSection
+              fnaFocus={fnaFocus}
+              selectedClient={
+                client as unknown as React.ComponentProps<
+                  typeof PolicyDetailsSection
+                >['selectedClient']
+              }
+            />
+          </Suspense>
+        </TabsContent>
 
-          {/* 3. Security Section */}
-          <TabsContent value="security" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <SecurityTab selectedClient={client} />
-            </Suspense>
-          </TabsContent>
+        {/* 3. Security Section */}
+        <TabsContent value="security" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <SecurityTab selectedClient={client} />
+          </Suspense>
+        </TabsContent>
 
-          {/* 4. Documents Section */}
-          <TabsContent value="documents" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <DocumentsTab selectedClient={client} />
-            </Suspense>
-          </TabsContent>
+        {/* 4. Documents Section */}
+        <TabsContent value="documents" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <DocumentsTab selectedClient={client} />
+          </Suspense>
+        </TabsContent>
 
-          {/* 5. Ask Vasco Section */}
-          <TabsContent value="askVasco" className="space-y-4">
-            <AskVascoPortalTab selectedClient={client} />
-          </TabsContent>
+        {/* 5. Ask Vasco Section */}
+        <TabsContent value="askVasco" className="space-y-4">
+          <AskVascoPortalTab selectedClient={client} />
+        </TabsContent>
 
-          {/* 6. E-Sign Section */}
-          <TabsContent value="esign" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <EsignTab selectedClient={client} />
-            </Suspense>
-          </TabsContent>
+        {/* 6. E-Sign Section */}
+        <TabsContent value="esign" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <EsignTab selectedClient={client} />
+          </Suspense>
+        </TabsContent>
 
-          {/* 7. Compliance Section */}
-          <TabsContent value="compliance" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <ComplianceTab
-                selectedClient={client}
-                sanctionsScreeningRunning={sanctionsScreeningRunning}
-                onRunSanctionsScreening={handleSanctionsScreening}
-                lastSanctionsCheck={lastSanctionsCheck}
-              />
-            </Suspense>
-          </TabsContent>
+        {/* 7. Compliance Section */}
+        <TabsContent value="compliance" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <ComplianceTab
+              selectedClient={client}
+              sanctionsScreeningRunning={sanctionsScreeningRunning}
+              onRunSanctionsScreening={onRunSanctionsScreening}
+              lastSanctionsCheck={lastSanctionsCheck}
+            />
+          </Suspense>
+        </TabsContent>
 
-          {/* 8. Communication Section */}
-          <TabsContent value="communication" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <CommunicationTab client={client} />
-            </Suspense>
-          </TabsContent>
+        {/* 8. Communication Section */}
+        <TabsContent value="communication" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <CommunicationTab client={client} />
+          </Suspense>
+        </TabsContent>
 
-          {/* 9. Notes Section */}
-          <TabsContent value="notes" className="space-y-4">
-            <Suspense fallback={<TabPanelFallback />}>
-              <ClientNotesTab selectedClient={client} />
-            </Suspense>
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+        {/* 9. Notes Section */}
+        <TabsContent value="notes" className="space-y-4">
+          <Suspense fallback={<TabPanelFallback />}>
+            <ClientNotesTab selectedClient={client} />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }

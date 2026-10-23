@@ -29,6 +29,7 @@ import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
 import { PDFDocument } from 'npm:pdf-lib';
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('esign-synthetic-probe');
 
@@ -62,7 +63,7 @@ async function time<T>(
     return {
       ok: false,
       latencyMs: Date.now() - start,
-      detail: err instanceof Error ? err.message : String(err),
+      detail: getErrMsg(err),
     };
   }
 }

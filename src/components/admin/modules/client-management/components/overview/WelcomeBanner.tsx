@@ -8,9 +8,10 @@
 import { Card, CardContent } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
 import { Badge } from '../../../../../ui/badge';
-import { User, Briefcase, RefreshCw, Download, Loader2 } from 'lucide-react';
+import { Briefcase, RefreshCw, Download, Loader2 } from 'lucide-react';
 import { fmt, fmtDate } from '../clientOverview/format';
 import { HealthScoreBreakdown } from './HealthScoreBreakdown';
+import { ClientAvatar } from '../ClientAvatar';
 import type { HealthSubScores } from '../../utils';
 import type { Client, ProfileData } from '../../types';
 import type { DashboardMode } from '../clientOverviewConstants';
@@ -154,9 +155,14 @@ export function WelcomeBanner({
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-4">
               {/* Avatar */}
-              <div className="flex items-center justify-center h-14 w-14 rounded-full bg-[#6d28d9]/10 flex-shrink-0">
-                <User className="h-7 w-7 text-[#6d28d9]" />
-              </div>
+              <ClientAvatar
+                clientId={client.id}
+                firstName={client.firstName}
+                lastName={client.lastName}
+                className="h-14 w-14"
+                fallbackClassName="bg-[#6d28d9]/10 text-[#6d28d9] text-lg font-semibold"
+                editable={!isClientMode}
+              />
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">

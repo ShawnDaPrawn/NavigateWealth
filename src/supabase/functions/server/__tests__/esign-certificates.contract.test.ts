@@ -1,5 +1,5 @@
 /**
- * esign-certificates.tsx — Completion Certificate Contract
+ * esign-certificates.ts — Completion Certificate Contract
  * ========================================================
  *
  * 280 statements, 0.4% coverage before this file. The completion certificate is
@@ -71,7 +71,7 @@ vi.mock('../esign-consent-registry.ts', () => ({
   ),
 }));
 
-const certs = await import('../esign-certificates.tsx');
+const certs = await import('../esign-certificates.ts');
 
 const ENVELOPE = 'env-1';
 

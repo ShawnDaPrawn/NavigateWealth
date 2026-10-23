@@ -5,7 +5,7 @@
  * These endpoints have NO auth — validation is the primary defence.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const ContactFormSubmitSchema = z.object({
   firstName: z

@@ -14,12 +14,7 @@ import { type PillarHealth, type Policy, numVal, strVal, worstGapStatus } from '
 // ── Pillar cards derivation ──────────────────────────────────────────────
 
 type FnaStatusValue =
-  | 'published'
-  | 'draft'
-  | 'not_started'
-  | 'error'
-  | 'submitted'
-  | 'client_draft';
+  'published' | 'draft' | 'not_started' | 'error' | 'submitted' | 'client_draft';
 
 /** Minimal shape of an FNA status entry the pillar derivation reads. */
 export interface PillarFnaStatusItem {

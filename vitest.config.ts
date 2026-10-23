@@ -33,14 +33,16 @@ export default defineConfig({
       { find: 'npm:docx', replacement: 'docx' },
       { find: 'npm:jspdf-autotable', replacement: 'jspdf-autotable' },
       { find: 'npm:jspdf', replacement: 'jspdf' },
+      // Pinned before unversioned, for the same prefix-order reason as pdf-lib.
+      { find: 'npm:zod@4.6.5', replacement: 'zod' },
       { find: 'npm:zod', replacement: 'zod' },
       { find: 'npm:hono', replacement: 'hono' },
       { find: 'npm:hono/cors', replacement: 'hono/cors' },
       { find: 'npm:@e965/xlsx@0.20.3', replacement: 'xlsx' },
       { find: 'npm:@zip.js/zip.js', replacement: '@zip.js/zip.js' },
       { find: 'jsr:@std/encoding/base64', replacement: '@jsr/std__encoding/base64' },
-      { find: 'node-forge@1.3.1', replacement: 'node-forge' },
-      { find: 'npm:node-forge@1.3.1', replacement: 'node-forge' },
+      { find: 'node-forge@1.4.0', replacement: 'node-forge' },
+      { find: 'npm:node-forge@1.4.0', replacement: 'node-forge' },
       // The e-signature signing stack. Without these the four modules that use
       // them fail to transform, and Vitest's coverage provider then drops them
       // from the report entirely rather than counting them as uncovered — which

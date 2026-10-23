@@ -2,13 +2,12 @@
  * Shared constants for Login and Signup pages.
  * Single source of truth for stats and feature showcases.
  */
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ─── Stat Cards (Right Column) ─────────────────────────────────────────────────
-export const AUTH_STATS = [
-  { value: '1,000+', label: 'Active Clients' },
-  { value: 'R500m+', label: 'Assets Managed' },
-  { value: '55+', label: 'Years Experience' },
-] as const;
+// Checkable facts only — the unbacked client, asset and experience figures that
+// used to sit here are why src/config/companyFacts.ts exists.
+export const AUTH_STATS = TRUST_FACTS.slice(0, 3).map(({ value, label }) => ({ value, label }));
 
 // ─── Feature Showcase Items ────────────────────────────────────────────────────
 export const LOGIN_FEATURES = [

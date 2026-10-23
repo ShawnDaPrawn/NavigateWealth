@@ -144,7 +144,7 @@ export function SEO({
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);
     setMeta('name', 'twitter:image', resolvedImage);
-    setMeta('name', 'twitter:site', '@NavigateWealthSA');
+    setMeta('name', 'twitter:site', '@Navigate_ZA');
 
     // Canonical link
     if (canonicalUrl) {
@@ -279,7 +279,7 @@ export function createAboutPageSchema(): Record<string, unknown> {
     '@type': 'AboutPage',
     name: `About ${SITE_NAME}`,
     description:
-      'Learn about Navigate Wealth, our mission, values, and the experienced team of independent financial advisors.',
+      'About Navigate Wealth, an independent, founder-led financial advisory practice (FSP 54606). Read a note from our founder, Shawn Francisco.',
     url: `${BASE_URL}/about`,
     publisher: {
       '@type': 'Organization',

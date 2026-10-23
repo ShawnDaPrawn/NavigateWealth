@@ -25,12 +25,7 @@ interface FnaRecord {
 }
 
 type BatchFnaStatus =
-  | 'published'
-  | 'draft'
-  | 'client_draft'
-  | 'submitted'
-  | 'not_started'
-  | 'error';
+  'published' | 'draft' | 'client_draft' | 'submitted' | 'not_started' | 'error';
 
 function findLatestPublished(records: FnaRecord[]): FnaRecord | null {
   const published = records.filter((r) => r.status === 'published');

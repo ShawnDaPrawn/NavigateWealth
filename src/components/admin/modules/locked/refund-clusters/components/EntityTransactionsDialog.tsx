@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '../../../../../ui/dialog';
 import { Input } from '../../../../../ui/input';
+import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { Label } from '../../../../../ui/label';
 import {
   Select,
@@ -344,14 +345,10 @@ export function EntityTransactionsDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="txn-amount">Amount (incl. VAT)</Label>
-                  <Input
+                  <CurrencyInputField
                     id="txn-amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
                     value={form.amount}
                     onChange={(e) => patch({ amount: e.target.value })}
-                    placeholder="0.00"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -374,14 +371,12 @@ export function EntityTransactionsDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="txn-vat-override">VAT Amount (override)</Label>
-                  <Input
+                  <CurrencyInputField
                     id="txn-vat-override"
-                    type="number"
-                    step="0.01"
-                    min="0"
                     value={form.vatOverride}
                     onChange={(e) => patch({ vatOverride: e.target.value })}
-                    placeholder={`Auto: ${formatZar(vatFromInclusive(amountNum, form.vatTreatment))}`}
+                    // The field shows its own "R", so the hint drops formatZar's.
+                    placeholder={`Auto: ${formatZar(vatFromInclusive(amountNum, form.vatTreatment)).replace(/^R\s*/, '')}`}
                   />
                 </div>
                 <div className="space-y-1.5 flex flex-col justify-end">

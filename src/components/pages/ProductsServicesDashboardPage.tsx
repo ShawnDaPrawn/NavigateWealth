@@ -276,7 +276,7 @@ export function ProductsServicesDashboardPage() {
         throw new Error(result?.error || 'Unable to submit your change request right now.');
       }
 
-      toast.success('Your change request has been sent to our team.');
+      toast.success('Your change request has been sent to us.');
       resetChangeRequestForm();
     } catch (error) {
       const message =

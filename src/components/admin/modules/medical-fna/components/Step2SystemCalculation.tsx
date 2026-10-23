@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { MedicalFNAInputs, MedicalFNAResults } from '../types';
 import { FNAStepNavigation } from '../../fna';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 interface Step2Props {
   inputs: Partial<MedicalFNAInputs>;
@@ -82,7 +83,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                 <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
                   Current MSA
                 </p>
-                <p className="text-lg font-medium">R {inputs.existingMSA.toLocaleString()}</p>
+                <p className="text-lg font-medium">{formatCurrencyWhole(inputs.existingMSA)}</p>
               </div>
             )}
             <div className="p-3 bg-muted/50 rounded-lg">
@@ -148,7 +149,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                 <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
                   Current Penalty
                 </p>
-                <p className="text-lg font-medium">R {inputs.existingLJP.toLocaleString()}</p>
+                <p className="text-lg font-medium">{formatCurrencyWhole(inputs.existingLJP)}</p>
               </div>
             )}
             <div className="p-3 bg-muted/50 rounded-lg">

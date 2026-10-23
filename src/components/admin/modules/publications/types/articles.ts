@@ -109,12 +109,7 @@ export interface Article {
 
   /** Optional press category for Press page display */
   press_category?:
-    | 'company_news'
-    | 'product_launch'
-    | 'awards'
-    | 'team_news'
-    | 'industry_insights'
-    | null;
+    'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
 
   /** Enriched fields from server (joins) */
   category_name?: string;
@@ -129,12 +124,7 @@ export interface Article {
 export interface CreateArticleInput {
   /** Optional press-page category */
   press_category?:
-    | 'company_news'
-    | 'product_launch'
-    | 'awards'
-    | 'team_news'
-    | 'industry_insights'
-    | null;
+    'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
 
   /** Article title */
   title: string;
@@ -229,12 +219,7 @@ export interface ArticleFormData {
   meta_description?: string;
   canonical_url?: string;
   press_category?:
-    | 'company_news'
-    | 'product_launch'
-    | 'awards'
-    | 'team_news'
-    | 'industry_insights'
-    | null;
+    'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
 }
 
 /**

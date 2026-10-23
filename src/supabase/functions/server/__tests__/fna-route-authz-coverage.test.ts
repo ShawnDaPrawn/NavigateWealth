@@ -22,11 +22,11 @@ import { fileURLToPath } from 'node:url';
 const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const FILES = [
-  'risk-planning-fna-routes.tsx',
-  'medical-fna-routes.tsx',
-  'retirement-fna-routes.tsx',
+  'risk-planning-fna-routes.ts',
+  'medical-fna-routes.ts',
+  'retirement-fna-routes.ts',
   'tax-planning-fna-routes.ts',
-  'investment-ina-routes.tsx',
+  'investment-ina-routes.ts',
   'estate-planning-fna-session-routes.ts',
   'estate-planning-fna-will-routes.ts',
   'estate-planning-fna-docs-routes.ts',
@@ -135,7 +135,7 @@ describe('FNA route ownership coverage', () => {
     // Sanity check that the body sweep is live, so it cannot pass vacuously.
     const bodyKeyed = all.filter((h) => BODY_CLIENT_ID.test(h.body));
     expect(bodyKeyed.map((h) => `${h.method} ${h.path} (${h.file})`)).toContain(
-      'POST /create (medical-fna-routes.tsx)',
+      'POST /create (medical-fna-routes.ts)',
     );
   });
 });

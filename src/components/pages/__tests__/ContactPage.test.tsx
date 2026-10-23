@@ -85,7 +85,7 @@ describe('ContactPage', () => {
         <ContactPage />
       </MemoryRouter>,
     );
-    expect(screen.getByText('012 667 2025')).toBeDefined();
+    expect(screen.getByText('012 667 2505')).toBeDefined();
     const emailEls = screen.getAllByText('info@navigatewealth.co');
     expect(emailEls.length).toBeGreaterThan(0);
   });

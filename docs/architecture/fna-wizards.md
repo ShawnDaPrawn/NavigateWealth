@@ -38,11 +38,72 @@ The pieces every wizard uses, all exported from the `fna` module barrel:
   client intake is supplied, in which case Step 2 with the calculation already
   run.
 
+Amounts on every step use the shared numeric inputs: `CurrencyInputField` for
+rands (the comma every three digits and the "." for cents appear as they are
+typed, never a stray leading 0) and `NumberInputField` for ages, counts, years
+and percentages. Rands display as `R1,234,567` through `formatCurrencyWhole`.
+See GUIDELINES §8.3.
+
 Every wizard takes the same props, `FNAWizardProps`, so the FNA registry
 (`profile-sections/fna-config.ts`) and the intake hand-off
 (`client-management/components/IntakeWizardHandoff.tsx`) treat all six
 identically. The registry mounts a wizard only while it is open, so each
 session starts on Step 1 with fresh state.
+
+## Publishing lands on the FNA list
+
+Publishing ends with `onFNAComplete(fnaId)`. Wherever the wizard was opened,
+the adviser lands on the client's Policy Details → that analysis's category →
+FNA list, with the new FNA highlighted:
+
+- From a policy category tab, `PolicyCategoryTab` opens its own FNA list.
+- From an accepted client intake, `ClientManagementModule` opens the client
+  drawer with `fnaFocus` (`FNA_POLICY_CATEGORY` maps the analysis to its
+  category).
+
+## After publish: list, view, publish, unpublish, delete
+
+Everything done to an FNA after the wizard goes through the registry —
+`FNAConfig.listForClient`, `getById`, `publishFNA`, `unpublishFNA` and
+`deleteFNA` — which call each module's own API. Nothing builds an FNA URL by
+hand: a hand-written URL map sent the Investment and Estate list and "View" to
+routes that do not exist, so their published FNAs answered 404. Every call but
+the list also takes the client id, because an FNA created from a client intake
+has an id that does not name its client; the server authorizes that client and
+builds the key from it. Every category with an FNA, Estate Planning included,
+has an "FNA" button that opens the list.
+
+Every type has a server route behind each call. Investment INA, Estate and Tax
+store a session under its client (`<prefix>:client:<clientId>:<id>`) and share
+`fna-client-scoped-sessions.ts`; Medical finds a wizard FNA or an intake one
+(`findMedicalFna`); Risk and Retirement keep each FNA at `<prefix>:<id>` with
+the client's `:list` and `:latest` alongside, and every lifecycle change keeps
+those two true. "Delete" on a Risk FNA archives it (kept on record, off the
+list); on the others it removes the record.
+
+"View" on an FNA with no calculated results — a draft made from a client
+intake — says it is not calculated yet instead of rendering a results view.
+
+### Client intakes
+
+Accepting a client intake makes a draft FNA from the client's answers
+(`linkedFnaId`), on the client's FNA list like any other FNA, and opens the
+wizard on it. Publishing creates the published FNA and then removes that draft
+(`removeIntakeDraft`), so the list shows one FNA, not a leftover draft beside
+it. If the wizard is closed without publishing, the draft stays in the list,
+where it can be viewed and deleted.
+
+### Tests
+
+- `src/components/admin/profile-sections/__tests__/fna-config.routes.test.ts`
+  pins the path of every registry call for every type.
+- `src/supabase/functions/server/__tests__/fna-view-by-id.contract.test.ts` and
+  `fna-session-lifecycle.contract.test.ts` pin that the server opens,
+  publishes, unpublishes and deletes each kind of id, and refuses another
+  client's adviser; `retirement-fna-routes.contract.test.ts` covers the
+  Retirement lifecycle and its `:list` / `:latest` bookkeeping.
+- `IntakeWizardHandoff.test.tsx` pins that publishing from an intake removes
+  its draft before landing.
 
 ## One way to read the client
 

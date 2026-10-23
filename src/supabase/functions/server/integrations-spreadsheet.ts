@@ -134,8 +134,12 @@ export function serialiseTemplateCellValue(value: unknown): unknown {
   return value;
 }
 
-export function buildTemplateFileName(providerName: string, categoryLabel: string): string {
-  const parts = [providerName || 'Provider', categoryLabel, 'Integration Template']
+export function buildTemplateFileName(
+  providerName: string,
+  categoryLabel: string,
+  suffix = 'Integration Template',
+): string {
+  const parts = [providerName || 'Provider', categoryLabel, suffix]
     .map((part) =>
       String(part || '')
         .replace(/[\\/:*?"<>|]/g, ' ')
@@ -194,7 +198,17 @@ export function parseSpreadsheetDateSerial(
   return XLSX.SSF.parse_date_code(raw) || null;
 }
 
-export function readSpreadsheetUpload(buffer: ArrayBuffer): {
+export function readSpreadsheetUpload(
+  buffer: ArrayBuffer,
+  options: {
+    /**
+     * Worksheets to read in preference to the canonical template sheet. The
+     * portfolio download names its data sheet differently from the
+     * integration template, and a workbook may carry both.
+     */
+    preferredSheets?: string[];
+  } = {},
+): {
   headers: string[];
   rawRows: Record<string, unknown>[];
   previewRows: Record<string, unknown>[];
@@ -203,11 +217,16 @@ export function readSpreadsheetUpload(buffer: ArrayBuffer): {
     type: 'array',
     sheetRows: MAX_INTEGRATION_UPLOAD_ROWS + 2,
   });
-  const dataSheetName = workbook.SheetNames.includes(CANONICAL_TEMPLATE_SHEET_NAME)
-    ? CANONICAL_TEMPLATE_SHEET_NAME
-    : workbook.SheetNames.includes('Provider Data')
-      ? 'Provider Data'
-      : workbook.SheetNames[0];
+  const preferred = (options.preferredSheets || []).find((name) =>
+    workbook.SheetNames.includes(name),
+  );
+  const dataSheetName =
+    preferred ||
+    (workbook.SheetNames.includes(CANONICAL_TEMPLATE_SHEET_NAME)
+      ? CANONICAL_TEMPLATE_SHEET_NAME
+      : workbook.SheetNames.includes('Provider Data')
+        ? 'Provider Data'
+        : workbook.SheetNames[0]);
   const sheet = workbook.Sheets[dataSheetName];
 
   if (!dataSheetName || !sheet) {

@@ -15,7 +15,6 @@ import { ProfileData, Asset } from '../../types';
 interface Deps {
   assetToDelete: string | null;
   profileData: ProfileData;
-  setAssetDisplayValues: Dispatch<SetStateAction<{ [id: string]: string }>>;
   setAssetToDelete: Dispatch<SetStateAction<string | null>>;
   setAssetsInEditMode: Dispatch<SetStateAction<Set<string>>>;
   setHasChanges: Dispatch<SetStateAction<boolean>>;
@@ -25,7 +24,6 @@ interface Deps {
 export function createAssetHandlers({
   assetToDelete,
   profileData,
-  setAssetDisplayValues,
   setAssetToDelete,
   setAssetsInEditMode,
   setHasChanges,
@@ -64,11 +62,6 @@ export function createAssetHandlers({
       newSet.delete(assetToDelete);
       return newSet;
     });
-    setAssetDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[assetToDelete];
-      return newState;
-    });
     setAssetToDelete(null);
     setHasChanges(true);
   };
@@ -101,11 +94,6 @@ export function createAssetHandlers({
       newSet.delete(id);
       return newSet;
     });
-    setAssetDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
-    });
   };
 
   const editAsset = (id: string) => {
@@ -125,11 +113,6 @@ export function createAssetHandlers({
         newSet.delete(id);
         return newSet;
       });
-      setAssetDisplayValues((prev) => {
-        const newState = { ...prev };
-        delete newState[id];
-        return newState;
-      });
       return;
     }
 
@@ -137,12 +120,6 @@ export function createAssetHandlers({
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
-    });
-
-    setAssetDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
     });
   };
 

@@ -96,7 +96,7 @@ vi.mock('../kv-cleanup-service.ts', () => ({
 
 const { request, routeRegistrations } = await import('./helpers/contract-harness.ts');
 const submissions = (await import('../submissions-routes.ts')).default;
-const newsletter = (await import('../newsletter.tsx')).default;
+const newsletter = (await import('../newsletter.ts')).default;
 const clients = (await import('../client-management-routes.ts')).default;
 const kvCleanup = (await import('../kv-cleanup-routes.ts')).default;
 const brand = (await import('../brand-routes.ts')).default;

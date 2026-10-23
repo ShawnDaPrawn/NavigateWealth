@@ -5,6 +5,8 @@
  * value; an override needs a recorded reason.
  */
 
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
+
 /**
  * - `fraction`: stored as a fraction (0.06), shown and edited as a percentage (6).
  * - `percent`:  stored and shown as a percentage (3.5).
@@ -32,7 +34,7 @@ export function fromDisplay(value: number, format: FNAAssumptionFormat): number 
 
 export function formatValue(value: number, format: FNAAssumptionFormat): string {
   if (format === 'currency') {
-    return `R ${Math.round(value).toLocaleString('en-ZA')}`;
+    return formatCurrencyWhole(value);
   }
   return `${toDisplay(value, format)}%`;
 }

@@ -268,6 +268,39 @@ describe('an anonymous caller cannot exhaust the store', () => {
   });
 });
 
+describe('accepted blocked image hosts are discarded', () => {
+  it.each([
+    ['https://content-media.investing.com/news/a.jpg'],
+    ['https://www.untitledui.com/images/flags/za.svg'],
+  ])('drops an img-src violation on %s', async (blocked) => {
+    // RSS thumbnails and the design-system showcase samples are an accepted
+    // outcome (see ACCEPTED_BLOCKED_IMAGE_HOSTS); each URL would otherwise
+    // become a permanently open Issue Manager row.
+    await post(legacy({ 'effective-directive': 'img-src', 'blocked-uri': blocked }));
+
+    expect(stored()).toHaveLength(0);
+  });
+
+  it('still records the same host under a different directive', async () => {
+    await post(
+      legacy({
+        'effective-directive': 'script-src',
+        'blocked-uri': 'https://content-media.investing.com/x.js',
+      }),
+    );
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  it('still records an img-src violation on an unlisted host', async () => {
+    await post(
+      legacy({ 'effective-directive': 'img-src', 'blocked-uri': 'https://evil.example/p.png' }),
+    );
+
+    expect(stored()).toHaveLength(1);
+  });
+});
+
 describe('extension noise is discarded', () => {
   it.each([
     ['chrome-extension://abc/inject.js'],
@@ -320,6 +353,103 @@ describe('extension noise is discarded', () => {
     const issues = stored() as { title: string }[];
     expect(issues).toHaveLength(1);
     expect(issues[0].title).toContain('real.example');
+  });
+});
+
+describe('crawler renderers are not visitors', () => {
+  const evalOnEstatePlanning = legacy({
+    'document-uri': 'https://www.navigatewealth.co/estate-planning',
+    'blocked-uri': 'eval',
+    'source-file': 'https://www.navigatewealth.co/assets/vendor-forms-DjFrCnjF.js',
+  });
+
+  function postAs(userAgent: string) {
+    return app.request('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/csp-report', 'User-Agent': userAgent },
+      body: JSON.stringify(evalOnEstatePlanning),
+    });
+  }
+
+  it('drops a report sent by a search-engine crawler', async () => {
+    const res = await postAs(
+      'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/153.0.8010.36 Safari/537.36',
+    );
+    expect(res.status).toBe(204);
+    expect(stored()).toHaveLength(0);
+  });
+
+  it('records the same report from a browser, naming the browser', async () => {
+    const browser =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
+    await postAs(browser);
+
+    const [issue] = stored() as { message: string }[];
+    expect(issue.message).toContain(`Last reported by: ${browser}`);
+  });
+});
+
+describe('code an automation tool injected is not ours', () => {
+  it('drops a source-less eval whose sample is a serialized function', async () => {
+    // Captured 2026-10-19 once 'report-sample' was on: a Puppeteer-style
+    // page.evaluate body, from a client claiming Chrome 118. Nothing in this
+    // repository or its dependencies calls utils.preloadCache().
+    await post(
+      legacy({
+        'document-uri': 'https://www.navigatewealth.co/resources',
+        'blocked-uri': 'eval',
+        'script-sample': '() => {\n  utils.preloadCache()\n}',
+      }),
+    );
+
+    expect(stored()).toHaveLength(0);
+  });
+
+  it('still records an eval made by one of our scripts', async () => {
+    await post(
+      legacy({
+        'document-uri': 'https://www.navigatewealth.co/admin',
+        'blocked-uri': 'eval',
+        'source-file': 'https://www.navigatewealth.co/assets/vendor-forms-DjFrCnjF.js',
+      }),
+    );
+
+    const [issue] = stored() as { message: string }[];
+    expect(issue.message).toContain('Source: https://www.navigatewealth.co/assets/vendor-forms');
+  });
+
+  it('still records an inline-script violation, which never has a source file', async () => {
+    await post(legacy({ 'blocked-uri': 'inline' }));
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  // A missing source file alone is not proof of automation: some browsers omit
+  // it for genuine evals, and those reports decide whether script-src can be
+  // enforced. Only the serialized-function sample marks injected code.
+  it('still records a source-less eval that carries no sample', async () => {
+    await post(
+      legacy({
+        'document-uri': 'https://www.navigatewealth.co/estate-planning',
+        'blocked-uri': 'eval',
+      }),
+    );
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  it('still records a source-less eval whose sample is ordinary code', async () => {
+    await post(legacy({ 'blocked-uri': 'eval', 'script-sample': 'var total = a + b;' }));
+
+    expect(stored()).toHaveLength(1);
+  });
+
+  it('still records a source-less Function-constructor eval (how first-party JIT shows up)', async () => {
+    await post(
+      legacy({ 'blocked-uri': 'eval', 'script-sample': '(function anonymous(payload,ctx\n) {' }),
+    );
+
+    expect(stored()).toHaveLength(1);
   });
 });
 

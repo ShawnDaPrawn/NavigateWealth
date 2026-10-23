@@ -5,7 +5,7 @@
  * registration via validateBody/validateOptionalBody (validate.ts).
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const TitleSchema = z
   .string()

@@ -3,10 +3,7 @@
 // ---------------------------------------------------------------------------
 
 export type PipelineId =
-  | 'market_commentary'
-  | 'regulatory_monitor'
-  | 'news_commentary'
-  | 'calendar_content';
+  'market_commentary' | 'regulatory_monitor' | 'news_commentary' | 'calendar_content';
 
 export interface PipelineConfig {
   id: PipelineId;

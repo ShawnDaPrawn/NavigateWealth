@@ -233,10 +233,7 @@ app.post(
         await kv.set(key, finalProfile);
       } catch (setError) {
         log.error('KV Write Failed', setError);
-        throw new Error(
-          `KV Write Failed: ${setError instanceof Error ? setError.message : String(setError)}`,
-          { cause: setError },
-        );
+        throw new Error(`KV Write Failed: ${getErrMsg(setError)}`, { cause: setError });
       }
 
       log.success('Profile updated successfully', { key });

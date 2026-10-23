@@ -4,14 +4,14 @@ import {
   ROA_MODULE_CONTRACT_SCHEMA_FORMAT,
   contractToLegacyModule,
   validateRoAModuleContract,
-} from '../advice-engine-roa-contract-types.ts';
+} from '../advice-engine/advice-engine-roa-contract-types.ts';
 import {
   AdviceEngineRoAService,
   buildCanonicalRoACompilation,
   createCanonicalRoADocx,
   createCanonicalRoAPdf,
   type RoADraftRecord,
-} from '../advice-engine-roa-service.ts';
+} from '../advice-engine/advice-engine-roa-service.ts';
 
 describe('RoA module contract definitions', () => {
   it('ships valid default contracts for the first editable RoA module set', () => {

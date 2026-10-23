@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { CurrencyInputField } from '../ui/currency-input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Separator } from '../ui/separator';
-import { formatCurrency, cleanCurrencyInput } from '../../utils/currencyFormatter';
+import { formatCurrency } from '../../utils/currencyFormatter';
 import { EmptyState } from './profile/EmptyState';
 import { emptyStateConfigs } from './profile/emptyStateConfigs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -48,10 +49,6 @@ interface BudgetingPageProps {
   embedded?: boolean;
   incomeValidationError?: string | null;
   setIncomeValidationError?: (error: string | null) => void;
-  grossIncomeDisplay?: string;
-  setGrossIncomeDisplay?: (value: string) => void;
-  netIncomeDisplay?: string;
-  setNetIncomeDisplay?: (value: string) => void;
   profileData?: Record<string, unknown>;
   handleInputChange?: (field: string, value: unknown) => void;
 }
@@ -269,8 +266,7 @@ export function BudgetingPage({
   }, [netIncome, totals, remaining]);
 
   const handleSaveExpense = () => {
-    const cleaned = cleanCurrencyInput(expenseForm.amount);
-    const amount = parseFloat(cleaned);
+    const amount = parseFloat(expenseForm.amount);
 
     if (!expenseForm.description.trim()) {
       alert('Please enter a description');
@@ -562,10 +558,7 @@ export function BudgetingPage({
                       onClick={handleSaveExpense}
                       size="sm"
                       className="bg-[#6d28d9] text-white hover:bg-[#5b21b6] disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={
-                        !expenseForm.amount ||
-                        parseFloat(cleanCurrencyInput(expenseForm.amount)) <= 0
-                      }
+                      disabled={!expenseForm.amount || parseFloat(expenseForm.amount) <= 0}
                     >
                       <Save className="h-4 w-4 mr-1" />
                       Save
@@ -622,22 +615,11 @@ export function BudgetingPage({
 
                   <div className="space-y-2">
                     <Label htmlFor="expenseAmount">Monthly Amount (Rands) *</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                        R
-                      </span>
-                      <Input
-                        id="expenseAmount"
-                        type="text"
-                        value={expenseForm.amount || ''}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9.]/g, '');
-                          setExpenseForm({ ...expenseForm, amount: raw });
-                        }}
-                        className="pl-8"
-                        placeholder="0.00"
-                      />
-                    </div>
+                    <CurrencyInputField
+                      id="expenseAmount"
+                      value={expenseForm.amount}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                    />
                   </div>
                 </div>
 
@@ -653,7 +635,7 @@ export function BudgetingPage({
                           : expenseForm.category === 'wants'
                             ? recommendations.wants - totals.wantsTotal
                             : recommendations.savings - totals.savingsTotal) -
-                          (parseFloat(cleanCurrencyInput(expenseForm.amount)) || 0),
+                          (parseFloat(expenseForm.amount) || 0),
                       ),
                     )}{' '}
                     remaining in {CATEGORY_INFO[expenseForm.category].name}

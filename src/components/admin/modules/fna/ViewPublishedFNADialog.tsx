@@ -49,11 +49,28 @@ interface ViewPublishedFNADialogProps {
    * compatibility across module ResultsView signatures.
    */
   ResultsView?: React.ComponentType<Record<string, unknown>>;
-  /** API base URL used to fetch the FNA when fnaId is provided */
+  /**
+   * Loads the FNA when fnaId is provided — FNAConfig.getById, which goes
+   * through the type's own API. Preferred over `apiBaseUrl`.
+   */
+  loadFn?: (fnaId: string) => Promise<Record<string, unknown> | null>;
+  /** Legacy: API base URL used to fetch `${apiBaseUrl}/${fnaId}` when no loadFn is given. */
   apiBaseUrl?: string;
   /** Async function to delete the FNA. When omitted and apiBaseUrl is
    *  not provided, the delete button is hidden. */
   deleteFn?: (fnaId: string) => Promise<void>;
+}
+
+/**
+ * Where each FNA type keeps its calculated results: Risk in `calculations`,
+ * Tax in `finalResults`, the rest in `results`. A draft made from a client
+ * intake has none yet, and the results views are not built for that (Tax's
+ * threw), so the dialog says so instead of rendering one.
+ */
+const RESULT_FIELDS = ['results', 'calculations', 'finalResults'] as const;
+
+function hasCalculatedResults(fna: Record<string, unknown>): boolean {
+  return RESULT_FIELDS.some((field) => fna[field] !== null && fna[field] !== undefined);
 }
 
 // ==================== COMPONENT ====================
@@ -68,6 +85,7 @@ export function ViewPublishedFNADialog({
   currentStatus,
   onDeleted,
   ResultsView,
+  loadFn,
   apiBaseUrl,
   deleteFn,
 }: ViewPublishedFNADialogProps) {
@@ -93,6 +111,12 @@ export function ViewPublishedFNADialog({
 
     setIsLoading(true);
     try {
+      if (loadFn) {
+        const loaded = await loadFn(fnaId);
+        if (!loaded) throw new Error(`${fnaTypeName} ${fnaId} was not found`);
+        setFnaData(loaded);
+        return;
+      }
       if (!apiBaseUrl) {
         throw new Error(`Cannot fetch FNA: no apiBaseUrl provided for type "${fnaType}"`);
       }
@@ -170,6 +194,14 @@ export function ViewPublishedFNADialog({
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />
+              </div>
+            ) : fnaData && !hasCalculatedResults(fnaData) ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="font-medium text-gray-900">Not calculated yet</p>
+                <p className="mt-1 text-sm">
+                  This draft holds the client&apos;s intake answers. Run the {fnaTypeName} to
+                  calculate and publish it.
+                </p>
               </div>
             ) : fnaData ? (
               ResultsView ? (

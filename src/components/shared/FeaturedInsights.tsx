@@ -315,8 +315,8 @@ export function FeaturedInsights() {
           <div>
             <h2 className="text-black mb-2 font-bold text-[20px]">Featured Insights</h2>
             <p className="text-gray-600 max-w-xl text-[15px]">
-              Expert perspectives on wealth management, tax planning, and financial strategy from
-              our advisers.
+              Perspectives on wealth management, tax planning, and financial strategy from Navigate
+              Wealth.
             </p>
           </div>
           <Link

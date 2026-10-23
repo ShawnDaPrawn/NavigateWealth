@@ -99,12 +99,12 @@ function makeBuilder(table: string) {
   return builder;
 }
 
-vi.mock('../social-assets-storage.ts', () => ({
+vi.mock('../social/social-assets-storage.ts', () => ({
   getSocialSupabase: () => ({ from: (t: string) => makeBuilder(t) }),
 }));
 
 const renderer = vi.hoisted(() => ({ renderAssetImage: vi.fn() }));
-vi.mock('../social-assets-images.ts', () => renderer);
+vi.mock('../social/social-assets-images.ts', () => renderer);
 
 const buffer = vi.hoisted(() => ({ getBufferPost: vi.fn() }));
 vi.mock('../buffer-service.ts', () => buffer);
@@ -120,7 +120,7 @@ import {
   syncBufferStatuses,
   updateAsset,
   updatePlaybook,
-} from '../social-assets-service.ts';
+} from '../social/social-assets-service.ts';
 import { APIError } from '../error.middleware.ts';
 
 function asset(overrides: Row): Row {

@@ -5,7 +5,7 @@
  * the medical aid wizard: each step was already a self-contained function with
  * its own props; only its address changed.
  */
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { type PreservationState, formatCurrency } from './model';
 
@@ -53,20 +53,15 @@ export function Step2Preservation({
       <div className="space-y-1.5">
         <Label className="text-sm font-medium text-gray-700">Estimated transfer amount</Label>
         <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-              R
-            </span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="e.g. 250,000"
+          <div className="flex-1">
+            <CurrencyInputField
+              placeholder="250,000"
               value={state.transfer_amount}
               onChange={(e) =>
                 onChange({ ...state, transfer_amount: formatCurrency(e.target.value) })
               }
               disabled={state.transfer_not_sure}
-              className="bg-white border-gray-300 h-10 pl-7"
+              className="bg-white border-gray-300 h-10"
             />
           </div>
           <button

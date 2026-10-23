@@ -9,6 +9,7 @@ import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { Shield, Info, AlertTriangle, FileText } from 'lucide-react';
+import { formatCurrencyWhole } from '../../../utils/currencyFormatter';
 
 // Import types from the admin module
 interface FinalRiskNeed {
@@ -54,14 +55,7 @@ interface RiskPlanningResultsProps {
   fna: PublishedFNA;
 }
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+const formatCurrency = (amount: number): string => formatCurrencyWhole(amount);
 
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('en-ZA', {

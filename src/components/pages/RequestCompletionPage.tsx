@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { NumberInputField } from '../ui/number-input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -16,6 +17,7 @@ import { Logo } from '../layout/Logo';
 import { Badge } from '../ui/badge';
 import { InteractiveFormRenderer } from '../admin/modules/resources';
 import { PageLoader } from '../ui/page-loader';
+import { COMPANY } from '@/config/companyFacts';
 
 // Minimal type definitions for request completion (module has been deleted)
 interface RequestInstance {
@@ -152,8 +154,8 @@ export function RequestCompletionPage() {
         );
       case 'number':
         return (
-          <Input
-            type="number"
+          <NumberInputField
+            decimals={2}
             value={(value as string) || ''}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
@@ -261,7 +263,7 @@ export function RequestCompletionPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              We have notified the team and will review your information shortly.
+              We have been notified and will review your information shortly.
             </p>
           </CardContent>
         </Card>
@@ -287,15 +289,15 @@ export function RequestCompletionPage() {
               <div className="text-right text-xs text-gray-600 space-y-1">
                 <div className="flex items-center justify-end gap-1">
                   <MapPin className="h-3 w-3" />
-                  <span>Cape Town, South Africa</span>
+                  <span>{COMPANY.headquarters}</span>
                 </div>
                 <div className="flex items-center justify-end gap-1">
                   <Phone className="h-3 w-3" />
-                  <span>+27 (0) 21 123 4567</span>
+                  <span>(+27) 12-667-2505</span>
                 </div>
                 <div className="flex items-center justify-end gap-1">
                   <Mail className="h-3 w-3" />
-                  <span>info@navigatewealth.co.za</span>
+                  <span>info@navigatewealth.co</span>
                 </div>
               </div>
             </div>
@@ -394,11 +396,13 @@ export function RequestCompletionPage() {
                 <ul className="list-disc list-inside space-y-1 text-gray-500">
                   <li>Please complete all required fields marked with an asterisk (*)</li>
                   <li>All information provided will be treated as confidential</li>
-                  <li>For assistance, please contact us at info@navigatewealth.co.za</li>
+                  <li>For assistance, please contact us at {COMPANY.email}</li>
                 </ul>
               </div>
               <div className="text-xs text-gray-400 pt-2 border-t border-gray-200">
-                <p>Navigate Wealth Financial Services (Pty) Ltd | Authorized FSP</p>
+                <p>
+                  {COMPANY.legalName} t/a {COMPANY.tradingName} | Authorised FSP {COMPANY.fspNumber}
+                </p>
                 <p className="mt-1">
                   This document is for information purposes only and does not constitute financial
                   advice.

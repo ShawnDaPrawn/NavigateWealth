@@ -6,6 +6,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { resolveCanonicalValueForClient } from './form-prefill-resolver.ts';
 import type { EsignField, EsignSigner } from './esign-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('esign-prefill');
 
@@ -92,9 +93,7 @@ async function loadClientFields(clientId: string | undefined): Promise<Record<st
       address: get('address') ?? get('physical_address'),
     };
   } catch (err) {
-    log.warn(
-      `Failed to load client ${clientId} for prefill: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    log.warn(`Failed to load client ${clientId} for prefill: ${getErrMsg(err)}`);
     return {};
   }
 }

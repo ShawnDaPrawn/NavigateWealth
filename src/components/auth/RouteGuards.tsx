@@ -15,11 +15,7 @@ import { logger } from '../../utils/logger';
 // ============================================================================
 
 export type AccountStatus =
-  | 'no_application'
-  | 'application_in_progress'
-  | 'submitted_for_review'
-  | 'approved'
-  | 'declined';
+  'no_application' | 'application_in_progress' | 'submitted_for_review' | 'approved' | 'declined';
 
 export type UserRole = 'admin' | 'client';
 

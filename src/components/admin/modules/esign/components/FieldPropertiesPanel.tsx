@@ -6,6 +6,7 @@
 
 import { useMemo } from 'react';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Button } from '../../../../ui/button';
@@ -319,31 +320,17 @@ export function FieldPropertiesPanel({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Min length</Label>
-                <Input
-                  type="number"
-                  min={0}
+                <NumberInputField
                   value={minLength ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    patchValidation({
-                      minLength: v === '' ? undefined : Math.max(0, parseInt(v, 10)),
-                    });
-                  }}
+                  onValueChange={(v) => patchValidation({ minLength: v })}
                   className="h-8"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Max length</Label>
-                <Input
-                  type="number"
-                  min={0}
+                <NumberInputField
                   value={maxLength ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    patchValidation({
-                      maxLength: v === '' ? undefined : Math.max(0, parseInt(v, 10)),
-                    });
-                  }}
+                  onValueChange={(v) => patchValidation({ maxLength: v })}
                   className="h-8"
                 />
               </div>
@@ -727,15 +714,12 @@ export function FieldPropertiesPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Precision</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={6}
+                    <NumberInputField
                       value={calc?.precision ?? 2}
-                      onChange={(e) =>
+                      onValueChange={(v) =>
                         writeCalculated({
                           formula: calc?.formula ?? '',
-                          precision: Math.max(0, Math.min(6, parseInt(e.target.value, 10) || 0)),
+                          precision: Math.max(0, Math.min(6, v ?? 0)),
                           prefix: calc?.prefix,
                         })
                       }
@@ -776,19 +760,21 @@ export function FieldPropertiesPanel({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">X Position (%)</Label>
-              <Input
-                type="number"
+              <NumberInputField
                 value={Math.round(field.x)}
-                onChange={(e) => onUpdate(field.id, { x: parseFloat(e.target.value) })}
+                onValueChange={(v) => {
+                  if (v !== undefined) onUpdate(field.id, { x: v });
+                }}
                 className="h-8"
               />
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Y Position (%)</Label>
-              <Input
-                type="number"
+              <NumberInputField
                 value={Math.round(field.y)}
-                onChange={(e) => onUpdate(field.id, { y: parseFloat(e.target.value) })}
+                onValueChange={(v) => {
+                  if (v !== undefined) onUpdate(field.id, { y: v });
+                }}
                 className="h-8"
               />
             </div>

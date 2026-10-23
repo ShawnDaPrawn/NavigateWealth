@@ -181,3 +181,40 @@ describe('contact form acknowledgment (real builder)', () => {
     expect(sent[0].html).toContain('&lt;script&gt;');
   });
 });
+
+describe('contact acknowledgement by enquiry type', () => {
+  beforeEach(() => {
+    sent.length = 0;
+  });
+
+  it('sends job applicants a careers acknowledgement, not the consultation one', async () => {
+    await sendContactFormAcknowledgment({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      phone: '0123456789',
+      clientType: 'job application',
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toBe('We received your application — Navigate Wealth');
+    expect(sent[0].html).toContain('email your CV to');
+    expect(sent[0].html).not.toContain('complimentary consultation');
+    expect(sent[0].text).not.toContain('complimentary consultation');
+  });
+
+  it('keeps the consultation acknowledgement for ordinary enquiries, without team wording', async () => {
+    await sendContactFormAcknowledgment({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane@example.com',
+      phone: '0123456789',
+      clientType: 'call-back request',
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).toContain('complimentary consultation');
+    expect(sent[0].html).not.toMatch(/our team|Navigate Wealth Team/);
+    expect(sent[0].text).not.toMatch(/our team|Navigate Wealth Team/);
+  });
+});

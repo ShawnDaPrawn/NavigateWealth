@@ -2,7 +2,7 @@
  * Security 2FA + suspend routes (Phase 5 decomposition).
  * =======================================================
  *
- * Extracted verbatim from security.tsx. No logic changes.
+ * Extracted verbatim from security.ts. No logic changes.
  *
  * Routes owned here:
  *   POST /:userId/suspend         — suspend/unsuspend a user account (admin only)
@@ -43,6 +43,7 @@ import {
 } from './repositories/two-factor-session-repository.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('security');
@@ -62,7 +63,7 @@ const TWO_FACTOR_VERIFY_LIMIT = {
 
 /** The Bearer token on this request — already verified by the route's guard. */
 function bearerToken(c: Context): string | undefined {
-  return c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  return stripBearerPrefix(c.req.header('Authorization'));
 }
 
 /**
@@ -587,7 +588,7 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
                 buttonUrl: 'https://www.navigatewealth.co/contact',
                 buttonLabel: 'Contact Support',
                 footerNote:
-                  'If you have any concerns, contact us immediately at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672025" style="color: #6d28d9;">012 667 2025</a>.',
+                  'If you have any concerns, contact us immediately at <a href="mailto:info@navigatewealth.co" style="color: #6d28d9;">info@navigatewealth.co</a> or call <a href="tel:+27126672505" style="color: #6d28d9;">012 667 2505</a>.',
                 footerSettings,
               },
             );
@@ -595,7 +596,7 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
               to: clientEmail,
               subject: 'Security Alert: Your Navigate Wealth Account Has Been Suspended',
               html: clientHtml,
-              text: `Security Alert — Your Navigate Wealth account has been temporarily suspended due to ${MAX_CUMULATIVE_FAILURES} failed two-factor authentication attempts. This is a security precaution. Please contact support at info@navigatewealth.co or call 012 667 2025 to reinstate your account.`,
+              text: `Security Alert — Your Navigate Wealth account has been temporarily suspended due to ${MAX_CUMULATIVE_FAILURES} failed two-factor authentication attempts. This is a security precaution. Please contact support at info@navigatewealth.co or call 012 667 2505 to reinstate your account.`,
             });
             log.info('✅ Client suspension alert email sent');
           }

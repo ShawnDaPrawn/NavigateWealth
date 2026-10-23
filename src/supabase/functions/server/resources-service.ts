@@ -30,7 +30,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { ValidationError, NotFoundError, APIError } from './error.middleware.ts';
 import type { Resource, ResourceFilters } from './resources-types.ts';
-import { generateId, parseRSStoJSON, type RSSItem } from './resources-helpers.ts';
+import { parseRSStoJSON, type RSSItem } from './resources-helpers.ts';
 import {
   getLegalDocument,
   getLegalDocumentAdmin,
@@ -142,7 +142,7 @@ export class ResourcesService {
    * Create resource
    */
   async createResource(data: Partial<Resource>): Promise<Resource> {
-    const resourceId = generateId();
+    const resourceId = crypto.randomUUID();
 
     const resource: Resource = {
       id: resourceId,
@@ -205,7 +205,7 @@ export class ResourcesService {
       throw new NotFoundError('Resource not found');
     }
 
-    const newId = generateId();
+    const newId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const duplicate: Resource = {
@@ -234,7 +234,7 @@ export class ResourcesService {
     scenario: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     if (!scenario.id) {
-      scenario.id = generateId();
+      scenario.id = crypto.randomUUID();
     }
     if (!scenario.createdAt) {
       scenario.createdAt = new Date().toISOString();

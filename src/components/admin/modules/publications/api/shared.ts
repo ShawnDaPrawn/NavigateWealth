@@ -26,10 +26,7 @@ export const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-cha
 export function notifyEmailEngagementChanged(
   articleId: string,
   reason:
-    | 'published'
-    | 'retry_queued'
-    | 'notification_job_updated'
-    | 'notification_campaign_updated',
+    'published' | 'retry_queued' | 'notification_job_updated' | 'notification_campaign_updated',
 ): void {
   if (typeof window === 'undefined') return;
 

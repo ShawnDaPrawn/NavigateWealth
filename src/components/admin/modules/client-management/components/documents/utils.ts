@@ -238,20 +238,7 @@ export function isValidFileExtension(filename: string): boolean {
   return (FILE_CONSTRAINTS.ALLOWED_EXTENSIONS as readonly string[]).includes(ext);
 }
 
-/**
- * Debounces a function call
- */
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number,
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
-
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
+export { debounce } from '../../../../../../shared/utils/debounce';
 
 /**
  * Creates a safe display name for a document

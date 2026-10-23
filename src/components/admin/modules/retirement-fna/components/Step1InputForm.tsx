@@ -10,13 +10,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
 import { User, Wallet, Info, Loader2, CalendarDays, TrendingUp } from 'lucide-react';
-import { formatCurrencyInput, cleanCurrencyInput } from '../../../../../utils/currencyFormatter';
+import { CurrencyInputField } from '../../../../ui/currency-input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { RetirementFNAInputs, RetirementFNAAdjustments } from '../types';
 import { DEFAULT_RETIREMENT_ASSUMPTIONS } from '../utils/calculation-engine';
 import { useFormPrefill } from '../../form-prefill';
@@ -58,6 +58,11 @@ function mapPrefillToRetirementInputs(
     currentRetirementSavings:
       Number(autoData.currentRetirementSavings ?? autoData.totalCurrentRetirementCapital) || 0,
   };
+}
+
+/** A stored fraction (0.065) as the percentage the adviser types (6.5). */
+function toPercent(fraction: number | undefined): number {
+  return Math.round((fraction ?? 0) * 10000) / 100;
 }
 
 export function Step1InputForm({
@@ -116,13 +121,6 @@ export function Step1InputForm({
 
   const handleChange = (field: keyof RetirementFNAInputs, value: string | number | boolean) => {
     setData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCurrencyChange = (field: keyof RetirementFNAInputs, value: string) => {
-    // Parse the string value back to a number for state
-    const cleanValue = cleanCurrencyInput(value);
-    const numericValue = cleanValue ? parseFloat(cleanValue) : 0;
-    handleChange(field, numericValue);
   };
 
   const handleAssumptionChange = (
@@ -204,14 +202,11 @@ export function Step1InputForm({
                     <Label htmlFor="currentAge" className="font-medium">
                       Current Age *
                     </Label>
-                    <Input
+                    <NumberInputField
                       id="currentAge"
-                      type="number"
-                      value={data.currentAge || ''}
-                      onChange={(e) => handleChange('currentAge', parseInt(e.target.value))}
+                      value={data.currentAge}
+                      onValueChange={(v) => handleChange('currentAge', v ?? 0)}
                       required
-                      min="18"
-                      max="100"
                     />
                     <p className="text-xs text-muted-foreground">Client's current age in years</p>
                   </div>
@@ -220,14 +215,11 @@ export function Step1InputForm({
                     <Label htmlFor="retirementAge" className="font-medium">
                       Intended Retirement Age *
                     </Label>
-                    <Input
+                    <NumberInputField
                       id="retirementAge"
-                      type="number"
-                      value={data.retirementAge || ''}
-                      onChange={(e) => handleChange('retirementAge', parseInt(e.target.value))}
+                      value={data.retirementAge}
+                      onValueChange={(v) => handleChange('retirementAge', v ?? 0)}
                       required
-                      min={data.currentAge ? data.currentAge + 1 : 18}
-                      max="100"
                     />
                     <p className="text-xs text-muted-foreground">Target age for retirement</p>
                   </div>
@@ -259,11 +251,10 @@ export function Step1InputForm({
                   <Label htmlFor="currentMonthlyIncome" className="font-medium">
                     Net Monthly Income
                   </Label>
-                  <Input
+                  <CurrencyInputField
                     id="currentMonthlyIncome"
-                    value={formatCurrencyInput(data.currentMonthlyIncome || 0)}
-                    onChange={(e) => handleCurrencyChange('currentMonthlyIncome', e.target.value)}
-                    placeholder="R 0.00"
+                    value={data.currentMonthlyIncome}
+                    onValueChange={(v) => handleChange('currentMonthlyIncome', v ?? 0)}
                   />
                   <p className="text-xs text-muted-foreground">
                     Base income for replacement ratio calculation
@@ -274,13 +265,10 @@ export function Step1InputForm({
                   <Label htmlFor="currentRetirementSavings" className="font-medium">
                     Current Retirement Capital
                   </Label>
-                  <Input
+                  <CurrencyInputField
                     id="currentRetirementSavings"
-                    value={formatCurrencyInput(data.currentRetirementSavings || 0)}
-                    onChange={(e) =>
-                      handleCurrencyChange('currentRetirementSavings', e.target.value)
-                    }
-                    placeholder="R 0.00"
+                    value={data.currentRetirementSavings}
+                    onValueChange={(v) => handleChange('currentRetirementSavings', v ?? 0)}
                   />
                   <p className="text-xs text-muted-foreground">
                     Total value of existing retirement funds and investments
@@ -291,13 +279,10 @@ export function Step1InputForm({
                   <Label htmlFor="currentMonthlyContribution" className="font-medium">
                     Current Monthly Contribution
                   </Label>
-                  <Input
+                  <CurrencyInputField
                     id="currentMonthlyContribution"
-                    value={formatCurrencyInput(data.currentMonthlyContribution || 0)}
-                    onChange={(e) =>
-                      handleCurrencyChange('currentMonthlyContribution', e.target.value)
-                    }
-                    placeholder="R 0.00"
+                    value={data.currentMonthlyContribution}
+                    onValueChange={(v) => handleChange('currentMonthlyContribution', v ?? 0)}
                   />
                   <p className="text-xs text-muted-foreground">
                     Total monthly contributions to retirement savings
@@ -321,16 +306,12 @@ export function Step1InputForm({
                       <div className="space-y-2">
                         <Label htmlFor="inflationRate">Inflation Rate (CPI)</Label>
                         <div className="relative">
-                          <Input
+                          <NumberInputField
                             id="inflationRate"
-                            type="number"
-                            step="0.1"
-                            value={((assumptions.inflationRate || 0) * 100).toFixed(1)}
-                            onChange={(e) =>
-                              handleAssumptionChange(
-                                'inflationRate',
-                                parseFloat(e.target.value) / 100,
-                              )
+                            decimals={2}
+                            value={toPercent(assumptions.inflationRate)}
+                            onValueChange={(v) =>
+                              handleAssumptionChange('inflationRate', (v ?? 0) / 100)
                             }
                           />
                           <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
@@ -343,16 +324,12 @@ export function Step1InputForm({
                       <div className="space-y-2">
                         <Label htmlFor="salaryEscalation">Salary Escalation</Label>
                         <div className="relative">
-                          <Input
+                          <NumberInputField
                             id="salaryEscalation"
-                            type="number"
-                            step="0.1"
-                            value={((assumptions.salaryEscalation || 0) * 100).toFixed(1)}
-                            onChange={(e) =>
-                              handleAssumptionChange(
-                                'salaryEscalation',
-                                parseFloat(e.target.value) / 100,
-                              )
+                            decimals={2}
+                            value={toPercent(assumptions.salaryEscalation)}
+                            onValueChange={(v) =>
+                              handleAssumptionChange('salaryEscalation', (v ?? 0) / 100)
                             }
                           />
                           <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
@@ -365,16 +342,12 @@ export function Step1InputForm({
                       <div className="space-y-2">
                         <Label htmlFor="preRetirementReturn">Pre-Retirement Return</Label>
                         <div className="relative">
-                          <Input
+                          <NumberInputField
                             id="preRetirementReturn"
-                            type="number"
-                            step="0.1"
-                            value={((assumptions.preRetirementReturn || 0) * 100).toFixed(1)}
-                            onChange={(e) =>
-                              handleAssumptionChange(
-                                'preRetirementReturn',
-                                parseFloat(e.target.value) / 100,
-                              )
+                            decimals={2}
+                            value={toPercent(assumptions.preRetirementReturn)}
+                            onValueChange={(v) =>
+                              handleAssumptionChange('preRetirementReturn', (v ?? 0) / 100)
                             }
                           />
                           <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
@@ -387,16 +360,12 @@ export function Step1InputForm({
                       <div className="space-y-2">
                         <Label htmlFor="postRetirementReturn">Post-Retirement Return</Label>
                         <div className="relative">
-                          <Input
+                          <NumberInputField
                             id="postRetirementReturn"
-                            type="number"
-                            step="0.1"
-                            value={((assumptions.postRetirementReturn || 0) * 100).toFixed(1)}
-                            onChange={(e) =>
-                              handleAssumptionChange(
-                                'postRetirementReturn',
-                                parseFloat(e.target.value) / 100,
-                              )
+                            decimals={2}
+                            value={toPercent(assumptions.postRetirementReturn)}
+                            onValueChange={(v) =>
+                              handleAssumptionChange('postRetirementReturn', (v ?? 0) / 100)
                             }
                           />
                           <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
@@ -408,13 +377,10 @@ export function Step1InputForm({
                       {/* Years in Retirement */}
                       <div className="space-y-2">
                         <Label htmlFor="yearsInRetirement">Years in Retirement</Label>
-                        <Input
+                        <NumberInputField
                           id="yearsInRetirement"
-                          type="number"
                           value={assumptions.yearsInRetirement}
-                          onChange={(e) =>
-                            handleAssumptionChange('yearsInRetirement', parseInt(e.target.value))
-                          }
+                          onValueChange={(v) => handleAssumptionChange('yearsInRetirement', v ?? 0)}
                         />
                       </div>
 
@@ -422,16 +388,11 @@ export function Step1InputForm({
                       <div className="space-y-2">
                         <Label htmlFor="replacementRatio">Target Income Ratio</Label>
                         <div className="relative">
-                          <Input
+                          <NumberInputField
                             id="replacementRatio"
-                            type="number"
-                            step="1"
-                            value={((assumptions.replacementRatio || 0) * 100).toFixed(0)}
-                            onChange={(e) =>
-                              handleAssumptionChange(
-                                'replacementRatio',
-                                parseFloat(e.target.value) / 100,
-                              )
+                            value={toPercent(assumptions.replacementRatio)}
+                            onValueChange={(v) =>
+                              handleAssumptionChange('replacementRatio', (v ?? 0) / 100)
                             }
                           />
                           <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">

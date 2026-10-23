@@ -98,11 +98,14 @@ export const EstatePlanningAPI = {
   /**
    * Get specific Estate Planning session by ID
    */
-  async getSessionById(sessionId: string): Promise<EstatePlanningSession> {
+  async getSessionById(sessionId: string, clientId?: string): Promise<EstatePlanningSession> {
     logger.debug('[EstatePlanningAPI] Fetching session', { sessionId });
     try {
+      // `clientId` lets the server find a session whose id does not encode its
+      // client (one created from a client intake).
+      const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
       const response = await api.get<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}`,
+        `/estate-planning-fna/session/${sessionId}${query}`,
       );
       return response.data;
     } catch (error) {
@@ -114,10 +117,12 @@ export const EstatePlanningAPI = {
   /**
    * Delete Estate Planning session by ID
    */
-  async deleteSession(sessionId: string): Promise<void> {
+  async deleteSession(sessionId: string, clientId?: string): Promise<void> {
     logger.debug('[EstatePlanningAPI] Deleting session', { sessionId });
     try {
-      await api.delete(`/estate-planning-fna/session/${sessionId}`);
+      await api.delete(
+        `/estate-planning-fna/session/${sessionId}${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
+      );
     } catch (error) {
       logger.error('Failed to delete Estate Planning session', error);
       throw error;
@@ -127,11 +132,11 @@ export const EstatePlanningAPI = {
   /**
    * Publish Estate Planning session
    */
-  async publishSession(sessionId: string): Promise<EstatePlanningSession> {
+  async publishSession(sessionId: string, clientId?: string): Promise<EstatePlanningSession> {
     logger.debug('[EstatePlanningAPI] Publishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}/publish`,
+        `/estate-planning-fna/session/${sessionId}/publish${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
       );
       return response.data;
     } catch (error) {
@@ -143,11 +148,11 @@ export const EstatePlanningAPI = {
   /**
    * Unpublish Estate Planning session (changes status from published back to draft)
    */
-  async unpublishSession(sessionId: string): Promise<EstatePlanningSession> {
+  async unpublishSession(sessionId: string, clientId?: string): Promise<EstatePlanningSession> {
     logger.debug('[EstatePlanningAPI] Unpublishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: EstatePlanningSession }>(
-        `/estate-planning-fna/session/${sessionId}/unpublish`,
+        `/estate-planning-fna/session/${sessionId}/unpublish${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
       );
       return response.data;
     } catch (error) {

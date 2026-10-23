@@ -109,11 +109,14 @@ export const InvestmentINAFnaAPI = {
   /**
    * Get specific INA session by ID
    */
-  async getSessionById(sessionId: string): Promise<InvestmentINASession> {
+  async getSessionById(sessionId: string, clientId?: string): Promise<InvestmentINASession> {
     logger.debug('[InvestmentINAFnaAPI] Fetching session', { sessionId });
     try {
+      // `clientId` lets the server find a session whose id does not encode its
+      // client (one created from a client intake).
+      const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
       const response = await api.get<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}`,
+        `/ina/investment/session/${sessionId}${query}`,
       );
       return response.data;
     } catch (error) {
@@ -125,10 +128,12 @@ export const InvestmentINAFnaAPI = {
   /**
    * Delete INA session by ID
    */
-  async deleteSession(sessionId: string): Promise<void> {
+  async deleteSession(sessionId: string, clientId?: string): Promise<void> {
     logger.debug('[InvestmentINAFnaAPI] Deleting session', { sessionId });
     try {
-      await api.delete(`/ina/investment/session/${sessionId}`);
+      await api.delete(
+        `/ina/investment/session/${sessionId}${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
+      );
     } catch (error) {
       logger.error('Failed to delete Investment INA session', error);
       throw error;
@@ -138,11 +143,11 @@ export const InvestmentINAFnaAPI = {
   /**
    * Publish Investment INA session
    */
-  async publishSession(sessionId: string): Promise<InvestmentINASession> {
+  async publishSession(sessionId: string, clientId?: string): Promise<InvestmentINASession> {
     logger.debug('[InvestmentINAFnaAPI] Publishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}/publish`,
+        `/ina/investment/session/${sessionId}/publish${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
       );
       return response.data;
     } catch (error) {
@@ -154,11 +159,11 @@ export const InvestmentINAFnaAPI = {
   /**
    * Unpublish Investment INA session (changes status from published back to draft)
    */
-  async unpublishSession(sessionId: string): Promise<InvestmentINASession> {
+  async unpublishSession(sessionId: string, clientId?: string): Promise<InvestmentINASession> {
     logger.debug('[InvestmentINAFnaAPI] Unpublishing session', { sessionId });
     try {
       const response = await api.put<{ success: boolean; data: InvestmentINASession }>(
-        `/ina/investment/session/${sessionId}/unpublish`,
+        `/ina/investment/session/${sessionId}/unpublish${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
       );
       return response.data;
     } catch (error) {

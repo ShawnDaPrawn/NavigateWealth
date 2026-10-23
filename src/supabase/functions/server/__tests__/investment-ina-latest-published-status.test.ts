@@ -30,7 +30,7 @@ vi.mock('../auth-mw.ts', async () =>
   (await import('./helpers/fna-routes-harness.ts')).makeAuthMwMockForFna(),
 );
 
-const app = (await import('../investment-ina-routes.tsx')).default;
+const app = (await import('../investment-ina-routes.ts')).default;
 
 describe('latest-published Investment INA', () => {
   it('answers 401, not 500, when the caller has no session', async () => {

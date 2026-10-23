@@ -146,9 +146,10 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
     if (footerSettings) {
       const socialLinksHtml = footerSettings.socialLinks
         ? Object.entries(footerSettings.socialLinks)
-            .filter(([_, url]) => url)
+            .filter(([platform, url]) => url && platform !== 'youtube')
             .map(([platform, url]) => {
-              const label = platform.charAt(0).toUpperCase() + platform.slice(1);
+              const label =
+                platform === 'twitter' ? 'X' : platform.charAt(0).toUpperCase() + platform.slice(1);
               return `<a href="${url}" class="email-link" style="color:#6d28d9; text-decoration:none; margin: 0 5px;">${label}</a>`;
             })
             .join(' | ')

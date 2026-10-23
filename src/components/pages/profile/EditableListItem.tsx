@@ -24,7 +24,7 @@ interface EditableListItemProps {
   className?: string;
 }
 
-export const EditableListItem: React.FC<EditableListItemProps> = ({
+export const EditableListItem = ({
   isEditing,
   onSave,
   onEdit,
@@ -35,7 +35,7 @@ export const EditableListItem: React.FC<EditableListItemProps> = ({
   badge,
   children,
   className = '',
-}) => {
+}: EditableListItemProps) => {
   const editBorderColor = borderColor.replace('border-', '').replace('-200', '-600');
 
   return (

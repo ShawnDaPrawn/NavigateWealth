@@ -29,7 +29,8 @@ export interface QuoteProvider {
 export interface QuoteFormField {
   id: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'select' | 'number';
+  /** 'number' renders a NumberInputField, 'currency' a CurrencyInputField (rand amount). */
+  type: 'text' | 'email' | 'tel' | 'select' | 'number' | 'currency';
   placeholder?: string;
   required?: boolean;
   options?: { value: string; label: string }[];

@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Phone, MessageCircle, Mail, Clock, FileText } from 'lucide-react';
+import { COMPANY } from '@/config/companyFacts';
 
 export function TopBar() {
   return (
@@ -10,7 +11,7 @@ export function TopBar() {
           <div className="flex items-center space-x-2 text-gray-700">
             <div className="flex items-center space-x-1.5 bg-white/70 px-3 py-1.5 rounded-md shadow-sm border border-gray-300/50">
               <Clock className="h-4 w-4 text-primary" />
-              <span className="text-sm font-semibold">Mon - Friday 08:00am - 16:30pm</span>
+              <span className="text-sm font-semibold">{COMPANY.officeHours.label}</span>
             </div>
           </div>
 
@@ -19,7 +20,7 @@ export function TopBar() {
             {/* Contact Information */}
             <div className="hidden lg:flex items-center space-x-4 bg-white/70 px-4 py-1.5 rounded-md shadow-sm border border-gray-300/50">
               <a
-                href="tel:012-667-2505"
+                href="tel:+27126672505"
                 className="flex items-center space-x-1.5 text-gray-700 hover:text-primary transition-all duration-200"
               >
                 <Phone className="h-4 w-4 text-primary" />
@@ -29,11 +30,11 @@ export function TopBar() {
               <div className="w-px h-4 bg-gray-300"></div>
 
               <a
-                href="mailto:enquiries@navigatewealth.co"
+                href={`mailto:${COMPANY.email}`}
                 className="flex items-center space-x-1.5 text-gray-700 hover:text-primary transition-all duration-200"
               >
                 <Mail className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold">info@navigatewealth.co</span>
+                <span className="text-sm font-semibold">{COMPANY.email}</span>
               </a>
 
               <div className="w-px h-4 bg-gray-300"></div>
@@ -62,7 +63,7 @@ export function TopBar() {
             {/* Mobile contact - simplified */}
             <div className="flex lg:hidden items-center space-x-2">
               <a
-                href="tel:012-667-2505"
+                href="tel:+27126672505"
                 aria-label="Call Navigate Wealth on 012 667 2505"
                 className="flex items-center justify-center w-8 h-8 bg-white/75 rounded-md shadow-sm border border-gray-300/50 text-primary hover:bg-primary hover:text-white transition-all duration-200"
               >

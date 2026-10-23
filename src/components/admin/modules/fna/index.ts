@@ -75,3 +75,5 @@ export { FNA_STATUS_CONFIG, FNA_BADGE_SIZE_CLASSES, FNA_QUERY_KEYS } from './con
 
 // --- public API used by other modules and by code outside admin/modules ---
 export { normalizeFnaListResponse } from './fnaListUtils';
+export { FNA_POLICY_CATEGORY } from './fnaPolicyCategory';
+export type { FNAType, FNAListFocus } from './fnaPolicyCategory';

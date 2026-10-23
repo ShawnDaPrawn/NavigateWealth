@@ -1,5 +1,5 @@
 /**
- * documents.tsx — what a client can do to a document record.
+ * documents.ts — what a client can do to a document record.
  * ==========================================================
  *
  * The router checks that the caller may act for `:userId` (self, admin or the
@@ -64,7 +64,7 @@ vi.mock('../email-service.ts', () => ({
 }));
 
 const { kvStore, request } = await import('./helpers/contract-harness.ts');
-const app = (await import('../documents.tsx')).default;
+const app = (await import('../documents.ts')).default;
 
 const DOC_KEY = 'document:client-a:doc-1';
 const stored = () => kvStore.get(DOC_KEY) as Record<string, unknown>;

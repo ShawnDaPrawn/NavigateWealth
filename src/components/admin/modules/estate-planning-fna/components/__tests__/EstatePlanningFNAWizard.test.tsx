@@ -111,7 +111,7 @@ describe('EstatePlanningFNAWizard', () => {
 
     // Step 4: publish.
     await waitFor(() => expect(screen.getByText('Final Analysis')).toBeTruthy());
-    expect(screen.getByText('Funeral costs: R80 000')).toBeTruthy();
+    expect(screen.getByText('Funeral costs: R80,000')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Publish FNA/ }));
 
     await waitFor(() => expect(onFNAComplete).toHaveBeenCalledWith('estate-1'));
@@ -167,7 +167,7 @@ describe('accepted client intake', () => {
 
     await waitFor(() => expect(screen.getByText('System Calculation')).toBeTruthy());
     // The R2m house counts in the gross estate; the R500k bond is a real number, not NaN.
-    expect(screen.getAllByText('R2 000 000').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R2,000,000').length).toBeGreaterThan(0);
     expect(screen.queryByText(/NaN/)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /Continue to Adjustments/ }));
@@ -204,8 +204,8 @@ describe('accepted client intake', () => {
 
     await waitFor(() => expect(screen.getByText('System Calculation')).toBeTruthy());
     // Records hold the R4m home; the intake's R2m "House" row is not added to it.
-    expect(screen.getAllByText('R4 000 000').length).toBeGreaterThan(0);
-    expect(screen.queryByText('R6 000 000')).toBeNull();
+    expect(screen.getAllByText('R4,000,000').length).toBeGreaterThan(0);
+    expect(screen.queryByText('R6,000,000')).toBeNull();
   });
 });
 

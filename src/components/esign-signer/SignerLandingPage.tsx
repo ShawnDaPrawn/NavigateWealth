@@ -26,15 +26,7 @@ import { t, normaliseLang } from './i18n';
 import type { SignerOrderSummary } from './types';
 
 type SigningStep =
-  | 'loading'
-  | 'expired'
-  | 'otp'
-  | 'kba'
-  | 'signing'
-  | 'waiting'
-  | 'complete'
-  | 'rejected'
-  | 'error';
+  'loading' | 'expired' | 'otp' | 'kba' | 'signing' | 'waiting' | 'complete' | 'rejected' | 'error';
 
 export function SignerLandingPage() {
   const [searchParams] = useSearchParams();

@@ -2,7 +2,7 @@
  * Security activity log routes (Phase 5 decomposition).
  * ======================================================
  *
- * Extracted verbatim from security.tsx. No logic changes.
+ * Extracted verbatim from security.ts. No logic changes.
  *
  * Routes owned here:
  *   GET  /:userId/activity  — fetch activity logs for a user

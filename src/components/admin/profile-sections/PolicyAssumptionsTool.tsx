@@ -31,7 +31,7 @@ import {
   DialogTrigger,
 } from '../../ui/dialog';
 import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
+import { NumberInputField } from '../../ui/number-input';
 import { Label } from '../../ui/label';
 import { formatCurrency } from '../../../utils/currencyFormatter';
 import { calculateRetirementMaturityValue } from '../../../utils/retirementCalculations';
@@ -190,11 +190,11 @@ export function PolicyAssumptionsTool({
                 Annual Growth Rate (%)
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="growth"
-                  type="number"
+                  decimals={2}
                   value={tempGrowth}
-                  onChange={(e) => setTempGrowth(Number(e.target.value))}
+                  onValueChange={(v) => setTempGrowth(v ?? 0)}
                   className="h-9 pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
@@ -210,11 +210,11 @@ export function PolicyAssumptionsTool({
                 </span>
               </Label>
               <div className="relative">
-                <Input
+                <NumberInputField
                   id="escalation"
-                  type="number"
+                  decimals={2}
                   value={tempEscalation}
-                  onChange={(e) => setTempEscalation(Number(e.target.value))}
+                  onValueChange={(v) => setTempEscalation(v ?? 0)}
                   className="h-9 pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">

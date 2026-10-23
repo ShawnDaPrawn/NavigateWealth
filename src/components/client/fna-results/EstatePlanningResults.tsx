@@ -2,7 +2,7 @@
  * Client-Side Estate Planning FNA Results Display
  * Read-only view of published Estate Planning Analysis
  *
- * Data source: /supabase/functions/server/estate-planning-fna-routes.tsx
+ * Data source: /supabase/functions/server/estate-planning-fna-routes.ts
  * Backend stores inputs with: familyInfo, dependants, willInfo, assets, liabilities,
  * lifePolicies, assumptions, hasOffshorAssets, hasTrusts, trustDetails, planningNotes
  * Results may be null if calculation hasn't been run — in that case we derive

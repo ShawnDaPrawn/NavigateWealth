@@ -1237,25 +1237,50 @@ const TooltipSection = () => (
             ))}
         </Demo>
 
-        <Demo title="Always open (isOpen)" className="justify-around gap-x-8 gap-y-28 pt-28 pb-10">
-            <Tooltip title="Portfolio value" isOpen>
-                <TooltipTrigger aria-label="Portfolio value">
-                    <Wallet02 className="size-5 text-fg-quaternary" />
-                </TooltipTrigger>
-            </Tooltip>
-            <Tooltip title="Portfolio value" arrow isOpen>
-                <TooltipTrigger aria-label="Portfolio value with arrow">
-                    <Wallet02 className="size-5 text-fg-quaternary" />
-                </TooltipTrigger>
-            </Tooltip>
-            <Tooltip title="R 1 250 000" description="Balanced Growth, as at 31 August 2026. Up 8.4% over twelve months." arrow isOpen>
-                <TooltipTrigger aria-label="Portfolio detail">
-                    <Grid01 className="size-5 text-fg-quaternary" />
-                </TooltipTrigger>
-            </Tooltip>
-        </Demo>
+        <HeldOpenTooltips />
     </ShowcaseSection>
 );
+
+/**
+ * Controlled tooltips (isOpen). They start closed and open together from a
+ * button: an open React Aria tooltip claims the Escape key for the whole page,
+ * so tooltips held open from page load would stop Escape closing any modal.
+ */
+const HeldOpenTooltips = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <Demo title="Held open (isOpen)" className="flex-col items-stretch gap-6">
+            <div>
+                <Button color="secondary" size="sm" onPress={() => setIsOpen((open) => !open)}>
+                    {isOpen ? "Close the tooltips" : "Open all three tooltips"}
+                </Button>
+            </div>
+            <div className="flex justify-around gap-x-8 pt-28 pb-10">
+                <Tooltip title="Portfolio value" isOpen={isOpen} onOpenChange={setIsOpen}>
+                    <TooltipTrigger aria-label="Portfolio value">
+                        <Wallet02 className="size-5 text-fg-quaternary" />
+                    </TooltipTrigger>
+                </Tooltip>
+                <Tooltip title="Portfolio value" arrow isOpen={isOpen} onOpenChange={setIsOpen}>
+                    <TooltipTrigger aria-label="Portfolio value with arrow">
+                        <Wallet02 className="size-5 text-fg-quaternary" />
+                    </TooltipTrigger>
+                </Tooltip>
+                <Tooltip
+                    title="R 1 250 000"
+                    description="Balanced Growth, as at 31 August 2026. Up 8.4% over twelve months."
+                    arrow
+                    isOpen={isOpen}
+                    onOpenChange={setIsOpen}
+                >
+                    <TooltipTrigger aria-label="Portfolio detail">
+                        <Grid01 className="size-5 text-fg-quaternary" />
+                    </TooltipTrigger>
+                </Tooltip>
+            </div>
+        </Demo>
+    );
+};
 
 /* ------------------------------------------------------------------ */
 /* Selection controls                                                  */

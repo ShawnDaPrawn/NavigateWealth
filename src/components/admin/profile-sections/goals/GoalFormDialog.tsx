@@ -9,6 +9,8 @@ import {
 } from '../../../ui/dialog';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
+import { CurrencyInputField } from '../../../ui/currency-input';
+import { NumberInputField } from '../../../ui/number-input';
 import { Label } from '../../../ui/label';
 import { Goal, GoalType, AdHocContribution } from '../../../../shared/goals';
 import { Checkbox } from '../../../ui/checkbox';
@@ -413,17 +415,12 @@ export function GoalFormDialog({
 
               <div className="col-span-2">
                 <Label htmlFor="amount">Target Amount (Future Value)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-gray-500">R</span>
-                  <Input
-                    id="amount"
-                    type="number"
-                    className={`pl-8 ${errors.targetAmount ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                    value={targetAmount}
-                    onChange={(e) => setTargetAmount(e.target.value)}
-                    placeholder="1000000"
-                  />
-                </div>
+                <CurrencyInputField
+                  id="amount"
+                  className={errors.targetAmount ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                  value={targetAmount}
+                  onChange={(e) => setTargetAmount(e.target.value)}
+                />
                 {errors.targetAmount && (
                   <p className="text-xs text-red-500 mt-1">{errors.targetAmount}</p>
                 )}
@@ -482,28 +479,22 @@ export function GoalFormDialog({
                   <span className="text-xs text-blue-600/70">Manual entry</span>
                 </div>
                 <div className="p-2 border-l border-gray-100 flex items-center">
-                  <div className="relative w-full">
-                    <span className="absolute left-2.5 top-2 text-gray-400 text-xs">R</span>
-                    <Input
+                  <div className="w-full">
+                    <CurrencyInputField
                       id="lumpSum"
-                      type="number"
-                      className="pl-6 h-9 text-center bg-blue-50/30 border-blue-200 focus-visible:ring-blue-500"
+                      className="h-9 text-center bg-blue-50/30 border-blue-200 focus-visible:ring-blue-500"
                       value={initialLumpSum}
                       onChange={(e) => setInitialLumpSum(e.target.value)}
-                      placeholder="0"
                     />
                   </div>
                 </div>
                 <div className="p-2 border-l border-gray-100 flex items-center">
-                  <div className="relative w-full">
-                    <span className="absolute left-2.5 top-2 text-gray-400 text-xs">R</span>
-                    <Input
+                  <div className="w-full">
+                    <CurrencyInputField
                       id="monthly"
-                      type="number"
-                      className="pl-6 h-9 text-center bg-blue-50/30 border-blue-200 focus-visible:ring-blue-500"
+                      className="h-9 text-center bg-blue-50/30 border-blue-200 focus-visible:ring-blue-500"
                       value={monthlyContribution}
                       onChange={(e) => setMonthlyContribution(e.target.value)}
-                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -526,9 +517,9 @@ export function GoalFormDialog({
                 <Label htmlFor="growth" className="text-xs">
                   Exp. Net Growth (%)
                 </Label>
-                <Input
+                <NumberInputField
                   id="growth"
-                  type="number"
+                  decimals={2}
                   value={annualGrowthRate}
                   onChange={(e) => setAnnualGrowthRate(e.target.value)}
                   placeholder="10"
@@ -542,9 +533,9 @@ export function GoalFormDialog({
                 <Label htmlFor="escalation" className="text-xs">
                   Annual Escalation (%)
                 </Label>
-                <Input
+                <NumberInputField
                   id="escalation"
-                  type="number"
+                  decimals={2}
                   value={annualEscalation}
                   onChange={(e) => setAnnualEscalation(e.target.value)}
                   placeholder="6"
@@ -560,9 +551,9 @@ export function GoalFormDialog({
                 <Label htmlFor="inflation" className="text-xs">
                   Inflation (%)
                 </Label>
-                <Input
+                <NumberInputField
                   id="inflation"
-                  type="number"
+                  decimals={2}
                   value={inflationRate}
                   onChange={(e) => setInflationRate(e.target.value)}
                   placeholder="6"
@@ -579,13 +570,13 @@ export function GoalFormDialog({
             <div className="border-t pt-4">
               <Label className="mb-2 block">Ad-Hoc Contributions</Label>
               <div className="flex gap-2 mb-2">
-                <Input
-                  type="number"
-                  placeholder="Amount"
-                  value={newAdHocAmount}
-                  onChange={(e) => setNewAdHocAmount(e.target.value)}
-                  className="flex-1"
-                />
+                <div className="flex-1">
+                  <CurrencyInputField
+                    placeholder="Amount"
+                    value={newAdHocAmount}
+                    onChange={(e) => setNewAdHocAmount(e.target.value)}
+                  />
+                </div>
                 <Input
                   type="date"
                   value={newAdHocDate}

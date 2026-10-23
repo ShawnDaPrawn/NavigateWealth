@@ -30,6 +30,7 @@ import {
   MedicalFNAInputs,
 } from '../types';
 import { FNAStepNavigation } from '../../fna';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 interface Step4Props {
   inputs: MedicalFNAInputs;
@@ -218,7 +219,9 @@ export function Step4Finalise({
               <div className="text-sm">
                 <div className="text-gray-600">
                   Existing MSA:{' '}
-                  <span className="font-medium text-gray-900">R {inputs.existingMSA || 0}</span>
+                  <span className="font-medium text-gray-900">
+                    {formatCurrencyWhole(inputs.existingMSA || 0)}
+                  </span>
                 </div>
                 <div className="text-gray-600">
                   Need Savings?{' '}

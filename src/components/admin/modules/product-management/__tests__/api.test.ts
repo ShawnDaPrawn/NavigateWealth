@@ -448,4 +448,22 @@ describe('productManagementApi', () => {
       });
     });
   });
+
+  describe('issuePortfolioAgentToken', () => {
+    it('issues once, with transient retries off, and returns the agent and its token', async () => {
+      const agent = { name: 'grok', createdAt: '2026-10-01T09:00:00Z' };
+      mockApiPost.mockResolvedValue({ success: true, agent, token: 'nwpa_once' });
+
+      const result = await productManagementApi.issuePortfolioAgentToken('grok');
+
+      expect(result).toEqual({ agent, token: 'nwpa_once' });
+      // A retry after a lost response would get 409 and the token would be gone.
+      expect(mockApiPost).toHaveBeenCalledTimes(1);
+      expect(mockApiPost).toHaveBeenCalledWith(
+        'integrations/portfolio-agents',
+        { name: 'grok' },
+        { retryTransientFailures: false },
+      );
+    });
+  });
 });

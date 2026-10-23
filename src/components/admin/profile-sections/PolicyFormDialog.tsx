@@ -26,7 +26,9 @@ import {
   Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
+import { invalidateClientPolicies } from '../../../shared/api/clientPolicies';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import { calculateRetirementMaturityValue } from '../../../utils/retirementCalculations';
 import { PolicyDocumentUpload } from './PolicyDocumentUpload';
@@ -65,6 +67,7 @@ export function PolicyFormDialog({
   editingPolicy,
   onSave,
 }: PolicyFormDialogProps) {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<'subcategory' | 'provider' | 'details'>('provider');
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
@@ -399,6 +402,9 @@ export function PolicyFormDialog({
       await (editingPolicy
         ? api.put('/integrations/policies', policyData)
         : api.post('/integrations/policies', policyData));
+      // Every cached view of this client's policies (Overview, Policies tab)
+      // refetches now, rather than showing the pre-save values.
+      void invalidateClientPolicies(queryClient, clientId);
 
       toast.success(editingPolicy ? 'Policy updated successfully' : 'Policy added successfully', {
         id: toastId,

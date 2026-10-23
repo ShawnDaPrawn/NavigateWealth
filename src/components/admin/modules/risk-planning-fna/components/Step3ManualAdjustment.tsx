@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { Edit2, RotateCcw, AlertTriangle, Info } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import {
@@ -342,10 +342,8 @@ export function Step3ManualAdjustment({
 
             <div className="space-y-2">
               <Label htmlFor="overrideValue">Override Value (Rand)</Label>
-              <Input
+              <CurrencyInputField
                 id="overrideValue"
-                type="number"
-                placeholder="0"
                 value={overrideForm.overrideValue}
                 onChange={(e) =>
                   setOverrideForm({ ...overrideForm, overrideValue: e.target.value })

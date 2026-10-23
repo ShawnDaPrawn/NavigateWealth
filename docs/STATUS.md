@@ -44,7 +44,11 @@ Vercel. `AGENTS.md` carries the full protocol.
 Every PR is gated by `.github/workflows/quality-check.yml`: format, ESLint,
 three typechecks (SPA, middleware, Deno), dependency-cruiser boundaries, unit
 tests, coverage floors, and the production build. `e2e-smoke` is a required
-check as well.
+check as well. The gates run as three parallel jobs (`static-checks`,
+`vitest`, `backend-coverage`) and the required `quality-check` job collects
+their results and decides; a superseded PR run is cancelled. Both required
+checks take their Node version from `.nvmrc` (20). Vercel builds production on
+its own project setting (24.x), which `.nvmrc` does not change.
 
 Several gates are **ratchets** rather than pass/fail rules: a committed number
 records the current size of a known backlog, and CI fails if the real count
@@ -123,12 +127,30 @@ stated prerequisite has already caused a production outage once.
   `kv.getByPrefixWhereFieldEquals` against the partial index from migration
   `20260914083818`. `kv.getByPrefix` is for one-off admin reads, not for
   anything on a timer.
-- **The browser accelerators pause when the tab is hidden.** Five background
-  pollers mount at `AdminDashboardPage` level for the whole admin session. The
-  three frequent ones go through `useVisibilityAwarePoll`, so a backgrounded
-  tab issues nothing. pg_cron is the authoritative driver in every case, which
-  is what makes pausing safe. The two remaining ones carry once-per-period
-  logic and are left on plain intervals deliberately.
+- **A bulk action is one request, not a loop over the single-item endpoint.**
+  Looping `DELETE /articles/:id` over 120 drafts took 7.5 minutes, because
+  every id is a new URL and pays its own preflight and request floor
+  ([`INCIDENTS.md`](INCIDENTS.md) 2026-10-01). Articles now use
+  `POST /publications/articles/bulk-delete`, which never deletes a published
+  article (the guard runs inside the DELETE itself), and
+  `POST /publications/articles/bulk-archive`.
+- **No scheduled work runs in the admin browser tab.** Until 2026-10-12 six
+  pollers mounted on `AdminDashboardPage` for the whole admin session
+  (scheduled publishing, auto-content, article and newsletter delivery, the
+  overdue-task digest, and client and KV maintenance), so every open admin
+  tab spent its first minute firing them. They are gone. Five duplicated a
+  pg_cron job and are now driven by it alone. The sixth, KV cleanup, had no
+  cron job: `kv-cleanup-nightly` (01:30 SAST,
+  `supabase/cron/kv-cleanup-jobs.sql`, jobid 38) replaces it. It was
+  installed on 2026-10-12, and its first scheduled run (23:30 UTC that night)
+  answered 200 with a live cleanup and recorded itself in
+  `system:kv_cleanup:last_run`. What
+  changed for users: article and newsletter emails advance on the 2-minute
+  cron tick only (Newsletter Studio no longer promises that an open page
+  sends), the overdue digest goes out on weekdays only (as the cron has always
+  sent it), and client data maintenance is weekly (Sunday night) rather than
+  daily. A job that must run belongs in a cron job, not in whoever has a tab
+  open.
 - **The delivery cron cadence and the studio's stale threshold move
   together.** The two email-delivery jobs tick every 2 minutes. With an idle
   heartbeat skipped for up to 2 minutes, a healthy job can show a 4-minute-old
@@ -141,6 +163,62 @@ stated prerequisite has already caused a production outage once.
   the KV store, untouched. The client and personnel drawers' Compliance tabs,
   Honeycomb and the goAML digest are separate and unaffected. Do not restore
   the old module or its API in passing.
+- **Policy details have two write paths, on purpose.** The native path, the
+  portal worker and the Review tab's template upload, stages a run that an
+  adviser publishes. The portfolio table, the Integrations **Portfolio** tab's
+  upload and the `/integrations/portfolio-table` endpoint an external agent
+  calls, applies directly after its own preview or `dryRun`. Both publish
+  through `publishSyncRun`, so locked fields hold, provenance is recorded in
+  `integrationSyncHistory` (source `portfolio_table` for the second path) and
+  client totals are recalculated the same way. Each agent has its own token,
+  and the actor on its writes (`agent:<name>`) comes from that token, never
+  from the request body. **External agent updates are automatic, by owner
+  decision (2026-10-01):** they apply and the client's profile follows, with
+  no further action or approval. That holds for an agent writing straight
+  into the database too: a trigger marks the client's totals stale and a
+  worker recalculates them (migrations `client_totals_refresh` and
+  `client_totals_refresh_claims`). Do not route agent writes through the
+  Review tab or add any review step without a new owner decision, and do not
+  let either path write around `publishSyncRun` or take an agent's name from
+  the body. A policy's PDF has two doors as well: the app's upload, and the
+  intake an agent with no login uses (a file over HTTPS, or base64 in SQL).
+  Both store through `replacePolicyDocumentForPolicy`; keep it that way rather
+  than giving the intake its own write.
+- **Every typed number goes through the two shared numeric inputs.**
+  `NumberInputField` for plain numbers (what is typed shows as typed, no
+  leading 0) and `CurrencyInputField` for rands (the comma every three digits
+  and the "." for cents appear while typing, not after). This is an owner rule
+  (2026-10-09) and ESLint enforces it: a native `type="number"` input, or the
+  blur-time `formatCurrencyInput` / `cleanCurrencyInput` helpers in a
+  component, fail lint. See [`GUIDELINES.md`](GUIDELINES.md) §8.3. Do not
+  reintroduce either to get a field working.
+- **The six FNA / INA wizards are one flow.** Risk Planning, Medical Aid,
+  Retirement, Tax Planning, Investment INA and Estate Planning run the same
+  four steps (Information Gathering, System Auto-Calculation, Adviser Manual
+  Adjustment, Finalise & Publish) inside `FNAWizardShell`, take the same
+  `FNAWizardProps`, and publish through `useFNAPublish`. Client values reach a
+  Step 1 form only through the shared review prefill, with shared facts
+  declared once in `FNA_CLIENT_KEYS`; no wizard reads the profile or policies
+  for them itself. Publishing lands the adviser on that category's FNA list in
+  Policy Details with the new FNA highlighted, whether the wizard was opened
+  from the category tab or from an accepted client intake. The FNA list,
+  "View", publish, unpublish and delete go through the registry
+  (`FNAConfig.listForClient`, `getById`, `publishFNA`, `unpublishFNA`,
+  `deleteFNA`), which calls each module's own API. Never build an FNA URL by hand: a
+  hand-written URL map is what sent the Investment INA and Estate lists and
+  "View" to routes that do not exist, so their published FNAs answered 404.
+  The rules, and the tests that hold them, are in
+  [`architecture/fna-wizards.md`](architecture/fna-wizards.md).
+- **The public site states only checkable facts about the firm.** In October
+  2026 a directory listing was declined because the About, Press and Careers
+  pages carried unbacked, contradictory figures (55+/25+/15+ years, 200+ vs
+  195+ clients, "20+ team members", a Cape Town office) and untraceable
+  testimonials. Every claim now comes from `src/config/companyFacts.ts` (FSP,
+  FSCA date, CIPC number, founder), and reviews render only from
+  `src/config/publishedReviews.ts`, each with a public link and date; the
+  section is hidden while that list is empty. `companyFacts.test.ts` fails if a
+  public page reintroduces the removed figures. Navigate Wealth is presented as
+  founder-led (Shawn Francisco); do not reintroduce headcounts.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
@@ -150,21 +228,23 @@ stated prerequisite has already caused a production outage once.
 These need dashboard or credential access. An agent can prepare and verify them
 but cannot complete them.
 
-| Item                                    | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Detail                                                             |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| Backup secrets and first verified run   | **The largest open resilience gap.** `weekly-backup` has three legs and not one has ever executed: all three scheduled runs were green because every step skipped. Leg 1 needs `SUPABASE_DB_URL` (use the **session pooler** string on port 5432 — the direct host is IPv6-only and runners are IPv4). Leg 2 needs `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. Leg 3 needs an Object Lock bucket and `NW_BACKUP_S3_BUCKET`. Closes when a dispatched run shows every leg `true` in its job summary — not before. | [`runbooks/backup-and-restore.md`](runbooks/backup-and-restore.md) |
-| Two-factor auth on privileged accounts  | Two-factor is built and works, and it is opt-in. Nothing enforces it by role, and **no admin, super-admin or adviser account has it enabled** (1 of 193 users overall). One phished adviser password is currently enough. Enforcement needs a code change; enabling it on the existing privileged accounts does not. Verification is now bound to the sign-in that performed it (`2fa_sessions:{userId}`), so turning it on protects against a stolen password even while the owner is signed in elsewhere.        | `security-2fa-routes.ts`, `auth-mw.ts`                             |
-| Super-admin / admin allowlists          | Super-admin and admin are granted by EMAIL (`SUPER_ADMIN_EMAILS`, `NW_ADMIN_EMAILS`), so every address listed — hardcoded or in those two Edge Function secrets — must already have an account. An address with none is a seat for whoever registers it first. The hardcoded set now holds only the owner; check both secrets for addresses with no account.                                                                                                                                                       | `constants.ts`                                                     |
-| Legacy staff role backfill              | Two admins and one adviser carry their role only in `user_metadata`, which the server no longer reads for any role. The admins keep access only while `NW_ADMIN_EMAILS` lists them; the adviser resolves as a client. Run the personnel backfill (super-admin) so each gets `app_metadata.role`.                                                                                                                                                                                                                   | `client-management-personnel-service.ts`                           |
-| `SUPER_ADMIN_PASSWORD` rotation         | Until the September 2026 auth review this one secret could reset any account's password through `/auth/ensure-dev-user`. Those routes are gone and it now only authenticates cron calls, but anyone who ever held it held the platform: rotate it.                                                                                                                                                                                                                                                                 | `cron-auth.ts`                                                     |
-| Anonymous-callable database function    | The live security advisor flags `public.social_asset_intake_submit_hex_staged` as `SECURITY DEFINER` and executable by `anon` and `authenticated`. It was applied in production from unmerged PR #337 and is not in `supabase/migrations`. Every sibling `social_asset_intake_*` function is service-role only. Revoking `EXECUTE` from `anon`, `authenticated` and `public` needs owner confirmation for the production write.                                                                                    | Supabase security advisor                                          |
-| Supabase password policy                | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                                                                                                                                                                                                                                                                                                              | Archived ledger § 3.6                                              |
-| `NW_ALLOWED_ORIGINS`                    | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                                                                                                                                                                                                                                                                                                          | Archived ledger § 3.2                                              |
-| Social automation — cron jobs           | Open until `supabase/cron/social-automation-jobs.sql` is run after the `/social-assets` Edge Function deploys, and query C shows both paths answering 200.                                                                                                                                                                                                                                                                                                                                                         | `runbooks/social-automation.md`                                    |
-| Social automation — X channel in Buffer | Open until the X account is connected in Buffer (third channel slot). The scheduling routine skips X until then.                                                                                                                                                                                                                                                                                                                                                                                                   | `runbooks/social-automation.md`                                    |
-| Social automation — Routines            | Open until the two weekly Routines (Sat 04:00 UTC generate, Sun 14:00 UTC schedule; connectors Buffer + Supabase) exist on the Claude and/or ChatGPT side. The playbooks they read are seeded by the migration.                                                                                                                                                                                                                                                                                                    | `runbooks/social-automation.md`                                    |
-| Newsletter intake — Routine             | Open until the monthly routine exists. Owner's choice: a **ChatGPT** scheduled task on the HTTPS path (`POST /newsletter-intake/submit`, header `x-nw-newsletter-intake-token`, token in Vault as `navigatewealth_newsletter_intake_token`). Migrations `20260916211847` and `20260916212029` are applied; until the routine runs, admins upload the PDF by hand, which works today.                                                                                                                               | `runbooks/newsletter-intake.md`                                    |
-| Newsletter website archive              | Live. Published newsletters appear at Resources → Newsletters and at `/resources/newsletter/<slug>`. The public bucket `make-91ed8379-newsletters-public` is created lazily on the first publish — no operator step. Two public read routes were added, so `quality/baselines/route-auth-baseline` rose 129 → 131.                                                                                                                                                                                                 | `runbooks/newsletter-intake.md`                                    |
+| Item                                    | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Detail                                                             |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Backup secrets and first verified run   | **The largest open resilience gap.** `weekly-backup` has three legs and not one has ever executed: all three scheduled runs were green because every step skipped. Leg 1 needs `SUPABASE_DB_URL` (use the **session pooler** string on port 5432 — the direct host is IPv6-only and runners are IPv4). Leg 2 needs `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`. Leg 3 needs an Object Lock bucket and `NW_BACKUP_S3_BUCKET`. Closes when a dispatched run shows every leg `true` in its job summary — not before.                                                                                                                                                                                                                                                                                                                                                                                                                            | [`runbooks/backup-and-restore.md`](runbooks/backup-and-restore.md) |
+| Two-factor auth on privileged accounts  | Two-factor is built and works, and it is opt-in. Nothing enforces it by role, and **no admin, super-admin or adviser account has it enabled** (1 of 193 users overall). One phished adviser password is currently enough. Enforcement needs a code change; enabling it on the existing privileged accounts does not. Verification is now bound to the sign-in that performed it (`2fa_sessions:{userId}`), so turning it on protects against a stolen password even while the owner is signed in elsewhere.                                                                                                                                                                                                                                                                                                                                                                                                                                   | `security-2fa-routes.ts`, `auth-mw.ts`                             |
+| Super-admin / admin allowlists          | Super-admin and admin are granted by EMAIL (`SUPER_ADMIN_EMAILS`, `NW_ADMIN_EMAILS`), so every address listed — hardcoded or in those two Edge Function secrets — must already have an account. An address with none is a seat for whoever registers it first. The hardcoded set now holds only the owner; check both secrets for addresses with no account.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `constants.ts`                                                     |
+| Legacy staff role backfill              | Two admins and one adviser carry their role only in `user_metadata`, which the server no longer reads for any role. The admins keep access only while `NW_ADMIN_EMAILS` lists them; the adviser resolves as a client. Run the personnel backfill (super-admin) so each gets `app_metadata.role`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `client-management-personnel-service.ts`                           |
+| `SUPER_ADMIN_PASSWORD` rotation         | Until the September 2026 auth review this one secret could reset any account's password through `/auth/ensure-dev-user`. Those routes are gone and it now only authenticates cron calls, but anyone who ever held it held the platform: rotate it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `cron-auth.ts`                                                     |
+| Supabase password policy                | The leaked-password toggle is on and verified. Minimum length 12 and leaving "required characters" alone are operator assertions — Supabase auth config is not readable over the API.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Archived ledger § 3.6                                              |
+| `NW_ALLOWED_ORIGINS`                    | Set it deliberately once every origin is known; until then the permissive fallback above is load-bearing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Archived ledger § 3.2                                              |
+| Social automation — cron jobs           | Open until `supabase/cron/social-automation-jobs.sql` is run after the `/social-assets` Edge Function deploys, and query C shows both paths answering 200.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `runbooks/social-automation.md`                                    |
+| Social automation — X channel in Buffer | Open until the X account is connected in Buffer (third channel slot). The scheduling routine skips X until then.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `runbooks/social-automation.md`                                    |
+| Social automation — Routines            | Open until the two weekly Routines (Sat 04:00 UTC generate, Sun 14:00 UTC schedule; connectors Buffer + Supabase) exist on the Claude and/or ChatGPT side. The playbooks they read are seeded by the migration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `runbooks/social-automation.md`                                    |
+| Newsletter intake — Routine             | Open until the monthly routine exists. Owner's choice: a **ChatGPT** scheduled task on the HTTPS path (`POST /newsletter-intake/submit`, header `x-nw-newsletter-intake-token`, token in Vault as `navigatewealth_newsletter_intake_token`). Migrations `20260916211847` and `20260916212029` are applied; until the routine runs, admins upload the PDF by hand, which works today.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `runbooks/newsletter-intake.md`                                    |
+| Newsletter website archive              | Live. Published newsletters appear at Resources → Newsletters and at `/resources/newsletter/<slug>`. The public bucket `make-91ed8379-newsletters-public` is created lazily on the first publish — no operator step. Two public read routes were added, so `quality/baselines/route-auth-baseline` rose 129 → 131.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `runbooks/newsletter-intake.md`                                    |
+| Agent updates — profile totals          | Live and verified (2026-10-01). Migrations `client_totals_refresh` (`20261001105937`) and `client_totals_refresh_claims` (`20261001122441`) applied; the worker deployed with #399. Owner decision: an external agent's update applies automatically and the client's profile follows. A write straight into the database (the update bot, through the connector) marks the client's totals stale and a worker recalculates them within seconds, one client at a time under a claim, storing them only while the policies it totalled are unchanged. A failure is recorded and retried after a back-off, never reported done. The one-off recalculation of all 4 clients with policies ran at 13:18 UTC, right after the deploy, with no failures; AGRA678002's profile now reads 569,366.18, matching the policy. If a client stays stale or shows a `last_error`, start with the runbook.                                                   | `runbooks/client-totals-refresh.md`                                |
+| Policy document intake — agents         | Live (2026-10-01). Migration `policy_document_intake` was run by the owner in the SQL editor, because the connector's approval prompt for SQL containing DELETE kept timing out, and recorded as `20261001120000`. That approval was for the install only. An agent that can make an HTTPS request uploads the PDF whole to `POST /policy-document-intake/upload` with its own agent token (a super admin issues one in the Portfolio tab), and it is normally stored in the same request. An agent with only the connector uses `policy_document_intake_submit(…)`, or `put_part` then submit; base64 rarely fits one statement, which is how the update bot was left with three short pieces under `agra678002-statement-2026-10-01`. Those are not a whole file: the worker refuses a PDF with no `%%EOF`, and an upload under that key clears them and submits its own file whole. Open until the first real hand-over reads `processed`. | `runbooks/policy-document-intake.md`                               |
+| Portfolio table — external agent        | Live and deployed. Each outside agent gets its own token: a super admin issues it under Integrations → Portfolio → Endpoint for external agents → Agent tokens, and the agent's name is recorded on every write it makes (a name in the body cannot change it). The original shared Vault token was carried over as the agent `shared` (migration `portfolio_agent_tokens`, applied). Open until the owner issues each bot (Grok/ChatGPT) its own token, sees its first dry run answer 200, and revokes `shared`. Run every bot every few hours, not every few minutes: the known debt below says why.                                                                                                                                                                                                                                                                                                                                        | `runbooks/portfolio-table.md`                                      |
 
 ## Open security follow-ups
 
@@ -173,15 +253,17 @@ migrations. These follow-ups from the same audit were **not**, and are recorded
 here so the archive banner is not mistaken for an all-clear. Detail and finding
 IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
 
-| Finding        | What is still open                                                                                                                                                                                                                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it.                                     |
-| H-3 / H-4      | **Closed.** The limiter is atomic (RPC, migration 20260821210412) and fails closed, and OTP brute-force is bounded by `esign-rate-limit.ts`. The remaining half — that the login and password-reset limits sat BESIDE the auth path rather than in it, so a caller could skip them entirely — is closed by `POST /auth/login` and `POST /auth/password-reset`. |
-| H-6 / H-9      | **Closed.** Download, audit, document and certificate reads use `requireOwnedEnvelope` (S6); the attachment LIST (`GET /esign/envelopes/:id/attachments`) was the last one that authenticated and then ignored the answer, and now checks envelope ownership too.                                                                                              |
-| H-11           | **Closed.** Content-type-aware body ceiling in `create-app.ts` (2 MB JSON / 55 MB upload, with a named exception for transcription's base64 audio), enforced ahead of every route.                                                                                                                                                                             |
-| M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                                                             |
-| M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                                                       |
-| —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                                                                 |
+| Finding        | What is still open                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H-5 (rotation) | **Owner action.** When no platform signing certificate is provisioned in the environment, `esign-pdf-protect.ts` falls back to storing the private key and its passphrase in KV — application-readable storage. The code logs a warning when it takes that path. Provision the certificate and rotate the key to close it.                                                                                                 |
+| H-3 / H-4      | **Closed.** The limiter is atomic (RPC, migration 20260821210412) and fails closed, and OTP brute-force is bounded by `esign-rate-limit.ts`. The remaining half — that the login and password-reset limits sat BESIDE the auth path rather than in it, so a caller could skip them entirely — is closed by `POST /auth/login` and `POST /auth/password-reset`.                                                             |
+| H-6 / H-9      | **Closed.** Download, audit, document and certificate reads use `requireOwnedEnvelope` (S6); the attachment LIST (`GET /esign/envelopes/:id/attachments`) was the last one that authenticated and then ignored the answer, and now checks envelope ownership too.                                                                                                                                                          |
+| H-11           | **Closed.** Content-type-aware body ceiling in `create-app.ts` (2 MB JSON / 55 MB upload, with a named exception for transcription's base64 audio), enforced ahead of every route.                                                                                                                                                                                                                                         |
+| M-7            | XSS sink hardening                                                                                                                                                                                                                                                                                                                                                                                                         |
+| M-12           | Idempotency body caching                                                                                                                                                                                                                                                                                                                                                                                                   |
+| —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                                                                                                                             |
+| GHSA-86w9      | **Accepted by the owner, 2026-10-02.** `node-forge` (via `@signpdf/signer-p12`) has a high advisory in RSA signature _verification_, no fixed release; `esign-pdf-protect.ts` only signs, so it is unreachable. `npm-audit-baseline` 0 → 2; `quality/accepted-advisories.json` keeps it off the Issue Manager. Edge import is `node-forge@1.4.0` since 2026-10-19. Floor back to 0 when a fix ships.                       |
+| GHSA-hq66      | **Avoided, 2026-10-09.** `pdfjs-dist` from 5.6.83 up to 6.2.108 can run arbitrary JavaScript when a malicious PDF is opened; the admin e-sign viewer opens uploaded PDFs. The grouped Dependabot bump to 5.7.284 was declined: `package.json` holds `~5.5.207` (unaffected) and `.github/dependabot.yml` ignores the affected range. The way forward is the deliberate move to 6.2.108+, a major with its own API changes. |
 
 ### Closed by the September 2026 auth review
 
@@ -442,13 +524,52 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
-- **The Edge Function source is 480+ files flat in one directory**, organised by
-  filename prefix. The three subfolders that exist (`locked/`,
-  `quote-verticals/`, `repositories/`) show the shape it should take. Split one
-  prefix per PR; see [`ROADMAP.md`](ROADMAP.md).
+- **Company facts live in one place; the copies outside the code were
+  reconciled on 2026-10-18.** Address (First Floor, Milestone Place Block A,
+  25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157), phone, `info@` as
+  the only mailbox, office hours 08:30–16:30, English and Afrikaans, in-person
+  or online meetings, and tax through Profin Accounting are in
+  `src/config/companyFacts.ts` (owner-confirmed, October 2026). Three copies are
+  data, not code:
+  - **Ask Vasco prompt: republished.** `ai:prompt:vasco-public:public:active`
+    and `:draft` now hold the code seed. The previous prompt, which was the
+    untouched old seed, is kept as a version, so the admin AI prompt editor
+    can roll back to it.
+  - **E-sign platform certificate: retired, replacement pending.** The
+    certificate from 2026-02-25 (serial `01c959c39a345859c3`) carried the old
+    organisation name and city. Its Vault and KV copies now have `expiresAt`
+    2026-10-18; the original date is kept in `originalExpiresAt`. The next
+    envelope completion generates a replacement with the Pretoria subject and
+    stores it in Vault. This generation path was checked locally under Deno
+    2.8.1 on 2026-10-18: a key in about 0.4 s, the right subject, and a sealed
+    PDF. Completions are rare (the last was in May 2026), so confirm the first
+    one logs "Platform signing certificate generated". To undo before then,
+    set `expiresAt` back to `originalExpiresAt` in both copies.
+  - **Articles: left as they are.** Some published articles say "our team of
+    experienced financial advisors" or carry the "Navigate Wealth Editorial
+    Team" byline. The owner decided not to change them.
+
+  The admin Publications → Settings "Press Page Stats" panel and
+  `/publications/press/{config,stats}` are no longer read and can be removed.
+
+- **The Edge Function source is still mostly flat** (440+ files in one
+  directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
+  `social/` were the first prefixes moved into folders (2026-10-08), alongside
+  the older `locked/`, `quote-verticals/` and `repositories/`. Split one prefix
+  per PR, lowest fan-in first; `esign-*`, `integrations-*` and `client-*` have
+  the most inbound imports and test paths and are the expensive ones. See
+  [`ROADMAP.md`](ROADMAP.md).
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.
+- **A provider/product policy book is built from a whole-namespace read.**
+  `listPoliciesForProviderCategory` reads every `policies:client:*` row and
+  filters in the isolate. The Review path's policy index has always done this;
+  the portfolio table now does it on every call, including the calls a
+  scheduled agent makes unattended. The cost is negligible at today's book
+  size and grows with every client's policies, so keep an agent's cadence in
+  hours rather than minutes. It goes away with the `policies` move to Postgres
+  ([`ROADMAP.md`](ROADMAP.md) §6 and §9a).
 - **Tracked asset weight, and the clone size behind it.** `src/assets` holds
   Figma exports at camera resolution. The build never serves them —
   `figmaAssetResolver` prefers a generated `.webp`, then a committed
@@ -475,5 +596,59 @@ is work not yet done, not budget.
   them to per-fingerprint rows, as the public and CSP rows already are, is the
   next step.
 
+- **What is left after an FNA's lifecycle was made whole.** Every type now
+  lists, opens, publishes, unpublishes and deletes through a real route (see
+  [`architecture/fna-wizards.md`](architecture/fna-wizards.md)). Still open:
+  - "Delete" means two things: on a Risk FNA it archives (the record is kept,
+    off the list); on the other five it removes the record.
+  - An intake draft whose wizard was closed without publishing can be viewed
+    ("not calculated yet") and deleted, but not continued: the accepted intake
+    has left the queue, so finishing it means running the FNA again.
+  - Four Risk and four Retirement intake drafts made before 2026-10-10 are on
+    no client's FNA list, because the intake did not list them then. They are
+    invisible until a one-off backfill adds them.
+
 - **Coverage floors are low.** They prevent regression; they do not indicate
   good coverage. Report the SPA and backend figures as two separate numbers.
+
+- **Admin screens wait ~2 s per Edge Function call, and the size of the
+  function is most of it.** Measured 2026-10-11
+  ([`edge-function-latency.md`](runbooks/edge-function-latency.md), corrected
+  section at the top): almost every request starts a fresh worker, and a
+  fresh worker of `make-server-91ed8379` costs ~1.4 s before any code runs
+  against ~0.25 s for a one-file function in the same project. Landed so far
+  (Phase 1, frontend): the admin frame no longer downloads every module up
+  front (1,094 → 435 KB gzip on first load; `admin-shell-static-graph.test.ts`
+  guards it), staff sessions keep a per-user query cache in IndexedDB that is
+  shown at once and always refetched on use (`utils/query/persistedQueryCache.ts`;
+  wiped on sign-out and on every deploy; the refetch is forced even for
+  queries marked `refetchOnMount: false`, permissions among them, which until
+  2026-10-12 kept showing the restored copy for the whole session), the sidebar badge counts fetch in
+  parallel and share the dashboard's `/admin/stats`, and two duplicate list
+  fetches are gone. A client's policies and the policy schemas are now one
+  shared query each (`shared/api/clientPolicies.ts`): the Overview tab and all
+  seven Policies-tab sections read them (seven policy requests and up to
+  thirteen schema requests per client become one of each), policies refetch on
+  every open (a fetch under 5 s old is reused, so one screen does not fetch
+  twice), and every write that changes them — the policy
+  form, delete/archive/reinstate, applying extracted document values, the
+  provider-spreadsheet publish and the portfolio-table apply — invalidates
+  them. The six background job pollers no longer run in the admin tab (see
+  "No scheduled work runs in the admin browser tab"), which takes their
+  start-up calls off every admin page load. Next: the remaining effect-based
+  loaders, then a lean function for the hot admin reads (largest single
+  lever), then fewer calls per screen.
+- **A client profile never opens on old data (owner's rule, 2026-10-12).**
+  Opening one resets every cached query whose key names the client (the
+  in-memory copy and anything the IndexedDB cache restored) and fetches the
+  client's record fresh from `GET /profile/client-record/:userId`, the same
+  entry `/all-users` returns for one user. The drawer shows "Opening client
+  profile" until that record arrives (one round trip; the Overview's profile,
+  policies and FNA-status reads start at the same moment), and shows an
+  error or "Client not available" rather than ever falling back to the
+  client-list row or a cached copy. Before this, the header, status, ID number
+  and email came from a list row up to five minutes old, and the profile was
+  read from a five-minute cache with no refresh at all. Pinned by
+  `ClientDrawer.freshOnOpen.test.tsx` (fails on the old drawer) and
+  `useFreshClientOnOpen.test.tsx`. A new drawer query must keep the client id
+  in its key, or the reset cannot find it.

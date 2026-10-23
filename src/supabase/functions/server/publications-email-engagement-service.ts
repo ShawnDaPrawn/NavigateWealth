@@ -25,12 +25,7 @@ const TRACKING_RECORD_LIST_PAGE_SIZE = 100;
 
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
 export type ArticleEmailDeliveryStatus =
-  | 'pending'
-  | 'sending'
-  | 'sent'
-  | 'failed'
-  | 'failed_retryable'
-  | 'failed_terminal';
+  'pending' | 'sending' | 'sent' | 'failed' | 'failed_retryable' | 'failed_terminal';
 
 export interface ArticleEmailTrackingRecord {
   token: string;

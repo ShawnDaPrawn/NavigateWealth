@@ -30,7 +30,13 @@ import { join, basename } from 'node:path';
 const MODULES_DIR = join(__dirname, '..', '..', 'admin', 'modules');
 const SRC_ROOT = join(__dirname, '..', '..', '..');
 
-/** Names exported via `export const X = lazy(` per module directory. */
+/**
+ * Names exported via `export const X = lazy(` per module directory, from the
+ * barrel and from the module's `shell.ts` entry. esign, issues and
+ * social-media define their lazy module component in `shell.ts` (so the admin
+ * frame can render it without importing the barrel) and the barrel re-exports
+ * it, so both specifiers resolve to the same lazy object.
+ */
 function lazyBarrelExports(): Map<string, Set<string>> {
   const result = new Map<string, Set<string>>();
   for (const dir of readdirSync(MODULES_DIR)) {
@@ -38,22 +44,19 @@ function lazyBarrelExports(): Map<string, Set<string>> {
     // modules use .tsx). Missing the .tsx ones would let this guard stay
     // green while a consumer double-wraps e.g. the tax-planning-fna
     // barrel's lazy export.
-    let source: string | null = null;
-    for (const barrel of [
-      join(MODULES_DIR, dir, 'index.ts'),
-      join(MODULES_DIR, dir, 'index.tsx'),
-    ]) {
+    const sources: string[] = [];
+    for (const entry of ['index.ts', 'index.tsx', 'shell.ts']) {
       try {
-        source = readFileSync(barrel, 'utf8');
-        break;
+        sources.push(readFileSync(join(MODULES_DIR, dir, entry), 'utf8'));
       } catch {
-        /* try next extension */
+        /* entry not present */
       }
     }
-    if (source === null) continue; // module without a barrel
     const names = new Set<string>();
-    for (const match of source.matchAll(/export const (\w+)(?::\s*[\w<>,.\s]+)? = lazy\(/g)) {
-      names.add(match[1]);
+    for (const source of sources) {
+      for (const match of source.matchAll(/export const (\w+)(?::\s*[\w<>,.\s]+)? = lazy\(/g)) {
+        names.add(match[1]);
+      }
     }
     if (names.size > 0) result.set(dir, names);
   }
@@ -91,8 +94,9 @@ describe('no React.lazy around a barrel lazy export', () => {
       const source = readFileSync(file, 'utf8');
       for (const match of source.matchAll(factoryPattern)) {
         const [, specifier, , exportName] = match;
-        // Only barrel specifiers: ".../modules/<dir>" or ".../modules/<dir>/index"
-        const barrelMatch = specifier.match(/modules\/([\w-]+)(?:\/index)?$/);
+        // Only public-entry specifiers: ".../modules/<dir>", ".../modules/<dir>/index"
+        // or ".../modules/<dir>/shell"
+        const barrelMatch = specifier.match(/modules\/([\w-]+)(?:\/(?:index|shell))?$/);
         if (!barrelMatch) continue;
         const moduleDir = barrelMatch[1];
         if (lazyExports.get(moduleDir)?.has(exportName)) {

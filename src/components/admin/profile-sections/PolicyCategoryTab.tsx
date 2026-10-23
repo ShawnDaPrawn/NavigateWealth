@@ -10,8 +10,9 @@ import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-rea
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
-import { projectId } from '../../../utils/supabase/info';
+import { invalidateClientPolicies } from '../../../shared/api/clientPolicies';
 import { DEFAULT_SCHEMAS } from './default-schemas';
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna';
+import { useInvalidateFnaBatchStatus } from '@/shared/fna-intake/hooks/useFnaBatchStatus';
 import { FNACard, PublishFNADialog, ViewPublishedFNADialog } from '../modules/fna';
 import { isPortalAutomationCategoryId } from '@/shared/integrations/portal-categories';
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
@@ -37,7 +39,6 @@ const GoalDashboard = React.lazy(() =>
   import('./goals/GoalDashboard').then((m) => ({ default: m.GoalDashboard })),
 );
 
-import { PreviousFNAsDialog } from '../modules/risk-planning-fna';
 import { calculateGoalStatus } from '../../../shared/goals';
 import type { Goal } from '../../../shared/goals';
 import { FNAManagementView as FNAManagementView } from '../modules/risk-planning-fna';
@@ -57,6 +58,10 @@ interface PolicyCategoryTabProps {
   clientId: string;
   /** Actual client display name (firstName + lastName) — used for will chat, PDF titles, etc. */
   clientDisplayName?: string;
+  /** Open on this category's FNA list (where a publish lands the adviser). */
+  openFNAListOnMount?: boolean;
+  /** Highlight this FNA in the list — the one just published. */
+  highlightFnaId?: string;
 }
 
 export function PolicyCategoryTab({
@@ -67,7 +72,10 @@ export function PolicyCategoryTab({
   description,
   clientId,
   clientDisplayName,
+  openFNAListOnMount = false,
+  highlightFnaId,
 }: PolicyCategoryTabProps) {
+  const queryClient = useQueryClient();
   // Policy State
   const [policies, setPolicies] = useState<PolicyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,12 +98,13 @@ export function PolicyCategoryTab({
 
   // View FNA Dialog State
   const [viewFNADialogOpen, setViewFNADialogOpen] = useState(false);
-  const [previousFNAsDialogOpen, setPreviousFNAsDialogOpen] = useState(false);
   const [selectedHistoricalFnaId, setSelectedHistoricalFnaId] = useState<string | undefined>(
     undefined,
   );
-  const [showFNAManagement, setShowFNAManagement] = useState(false);
+  const [showFNAManagement, setShowFNAManagement] = useState(openFNAListOnMount);
   const [refreshFNAManagementTrigger, setRefreshFNAManagementTrigger] = useState(0);
+  const [highlightedFnaId, setHighlightedFnaId] = useState(highlightFnaId);
+  const invalidateFnaBatchStatus = useInvalidateFnaBatchStatus();
 
   // Will Management State (for Estate Planning)
   const [showWillManagement, setShowWillManagement] = useState(false);
@@ -135,41 +144,17 @@ export function PolicyCategoryTab({
 
   const categoryId = categoryIdMap[categorySubtabId];
 
-  // Helper to determine FNA API Base URL
-  const getFnaApiBaseUrl = () => {
-    const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379`;
-
-    switch (categorySubtabId) {
-      case 'medical-aid':
-        return `${SERVER_BASE}/medical-fna`;
-      case 'retirement':
-        return `${SERVER_BASE}/retirement-fna`;
-      case 'investments':
-        return `${SERVER_BASE}/investment-ina`;
-      case 'tax-planning':
-        return `${SERVER_BASE}/tax-planning-fna`;
-      case 'estate-planning':
-        return `${SERVER_BASE}/estate-planning-fna`;
-      case 'risk-planning':
-      default:
-        return `${SERVER_BASE}/risk-planning-fna`;
-    }
-  };
-
-  const fnaApiBaseUrl = getFnaApiBaseUrl();
-
-  // Helper to determine FNA list API URL
-  const getFnaListApiUrl = () => {
-    switch (categorySubtabId) {
-      case 'risk-planning':
-        return `${fnaApiBaseUrl}/client/${clientId}/list`;
-      default:
-        return `${fnaApiBaseUrl}/client/${clientId}`;
-    }
-  };
-
-  const fnaListApiUrl = getFnaListApiUrl();
   const fnaListTitle = `${categoryName} FNAs`;
+
+  // A publish lands on this category's FNA list with the new FNA highlighted.
+  const handleFNAPublished = (fnaId: string) => {
+    fnaManagement.handleFNAComplete(fnaId);
+    invalidateFnaBatchStatus(clientId);
+    setHighlightedFnaId(fnaId);
+    setShowWillManagement(false);
+    setShowFNAManagement(true);
+    setRefreshFNAManagementTrigger((prev) => prev + 1);
+  };
 
   const loadTableStructure = useCallback(async () => {
     // Helper to fetch schema for a specific category with retry for cold-start resilience
@@ -304,6 +289,7 @@ export function PolicyCategoryTab({
       toast.success('Policy deleted successfully', { id: toastId });
       setDeletingPolicy(null);
       loadPolicies();
+      void invalidateClientPolicies(queryClient, clientId);
     } catch (err: unknown) {
       console.error('Error deleting policy:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to delete policy');
@@ -328,6 +314,7 @@ export function PolicyCategoryTab({
       toast.success('Policy archived successfully', { id: toastId });
       setArchivingPolicy(null);
       loadPolicies();
+      void invalidateClientPolicies(queryClient, clientId);
     } catch (err: unknown) {
       console.error('Error archiving policy:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to archive policy');
@@ -346,6 +333,7 @@ export function PolicyCategoryTab({
 
       toast.success('Policy reinstated successfully', { id: toastId });
       loadPolicies();
+      void invalidateClientPolicies(queryClient, clientId);
     } catch (err: unknown) {
       console.error('Error reinstating policy:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to reinstate policy');
@@ -473,10 +461,11 @@ export function PolicyCategoryTab({
         ) : showFNAManagement && hasFNA && fnaConfig ? (
           <FNAManagementView
             key={refreshFNAManagementTrigger}
-            clientId={clientId}
-            clientName={categoryName}
+            clientName={clientDisplayName || categoryName}
             title={fnaListTitle}
-            apiUrl={fnaListApiUrl}
+            fnaName={fnaConfig.name}
+            loadFNAs={() => fnaConfig.listForClient(clientId)}
+            highlightFnaId={highlightedFnaId}
             onCreateNew={() => {
               setShowFNAManagement(false);
               fnaManagement.handleRunFNA();
@@ -510,19 +499,17 @@ export function PolicyCategoryTab({
                     Goals
                   </Button>
                 )}
-                {/* Show Will Management button for Estate Planning instead of FNA */}
-                {categorySubtabId === 'estate-planning' ? (
+                {categorySubtabId === 'estate-planning' && (
                   <Button variant="outline" size="sm" onClick={() => setShowWillManagement(true)}>
                     <FileBarChart className="h-4 w-4 mr-2" />
                     Will Management
                   </Button>
-                ) : (
-                  hasFNA && (
-                    <Button variant="outline" size="sm" onClick={() => setShowFNAManagement(true)}>
-                      <FileBarChart className="h-4 w-4 mr-2" />
-                      FNA
-                    </Button>
-                  )
+                )}
+                {hasFNA && (
+                  <Button variant="outline" size="sm" onClick={() => setShowFNAManagement(true)}>
+                    <FileBarChart className="h-4 w-4 mr-2" />
+                    FNA
+                  </Button>
                 )}
                 <Button
                   variant={showArchived ? 'secondary' : 'outline'}
@@ -591,7 +578,7 @@ export function PolicyCategoryTab({
               </div>
             )}
 
-            {/* FNA Card - Only show for draft FNAs (published FNAs are in "Previous FNAs" modal) */}
+            {/* FNA Card - Only show for draft FNAs (published FNAs are in the FNA list) */}
             {hasFNA &&
               fnaManagement.fna &&
               fnaConfig &&
@@ -728,7 +715,7 @@ export function PolicyCategoryTab({
             onClose={() => fnaManagement.setWizardOpen(false)}
             clientId={clientId}
             clientName={clientDisplayName || undefined}
-            onFNAComplete={fnaManagement.handleFNAComplete}
+            onFNAComplete={handleFNAPublished}
           />
         </Suspense>
       )}
@@ -784,23 +771,6 @@ export function PolicyCategoryTab({
         />
       )}
 
-      {/* Previous FNAs Dialog - Unified for all FNA types (lazy chunk requires Suspense) */}
-      {hasFNA && fnaConfig && (
-        <Suspense fallback={null}>
-          <PreviousFNAsDialog
-            open={previousFNAsDialogOpen}
-            onOpenChange={setPreviousFNAsDialogOpen}
-            clientId={clientId}
-            title={`Previous ${fnaListTitle}`}
-            apiUrl={fnaListApiUrl}
-            onViewFNA={(fnaId: string) => {
-              setSelectedHistoricalFnaId(fnaId);
-              setViewFNADialogOpen(true);
-            }}
-          />
-        </Suspense>
-      )}
-
       {/* View Historical FNA Dialog */}
       {hasFNA && fnaConfig && selectedHistoricalFnaId && (
         <ViewPublishedFNADialog
@@ -815,8 +785,8 @@ export function PolicyCategoryTab({
           fnaTypeName={fnaConfig.name}
           fnaId={selectedHistoricalFnaId}
           ResultsView={fnaConfig.ResultsView}
-          apiBaseUrl={fnaApiBaseUrl}
-          deleteFn={fnaConfig.deleteFNA}
+          loadFn={(fnaId) => fnaConfig.getById(fnaId, clientId)}
+          deleteFn={(fnaId) => fnaConfig.deleteFNA(fnaId, clientId)}
           onDeleted={() => {
             // Refresh the FNA management view
             setRefreshFNAManagementTrigger((prev) => prev + 1);

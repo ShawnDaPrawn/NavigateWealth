@@ -83,8 +83,7 @@ interface PolicyTableProps {
 /** Plain-language provenance for the most recent automated change, if any. */
 function describeLastSync(policy: PolicyRecord): string | null {
   const history = (policy as Record<string, unknown>).integrationSyncHistory as
-    | Array<{ publishedAt?: string; source?: string }>
-    | undefined;
+    Array<{ publishedAt?: string; source?: string }> | undefined;
   const latest = Array.isArray(history) && history.length > 0 ? history[history.length - 1] : null;
   if (!latest?.publishedAt) return null;
 
@@ -96,7 +95,9 @@ function describeLastSync(policy: PolicyRecord): string | null {
       ? 'provider portal'
       : latest.source === 'document'
         ? 'policy document'
-        : 'spreadsheet';
+        : latest.source === 'portfolio_table'
+          ? 'portfolio table'
+          : 'spreadsheet';
 
   return `Updated from the ${sourceLabel} on ${when.toLocaleDateString('en-ZA', {
     day: 'numeric',
@@ -262,8 +263,7 @@ export function PolicyTable({
                           {/* AI extraction indicator */}
                           {(
                             (policy as Record<string, unknown>).extraction as
-                              | { status?: string }
-                              | undefined
+                              { status?: string } | undefined
                           )?.status === 'completed' &&
                             !policy.archived && (
                               <span title="AI data extracted" className="flex-shrink-0">

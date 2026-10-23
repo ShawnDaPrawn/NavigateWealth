@@ -6,7 +6,7 @@
  * from breaking the entire submissions module chunk.
  *
  * Uses pdf-lib with the Navigate Wealth branded template (same as
- * esign-certificates.tsx): purple header band, bordered section headings,
+ * esign-certificates.ts): purple header band, bordered section headings,
  * form-row layout with table borders, proper multi-page pagination,
  * and branded footer.
  *
@@ -266,7 +266,7 @@ export async function downloadSubmissionAsPdf(submission: Submission): Promise<v
   const CONTENT_TOP = PAGE_H - HEADER_H - 24;
   const MIN_CONTENT_Y = FOOTER_ZONE + 15;
 
-  // ── Brand colours (identical to esign-certificates.tsx) ────────────
+  // ── Brand colours (identical to esign-certificates.ts) ────────────
   const PURPLE = rgb(109 / 255, 40 / 255, 217 / 255);
   const PURPLE_LIGHT = rgb(139 / 255, 92 / 255, 246 / 255);
   const TEXT_COLOR = rgb(17 / 255, 24 / 255, 39 / 255);
@@ -377,7 +377,7 @@ export async function downloadSubmissionAsPdf(submission: Submission): Promise<v
       { x: MARGIN, y: FOOTER_TEXT_Y, size: 6.5, font: italicFont, color: MUTED },
     );
     page.drawText(
-      'First Floor, Milestone Place, Block A, 25 Sovereign Dr, Route 21 Business Park, Irene, 0157',
+      'First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157',
       { x: MARGIN, y: FOOTER_TEXT_Y - 10, size: 6, font: italicFont, color: MUTED },
     );
     const pageText = `Page ${pageNum} of ${totalPages}`;
@@ -755,7 +755,7 @@ export async function downloadSubmissionAsPdf(submission: Submission): Promise<v
 
   // ── Save and trigger download ──────────────────────────────────────
   const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

@@ -3,6 +3,7 @@
  * see RiskQuoteWizard.tsx for the state machine.
  */
 import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import {
   Select,
@@ -64,19 +65,12 @@ export function Step2Personal({
           <Label className="text-sm font-medium text-gray-700">
             Gross monthly income <span className="text-red-500">*</span>
           </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-              R
-            </span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="e.g. 85 000"
-              value={details.income_gross_monthly}
-              onChange={(e) => update('income_gross_monthly', formatCurrency(e.target.value))}
-              className="pl-8 bg-white border-gray-300 h-11"
-            />
-          </div>
+          <CurrencyInputField
+            placeholder="85,000"
+            value={details.income_gross_monthly}
+            onChange={(e) => update('income_gross_monthly', formatCurrency(e.target.value))}
+            className="bg-white border-gray-300 h-11"
+          />
         </div>
 
         {/* Net income */}
@@ -84,19 +78,12 @@ export function Step2Personal({
           <Label className="text-sm font-medium text-gray-700">
             Net monthly income <span className="text-red-500">*</span>
           </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-              R
-            </span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="e.g. 62 000"
-              value={details.income_net_monthly}
-              onChange={(e) => update('income_net_monthly', formatCurrency(e.target.value))}
-              className="pl-8 bg-white border-gray-300 h-11"
-            />
-          </div>
+          <CurrencyInputField
+            placeholder="62,000"
+            value={details.income_net_monthly}
+            onChange={(e) => update('income_net_monthly', formatCurrency(e.target.value))}
+            className="bg-white border-gray-300 h-11"
+          />
           {showNetWarning && (
             <p className="text-xs text-amber-600 flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
@@ -169,19 +156,12 @@ export function Step2Personal({
             <Label className="text-sm font-medium text-gray-700">
               Spouse / partner monthly income <span className="text-red-500">*</span>
             </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                R
-              </span>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="e.g. 45 000"
-                value={details.spouse_income_monthly}
-                onChange={(e) => update('spouse_income_monthly', formatCurrency(e.target.value))}
-                className="pl-8 bg-white border-gray-300 h-11"
-              />
-            </div>
+            <CurrencyInputField
+              placeholder="45,000"
+              value={details.spouse_income_monthly}
+              onChange={(e) => update('spouse_income_monthly', formatCurrency(e.target.value))}
+              className="bg-white border-gray-300 h-11"
+            />
           </div>
         )}
       </div>

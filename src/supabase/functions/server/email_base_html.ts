@@ -190,9 +190,9 @@ export const BASE_EMAIL_TEMPLATE = `<!DOCTYPE html>
           </p>
 
           <p style="margin:8px 0 0;">
-            First Floor, Milestone Place, Block A<br />
-            25 Sovereign Dr, Route 21 Business Park<br />
-            Irene, 0157
+            First Floor, Milestone Place Block A<br />
+            25 Sovereign Drive, Route 21 Business Park<br />
+            Pretoria, 0157
           </p>
 
           <p style="margin:8px 0 0;">
@@ -211,9 +211,9 @@ export const BASE_EMAIL_TEMPLATE = `<!DOCTYPE html>
             <a href="https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA=="
                class="email-link"
                style="color:#6d28d9; text-decoration:none;">Instagram</a> |
-            <a href="https://www.youtube.com/@navigatewealth"
+            <a href="https://x.com/Navigate_ZA"
                class="email-link"
-               style="color:#6d28d9; text-decoration:none;">YouTube</a>
+               style="color:#6d28d9; text-decoration:none;">X</a>
           </p>
 
           <p style="margin:12px 0 0;" class="email-muted">

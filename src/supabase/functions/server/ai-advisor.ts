@@ -66,7 +66,7 @@ async function requireAuth(c: Context, next: Next) {
     }
 
     // Same account-security policy as auth-mw (P1.2) — see the note in
-    // ai-intelligence.tsx. Without it a suspended account keeps talking to the
+    // ai-intelligence.ts. Without it a suspended account keeps talking to the
     // advisor until its token expires on its own.
     try {
       await enforceAccountSecurity(user.id, readTokenIssuedAt(token), readTokenSessionId(token));

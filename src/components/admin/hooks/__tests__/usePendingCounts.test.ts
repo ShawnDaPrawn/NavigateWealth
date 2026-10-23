@@ -3,9 +3,17 @@ import { renderHook } from '@testing-library/react';
 import { usePendingCounts, usePendingCountsWithPriority } from '../usePendingCounts';
 
 const mockUseQuery = vi.fn();
+const mockFetchQuery = vi.fn((options: { queryFn: () => unknown }) => options.queryFn());
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
+  useQueryClient: () => ({ fetchQuery: mockFetchQuery }),
+}));
+
+const mockGetStats = vi.fn();
+
+vi.mock('../../modules/dashboard/shell', () => ({
+  dashboardApi: { stats: { getStats: (...args: unknown[]) => mockGetStats(...args) } },
 }));
 
 const mockApiGet = vi.fn();
@@ -24,6 +32,7 @@ vi.mock('../../../../utils/auth', () => ({
 
 vi.mock('../../../../utils/queryKeys', () => ({
   pendingCountsKeys: { all: ['pending-counts'] },
+  dashboardKeys: { stats: () => ['dashboard-stats'] },
 }));
 
 const mockGetIncompleteCount = vi.fn();
@@ -131,8 +140,8 @@ describe('usePendingCounts', () => {
 
   it('queryFn fetches counts when session has access_token', async () => {
     mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
+    mockGetStats.mockResolvedValue({ submitted_for_review: 3 });
     mockApiGet
-      .mockResolvedValueOnce({ stats: { submitted_for_review: 3 } })
       .mockResolvedValueOnce({ new: 2, in_progress: 1 })
       .mockResolvedValueOnce({ count: 5 })
       .mockResolvedValueOnce({ snapshot: { summary: { open: 2 } } });
@@ -154,6 +163,7 @@ describe('usePendingCounts', () => {
   it('queryFn handles API errors gracefully (returns zeroed counts)', async () => {
     mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
     mockApiGet.mockRejectedValue(new Error('Network error'));
+    mockGetStats.mockRejectedValue(new Error('Network error'));
     const capturedConfig = vi.fn();
     mockUseQuery.mockImplementation((config) => {
       capturedConfig(config);
@@ -169,8 +179,8 @@ describe('usePendingCounts', () => {
 
   it('queryFn uses safeCount for non-numeric issue open count', async () => {
     mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
+    mockGetStats.mockResolvedValue({});
     mockApiGet
-      .mockResolvedValueOnce({ stats: {} })
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ snapshot: { summary: { open: 'not-a-number' } } });
@@ -183,6 +193,51 @@ describe('usePendingCounts', () => {
     const config = capturedConfig.mock.calls[0][0];
     const result = await config.queryFn();
     expect(result.issues).toEqual({ count: 0 });
+  });
+});
+
+describe('fetchPendingCounts request shape', () => {
+  async function runQueryFn() {
+    const capturedConfig = vi.fn();
+    mockUseQuery.mockImplementation((config) => {
+      capturedConfig(config);
+      return { data: buildEmptyCounts() };
+    });
+    renderHook(() => usePendingCounts());
+    return capturedConfig.mock.calls[0][0].queryFn();
+  }
+
+  it('sends all four requests before any of them answers', async () => {
+    // Serial awaits kept the badges blank for ~8 s (four Edge Function round
+    // trips); every request must be in flight at once.
+    mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
+    const never = new Promise(() => {});
+    mockGetStats.mockReturnValue(never);
+    mockApiGet.mockReturnValue(never);
+
+    void runQueryFn();
+    await vi.waitFor(() => expect(mockApiGet).toHaveBeenCalledTimes(3));
+    expect(mockGetStats).toHaveBeenCalledTimes(1);
+    expect(mockApiGet.mock.calls.map((call) => call[0])).toEqual([
+      '/tasks/stats',
+      '/submissions/count/new',
+      '/quality-issues',
+    ]);
+  });
+
+  it("reads /admin/stats through the dashboard's own query key", async () => {
+    // Same key and fetcher as the dashboard's stats query, so the two share
+    // one request instead of each fetching the most expensive route.
+    mockGetSession.mockResolvedValue({ access_token: 'tok-abc' });
+    mockGetStats.mockResolvedValue({});
+    mockApiGet.mockResolvedValue({});
+
+    await runQueryFn();
+
+    expect(mockFetchQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['dashboard-stats'], staleTime: 30_000 }),
+    );
+    expect(mockApiGet).not.toHaveBeenCalledWith('/admin/stats');
   });
 });
 

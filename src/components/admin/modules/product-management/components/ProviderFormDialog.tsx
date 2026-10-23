@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
+import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 import {
   PRODUCT_CATEGORIES,
   ProductCategoryId,

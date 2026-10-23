@@ -9,7 +9,7 @@
  *
  * REAL COLLABORATORS
  * ------------------
- * `esign-services.tsx` and `esign-template-service.ts` are NOT stubbed. Both
+ * `esign-services.ts` and `esign-template-service.ts` are NOT stubbed. Both
  * are pure KV apart from a fire-and-forget Postgres mirror, so stubbing only
  * that mirror lets the genuine envelope, signer, field and audit writes run.
  * That matters here beyond coverage: the thing under test is a handoff BETWEEN
@@ -51,7 +51,10 @@ const mail = vi.hoisted(() => ({
   sent: [] as Array<{ to: string; subject: string }>,
   ok: true,
 }));
-vi.mock('../email-service.ts', () => ({
+// Only the transport is stubbed. The template builders stay real:
+// esign-email-templates.ts renders the invite with them.
+vi.mock('../email-service.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../email-service.ts')>()),
   sendEmail: vi.fn(async (params: { to: string; subject: string }) => {
     if (!mail.ok) return false;
     mail.sent.push({ to: params.to, subject: params.subject });
@@ -74,7 +77,7 @@ const {
   advancePacketRunFromCompletion,
 } = await import('../esign-packet-service.ts');
 const { getEnvelopeSigners, getEnvelopeDetails, getAuditTrail } =
-  await import('../esign-services.tsx');
+  await import('../esign-services.ts');
 
 const FIRM = 'firm-1';
 const CLIENT = 'client-1';

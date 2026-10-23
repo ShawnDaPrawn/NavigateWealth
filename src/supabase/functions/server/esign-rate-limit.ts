@@ -19,6 +19,7 @@ import type { MiddlewareHandler } from 'npm:hono';
 import { checkRateLimit, type RateLimitConfig } from './rateLimiter.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
+import { retryAfterSeconds } from './retry-after.ts';
 
 const log = createModuleLogger('esign-rate-limit');
 
@@ -117,7 +118,7 @@ export function rateLimit(
     c.header('X-RateLimit-Reset', String(Math.floor(result.resetAt.getTime() / 1000)));
 
     if (!result.allowed) {
-      const retryAfterSec = Math.max(1, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000));
+      const retryAfterSec = retryAfterSeconds(result.resetAt);
       c.header('Retry-After', String(retryAfterSec));
       log.info('Rate limit blocked', { action, idHashPrefix: id.slice(0, 16) });
       if (opts.silent) {

@@ -25,8 +25,23 @@ export function mountCoreRoutes(app: Hono) {
   lazy(app, '/sitemap', () => import('./sitemap.ts'));
   lazy(app, '/rss-proxy', () => import('./rss-proxy.ts'));
 
-  // Mount /integrations/honeycomb BEFORE generic /integrations
-  lazy(app, '/integrations/honeycomb', () => import('./honeycomb-routes.ts'));
+  // Mount /integrations/honeycomb, /integrations/portfolio-table and
+  // /integrations/portfolio-agents BEFORE the generic /integrations. The
+  // portfolio table has its own router (and its own agent-token gate) so that
+  // gate can never leak onto the integrations family; the agent tokens it
+  // checks are managed on a separate, super-admin-only router that no agent
+  // token can reach.
+  lazy(app, '/integrations/honeycomb', () => import('./honeycomb/honeycomb-routes.ts'));
+  lazy(
+    app,
+    '/integrations/portfolio-table',
+    () => import('./integrations-portfolio-table-routes.ts'),
+  );
+  lazy(
+    app,
+    '/integrations/portfolio-agents',
+    () => import('./integrations-portfolio-agents-routes.ts'),
+  );
   lazy(app, '/integrations', () => import('./integrations.ts'));
 
   lazy(app, '/kv-store', () => import('./kv-routes.ts'));

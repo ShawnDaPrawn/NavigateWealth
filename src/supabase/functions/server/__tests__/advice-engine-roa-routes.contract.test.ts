@@ -64,7 +64,7 @@ const svc = vi.hoisted(() => ({
   buildClientContext: vi.fn(),
 }));
 
-vi.mock('../advice-engine-roa-service.ts', () => ({
+vi.mock('../advice-engine/advice-engine-roa-service.ts', () => ({
   AdviceEngineRoAService: class {
     listDrafts = svc.listDrafts;
     getDraft = svc.getDraft;
@@ -82,7 +82,7 @@ vi.mock('../advice-engine-roa-service.ts', () => ({
   },
 }));
 
-vi.mock('../advice-engine-roa-contract-service.ts', () => ({
+vi.mock('../advice-engine/advice-engine-roa-contract-service.ts', () => ({
   AdviceEngineRoAContractService: class {
     listContracts = svc.listContracts;
     getContract = svc.getContract;
@@ -94,7 +94,7 @@ vi.mock('../advice-engine-roa-contract-service.ts', () => ({
   },
 }));
 
-vi.mock('../advice-engine-roa-conversation.ts', () => ({
+vi.mock('../advice-engine/advice-engine-roa-conversation.ts', () => ({
   AdviceEngineRoAConversationService: class {
     startConversations = svc.startConversations;
     getConversation = svc.getConversation;
@@ -107,7 +107,7 @@ vi.mock('../advice-engine-roa-conversation.ts', () => ({
   sanitiseConversationRecord: (r: unknown) => r,
 }));
 
-vi.mock('../advice-engine-roa-service-helpers.ts', () => ({
+vi.mock('../advice-engine/advice-engine-roa-service-helpers.ts', () => ({
   buildClientContext: svc.buildClientContext,
 }));
 
@@ -167,7 +167,7 @@ vi.mock('../auth-mw.ts', () => ({
   },
 }));
 
-const app = (await import('../advice-engine-roa-routes.ts')).default;
+const app = (await import('../advice-engine/advice-engine-roa-routes.ts')).default;
 
 /** Request helper: `as` sets the acting role and user. */
 function req(

@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Logo } from '../layout/Logo';
+import { COMPANY, FOUNDER, TRUST_FACTS } from '@/config/companyFacts';
 
 const carouselSlides = [
   {
@@ -61,9 +62,9 @@ const carouselSlides = [
   },
   {
     id: 2,
-    title: 'Expert financial guidance',
+    title: 'Founder-led financial guidance',
     subtitle:
-      'Our certified advisors provide professional insights and support throughout your journey.',
+      'Work directly with our founder for independent, professional advice throughout your journey.',
     content: (
       <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 space-y-4">
         <div className="flex items-center space-x-3 mb-4">
@@ -71,27 +72,19 @@ const carouselSlides = [
             <Users className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-white font-semibold">Advisory Team</div>
-            <div className="text-white/70 text-sm">Professional expertise at your service</div>
+            <div className="text-white font-semibold">{FOUNDER.name}</div>
+            <div className="text-white/70 text-sm">
+              {FOUNDER.title}, {COMPANY.tradingName}
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <div className="text-white font-semibold text-lg">15+</div>
-            <div className="text-white/70 text-xs">Years Experience</div>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <div className="text-white font-semibold text-lg">500+</div>
-            <div className="text-white/70 text-xs">Happy Clients</div>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <div className="text-white font-semibold text-lg">98%</div>
-            <div className="text-white/70 text-xs">Client Satisfaction</div>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 text-center">
-            <div className="text-white font-semibold text-lg">$2B+</div>
-            <div className="text-white/70 text-xs">Assets Managed</div>
-          </div>
+          {TRUST_FACTS.map(({ value, label }) => (
+            <div key={value} className="bg-white/10 rounded-lg p-3 text-center">
+              <div className="text-white font-semibold text-lg">{value}</div>
+              <div className="text-white/70 text-xs">{label}</div>
+            </div>
+          ))}
         </div>
       </div>
     ),

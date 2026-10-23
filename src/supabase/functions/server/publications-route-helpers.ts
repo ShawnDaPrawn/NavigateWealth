@@ -3,7 +3,7 @@
  * the publications Edge Function routes (Phase 5c decomposition).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx so the route sub-apps can
+ * Extracted verbatim from publications-routes.ts so the route sub-apps can
  * import them without a cycle back through the composition root: the article /
  * category / type / tag domain interfaces, the cron-auth constants +
  * isAuthorizedPublicationsCronRequest, and the pure id / slug / reading-time +
@@ -17,6 +17,7 @@ import {
   processArticleNotificationJobs,
   getArticleNotificationJob,
 } from './publications-notification-service.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('publications-route-helpers');
 
@@ -75,12 +76,7 @@ export interface Article {
   notify_on_publish?: boolean; // New field to control email notifications on publish
   /** Optional press category — when set, the article appears on the public Press page */
   press_category?:
-    | 'company_news'
-    | 'product_launch'
-    | 'awards'
-    | 'team_news'
-    | 'industry_insights'
-    | null;
+    'company_news' | 'product_launch' | 'awards' | 'team_news' | 'industry_insights' | null;
 }
 
 export const PUBLICATIONS_CRON_AUTH_KEY = 'system:publications:cron_auth_token';
@@ -112,10 +108,6 @@ export interface ArticleTagLink {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-export function generateId(): string {
-  return crypto.randomUUID();
-}
 
 export function generateSlug(text: string): string {
   return text
@@ -180,7 +172,7 @@ export async function isAuthorizedPublicationsCronRequest(
     );
   } catch (error) {
     log.warn('Unable to load publications cron auth token from KV', {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return false;
   }
@@ -200,7 +192,7 @@ export async function kickArticleNotificationJob(jobId: string | null | undefine
   } catch (error) {
     log.warn('Failed to kick article notification job immediately', {
       jobId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrMsg(error),
     });
     return null;
   }

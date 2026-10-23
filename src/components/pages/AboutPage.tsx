@@ -1,15 +1,16 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router';
 import { SEO, createAboutPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { ProvidersModal } from '../modals/ProvidersModal';
+import { PublishedReviews } from '../shared/PublishedReviews';
+import { FounderNote } from './about/FounderNote';
+import { COMPANY, TRUST_FACTS } from '@/config/companyFacts';
 
 import {
   Award,
@@ -20,25 +21,32 @@ import {
   Eye,
   Target,
   ArrowRight,
-  Building,
   CheckCircle,
-  Star,
   Handshake,
-  Zap,
   Calendar,
   FileText,
   HandHeart,
   Scale,
   Lightbulb,
-  Play,
+  Stethoscope,
 } from 'lucide-react';
 
 export function AboutPage() {
   const [consultationModalOpen, setConsultationModalOpen] = useState(false);
   const [thankYouModalOpen, setThankYouModalOpen] = useState(false);
-  const [founderVideoModalOpen, setFounderVideoModalOpen] = useState(false);
   const [providersModalOpen, setProvidersModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('mission');
+  const { hash } = useLocation();
+
+  // /about#founder (linked from the Team page) should land on the founder's
+  // note. A frame's delay lets ScrollToTop's route-change reset run first.
+  useEffect(() => {
+    if (hash !== '#founder') return;
+    const frame = requestAnimationFrame(() =>
+      document.getElementById('founder')?.scrollIntoView({ behavior: 'smooth' }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [hash]);
 
   // Get SEO data for about page
   const seoData = getSEOData('about');
@@ -59,8 +67,8 @@ export function AboutPage() {
           icon: Target,
         },
         {
-          title: 'Our Culture',
-          text: 'We foster a culture of excellence, integrity, and continuous learning. Our team is committed to staying at the forefront of financial planning while maintaining the personal touch that makes us different.',
+          title: 'Our Approach',
+          text: 'As a founder-led practice, we keep advice personal: you deal directly with the person advising you. We stay current with markets and regulation so that the advice stays relevant as your life changes.',
           icon: Users,
         },
         {
@@ -75,22 +83,22 @@ export function AboutPage() {
       icon: HandHeart,
       title: 'Trusted Product Providers',
       description:
-        'We work with industry-leading partners to provide you with the best financial products and solutions.',
+        'We work with established South African product providers, so you can compare real options side by side.',
       content: [
         {
           title: 'Investment Partners',
-          text: 'We partner with top-tier asset managers including Allan Gray, Coronation, Ninety One, and Prudential to provide diversified investment solutions.',
+          text: 'Investment managers and platforms including Allan Gray, Sygnia, Stanlib and INN8, used to build diversified investment and retirement portfolios.',
           icon: TrendingUp,
         },
         {
           title: 'Insurance Partners',
-          text: 'Our insurance partnerships with Discovery, Old Mutual, Momentum, and Sanlam ensure comprehensive risk management and life cover solutions.',
+          text: 'Life, disability and severe illness cover compared across insurers including Discovery, Old Mutual, Momentum, Sanlam, Liberty, BrightRock and Hollard.',
           icon: Shield,
         },
         {
-          title: 'Platform Partners',
-          text: 'We utilize cutting-edge technology platforms from FNB, Nedbank, and Standard Bank to provide seamless account management and reporting.',
-          icon: Building,
+          title: 'Medical & Estate Partners',
+          text: 'Medical aid options from Discovery Health and Momentum Health, and estate planning support from Capital Legacy and EW Serfontein & Associates.',
+          icon: Stethoscope,
         },
       ],
     },
@@ -99,21 +107,21 @@ export function AboutPage() {
       icon: Scale,
       title: 'Regulatory Compliance',
       description:
-        'Our comprehensive licensing ensures we can provide you with expert advice across all financial services.',
+        'Every detail below can be checked independently, starting with the FSCA’s public register.',
       content: [
         {
-          title: 'FSP License',
-          text: 'Navigate Wealth is an authorized Financial Services Provider (FSP 54606) licensed by the Financial Sector Conduct Authority (FSCA).',
+          title: 'FSP Licence',
+          text: `${COMPANY.tradingName} is the trading name of ${COMPANY.legalName} (registration ${COMPANY.registrationNumber}), an authorised Financial Services Provider (FSP ${COMPANY.fspNumber}) licensed by the ${COMPANY.regulator} on ${COMPANY.fscaAuthorisedOn}.`,
           icon: Award,
         },
         {
-          title: 'Professional Qualifications',
-          text: 'Our advisors hold CFP®, CFA, and other relevant qualifications, ensuring the highest standards of professional competence.',
-          icon: Star,
+          title: 'Fit and Proper Advice',
+          text: 'Everyone who gives advice at Navigate Wealth meets the FSCA’s Fit and Proper requirements for honesty, qualifications, experience and continuous professional development.',
+          icon: Users,
         },
         {
           title: 'Regulatory Oversight',
-          text: 'We operate under strict regulatory oversight, with regular compliance audits and adherence to all industry best practices and ethical standards.',
+          text: 'We operate under the FAIS Act and the FSCA’s General Code of Conduct, and our authorisation can be confirmed on the FSCA’s public register of financial services providers.',
           icon: CheckCircle,
         },
       ],
@@ -172,9 +180,9 @@ export function AboutPage() {
             <div className="flex flex-col items-center text-center py-20 lg:py-28">
               {/* Pill badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
-                <Award className="h-3.5 w-3.5 text-purple-400" />
+                <Shield className="h-3.5 w-3.5 text-purple-400" />
                 <span className="text-[12px] font-medium text-gray-400 tracking-wide">
-                  55+ Years of Combined Experience
+                  FSCA-authorised · FSP {COMPANY.fspNumber}
                 </span>
               </div>
 
@@ -183,19 +191,22 @@ export function AboutPage() {
                 <h1 className="!text-[clamp(2rem,5vw,3.5rem)] !font-extrabold !leading-[1.1] text-white tracking-tight">
                   Your Trusted{' '}
                   <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">
-                    Financial Partners
+                    Financial Partner
                   </span>
                 </h1>
                 <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                  Navigate Wealth helps individuals and families build, protect, and transfer wealth
-                  through comprehensive financial planning and investment management.
+                  Navigate Wealth is an independent, founder-led practice that helps individuals and
+                  families build, protect, and transfer wealth through comprehensive financial
+                  planning and investment management.
                 </p>
               </div>
 
               {/* CTA buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mt-10">
                 <Button
-                  onClick={() => setFounderVideoModalOpen(true)}
+                  onClick={() =>
+                    document.getElementById('founder')?.scrollIntoView({ behavior: 'smooth' })
+                  }
                   size="lg"
                   className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200 px-8 h-12 shadow-lg shadow-purple-600/20"
                 >
@@ -214,20 +225,18 @@ export function AboutPage() {
 
               {/* Trust indicators */}
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-10 pt-8 border-t border-white/[0.06] w-full max-w-2xl">
-                {[
-                  { icon: CheckCircle, text: 'R500m+ Assets Under Advisement' },
-                  { icon: CheckCircle, text: '200+ Clients' },
-                  { icon: CheckCircle, text: '98% Retention' },
-                ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-center gap-1.5 text-gray-500">
+                {TRUST_FACTS.map(({ icon: Icon, value }) => (
+                  <div key={value} className="flex items-center gap-1.5 text-gray-500">
                     <Icon className="h-3.5 w-3.5 text-purple-400/70 flex-shrink-0" />
-                    <span className="text-xs font-medium">{text}</span>
+                    <span className="text-xs font-medium">{value}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
         </section>
+
+        <FounderNote onBookConsultation={() => setConsultationModalOpen(true)} />
 
         {/* Information Section Changer */}
         <section className="py-20 section-white relative overflow-hidden">
@@ -380,124 +389,8 @@ export function AboutPage() {
           </div>
         </section>
 
-        {/* Client Reviews */}
-        <section className="py-20 section-dark-gray">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-            <div className="text-center mb-16">
-              <Badge className="bg-primary/20 text-white border-primary/30 mb-6">
-                Client Stories
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                What Our Clients Say
-              </h2>
-              <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                Don't just take our word for it. Here's what our valued clients have to say about
-                their experience with Navigate Wealth.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-              {/* Review 1 */}
-              <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm hover:bg-gray-800/70 transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    "Navigate Wealth completely transformed our financial future. Their personalized
-                    approach and expert guidance helped us secure our retirement and protect our
-                    family's wealth. I couldn't be happier with their service."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                      <span className="text-primary font-medium">FU</span>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium">Franswa Uys</h4>
-                      <p className="text-gray-400 text-sm">Private Client</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Review 2 */}
-              <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm hover:bg-gray-800/70 transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    "The team at Navigate Wealth is exceptional. They took the time to understand
-                    our unique situation and created a comprehensive financial plan that exceeded
-                    our expectations. Their ongoing support is invaluable."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                      <span className="text-primary font-medium">LS</span>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium">Lee-Anne Simmons</h4>
-                      <p className="text-gray-400 text-sm">Family Client</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Review 3 */}
-              <Card className="border border-gray-600 bg-gray-800/50 backdrop-blur-sm hover:bg-gray-800/70 transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 mb-6 leading-relaxed">
-                    "Professional, knowledgeable, and trustworthy. Navigate Wealth helped us
-                    navigate complex investment decisions with confidence. Their independent advice
-                    gave us peace of mind knowing we're in good hands."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                      <span className="text-primary font-medium">DK</span>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium">David Kruger</h4>
-                      <p className="text-gray-400 text-sm">Business Owner</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Call to Action */}
-            <div className="text-center mt-16">
-              <div className="max-w-2xl mx-auto">
-                <h3 className="text-2xl font-bold text-white mb-4">
-                  Ready to Join Our Success Stories?
-                </h3>
-                <p className="text-gray-300 mb-8">
-                  Experience the Navigate Wealth difference for yourself. Schedule a complimentary
-                  consultation today.
-                </p>
-                <Button
-                  size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transform transition-all duration-200 px-8 py-4 shadow-lg hover:shadow-xl rounded-lg group"
-                  asChild
-                >
-                  <Link to="/signup">
-                    <Zap className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
-                    Get Started
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Client reviews — renders only once there are traceable, published reviews */}
+        <PublishedReviews />
 
         {/* Call to Action Section */}
         <section className="py-20 section-white relative overflow-hidden">
@@ -511,9 +404,7 @@ export function AboutPage() {
 
           <div className="relative max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <div className="max-w-4xl mx-auto text-center text-gray-900">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Join Our Team or Stay Informed
-              </h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">Work With Us or Stay Informed</h2>
               <p className="text-xl text-gray-600 mb-8">
                 Discover exciting career opportunities with Navigate Wealth or stay up to date with
                 our latest news, announcements, and industry insights.
@@ -544,18 +435,12 @@ export function AboutPage() {
 
               {/* Trust indicators */}
               <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 pt-12 mt-8 border-t border-gray-300">
-                <div className="flex items-center text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-primary mr-2" />
-                  25+ Years Combined Experience
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-primary mr-2" />
-                  R500M+ Assets Managed
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <CheckCircle className="h-4 w-4 text-primary mr-2" />
-                  98% Client Retention
-                </div>
+                {TRUST_FACTS.map(({ value, label }) => (
+                  <div key={value} className="flex items-center text-sm text-gray-600">
+                    <CheckCircle className="h-4 w-4 text-primary mr-2" />
+                    {value} — {label}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -569,51 +454,6 @@ export function AboutPage() {
 
         {/* Providers Modal */}
         <ProvidersModal isOpen={providersModalOpen} onClose={() => setProvidersModalOpen(false)} />
-
-        {/* Founder Video Modal */}
-        <Dialog open={founderVideoModalOpen} onOpenChange={setFounderVideoModalOpen}>
-          <DialogContent className="max-w-md w-full mx-auto bg-white border border-gray-200 rounded-2xl shadow-2xl p-0 overflow-hidden">
-            <DialogTitle className="sr-only">Video Coming Soon</DialogTitle>
-            <DialogDescription className="sr-only">
-              The founder video is not yet available. Please check back soon.
-            </DialogDescription>
-
-            {/* Top accent bar */}
-            <div className="h-1.5 bg-gradient-to-r from-purple-600 via-primary to-purple-600" />
-
-            <div className="px-8 pt-8 pb-6 text-center">
-              {/* Icon */}
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Play className="h-7 w-7 text-primary ml-0.5" />
-              </div>
-
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Video Coming Soon</h3>
-              <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                We're currently preparing this video. Please check back soon to meet our founder and
-                learn more about the Navigate Wealth story.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => setFounderVideoModalOpen(false)}
-                  className="px-6"
-                >
-                  Close
-                </Button>
-                <Button
-                  onClick={() => {
-                    setFounderVideoModalOpen(false);
-                    setConsultationModalOpen(true);
-                  }}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 px-6"
-                >
-                  Book a Consultation
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

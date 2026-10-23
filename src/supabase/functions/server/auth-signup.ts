@@ -28,6 +28,7 @@ import {
 } from '../../../shared/submissions/blockedIpAddresses.ts';
 import { checkRateLimit, RATE_LIMITS } from './rateLimiter.ts';
 import { escapeHtml } from './shared-validation-utils.ts';
+import { retryAfterSeconds } from './retry-after.ts';
 
 const app = new Hono();
 const log = createModuleLogger('auth-signup');
@@ -176,7 +177,7 @@ app.post('/signup', validateBody(PublicSignupSchema), async (c) => {
       const limit = await checkRateLimit(identifier, 'signup', RATE_LIMITS.SIGNUP);
       if (!limit.allowed) {
         log.warn('Signup rejected: rate limit exceeded', { dimension });
-        const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
+        const retryAfter = retryAfterSeconds(limit.resetAt);
         c.header('Retry-After', String(retryAfter));
         return c.json(
           {

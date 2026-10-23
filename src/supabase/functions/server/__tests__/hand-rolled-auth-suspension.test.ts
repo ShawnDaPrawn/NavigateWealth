@@ -46,7 +46,7 @@ vi.mock('../kv_store.tsx', () => ({
   mdel: vi.fn(),
 }));
 
-vi.mock('../email-service.tsx', () => ({
+vi.mock('../email-service.ts', () => ({
   sendEmail: vi.fn(),
   createEmailTemplate: vi.fn(() => ''),
   getFooterSettings: vi.fn(async () => ({})),

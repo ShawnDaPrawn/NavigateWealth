@@ -66,8 +66,8 @@ export function AdviserQuickActionDialogs({
           <DialogHeader>
             <DialogTitle>Schedule a Meeting with {adviserData.name}</DialogTitle>
             <DialogDescription>
-              Please select 3 available time slots next week (10:00 AM - 4:00 PM). Your adviser's
-              Personal Assistant will contact you to confirm the best time slot.
+              Please select 3 time slots next week (office hours 08:30 – 16:30). Your request opens
+              in your email app, and we will confirm the best time slot.
             </DialogDescription>
           </DialogHeader>
 
@@ -124,8 +124,8 @@ export function AdviserQuickActionDialogs({
             <Alert className="bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                Meetings will be conducted via video call or phone. Your adviser's PA will send you
-                the meeting details and agenda 24 hours before the confirmed time.
+                Meetings can be in person at our Pretoria office, or by video call or phone. We will
+                send you the meeting details once the time is confirmed.
               </AlertDescription>
             </Alert>
           </div>
@@ -157,7 +157,8 @@ export function AdviserQuickActionDialogs({
           <DialogHeader>
             <DialogTitle>Send Message to {adviserData.name}</DialogTitle>
             <DialogDescription>
-              Send a secure message to your adviser. You'll receive a response within 24 hours.
+              Your message opens in your email app, addressed to us. We respond within 24 hours on
+              business days.
             </DialogDescription>
           </DialogHeader>
 
@@ -183,7 +184,7 @@ export function AdviserQuickActionDialogs({
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Send className="h-4 w-4 mr-2" />
-              Send Message
+              Open in Email
             </Button>
           </DialogFooter>
         </DialogContent>

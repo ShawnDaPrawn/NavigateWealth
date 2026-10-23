@@ -12,6 +12,7 @@ import {
 } from '../../../../../ui/select';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../../../ui/form';
 import { CurrencyInputField } from '../../../../../ui/currency-input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../../utils';
 import { RELATIONSHIP_OPTIONS } from '../../constants';
@@ -114,7 +115,7 @@ export function DependantsForm() {
                       <FormItem>
                         <FormLabel>Dependency Term (years) *</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
+                          <NumberInputField placeholder="0" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -127,7 +128,7 @@ export function DependantsForm() {
                       <FormItem>
                         <FormLabel>Monthly Cost *</FormLabel>
                         <FormControl>
-                          <CurrencyInputField placeholder="0" {...field} />
+                          <CurrencyInputField {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -166,7 +167,7 @@ export function DependantsForm() {
               <FormItem>
                 <FormLabel>Spouse Average Monthly Income</FormLabel>
                 <FormControl>
-                  <CurrencyInputField placeholder="0" {...field} />
+                  <CurrencyInputField {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

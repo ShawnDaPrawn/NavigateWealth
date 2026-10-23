@@ -35,7 +35,7 @@ import {
   updateSignerStatus,
   getEnvelopeSigners,
   logAuditEvent,
-} from './esign-services.tsx';
+} from './esign-services.ts';
 import { getTemplate, getTemplateVersion } from './esign-template-service.ts';
 import { sendEmail } from './email-service.ts';
 import { createSigningInviteEmail } from './esign-email-templates.ts';

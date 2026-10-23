@@ -52,7 +52,10 @@ When a change is ready to ship, do **all** of the following **in the same turn**
 
    ```bash
    npm run format            # prettier --write, then re-stage
-   npm run lint              # eslint  (baseline: 0 errors)
+   npm run lint              # eslint: 0 errors AND no new warnings. It exits 0
+                             # on a warning, but CI fails on any warning above
+                             # quality/baselines/eslint-warning-baseline (0):
+                             # read its "N problems" line, not the exit code.
    npm run typecheck         # SPA tsc (baseline: 0 errors)
    npm run typecheck:middleware
    npm run typecheck:deno    # must not exceed quality/baselines/deno-check-baseline
@@ -74,6 +77,17 @@ When a change is ready to ship, do **all** of the following **in the same turn**
    added here were missing from this list for a while, which meant a run that
    looked complete locally could still fail after push — the exact failure mode
    this protocol exists to prevent.
+
+   **Run them on the Node version in `.nvmrc` (22), as CI does.** Every
+   workflow reads its Node version from `.nvmrc`, except the deploy workflow,
+   which pins `'22'` explicitly so a rollback to an older revision still gets
+   the right runtime; keep the two in step. The sandbox's default `node` is 22,
+   so no PATH change is needed. A version mismatch is not hypothetical: on
+   2026-10-01 (PR #403), while CI was still on Node 20, std's `encodeBase64`
+   called `ArrayBuffer.prototype.transfer` (Node 21+), and 11 upload tests
+   that passed locally on 22 answered 500 in CI. If `.nvmrc` ever moves again,
+   run the gates on that version, not on whatever `node` happens to be first
+   on PATH.
 
    If a gate genuinely cannot run (e.g. a blocked `npm install`), **say so
    explicitly with the error** — do not commit unverified code and "let CI catch

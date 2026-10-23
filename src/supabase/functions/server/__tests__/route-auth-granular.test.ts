@@ -39,7 +39,7 @@
  * A ratchet is only worth its floor if the thing doing the counting still
  * works, so three properties are pinned independently of the count.
  *
- * The first version of this file anchored that on the `documents.tsx` IDOR —
+ * The first version of this file anchored that on the `documents.ts` IDOR —
  * "the analysis must still re-derive this known true positive". That was the
  * wrong kind of anchor and it broke the first time it mattered: PR #207 FIXED
  * the IDOR (`app.use('*', requireAuth)` plus a path-scoped
@@ -51,7 +51,7 @@
  *   - routes that are public BY DEFINITION stay in the list — a `/login` that
  *     required auth would be a bootstrap paradox, and the health probes are
  *     documented in index.tsx as the only deliberately open endpoints;
- *   - `documents.tsx` — now guarded at BOTH router scope and path scope — must
+ *   - `documents.ts` — now guarded at BOTH router scope and path scope — must
  *     stay OUT of it, which exercises the two hardest resolution rules and
  *     would catch either a regressed guard or a broken analysis;
  *   - the route total stays in a sane range, so the regexes cannot silently
@@ -261,28 +261,28 @@ describe('route-granular auth ratchet (Stage A / F3)', () => {
     }
   });
 
-  it('does not report documents.tsx, which is guarded at router AND path scope', () => {
-    // The counterpart true negative. documents.tsx carries
+  it('does not report documents.ts, which is guarded at router AND path scope', () => {
+    // The counterpart true negative. documents.ts carries
     // `app.use('*', requireAuth)` AND `app.use('/:userId', requireClientAccess)`
     // (PR #207), so it exercises both of the resolution rules most likely to
     // break. A regression here is either a removed guard on client documents —
     // the IDOR reopening — or an analysis that no longer understands scoped
     // middleware. Both must fail CI.
     // Prove the file is actually IN the analysis first. Without this the
-    // assertion below passes trivially the moment documents.tsx is renamed,
+    // assertion below passes trivially the moment documents.ts is renamed,
     // deleted, or stops being scanned — a check that cannot fail is worth less
     // than no check, because it reads as coverage.
     expect(
-      analysedFiles.some((f) => f.replaceAll('\\', '/').endsWith('/documents.tsx')),
-      'documents.tsx is no longer being analysed — re-point this anchor at whichever module now carries router-scoped AND path-scoped guards',
+      analysedFiles.some((f) => f.replaceAll('\\', '/').endsWith('/documents.ts')),
+      'documents.ts is no longer being analysed — re-point this anchor at whichever module now carries router-scoped AND path-scoped guards',
     ).toBe(true);
     expect(
-      routeCounts.get('documents.tsx') ?? 0,
-      'documents.tsx no longer registers any routes — re-point this anchor',
+      routeCounts.get('documents.ts') ?? 0,
+      'documents.ts no longer registers any routes — re-point this anchor',
     ).toBeGreaterThan(0);
 
-    const leaked = unguarded.filter((entry) => entry.startsWith('documents.tsx '));
-    expect(leaked, 'documents.tsx routes lost their guard, or guard resolution broke').toEqual([]);
+    const leaked = unguarded.filter((entry) => entry.startsWith('documents.ts '));
+    expect(leaked, 'documents.ts routes lost their guard, or guard resolution broke').toEqual([]);
   });
 
   // ── §5.5: the number is now an inventory, not a mystery ──────────────────

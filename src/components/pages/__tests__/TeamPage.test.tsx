@@ -42,7 +42,7 @@ describe('TeamPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('does not render invented fallback advisers when the API is empty', async () => {
+  it('always shows the founder, and no invented advisers, when the API is empty', async () => {
     vi.mocked(fetch).mockResolvedValue({
       json: async () => ({ success: true, data: [] }),
       ok: true,
@@ -50,34 +50,45 @@ describe('TeamPage', () => {
 
     renderTeam();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Team profiles are being updated/i)).toBeDefined();
-    });
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
 
+    expect(screen.getByRole('heading', { name: 'Shawn Francisco' })).toBeDefined();
+    expect(screen.getByAltText(/Shawn Francisco, Founder of Navigate Wealth/)).toBeDefined();
+    expect(screen.getByRole('link', { name: /Read the full note from Shawn/ })).toBeDefined();
     expect(screen.queryByText('Michael Johnson')).toBeNull();
     expect(screen.queryByText('Sarah Chen')).toBeNull();
     expect(screen.queryByText('Series 7')).toBeNull();
-    expect(screen.getByRole('link', { name: /Contact Us/i })).toBeDefined();
+    // A founder-led practice: no headcount claim, no "experienced team" copy.
+    expect(screen.queryByText(/experienced team/i)).toBeNull();
   });
 
-  it('does not render invented fallback advisers when the API fails', async () => {
+  it('still shows the founder when the API fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(fetch).mockRejectedValue(new Error('network'));
 
     renderTeam();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Team profiles are being updated/i)).toBeDefined();
-    });
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
 
+    expect(screen.getByRole('heading', { name: 'Shawn Francisco' })).toBeDefined();
     expect(screen.queryByText('Lisa Thompson')).toBeNull();
   });
 
-  it('renders published team members from the API', async () => {
+  it('renders published team members below the founder, without repeating the founder', async () => {
     vi.mocked(fetch).mockResolvedValue({
       json: async () => ({
         success: true,
         data: [
+          {
+            id: 'founder-dup',
+            name: 'Shawn Francisco',
+            title: 'Founder',
+            credentials: '',
+            bio: 'Duplicate of the static founder profile.',
+            specialties: [],
+            image: '/team/shawn.jpg',
+            sortOrder: 0,
+          },
           {
             id: 'real-1',
             name: 'Thabo Mokoena',
@@ -99,7 +110,8 @@ describe('TeamPage', () => {
       expect(screen.getByText('Thabo Mokoena')).toBeDefined();
     });
 
-    expect(screen.queryByText(/Team profiles are being updated/i)).toBeNull();
     expect(screen.getByText('Financial Adviser')).toBeDefined();
+    expect(screen.getAllByRole('heading', { name: 'Shawn Francisco' })).toHaveLength(1);
+    expect(screen.queryByText('Duplicate of the static founder profile.')).toBeNull();
   });
 });

@@ -15,6 +15,7 @@ import {
 } from '../../../../../ui/dialog';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { formatMinor, parseToMinor } from '../constants';
 import type { DepositInput } from '../types';
 
@@ -71,9 +72,9 @@ export function DepositDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="deposit-amount">Amount</Label>
-            <Input
+            <NumberInputField
               id="deposit-amount"
-              inputMode="decimal"
+              decimals={2}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"

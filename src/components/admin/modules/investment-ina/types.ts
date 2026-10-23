@@ -21,11 +21,7 @@ export type GoalType =
 export type PriorityLevel = 'low' | 'medium' | 'high';
 
 export type GoalStatus =
-  | 'on-track'
-  | 'slight-shortfall'
-  | 'moderate-shortfall'
-  | 'significant-shortfall'
-  | 'overfunded';
+  'on-track' | 'slight-shortfall' | 'moderate-shortfall' | 'significant-shortfall' | 'overfunded';
 
 export interface InvestmentGoal {
   id: string;

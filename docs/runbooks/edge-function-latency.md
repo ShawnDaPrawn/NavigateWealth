@@ -15,6 +15,46 @@ database's continent, and only **330–550 ms is this application's own work**.
 Cold start, which looked like the most likely culprit, turned out to contribute
 nothing.
 
+> **CORRECTED 2026-10-11 — the ~1 s floor is NOT fixed platform overhead. It
+> is the cost of starting a worker for THIS function, and almost every request
+> starts one.** The conclusion above (and the "Resolved" section below) is
+> wrong, and the correction changes what is worth doing next.
+>
+> **1. Nearly every request gets a new worker.** In the 24 hours to
+> 2026-10-11, `function_logs` recorded 4,086 `Boot` events for 3,974 requests
+> in `function_edge_logs`; 4,076 `execution_id`s carry exactly one boot, and
+> only 71 requests landed on a worker that had served one before. Every
+> shutdown reason was `EarlyDrop`. The "no variance, so not cold start"
+> argument below fails for exactly this reason: when every request is cold,
+> cold start has no variance.
+>
+> **2. A no-work request is fast on a reused worker.** The `OPTIONS` 204
+> preflight — the request below that "provably does no work" — took
+> **24–36 ms** on the few reused workers and **1,178–1,300 ms** on fresh ones.
+>
+> **3. The cost scales with the function, not the platform.** Controlled
+> test, 2026-10-11 14:39 UTC: 8 concurrent `GET`s from `pg_net` inside the
+> database to each of two functions in the same project, so caller, region
+> (`us-east-2`) and time were identical, and each request got its own fresh
+> worker:
+>
+> | target                                                        | min      | p50          | max      |
+> | ------------------------------------------------------------- | -------- | ------------ | -------- |
+> | `navigate-publications-artwork-pgnet` (one file; 405 at once) | 231 ms   | **244 ms**   | 259 ms   |
+> | `make-server-91ed8379` `/health` (static JSON, no I/O)        | 1,292 ms | **1,432 ms** | 1,525 ms |
+>
+> Both import `supabase-js`; the small one boots in ~240 ms all in. About
+> **1.2 s of every request to the main function is the price of its size** (a
+> ~3.2 MB source payload plus PDF/DOCX/XLSX/crypto dependencies, all in one
+> bundle). The runtime's own `boot_time` (~85 ms) does not include it.
+>
+> **What follows.** "No app-side change recovers it" is false. A lean
+> function carrying only the hot admin reads should answer in ~250 ms plus its
+> own work instead of ~1.4 s plus its own work — the largest single latency
+> lever available, ahead of any query tuning. Fewer requests per screen also
+> pays directly, since each one is a fresh worker. Re-run the test with the
+> query under "Re-measuring" before relying on these numbers.
+
 ---
 
 ## The geometry
@@ -147,7 +187,7 @@ nothing.
 That is all the preflight establishes. It narrows the search; it does not name
 a culprit.
 
-#### Resolved: the floor is fixed platform invocation cost, not cold start
+#### ~~Resolved: the floor is fixed platform invocation cost, not cold start~~ (wrong — see the 2026-10-11 correction at the top)
 
 **Measured 2026-08-26, 24-hour window, grouped by method, status and serving
 region.** The `204` preflight rows are the answer, because a preflight is the
@@ -355,6 +395,38 @@ The database's own region comes from the project record, not from a guess:
 `get_project` reports `"region": "us-east-2"`.
 
 ---
+
+**Worker reuse and the size test (2026-10-11).** How many requests start a
+worker, and what a no-work request costs on a fresh versus reused one:
+
+```sql
+-- requests vs boots (run each in the Logs Explorer, last 24 h)
+select count(*) from logs where source = 'function_edge_logs';
+select countIf(log_attributes['event_type'] = 'Boot') from logs where source = 'function_logs';
+
+-- first request on a worker vs later ones
+select if(rn = 1, 'fresh worker', 'reused worker') as kind, m, count(*) n,
+       round(quantile(0.5)(ms), 0) as p50_ms, round(min(ms), 0) as min_ms
+from (
+  select toFloat64OrZero(log_attributes['execution_time_ms']) as ms,
+         log_attributes['request.method'] as m,
+         row_number() over (partition by log_attributes['execution_id'] order by timestamp) as rn
+  from logs where source = 'function_edge_logs'
+) group by kind, m order by kind, m;
+```
+
+The size test fires identical `GET`s from inside the database, so caller and
+region are the same for both functions (`pg_net` is already installed for the
+cron jobs; the small function answers a `GET` with 405 before doing anything):
+
+```sql
+select
+  (select array_agg(net.http_get(url := 'https://<ref>.supabase.co/functions/v1/navigate-publications-artwork-pgnet?probe=small-' || g)) from generate_series(1, 8) g),
+  (select array_agg(net.http_get(url := 'https://<ref>.supabase.co/functions/v1/make-server-91ed8379/health?probe=big-' || g)) from generate_series(1, 8) g);
+```
+
+then, a minute later, group `function_edge_logs` rows whose `request.search`
+contains `probe=` by `function_id`.
 
 ## What this does not say
 

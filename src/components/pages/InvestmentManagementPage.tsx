@@ -314,7 +314,7 @@ export function InvestmentManagementPage() {
           quoteLink: '/get-quote/investment-management/contact',
           heroStyle: 'unified',
           stats: [
-            { value: '10+', label: 'Fund Managers' },
+            { value: String(partnerLogos.length), label: 'Investment Providers' },
             { value: '5', label: 'Investment Types' },
             { value: '3', label: 'Business Solutions' },
           ],
@@ -434,7 +434,7 @@ export function InvestmentManagementPage() {
         approach: {
           serviceName: 'How We Manage Your Investments',
           headerDescription:
-            'At Navigate Wealth, we follow a proven methodology to ensure your investment strategy aligns with your financial goals, risk appetite, and time horizon.',
+            'At Navigate Wealth, we follow a structured methodology to ensure your investment strategy aligns with your financial goals, risk appetite, and time horizon.',
           steps: [
             {
               step: '1',

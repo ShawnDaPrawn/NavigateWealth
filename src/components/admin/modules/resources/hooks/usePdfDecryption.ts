@@ -51,7 +51,7 @@ export function usePdfDecryption(): UsePdfDecryptionResult {
       // Save the PDF without encryption.
       const decryptedBytes = await pdfDoc.save();
 
-      const blob = new Blob([decryptedBytes], { type: 'application/pdf' });
+      const blob = new Blob([decryptedBytes as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
 
       setDecryptedUrl(url);

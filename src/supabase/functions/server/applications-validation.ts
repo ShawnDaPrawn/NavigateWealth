@@ -4,7 +4,7 @@
  * P1 — Zod validation for applications-routes.ts
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 export const InviteClientSchema = z
   .object({

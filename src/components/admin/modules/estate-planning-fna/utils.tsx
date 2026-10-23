@@ -16,6 +16,7 @@ import type {
 } from './types';
 
 import { ESTATE_PLANNING_CONSTANTS } from './constants';
+import { formatCurrencyWhole } from '../../../../utils/currencyFormatter';
 
 /**
  * Helper Functions
@@ -62,10 +63,11 @@ export function assessLiquidityRisk(shortfall: number): 'none' | 'moderate' | 's
 }
 
 /**
- * Format currency
+ * A whole-rand amount with comma thousands, without the "R" (callers add it):
+ * 2000000 → "2,000,000".
  */
 export function formatCurrency(amount: number): string {
-  return Math.round(amount).toLocaleString('en-ZA');
+  return formatCurrencyWhole(amount).replace('R', '');
 }
 
 /**
@@ -494,10 +496,7 @@ function analyzeMinorChildren(
 
   // Determine capital management structure
   let capitalManagementStructure:
-    | 'guardian_fund'
-    | 'testamentary_trust'
-    | 'inter_vivos_trust'
-    | 'none' = 'none';
+    'guardian_fund' | 'testamentary_trust' | 'inter_vivos_trust' | 'none' = 'none';
 
   if (inputs.hasTrusts) {
     capitalManagementStructure = 'inter_vivos_trust';

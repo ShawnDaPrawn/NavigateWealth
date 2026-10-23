@@ -2,7 +2,7 @@
  * esign /templates/* routes — reusable envelope templates (Phase 5).
  * ==================================================================
  *
- * Extracted verbatim from esign-routes.tsx: template CRUD, versioning,
+ * Extracted verbatim from esign-routes.ts: template CRUD, versioning,
  * create-from-envelope / sync-from-envelope, and materialise-draft (spin a
  * template into a new draft envelope). Mounted via
  * `esignRoutes.route('/', templatesRoutes)`. Depends on shared esign services

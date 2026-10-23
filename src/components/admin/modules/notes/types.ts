@@ -151,12 +151,7 @@ export interface SavedFilterPreset {
 
 /** Available bulk action types */
 export type BulkActionType =
-  | 'archive'
-  | 'unarchive'
-  | 'delete'
-  | 'addTag'
-  | 'removeTag'
-  | 'setColor';
+  'archive' | 'unarchive' | 'delete' | 'addTag' | 'removeTag' | 'setColor';
 
 // ============================================================================
 // COLOUR LABELS

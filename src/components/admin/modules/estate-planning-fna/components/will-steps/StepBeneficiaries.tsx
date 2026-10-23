@@ -4,6 +4,7 @@
  */
 
 import { Input } from '../../../../../ui/input';
+import { NumberInputField } from '../../../../../ui/number-input';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Plus, Users, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -78,14 +79,10 @@ export function StepBeneficiaries({
                     />
                   </FormField>
                   <FormField label="Percentage (%)">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
+                    <NumberInputField
+                      decimals={2}
                       value={beneficiary.percentage}
-                      onChange={(e) =>
-                        onUpdate(beneficiary.id, 'percentage', parseFloat(e.target.value) || 0)
-                      }
+                      onValueChange={(v) => onUpdate(beneficiary.id, 'percentage', v ?? 0)}
                       placeholder="0-100"
                     />
                   </FormField>

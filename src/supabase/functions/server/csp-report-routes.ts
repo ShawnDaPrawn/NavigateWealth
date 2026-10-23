@@ -50,6 +50,7 @@ import {
 } from '../../../shared/quality/qualityIssues.ts';
 import { CSP_VIOLATION_KEY_PREFIX, MAX_CSP_VIOLATION_ISSUES } from './quality-issues-normalize.ts';
 import { CSP_REPORT_IP_LIMIT_PER_HOUR, checkIpOnlyRateLimit } from './public-form-rate-limit.ts';
+import { isAutomatedUserAgent } from '../../../shared/quality/automatedUserAgent.ts';
 
 const app = new Hono();
 const log = createModuleLogger('csp-report');
@@ -74,6 +75,19 @@ const EXTENSION_SCHEMES = [
   'safari-extension:',
   'webkit-masked-url:',
 ];
+
+/**
+ * Image hosts whose `img-src` reports are an accepted, documented outcome.
+ *
+ * Market News thumbnails come from third-party RSS feeds (investing.com) with
+ * arbitrary URLs, and MarketNewsTab.tsx records the decision to let the policy
+ * block them rather than widen `img-src` to all of `https:` — the tab shows a
+ * local placeholder instead. The design-system showcase library hot-links
+ * untitledui.com sample avatars and flags. Each distinct URL would otherwise
+ * become its own open Issue Manager row that can never be "fixed". Exact
+ * hostnames only, and only for `img-src`; every other directive still reports.
+ */
+const ACCEPTED_BLOCKED_IMAGE_HOSTS = ['content-media.investing.com', 'www.untitledui.com'];
 
 /** One request cannot enqueue more than this many reports. */
 const MAX_REPORTS_PER_REQUEST = 20;
@@ -196,6 +210,48 @@ function isExtensionNoise(v: NormalizedViolation): boolean {
 }
 
 /**
+ * Code an automation tool injected and then evaluated.
+ *
+ * Tools that drive a browser over the DevTools protocol (Puppeteer, Playwright
+ * and the scrapers built on them) run their own functions in the page by
+ * SERIALIZING them and evaluating the text. The browser then reports a blocked
+ * `eval` with no source file — the code has no URL — and, with
+ * `'report-sample'` on, a sample that is literally a function's source. The
+ * first one captured (2026-10-19) sampled `() => { utils.preloadCache() }`,
+ * which appears nowhere in this repository or its dependencies, from a client
+ * claiming a two-year-old Chrome. It had re-opened the same Issue Manager row
+ * nineteen times in eight days.
+ *
+ * Both signals are required. A missing source file alone is NOT enough: some
+ * browsers omit it for genuine evals, and those reports are the evidence that
+ * decides whether `script-src` can be enforced. A sample alone is not enough
+ * either. `new Function(...)` samples as `function anonymous(`, which is how
+ * first-party code (Zod's JIT, before zodJitless.ts) shows up, so that shape is
+ * excluded explicitly.
+ */
+const SERIALIZED_FUNCTION_SAMPLE =
+  /^\s*(?:async\s*)?(?:\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>|function\s*\*?\s*[A-Za-z_$]?[\w$]*\s*\()/;
+
+function isInjectedFunctionEval(v: NormalizedViolation): boolean {
+  return (
+    v.directive.startsWith('script-src') &&
+    v.blockedUrl === 'eval' &&
+    !v.sourceFile &&
+    SERIALIZED_FUNCTION_SAMPLE.test(v.sample) &&
+    !/^\s*\(?\s*function anonymous\b/.test(v.sample)
+  );
+}
+
+function isAcceptedBlockedImage(v: NormalizedViolation): boolean {
+  if (!v.directive.startsWith('img-src')) return false;
+  try {
+    return ACCEPTED_BLOCKED_IMAGE_HOSTS.includes(new URL(v.blockedUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * POST / — the endpoint named by `Reporting-Endpoints` and `report-uri`.
  *
  * Always answers 204, whatever happens. A browser cannot act on an error here
@@ -220,12 +276,27 @@ app.post(
       return c.body(null, 204);
     }
 
+    // A crawler's renderer (Googlebot, Bingbot, …) is not a visitor, and what
+    // it reports is not evidence about what our visitors' browsers do: a
+    // violation our own code causes shows up from real browsers too, with a
+    // source file to act on. Same rule, same helper, as the runtime ingest.
+    const userAgent = c.req.header('user-agent') ?? '';
+    if (isAutomatedUserAgent(userAgent)) {
+      return c.body(null, 204);
+    }
+
     const payload = await c.req.json().catch(() => null);
-    const violations = normalize(payload).filter((v) => !isExtensionNoise(v));
+    const violations = normalize(payload).filter(
+      (v) => !isExtensionNoise(v) && !isAcceptedBlockedImage(v) && !isInjectedFunctionEval(v),
+    );
 
     if (violations.length === 0) {
       return c.body(null, 204);
     }
+
+    // Kept on the row so a report with no source file can still be traced to a
+    // browser family. Origin-free and capped; a user agent carries no token.
+    const browser = text(userAgent, 200);
 
     const now = new Date().toISOString();
 
@@ -271,6 +342,7 @@ app.post(
           v.sourceFile ? `Source: ${v.sourceFile}` : '',
           v.sample ? `Sample: ${v.sample}` : '',
           `Disposition: ${enforced ? 'enforce' : v.disposition}`,
+          browser ? `Last reported by: ${browser}` : '',
         ]
           .filter(Boolean)
           .join('\n'),

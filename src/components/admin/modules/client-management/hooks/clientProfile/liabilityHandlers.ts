@@ -17,9 +17,6 @@ interface Deps {
   profileData: ProfileData;
   setHasChanges: Dispatch<SetStateAction<boolean>>;
   setLiabilitiesInEditMode: Dispatch<SetStateAction<Set<string>>>;
-  setLiabilityDisplayValues: Dispatch<
-    SetStateAction<{ [id: string]: { amount?: string; monthlyPayment?: string } }>
-  >;
   setLiabilityToDelete: Dispatch<SetStateAction<string | null>>;
   setProfileData: Dispatch<SetStateAction<ProfileData>>;
 }
@@ -29,7 +26,6 @@ export function createLiabilityHandlers({
   profileData,
   setHasChanges,
   setLiabilitiesInEditMode,
-  setLiabilityDisplayValues,
   setLiabilityToDelete,
   setProfileData,
 }: Deps) {
@@ -67,11 +63,6 @@ export function createLiabilityHandlers({
       newSet.delete(liabilityToDelete);
       return newSet;
     });
-    setLiabilityDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[liabilityToDelete];
-      return newState;
-    });
     setLiabilityToDelete(null);
     setHasChanges(true);
   };
@@ -106,11 +97,6 @@ export function createLiabilityHandlers({
       newSet.delete(id);
       return newSet;
     });
-    setLiabilityDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
-    });
   };
 
   const editLiability = (id: string) => {
@@ -130,11 +116,6 @@ export function createLiabilityHandlers({
         newSet.delete(id);
         return newSet;
       });
-      setLiabilityDisplayValues((prev) => {
-        const newState = { ...prev };
-        delete newState[id];
-        return newState;
-      });
       return;
     }
 
@@ -142,12 +123,6 @@ export function createLiabilityHandlers({
       const newSet = new Set(prev);
       newSet.delete(id);
       return newSet;
-    });
-
-    setLiabilityDisplayValues((prev) => {
-      const newState = { ...prev };
-      delete newState[id];
-      return newState;
     });
   };
 

@@ -2,7 +2,7 @@
  * Portal automation types (Phase 5 decomposition).
  * =================================================
  *
- * Extracted verbatim from integrations.tsx so the portal-automation routes,
+ * Extracted verbatim from integrations.ts so the portal-automation routes,
  * helpers, and (future) sub-routers can share a single canonical type surface
  * as that 6,600-line god-file is split apart. These are pure type declarations
  * (erased at runtime) — moving them changes no behaviour.
@@ -63,12 +63,7 @@ export interface PortalCredentialStatus {
  * them into "not connected" is what let a broken provider sit unnoticed.
  */
 export type PortalConnectionState =
-  | 'no_login_url'
-  | 'no_credentials'
-  | 'untested'
-  | 'testing'
-  | 'connected'
-  | 'failed';
+  'no_login_url' | 'no_credentials' | 'untested' | 'testing' | 'connected' | 'failed';
 
 /** The stored outcome of the last sign-in test for a provider + profile. */
 export interface PortalConnectionRecord {
@@ -177,13 +172,7 @@ export interface PortalDocumentArtifactStatus {
   id: string;
   label: string;
   status:
-    | 'not_requested'
-    | 'started'
-    | 'downloaded'
-    | 'validated'
-    | 'attached'
-    | 'failed'
-    | 'skipped';
+    'not_requested' | 'started' | 'downloaded' | 'validated' | 'attached' | 'failed' | 'skipped';
   fileName?: string;
   documentId?: string;
   error?: string;

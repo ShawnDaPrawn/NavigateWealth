@@ -32,10 +32,7 @@ export type VascoGuardrailBlockCode =
   | 'guardrail_unavailable';
 
 export type VascoGuardrailAnalyticsEvent =
-  | 'topic_blocked'
-  | 'rate_limited'
-  | 'circuit_breaker'
-  | 'guardrail_error';
+  'topic_blocked' | 'rate_limited' | 'circuit_breaker' | 'guardrail_error';
 
 export interface VascoPublicGuardrailMessage {
   role: string;

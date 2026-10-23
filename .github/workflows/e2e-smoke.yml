@@ -63,7 +63,9 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          # Same Node as Quality Check (.nvmrc), so the two required checks
+          # build the app on one runtime.
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies

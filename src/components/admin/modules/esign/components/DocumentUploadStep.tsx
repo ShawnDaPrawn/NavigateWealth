@@ -16,6 +16,7 @@ import { AlertCircle, FileText, Settings2, Upload, XCircle } from 'lucide-react'
 
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Button } from '../../../../ui/button';
 import { cn } from '../../../../ui/utils';
@@ -274,16 +275,12 @@ export function DocumentUploadStep({ value, onChange, disabled = false }: Docume
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="space-y-2 sm:w-40">
               <Label htmlFor="esign-envelope-expiry">Days to expire</Label>
-              <Input
+              <NumberInputField
                 id="esign-envelope-expiry"
-                type="number"
-                inputMode="numeric"
-                min={MIN_EXPIRY_DAYS}
-                max={MAX_EXPIRY_DAYS}
                 value={Number.isFinite(expiryDays) ? expiryDays : ''}
                 disabled={disabled}
                 aria-invalid={expiryInvalid || undefined}
-                onChange={(e) => patch({ expiryDays: parseInt(e.target.value, 10) })}
+                onValueChange={(v) => patch({ expiryDays: v ?? NaN })}
                 className={cn(expiryInvalid && 'border-red-300 focus-visible:ring-red-200')}
               />
             </div>

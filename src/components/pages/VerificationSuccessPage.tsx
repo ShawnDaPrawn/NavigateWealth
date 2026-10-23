@@ -102,10 +102,10 @@ export default function VerificationSuccessPage() {
               <p className="text-sm text-gray-600">Need help getting started?</p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
-                  to="/help"
+                  to="/contact"
                   className="text-sm text-purple-700 hover:text-purple-800 underline"
                 >
-                  Visit Help Center
+                  Contact Us
                 </Link>
                 <span className="hidden sm:inline text-gray-300">•</span>
                 <Link

@@ -27,14 +27,12 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
-  Shield,
   TrendingUp,
-  Award,
   Zap,
-  BarChart3,
   Lock,
   HeartHandshake,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 interface AccountTypeOption {
   id: 'personal' | 'business' | 'adviser';
@@ -82,11 +80,12 @@ const ACCOUNT_TYPES: AccountTypeOption[] = [
   },
 ];
 
-const TRUST_STATS = [
-  { icon: Shield, label: 'FSP 54606', sublabel: 'Regulated' },
-  { icon: Award, label: '15+ Years', sublabel: 'Experience' },
-  { icon: BarChart3, label: 'R500M+', sublabel: 'Under Management' },
-] as const;
+// Checkable facts only — see src/config/companyFacts.ts.
+const TRUST_STATS = TRUST_FACTS.slice(0, 3).map(({ icon, value, label }) => ({
+  icon,
+  label: value,
+  sublabel: label,
+}));
 
 const PROCESS_STEPS = [
   { number: '1', label: 'Personal Details' },

@@ -3,13 +3,13 @@
  * Professional HTML email templates for e-signature notifications.
  *
  * Exports consumed by:
- *   - esign-routes.tsx  -> createSigningInviteEmail, createOTPEmail
+ *   - esign-routes.ts  -> createSigningInviteEmail, createOTPEmail
  *   - esign-workflow.ts -> createEnvelopeCompleteEmail, createSigningCompleteEmail
  *
  * @module esign-email-templates
  */
 
-import { createEmailTemplate, createPlainTextEmail } from './email-service.tsx';
+import { createEmailTemplate, createPlainTextEmail } from './email-service.ts';
 
 // --------------------------------------------------------------------------
 // Shared helpers
@@ -31,7 +31,7 @@ function formatDate(iso: string): string {
 }
 
 // --------------------------------------------------------------------------
-// 1. Signing Invite Email  (used by esign-routes.tsx)
+// 1. Signing Invite Email  (used by esign-routes.ts)
 // --------------------------------------------------------------------------
 
 interface SigningInviteParams {
@@ -93,7 +93,7 @@ export function createSigningInviteEmail(params: SigningInviteParams): {
 }
 
 // --------------------------------------------------------------------------
-// 2. OTP Verification Email  (used by esign-routes.tsx)
+// 2. OTP Verification Email  (used by esign-routes.ts)
 // --------------------------------------------------------------------------
 
 interface OTPEmailParams {

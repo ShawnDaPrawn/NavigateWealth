@@ -143,8 +143,8 @@ export function DeliveryHealthCard({
 
           {health.level === 'missing' ? (
             <Notice tone="warn" icon={Clock} title="Scheduled sends need the delivery job">
-              Newsletters still send while an admin has this page open. For unattended delivery an
-              operator installs the job from{' '}
+              Nothing sends on its own until the job is installed; &quot;Run a delivery pass
+              now&quot; below sends by hand. An operator installs the job from{' '}
               <code className="rounded bg-black/5 px-1 py-0.5 text-[11px] dark:bg-white/10">
                 supabase/cron/newsletter-studio-jobs.sql
               </code>

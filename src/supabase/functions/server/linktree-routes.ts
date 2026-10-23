@@ -13,6 +13,9 @@ import { Hono } from 'npm:hono';
 import { normalizeNavigateWealthUrl } from '../../../utils/siteOrigin.ts';
 import { requireAdmin } from './auth-mw.ts';
 import * as kv from './kv_store.tsx';
+import { createModuleLogger } from './stderr-logger.ts';
+
+const log = createModuleLogger('linktree');
 
 const app = new Hono();
 
@@ -118,7 +121,7 @@ app.get('/public', async (c) => {
     const enabledLinks = links.filter((link) => link.enabled).sort((a, b) => a.order - b.order);
     return c.json({ success: true, data: { links: enabledLinks, settings } });
   } catch (error: unknown) {
-    console.error('[linktree] Error fetching public data:', error);
+    log.error('Error fetching public data', error);
     return c.json({ success: false, error: 'Failed to load links' }, 500);
   }
 });
@@ -128,7 +131,7 @@ app.get('/links', async (c) => {
     const links = await getLinks();
     return c.json({ success: true, data: links.sort((a, b) => a.order - b.order) });
   } catch (error: unknown) {
-    console.error('[linktree] Error fetching links:', error);
+    log.error('Error fetching links', error);
     return c.json({ success: false, error: 'Failed to load links' }, 500);
   }
 });
@@ -163,7 +166,7 @@ app.post('/links', async (c) => {
 
     return c.json({ success: true, data: newLink });
   } catch (error: unknown) {
-    console.error('[linktree] Error creating link:', error);
+    log.error('Error creating link', error);
     return c.json({ success: false, error: 'Failed to create link' }, 500);
   }
 });
@@ -191,7 +194,7 @@ app.put('/links/:id', async (c) => {
 
     return c.json({ success: true, data: updated });
   } catch (error: unknown) {
-    console.error('[linktree] Error updating link:', error);
+    log.error('Error updating link', error);
     return c.json({ success: false, error: 'Failed to update link' }, 500);
   }
 });
@@ -209,7 +212,7 @@ app.delete('/links/:id', async (c) => {
     await saveLinks(filtered);
     return c.json({ success: true });
   } catch (error: unknown) {
-    console.error('[linktree] Error deleting link:', error);
+    log.error('Error deleting link', error);
     return c.json({ success: false, error: 'Failed to delete link' }, 500);
   }
 });
@@ -238,7 +241,7 @@ app.put('/reorder', async (c) => {
     await saveLinks([...reordered, ...remaining]);
     return c.json({ success: true });
   } catch (error: unknown) {
-    console.error('[linktree] Error reordering links:', error);
+    log.error('Error reordering links', error);
     return c.json({ success: false, error: 'Failed to reorder links' }, 500);
   }
 });
@@ -248,7 +251,7 @@ app.get('/settings', async (c) => {
     const settings = await getSettings();
     return c.json({ success: true, data: settings });
   } catch (error: unknown) {
-    console.error('[linktree] Error fetching settings:', error);
+    log.error('Error fetching settings', error);
     return c.json({ success: false, error: 'Failed to load settings' }, 500);
   }
 });
@@ -261,7 +264,7 @@ app.put('/settings', async (c) => {
     await saveSettings(updated);
     return c.json({ success: true, data: updated });
   } catch (error: unknown) {
-    console.error('[linktree] Error updating settings:', error);
+    log.error('Error updating settings', error);
     return c.json({ success: false, error: 'Failed to update settings' }, 500);
   }
 });

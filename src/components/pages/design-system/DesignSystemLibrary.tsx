@@ -6,10 +6,16 @@
  * rendered inside this React 18 page without restyling the site. It is built
  * to /design-system-library/ and shown here in a same-origin iframe instead.
  * The iframe never scrolls: the library reports its height, and asks this page
- * to scroll when one of its index links is clicked.
+ * to scroll when one of its index links is clicked. In return this page tells
+ * the library which part of the iframe is on screen, so its modals open there.
  */
 import { useEffect, useRef, useState } from 'react';
-import { isLibraryMessage, LIBRARY_MARKER, LIBRARY_PATH } from './designSystemLibraryMessages';
+import {
+  isLibraryMessage,
+  LIBRARY_MARKER,
+  LIBRARY_PATH,
+  viewportMessage,
+} from './designSystemLibraryMessages';
 
 /** Room left above a section after a jump, for the site's sticky header. */
 const HEADER_OFFSET = 96;
@@ -59,6 +65,34 @@ export function DesignSystemLibrary() {
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, []);
+
+  // Keep the library told which part of it is on screen, as the page scrolls
+  // or resizes and whenever the iframe's height changes.
+  useEffect(() => {
+    if (status !== 'ready') return;
+    let frameRequest = 0;
+    const send = () => {
+      frameRequest = 0;
+      const frame = frameRef.current;
+      if (!frame?.contentWindow) return;
+      const rect = frame.getBoundingClientRect();
+      frame.contentWindow.postMessage(
+        viewportMessage({ top: rect.top, height: rect.height }, window.innerHeight),
+        window.location.origin,
+      );
+    };
+    const schedule = () => {
+      if (!frameRequest) frameRequest = window.requestAnimationFrame(send);
+    };
+    send();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      if (frameRequest) window.cancelAnimationFrame(frameRequest);
+    };
+  }, [status, height]);
 
   if (status === 'missing') {
     return (

@@ -2,7 +2,7 @@
  * Step1Covers of the risk quote wizard. One step slice —
  * see RiskQuoteWizard.tsx for the state machine.
  */
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
 import { CheckCircle, HelpCircle, Info } from 'lucide-react';
@@ -88,20 +88,13 @@ export function Step1Covers({
                         ? 'Monthly amount (ZAR / month, real value)'
                         : 'Cover amount (ZAR)'}
                     </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                        R
-                      </span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder={cover.isMonthly ? 'e.g. 35 000' : 'e.g. 2 000 000'}
-                        value={entry.amount}
-                        onChange={(e) => setAmount(cover.id, e.target.value)}
-                        disabled={entry.adviser_assist}
-                        className={`pl-8 h-10 bg-white border-gray-300 ${entry.adviser_assist ? 'opacity-50' : ''}`}
-                      />
-                    </div>
+                    <CurrencyInputField
+                      placeholder={cover.isMonthly ? '35,000' : '2,000,000'}
+                      value={entry.amount}
+                      onChange={(e) => setAmount(cover.id, e.target.value)}
+                      disabled={entry.adviser_assist}
+                      className={`h-10 bg-white border-gray-300 ${entry.adviser_assist ? 'opacity-50' : ''}`}
+                    />
                   </div>
 
                   <label className="flex items-center gap-2 cursor-pointer group">

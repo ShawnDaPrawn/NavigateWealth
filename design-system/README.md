@@ -58,6 +58,15 @@ Typography, are the site's own and are unchanged.
   shows it in a same-origin iframe. The iframe reports its height to the page
   and asks the page to scroll for index links, so it reads as one page. The
   components the site uses today are one click away on the same tab.
+- The iframe never scrolls, so `untitled-ui-react/src/showcase/embed.ts`
+  handles two things. It reports the content's own height, not the document's,
+  so the iframe shrinks again when content collapses. It also receives the
+  part of the iframe that is on screen, and `showcase.css` pins modals and
+  slideouts there; otherwise they would open in the middle of an iframe tens
+  of thousands of pixels tall.
+- Keep demos from holding overlays open (for example a tooltip with
+  `isOpen` from page load). An open React Aria tooltip takes the Escape key
+  for the whole page, so no modal could then be closed with Escape.
 - If the library is not built (local `npm run dev`), the tab says so instead
   of embedding the site inside itself.
 

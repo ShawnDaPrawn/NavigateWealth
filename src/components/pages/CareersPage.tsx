@@ -5,7 +5,8 @@
  *   - bg-[#111827] with single subtle radial gradient glow
  *   - Centered layout with pill badge, gradient accent heading, gray-400 text
  *   - Clean CTA buttons without scale transforms
- *   - Stats bar and trust indicators
+ *   - Trust indicators (no headcount or retention figures — see
+ *     src/config/companyFacts.ts for why)
  *
  * Sections:
  *   1. Hero (dark — unified standard)
@@ -17,7 +18,7 @@
  * @module pages/CareersPage
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -40,10 +41,9 @@ import {
   Clock,
   Calendar,
   Loader2,
-  Award,
   Heart,
   Lightbulb,
-  Rocket,
+  UserCheck,
   GraduationCap,
   Coffee,
   ChevronRight,
@@ -103,9 +103,9 @@ const categories = [
 
 const values = [
   {
-    title: 'Big Ambitions',
-    description: "We're building South Africa's leading independent financial advisory firm.",
-    icon: Rocket,
+    title: 'Founder-Led',
+    description: 'Work directly alongside the founder and see how every part of the practice runs.',
+    icon: UserCheck,
   },
   {
     title: 'Client Excellence',
@@ -114,50 +114,43 @@ const values = [
   },
   {
     title: 'Professional Growth',
-    description: 'We invest in our people and support continuous learning and development.',
+    description: 'We support continuous learning, CPD and professional development.',
     icon: GraduationCap,
   },
   {
-    title: 'Market Leadership',
-    description: 'We set the standard for independent financial advice in South Africa.',
+    title: 'Independence',
+    description: 'We give advice that is not tied to any single product provider.',
     icon: Globe,
   },
 ];
-
-const HERO_STATS = [
-  { label: 'Years Experience', value: 15, suffix: '+', icon: Award },
-  { label: 'Team Members', value: 20, suffix: '+', icon: Users },
-  { label: 'Roles Filled in 2025', value: 8, suffix: '', icon: Briefcase },
-  { label: 'Staff Retention', value: 95, suffix: '%', icon: Heart },
-] as const;
 
 const PERKS = [
   {
     icon: TrendingUp,
     title: 'Competitive Remuneration',
-    description: 'Market-leading salary & performance bonuses',
+    description: 'Market-related pay, discussed openly for each role',
   },
   {
     icon: GraduationCap,
     title: 'Continuous Learning',
-    description: 'Funded CPD, certifications & study support',
+    description: 'Support for CPD and industry qualifications',
   },
   {
     icon: Coffee,
     title: 'Flexible Working',
-    description: 'Hybrid model with modern Cape Town office',
+    description: 'Hybrid working from our Pretoria office',
   },
   {
     icon: Shield,
-    title: 'Comprehensive Benefits',
-    description: 'Medical aid, retirement fund & risk cover',
+    title: 'Meaningful Work',
+    description: 'Help clients make real, well-informed financial decisions',
   },
   {
     icon: Lightbulb,
     title: 'Innovation Culture',
     description: 'AI tools, modern tech stack & creative freedom',
   },
-  { icon: Users, title: 'Mentorship', description: 'One-on-one coaching from industry veterans' },
+  { icon: Users, title: 'Mentorship', description: 'One-on-one mentorship from the founder' },
 ];
 
 // ============================================================================
@@ -173,81 +166,6 @@ async function fetchJobListings(): Promise<JobListing[]> {
     console.error('Failed to fetch job listings:', err);
   }
   return [];
-}
-
-// ============================================================================
-// Animated Counter Hook (matches homepage)
-// ============================================================================
-
-function useCountUp(target: number, duration = 2000, startDelay = 400) {
-  const [count, setCount] = useState(0);
-  const started = useRef(false);
-
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-
-    const timeout = setTimeout(() => {
-      const isDecimal = target % 1 !== 0;
-      const steps = 60;
-      const increment = target / steps;
-      let current = 0;
-      let step = 0;
-
-      const interval = setInterval(() => {
-        step++;
-        current += increment;
-        if (step >= steps) {
-          setCount(target);
-          clearInterval(interval);
-        } else {
-          setCount(isDecimal ? parseFloat(current.toFixed(1)) : Math.round(current));
-        }
-      }, duration / steps);
-    }, startDelay);
-
-    return () => clearTimeout(timeout);
-  }, [target, duration, startDelay]);
-
-  return count;
-}
-
-// ============================================================================
-// Sub-Components
-// ============================================================================
-
-function StatItem({
-  label,
-  value,
-  suffix,
-  prefix,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  suffix: string;
-  prefix?: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  const animatedValue = useCountUp(value, 2200, 600);
-
-  const display = value % 1 !== 0 ? animatedValue.toFixed(1) : animatedValue.toLocaleString();
-
-  return (
-    <div className="flex items-center gap-3 justify-center lg:justify-start group">
-      <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/15 transition-colors">
-        <Icon className="h-5 w-5 text-purple-400" />
-      </div>
-      <div>
-        <div className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-          {prefix}
-          {display}
-          {suffix}
-        </div>
-        <div className="text-xs text-gray-500 font-medium">{label}</div>
-      </div>
-    </div>
-  );
 }
 
 // ============================================================================
@@ -322,8 +240,8 @@ export function CareersPage() {
                 </span>
               </h1>
               <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Join South Africa's most ambitious independent financial advisory firm. We combine
-                cutting-edge technology with personalised service to help clients achieve their
+                Navigate Wealth is an independent, founder-led financial advisory practice. We
+                combine modern technology with personalised service to help clients achieve their
                 financial goals.
               </p>
             </div>
@@ -365,15 +283,6 @@ export function CareersPage() {
                 <CheckCircle className="h-3.5 w-3.5 text-purple-400/70 flex-shrink-0" />
                 <span className="text-xs font-medium">Equal Opportunity Employer</span>
               </div>
-            </div>
-          </div>
-
-          {/* Stats Bar */}
-          <div className="relative z-10 border-t border-white/[0.06] py-6 lg:py-8">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-              {HERO_STATS.map((stat) => (
-                <StatItem key={stat.label} {...stat} />
-              ))}
             </div>
           </div>
         </div>
@@ -612,12 +521,12 @@ export function CareersPage() {
                 {/* Mini perks grid */}
                 <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-left max-w-2xl mx-auto">
                   {[
-                    'Competitive salary & benefits',
+                    'Competitive remuneration',
                     'Professional development',
                     'Growth opportunities',
                     'Modern work environment',
                     'Flexible working options',
-                    'Team collaboration culture',
+                    'Close-knit, founder-led culture',
                   ].map((item) => (
                     <div
                       key={item}
@@ -658,8 +567,8 @@ export function CareersPage() {
               Why Navigate Wealth?
             </h2>
             <p className="text-gray-400 text-base sm:text-lg leading-relaxed">
-              Join a company that's revolutionising financial advice in South Africa with ambition,
-              innovation, and a commitment to excellence.
+              Join a growing, founder-led practice built on independence, transparency and personal
+              service.
             </p>
           </div>
 
@@ -697,8 +606,8 @@ export function CareersPage() {
               Everything You Need to Thrive
             </h2>
             <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
-              We believe that taking care of our team is the foundation of exceptional client
-              service. Here's what you can expect.
+              We believe that taking care of the people who work with us is the foundation of
+              exceptional client service. Here's what you can expect.
             </p>
           </div>
 
@@ -766,7 +675,7 @@ export function CareersPage() {
                 className="border-primary/80 bg-primary/10 text-white hover:bg-primary/20 hover:border-primary hover:text-white hover:scale-105 transform transition-all duration-200 px-8 backdrop-blur-sm shadow-lg hover:shadow-xl"
                 asChild
               >
-                <Link to="/contact">Contact Our Team</Link>
+                <Link to="/contact">Contact Us</Link>
               </Button>
             </div>
 

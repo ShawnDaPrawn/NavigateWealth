@@ -8,14 +8,7 @@
 // ============================================================================
 
 export type EventType =
-  | 'meeting'
-  | 'review'
-  | 'call'
-  | 'webinar'
-  | 'internal'
-  | 'consultation'
-  | 'deadline'
-  | 'other';
+  'meeting' | 'review' | 'call' | 'webinar' | 'internal' | 'consultation' | 'deadline' | 'other';
 
 export type EventStatus = 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
 

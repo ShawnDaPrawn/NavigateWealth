@@ -19,11 +19,12 @@
  * signing route that takes a signer id instead of the signer's access token.
  */
 import { Hono } from 'npm:hono';
-import { getAuthContext, AuthError } from './auth-mw.ts';
+import { getAuthContext } from './auth-mw.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { belongsToFirm } from './esign-firm-scope.ts';
 import { getClientEnvelopes } from './esign-services.ts';
 import { canAccessClientAs } from './client-access.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-sender-envelope-routes');
 
@@ -55,13 +56,7 @@ app.get('/clients/:clientId/envelopes', async (c) => {
     return c.json({ envelopes: scoped });
   } catch (error: unknown) {
     log.error('❌ Get client envelopes error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to fetch envelopes',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to fetch envelopes');
   }
 });
 

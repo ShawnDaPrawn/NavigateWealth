@@ -8,7 +8,7 @@
  * (todo-routes.ts) — services never validate directly.
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // ── Path Parameters ────────────────────────────────────────────────────────
 

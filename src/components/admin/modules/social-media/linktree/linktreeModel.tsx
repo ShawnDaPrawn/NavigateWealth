@@ -23,9 +23,7 @@ import {
   Link as Globe,
   Instagram,
   Linkedin,
-  Youtube,
   Facebook,
-  Twitter,
   Mail,
   Phone,
   MapPin,
@@ -33,6 +31,7 @@ import {
   FileText,
   BookOpen,
 } from 'lucide-react';
+import { XIcon } from '../../../../shared/XIcon';
 import { api } from '../../../../../utils/api';
 
 // ============================================================================
@@ -124,15 +123,15 @@ export const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
     category: 'social',
   },
   {
-    title: 'YouTube Channel',
-    url: 'https://www.youtube.com/@navigatewealth',
-    description: 'Watch our financial planning videos',
-    icon: <Youtube className="h-4 w-4" />,
-    category: 'content',
+    title: 'X',
+    url: 'https://x.com/Navigate_ZA',
+    description: 'Follow us on X',
+    icon: <XIcon className="h-4 w-4" />,
+    category: 'social',
   },
   {
     title: 'Email Us',
-    url: 'mailto:info@navigatewealth.co.za',
+    url: 'mailto:info@navigatewealth.co',
     description: 'Get in touch via email',
     icon: <Mail className="h-4 w-4" />,
     category: 'contact',
@@ -146,8 +145,8 @@ export const QUICK_ADD_TEMPLATES: QuickAddTemplate[] = [
   },
   {
     title: 'Office Location',
-    url: 'https://maps.google.com/?q=Route+21+Corporate+Park+Centurion',
-    description: 'Route 21 Corporate Park, Centurion',
+    url: 'https://maps.google.com/?q=Milestone+Place+25+Sovereign+Drive+Route+21+Business+Park+Pretoria',
+    description: 'Route 21 Business Park, Pretoria',
     icon: <MapPin className="h-4 w-4" />,
     category: 'contact',
   },
@@ -174,22 +173,16 @@ export const SOCIAL_PLATFORMS = [
     placeholder: 'https://facebook.com/navigatewealth',
   },
   {
-    key: 'youtube',
-    label: 'YouTube',
-    icon: <Youtube className="h-4 w-4" />,
-    placeholder: 'https://youtube.com/@navigatewealth',
-  },
-  {
     key: 'twitter',
-    label: 'X (Twitter)',
-    icon: <Twitter className="h-4 w-4" />,
-    placeholder: 'https://x.com/navigatewealth',
+    label: 'X',
+    icon: <XIcon className="h-4 w-4" />,
+    placeholder: 'https://x.com/Navigate_ZA',
   },
   {
     key: 'email',
     label: 'Email',
     icon: <Mail className="h-4 w-4" />,
-    placeholder: 'mailto:info@navigatewealth.co.za',
+    placeholder: 'mailto:info@navigatewealth.co',
   },
 ] as const;
 

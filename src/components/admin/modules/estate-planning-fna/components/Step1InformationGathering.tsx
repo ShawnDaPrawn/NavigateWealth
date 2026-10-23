@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import {
@@ -169,11 +170,10 @@ export function Step1InformationGathering({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="estate-age">Age *</Label>
-                  <Input
+                  <NumberInputField
                     id="estate-age"
-                    type="number"
-                    value={inputs.familyInfo.age || ''}
-                    onChange={(e) => setFamily({ age: parseInt(e.target.value, 10) || 0 })}
+                    value={inputs.familyInfo.age}
+                    onValueChange={(v) => setFamily({ age: v ?? 0 })}
                   />
                 </div>
               </div>

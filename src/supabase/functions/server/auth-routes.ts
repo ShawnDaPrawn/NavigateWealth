@@ -35,6 +35,8 @@ import {
   PasswordResetSchema,
 } from './auth-validation.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
+import { retryAfterSeconds } from './retry-after.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const authRoutes = new Hono();
 const log = createModuleLogger('auth-routes');
@@ -338,7 +340,7 @@ authRoutes.post('/login', validateBody(LoginSchema), async (c) => {
             errorMessage: limit.reason,
           });
         }
-        const retryAfter = Math.max(1, Math.ceil((limit.resetAt.getTime() - Date.now()) / 1000));
+        const retryAfter = retryAfterSeconds(limit.resetAt);
         c.header('Retry-After', String(retryAfter));
         return c.json(
           {
@@ -546,7 +548,7 @@ authRoutes.post('/password-change', requirePrimaryAuth, async (c) => {
     // Watermark at the caller's own token, so the session that just performed
     // the change survives and every older one does not. See
     // session-revocation.ts for why this is not `now`.
-    const accessToken = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+    const accessToken = stripBearerPrefix(c.req.header('Authorization'));
     const { revokeSessionsAfterCredentialChange } = await import('./session-revocation.ts');
     const revocation = await revokeSessionsAfterCredentialChange({
       userId,

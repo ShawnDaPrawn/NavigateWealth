@@ -3,6 +3,7 @@
  * see InvestmentQuoteWizard.tsx for the state machine.
  */
 import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { TAX_BRACKET_OPTIONS, formatCurrency, type FinancialState } from './model';
 
@@ -31,17 +32,12 @@ export function Step4Financial({
         <Label className="text-sm font-medium text-gray-700">
           Gross monthly income <span className="text-red-500">*</span>
         </Label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder="e.g. 45,000"
-            value={financial.income_gross_monthly}
-            onChange={(e) => update('income_gross_monthly', formatCurrency(e.target.value))}
-            className="bg-white border-gray-300 h-11 pl-7"
-          />
-        </div>
+        <CurrencyInputField
+          placeholder="45,000"
+          value={financial.income_gross_monthly}
+          onChange={(e) => update('income_gross_monthly', formatCurrency(e.target.value))}
+          className="bg-white border-gray-300 h-11"
+        />
       </div>
 
       {/* Net monthly income */}
@@ -49,17 +45,12 @@ export function Step4Financial({
         <Label className="text-sm font-medium text-gray-700">
           Net monthly income <span className="text-red-500">*</span>
         </Label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder="e.g. 32,000"
-            value={financial.income_net_monthly}
-            onChange={(e) => update('income_net_monthly', formatCurrency(e.target.value))}
-            className="bg-white border-gray-300 h-11 pl-7"
-          />
-        </div>
+        <CurrencyInputField
+          placeholder="32,000"
+          value={financial.income_net_monthly}
+          onChange={(e) => update('income_net_monthly', formatCurrency(e.target.value))}
+          className="bg-white border-gray-300 h-11"
+        />
       </div>
 
       {/* Existing investments */}

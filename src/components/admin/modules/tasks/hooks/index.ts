@@ -24,6 +24,3 @@ export {
 
 // Board hook
 export { useTaskBoard } from './useTaskBoard';
-
-// Background processors
-export { useOverdueDigestProcessor } from './useOverdueDigestProcessor';

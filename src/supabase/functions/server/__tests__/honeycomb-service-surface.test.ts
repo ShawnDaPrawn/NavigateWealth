@@ -24,14 +24,14 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const HONEYCOMB_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'honeycomb');
 
 /** Route files that reach the service through a namespace import. */
-const ROUTE_FILES = readdirSync(SERVER_DIR).filter(
+const ROUTE_FILES = readdirSync(HONEYCOMB_DIR).filter(
   (f) =>
     /^honeycomb-.*routes\.ts$/.test(f) &&
     /import \* as service from '\.\/honeycomb-service\.ts'/.test(
-      readFileSync(join(SERVER_DIR, f), 'utf8'),
+      readFileSync(join(HONEYCOMB_DIR, f), 'utf8'),
     ),
 );
 
@@ -39,7 +39,9 @@ const CALLED = [
   ...new Set(
     ROUTE_FILES.flatMap((f) =>
       [
-        ...readFileSync(join(SERVER_DIR, f), 'utf8').matchAll(/\bservice\.([A-Za-z_]\w*)\s*[(<]/g),
+        ...readFileSync(join(HONEYCOMB_DIR, f), 'utf8').matchAll(
+          /\bservice\.([A-Za-z_]\w*)\s*[(<]/g,
+        ),
       ].map((m) => m[1]),
     ),
   ),
@@ -54,7 +56,10 @@ describe('every name the routes call is exported', () => {
   });
 
   it('exports each one as a function', async () => {
-    const service = (await import('../honeycomb-service.ts')) as unknown as Record<string, unknown>;
+    const service = (await import('../honeycomb/honeycomb-service.ts')) as unknown as Record<
+      string,
+      unknown
+    >;
 
     const missing = CALLED.filter((name) => typeof service[name] !== 'function');
 

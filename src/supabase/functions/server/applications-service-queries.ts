@@ -172,8 +172,7 @@ export async function getApplicationById(
       user_email: user?.email || null,
       user_name: (() => {
         const pi = application.application_data?.personalInfo as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         const piName = `${String(pi?.firstName ?? '')} ${String(pi?.lastName ?? '')}`.trim();
         return (user?.user_metadata?.name as string) || piName || null;
       })(),

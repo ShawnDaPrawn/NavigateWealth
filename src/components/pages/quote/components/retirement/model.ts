@@ -101,16 +101,11 @@ export interface WizardDraft {
 
 // ── Props ───────────────────────────────────────────────────────────────────────
 
-export function formatCurrency(value: string): string {
-  const num = value.replace(/[^\d]/g, '');
-  if (!num) return '';
-  return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-export function parseCurrencyToNumber(value: string): number {
-  const cleaned = value.replace(/[^\d]/g, '');
-  return cleaned ? Number(cleaned) : 0;
-}
+// The wizards' amount-field mask, shared by all four quote wizards.
+export {
+  formatAmountInput as formatCurrency,
+  parseAmountInput as parseCurrencyToNumber,
+} from '../wizard/amountInput';
 
 export function getInitialRA(): RAContributionState {
   return {

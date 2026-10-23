@@ -3,7 +3,8 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { toast } from 'sonner';
-import { MapPin, Phone, Mail, Linkedin, ArrowRight, Youtube, Instagram } from 'lucide-react';
+import { MapPin, Phone, Mail, Linkedin, ArrowRight, Instagram } from 'lucide-react';
+import { XIcon, NAVIGATE_WEALTH_X_URL } from '../shared/XIcon';
 import { Logo } from './Logo';
 import { api } from '../../utils/api/client';
 
@@ -92,7 +93,6 @@ export function Footer() {
       { label: 'Sitemap', path: '/sitemap' },
       { label: 'Market Updates', path: '/resources?section=market-updates' },
       { label: 'Newsletters', path: '/resources?section=newsletters' },
-      { label: 'Design System', path: '/design-system' },
     ],
     legal: [
       { label: 'Privacy and Data', path: '/legal?section=privacy-data-protection' },
@@ -116,7 +116,8 @@ export function Footer() {
               <div className="flex items-center space-x-3 text-gray-300">
                 <MapPin className="h-8 w-8 text-primary" />
                 <span className="text-sm">
-                  Milestone Place Block A, 25 Sovereign Dr Route 21 Business Park, Pretoria, 0178
+                  First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park,
+                  Pretoria, 0157
                 </span>
               </div>
               <div className="flex items-center space-x-3 text-gray-300">
@@ -305,12 +306,12 @@ export function Footer() {
               asChild
             >
               <a
-                href="https://www.youtube.com/@navigatewealth"
+                href={NAVIGATE_WEALTH_X_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="YouTube"
+                aria-label="X"
               >
-                <Youtube className="h-5 w-5" />
+                <XIcon className="h-5 w-5" />
               </a>
             </Button>
           </div>
@@ -330,8 +331,8 @@ export function Footer() {
             making any financial decision, you should consider your personal circumstances and,
             where appropriate, seek professional advice. Navigate Wealth will not be liable for any
             losses or damages arising from the use of this website or any reliance on the
-            information provided herein. For tailored advice, please contact our qualified advisor/s
-            directly. Full terms and conditions are available upon request.
+            information provided herein. For tailored advice, please contact us directly. Full terms
+            and conditions are available on our Legal page.
           </p>
         </div>
       </div>

@@ -2,7 +2,7 @@
  * Client-Side Retirement FNA Results Display
  * Read-only view of published Retirement Planning Analysis
  *
- * Data source: /supabase/functions/server/retirement-fna-routes.tsx
+ * Data source: /supabase/functions/server/retirement-fna-routes.ts
  * Uses "inputs" and "results" fields from the stored session
  */
 

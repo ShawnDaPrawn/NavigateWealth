@@ -66,7 +66,7 @@ vi.mock('../auth-mw.ts', async () => {
 });
 
 const { request, routeRegistrations, kvStore } = await import('./helpers/contract-harness.ts');
-const esign = (await import('../esign-routes.tsx')).default;
+const esign = (await import('../esign-routes.ts')).default;
 
 /** Routes that are NOT staff-only, and why. Matched on method + path pattern. */
 const OPEN: Array<[RegExp, string]> = [

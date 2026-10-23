@@ -4,7 +4,7 @@
  * P1 — Zod validation for requests-routes.ts
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // ============================================================================
 // TEMPLATE SCHEMAS

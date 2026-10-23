@@ -11,10 +11,6 @@ import type { Provider, Product, Integration, ProductFilters } from './product-m
 const log = createModuleLogger('product-management-service');
 
 // Helper to generate unique ID
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
 export class ProductManagementService {
   // ========================================================================
   // PROVIDERS
@@ -70,7 +66,7 @@ export class ProductManagementService {
    * Create provider
    */
   async createProvider(data: Partial<Provider>): Promise<Provider> {
-    const providerId = generateId();
+    const providerId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
 
     const provider: Provider = {
@@ -202,7 +198,7 @@ export class ProductManagementService {
    * Create product
    */
   async createProduct(data: Partial<Product>): Promise<Product> {
-    const productId = generateId();
+    const productId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
 
     const product: Product = {
@@ -276,7 +272,7 @@ export class ProductManagementService {
    * Create integration
    */
   async createIntegration(data: Partial<Integration>): Promise<Integration> {
-    const integrationId = generateId();
+    const integrationId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
 
     const integration: Integration = {

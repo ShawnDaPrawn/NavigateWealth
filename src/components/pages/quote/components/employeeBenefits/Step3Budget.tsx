@@ -2,7 +2,7 @@
  * Step3Budget of the employee benefits quote wizard. One step slice —
  * see EmployeeBenefitsQuoteWizard.tsx for the state machine.
  */
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { HelpCircle } from 'lucide-react';
 import {
@@ -37,20 +37,15 @@ export function Step3Budget({
           <span className="text-red-500">*</span>
         </Label>
         <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-              R
-            </span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="e.g. 25,000"
+          <div className="flex-1">
+            <CurrencyInputField
+              placeholder="25,000"
               value={budget.monthly_budget}
               onChange={(e) =>
                 onChange({ ...budget, monthly_budget: formatCurrency(e.target.value) })
               }
               disabled={budget.budget_adviser_assist}
-              className="bg-white border-gray-300 h-11 pl-7"
+              className="bg-white border-gray-300 h-11"
             />
           </div>
           <button

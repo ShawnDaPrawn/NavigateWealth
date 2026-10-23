@@ -3,7 +3,7 @@
  * article-notification job/campaign management surface (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from publications-routes.tsx; mounted via
+ * Extracted verbatim from publications-routes.ts; mounted via
  * `publications.route('/', notificationsRoutes)`. Carries the two
  * notification-shaped response helpers it owns (completedBlast / campaign-first
  * engagement summary). Behaviour-preserving; the publications route contract
@@ -46,6 +46,8 @@ import {
   type Article,
   type DeletedArticleRecord,
 } from './publications-route-helpers.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const log = createModuleLogger('publications-notifications-routes');
 
@@ -287,7 +289,7 @@ notificationsRoutes.get(
       } catch (repairError) {
         log.warn('Failed to self-heal publish notification campaign from tracking', {
           articleId: id,
-          error: repairError instanceof Error ? repairError.message : String(repairError),
+          error: getErrMsg(repairError),
         });
       }
     }
@@ -417,6 +419,18 @@ notificationsRoutes.post(
   }),
 );
 
+// Registered BEFORE `/notification-jobs/:jobId`: Hono matches in registration
+// order, so the param route would otherwise take "processor-status" as a job id
+// and answer 404 "Notification job not found" (GitHub #384).
+notificationsRoutes.get(
+  '/notification-jobs/processor-status',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const state = await getArticleNotificationProcessorState();
+    return c.json({ success: true, data: state });
+  }),
+);
+
 notificationsRoutes.get(
   '/notification-jobs/:jobId',
   requireAdmin,
@@ -468,19 +482,10 @@ notificationsRoutes.post(
   }),
 );
 
-notificationsRoutes.get(
-  '/notification-jobs/processor-status',
-  requireAdmin,
-  asyncHandler(async (c) => {
-    const state = await getArticleNotificationProcessorState();
-    return c.json({ success: true, data: state });
-  }),
-);
-
 notificationsRoutes.post('/cron/process-notification-jobs', async (c) => {
   try {
     const authHeader = c.req.header('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const token = stripBearerPrefix(authHeader);
     const sharedCronToken = c.req.header(PUBLICATIONS_CRON_SHARED_HEADER) || '';
     if (!(await isAuthorizedPublicationsCronRequest(token, sharedCronToken))) {
       return c.json({ error: 'Unauthorized - cron auth required' }, 401);

@@ -34,7 +34,7 @@ import {
   SOCIAL_ASSETS_BUCKET_LIMIT,
   SOCIAL_ASSETS_IMAGE_TYPES,
   SOCIAL_ASSETS_VIDEO_TYPES,
-} from '../social-assets-storage.ts';
+} from '../social/social-assets-storage.ts';
 
 const EXPECTED = {
   public: true,

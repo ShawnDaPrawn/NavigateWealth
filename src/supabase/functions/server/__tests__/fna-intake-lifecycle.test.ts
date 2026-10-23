@@ -12,6 +12,7 @@ vi.mock('../kv_store.tsx', () => ({
   get: vi.fn(),
   set: vi.fn(),
   del: vi.fn(),
+  mset: vi.fn(),
   getByPrefix: vi.fn(),
 }));
 
@@ -34,6 +35,7 @@ describe('fna-intake lifecycle', () => {
     vi.mocked(kv.get).mockReset();
     vi.mocked(kv.set).mockReset();
     vi.mocked(kv.del).mockReset();
+    vi.mocked(kv.mset).mockReset();
     vi.mocked(kv.getByPrefix).mockReset();
   });
 
@@ -57,6 +59,7 @@ describe('fna-intake lifecycle', () => {
     });
 
     vi.mocked(kv.del).mockResolvedValue(undefined);
+    vi.mocked(kv.mset).mockResolvedValue(undefined);
 
     const draft = await createOrUpdateIntakeDraft(clientId, 'retirement', { currentAge: 45 }, user);
     const submitted = await submitIntakeSession(draft.id, user, true);
@@ -69,6 +72,14 @@ describe('fna-intake lifecycle', () => {
 
     const stored = await getIntakeSession(draft.id);
     expect(stored?.status).toBe('accepted');
+
+    // The adviser draft is written with its entry on the client's FNA list
+    // (which the FNA list reads), and only once: the second accept reuses it.
+    expect(kv.mset).toHaveBeenCalledTimes(1);
+    expect(kv.mset).toHaveBeenCalledWith(
+      [`retirement_fna:${first.linkedFnaId}`, `retirement_fna:${clientId}:list`],
+      [expect.objectContaining({ id: first.linkedFnaId, status: 'draft' }), [first.linkedFnaId]],
+    );
   });
 
   it('request-info returns intake to client_draft', async () => {

@@ -9,8 +9,7 @@ const assetsTab = vi.hoisted(() => ({
 }));
 const composer = vi.hoisted(() => ({
   onSubmit: null as
-    | ((request: ComposeRequest, assetIds: string[]) => Promise<unknown> | unknown)
-    | null,
+    ((request: ComposeRequest, assetIds: string[]) => Promise<unknown> | unknown) | null,
   selectedProfiles: [] as string[],
   initialMedia: [] as Array<{ id: string; url: string; type: string }>,
   initialContent: undefined as string | undefined,

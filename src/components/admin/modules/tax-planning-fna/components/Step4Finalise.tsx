@@ -14,6 +14,7 @@ import { Textarea } from '../../../../ui/textarea';
 import { Label } from '../../../../ui/label';
 import { toast } from 'sonner';
 import { FNAStepNavigation } from '../../fna';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 interface Step4Props {
   finalInputs: TaxPlanningInputs;
@@ -69,7 +70,7 @@ export function Step4Finalise({
     onPublish(finalRecs, adviserNotes);
   };
 
-  const formatMoney = (val: number) => `R ${Math.round(val).toLocaleString()}`;
+  const formatMoney = (val: number) => formatCurrencyWhole(val);
 
   return (
     <div className="space-y-8">

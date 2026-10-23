@@ -39,13 +39,7 @@ export type EnvelopeStatus =
  * Signer status types
  */
 export type SignerStatus =
-  | 'pending'
-  | 'sent'
-  | 'viewed'
-  | 'otp_verified'
-  | 'signed'
-  | 'rejected'
-  | 'declined';
+  'pending' | 'sent' | 'viewed' | 'otp_verified' | 'signed' | 'rejected' | 'declined';
 
 /**
  * Field type for document form fields
@@ -571,12 +565,7 @@ export interface PrefillMetadata {
  * tiny so it can be safely evaluated without a real expression parser.
  */
 export type ConditionalOperator =
-  | 'equals'
-  | 'not_equals'
-  | 'is_checked'
-  | 'is_unchecked'
-  | 'is_filled'
-  | 'is_empty';
+  'equals' | 'not_equals' | 'is_checked' | 'is_unchecked' | 'is_filled' | 'is_empty';
 
 export interface ConditionalRule {
   /** Field id that controls visibility. Must reference another field on

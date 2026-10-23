@@ -1,0 +1,21 @@
+/*
+ * When the showcase is embedded in the website's /design-system page, the
+ * iframe is as tall as the whole showcase, so "the viewport" is tens of
+ * thousands of pixels tall and a modal centred in it opens far off screen.
+ * embed.ts receives the part of the iframe the visitor can see
+ * (--nw-view-top, --nw-view-height), and this pins the page-level React Aria
+ * modal overlays (modals and slideouts) to it.
+ *
+ * React Aria marks those overlays with an inline --visual-viewport-height,
+ * which is also what the kit sizes the modal's max height from, so that is
+ * overridden too. Only overlays portalled to <body> are moved: a demo that
+ * keeps its overlay inside its own frame (the mobile header's drawer) is
+ * already where it should be.
+ */
+html[data-embedded] body > [style*="--visual-viewport-height"] {
+    top: var(--nw-view-top, 0px) !important;
+    bottom: auto !important;
+    height: var(--nw-view-height, 100vh) !important;
+    min-height: 0 !important;
+    --visual-viewport-height: var(--nw-view-height, 100vh) !important;
+}

@@ -34,11 +34,14 @@ export const MedicalFnaAPI = {
   /**
    * Get a specific Medical FNA session
    */
-  async getMedicalFNA(fnaId: string): Promise<MedicalFNASession> {
+  async getMedicalFNA(fnaId: string, clientId?: string): Promise<MedicalFNASession> {
     logger.debug('[MedicalFnaAPI] Fetching FNA', { fnaId });
     try {
+      // `clientId` lets the server find an FNA created from a client intake,
+      // which is stored under the client.
+      const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
       const response = await api.get<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/${fnaId}`,
+        `/medical-fna/${fnaId}${query}`,
       );
       return response.data;
     } catch (error) {
@@ -165,11 +168,11 @@ export const MedicalFnaAPI = {
   /**
    * Publish Medical FNA (makes it visible to client)
    */
-  async publishMedicalFNA(fnaId: string): Promise<MedicalFNASession> {
+  async publishMedicalFNA(fnaId: string, clientId?: string): Promise<MedicalFNASession> {
     logger.debug('[MedicalFnaAPI] Publishing', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/publish/${fnaId}`,
+        `/medical-fna/publish/${fnaId}${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
       );
       return response.data;
     } catch (error) {
@@ -181,11 +184,11 @@ export const MedicalFnaAPI = {
   /**
    * Unpublish Medical FNA (changes status from published back to draft)
    */
-  async unpublishMedicalFNA(fnaId: string): Promise<MedicalFNASession> {
+  async unpublishMedicalFNA(fnaId: string, clientId?: string): Promise<MedicalFNASession> {
     logger.debug('[MedicalFnaAPI] Unpublishing', { fnaId });
     try {
       const response = await api.post<{ success: boolean; data: MedicalFNASession }>(
-        `/medical-fna/unpublish/${fnaId}`,
+        `/medical-fna/unpublish/${fnaId}${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
       );
       return response.data;
     } catch (error) {
@@ -210,10 +213,12 @@ export const MedicalFnaAPI = {
   /**
    * Delete a Medical FNA
    */
-  async deleteMedicalFNA(fnaId: string): Promise<void> {
+  async deleteMedicalFNA(fnaId: string, clientId?: string): Promise<void> {
     logger.debug('[MedicalFnaAPI] Deleting', { fnaId });
     try {
-      await api.delete(`/medical-fna/delete/${fnaId}`);
+      await api.delete(
+        `/medical-fna/delete/${fnaId}${clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''}`,
+      );
     } catch (error) {
       logger.error('Failed to delete Medical FNA', error);
       throw error;

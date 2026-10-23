@@ -31,8 +31,7 @@ export function investmentPdfFields(productDetails: QuoteProductDetails): QuoteP
 
   // Contributions
   const contribs = productDetails.contributions as
-    | Record<string, Record<string, unknown>>
-    | undefined;
+    Record<string, Record<string, unknown>> | undefined;
   if (contribs) {
     for (const [typeId, entry] of Object.entries(contribs)) {
       const label = typeId.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
@@ -116,8 +115,7 @@ export function investmentHtml(productDetails: QuoteProductDetails): string {
 
   // Contributions
   const contribs = productDetails.contributions as
-    | Record<string, Record<string, unknown>>
-    | undefined;
+    Record<string, Record<string, unknown>> | undefined;
   if (contribs) {
     const cRows: string[] = [];
     for (const [typeId, entry] of Object.entries(contribs)) {

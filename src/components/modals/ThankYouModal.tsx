@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { CheckCircle2, Phone, Mail, Clock, Calendar, ArrowRight, Star, Shield } from 'lucide-react';
+import { COMPANY } from '@/config/companyFacts';
 
 interface ThankYouModalProps {
   open: boolean;
@@ -36,8 +37,7 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
               Thank You{firstName && `, ${firstName}`}!
             </DialogTitle>
             <DialogDescription className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto text-center">
-              Your request has been received and one of our qualified financial advisers will
-              contact you shortly to discuss your risk management needs.
+              Your request has been received. We will be in touch shortly to discuss what you need.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -59,8 +59,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Initial Contact</h4>
                   <p className="text-gray-600 text-sm">
-                    Our team will call you within 24 hours to acknowledge your request and schedule
-                    a convenient consultation time.
+                    We will call you within 24 hours on business days to acknowledge your request
+                    and schedule a convenient consultation time.
                   </p>
                 </div>
               </div>
@@ -72,8 +72,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Needs Assessment</h4>
                   <p className="text-gray-600 text-sm">
-                    We'll conduct a comprehensive review of your financial situation and risk
-                    management requirements.
+                    We'll conduct a comprehensive review of your financial situation and what you
+                    need.
                   </p>
                 </div>
               </div>
@@ -85,8 +85,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Tailored Solutions</h4>
                   <p className="text-gray-600 text-sm">
-                    Receive personalized recommendations from South Africa's leading insurance
-                    providers that match your specific needs and budget.
+                    Receive personalised recommendations, compared across the providers we work
+                    with, that match your needs and budget.
                   </p>
                 </div>
               </div>
@@ -102,11 +102,11 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900">Direct Contact</h4>
-                  <p className="text-sm text-gray-600">Speak to our team immediately</p>
+                  <p className="text-sm text-gray-600">Speak to us directly</p>
                 </div>
               </div>
-              <p className="text-primary font-semibold mb-2">+27 (0)12 667 2505</p>
-              <p className="text-xs text-gray-500">Available Monday - Friday, 8:00 AM - 5:00 PM</p>
+              <p className="text-primary font-semibold mb-2">{COMPANY.phone.display}</p>
+              <p className="text-xs text-gray-500">Available {COMPANY.officeHours.label}</p>
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -119,10 +119,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                   <p className="text-sm text-gray-600">Send us additional information</p>
                 </div>
               </div>
-              <p className="text-primary font-semibold mb-2">info@navigatewealth.co</p>
-              <p className="text-xs text-gray-500">
-                We respond within 4 hours during business days
-              </p>
+              <p className="text-primary font-semibold mb-2">{COMPANY.email}</p>
+              <p className="text-xs text-gray-500">We respond within 24 hours on business days</p>
             </div>
           </div>
 
@@ -145,7 +143,7 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900 text-sm">FSCA Authorised</p>
-                  <p className="text-xs text-gray-600">Regulated financial advisers</p>
+                  <p className="text-xs text-gray-600">FSP {COMPANY.fspNumber}</p>
                 </div>
               </div>
 
@@ -154,8 +152,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
                   <Star className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">Expert Advice</p>
-                  <p className="text-xs text-gray-600">Qualified professionals</p>
+                  <p className="font-semibold text-gray-900 text-sm">Independent Advice</p>
+                  <p className="text-xs text-gray-600">Not tied to one provider</p>
                 </div>
               </div>
             </div>
@@ -168,9 +166,8 @@ export function ThankYouModal({ open, onOpenChange, clientName }: ThankYouModalP
               <div>
                 <h4 className="text-sm font-semibold text-blue-900 mb-1">Expected Response Time</h4>
                 <p className="text-sm text-blue-800">
-                  Our advisers typically contact new clients within <strong>24 hours</strong> during
-                  business days. For urgent matters, please call us directly at the number provided
-                  above.
+                  We typically contact new clients within <strong>24 hours</strong> on business
+                  days. For urgent matters, please call us directly at the number provided above.
                 </p>
               </div>
             </div>

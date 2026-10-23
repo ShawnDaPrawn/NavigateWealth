@@ -16,7 +16,7 @@
  * The preference record is stored in KV so this service stays self-contained
  * and does not require a new database table. Users can read/write their
  * preference via `GET /esign/me/notification-prefs` and
- * `PUT /esign/me/notification-prefs` (see esign-routes.tsx).
+ * `PUT /esign/me/notification-prefs` (see esign-routes.ts).
  */
 
 import * as kv from './kv_store.tsx';

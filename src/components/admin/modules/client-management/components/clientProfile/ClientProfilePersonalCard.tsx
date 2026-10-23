@@ -8,37 +8,28 @@ import { Label } from '../../../../../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../ui/card';
 import { SelectItem } from '../../../../../ui/select';
 import { Separator } from '../../../../../ui/separator';
-import { formatCurrencyDisplay } from '../../../../../../utils/currencyFormatter';
 import { User, Shield, Banknote } from 'lucide-react';
 import { CountrySelect } from '../../../../../pages/profile/CountrySelect';
-import { InputWithCopy, SelectWithCopy } from './ProfileFieldsWithCopy';
+import { CurrencyInputWithCopy, InputWithCopy, SelectWithCopy } from './ProfileFieldsWithCopy';
 import type { ClientProfileHook } from './clientProfileHook';
 
 interface ClientProfilePersonalCardProps {
   state: ClientProfileHook['state'];
   actions: ClientProfileHook['actions'];
-  grossIncomeDisplay: string | null;
-  setGrossIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  netIncomeDisplay: string | null;
-  setNetIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  grossAnnualIncomeDisplay: string | null;
-  setGrossAnnualIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  netAnnualIncomeDisplay: string | null;
-  setNetAnnualIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-export function ClientProfilePersonalCard({
-  state,
-  actions,
-  grossIncomeDisplay,
-  setGrossIncomeDisplay,
-  netIncomeDisplay,
-  setNetIncomeDisplay,
-  grossAnnualIncomeDisplay,
-  setGrossAnnualIncomeDisplay,
-  netAnnualIncomeDisplay,
-  setNetAnnualIncomeDisplay,
-}: ClientProfilePersonalCardProps) {
+type IncomeField =
+  'grossMonthlyIncome' | 'netMonthlyIncome' | 'grossAnnualIncome' | 'netAnnualIncome';
+
+export function ClientProfilePersonalCard({ state, actions }: ClientProfilePersonalCardProps) {
+  const setIncome = (field: IncomeField, value: number | undefined) => {
+    const numValue = value ?? 0;
+    // Only mark dirty if value actually changed
+    if (numValue !== (state.profileData[field] || 0)) {
+      actions.handleInputChange(field, numValue);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -206,129 +197,35 @@ export function ClientProfilePersonalCard({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <InputWithCopy
+            <CurrencyInputWithCopy
               label="Gross Monthly Income (R)"
-              value={
-                grossIncomeDisplay !== null
-                  ? grossIncomeDisplay
-                  : formatCurrencyDisplay(state.profileData.grossMonthlyIncome)
-              }
+              value={state.profileData.grossMonthlyIncome}
               id="grossMonthlyIncome"
-              fieldName="grossMonthlyIncome"
-              type="text"
-              placeholder="0.00"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                // Allow raw typing — no reformatting while editing to avoid cursor issues
-                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                setGrossIncomeDisplay(raw);
-              }}
-              onBlur={() => {
-                const numValue = parseFloat(grossIncomeDisplay || '0') || 0;
-                // Only mark dirty if value actually changed
-                if (numValue !== (state.profileData.grossMonthlyIncome || 0)) {
-                  actions.handleInputChange('grossMonthlyIncome', numValue);
-                }
-                setGrossIncomeDisplay(null);
-              }}
-              onFocus={() => {
-                if (grossIncomeDisplay === null) {
-                  const val = state.profileData.grossMonthlyIncome;
-                  setGrossIncomeDisplay(val ? val.toString() : '');
-                }
-              }}
+              onValueChange={(v) => setIncome('grossMonthlyIncome', v)}
             />
           </div>
           <div className="space-y-2">
-            <InputWithCopy
+            <CurrencyInputWithCopy
               label="Net Monthly Income (R)"
-              value={
-                netIncomeDisplay !== null
-                  ? netIncomeDisplay
-                  : formatCurrencyDisplay(state.profileData.netMonthlyIncome)
-              }
+              value={state.profileData.netMonthlyIncome}
               id="netMonthlyIncome"
-              fieldName="netMonthlyIncome"
-              type="text"
-              placeholder="0.00"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                setNetIncomeDisplay(raw);
-              }}
-              onBlur={() => {
-                const numValue = parseFloat(netIncomeDisplay || '0') || 0;
-                if (numValue !== (state.profileData.netMonthlyIncome || 0)) {
-                  actions.handleInputChange('netMonthlyIncome', numValue);
-                }
-                setNetIncomeDisplay(null);
-              }}
-              onFocus={() => {
-                if (netIncomeDisplay === null) {
-                  const val = state.profileData.netMonthlyIncome;
-                  setNetIncomeDisplay(val ? val.toString() : '');
-                }
-              }}
+              onValueChange={(v) => setIncome('netMonthlyIncome', v)}
             />
           </div>
           <div className="space-y-2">
-            <InputWithCopy
+            <CurrencyInputWithCopy
               label="Gross Annual Income (R)"
-              value={
-                grossAnnualIncomeDisplay !== null
-                  ? grossAnnualIncomeDisplay
-                  : formatCurrencyDisplay(state.profileData.grossAnnualIncome)
-              }
+              value={state.profileData.grossAnnualIncome}
               id="grossAnnualIncome"
-              fieldName="grossAnnualIncome"
-              type="text"
-              placeholder="0.00"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                setGrossAnnualIncomeDisplay(raw);
-              }}
-              onBlur={() => {
-                const numValue = parseFloat(grossAnnualIncomeDisplay || '0') || 0;
-                if (numValue !== (state.profileData.grossAnnualIncome || 0)) {
-                  actions.handleInputChange('grossAnnualIncome', numValue);
-                }
-                setGrossAnnualIncomeDisplay(null);
-              }}
-              onFocus={() => {
-                if (grossAnnualIncomeDisplay === null) {
-                  const val = state.profileData.grossAnnualIncome;
-                  setGrossAnnualIncomeDisplay(val ? val.toString() : '');
-                }
-              }}
+              onValueChange={(v) => setIncome('grossAnnualIncome', v)}
             />
           </div>
           <div className="space-y-2">
-            <InputWithCopy
+            <CurrencyInputWithCopy
               label="Net Annual Income (R)"
-              value={
-                netAnnualIncomeDisplay !== null
-                  ? netAnnualIncomeDisplay
-                  : formatCurrencyDisplay(state.profileData.netAnnualIncome)
-              }
+              value={state.profileData.netAnnualIncome}
               id="netAnnualIncome"
-              fieldName="netAnnualIncome"
-              type="text"
-              placeholder="0.00"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                setNetAnnualIncomeDisplay(raw);
-              }}
-              onBlur={() => {
-                const numValue = parseFloat(netAnnualIncomeDisplay || '0') || 0;
-                if (numValue !== (state.profileData.netAnnualIncome || 0)) {
-                  actions.handleInputChange('netAnnualIncome', numValue);
-                }
-                setNetAnnualIncomeDisplay(null);
-              }}
-              onFocus={() => {
-                if (netAnnualIncomeDisplay === null) {
-                  const val = state.profileData.netAnnualIncome;
-                  setNetAnnualIncomeDisplay(val ? val.toString() : '');
-                }
-              }}
+              onValueChange={(v) => setIncome('netAnnualIncome', v)}
             />
           </div>
         </div>

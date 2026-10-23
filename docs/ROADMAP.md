@@ -47,7 +47,7 @@ The heavy lifting of the last two months is real and enforced in CI
   mounts, request-id in every log line via AsyncLocalStorage,
   `validateBody`/`validateOptionalBody`, a typed `repositories/` base with
   bounded reads, `src/shared/contracts` with its first real adopter.
-- **Structural wins**: `integrations.tsx` split into seven route modules,
+- **Structural wins**: `integrations.ts` split into seven route modules,
   Deno check burned to 0, `quality/baselines/eslint-warning-baseline` 55, eager entry −24%
   (A16), `react-toastify` deleted and banned (A12).
 
@@ -99,7 +99,7 @@ These survived the P0/P1 push and are the only items below that outrank
   `consultation.ts` still build staff-facing email HTML with **zero**
   `escapeHtml` calls on anonymous input.
 - **S11 (partial).** The atomic Postgres limiter landed for auth
-  (`20260821000001_atomic_auth_rate_limit.sql`); public lead-gen forms remain
+  (`20260821210412_atomic_auth_rate_limit.sql`); public lead-gen forms remain
   email-keyed (rotate address → unlimited) and KV limiters still fail open.
 - **P1.1.** 78 anon-key bearer call sites (ratcheted, not banned).
 - **P1.3.** `verify_jwt = false` — flipping it requires the `public` sibling
@@ -294,15 +294,13 @@ also gives those modules retry, 401-refresh, and typed `APIError` for free.
   remaining legitimate sites (signer-facing anon calls) are individually
   commented.
 
-### 4.5 Consolidate the app shell into `src/app/` (Stage A leftover)
+### 4.5 Consolidate the app shell into `src/app/` (Stage A leftover) — **DONE 2026-10-08**
 
-Still not done (no `src/app/` exists). Move `App.tsx`, `AppRoutes.tsx`,
-`src/router/`, and the provider tree into `src/app/` — a small, high-value
-discoverability move that was explicitly scoped as safe. Nothing else
-relocates.
-
-- **Effort:** S/M. **Gate:** build + tests green; imports updated; no
-  behaviour change.
+`src/app/` now holds `App.tsx`, `AppRoutes.tsx`, `AppProviders.tsx` and
+`router/createAppRouter.tsx`; `main.tsx` stays at `src/`. `AdminDataPrefetch`
+stays in `components/providers/` because admin modules and the API client use
+it, so it is not shell code. A pure move: imports rewritten, no behaviour
+change, build and tests green.
 
 ### 4.6 Shared contracts adoption (Stage C continuation)
 
@@ -316,17 +314,19 @@ as they are touched; duplicated shapes are deleted, not maintained.
 - **Effort:** M (ongoing). **Gate:** `quality/baselines/contract-coverage-baseline` rises with
   each adoption; publications/advice-engine `types.ts` shrink to re-exports.
 
-### 4.7 Dead weight and readability batch (A13, A15)
+### 4.7 Dead weight and readability batch (A13, A15) — **DONE (verified 2026-10-08)**
 
-One cleanup PR each: scope the 1,056 lines of Quill CSS out of `src/index.css`
-into the editor component; delete `src/imports/` strays
-(`client-report-overview.txt`, `linkedin-share-guide.md`) and the unused
-`figma/ImageWithFallback.tsx`; converge on one DnD library
-(`@hello-pangea/dnd` — `react-dnd` has 2 importers); reconcile `src/public/`
-vs `public/`.
+Every item here was found already done when re-checked against `main`:
 
-- **Effort:** S each. **Gate:** homepage no longer ships editor CSS; one DnD
-  dependency; `npm run build` output unchanged elsewhere.
+- Quill CSS is no longer in `src/index.css`, which is now a single `@import`
+  of `styles/globals.css`; `quill.snow.css` is imported by the four editor
+  components that use it.
+- `src/imports/` and `src/public/` no longer exist.
+- `react-dnd` is gone from `package.json` and has no importer;
+  `@hello-pangea/dnd` is the one DnD library.
+- `ImageWithFallback` turned out to be a real component with 21 importers,
+  not dead code. It moved from `components/figma/` to `components/shared/`
+  (#422) instead of being deleted.
 
 ---
 
@@ -355,7 +355,7 @@ Current worst, re-measured: `resources-service.ts` (1,725),
 `ai-advisor.ts` (1,443), `communication-service.ts` (1,387),
 `integrations-portal-worker-routes.ts` (1,142). Split by responsibility, not
 line count — each becomes `*-routes` (transport) + `*-service` (logic) +
-`*-repository` (data), following the proven `integrations.tsx` playbook: one
+`*-repository` (data), following the proven `integrations.ts` playbook: one
 route group per PR, pure move first, same response shapes, contract test
 before and after. `quote-request-routes.ts` doubles as WS0's S10 fix — do the
 escaping first, split second.
@@ -488,7 +488,9 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
    pattern: migration + RLS → dual-write → backfill → read-flag → cutover.
    Because reads go through repositories by then, each cutover is a repository
    swap, not a 175-file edit. One entity per epic; `clients` first (highest
-   query pressure, most cross-feature reads).
+   query pressure, most cross-feature reads). The `policies` step also retires
+   the two whole-namespace reads of `policies:client:*`, behind the Review
+   tab's policy index and the portfolio table's book (§9a item 6).
    _Gate per entity:_ migration + RLS committed, backfill script, flag
    cutover, KV path retired.
 3. **KV stays** for genuinely schemaless/ephemeral state (drafts, rate-limit
@@ -564,7 +566,7 @@ Sequenced after WS0; runs in parallel with WS1/WS2. The order inside matters:
      77-entry lazy mount table and resolves every public route to its real URL.
      Writing it surfaced two things a hand-written list would have got wrong:
      mount-core mounts **extension proxies** (`./security.ts` for
-     `security.tsx`), and the e-sign / publications families nest **three levels
+     `security.ts`), and the e-sign / publications families nest **three levels
      deep** (`lazy → esign-routes → esign-sender-routes →
 esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
      than a fixed depth. 28 routes were unresolvable before those two fixes.
@@ -697,6 +699,83 @@ esign-sender-envelope-routes`), so the resolver walks to a fixpoint rather
 
 ---
 
+## 9a. Policy data — the two update paths (feature track)
+
+_Added 2026-09-30, after the portfolio table landed on `main`._
+
+Policy details now change two ways. Both publish through `publishSyncRun`, so
+locked fields, provenance and client totals behave identically; they differ in
+who drives them and whether an adviser approves the change first.
+
+| Path                       | Driven by                                                                                                                  | Before anything is written                   | Where it lives                                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Native policy update agent | The portal worker, and the Review tab's template upload                                                                    | A staged run that an adviser publishes       | `integrations-portal-*`, `scripts/portal-worker/`                                                          |
+| Portfolio table            | The Integrations **Portfolio** tab (download, amend, upload) and an external agent calling `/integrations/portfolio-table` | Its own preview or `dryRun`, then it applies | `integrations-portfolio-table-*`, contract in [`runbooks/portfolio-table.md`](runbooks/portfolio-table.md) |
+
+A policy's PDF has its own two doors, both through
+`replacePolicyDocumentForPolicy`: the app's upload, and, for an agent with no
+login, a hand-over through SQL that a worker stores — **DONE 2026-10-01**
+(migration `policy_document_intake`, contract in
+[`runbooks/policy-document-intake.md`](runbooks/policy-document-intake.md)).
+
+The owner is still building the native agent; nothing below changes it. What
+remains for the external path, in order:
+
+1. **Issue each agent its own token**, check that its first `dryRun` gets a
+   200 back, then revoke `shared`. This is an operator step, listed in
+   [`STATUS.md`](STATUS.md). Items 4 and 5 wait for a real agent's traffic, so
+   they are designed against how it actually behaves.
+2. **One token per agent** — **DONE 2026-10-01** (migration
+   `20261001083546`). Tokens live in
+   `public.portfolio_agent_tokens` as SHA-256 hashes only; the gate names the
+   agent from its token, the persisted run records `actor: agent:<name>`, and a
+   `submittedBy` in the body no longer decides it. A super admin issues and
+   revokes tokens in the Portfolio tab (`/integrations/portfolio-agents`, which
+   no agent token can reach). The old shared secret was carried over as the
+   agent `shared`, so nothing configured with it broke.
+   _Gate (met):_ the actor on a published run comes from the token, not the
+   body, pinned by the portfolio-table contract tests.
+3. **Retire the shared Vault secret.** Nothing reads
+   `navigatewealth_portfolio_table_token` or
+   `public.verify_portfolio_table_token` since item 2 deployed; they stayed
+   only so the code live before it kept working. Once `shared` is revoked, a
+   migration drops the function and deletes the secret.
+   _Gate:_ neither exists in production, and no code names them.
+4. **Rate-limit the token tier.** Nothing bounds how often a token holder may
+   call, and every call reads the whole policy namespace (item 6). A per-token
+   limit on the atomic Postgres limiter that auth already uses
+   (`20260821210412_atomic_auth_rate_limit.sql`) closes it; the agent name the
+   gate now resolves is the natural key.
+5. **Whether agent writes wait for review** — **DECIDED 2026-10-01 by the
+   owner: they do not.** An external agent's update applies automatically and
+   updates the client's profile with no further action or approval. The
+   endpoint already published directly; what was missing was the profile for
+   an agent writing through the Supabase connector, which never recalculated
+   the client's totals. Migration `client_totals_refresh` now marks such a
+   client stale and a worker recalculates them
+   ([`runbooks/client-totals-refresh.md`](runbooks/client-totals-refresh.md)).
+   Do not add a review step to agent writes without a new owner decision.
+6. **Indexed reads.** `listPoliciesForProviderCategory` reads every
+   `policies:client:*` row to build one book. This rides on §6's `policies`
+   cutover rather than being fixed separately:
+   `repositories/integration-book-repository.ts` is the seam, and a book
+   becomes one indexed query by provider and category.
+   _Gate:_ no whole-namespace read behind the portfolio routes.
+7. **Values from an agent that only has the Supabase connector.** The update
+   bot writes policy values straight into `policies:client:*` through the
+   connector, so its changes go around `publishSyncRun`. The client's totals
+   are now recalculated automatically after such a write (item 5). What is
+   still missing: locked fields are not honoured, nothing is recorded in
+   `integrationSyncHistory`, and a write can race the document worker (the
+   intake runbook's "Order with value updates"). A SQL hand-over for rows,
+   swept by a worker that calls `applyPortfolioRows` the way the document
+   intake calls the upload path, puts it on the same rails as the endpoint.
+   _Gate:_ no agent writes `kv_store_91ed8379` directly.
+
+- **Effort:** items 2 and 5 done; S/S for items 3 and 4; item 6 is part of §6, not extra work; item 7 is M.
+
+---
+
 ## 10. Suggested sequencing
 
 Dependency-ordered, not calendar-ordered; each cell is a stream of small PRs
@@ -705,14 +784,16 @@ under the AGENTS.md finalization protocol (verify locally → PR → auto-merge)
 | Order        | Do                                                                                                                  | Why now                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Now**      | WS0 punch list (0.1–0.9)                                                                                            | Open exposures; every item small and fully specified     |
-| **Next**     | ~~§5.4 `createApp()`~~ · ~~§8.1 blocking smoke~~ · §8.4 CI tail · §4.5 `src/app/` · §4.7 + §9 hygiene batch         | Cheap, independent, unlock testing + Stage E             |
+| **Next**     | ~~§5.4 `createApp()`~~ · ~~§8.1 blocking smoke~~ · §8.4 CI tail · ~~§4.5 `src/app/`~~ · ~~§4.7~~ + §9 hygiene batch | Cheap, independent, unlock testing + Stage E             |
 | **Then**     | §4.2 quote wizards · §4.4 raw-fetch convergence · §5.3 validation → 0 · §5.5 route-auth review · §5.1 auth 5→2      | Burns four ratchets hard; feeds P1.1                     |
 | **Then**     | §7.1 P1.1 → 0 · §7.2–7.3 public split + `verify_jwt=true`                                                           | The keystone's final flip; needs §5.5's inventory        |
 | **Parallel** | §4.1 boundaries → 0 · §4.3/§5.2 god-file splits · §4.6 contracts · §6 repositories → Postgres · §8.2 contract tests | Long-running strangler tracks; touch-it-you-fix-it       |
 | **Later**    | §7.4 esign function split · ~~§7.5 metrics~~ · §8.3 e2e growth · budget steps 800→600                               | Need the earlier structure; do from data, not assumption |
 
 **New feature work continues throughout** — WS0 is the only stop-the-line
-block. Everything else rides touch-it-you-fix-it plus dedicated slices.
+block. Everything else rides touch-it-you-fix-it plus dedicated slices. The
+policy-update paths in §9a are such a feature track: their first item is an
+operator step, and the rest wait for the first external agent's real traffic.
 
 ---
 

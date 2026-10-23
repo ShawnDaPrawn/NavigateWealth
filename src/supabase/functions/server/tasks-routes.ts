@@ -52,9 +52,7 @@ function normaliseTask(raw: RawKvTask): KvTask {
     due_date: (r.due_date ?? r.dueDate ?? null) as string | null | undefined,
     is_template: (r.is_template ?? r.isTemplate ?? false) as boolean,
     assignee_initials: (r.assignee_initials ?? r.assigneeInitials ?? null) as
-      | string
-      | null
-      | undefined,
+      string | null | undefined,
     assignee_id: (r.assignee_id ?? r.assigneeId ?? null) as string | null | undefined,
     created_by: (r.created_by ?? r.createdBy ?? '') as string,
     created_at: (r.created_at ?? r.createdAt ?? new Date().toISOString()) as string,
@@ -62,13 +60,9 @@ function normaliseTask(raw: RawKvTask): KvTask {
     completed_at: (r.completed_at ?? r.completedAt ?? null) as string | null | undefined,
     sort_order: (r.sort_order ?? r.sortOrder ?? 0) as number,
     reminder_frequency: (r.reminder_frequency ?? r.reminderFrequency ?? null) as
-      | string
-      | null
-      | undefined,
+      string | null | undefined,
     last_reminder_sent: (r.last_reminder_sent ?? r.lastReminderSent ?? null) as
-      | string
-      | null
-      | undefined,
+      string | null | undefined,
     tags: (Array.isArray(r.tags) ? r.tags : []) as string[],
     category: (r.category ?? null) as string | null | undefined,
     priority: (r.priority ?? 'medium') as KvTask['priority'],

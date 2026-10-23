@@ -1,5 +1,5 @@
 /**
- * esign-routes.tsx — Route Contract / Characterization Tests (Phase 4)
+ * esign-routes.ts — Route Contract / Characterization Tests (Phase 4)
  * ====================================================================
  *
  * Locks the HTTP-level contracts of the e-sign Edge Function's entry routes
@@ -150,13 +150,13 @@ vi.mock('../esign-pdf-analysis.ts', () => ({ analyzeUploadedPdf: vi.fn() }));
 vi.mock('../esign-pdf-transform.ts', () => ({ applyManifest: vi.fn(), validateManifest: vi.fn() }));
 vi.mock('../esign-pdf.service.ts', () => ({ PDFService: class {} }));
 
-import esignRoutes from '../esign-routes.tsx';
+import esignRoutes from '../esign-routes.ts';
 
 beforeEach(() => {
   kvStore.clear();
 });
 
-describe('esign-routes.tsx route contracts', () => {
+describe('esign-routes.ts route contracts', () => {
   it('GET / returns the esign service status envelope', async () => {
     const res = await esignRoutes.request('/');
     expect(res.status).toBe(200);

@@ -41,9 +41,9 @@ import {
   getAuditTrail,
   getEnvelopeSigners,
   logAuditEvent,
-} from './esign-services.tsx';
+} from './esign-services.ts';
 import { getReminderConfig, type ReminderConfig } from './esign-automation.ts';
-import { sendSigningReminder } from './email-service.tsx';
+import { sendSigningReminder } from './email-service.ts';
 import { sendReminderSms } from './sms-service.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';

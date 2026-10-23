@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
+import { NumberInputField } from '../../ui/number-input';
 import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Button } from '../../ui/button';
@@ -86,11 +87,11 @@ export function HealthSection({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="height">Height</Label>
-              <Input
+              <NumberInputField
                 id="height"
-                type="number"
+                decimals={2}
                 value={pd.height || ''}
-                onChange={(e) => handleInputChange('height', parseFloat(e.target.value) || 0)}
+                onValueChange={(v) => handleInputChange('height', v ?? 0)}
                 placeholder="0"
                 className="mt-1.5"
               />
@@ -114,11 +115,11 @@ export function HealthSection({
 
             <div>
               <Label htmlFor="weight">Weight</Label>
-              <Input
+              <NumberInputField
                 id="weight"
-                type="number"
+                decimals={2}
                 value={pd.weight || ''}
-                onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
+                onValueChange={(v) => handleInputChange('weight', v ?? 0)}
                 placeholder="0"
                 className="mt-1.5"
               />
@@ -360,9 +361,8 @@ export function HealthSection({
                                 <Label htmlFor={`condition-year-${condition.id}`}>
                                   Year Diagnosed
                                 </Label>
-                                <Input
+                                <NumberInputField
                                   id={`condition-year-${condition.id}`}
-                                  type="number"
                                   value={condition.yearDiagnosed}
                                   onChange={(e) =>
                                     updateChronicCondition(condition.id, {
@@ -370,8 +370,6 @@ export function HealthSection({
                                     })
                                   }
                                   placeholder="e.g., 2020"
-                                  min="1900"
-                                  max={new Date().getFullYear()}
                                   className="mt-1.5"
                                 />
                               </div>

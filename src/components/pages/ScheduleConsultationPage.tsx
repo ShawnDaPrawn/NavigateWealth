@@ -116,8 +116,8 @@ export function ScheduleConsultationPage() {
                   Other ways to reach us
                 </h2>
                 <p className="text-sm sm:text-base text-gray-600 mt-2 max-w-3xl leading-relaxed">
-                  Prefer not to book online? Reach our team directly or send a message from the full
-                  contact page — your campaign parameters stay in the link.
+                  Prefer not to book online? Call or email us directly, or send a message from the
+                  full contact page — your campaign parameters stay in the link.
                 </p>
               </div>
 

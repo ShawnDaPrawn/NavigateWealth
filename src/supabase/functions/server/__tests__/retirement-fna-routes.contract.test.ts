@@ -1,5 +1,5 @@
 /**
- * retirement-fna-routes.tsx — Route Contract Tests
+ * retirement-fna-routes.ts — Route Contract Tests
  * ================================================
  *
  * Eight routes, 142 statements uncovered. Same family and same harness as the
@@ -45,7 +45,7 @@ vi.mock('../form-prefill-auto-populate.ts', () => prefill);
 import { kvStore } from './helpers/contract-harness.ts';
 import { resetFnaHarness, seedFnaUser, fnaAssignments } from './helpers/fna-routes-harness.ts';
 
-const app = (await import('../retirement-fna-routes.tsx')).default;
+const app = (await import('../retirement-fna-routes.ts')).default;
 
 const CLIENT_A = '11111111-2222-4333-8444-555555555555';
 const CLIENT_B = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
@@ -160,6 +160,10 @@ describe('authorization', () => {
     ['PUT', (id: string) => `/${id}/inputs`, { currentAge: 50 }],
     ['POST', (id: string) => `/${id}/calculate`, undefined],
     ['PUT', (id: string) => `/${id}/publish`, undefined],
+    ['PUT', (id: string) => `/${id}/unpublish`, undefined],
+    ['PUT', (id: string) => `/${id}/draft`, undefined],
+    ['PUT', (id: string) => `/${id}/archive`, undefined],
+    ['DELETE', (id: string) => `/${id}`, undefined],
   ];
 
   it.each(RECORD_SCOPED)(
@@ -177,6 +181,71 @@ describe('authorization', () => {
 
   it('admits the client for their own sessions', async () => {
     expect((await req(`/client/${CLIENT_A}`, { as: 'clientA' })).status).toBe(200);
+  });
+});
+
+// ============================================================================
+// AFTER PUBLISH — unpublish, draft, archive, delete
+// ============================================================================
+//
+// The SPA called all four and the server had none of them, so "Delete" in the
+// FNA view dialog answered 404 for every Retirement FNA.
+
+describe('after publish', () => {
+  async function published() {
+    const fna = await create();
+    await req(`/${fna.id}/publish`, { method: 'PUT' });
+    return fna;
+  }
+
+  it('unpublish returns the FNA to a draft and stops :latest serving it', async () => {
+    const fna = await published();
+    const res = await req(`/${fna.id}/unpublish`, { method: 'PUT' });
+    expect(res.status).toBe(200);
+    expect(record(fna.id)?.status).toBe('draft');
+    expect(latest(CLIENT_A)).toBeUndefined();
+    const after = await req(`/client/${CLIENT_A}/latest-published`);
+    expect(await json(after)).toEqual({ success: true, data: null });
+  });
+
+  it('unpublish refuses an FNA that is not published', async () => {
+    const fna = await create();
+    expect((await req(`/${fna.id}/unpublish`, { method: 'PUT' })).status).toBe(400);
+  });
+
+  it('unpublish leaves :latest alone when it points at another FNA', async () => {
+    const first = await published();
+    const second = await published();
+    await req(`/${first.id}/unpublish`, { method: 'PUT' });
+    expect((latest(CLIENT_A) as unknown as { id: string }).id).toBe(second.id);
+  });
+
+  it('draft returns a published FNA to a draft, publication stamp included', async () => {
+    const fna = await published();
+    expect(record(fna.id)?.publishedAt).toBeTruthy();
+    expect((await req(`/${fna.id}/draft`, { method: 'PUT' })).status).toBe(200);
+    expect(record(fna.id)?.status).toBe('draft');
+    expect(record(fna.id)?.publishedAt).toBeUndefined();
+    expect(record(fna.id)?.publishedBy).toBeUndefined();
+    expect(latest(CLIENT_A)).toBeUndefined();
+  });
+
+  it('archive keeps the record but takes it off the list and the pointer', async () => {
+    const fna = await published();
+    expect((await req(`/${fna.id}/archive`, { method: 'PUT' })).status).toBe(200);
+    expect(record(fna.id)?.status).toBe('archived');
+    expect(list(CLIENT_A)).not.toContain(fna.id);
+    expect(latest(CLIENT_A)).toBeUndefined();
+  });
+
+  it('delete removes the record, its list entry and the pointer', async () => {
+    const keep = await create();
+    const fna = await published();
+    const res = await req(`/${fna.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(200);
+    expect(record(fna.id)).toBeUndefined();
+    expect(list(CLIENT_A)).toEqual([keep.id]);
+    expect(latest(CLIENT_A)).toBeUndefined();
   });
 });
 
@@ -331,6 +400,22 @@ describe('reads', () => {
     const res = await req(`/client/${CLIENT_A}/latest-published`);
     const { data } = (await json(res)) as unknown as { data: { id: string } | null };
     expect(data?.id).toBe(fna.id);
+  });
+
+  it('GET /client/:clientId/latest-published never returns a draft held in the pointer', async () => {
+    // An intake hand-off used to write its draft into `:latest`, and the card
+    // then showed that draft as the client's current Retirement FNA.
+    const published = await create();
+    await req(`/${published.id}/publish`, { method: 'PUT' });
+    kvStore.set(`retirement_fna:${CLIENT_A}:latest`, {
+      id: 'intake-draft',
+      clientId: CLIENT_A,
+      status: 'draft',
+    });
+
+    const res = await req(`/client/${CLIENT_A}/latest-published`);
+    const { data } = (await json(res)) as unknown as { data: { id: string } | null };
+    expect(data?.id).toBe(published.id);
   });
 
   it('GET /client/:clientId/latest-published returns null when nothing is published', async () => {

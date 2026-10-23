@@ -11,13 +11,7 @@ export type FormPrefillId =
   | 'investment-ina-step1';
 
 export type PrefillDataSource =
-  | 'profile'
-  | 'client_keys'
-  | 'policies'
-  | 'intake'
-  | 'fna_draft'
-  | 'derived'
-  | 'template';
+  'profile' | 'client_keys' | 'policies' | 'intake' | 'fna_draft' | 'derived' | 'template';
 
 export type PrefillConfidence = 'exact' | 'derived' | 'alias';
 

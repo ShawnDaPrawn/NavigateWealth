@@ -170,10 +170,26 @@ function getPackageVersion(report, packageName) {
   return toOptionalString(report?.dependencies?.[packageName]?.version);
 }
 
+/**
+ * Lines that state WHY a Vitest run failed, in preference to the first line
+ * that merely mentions an error. On 2026-10-19 the generic match landed on the
+ * AbortError a passing test deliberately provokes in a child process
+ * (postDeploySmoke.test.ts), so the Issue Manager blamed post-deploy-smoke.mjs
+ * for a failure it had nothing to do with.
+ */
+const DECISIVE_FAILURE_LINE =
+  /^\s*FAIL\s|Unhandled (Errors?|Rejection)|ERROR: Coverage|does not meet .*threshold|Test Files .*failed/i;
+
 function excerptLog(log) {
   const lines = log.split(/\r?\n/).filter(Boolean);
+  const decisiveIndex = lines.findIndex((line) => DECISIVE_FAILURE_LINE.test(line));
   const errorIndex = lines.findIndex((line) => /error|failed|✗/i.test(line));
-  const start = errorIndex >= 0 ? Math.max(0, errorIndex - 2) : Math.max(0, lines.length - 8);
+  const start =
+    decisiveIndex >= 0
+      ? decisiveIndex
+      : errorIndex >= 0
+        ? Math.max(0, errorIndex - 2)
+        : Math.max(0, lines.length - 8);
   return lines
     .slice(start, start + 10)
     .join('\n')
@@ -257,6 +273,34 @@ function collectTestIssues() {
     }
   }
 
+  // A test FILE can fail with no failing test in it: an import that does not
+  // resolve, a throw in a describe body or a hook. Vitest marks the file failed
+  // and lists no assertions, which used to fall through to the generic "Test
+  // run failed" below with an excerpt that named the wrong thing. Name the file.
+  for (const testResult of report?.testResults || []) {
+    if (testResult.status !== 'failed') continue;
+    const hasFailedAssertion = (testResult.assertionResults || []).some(
+      (assertion) => assertion.status === 'failed',
+    );
+    if (hasFailedAssertion) continue;
+    const file = String(testResult.name || '').replace(/^.*?\/(src|scripts|e2e)\//, '$1/');
+    issues.push(
+      createIssue({
+        id: issueId(['test', 'suite', file || 'unknown']),
+        source: 'test',
+        severity: 'error',
+        component: 'test-suite',
+        environment: process.env.GITHUB_REF_NAME || 'local',
+        title: `Test file failed to run: ${file || 'unknown file'}`,
+        message:
+          String(testResult.message || '').slice(0, 1600) ||
+          'Vitest marked this file failed without a failing test.',
+        filePath: file || testResult.name,
+        ruleId: 'vitest',
+      }),
+    );
+  }
+
   if (issues.length > 0) return issues;
 
   return [
@@ -274,12 +318,114 @@ function collectTestIssues() {
   ];
 }
 
+// ----------------------------------------------------------------------------
+// Accepted advisories (quality/accepted-advisories.json)
+// ----------------------------------------------------------------------------
+//
+// An advisory the owner accepted as unreachable used to be published on every
+// push to main anyway. Each publish moved its lastSeenAt past the Issue
+// Manager's resolvedAt, so closing it only reopened it as a "regression" and
+// minted a fresh remediation task — GHSA-86w9 (node-forge) did exactly that
+// from 2026-10-02 onwards. Accepted findings are now left out of the snapshot
+// and listed in the payload's `acceptedRisks` instead. The npm audit ratchet is
+// separate and still counts them.
+
+const ACCEPTED_ADVISORIES_PATH = 'quality/accepted-advisories.json';
+
+/** Accepted entries that are well-formed and not past their review date. */
+function loadAcceptedAdvisories(today = now.slice(0, 10)) {
+  const register = readJson(ACCEPTED_ADVISORIES_PATH);
+  return toArray(register?.advisories).flatMap((entry) => {
+    const id = toOptionalString(entry?.id)?.toUpperCase();
+    const reviewBy = toOptionalString(entry?.reviewBy);
+    const packages = toArray(entry?.packages).filter((name) => typeof name === 'string');
+    if (!id || !reviewBy || packages.length === 0) return [];
+    if (reviewBy < today) {
+      console.warn(
+        `Accepted advisory ${id} passed its review date (${reviewBy}); publishing it again. ` +
+          `Re-check reachability, then extend or remove it in ${ACCEPTED_ADVISORIES_PATH}.`,
+      );
+      return [];
+    }
+    return [{ ...entry, id, reviewBy, packages }];
+  });
+}
+
+function advisoryKey(advisory) {
+  return (
+    extractIdentifierFromUrl(advisory?.url) ||
+    toOptionalString(advisory?.source) ||
+    ''
+  ).toUpperCase();
+}
+
+/**
+ * Every advisory id behind a vulnerability, following `via` package names
+ * (`@signpdf/signer-p12` → `node-forge` → GHSA-…). Null when one cannot be
+ * identified, which means "not provably accepted".
+ */
+function advisoryIdsBehind(report, name, seen = new Set()) {
+  if (seen.has(name)) return [];
+  seen.add(name);
+  const vulnerability = report?.vulnerabilities?.[name];
+  if (!vulnerability) return null;
+
+  const ids = [];
+  for (const entry of toArray(vulnerability.via)) {
+    if (typeof entry === 'string') {
+      const nested = advisoryIdsBehind(report, entry, seen);
+      if (nested === null) return null;
+      ids.push(...nested);
+    } else if (entry && typeof entry === 'object') {
+      const id = advisoryKey(entry);
+      if (!id) return null;
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * The register entries covering this vulnerability, or null when any part of
+ * it is not covered. A published fix always wins: the acceptance lapses so the
+ * "security fix available" alert can fire.
+ */
+function findAcceptance(report, name, vulnerability, accepted) {
+  if (accepted.length === 0) return null;
+  if (normalizeFixAvailable(vulnerability.fixAvailable).fixAvailable) return null;
+  const ids = advisoryIdsBehind(report, name);
+  if (!ids || ids.length === 0) return null;
+  const entries = [...new Set(ids)].map((id) =>
+    accepted.find((entry) => entry.id === id && entry.packages.includes(name)),
+  );
+  return entries.every(Boolean) ? entries : null;
+}
+
+const acceptedRisks = [];
+
 function collectAuditIssues() {
   const report = readJson('quality-npm-audit-report.json');
   const vulnerabilities = report?.vulnerabilities;
   if (!vulnerabilities || typeof vulnerabilities !== 'object') return [];
+  const accepted = loadAcceptedAdvisories();
 
   return Object.entries(vulnerabilities).flatMap(([name, vulnerability]) => {
+    const acceptance = findAcceptance(report, name, vulnerability, accepted);
+    if (acceptance) {
+      for (const entry of acceptance) {
+        acceptedRisks.push({
+          packageName: name,
+          severity: vulnerability.severity,
+          advisoryId: entry.id,
+          acceptedBy: entry.acceptedBy,
+          acceptedOn: entry.acceptedOn,
+          reviewBy: entry.reviewBy,
+          reference: entry.reference,
+        });
+      }
+      return [];
+    }
+
     const packageVersion = getPackageVersion(report, name);
     const fix = normalizeFixAvailable(vulnerability.fixAvailable);
     const advisoryEntries = toArray(vulnerability.via).filter(
@@ -360,9 +506,19 @@ const payload = {
   branch: process.env.GITHUB_REF_NAME,
   commitSha: process.env.GITHUB_SHA,
   issues,
+  // Not stored by the ingest route; kept so the CI artifact and log show what
+  // was deliberately left out, and why.
+  acceptedRisks,
 };
 
 writeFileSync('quality-issues-payload.json', JSON.stringify(payload, null, 2));
+
+for (const risk of acceptedRisks) {
+  console.log(
+    `Accepted risk, not published: ${risk.packageName} ${risk.advisoryId} (${risk.severity}) — ` +
+      `accepted ${risk.acceptedOn || '?'} by ${risk.acceptedBy || '?'}, review by ${risk.reviewBy}.`,
+  );
+}
 
 if (!token) {
   if (isCi) {

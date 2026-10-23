@@ -19,6 +19,7 @@ const authenticateUser = vi.hoisted(() => vi.fn());
 const kvGet = vi.hoisted(() => vi.fn());
 const kvSet = vi.hoisted(() => vi.fn());
 const kvDel = vi.hoisted(() => vi.fn());
+const kvMset = vi.hoisted(() => vi.fn());
 const kvGetByPrefix = vi.hoisted(() => vi.fn());
 const resolveAdviser = vi.hoisted(() => vi.fn());
 
@@ -35,7 +36,7 @@ vi.mock('../kv_store.tsx', () => ({
   del: (...a: unknown[]) => kvDel(...a),
   getByPrefix: (...a: unknown[]) => kvGetByPrefix(...a),
   mget: vi.fn(),
-  mset: vi.fn(),
+  mset: (...a: unknown[]) => kvMset(...a),
   mdel: vi.fn(),
 }));
 
@@ -51,9 +52,9 @@ vi.mock('../net-worth-snapshot-service.ts', () => ({
   },
 }));
 
-import riskRoutes from '../risk-planning-fna-routes.tsx';
-import medicalRoutes from '../medical-fna-routes.tsx';
-import retirementRoutes from '../retirement-fna-routes.tsx';
+import riskRoutes from '../risk-planning-fna-routes.ts';
+import medicalRoutes from '../medical-fna-routes.ts';
+import retirementRoutes from '../retirement-fna-routes.ts';
 
 const OWNER = 'client-owner';
 const STRANGER = 'client-stranger';
@@ -231,6 +232,7 @@ describe('retirement FNA', () => {
 
     expect(res.status).toBe(403);
     expect(kvSet).not.toHaveBeenCalled();
+    expect(kvMset).not.toHaveBeenCalled();
   });
 
   it('lets the owner publish it', async () => {
@@ -240,6 +242,13 @@ describe('retirement FNA', () => {
     const res = await app.request('/r-1/publish', { method: 'PUT', headers: auth });
 
     expect(res.status).toBe(200);
-    expect(kvSet).toHaveBeenCalled();
+    // Publish writes the record and the client's `:latest` pointer together.
+    expect(kvMset).toHaveBeenCalledWith(
+      ['retirement_fna:r-1', `retirement_fna:${OWNER}:latest`],
+      [
+        expect.objectContaining({ id: 'r-1', status: 'published' }),
+        expect.objectContaining({ id: 'r-1' }),
+      ],
+    );
   });
 });

@@ -1,8 +1,5 @@
 export type LegalDocumentSection =
-  | 'legal-notices'
-  | 'privacy-data-protection'
-  | 'regulatory-disclosures'
-  | 'other';
+  'legal-notices' | 'privacy-data-protection' | 'regulatory-disclosures' | 'other';
 
 export interface LegalDocumentRegistryEntry {
   slug: string;

@@ -128,9 +128,12 @@ describe('step 1 will not advance without an identity', () => {
     // the gate shut, and they hold it shut only because of `.trim()`.
     const { container } = setup();
     const inputs = Array.from(container.querySelectorAll('input'));
-    fireEvent.change(inputs.find((i) => i.type === 'email')!, {
-      target: { value: 'zora@example.co.za' },
-    });
+    fireEvent.change(
+      inputs.find((i) => i.type === 'email')!,
+      {
+        target: { value: 'zora@example.co.za' },
+      },
+    );
     fireEvent.change(inputs[0], { target: { value: '   ' } });
     fireEvent.change(inputs[1], { target: { value: '   ' } });
 
@@ -204,9 +207,12 @@ describe('the submitted draft is the deliverable', () => {
     const first = inputs();
     fireEvent.change(first[0], { target: { value: 'Zora' } });
     fireEvent.change(first[1], { target: { value: 'Mkhize' } });
-    fireEvent.change(first.find((i) => i.type === 'email')!, {
-      target: { value: 'zora@example.co.za' },
-    });
+    fireEvent.change(
+      first.find((i) => i.type === 'email')!,
+      {
+        target: { value: 'zora@example.co.za' },
+      },
+    );
     fireEvent.click(primaryButton());
 
     // Step 2 — executor

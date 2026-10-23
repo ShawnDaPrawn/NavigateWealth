@@ -9,6 +9,8 @@ import { EmptyState } from '../EmptyState';
 import { emptyStateConfigs } from '../emptyStateConfigs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';
+import { CurrencyInputField } from '../../../ui/currency-input';
+import { NumberInputField } from '../../../ui/number-input';
 import { Label } from '../../../ui/label';
 import { Button } from '../../../ui/button';
 import { Textarea } from '../../../ui/textarea';
@@ -21,11 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog';
-import {
-  formatCurrency,
-  formatCurrencyInput,
-  cleanCurrencyInput,
-} from '../../../../utils/currencyFormatter';
+import { formatCurrency } from '../../../../utils/currencyFormatter';
 import { DollarSign, Plus, Edit2, Trash2, X, Check, Landmark } from 'lucide-react';
 import { useInlineEditDialogClose } from '../../../shared/unsaved-changes';
 
@@ -36,10 +34,6 @@ interface LiabilitiesPanelProps {
   profileData: ProfileData;
   totalLiabilities: number;
   liabilitiesInEditMode: Set<string>;
-  liabilityDisplayValues: { [id: string]: { amount?: string; monthlyPayment?: string } };
-  setLiabilityDisplayValues: React.Dispatch<
-    React.SetStateAction<{ [id: string]: { amount?: string; monthlyPayment?: string } }>
-  >;
   liabilityEditGuard: ReturnType<typeof useInlineEditDialogClose>;
   addLiability: () => void;
   updateLiability: (id: string, updates: Partial<Liability>) => void;
@@ -52,8 +46,6 @@ export function LiabilitiesPanel({
   profileData,
   totalLiabilities,
   liabilitiesInEditMode,
-  liabilityDisplayValues,
-  setLiabilityDisplayValues,
   liabilityEditGuard,
   addLiability,
   updateLiability,
@@ -266,43 +258,12 @@ export function LiabilitiesPanel({
                         <Label htmlFor={`outstanding-${liability.id}`}>
                           Outstanding Balance (R) *
                         </Label>
-                        <Input
+                        <CurrencyInputField
                           id={`outstanding-${liability.id}`}
-                          type="text"
-                          value={
-                            liabilityDisplayValues[liability.id]?.amount !== undefined
-                              ? liabilityDisplayValues[liability.id].amount
-                              : liability.outstandingBalance
-                                ? formatCurrencyInput(liability.outstandingBalance.toString())
-                                : ''
+                          value={liability.outstandingBalance}
+                          onValueChange={(v) =>
+                            updateLiability(liability.id, { outstandingBalance: v ?? 0 })
                           }
-                          onChange={(e) => {
-                            const formattedDisplay = formatCurrencyInput(e.target.value);
-                            setLiabilityDisplayValues((prev) => ({
-                              ...prev,
-                              [liability.id]: {
-                                ...prev[liability.id],
-                                amount: formattedDisplay,
-                              },
-                            }));
-                            const cleanValue = cleanCurrencyInput(formattedDisplay);
-                            updateLiability(liability.id, {
-                              outstandingBalance: parseFloat(cleanValue) || 0,
-                            });
-                          }}
-                          onBlur={() => {
-                            setLiabilityDisplayValues((prev) => {
-                              const nextValues = { ...prev };
-                              if (nextValues[liability.id]) {
-                                delete nextValues[liability.id].amount;
-                                if (Object.keys(nextValues[liability.id]).length === 0) {
-                                  delete nextValues[liability.id];
-                                }
-                              }
-                              return nextValues;
-                            });
-                          }}
-                          placeholder="0.00"
                           className="mt-1.5"
                         />
                       </div>
@@ -310,57 +271,23 @@ export function LiabilitiesPanel({
                         <Label htmlFor={`monthly-payment-${liability.id}`}>
                           Monthly Repayment (R) *
                         </Label>
-                        <Input
+                        <CurrencyInputField
                           id={`monthly-payment-${liability.id}`}
-                          type="text"
-                          value={
-                            liabilityDisplayValues[liability.id]?.monthlyPayment !== undefined
-                              ? liabilityDisplayValues[liability.id].monthlyPayment
-                              : liability.monthlyPayment
-                                ? formatCurrencyInput(liability.monthlyPayment.toString())
-                                : ''
+                          value={liability.monthlyPayment}
+                          onValueChange={(v) =>
+                            updateLiability(liability.id, { monthlyPayment: v ?? 0 })
                           }
-                          onChange={(e) => {
-                            const formattedDisplay = formatCurrencyInput(e.target.value);
-                            setLiabilityDisplayValues((prev) => ({
-                              ...prev,
-                              [liability.id]: {
-                                ...prev[liability.id],
-                                monthlyPayment: formattedDisplay,
-                              },
-                            }));
-                            const cleanValue = cleanCurrencyInput(formattedDisplay);
-                            updateLiability(liability.id, {
-                              monthlyPayment: parseFloat(cleanValue) || 0,
-                            });
-                          }}
-                          onBlur={() => {
-                            setLiabilityDisplayValues((prev) => {
-                              const nextValues = { ...prev };
-                              if (nextValues[liability.id]) {
-                                delete nextValues[liability.id].monthlyPayment;
-                                if (Object.keys(nextValues[liability.id]).length === 0) {
-                                  delete nextValues[liability.id];
-                                }
-                              }
-                              return nextValues;
-                            });
-                          }}
-                          placeholder="0.00"
                           className="mt-1.5"
                         />
                       </div>
                       <div>
                         <Label htmlFor={`interest-rate-${liability.id}`}>Interest Rate (%)</Label>
-                        <Input
+                        <NumberInputField
                           id={`interest-rate-${liability.id}`}
-                          type="number"
-                          step="0.01"
+                          decimals={2}
                           value={liability.interestRate || ''}
-                          onChange={(e) =>
-                            updateLiability(liability.id, {
-                              interestRate: parseFloat(e.target.value) || 0,
-                            })
+                          onValueChange={(v) =>
+                            updateLiability(liability.id, { interestRate: v ?? 0 })
                           }
                           placeholder="0.00"
                           className="mt-1.5"

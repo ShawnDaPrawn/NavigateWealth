@@ -22,7 +22,7 @@ const svc = vi.hoisted(() => ({
   getAnalytics: vi.fn(async () => ({ totals: { impressions: 1 } })),
 }));
 
-vi.mock('../social-marketing-service.ts', () => svc);
+vi.mock('../social/social-marketing-service.ts', () => svc);
 vi.mock('../stderr-logger.ts', async () =>
   (await import('./helpers/contract-harness.ts')).makeLoggerMock(),
 );
@@ -34,7 +34,7 @@ vi.mock('../auth-mw.ts', async () => {
   };
 });
 
-import app from '../social-marketing-routes.ts';
+import app from '../social/social-marketing-routes.ts';
 
 const CHANNEL = '6aa09ad0cd8b9c702c32ab6a';
 const POST = '6aa09ad0cd8b9c702c32ab6b';

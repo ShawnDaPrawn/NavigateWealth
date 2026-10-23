@@ -10,7 +10,6 @@ import * as kv from './kv_store.tsx';
 import { NotFoundError } from './error.middleware.ts';
 import { DEFAULT_TEMPLATES } from './email-service.ts';
 import type { Template } from './communication-types.ts';
-import { generateId } from './communication-service-helpers.ts';
 
 const log = createModuleLogger('communication-service');
 
@@ -91,7 +90,7 @@ export async function getTemplateById(id: string): Promise<Template | null> {
 }
 
 export async function createTemplate(data: Partial<Template>): Promise<Template> {
-  const templateId = generateId();
+  const templateId = crypto.randomUUID();
 
   const template: Template = {
     id: templateId,

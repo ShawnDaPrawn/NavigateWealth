@@ -216,7 +216,6 @@ const PACKAGE_CHUNKS = new Map<string, string>([
   ['cmdk', 'vendor-ui'],
   ['input-otp', 'vendor-ui'],
   ['embla-carousel-react', 'vendor-ui'],
-  ['react-resizable-panels', 'vendor-ui'],
 
   ['lucide-react', 'vendor-foundation'],
   ['class-variance-authority', 'vendor-foundation'],
@@ -246,6 +245,15 @@ const SCOPE_CHUNKS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 function getManualChunk(id: string): string | undefined {
+  // Vite's preload helper is imported by every chunk that lazy-loads anything,
+  // and Rollup otherwise hoists it into whichever chunk it meets first. Once
+  // @zip.js/zip.js (2.23) started using import(), that was vendor-docx, so the
+  // entry imported 527 KB of Word export just to get this helper. vendor-react
+  // is eager anyway, so the helper costs nothing there.
+  if (id.includes('vite/preload-helper')) {
+    return 'vendor-react';
+  }
+
   const packageName = packageNameFromId(id);
   if (!packageName) {
     return undefined;
@@ -265,8 +273,18 @@ function getManualChunk(id: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Identifies the deploy. The persisted query cache discards everything saved
+ * by a different build, so a response shape that changed in this deploy is
+ * never rendered from an old copy (src/utils/query/persistedQueryCache.ts).
+ */
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || 'local';
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), figmaAssetResolver(), connectionHints()],
+  define: {
+    'import.meta.env.VITE_NW_BUILD_ID': JSON.stringify(BUILD_ID),
+  },
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {

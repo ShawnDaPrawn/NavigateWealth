@@ -101,9 +101,8 @@ export function PublicationsModule() {
   } = useCategories({ activeOnly: false });
   const { canDo } = useCurrentUserPermissions();
 
-  // NOTE: useScheduledPublishProcessor and useAutoContentProcessor have been
-  // lifted to AdminDashboardPage so they run regardless of which tab is active.
-  // They were previously here but only fired when the Publications tab was open.
+  // Scheduled publishing and auto-content run from pg_cron on the server, not
+  // from this page (see AdminDashboardPage's "No background jobs here").
 
   const canCreate = canDo('publications', 'create');
   const canPublish = canDo('publications', 'publish');

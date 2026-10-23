@@ -501,6 +501,9 @@ here so the next audit starts from a complete set.
 | `newsletter-studio-process-campaigns`   | `*/2 * * * *`  | `/newsletter-studio/cron/process`                    | `supabase/cron/newsletter-studio-jobs.sql`         |
 | `db-maintenance-purge-cron-history`     | `0 2 * * *`    | SQL only: 7-day retention on `cron.job_run_details`  | migration `20260913181044`                         |
 | `db-maintenance-vacuum-system-tables`   | `20 2 * * *`   | SQL only: `vacuum (analyze)` on the two tables below | migration `20260913181044`                         |
+| `policy-document-intake-sweep`          | `*/2 * * * *`  | `/policy-document-intake/process`, only when due     | migration `policy_document_intake`                 |
+| `client-totals-refresh-sweep`           | `*/2 * * * *`  | `/client-totals-refresh/process`, only when takeable | migration `client_totals_refresh`                  |
+| `kv-cleanup-nightly`                    | `30 23 * * *`  | `/kv-cleanup/cron`                                   | `supabase/cron/kv-cleanup-jobs.sql`                |
 
 Saturday 06:00 SAST. It writes the AI summaries that the client Documents tab
 renders as its activity timeline, for every document batch uploaded in the last
@@ -559,6 +562,37 @@ PDF to every email and sizes each concurrent batch from the encoded PDF, which
 is why a 5 MB issue goes out three to five at a time rather than twenty. The
 contract for the hand-over is `newsletter-intake.md`.
 
+### `policy-document-intake-sweep` (installed by migration `policy_document_intake`)
+
+The safety net for the policy document intake (`policy-document-intake.md`).
+Its command is SQL, `select public.policy_document_intake_kick()`, and the
+function calls out to `/policy-document-intake/process` only when a hand-over
+is due: pending past its retry time, or claimed by a worker that never
+finished. Most of the time it finds nothing and makes no request at all. So
+read it differently from the HTTP jobs above:
+
+- Query A is green every 2 minutes whether or not anything was due. That is
+  correct, not the green-when-broken trap: the run did what it was asked.
+- Plane 2 exists only for the runs that called out. Their request id is what
+  `kick()` returned. The same function also runs from `submit` and `retry`,
+  which is the usual wake-up; this job covers retries and missed wake-ups.
+- Its token is the shared `navigatewealth_cron_auth_token` from Vault, read at
+  call time, like every other job here. A missing secret makes `kick()` return
+  null with a warning instead of calling out.
+
+### `client-totals-refresh-sweep` (installed by migration `client_totals_refresh`)
+
+The safety net for the automatic profile refresh (`client-totals-refresh.md`).
+It works like `policy-document-intake-sweep` above. Its command is SQL,
+`select public.client_totals_refresh_kick()`, and it calls
+`/client-totals-refresh/process` only when the worker would find a client to
+take: one whose totals are stale, that no live claim holds, and that is not
+backing off after a failure (migration `client_totals_refresh_claims`). The
+usual wake-up comes from the trigger on direct policy writes; this job covers
+lost ones, lapsed claims and finished back-offs. Query A is green every 2
+minutes whether or not anything was stale, and plane 2 exists only for the
+runs that called out.
+
 ### `social-automation-render-images` and `social-automation-sync-buffer` (to install after the social-assets deploy)
 
 Two hourly jobs from `supabase/cron/social-automation-jobs.sql` supporting the routine-driven
@@ -568,6 +602,34 @@ guarded by the Vault cron token (or an admin session for the "Run now" buttons).
 only once the Edge Function carrying `/social-assets` is live — a job pointing at a 404 is
 finding 2 of the 2026-08-25 audit all over again — and confirm with query C that the paths
 answer 200.
+
+### `kv-cleanup-nightly` (installed 2026-10-12, jobid 38)
+
+The KV store cleanup (`kv-cleanup-service.ts`): rate-limit entries older than an
+hour, newsletter confirmations past their 48-hour window, contact, consultation
+and quote submissions older than 90 days, and audit entries older than 365 days.
+01:30 SAST, clear of the 02:00/02:20 UTC maintenance jobs. Until this job, nothing scheduled the
+cleanup at all: its only runner was a poller in the admin browser tab, so it ran
+only on days someone opened the portal. That poller and the five other
+browser-tab job runners were removed in the same change; every job they
+duplicated is driven by pg_cron alone now.
+
+Authenticated with the Vault-backed `x-nw-cron-auth` token. `POST
+/kv-cleanup/cron` moved from the inline service-role compare to
+`requireCronAuth` in the same change (#451), so it accepts that token; a job
+pointed at a function deployed before that change would 401 every night.
+Installed from `supabase/cron/kv-cleanup-jobs.sql` once that deploy was green.
+One `net.http_post` through the job's exact command then answered 200 with
+`"success": true` and a live cleanup (3 stale rate-limit keys; the rest had
+gone in that morning's run). That proved the route, the token and the
+command, not that pg_cron fires the row, so the job counted as verified only
+after its first scheduled run. It is, on 2026-10-12 at 23:30 UTC:
+
+- query A showed run 943518 `succeeded`;
+- query C showed `POST /kv-cleanup/cron` answering 200 at 23:30:05;
+- the job's own `net._http_response` row (id 739859) held the body:
+  `"success": true`, 5 stale rate-limit keys deleted;
+- `system:kv_cleanup:last_run` recorded 23:30:05 UTC.
 
 ## What these queries cost, and the two jobs that keep them cheap
 

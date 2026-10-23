@@ -27,6 +27,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { completeEnvelope } from './esign-workflow.ts';
 import { updateEnvelopeStatus, logAuditEvent, getEnvelopeDetails } from './esign-services.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('esign-completion-queue');
 
@@ -133,7 +134,7 @@ export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
         throw new Error(result.error || 'Unknown completion failure');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = getErrMsg(err);
       log.error(
         `Completion job failed for envelope ${job.envelopeId} (attempt ${job.attempts + 1}): ${msg}`,
       );

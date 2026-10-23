@@ -47,6 +47,7 @@
 import { createKvRepository } from './repositories/kv-repository.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getAllEntries, type KBEntry } from './kb-service.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('vasco-rag');
 
@@ -649,7 +650,7 @@ export async function indexAllArticles(): Promise<IndexResult> {
         totalChunks += chunkCount;
         log.info(`Indexed article "${article.title}": ${chunkCount} chunks`);
       } catch (err) {
-        const msg = `Failed to index article "${article.title || article.id}": ${err instanceof Error ? err.message : String(err)}`;
+        const msg = `Failed to index article "${article.title || article.id}": ${getErrMsg(err)}`;
         errors.push(msg);
         log.error(msg);
         // Keep whatever was indexed for it before — do not remove it below.
@@ -673,7 +674,7 @@ export async function indexAllArticles(): Promise<IndexResult> {
         totalChunks += chunkCount;
         log.info(`Indexed knowledge entry "${entry.title}": ${chunkCount} chunks`);
       } catch (err) {
-        const msg = `Failed to index knowledge entry "${entry.title || entry.id}": ${err instanceof Error ? err.message : String(err)}`;
+        const msg = `Failed to index knowledge entry "${entry.title || entry.id}": ${getErrMsg(err)}`;
         errors.push(msg);
         log.error(msg);
         wanted.add(sourceKey('kb', entry.id));

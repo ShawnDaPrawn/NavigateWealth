@@ -8,6 +8,7 @@ import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Switch } from '../../../../ui/switch';
 import { Textarea } from '../../../../ui/textarea';
 import {
@@ -276,15 +277,12 @@ export function ContentSourceDialogs({
 
               <div className="space-y-1.5">
                 <Label>Max per Run</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
+                <NumberInputField
                   value={form.maxArticlesPerRun}
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setForm((p) => ({
                       ...p,
-                      maxArticlesPerRun: Math.max(1, parseInt(e.target.value, 10) || 1),
+                      maxArticlesPerRun: v || 1,
                     }))
                   }
                   className="h-9"
@@ -299,15 +297,12 @@ export function ContentSourceDialogs({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Max per Day</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={50}
+                <NumberInputField
                   value={form.maxArticlesPerDay}
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setForm((p) => ({
                       ...p,
-                      maxArticlesPerDay: Math.max(0, parseInt(e.target.value, 10) || 0),
+                      maxArticlesPerDay: v ?? 0,
                     }))
                   }
                   className="h-9"
@@ -317,15 +312,12 @@ export function ContentSourceDialogs({
 
               <div className="space-y-1.5">
                 <Label>Max per Week</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
+                <NumberInputField
                   value={form.maxArticlesPerWeek}
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setForm((p) => ({
                       ...p,
-                      maxArticlesPerWeek: Math.max(0, parseInt(e.target.value, 10) || 0),
+                      maxArticlesPerWeek: v ?? 0,
                     }))
                   }
                   className="h-9"

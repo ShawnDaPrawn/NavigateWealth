@@ -228,7 +228,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     ? message
                     : fallbackMessage ||
                       error?.message ||
-                      'An unexpected error occurred. Our team has been notified.'}
+                      'An unexpected error occurred. We have been notified.'}
                 </AlertDescription>
               </Alert>
 

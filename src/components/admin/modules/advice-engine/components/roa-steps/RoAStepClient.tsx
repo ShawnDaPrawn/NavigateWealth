@@ -83,8 +83,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
               )?.riskCategory ||
               (
                 clientContext.clientSnapshot.profile?.riskAssessment as
-                  | { riskCategory?: string }
-                  | undefined
+                  { riskCategory?: string } | undefined
               )?.riskCategory ||
               'N/A',
           ),

@@ -189,7 +189,8 @@ export const AutoContentAPI = {
 
   /**
    * Process pipelines that are due based on their scheduleIntervalHours.
-   * Called by the client-side auto-content poller. Idempotent — safe to call repeatedly.
+   * pg_cron drives this on the server (`auto-content-process-due`); this is the
+   * manual trigger. Idempotent — safe to call repeatedly.
    */
   async processDue(): Promise<{
     processed: PipelineTriggerResult[];

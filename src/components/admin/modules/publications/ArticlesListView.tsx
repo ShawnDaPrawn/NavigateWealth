@@ -38,7 +38,13 @@ import {
 import { cn } from '../../../ui/utils';
 
 // Hooks & components
-import { useArticles, useCategories, useArticleActions } from './hooks';
+import {
+  useArticles,
+  useCategories,
+  useArticleActions,
+  useArchiveArticles,
+  useDeleteArticles,
+} from './hooks';
 import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
 import { StatusBadge } from './components/StatusBadge';
@@ -74,11 +80,14 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // ── Actions ──────────────────────────────────────────────────────────
-  const { handleDuplicate, handleDelete, handleArchive, isProcessing } = useArticleActions({
+  const { handleDuplicate, isProcessing } = useArticleActions({
     onSuccess: () => refetch(),
     onError: (err) => toast.error(err),
-    onDelete: () => refetch(),
   });
+  // Deleted and archived rows change in the list immediately; see the hooks.
+  const { mutate: deleteArticles, isPending: isDeleting } = useDeleteArticles();
+  const { mutate: archiveArticles, isPending: isArchiving } = useArchiveArticles();
+  const isBusy = isProcessing || isDeleting || isArchiving;
 
   const confirmDialog = useConfirmDialog();
 
@@ -163,30 +172,57 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
   }, []);
 
   const handleBulkArchive = useCallback(() => {
+    const selected = articles.filter((a) => selectedIds.has(a.id));
+    const toArchive = selected.filter((a) => a.status !== 'archived');
+
+    if (toArchive.length === 0) {
+      toast.info('The selected articles are already archived.');
+      return;
+    }
+
+    // Archiving a published article takes it off the public site, so say so.
+    const liveCount = toArchive.filter((a) => a.status === 'published').length;
+    const liveNote =
+      liveCount > 0
+        ? ` ${liveCount} of them are published and will be taken off the live site.`
+        : '';
     confirmDialog.open({
       title: 'Archive Selected',
-      description: `Are you sure you want to archive ${selectedIds.size} article(s)?`,
-      onConfirm: async () => {
-        for (const id of selectedIds) {
-          await handleArchive(id);
-        }
+      description: `Are you sure you want to archive ${toArchive.length} article(s)?${liveNote}`,
+      onConfirm: () => {
         setSelectedIds(new Set());
+        archiveArticles({ ids: toArchive.map((a) => a.id), mode: 'bulk' });
       },
     });
-  }, [selectedIds, handleArchive, confirmDialog]);
+  }, [articles, selectedIds, archiveArticles, confirmDialog]);
 
   const handleBulkDelete = useCallback(() => {
+    // Published articles are never bulk deleted (the server refuses them too),
+    // so they are left out up front and the dialog says so.
+    const selected = articles.filter((a) => selectedIds.has(a.id));
+    const deletable = selected.filter((a) => a.status !== 'published').map((a) => a.id);
+    const publishedCount = selected.length - deletable.length;
+
+    if (deletable.length === 0) {
+      toast.info(
+        'Published articles cannot be bulk deleted. Delete them one at a time, or unpublish them first.',
+      );
+      return;
+    }
+
+    const keptNote =
+      publishedCount > 0
+        ? ` ${publishedCount} published article(s) in your selection will be kept.`
+        : '';
     confirmDialog.open({
       title: 'Delete Selected',
-      description: `Are you sure you want to permanently delete ${selectedIds.size} article(s)? This cannot be undone.`,
-      onConfirm: async () => {
-        for (const id of selectedIds) {
-          await handleDelete(id);
-        }
+      description: `Are you sure you want to permanently delete ${deletable.length} article(s)? This cannot be undone.${keptNote}`,
+      onConfirm: () => {
         setSelectedIds(new Set());
+        deleteArticles({ ids: deletable, mode: 'bulk' });
       },
     });
-  }, [selectedIds, handleDelete, confirmDialog]);
+  }, [articles, selectedIds, deleteArticles, confirmDialog]);
 
   // ── Sort toggle ──────────────────────────────────────────────────────
   const toggleSort = useCallback(
@@ -416,7 +452,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                 size="sm"
                 className="gap-1.5"
                 onClick={handleBulkArchive}
-                disabled={isProcessing}
+                disabled={isBusy}
               >
                 <Archive className="h-3.5 w-3.5" />
                 Archive
@@ -426,7 +462,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                 size="sm"
                 className="gap-1.5 text-red-600 hover:bg-red-50 border-red-200"
                 onClick={handleBulkDelete}
-                disabled={isProcessing}
+                disabled={isBusy}
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete
@@ -591,7 +627,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                           icon={Copy}
                           label="Duplicate"
                           onClick={() => handleDuplicate(article.id)}
-                          disabled={isProcessing}
+                          disabled={isBusy}
                         />
                         <ActionButton
                           icon={Archive}
@@ -599,10 +635,15 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                           onClick={() => {
                             confirmDialog.open({
                               title: 'Archive Article',
-                              description: `Archive "${article.title}"?`,
-                              onConfirm: () => handleArchive(article.id),
+                              description:
+                                article.status === 'published'
+                                  ? `Archive "${article.title}"? It is published and will be taken off the live site.`
+                                  : `Archive "${article.title}"?`,
+                              onConfirm: () =>
+                                archiveArticles({ ids: [article.id], mode: 'single' }),
                             });
                           }}
+                          disabled={isBusy}
                         />
                         <ActionButton
                           icon={Trash2}
@@ -612,10 +653,11 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                             confirmDialog.open({
                               title: 'Delete Article',
                               description: `Permanently delete "${article.title}"? This cannot be undone.`,
-                              onConfirm: () => handleDelete(article.id),
+                              onConfirm: () =>
+                                deleteArticles({ ids: [article.id], mode: 'single' }),
                             });
                           }}
-                          disabled={isProcessing}
+                          disabled={isBusy}
                         />
                       </div>
                     </td>

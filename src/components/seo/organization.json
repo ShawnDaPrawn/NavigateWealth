@@ -1,18 +1,32 @@
 {
   "name": "Navigate Wealth",
   "legalName": "Wealthfront (Pty) Ltd trading as Navigate Wealth",
-  "description": "Independent financial advisory firm providing comprehensive wealth management services across South Africa.",
+  "description": "Independent, founder-led financial advisory practice providing comprehensive wealth management services across South Africa. Authorised Financial Services Provider (FSP 54606).",
+  "foundingDate": "2024",
+  "founder": {
+    "@type": "Person",
+    "name": "Shawn Francisco",
+    "jobTitle": "Founder"
+  },
   "telephone": "+27126672505",
   "email": "info@navigatewealth.co",
   "priceRange": "$$",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "Milestone Place Block A, 25 Sovereign Dr Route 21 Business Park",
+    "streetAddress": "First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park",
     "addressLocality": "Pretoria",
     "addressRegion": "Gauteng",
-    "postalCode": "0178",
+    "postalCode": "0157",
     "addressCountry": "ZA"
   },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "08:30",
+      "closes": "16:30"
+    }
+  ],
   "areaServed": {
     "@type": "Country",
     "name": "South Africa"
@@ -32,6 +46,6 @@
   "sameAs": [
     "https://www.linkedin.com/company/navigatewealth/",
     "https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==",
-    "https://www.youtube.com/@navigatewealth"
+    "https://x.com/Navigate_ZA"
   ]
 }

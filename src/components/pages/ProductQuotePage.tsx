@@ -81,9 +81,8 @@ function SuccessScreen({ serviceName }: { serviceName: string }) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Quote Request Received!</h1>
           <p className="text-gray-600 leading-relaxed">
-            Thank you for your {serviceName.toLowerCase()} quote request. One of our qualified
-            advisers will be in touch within <strong>24 business hours</strong> with a personalised,
-            no-obligation quote.
+            Thank you for your {serviceName.toLowerCase()} quote request. We will be in touch within{' '}
+            <strong>24 hours on business days</strong> with a personalised, no-obligation quote.
           </p>
         </div>
         <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-left space-y-2">
@@ -664,7 +663,7 @@ export function ProductQuotePage() {
                   },
                   {
                     icon: Users,
-                    label: `${serviceConfig.providers.length > 0 ? serviceConfig.providers.length + '+ ' : ''}Trusted Partners`,
+                    label: `${serviceConfig.providers.length > 0 ? serviceConfig.providers.length + ' ' : ''}Trusted Partner${serviceConfig.providers.length === 1 ? '' : 's'}`,
                     desc: 'Compare the best options available',
                   },
                   {
@@ -675,12 +674,12 @@ export function ProductQuotePage() {
                   {
                     icon: Phone,
                     label: 'Free Consultation',
-                    desc: 'No cost, no obligation — ever',
+                    desc: 'No cost, no obligation',
                   },
                   {
                     icon: Star,
-                    label: 'Expert Advisers',
-                    desc: 'Qualified professionals with years of experience',
+                    label: 'Independent Advice',
+                    desc: 'FSCA-authorised, not tied to one provider',
                   },
                   {
                     icon: Lock,
@@ -701,22 +700,6 @@ export function ProductQuotePage() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Testimonial / social proof */}
-            <div className="bg-gradient-to-br from-primary/5 to-primary/[0.02] rounded-2xl border border-primary/10 p-6">
-              <div className="flex items-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} className="h-4 w-4 text-amber-400 fill-amber-400" />
-                ))}
-              </div>
-              <p className="text-sm text-gray-700 italic leading-relaxed mb-3">
-                "Navigate Wealth compared multiple options and found us the best cover at a lower
-                premium than we were paying. The process was smooth and completely free."
-              </p>
-              <p className="text-xs font-semibold text-gray-900">
-                — Satisfied client, Johannesburg
-              </p>
             </div>
 
             {/* Trust bar */}

@@ -4,7 +4,7 @@ import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import {
@@ -24,11 +24,11 @@ import {
   HeadphonesIcon,
   Monitor,
   Calendar,
-  Banknote,
   ChevronRight,
   Sparkles,
   Briefcase,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -40,7 +40,7 @@ const services = [
     description:
       'Smooth practice transitions that preserve client relationships and unlock ongoing revenue streams.',
     icon: Users,
-    link: '/succession-planning',
+    link: '/contact?type=advisors',
     features: [
       'Client relationship preservation',
       'Revenue stream continuity',
@@ -54,7 +54,7 @@ const services = [
     description:
       'Structure your firm to honor professional standards and ensure multi-generational continuity.',
     icon: HandHeart,
-    link: '/legacy-planning',
+    link: '/contact?type=advisors',
     features: ['Professional standards', 'Multi-generational solutions', 'Service continuity'],
     accent: 'from-violet-500 to-purple-600',
     accentLight: 'bg-violet-50 text-violet-600',
@@ -64,7 +64,7 @@ const services = [
     description:
       'Professional practice appraisals and comprehensive assessments for informed decision-making.',
     icon: Calculator,
-    link: '/practice-valuation',
+    link: '/contact?type=advisors',
     features: ['Professional valuations', 'Market assessments', 'Deal structuring'],
     accent: 'from-amber-500 to-orange-600',
     accentLight: 'bg-amber-50 text-amber-600',
@@ -74,7 +74,7 @@ const services = [
     description:
       'Comprehensive guidance on valuations, deal structures, and seamless client handovers.',
     icon: Building,
-    link: '/practice-sales',
+    link: '/contact?type=advisors',
     features: ['Fair valuations', 'Transparent deals', 'Client handovers'],
     accent: 'from-emerald-500 to-teal-600',
     accentLight: 'bg-emerald-50 text-emerald-600',
@@ -83,7 +83,7 @@ const services = [
     title: 'Client Transitions',
     description: 'Seamless client relationship transfers that maintain service quality and trust.',
     icon: Target,
-    link: '/client-transitions',
+    link: '/contact?type=advisors',
     features: ['Relationship transfers', 'Service quality', 'Trust preservation'],
     accent: 'from-rose-500 to-pink-600',
     accentLight: 'bg-rose-50 text-rose-600',
@@ -107,11 +107,8 @@ const practiceStages = [
   { icon: Award, title: 'Retirement', description: 'Legacy secured' },
 ];
 
-const stats = [
-  { value: '25+', label: 'Years Advisory Experience', icon: Award },
-  { value: 'R1B+', label: 'Practice Transitions Managed', icon: Banknote },
-  { value: '100%', label: 'Client Retention Rate', icon: Shield },
-];
+// Checkable facts only — see src/config/companyFacts.ts.
+const stats = TRUST_FACTS.slice(0, 3);
 
 const digitalFeatures = [
   {
@@ -132,7 +129,7 @@ const digitalFeatures = [
   {
     icon: HeadphonesIcon,
     title: 'Personal Service',
-    description: 'Dedicated support team from planning through completion',
+    description: 'Direct support from planning through completion',
   },
 ];
 
@@ -351,10 +348,10 @@ export function ForAdvisersPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center space-y-6 sm:space-y-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight">
-              Trusted Experience in Practice Transitions
+              Practice Transitions, Handled Personally
             </h2>
             <p className="text-base sm:text-lg text-white/80 leading-relaxed">
-              Our expertise in succession planning and practice management means your transition is
+              We focus on succession planning and practice transitions, so your transition is
               handled with the professionalism and care your practice deserves.
             </p>
             <div className="pt-4">
@@ -394,8 +391,8 @@ export function ForAdvisersPage() {
               </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
                 Navigate Wealth provides end-to-end support throughout your succession journey. From
-                initial planning and valuation through to final client handovers, our dedicated team
-                ensures every detail is managed professionally.
+                initial planning and valuation through to final client handovers, we make sure every
+                detail is managed professionally.
               </p>
               <p className="text-gray-500 leading-relaxed">
                 Focus on your next chapter with complete confidence — we handle the complexity so
@@ -439,8 +436,7 @@ export function ForAdvisersPage() {
             </h2>
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
               Whether you're planning retirement, considering a practice sale, or structuring legacy
-              solutions, our succession planning experts are here to guide you through every step of
-              the process.
+              solutions, we are here to guide you through every step of the process.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">

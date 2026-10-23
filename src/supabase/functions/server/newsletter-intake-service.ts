@@ -44,6 +44,7 @@ import {
   type IntakeSweepResult,
   type NewsletterIntakeRow,
 } from './newsletter-intake-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('newsletter-intake');
 
@@ -319,7 +320,7 @@ export async function sweepNewsletterIntake(): Promise<IntakeSweepResult> {
       await markRow(row.id, { status: 'processed', campaign_id: outcome.campaignId, error: null });
       result.processed++;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = getErrMsg(error);
       result.failed++;
       result.errors.push(`intake ${row.id}: ${message}`);
       log.error('Intake row failed', { rowId: row.id, message });

@@ -2,7 +2,7 @@
  * Core integration types (Phase 5 decomposition).
  * ================================================
  *
- * Extracted verbatim from integrations.tsx — config, field bindings, upload
+ * Extracted verbatim from integrations.ts — config, field bindings, upload
  * history, provider, and sync-run shapes shared across the integrations
  * routes/helpers and (future) sub-routers. Pure type declarations (erased at
  * runtime) — moving them changes no behaviour.
@@ -63,12 +63,7 @@ export interface IntegrationProvider {
 
 export type SyncMatchStatus = 'matched' | 'unmatched' | 'duplicate' | 'invalid';
 export type SyncPublishStatus =
-  | 'pending'
-  | 'auto_eligible'
-  | 'held'
-  | 'published'
-  | 'skipped'
-  | 'failed';
+  'pending' | 'auto_eligible' | 'held' | 'published' | 'skipped' | 'failed';
 export type SyncRunStatus = 'staged' | 'published' | 'partially_published' | 'failed';
 
 export interface SyncDiff {
@@ -105,7 +100,17 @@ export interface IntegrationSyncRun {
   providerName: string;
   categoryId: string;
   fileName: string;
-  source: 'spreadsheet' | 'portal';
+  /**
+   * 'portfolio_table' runs are built by the portfolio table (a re-uploaded
+   * book or the agent endpoint) and published in the same call, so they are
+   * persisted as a record of what changed rather than as something to review.
+   */
+  source: 'spreadsheet' | 'portal' | 'portfolio_table';
+  /**
+   * Who submitted a 'portfolio_table' run: `agent:<name>` read from the
+   * agent's own token, `admin:<userId>`, or `scheduled[:<name>]`.
+   */
+  actor?: string;
   status: SyncRunStatus;
   createdAt: string;
   updatedAt: string;

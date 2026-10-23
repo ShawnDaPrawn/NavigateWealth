@@ -23,7 +23,7 @@ vi.mock('../communication-business-logic.ts', () => ({
   getAllClients: (...a: unknown[]) => getAllClients(...a),
 }));
 
-vi.mock('../email-service.tsx', () => ({
+vi.mock('../email-service.ts', () => ({
   sendEmail: (...a: unknown[]) => sendEmail(...a),
   createEmailTemplate: (html: string) => html,
   getFooterSettings: async () => ({}),

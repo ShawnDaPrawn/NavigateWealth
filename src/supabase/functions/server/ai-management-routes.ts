@@ -28,6 +28,7 @@ import { getAllAgents, getAgent } from './ai-management-service.ts';
 import * as kbService from './kb-service.ts';
 import * as promptService from './prompt-service.ts';
 import { removeKnowledgeEntryFromIndex, syncKnowledgeEntry } from './vasco-rag-service.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const app = new Hono();
 const log = createModuleLogger('ai-management-routes');
@@ -48,7 +49,7 @@ async function syncEntryToIndex(entry: kbService.KBEntry): Promise<KnowledgeInde
   try {
     return await syncKnowledgeEntry(entry);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = getErrMsg(err);
     log.error('KB entry saved but could not be indexed for Vasco', {
       id: entry.id,
       error: message,
@@ -220,7 +221,7 @@ app.delete(
       // The entry is gone; a leftover vector is harmless noise until the next rebuild.
       log.warn('Deleted KB entry could not be removed from the index', {
         id,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrMsg(err),
       });
     }
     return c.json({ success: true });

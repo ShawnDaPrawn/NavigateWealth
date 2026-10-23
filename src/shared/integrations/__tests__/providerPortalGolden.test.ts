@@ -23,45 +23,45 @@ describe('provider portal golden flows', () => {
   const allanGrayAdapterSource = readRepoFile('scripts/provider-adapters/allan-gray.mjs');
   const brightRockAdapterSource = readRepoFile('scripts/provider-adapters/brightrock.mjs');
   const capitalLegacyAdapterSource = readRepoFile('scripts/provider-adapters/capital-legacy.mjs');
-  // Portal automation types were extracted out of integrations.tsx (Phase 5
+  // Portal automation types were extracted out of integrations.ts (Phase 5
   // decomposition); the type-level anchors now live in this module.
   const portalTypesSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-types.ts',
   );
   // Portal credential storage/canonicalisation was extracted out of
-  // integrations.tsx (Phase 5); the Capital Legacy id anchors live here now.
+  // integrations.ts (Phase 5); the Capital Legacy id anchors live here now.
   const portalCredentialsSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-credentials.ts',
   );
   // Worker-auth guard + category eligibility/classification was extracted out of
-  // integrations.tsx (Phase 5); those anchors live here now.
+  // integrations.ts (Phase 5); those anchors live here now.
   const portalGuardsSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-guards.ts',
   );
-  // Portal flow-config normalisers were extracted out of integrations.tsx
+  // Portal flow-config normalisers were extracted out of integrations.ts
   // (Phase 5); the document-type anchor lives here now.
   const portalFlowConfigSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-flow-config.ts',
   );
   // Portal flow resolution (default/load/sanitise + scope errors) was extracted
-  // out of integrations.tsx (Phase 5); those anchors live here now.
+  // out of integrations.ts (Phase 5); those anchors live here now.
   const portalFlowSource = readRepoFile(
     'src/supabase/functions/server/integrations-portal-flow.ts',
   );
   // Sync-run engine + portal job-items (queue build / sync run / publish) was
-  // extracted out of integrations.tsx (Phase 5); the portal job category-match
+  // extracted out of integrations.ts (Phase 5); the portal job category-match
   // anchor lives here now.
   const syncEngineSource = readRepoFile(
     'src/supabase/functions/server/integrations-sync-engine.ts',
   );
   // Document storage helpers (bucket provisioning + estate/policy doc upload)
-  // were extracted out of integrations.tsx (Phase 5); the legal-docs bucket
+  // were extracted out of integrations.ts (Phase 5); the legal-docs bucket
   // anchor lives here now.
   const docStorageSource = readRepoFile(
     'src/supabase/functions/server/integrations-document-storage.ts',
   );
   // Portal automation HTTP routes (/portal-flows, /portal-jobs, /portal-worker)
-  // were extracted out of integrations.tsx into a mounted Hono sub-app (Phase 5)
+  // were extracted out of integrations.ts into a mounted Hono sub-app (Phase 5)
   // and then split into flow/job/worker route modules. Keep the golden anchors
   // pointed at the actual handler modules instead of the thin orchestrator.
   const portalRoutesSource = [

@@ -3,28 +3,17 @@ import type { ProfileData, HandleInputChange } from '../types';
 import { CountrySelect } from '../CountrySelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';
+import { CurrencyInputField } from '../../../ui/currency-input';
 import { Label } from '../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Alert, AlertDescription } from '../../../ui/alert';
 import { Separator } from '../../../ui/separator';
-import {
-  formatCurrency,
-  formatCurrencyInput,
-  cleanCurrencyInput,
-} from '../../../../utils/currencyFormatter';
+import { formatCurrency } from '../../../../utils/currencyFormatter';
 import { User, AlertCircle, IdCard } from 'lucide-react';
 
 interface PersonalInfoSectionProps {
   profileData: ProfileData;
   handleInputChange: HandleInputChange;
-  grossIncomeDisplay: string | null;
-  setGrossIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  netIncomeDisplay: string | null;
-  setNetIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  grossAnnualIncomeDisplay: string | null;
-  setGrossAnnualIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
-  netAnnualIncomeDisplay: string | null;
-  setNetAnnualIncomeDisplay: React.Dispatch<React.SetStateAction<string | null>>;
   incomeValidationError: string;
   setIncomeValidationError: React.Dispatch<React.SetStateAction<string>>;
   setProfileData: React.Dispatch<React.SetStateAction<ProfileData>>;
@@ -34,14 +23,6 @@ interface PersonalInfoSectionProps {
 export function PersonalInfoSection({
   profileData,
   handleInputChange,
-  grossIncomeDisplay,
-  setGrossIncomeDisplay,
-  netIncomeDisplay,
-  setNetIncomeDisplay,
-  grossAnnualIncomeDisplay,
-  setGrossAnnualIncomeDisplay,
-  netAnnualIncomeDisplay,
-  setNetAnnualIncomeDisplay,
   incomeValidationError,
   setIncomeValidationError,
   setProfileData,
@@ -178,55 +159,30 @@ export function PersonalInfoSection({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="grossIncome">Gross Monthly Income (Pre-Tax) *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
-                <Input
-                  id="grossIncome"
-                  type="text"
-                  value={
-                    grossIncomeDisplay !== null
-                      ? grossIncomeDisplay
-                      : profileData.grossIncome
-                        ? formatCurrencyInput(profileData.grossIncome.toString())
-                        : ''
+              <CurrencyInputField
+                id="grossIncome"
+                value={profileData.grossIncome}
+                onValueChange={(v) => {
+                  const numValue = v ?? 0;
+                  setProfileData((prev) => ({
+                    ...prev,
+                    grossIncome: numValue,
+                    grossAnnualIncome: numValue * 12,
+                  }));
+                  setSaveSuccess(false);
+                }}
+                onBlur={() => {
+                  const numValue = profileData.grossIncome || 0;
+                  if (profileData.netIncome > numValue && numValue > 0) {
+                    setIncomeValidationError(
+                      `Net income (${formatCurrency(profileData.netIncome)}) cannot exceed gross income (${formatCurrency(numValue)})`,
+                    );
+                  } else {
+                    setIncomeValidationError('');
                   }
-                  onChange={(e) => {
-                    const formatted = formatCurrencyInput(e.target.value);
-                    setGrossIncomeDisplay(formatted);
-                  }}
-                  onBlur={() => {
-                    const value = cleanCurrencyInput(grossIncomeDisplay || '');
-                    const numValue = parseFloat(value) || 0;
-
-                    setProfileData((prev) => ({
-                      ...prev,
-                      grossIncome: numValue,
-                      grossAnnualIncome: numValue * 12,
-                    }));
-                    setSaveSuccess(false);
-                    setGrossIncomeDisplay(null);
-
-                    if (profileData.netIncome > numValue && numValue > 0) {
-                      setIncomeValidationError(
-                        `Net income (${formatCurrency(profileData.netIncome)}) cannot exceed gross income (${formatCurrency(numValue)})`,
-                      );
-                    } else {
-                      setIncomeValidationError('');
-                    }
-                  }}
-                  onFocus={() => {
-                    if (grossIncomeDisplay === null) {
-                      setGrossIncomeDisplay(
-                        profileData.grossIncome
-                          ? formatCurrencyInput(profileData.grossIncome.toString())
-                          : '',
-                      );
-                    }
-                  }}
-                  placeholder="0.00"
-                  className={`mt-1.5 pl-8 ${incomeValidationError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                />
-              </div>
+                }}
+                className={`mt-1.5 ${incomeValidationError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
               <p className="text-xs text-gray-500 mt-1">
                 Your total monthly income before tax deductions
               </p>
@@ -234,55 +190,30 @@ export function PersonalInfoSection({
 
             <div>
               <Label htmlFor="netIncome">Net Monthly Income (Post-Tax) *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
-                <Input
-                  id="netIncome"
-                  type="text"
-                  value={
-                    netIncomeDisplay !== null
-                      ? netIncomeDisplay
-                      : profileData.netIncome
-                        ? formatCurrencyInput(profileData.netIncome.toString())
-                        : ''
+              <CurrencyInputField
+                id="netIncome"
+                value={profileData.netIncome}
+                onValueChange={(v) => {
+                  const numValue = v ?? 0;
+                  setProfileData((prev) => ({
+                    ...prev,
+                    netIncome: numValue,
+                    netAnnualIncome: numValue * 12,
+                  }));
+                  setSaveSuccess(false);
+                }}
+                onBlur={() => {
+                  const numValue = profileData.netIncome || 0;
+                  if (numValue > profileData.grossIncome && profileData.grossIncome > 0) {
+                    setIncomeValidationError(
+                      `Net income (${formatCurrency(numValue)}) cannot exceed gross income (${formatCurrency(profileData.grossIncome)})`,
+                    );
+                  } else {
+                    setIncomeValidationError('');
                   }
-                  onChange={(e) => {
-                    const formatted = formatCurrencyInput(e.target.value);
-                    setNetIncomeDisplay(formatted);
-                  }}
-                  onBlur={() => {
-                    const value = cleanCurrencyInput(netIncomeDisplay || '');
-                    const numValue = parseFloat(value) || 0;
-
-                    setProfileData((prev) => ({
-                      ...prev,
-                      netIncome: numValue,
-                      netAnnualIncome: numValue * 12,
-                    }));
-                    setSaveSuccess(false);
-                    setNetIncomeDisplay(null);
-
-                    if (numValue > profileData.grossIncome && profileData.grossIncome > 0) {
-                      setIncomeValidationError(
-                        `Net income (${formatCurrency(numValue)}) cannot exceed gross income (${formatCurrency(profileData.grossIncome)})`,
-                      );
-                    } else {
-                      setIncomeValidationError('');
-                    }
-                  }}
-                  onFocus={() => {
-                    if (netIncomeDisplay === null) {
-                      setNetIncomeDisplay(
-                        profileData.netIncome
-                          ? formatCurrencyInput(profileData.netIncome.toString())
-                          : '',
-                      );
-                    }
-                  }}
-                  placeholder="0.00"
-                  className={`mt-1.5 pl-8 ${incomeValidationError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                />
-              </div>
+                }}
+                className={`mt-1.5 ${incomeValidationError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
               <p className="text-xs text-gray-500 mt-1">
                 Your take-home pay after tax (used for budgeting)
               </p>
@@ -291,41 +222,12 @@ export function PersonalInfoSection({
             {/* Annual Fields */}
             <div>
               <Label htmlFor="grossAnnualIncome">Gross Annual Income (Pre-Tax)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
-                <Input
-                  id="grossAnnualIncome"
-                  type="text"
-                  value={
-                    grossAnnualIncomeDisplay !== null
-                      ? grossAnnualIncomeDisplay
-                      : profileData.grossAnnualIncome
-                        ? formatCurrencyInput(profileData.grossAnnualIncome.toString())
-                        : ''
-                  }
-                  onChange={(e) => {
-                    const formatted = formatCurrencyInput(e.target.value);
-                    setGrossAnnualIncomeDisplay(formatted);
-                  }}
-                  onBlur={() => {
-                    const value = cleanCurrencyInput(grossAnnualIncomeDisplay || '');
-                    const numValue = parseFloat(value) || 0;
-                    handleInputChange('grossAnnualIncome', numValue);
-                    setGrossAnnualIncomeDisplay(null);
-                  }}
-                  onFocus={() => {
-                    if (grossAnnualIncomeDisplay === null) {
-                      setGrossAnnualIncomeDisplay(
-                        profileData.grossAnnualIncome
-                          ? formatCurrencyInput(profileData.grossAnnualIncome.toString())
-                          : '',
-                      );
-                    }
-                  }}
-                  placeholder="0.00"
-                  className="mt-1.5 pl-8"
-                />
-              </div>
+              <CurrencyInputField
+                id="grossAnnualIncome"
+                value={profileData.grossAnnualIncome}
+                onValueChange={(v) => handleInputChange('grossAnnualIncome', v ?? 0)}
+                className="mt-1.5"
+              />
               <p className="text-xs text-gray-500 mt-1">
                 Automatically calculated, but can be amended
               </p>
@@ -333,41 +235,12 @@ export function PersonalInfoSection({
 
             <div>
               <Label htmlFor="netAnnualIncome">Net Annual Income (Post-Tax)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R</span>
-                <Input
-                  id="netAnnualIncome"
-                  type="text"
-                  value={
-                    netAnnualIncomeDisplay !== null
-                      ? netAnnualIncomeDisplay
-                      : profileData.netAnnualIncome
-                        ? formatCurrencyInput(profileData.netAnnualIncome.toString())
-                        : ''
-                  }
-                  onChange={(e) => {
-                    const formatted = formatCurrencyInput(e.target.value);
-                    setNetAnnualIncomeDisplay(formatted);
-                  }}
-                  onBlur={() => {
-                    const value = cleanCurrencyInput(netAnnualIncomeDisplay || '');
-                    const numValue = parseFloat(value) || 0;
-                    handleInputChange('netAnnualIncome', numValue);
-                    setNetAnnualIncomeDisplay(null);
-                  }}
-                  onFocus={() => {
-                    if (netAnnualIncomeDisplay === null) {
-                      setNetAnnualIncomeDisplay(
-                        profileData.netAnnualIncome
-                          ? formatCurrencyInput(profileData.netAnnualIncome.toString())
-                          : '',
-                      );
-                    }
-                  }}
-                  placeholder="0.00"
-                  className="mt-1.5 pl-8"
-                />
-              </div>
+              <CurrencyInputField
+                id="netAnnualIncome"
+                value={profileData.netAnnualIncome}
+                onValueChange={(v) => handleInputChange('netAnnualIncome', v ?? 0)}
+                className="mt-1.5"
+              />
               <p className="text-xs text-gray-500 mt-1">
                 Automatically calculated, but can be amended
               </p>

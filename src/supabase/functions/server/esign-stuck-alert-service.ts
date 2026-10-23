@@ -23,7 +23,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { shouldDeliverSenderEvent } from './esign-notification-prefs.ts';
 import { emitWebhookEvent } from './webhook-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
-import { logAuditEvent } from './esign-services.tsx';
+import { logAuditEvent } from './esign-services.ts';
 import type { EsignEnvelope, EsignSigner } from './esign-types.ts';
 
 const log = createModuleLogger('esign-stuck-alerts');

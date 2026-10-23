@@ -21,6 +21,7 @@ import {
   INCOME_PROTECTION,
   SYSTEM_VERSION,
 } from '../constants';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 // ==================== LIFE COVER CALCULATION ====================
 
@@ -118,8 +119,8 @@ export function calculateLifeCover(input: InformationGatheringInput): LifeCoverC
   const assumptions = [
     `Income multiple: ${incomeMultiple}× (${numDependants} dependant${numDependants !== 1 ? 's' : ''}, ${isSingleIncome ? 'single-income' : 'dual-income'} household)`,
     `Estate costs: ${(LIFE_COVER.ESTATE_COSTS_PERCENTAGE * 100).toFixed(2)}% of net estate value`,
-    `Funeral and final expenses: R${LIFE_COVER.FUNERAL_FINAL_EXPENSES.toLocaleString()}`,
-    `Net annual income: R${netAnnualIncome.toLocaleString()}`,
+    `Funeral and final expenses: ${formatCurrencyWhole(LIFE_COVER.FUNERAL_FINAL_EXPENSES)}`,
+    `Net annual income: ${formatCurrencyWhole(netAnnualIncome)}`,
   ];
 
   const riskNotes = [
@@ -199,9 +200,9 @@ export function calculateDisabilityCover(
   // Assumptions and Risk Notes
   const assumptions = [
     `Disability multiple: ${disabilityMultiple}× (${numDependants} dependant${numDependants !== 1 ? 's' : ''})`,
-    `Vehicle adaptation: R${DISABILITY_COVER.VEHICLE_ADAPTATION.toLocaleString()}`,
-    `Medical equipment: R${DISABILITY_COVER.MEDICAL_EQUIPMENT.toLocaleString()}`,
-    `Once-off care costs: R${DISABILITY_COVER.ONCE_OFF_CARE_COSTS.toLocaleString()}`,
+    `Vehicle adaptation: ${formatCurrencyWhole(DISABILITY_COVER.VEHICLE_ADAPTATION)}`,
+    `Medical equipment: ${formatCurrencyWhole(DISABILITY_COVER.MEDICAL_EQUIPMENT)}`,
+    `Once-off care costs: ${formatCurrencyWhole(DISABILITY_COVER.ONCE_OFF_CARE_COSTS)}`,
   ];
 
   const riskNotes = [
@@ -259,7 +260,7 @@ export function calculateSevereIllnessCover(
   const assumptions = [
     `Income band: ${matchedBand}`,
     `Income multiple: ${incomeMultiple}×`,
-    `Gross annual income: R${grossAnnualIncome.toLocaleString()}`,
+    `Gross annual income: ${formatCurrencyWhole(grossAnnualIncome)}`,
   ];
 
   const riskNotes = [
@@ -324,8 +325,8 @@ export function calculateIncomeProtection(
 
   // Assumptions and Risk Notes
   const assumptions = [
-    `Calculated need: R${calculatedNeed.toLocaleString()} per month (100% of net income)`,
-    `Insurable maximum: R${insurableMaximum.toLocaleString()} per month`,
+    `Calculated need: ${formatCurrencyWhole(calculatedNeed)} per month (100% of net income)`,
+    `Insurable maximum: ${formatCurrencyWhole(insurableMaximum)} per month`,
     `Benefit term (permanent): ${benefitTerm} years (to age ${retirementAge})`,
     `Temporary benefit period: ${incomeProtectionSettings.temporary.benefitPeriod}`,
     `Permanent escalation: ${incomeProtectionSettings.permanent.escalation}`,

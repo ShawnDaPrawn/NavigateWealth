@@ -4,6 +4,7 @@ import { TAX_YEAR_2026_2027 } from '../constants';
 import { Calculator, AlertTriangle } from 'lucide-react';
 import { Progress } from '../../../../ui/progress';
 import { FNAStepNavigation } from '../../fna';
+import { formatCurrencyWhole } from '../../../../../utils/currencyFormatter';
 
 interface Step2Props {
   inputs: TaxPlanningInputs;
@@ -13,7 +14,7 @@ interface Step2Props {
 }
 
 export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }: Step2Props) {
-  const formatMoney = (val: number) => `R ${Math.round(val).toLocaleString()}`;
+  const formatMoney = (val: number) => formatCurrencyWhole(val);
   const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
 
   // Safe percentage calculation to prevent NaN/Infinity

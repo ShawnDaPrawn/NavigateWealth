@@ -181,7 +181,7 @@ export const newsletterStudioApi = {
     return response.lists ?? [];
   },
 
-  /** Best-effort accelerator tick; cron remains the authoritative driver. */
+  /** One delivery pass by hand ("Run a delivery pass now"); the pg_cron job drives delivery. */
   async process(): Promise<ProcessResult> {
     const response = await api.post<{ result: ProcessResult }>(ENDPOINTS.PROCESS, {});
     return response.result;

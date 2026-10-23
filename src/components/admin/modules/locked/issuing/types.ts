@@ -9,12 +9,7 @@
 export type CardholderType = 'company' | 'individual';
 
 export type SpendingLimitInterval =
-  | 'per_authorization'
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'yearly'
-  | 'all_time';
+  'per_authorization' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all_time';
 
 export interface Cardholder {
   id: string;

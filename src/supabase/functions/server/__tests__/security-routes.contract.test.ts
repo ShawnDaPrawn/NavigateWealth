@@ -1,5 +1,5 @@
 /**
- * security.tsx — Route Contract / Characterization Tests (Phase 5)
+ * security.ts — Route Contract / Characterization Tests (Phase 5)
  * ================================================================
  *
  * Purpose: lock the response CONTRACTS of the security Edge Function's routes
@@ -158,7 +158,7 @@ vi.mock('../email-service.ts', () => ({
   getFooterSettings: vi.fn(async () => ({})),
 }));
 
-import securityApp from '../security.tsx';
+import securityApp from '../security.ts';
 
 const AUTH = { Authorization: 'Bearer test-token' };
 const OTHER_USER_ID = 'other-user-id';
@@ -177,7 +177,7 @@ beforeEach(() => {
   limiter.checkRateLimit.mockClear();
 });
 
-describe('security.tsx route contracts', () => {
+describe('security.ts route contracts', () => {
   it('GET / returns the service status envelope (no auth)', async () => {
     const res = await securityApp.request('/');
     expect(res.status).toBe(200);

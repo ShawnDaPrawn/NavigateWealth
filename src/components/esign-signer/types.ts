@@ -12,13 +12,7 @@ export interface SignerSessionData {
   signer_email: string;
   signer_role?: string;
   signer_status:
-    | 'pending'
-    | 'sent'
-    | 'viewed'
-    | 'otp_verified'
-    | 'signed'
-    | 'rejected'
-    | 'declined';
+    'pending' | 'sent' | 'viewed' | 'otp_verified' | 'signed' | 'rejected' | 'declined';
   signer_order?: number;
   otp_required: boolean;
   otp_verified?: boolean;

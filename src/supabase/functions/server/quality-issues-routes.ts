@@ -14,6 +14,7 @@ import {
   checkIpOnlyRateLimit,
 } from './public-form-rate-limit.ts';
 import { buildRuntimeClientIssue, trimRuntimeIssues } from './quality-issues-runtime-client.ts';
+import { isAutomatedUserAgent } from '../../../shared/quality/automatedUserAgent.ts';
 
 import {
   ISSUE_WORKFLOW_KEY,
@@ -32,6 +33,7 @@ import {
 import { mergeWorkflowState } from './quality-issues-automation.ts';
 import { buildCurrentSnapshot, runAutomationOnCurrentState } from './quality-issues-state.ts';
 import { constantTimeEqual } from './crypto-utils.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const app = new Hono();
 const log = createModuleLogger('quality-issues');
@@ -45,10 +47,7 @@ function hasValidIngestToken(c: Context): boolean {
     return false;
   }
 
-  const bearerToken = c.req
-    .header('Authorization')
-    ?.replace(/^Bearer\s+/i, '')
-    .trim();
+  const bearerToken = stripBearerPrefix(c.req.header('Authorization'))?.trim();
   const headerToken = c.req.header('X-Quality-Ingest-Token')?.trim();
   // Constant-time, like every other shared-secret check here (M-1).
   return (
@@ -246,6 +245,18 @@ app.post(
 
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object' || typeof body.message !== 'string') {
+      return c.body(null, 204);
+    }
+
+    // Crawler renderers (Googlebot, Bingbot, …) refuse or cut off our API
+    // calls as a matter of course; filing those reopened the same "Network
+    // request failed" issue over and over. The browser reporter now stays quiet
+    // for them too — this catches bundles cached before that shipped. Either
+    // the header or the reported agent is enough. See automatedUserAgent.ts.
+    if (
+      isAutomatedUserAgent(c.req.header('user-agent')) ||
+      isAutomatedUserAgent(typeof body.userAgent === 'string' ? body.userAgent : undefined)
+    ) {
       return c.body(null, 204);
     }
 

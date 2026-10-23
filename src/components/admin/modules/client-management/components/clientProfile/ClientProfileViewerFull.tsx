@@ -9,11 +9,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../../../../../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../../../../ui/alert';
-import {
-  formatCurrency,
-  formatCurrencyInput,
-  cleanCurrencyInput,
-} from '../../../../../../utils/currencyFormatter';
+import { formatCurrency } from '../../../../../../utils/currencyFormatter';
 import {
   User,
   Mail,
@@ -106,12 +102,6 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   const [policyRecords, setPolicyRecords] = useState<PolicyAssetSourceRecord[]>([]);
   const [policyAssetsLoading, setPolicyAssetsLoading] = useState(false);
   const [policyAssetsError, setPolicyAssetsError] = useState<string | null>(null);
-
-  // Local display state for currency inputs
-  const [grossIncomeDisplay, setGrossIncomeDisplay] = useState<string | null>(null);
-  const [netIncomeDisplay, setNetIncomeDisplay] = useState<string | null>(null);
-  const [grossAnnualIncomeDisplay, setGrossAnnualIncomeDisplay] = useState<string | null>(null);
-  const [netAnnualIncomeDisplay, setNetAnnualIncomeDisplay] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,18 +230,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
       <div className="flex-1 overflow-y-auto pr-2">
         {/* Personal Information Section */}
         {activeSection === 'personal' && (
-          <ClientProfilePersonalCard
-            state={state}
-            actions={actions}
-            grossIncomeDisplay={grossIncomeDisplay}
-            setGrossIncomeDisplay={setGrossIncomeDisplay}
-            netIncomeDisplay={netIncomeDisplay}
-            setNetIncomeDisplay={setNetIncomeDisplay}
-            grossAnnualIncomeDisplay={grossAnnualIncomeDisplay}
-            setGrossAnnualIncomeDisplay={setGrossAnnualIncomeDisplay}
-            netAnnualIncomeDisplay={netAnnualIncomeDisplay}
-            setNetAnnualIncomeDisplay={setNetAnnualIncomeDisplay}
-          />
+          <ClientProfilePersonalCard state={state} actions={actions} />
         )}
 
         {/* Contact Details Section */}
@@ -419,12 +398,6 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             setAssetToDelete={actions.setAssetToDelete}
             liabilityToDelete={state.liabilityToDelete}
             setLiabilityToDelete={actions.setLiabilityToDelete}
-            assetDisplayValues={state.assetDisplayValues}
-            setAssetDisplayValues={actions.setAssetDisplayValues}
-            liabilityDisplayValues={state.liabilityDisplayValues}
-            setLiabilityDisplayValues={actions.setLiabilityDisplayValues}
-            cleanCurrencyInput={cleanCurrencyInput}
-            formatCurrencyInput={formatCurrencyInput}
             formatCurrency={formatCurrency}
           />
         )}
@@ -440,10 +413,6 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               setIncomeValidationError={
                 actions.setIncomeValidationError as (error: string | null) => void
               }
-              grossIncomeDisplay={state.grossIncomeDisplay ?? undefined}
-              setGrossIncomeDisplay={actions.setGrossIncomeDisplay}
-              netIncomeDisplay={state.netIncomeDisplay ?? undefined}
-              setNetIncomeDisplay={actions.setNetIncomeDisplay}
               profileData={profileDataLoose}
               handleInputChange={handleInputChangeLoose}
             />

@@ -143,10 +143,7 @@ export interface GenerateArticleResult {
 // ============================================================================
 
 export type PipelineId =
-  | 'market_commentary'
-  | 'regulatory_monitor'
-  | 'news_commentary'
-  | 'calendar_content';
+  'market_commentary' | 'regulatory_monitor' | 'news_commentary' | 'calendar_content';
 
 export interface PipelineConfig {
   id: PipelineId;
@@ -358,22 +355,12 @@ export interface ArticleReshareResponse {
 }
 
 export type ArticleEmailDeliveryStatus =
-  | 'pending'
-  | 'sending'
-  | 'sent'
-  | 'failed'
-  | 'failed_retryable'
-  | 'failed_terminal';
+  'pending' | 'sending' | 'sent' | 'failed' | 'failed_retryable' | 'failed_terminal';
 export type ArticleEmailTrackingSource = 'publish' | 'reshare';
 export type ArticleNotificationJobStatus =
-  | 'queued'
-  | 'processing'
-  | 'completed'
-  | 'completed_with_failures';
+  'queued' | 'processing' | 'completed' | 'completed_with_failures';
 export type ArticleNotificationCampaignStatus =
-  | ArticleNotificationJobStatus
-  | 'no_recipients'
-  | 'queue_failed';
+  ArticleNotificationJobStatus | 'no_recipients' | 'queue_failed';
 export type ArticleNotificationJobKind = 'publish' | 'retry_undelivered';
 export type ArticleNotificationJobPhase = 'preparing' | 'sending' | 'completed';
 

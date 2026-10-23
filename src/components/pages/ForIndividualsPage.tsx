@@ -4,7 +4,7 @@ import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import {
@@ -20,8 +20,6 @@ import {
   Home,
   Baby,
   GraduationCap,
-  Banknote,
-  Globe,
   Smartphone,
   HeadphonesIcon,
   Monitor,
@@ -29,6 +27,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ---------------------------------------------------------------------------
 // Data — identical content to legacy, restructured for the new layout
@@ -41,7 +40,7 @@ const services = [
       "Access South Africa's leading medical schemes and products with comprehensive gap cover protection.",
     icon: Heart,
     link: '/medical-aid',
-    features: ['Top medical schemes', 'Gap cover options', 'Specialist networks'],
+    features: ['Medical scheme comparison', 'Gap cover options', 'Specialist networks'],
     accent: 'from-rose-500 to-pink-600',
     accentLight: 'bg-rose-50 text-rose-600',
   },
@@ -104,11 +103,8 @@ const lifeMilestones = [
   { icon: GraduationCap, title: 'Retirement', description: 'Enjoying freedom' },
 ];
 
-const stats = [
-  { value: 'R500M+', label: 'Assets Under Advisement', icon: Banknote },
-  { value: '100+', label: 'Clients Across SA & Abroad', icon: Globe },
-  { value: 'R1B+', label: 'Life Assurance Coverage', icon: Shield },
-];
+// Checkable facts only — see src/config/companyFacts.ts.
+const stats = TRUST_FACTS.slice(0, 3);
 
 const digitalFeatures = [
   {
@@ -352,12 +348,12 @@ export function ForIndividualsPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center space-y-6 sm:space-y-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight">
-              Independent Advice Backed by Scale
+              Independent Advice, Personally Delivered
             </h2>
             <p className="text-base sm:text-lg text-white/80 leading-relaxed">
-              Our clients benefit from Navigate Wealth's scale and experience. These numbers mean we
-              have negotiating power with providers, while you still receive the personalised
-              attention of a boutique, independent adviser.
+              Navigate Wealth is a founder-led, independent practice. We compare products across the
+              providers we work with, and you receive the personal attention of an adviser who knows
+              your situation.
             </p>
             <div className="pt-4">
               <Button

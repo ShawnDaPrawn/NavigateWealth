@@ -17,7 +17,7 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { DashboardMode } from '../clientOverviewConstants';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Phone,
   Shield,
@@ -64,6 +64,7 @@ import { deriveKpiValues } from '../clientOverview/kpiValues';
 import { type PillarData, derivePillars } from '../clientOverview/pillars';
 import {
   type Policy,
+  type SchemaField,
   normalizePolicyData,
   numVal,
   sumField,
@@ -91,8 +92,13 @@ import {
   FNA_MODULES,
   ACTIVITY_TYPE_MAP,
   CATEGORY_GROUP_MAP,
-  fetchAllSchemas,
 } from '../clientOverviewConstants';
+import {
+  clientPoliciesQueryOptions,
+  invalidateClientPolicies,
+  invalidatePolicySchemas,
+  policySchemasQueryOptions,
+} from '../../../../../../shared/api/clientPolicies';
 import { type FNAStatusItem } from '../overview/FNAStatusCard';
 import { downloadClientOverviewPDF } from '../overview/clientOverviewPdfExport';
 
@@ -101,11 +107,43 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
   const isClient = mode === 'client';
   // ── Phase 1 state ───────────────────────────────────────────────────
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [allPolicies, setAllPolicies] = useState<Policy[]>([]);
-  const [policiesByCategory, setPoliciesByCategory] = useState<Record<string, Policy[]>>({});
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [loadingPolicies, setLoadingPolicies] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Policies and schemas come from the shared, cached queries the Policies tab
+  // also reads (shared/api/clientPolicies.ts): the overview paints from the
+  // last copy and refetches on every open, and every policy write invalidates.
+  const policiesQuery = useQuery(clientPoliciesQueryOptions(client.id));
+  const schemasQuery = useQuery(policySchemasQueryOptions());
+  const loadingPolicies = policiesQuery.isPending || schemasQuery.isPending;
+
+  // Normalise each policy's data using its category's schema and group by
+  // overview bucket (client-side filtering replaces 7 server calls). A failed
+  // fetch reads as no policies, as it always has; a failed schema fetch only
+  // skips normalisation.
+  const { allPolicies, policiesByCategory } = useMemo(() => {
+    const rawPolicies = (policiesQuery.data ?? []) as unknown as Policy[];
+    const schemaMap = (schemasQuery.data ?? {}) as unknown as Record<string, SchemaField[]>;
+    const byCategory: Record<string, Policy[]> = {};
+    const flat: Policy[] = [];
+
+    for (const pol of rawPolicies) {
+      // Normalise field-ID keys to keyIds using the schema
+      const fields = schemaMap[pol.categoryId];
+      const normalised =
+        fields && pol.data ? { ...pol, data: normalizePolicyData(pol.data, fields) } : pol;
+
+      // Group into the overview category bucket
+      const bucket = CATEGORY_GROUP_MAP[pol.categoryId];
+      if (bucket) {
+        if (!byCategory[bucket]) byCategory[bucket] = [];
+        byCategory[bucket].push(normalised);
+      }
+      flat.push(normalised);
+    }
+
+    return { allPolicies: flat, policiesByCategory: byCategory };
+  }, [policiesQuery.data, schemasQuery.data]);
 
   // ── Phase 2 state ───────────────────────────────────────────────────
   // FNA statuses via React Query hook — replaces manual useState/useCallback/useEffect
@@ -194,50 +232,6 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
     }
   }, [client.id, client.profile?.personalInformation, queryClient]);
 
-  const fetchPolicies = useCallback(async () => {
-    setLoadingPolicies(true);
-    try {
-      // Fetch schemas (cached after first load) and ALL policies in parallel.
-      // Previously this was a waterfall: 13 schema calls → wait → 7 policy calls.
-      // Now: 1 batch schema call (cached) + 1 policy call, both in parallel.
-      const [schemaMap, rawPolicies] = await Promise.all([
-        fetchAllSchemas(),
-        api
-          .get<{ policies?: Policy[] }>(`/integrations/policies?clientId=${client.id}`)
-          .then((data) => (data.policies || []) as Policy[])
-          .catch(() => [] as Policy[]),
-      ]);
-
-      // Normalise each policy's data using its category's schema
-      // and group by overview bucket (client-side filtering replaces 7 server calls)
-      const byCategory: Record<string, Policy[]> = {};
-      const flat: Policy[] = [];
-
-      for (const pol of rawPolicies) {
-        // Normalise field-ID keys to keyIds using the schema
-        const fields = schemaMap[pol.categoryId];
-        const normalised =
-          fields && pol.data ? { ...pol, data: normalizePolicyData(pol.data, fields) } : pol;
-
-        // Group into the overview category bucket
-        const bucket = CATEGORY_GROUP_MAP[pol.categoryId];
-        if (bucket) {
-          if (!byCategory[bucket]) byCategory[bucket] = [];
-          byCategory[bucket].push(normalised);
-        }
-        flat.push(normalised);
-      }
-
-      setPoliciesByCategory(byCategory);
-      setAllPolicies(flat);
-    } catch (err) {
-      console.error('Error loading policies for overview:', err);
-      setError('Failed to load policy data.');
-    } finally {
-      setLoadingPolicies(false);
-    }
-  }, [client.id]);
-
   // ── Phase 2: Activity log fetching ────────────────────────────────────
 
   const fetchActivityLogs = useCallback(async () => {
@@ -314,14 +308,11 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
     fetchProfile().catch(() => {
       /* handled internally */
     });
-    fetchPolicies().catch(() => {
-      /* handled internally */
-    });
-    // FNA statuses are managed by useFnaBatchStatus (React Query) — no manual fetch needed
+    // Policies and FNA statuses are React Query — no manual fetch needed
     fetchActivityLogs().catch(() => {
       /* handled internally */
     });
-  }, [fetchProfile, fetchPolicies, fetchActivityLogs]);
+  }, [fetchProfile, fetchActivityLogs]);
 
   const refreshAll = useCallback(() => {
     setError(null);
@@ -329,14 +320,13 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
     fetchProfile().catch(() => {
       /* handled internally */
     });
-    fetchPolicies().catch(() => {
-      /* handled internally */
-    });
+    void invalidateClientPolicies(queryClient, client.id);
+    void invalidatePolicySchemas(queryClient);
     refetchFna(); // React Query handles cache invalidation and re-fetch
     fetchActivityLogs().catch(() => {
       /* handled internally */
     });
-  }, [client.id, fetchProfile, fetchPolicies, refetchFna, fetchActivityLogs, queryClient]);
+  }, [client.id, fetchProfile, refetchFna, fetchActivityLogs, queryClient]);
 
   // ── Derived data ──────────────────────────────────────────────────────
 

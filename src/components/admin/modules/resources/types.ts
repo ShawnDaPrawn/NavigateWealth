@@ -227,10 +227,7 @@ export interface ResourceResponse {
 export type LegalDocumentLifecycleStatus = 'draft' | 'published' | 'archived';
 export type LegalDocumentRenderMode = 'legacy_resource' | 'versioned_document';
 export type LegalDocumentSection =
-  | 'legal-notices'
-  | 'privacy-data-protection'
-  | 'regulatory-disclosures'
-  | 'other';
+  'legal-notices' | 'privacy-data-protection' | 'regulatory-disclosures' | 'other';
 
 export interface LegalDocumentDefinitionResponse {
   id: string;

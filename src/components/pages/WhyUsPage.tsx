@@ -8,15 +8,14 @@ import { Badge } from '../ui/badge';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { ProvidersModal } from '../modals/ProvidersModal';
+import { PublishedReviews } from '../shared/PublishedReviews';
+import { COMPANY, TRUST_FACTS } from '@/config/companyFacts';
 import {
   Award,
-  Shield,
   Users,
-  TrendingUp,
   Globe,
   CheckCircle,
   ArrowRight,
-  Star,
   Monitor,
   Handshake,
   Lock,
@@ -24,7 +23,6 @@ import {
   Lightbulb,
   BarChart3,
   FileCheck,
-  UserCheck,
   Building2,
   Headset,
 } from 'lucide-react';
@@ -34,33 +32,6 @@ export function WhyUsPage() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [showProvidersModal, setShowProvidersModal] = useState(false);
-
-  const statistics = [
-    {
-      value: 'R500M+',
-      label: 'Assets Under Advisement',
-      icon: TrendingUp,
-      color: 'purple',
-    },
-    {
-      value: '100+',
-      label: 'Satisfied Clients',
-      icon: Users,
-      color: 'blue',
-    },
-    {
-      value: 'R1B+',
-      label: 'Life Assurance Placed',
-      icon: Shield,
-      color: 'green',
-    },
-    {
-      value: '15+',
-      label: 'Years Experience',
-      icon: Award,
-      color: 'orange',
-    },
-  ];
 
   const coreValues = [
     {
@@ -92,13 +63,13 @@ export function WhyUsPage() {
     {
       title: 'Expertise',
       description:
-        'Qualified financial advisers with deep industry knowledge and continuous professional development.',
+        'Advice that meets the FSCA’s Fit and Proper standards, backed by continuous professional development.',
       icon: Award,
       features: [
-        'CFP® certified advisers',
-        '15+ years experience',
-        'Ongoing training',
-        'Industry recognized',
+        'FSCA Fit and Proper standards',
+        'Continuous professional development',
+        'Plain-language advice',
+        'Regular plan reviews',
       ],
       gradient: 'from-green-500 to-green-600',
     },
@@ -122,33 +93,24 @@ export function WhyUsPage() {
       icon: Handshake,
       title: 'Truly Independent',
       description:
-        "Unlike tied agents, we're free to recommend any product from any provider. Our only obligation is to you.",
-      stat: '30+',
-      statLabel: 'Product Providers',
+        "Unlike tied agents, we're free to recommend products from a range of providers. Our only obligation is to you.",
     },
     {
       icon: HeadphonesIcon,
       title: 'Personal Service',
       description:
-        "You'll have a dedicated adviser who knows you, your family, and your goals. Real relationships, not call centers.",
-      stat: '24hrs',
-      statLabel: 'Response Time',
+        'As a founder-led practice, you deal directly with the person advising you — someone who knows you, your family, and your goals. Real relationships, not call centres.',
     },
     {
       icon: BarChart3,
       title: 'Comprehensive Solutions',
       description:
         'From investments to insurance, retirement to estates - we handle every aspect of your financial life.',
-      stat: '7',
-      statLabel: 'Core Services',
     },
     {
       icon: Lock,
       title: 'Security & Compliance',
-      description:
-        'Fully licensed and regulated. Your personal and financial information is protected with bank-level security.',
-      stat: '100%',
-      statLabel: 'Compliant',
+      description: `Authorised by the FSCA (FSP ${COMPANY.fspNumber}) and regulated under the FAIS Act. Your personal and financial information is protected with bank-level security.`,
     },
   ];
 
@@ -165,7 +127,7 @@ export function WhyUsPage() {
       number: '02',
       title: 'Strategy Development',
       description:
-        'Our team researches solutions across the market and develops a tailored financial strategy.',
+        'We research solutions across a range of providers and develop a tailored financial strategy.',
       icon: Lightbulb,
       details: ['Market research', 'Product comparison', 'Strategy formulation', 'Risk assessment'],
     },
@@ -189,30 +151,6 @@ export function WhyUsPage() {
         'Portfolio monitoring',
         'Continuous support',
       ],
-    },
-  ];
-
-  const testimonials = [
-    {
-      quote:
-        'Navigate Wealth transformed how we think about our financial future. Their independence and expertise gave us confidence in every decision.',
-      author: 'Sarah M.',
-      role: 'Business Owner',
-      rating: 5,
-    },
-    {
-      quote:
-        'The combination of their digital platform and personal service is unmatched. I can track everything online but have a real person to call when needed.',
-      author: 'James K.',
-      role: 'Medical Professional',
-      rating: 5,
-    },
-    {
-      quote:
-        'After years with a bank-tied adviser, the difference is night and day. They truly work for me, not commission targets.',
-      author: 'Linda T.',
-      role: 'Retired Educator',
-      rating: 5,
     },
   ];
 
@@ -240,7 +178,7 @@ export function WhyUsPage() {
           <div className="flex flex-col items-center text-center py-20 lg:py-28">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] mb-8">
               <span className="text-[12px] font-medium text-gray-400 tracking-wide">
-                Independent Financial Advisers
+                Independent Financial Advice
               </span>
             </div>
 
@@ -280,22 +218,24 @@ export function WhyUsPage() {
         </div>
       </section>
 
-      {/* Statistics Section */}
+      {/* Trust facts — checkable, see src/config/companyFacts.ts */}
       <section className="py-20 section-white">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
-            {statistics.map((stat, index) => {
+            {TRUST_FACTS.map((stat) => {
               const Icon = stat.icon;
               return (
                 <Card
-                  key={index}
+                  key={stat.value}
                   className="text-center border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50"
                 >
                   <CardContent className="pt-8 pb-6">
                     <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
                       <Icon className="h-7 w-7 text-primary" />
                     </div>
-                    <div className="text-4xl font-bold text-gray-900 mb-2">{stat.value}</div>
+                    <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                      {stat.value}
+                    </div>
                     <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
                   </CardContent>
                 </Card>
@@ -364,8 +304,8 @@ export function WhyUsPage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-gray-900 mb-6">The Navigate Wealth Advantage</h2>
             <p className="text-gray-600 text-lg">
-              Experience the difference that comes from working with advisers who put your interests
-              first.
+              Experience the difference that comes from working with an adviser who puts your
+              interests first.
             </p>
           </div>
 
@@ -382,13 +322,7 @@ export function WhyUsPage() {
                       <Icon className="h-8 w-8 text-primary" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">{item.title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed mb-4">{item.description}</p>
-                    <div className="pt-4 border-t border-gray-100">
-                      <div className="text-3xl font-bold text-primary mb-1">{item.stat}</div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">
-                        {item.statLabel}
-                      </div>
-                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
                   </CardContent>
                 </Card>
               );
@@ -409,8 +343,8 @@ export function WhyUsPage() {
                 </Badge>
                 <h2 className="text-white text-[20px]">How We Work With You</h2>
                 <p className="text-white/80 text-lg leading-relaxed">
-                  Our proven four-step process ensures you receive personalized advice backed by
-                  thorough research and ongoing support.
+                  Our four-step process ensures you receive personalized advice backed by thorough
+                  research and ongoing support.
                 </p>
               </div>
 
@@ -463,8 +397,8 @@ export function WhyUsPage() {
                   <div className="bg-[rgba(25,15,46,0.95)] backdrop-blur-sm rounded-xl p-6">
                     <h3 className="text-white mb-4">Ready to Get Started?</h3>
                     <p className="text-white/90 mb-6">
-                      Book a complimentary consultation to discuss your financial goals with one of
-                      our qualified advisers.
+                      Book a complimentary consultation to discuss your financial goals, in person
+                      or online.
                     </p>
                     <Button
                       className="w-full bg-primary text-white hover:bg-primary/90"
@@ -478,35 +412,35 @@ export function WhyUsPage() {
                 </div>
               </div>
 
-              {/* Quick Stats */}
+              {/* Checkable credentials — replaces unevidenced satisfaction/retention rates */}
               <Card className="border-none bg-white/5 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <h4 className="text-white font-semibold mb-4">Why Clients Choose Us</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-white/80">
-                      <span className="text-sm">Client Satisfaction</span>
-                      <span className="font-semibold">98%</span>
-                    </div>
-                    <div className="w-full bg-white/10 rounded-full h-2">
-                      <div className="bg-primary h-2 rounded-full" style={{ width: '98%' }}></div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-white/80 pt-2">
-                      <span className="text-sm">Client Retention Rate</span>
-                      <span className="font-semibold">95%</span>
-                    </div>
-                    <div className="w-full bg-white/10 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '95%' }}></div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-white/80 pt-2">
-                      <span className="text-sm">Referral Rate</span>
-                      <span className="font-semibold">87%</span>
-                    </div>
-                    <div className="w-full bg-white/10 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '87%' }}></div>
-                    </div>
-                  </div>
+                  <h4 className="text-white font-semibold mb-4">Check Our Credentials</h4>
+                  <dl className="space-y-3 text-sm">
+                    {[
+                      {
+                        term: 'FSCA authorisation',
+                        detail: `FSP ${COMPANY.fspNumber}, granted ${COMPANY.fscaAuthorisedOn}`,
+                      },
+                      {
+                        term: 'Registered company',
+                        detail: `${COMPANY.legalName}, ${COMPANY.registrationNumber}`,
+                      },
+                      { term: 'Office', detail: COMPANY.office },
+                    ].map(({ term, detail }) => (
+                      <div
+                        key={term}
+                        className="flex flex-col sm:flex-row sm:justify-between gap-1"
+                      >
+                        <dt className="text-white/60">{term}</dt>
+                        <dd className="text-white/90 font-medium sm:text-right">{detail}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="text-xs text-white/50 mt-4">
+                    Our authorisation can be confirmed on the FSCA’s public register of financial
+                    services providers.
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -514,48 +448,8 @@ export function WhyUsPage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 section-white">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
-              Client Testimonials
-            </Badge>
-            <h2 className="text-gray-900 mb-6">What Our Clients Say</h2>
-            <p className="text-gray-600 text-lg">
-              Don't just take our word for it—hear from the clients we've helped achieve their
-              financial goals.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card
-                key={index}
-                className="border border-gray-200 hover:shadow-lg transition-all duration-300"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-1 mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-700 italic mb-6 leading-relaxed">"{testimonial.quote}"</p>
-                  <div className="flex items-center space-x-3 pt-4 border-t border-gray-100">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <UserCheck className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">{testimonial.author}</div>
-                      <div className="text-sm text-gray-500">{testimonial.role}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Client reviews — renders only once there are traceable, published reviews */}
+      <PublishedReviews />
 
       {/* Final CTA Section */}
       <section className="py-16 lg:py-20 section-white">
@@ -570,8 +464,8 @@ export function WhyUsPage() {
                   Experience the Navigate Wealth Difference
                 </h2>
                 <p className="text-lg text-white/90 mb-8 leading-relaxed">
-                  Join the hundreds of clients who've discovered what truly independent,
-                  personalized financial advice looks like. Schedule your free consultation today.
+                  Discover what truly independent, personalized financial advice looks like.
+                  Schedule your free consultation today.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button
@@ -593,18 +487,12 @@ export function WhyUsPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12 pt-8 border-t border-white/20">
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-bold mb-1">24hrs</div>
-                    <div className="text-xs sm:text-sm text-white/80">Response Time</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-bold mb-1">100%</div>
-                    <div className="text-xs sm:text-sm text-white/80">Independent</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-bold mb-1">15+</div>
-                    <div className="text-xs sm:text-sm text-white/80">Providers</div>
-                  </div>
+                  {TRUST_FACTS.slice(0, 3).map(({ value, label }) => (
+                    <div key={value}>
+                      <div className="text-lg sm:text-2xl font-bold mb-1">{value}</div>
+                      <div className="text-xs sm:text-sm text-white/80">{label}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </CardContent>

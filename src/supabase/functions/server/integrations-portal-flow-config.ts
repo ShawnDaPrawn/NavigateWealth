@@ -2,7 +2,7 @@
  * Portal automation — flow config normalisation (Phase 5 decomposition).
  * ======================================================================
  *
- * Extracted verbatim from integrations.tsx. Pure normalisers that sanitise a
+ * Extracted verbatim from integrations.ts. Pure normalisers that sanitise a
  * provider's portal-flow configuration (steps, search, extraction fields,
  * policy-schedule + document-artifact configs/statuses, credential profiles)
  * into the canonical shapes. Deps: already-extracted helpers (brain config,

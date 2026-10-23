@@ -2,7 +2,7 @@
  * esign /consent/* routes — consent document registry (Phase 5).
  * ==============================================================
  *
- * Extracted verbatim from esign-routes.tsx: the active-consent lookup and
+ * Extracted verbatim from esign-routes.ts: the active-consent lookup and
  * consent-version publish / activate surface. Mounted via
  * `esignRoutes.route('/', consentRoutes)`. Self-contained — auth + the
  * consent-registry service only. Behaviour-preserving; the contract suite

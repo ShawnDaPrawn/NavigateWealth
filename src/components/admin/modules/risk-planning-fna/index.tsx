@@ -48,5 +48,3 @@ export const Step1InformationGathering = lazy(() =>
 export const FNAManagementView = lazy(() =>
   import('./components/FNAManagementView').then((m) => ({ default: m.FNAManagementView })),
 );
-
-export const PreviousFNAsDialog = lazy(() => import('./components/PreviousFNAsDialog'));

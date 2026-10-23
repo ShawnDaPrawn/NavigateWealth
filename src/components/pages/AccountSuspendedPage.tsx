@@ -94,7 +94,7 @@ export function AccountSuspendedPage({
                       <Phone className="h-3.5 w-3.5 text-[#6d28d9]" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Call Our Team</p>
+                      <p className="font-medium text-gray-900">Call Us</p>
                       <p className="text-gray-600">
                         Reach us at{' '}
                         <a

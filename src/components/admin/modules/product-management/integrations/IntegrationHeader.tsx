@@ -1,6 +1,6 @@
 import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Bot, ClipboardCheck, KeyRound, Settings2 } from 'lucide-react';
+import { Bot, ClipboardCheck, KeyRound, Settings2, TableProperties } from 'lucide-react';
 import {
   IntegrationProvider,
   IntegrationStats,
@@ -33,12 +33,12 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
 
   return (
     <div className="p-6 border-b bg-white z-10">
-      <div className="flex justify-between items-start mb-6">
-        <div>
+      <div className="flex justify-between items-start gap-6 mb-6">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{provider.name} Integration</h2>
           <p className="text-gray-500">Review proposed {provider.name} policy updates, and configure how they are collected</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <div className="w-[250px]">
             <Select value={selectedCategoryId} onValueChange={onCategoryChange} disabled={automationCategoryIds.length === 0}>
               <SelectTrigger className="h-9 bg-white border-gray-300">
@@ -73,6 +73,13 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
               {pendingReviewCount}
             </span>
           )}
+        </TabsTrigger>
+        <TabsTrigger
+          value="portfolio"
+          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
+        >
+          <TableProperties className="w-3.5 h-3.5" />
+          Portfolio
         </TabsTrigger>
         <TabsTrigger
           value="setup"

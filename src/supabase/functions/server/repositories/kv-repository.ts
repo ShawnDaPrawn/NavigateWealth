@@ -56,6 +56,9 @@ export interface KvRepository<T> {
   put(id: string, value: T): Promise<void>;
   remove(id: string): Promise<void>;
   getMany(ids: string[]): Promise<(T | null)[]>;
+  putMany(entries: ReadonlyArray<readonly [id: string, value: T]>): Promise<void>;
+  removeMany(ids: string[]): Promise<void>;
+  removeManyUnless(ids: string[], guard: { field: string; equals: string }): Promise<string[]>;
   list(options?: { limit?: number; startAfter?: string }): Promise<Page<T>>;
   listAll(reason: string): Promise<T[]>;
   listWithKeys(reason: string, idPrefix?: string): Promise<Array<{ key: string; value: T }>>;
@@ -93,6 +96,33 @@ export function createKvRepository<T>(namespace: string): KvRepository<T> {
       if (ids.length === 0) return [];
       const values = (await kv.mget(ids.map(key))) as (T | null)[];
       return ids.map((_, i) => values[i] ?? null);
+    },
+
+    // One round-trip for the whole set, where a loop of put/remove would pay
+    // a round-trip per id. Callers bound the batch size: `mget`/`mdel` put
+    // every key into the request URL.
+    async putMany(entries): Promise<void> {
+      if (entries.length === 0) return;
+      await kv.mset(
+        entries.map(([id]) => key(id)),
+        entries.map(([, value]) => value),
+      );
+    },
+
+    async removeMany(ids: string[]): Promise<void> {
+      if (ids.length === 0) return;
+      await kv.mdel(ids.map(key));
+    },
+
+    /**
+     * Remove every id whose stored value does NOT have `guard.field` equal to
+     * `guard.equals`, checked in the same statement as the delete. Returns
+     * the ids actually removed; anything else was protected or already gone.
+     */
+    async removeManyUnless(ids, guard): Promise<string[]> {
+      if (ids.length === 0) return [];
+      const removed = await kv.mdelUnlessFieldEquals(ids.map(key), guard.field, guard.equals);
+      return removed.map((k) => k.slice(namespace.length));
     },
 
     async list(options): Promise<Page<T>> {

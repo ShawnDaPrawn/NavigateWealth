@@ -107,12 +107,13 @@ describe('ArticleDetailPage', () => {
     });
   });
 
-  it('renders demo article by slug without network calls', async () => {
+  it('does not serve placeholder demo articles for unpublished slugs', async () => {
     mockFetchReturns404();
     renderWithSlug('complete-guide-retirement-planning-2025');
     await waitFor(() => {
-      expect(screen.getByText('The Complete Guide to Retirement Planning in 2025')).toBeTruthy();
+      expect(screen.getByText('Back to Resources')).toBeTruthy();
     });
+    expect(screen.queryByText('The Complete Guide to Retirement Planning in 2025')).toBeNull();
   });
 
   it('renders article title from API response', async () => {
@@ -142,7 +143,7 @@ describe('ArticleDetailPage', () => {
     });
   });
 
-  it('falls back to editorial team author when author_name is absent', async () => {
+  it('falls back to the firm as author when author_name is absent', async () => {
     mockFetchReturnsArticle({
       id: 'art-003',
       slug: 'no-author-article',
@@ -151,7 +152,7 @@ describe('ArticleDetailPage', () => {
     });
     renderWithSlug('no-author-article');
     await waitFor(() => {
-      expect(screen.getByText('Navigate Wealth Editorial Team')).toBeTruthy();
+      expect(screen.getAllByText('Navigate Wealth').length).toBeGreaterThan(0);
     });
   });
 

@@ -55,7 +55,7 @@ const individualProducts: Record<string, CoverContent> = {
     features: [
       {
         title: 'Legal Drafting',
-        description: 'Professional will preparation by accredited drafters',
+        description: 'Professional will preparation through our estate planning partners',
       },
       { title: 'Guardian Appointments', description: 'Nominate guardians for minor children' },
       { title: 'Executor Selection', description: 'Appoint a trusted executor for your estate' },
@@ -195,7 +195,7 @@ export function EstatePlanningPage() {
           titleLine1: 'Protect Your',
           titleLine2: 'Legacy',
           description:
-            'Comprehensive estate planning for individuals and businesses — wills, trusts, succession planning, and business continuity from accredited specialists.',
+            'Comprehensive estate planning for individuals and businesses — wills, trusts, succession planning, and business continuity through our estate planning partners.',
           heroImage: estatePlanningHeroImage,
           heroImageKey: 'estate-hero',
           heroImageAlt:
@@ -205,7 +205,7 @@ export function EstatePlanningPage() {
           quoteLink: '/get-quote/estate-planning/contact',
           heroStyle: 'unified',
           stats: [
-            { value: '2+', label: 'Trusted Partners' },
+            { value: String(partnerLogos.length), label: 'Estate Partners' },
             { value: '3', label: 'Individual Services' },
             { value: '2', label: 'Business Solutions' },
           ],
@@ -291,7 +291,7 @@ export function EstatePlanningPage() {
         approach: {
           serviceName: 'How We Protect Your Legacy',
           headerDescription:
-            'At Navigate Wealth, we follow a proven methodology to ensure your estate plan comprehensively protects your family and preserves your legacy.',
+            'At Navigate Wealth, we follow a structured methodology to ensure your estate plan comprehensively protects your family and preserves your legacy.',
           steps: [
             {
               step: '1',

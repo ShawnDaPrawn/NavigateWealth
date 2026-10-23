@@ -1,6 +1,6 @@
 /**
  * Shared types, constants, and helper functions for security route sub-routers
- * (Phase 5 decomposition). Extracted verbatim from security.tsx.
+ * (Phase 5 decomposition). Extracted verbatim from security.ts.
  *
  * Imported by security-activity-routes.ts, security-password-routes.ts,
  * security-email-change-routes.ts, and security-2fa-routes.ts. No logic
@@ -20,6 +20,7 @@ import {
 import { resolveClientFirstName } from './client-display-name.ts';
 import { resolveTrustedRole } from './constants.ts';
 import { secureRandomDigits } from './crypto-utils.ts';
+import { sha256Hex } from './sha256.ts';
 
 const log = createModuleLogger('security-shared');
 
@@ -254,14 +255,6 @@ export function emailChangeKey(userId: string): string {
  */
 export function generateSixDigitCode(): string {
   return secureRandomDigits(6);
-}
-
-export async function sha256Hex(input: string): Promise<string> {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 export async function createCodePair() {

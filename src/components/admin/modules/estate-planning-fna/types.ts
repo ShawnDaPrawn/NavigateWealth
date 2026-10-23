@@ -12,12 +12,7 @@ export interface FamilyInformation {
   dateOfBirth: string;
   age: number;
   maritalStatus:
-    | 'single'
-    | 'married_cop'
-    | 'married_anc'
-    | 'married_customary'
-    | 'divorced'
-    | 'widowed';
+    'single' | 'married_cop' | 'married_anc' | 'married_customary' | 'divorced' | 'widowed';
   spouseName?: string;
   spouseId?: string;
   spouseAge?: number;
@@ -94,11 +89,7 @@ export interface RetirementAsset extends AssetItem {
 }
 
 export type EstatePlanningAsset =
-  | PropertyAsset
-  | FinancialAsset
-  | BusinessAsset
-  | PersonalAsset
-  | RetirementAsset;
+  PropertyAsset | FinancialAsset | BusinessAsset | PersonalAsset | RetirementAsset;
 
 // ============= LIABILITIES =============
 
@@ -302,13 +293,7 @@ export interface BeneficiaryAlignment {
 
 export interface StructuralRisk {
   category:
-    | 'will'
-    | 'guardianship'
-    | 'beneficiary'
-    | 'liquidity'
-    | 'business'
-    | 'cross_border'
-    | 'trust';
+    'will' | 'guardianship' | 'beneficiary' | 'liquidity' | 'business' | 'cross_border' | 'trust';
   severity: 'high' | 'medium' | 'low';
   issue: string;
   impact: string;

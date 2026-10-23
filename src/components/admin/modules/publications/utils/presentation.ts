@@ -195,38 +195,7 @@ export function groupByCategory(articles: Article[]): Record<string, Article[]> 
 // PERFORMANCE UTILITIES
 // ============================================================================
 
-/**
- * Debounce function to limit how often a function is called
- *
- * @param func - Function to debounce
- * @param wait - Milliseconds to wait
- * @returns Debounced function
- *
- * @example
- * ```typescript
- * const debouncedSearch = debounce((query: string) => {
- *   searchArticles(query);
- * }, 300);
- * ```
- */
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number,
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
-
-  return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
-      timeout = null;
-      func(...args);
-    };
-
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(later, wait);
-  };
-}
+export { debounce } from '../../../../../shared/utils/debounce';
 
 // ============================================================================
 // READING TIME & FORM VALIDATION

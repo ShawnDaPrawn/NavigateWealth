@@ -1,5 +1,5 @@
 /**
- * integrations.tsx — Route Contract / Characterization Tests (Phase 4)
+ * integrations.ts — Route Contract / Characterization Tests (Phase 4)
  * ====================================================================
  *
  * Purpose: lock the response CONTRACTS of the integrations Edge Function's
@@ -8,7 +8,7 @@
  * during extraction, these tests fail.
  *
  * Approach (mirrors fna-intake-routes.integration + esign-happy-path):
- *   • Mount the real Hono app (default export of integrations.tsx).
+ *   • Mount the real Hono app (default export of integrations.ts).
  *   • Mock the Deno/IO boundary only — in-memory KV, quiet logger, a
  *     pass-through `requireAuth` that still enforces the auth header, and a
  *     stubbed Supabase client. No real network/Deno runtime.
@@ -170,7 +170,7 @@ vi.mock('../policy-extraction-service.ts', () => ({
   })),
 }));
 
-import integrationsApp from '../integrations.tsx';
+import integrationsApp from '../integrations.ts';
 
 const AUTH = { Authorization: 'Bearer test-token' };
 
@@ -178,7 +178,7 @@ beforeEach(() => {
   kvStore.clear();
 });
 
-describe('integrations.tsx route contracts', () => {
+describe('integrations.ts route contracts', () => {
   describe('admin-only provider routes refuse a signed-in client', () => {
     // GET /template builds its workbook from EVERY client's policies for the
     // provider; /config is the firm-wide import mapping. Both were requireAuth.

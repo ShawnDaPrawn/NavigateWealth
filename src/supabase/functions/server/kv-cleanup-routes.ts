@@ -14,7 +14,7 @@ import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { runKvCleanup, getLastCleanupRun } from './kv-cleanup-service.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
-import { constantTimeEqual } from './crypto-utils.ts';
+import { requireCronAuth } from './cron-auth.ts';
 
 const app = new Hono();
 const log = createModuleLogger('kv-cleanup');
@@ -122,26 +122,22 @@ app.post(
 /**
  * POST /kv-cleanup/cron
  *
- * Cron-safe endpoint for scheduled KV cleanup.
- * Authenticated via SUPABASE_SERVICE_ROLE_KEY or SUPER_ADMIN_PASSWORD.
+ * Cron-safe endpoint for scheduled KV cleanup, driven nightly by the
+ * `kv-cleanup-nightly` pg_cron job (supabase/cron/kv-cleanup-jobs.sql). Until
+ * 2026-10 nothing scheduled it: the only runner was a poller in the admin
+ * browser tab, so cleanup happened only while an admin had the portal open.
+ *
+ * Authenticated by `requireCronAuth` (the Vault-backed `x-nw-cron-auth` token,
+ * with the service-role / super-admin bearer kept as a fallback for manual
+ * runs). It used to compare the service-role key inline — the exact check that
+ * left every other scheduled job answering 401 in August (see cron-auth.ts).
+ *
  * Runs in live mode (dryRun=false) with default retention (90 days).
  */
 app.post(
   '/cron',
+  requireCronAuth,
   asyncHandler(async (c) => {
-    const authHeader = c.req.header('Authorization') || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const superAdminPw = Deno.env.get('SUPER_ADMIN_PASSWORD') || '';
-
-    // Constant-time, matching cron-auth.ts (M-1).
-    const authorized =
-      (serviceRoleKey !== '' && constantTimeEqual(token, serviceRoleKey)) ||
-      (superAdminPw !== '' && constantTimeEqual(token, superAdminPw));
-    if (!authorized) {
-      return c.json({ error: 'Unauthorized — cron auth required' }, 401);
-    }
-
     log.info('CRON: Starting scheduled KV cleanup');
 
     const result = await runKvCleanup({

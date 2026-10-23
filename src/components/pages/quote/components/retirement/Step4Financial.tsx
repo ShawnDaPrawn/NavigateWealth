@@ -5,7 +5,7 @@
  * the medical aid wizard: each step was already a self-contained function with
  * its own props; only its address changed.
  */
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
 import { Label } from '../../../../ui/label';
 import { type FinancialState, TAX_BRACKET_OPTIONS, formatCurrency } from './model';
 
@@ -29,57 +29,42 @@ export function Step4Financial({
         <Label className="text-sm font-medium text-gray-700">
           Gross monthly income <span className="text-red-500">*</span>
         </Label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder="e.g. 45,000"
-            value={financial.income_gross_monthly}
-            onChange={(e) =>
-              onChange({ ...financial, income_gross_monthly: formatCurrency(e.target.value) })
-            }
-            className="bg-white border-gray-300 h-11 pl-7"
-          />
-        </div>
+        <CurrencyInputField
+          placeholder="45,000"
+          value={financial.income_gross_monthly}
+          onChange={(e) =>
+            onChange({ ...financial, income_gross_monthly: formatCurrency(e.target.value) })
+          }
+          className="bg-white border-gray-300 h-11"
+        />
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-sm font-medium text-gray-700">
           Net monthly income <span className="text-red-500">*</span>
         </Label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder="e.g. 32,000"
-            value={financial.income_net_monthly}
-            onChange={(e) =>
-              onChange({ ...financial, income_net_monthly: formatCurrency(e.target.value) })
-            }
-            className="bg-white border-gray-300 h-11 pl-7"
-          />
-        </div>
+        <CurrencyInputField
+          placeholder="32,000"
+          value={financial.income_net_monthly}
+          onChange={(e) =>
+            onChange({ ...financial, income_net_monthly: formatCurrency(e.target.value) })
+          }
+          className="bg-white border-gray-300 h-11"
+        />
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-sm font-medium text-gray-700">
           Current total retirement savings (optional)
         </Label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R</span>
-          <Input
-            type="text"
-            inputMode="numeric"
-            placeholder="e.g. 500,000"
-            value={financial.current_retirement_savings}
-            onChange={(e) =>
-              onChange({ ...financial, current_retirement_savings: formatCurrency(e.target.value) })
-            }
-            className="bg-white border-gray-300 h-11 pl-7"
-          />
-        </div>
+        <CurrencyInputField
+          placeholder="500,000"
+          value={financial.current_retirement_savings}
+          onChange={(e) =>
+            onChange({ ...financial, current_retirement_savings: formatCurrency(e.target.value) })
+          }
+          className="bg-white border-gray-300 h-11"
+        />
       </div>
 
       <div className="space-y-2">

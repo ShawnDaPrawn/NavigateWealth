@@ -4,6 +4,7 @@
  * publications-ai-service.ts.
  */
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('publications-ai');
 
@@ -139,7 +140,7 @@ export async function searchUnsplashImage(
   } catch (err) {
     log.error('Unsplash image search failed with exception', {
       query,
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrMsg(err),
     });
     return undefined;
   }

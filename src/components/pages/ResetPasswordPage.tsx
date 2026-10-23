@@ -114,8 +114,7 @@ export function ResetPasswordPage() {
 
         // Hash already consumed by detectSessionInUrl or exchange ran elsewhere — retry getSession briefly
         let session:
-          | Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']
-          | null = null;
+          Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] | null = null;
         const delays = [0, 150, 350, 600];
         for (const ms of delays) {
           if (ms > 0) {

@@ -15,6 +15,7 @@ import { Textarea } from '../../ui/textarea';
 import { Switch } from '../../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { CurrencyInputField } from '../../ui/currency-input';
+import { NumberInputField } from '../../ui/number-input';
 import type { ProductField } from './policyFormModel';
 import { PolicyAssumptionsTool } from './PolicyAssumptionsTool';
 
@@ -69,9 +70,9 @@ export function renderPolicyFieldInput({
             {field.name}
             {field.required && <span className="text-red-500 ml-1">*</span>}
           </Label>
-          <Input
+          <NumberInputField
             id={field.id}
-            type="number"
+            decimals={2}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             placeholder={`Enter ${field.name.toLowerCase()}`}
@@ -134,9 +135,9 @@ export function renderPolicyFieldInput({
             {field.required && <span className="text-red-500 ml-1">*</span>}
           </Label>
           <div className="relative">
-            <Input
+            <NumberInputField
               id={field.id}
-              type="number"
+              decimals={2}
               value={value}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               placeholder="0"

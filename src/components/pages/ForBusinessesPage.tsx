@@ -4,21 +4,19 @@ import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import {
   Building,
   Shield,
   Users,
-  DollarSign,
   Calculator,
   Globe,
   ArrowRight,
   CheckCircle,
   TrendingUp,
   Trophy,
-  BarChart3,
   FileText,
   Smartphone,
   HeadphonesIcon,
@@ -28,6 +26,7 @@ import {
   Sparkles,
   PieChart,
 } from 'lucide-react';
+import { TRUST_FACTS } from '@/config/companyFacts';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -43,15 +42,6 @@ const services = [
     features: ['Group health insurance', 'Retirement benefits', 'Wellness programs'],
     accent: 'from-blue-500 to-indigo-600',
     accentLight: 'bg-blue-50 text-blue-600',
-  },
-  {
-    title: 'Cash Management',
-    description: 'Optimize cash flow, liquidity management, and working capital solutions.',
-    icon: DollarSign,
-    link: '/cash-management',
-    features: ['Cash flow optimization', 'Liquidity management', 'Working capital'],
-    accent: 'from-emerald-500 to-teal-600',
-    accentLight: 'bg-emerald-50 text-emerald-600',
   },
   {
     title: 'Risk Management',
@@ -80,15 +70,6 @@ const services = [
     accent: 'from-amber-500 to-orange-600',
     accentLight: 'bg-amber-50 text-amber-600',
   },
-  {
-    title: 'Forex & Trade Finance',
-    description: 'Foreign exchange services, currency hedging, and international trade finance.',
-    icon: Globe,
-    link: '/forex-services',
-    features: ['Currency hedging', 'Forex transactions', 'Trade finance'],
-    accent: 'from-cyan-500 to-blue-600',
-    accentLight: 'bg-cyan-50 text-cyan-600',
-  },
 ];
 
 const businessStages = [
@@ -99,11 +80,8 @@ const businessStages = [
   { icon: Globe, title: 'Global', description: 'International' },
 ];
 
-const stats = [
-  { value: '500+', label: 'Business Clients', icon: Building },
-  { value: 'R2B+', label: 'Corporate Assets Managed', icon: BarChart3 },
-  { value: '50+', label: 'Partner Providers', icon: Shield },
-];
+// Checkable facts only — see src/config/companyFacts.ts.
+const stats = TRUST_FACTS.slice(0, 3);
 
 const digitalFeatures = [
   {
@@ -124,7 +102,7 @@ const digitalFeatures = [
   {
     icon: HeadphonesIcon,
     title: 'Dedicated Support',
-    description: 'Expert advisers assigned to your business for proactive guidance',
+    description: 'One adviser who knows your business, for proactive guidance',
   },
 ];
 
@@ -291,7 +269,7 @@ export function ForBusinessesPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             {services.map((service, index) => {
               const Icon = service.icon;
               return (
@@ -344,12 +322,11 @@ export function ForBusinessesPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center space-y-6 sm:space-y-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight">
-              Enterprise-Level Expertise with Personal Service
+              Independent Advice with Personal Service
             </h2>
             <p className="text-base sm:text-lg text-white/80 leading-relaxed">
-              Our business clients benefit from Navigate Wealth's institutional experience and
-              provider relationships, while receiving the dedicated attention and tailored solutions
-              your business deserves.
+              As a founder-led, independent practice, we compare solutions across the providers we
+              work with and give your business the direct attention and tailored advice it deserves.
             </p>
             <div className="pt-4">
               <Button
@@ -389,11 +366,11 @@ export function ForBusinessesPage() {
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
                 Navigate Wealth combines cutting-edge financial technology with deep business
                 expertise. Through our dedicated business portal, you can manage policies, access
-                reports, and communicate with your financial team.
+                reports, and communicate with your adviser.
               </p>
               <p className="text-gray-500 leading-relaxed">
-                Our experienced advisers provide strategic guidance and proactive support so you can
-                focus on what matters most — your business.
+                We provide strategic guidance and proactive support so you can focus on what matters
+                most — your business.
               </p>
             </div>
 
@@ -432,9 +409,8 @@ export function ForBusinessesPage() {
               Ready to Optimize Your Business Finances?
             </h2>
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-              Whether you're looking to enhance employee benefits, optimize cash flow, or develop a
-              comprehensive risk management strategy, our business financial experts are here to
-              help you succeed.
+              Whether you're looking to enhance employee benefits, plan your business's tax, or
+              develop a comprehensive risk management strategy, we are here to help you succeed.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">

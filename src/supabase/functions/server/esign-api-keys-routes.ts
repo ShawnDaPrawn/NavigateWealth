@@ -2,7 +2,7 @@
  * esign /api-keys/* routes — programmatic-access key management (Phase 5).
  * ========================================================================
  *
- * Extracted verbatim from esign-routes.tsx: per-firm API key mint / list /
+ * Extracted verbatim from esign-routes.ts: per-firm API key mint / list /
  * update / rotate / revoke, with plaintext tokens returned only once on
  * create and rotate. Mounted via `esignRoutes.route('/', apiKeysRoutes)`.
  * Self-contained — shared esign services + esign-route-helpers (resolveFirmId)
@@ -10,7 +10,7 @@
  */
 import { Hono } from 'npm:hono';
 import { createModuleLogger } from './stderr-logger.ts';
-import { getAuthContext, AuthError, requireAdmin } from './auth-mw.ts';
+import { getAuthContext, requireAdmin } from './auth-mw.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { resolveFirmId } from './esign-route-helpers.ts';
 import { validateBody, validateOptionalBody } from './validate.ts';
@@ -25,6 +25,7 @@ import {
   rotateApiKey,
   redactApiKey,
 } from './api-key-service.ts';
+import { authErrorResponse } from './esign-auth-error-response.ts';
 
 const log = createModuleLogger('esign-api-keys-routes');
 
@@ -65,13 +66,7 @@ apiKeysRoutes.post(
       return c.json({ key: redactApiKey(key), token });
     } catch (error: unknown) {
       log.error('Create API key error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to create API key',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to create API key');
     }
   },
 );
@@ -85,11 +80,7 @@ apiKeysRoutes.get('/api-keys', requireAdmin, async (c) => {
     return c.json({ keys: keys.map(redactApiKey) });
   } catch (error: unknown) {
     log.error('List API keys error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to list API keys' }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to list API keys');
   }
 });
 
@@ -134,13 +125,7 @@ apiKeysRoutes.patch(
       return c.json({ key: updated ? redactApiKey(updated) : null });
     } catch (error: unknown) {
       log.error('Update API key error:', error);
-      const status = error instanceof AuthError ? error.statusCode : 500;
-      return new Response(
-        JSON.stringify({
-          error: error instanceof Error ? error.message : 'Failed to update API key',
-        }),
-        { status, headers: { 'Content-Type': 'application/json' } },
-      );
+      return authErrorResponse(error, 'Failed to update API key');
     }
   },
 );
@@ -167,13 +152,7 @@ apiKeysRoutes.post('/api-keys/:id/rotate', requireAdmin, rateLimit('SENDER_MUTAT
     return c.json({ key: redactApiKey(rotated.key), token: rotated.token });
   } catch (error: unknown) {
     log.error('Rotate API key error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to rotate API key',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to rotate API key');
   }
 });
 
@@ -198,13 +177,7 @@ apiKeysRoutes.delete('/api-keys/:id', requireAdmin, rateLimit('SENDER_MUTATE'), 
     return c.json({ success: true });
   } catch (error: unknown) {
     log.error('Delete API key error:', error);
-    const status = error instanceof AuthError ? error.statusCode : 500;
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to delete API key',
-      }),
-      { status, headers: { 'Content-Type': 'application/json' } },
-    );
+    return authErrorResponse(error, 'Failed to delete API key');
   }
 });
 

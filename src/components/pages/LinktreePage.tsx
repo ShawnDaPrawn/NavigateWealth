@@ -19,11 +19,10 @@ import {
   MapPin,
   Phone,
   Shield,
-  Twitter,
-  Youtube,
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { normalizeNavigateWealthUrl, SITE_ORIGIN } from '../../utils/siteOrigin';
+import { XIcon } from '../shared/XIcon';
 import { SEO } from '../seo/SEO';
 import navigateWealthLogo from '/brand-assets/navigate-wealth-logo-black-purple.png';
 
@@ -64,8 +63,7 @@ const SOCIAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }
   instagram: Instagram,
   linkedin: Linkedin,
   facebook: Facebook,
-  youtube: Youtube,
-  twitter: Twitter,
+  twitter: XIcon,
   email: Mail,
 };
 
@@ -73,7 +71,6 @@ const SOCIAL_LABEL_MAP: Record<string, string> = {
   instagram: 'Instagram',
   linkedin: 'LinkedIn',
   facebook: 'Facebook',
-  youtube: 'YouTube',
   twitter: 'X',
   email: 'Email',
 };
@@ -82,9 +79,8 @@ function getLinkIcon(url: string): React.ComponentType<{ className?: string }> {
   const lower = url.toLowerCase();
   if (lower.includes('instagram.com')) return Instagram;
   if (lower.includes('linkedin.com')) return Linkedin;
-  if (lower.includes('youtube.com')) return Youtube;
   if (lower.includes('facebook.com')) return Facebook;
-  if (lower.includes('twitter.com') || lower.includes('x.com')) return Twitter;
+  if (lower.includes('twitter.com') || lower.includes('x.com')) return XIcon;
   if (lower.startsWith('mailto:')) return Mail;
   if (lower.startsWith('tel:')) return Phone;
   if (lower.includes('maps.google') || lower.includes('goo.gl/maps')) return MapPin;

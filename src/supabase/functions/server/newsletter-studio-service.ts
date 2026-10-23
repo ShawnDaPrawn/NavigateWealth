@@ -47,6 +47,7 @@ import {
   refreshPublishedNewsletter,
   unpublishCampaignFromWebsite,
 } from './newsletter-studio-publish.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 // Routes import the whole studio surface from here; the audience and
 // engagement modules are implementation splits, not separate public APIs.
@@ -366,7 +367,7 @@ export async function attachCampaignPdf(
     } catch (error) {
       log.error('Replaced the PDF but could not refresh the website copy', {
         campaignId: id,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
       // Deliberately loud: the upload succeeded, so silence here would leave
       // visitors downloading the old document with nothing to act on.

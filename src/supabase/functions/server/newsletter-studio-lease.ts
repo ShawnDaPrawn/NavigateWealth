@@ -12,6 +12,7 @@ import { nowIso } from './newsletter-studio-service.ts';
 import { newsletterCampaigns } from './repositories/newsletter-studio-repository.ts';
 import { ACTIVE_CAMPAIGN_STATUSES } from './newsletter-studio-types.ts';
 import type { NewsletterCampaign } from './newsletter-studio-types.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 const log = createModuleLogger('newsletter-studio-lease');
 
@@ -125,7 +126,7 @@ export async function withLeaseHeartbeat<T>(
       } catch (error) {
         log.warn('Lease heartbeat failed', {
           campaignId: campaign.id,
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrMsg(error),
         });
       }
     })();

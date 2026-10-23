@@ -75,6 +75,7 @@ export const clientKeys = {
   details: () => [...clientKeys.all, 'detail'] as const,
   detail: (id: string) => [...clientKeys.details(), id] as const,
   profile: (id: string) => [...clientKeys.all, 'profile', id] as const,
+  avatar: (id: string) => [...clientKeys.all, 'avatar', id] as const,
   keys: (id: string) => [...clientKeys.all, 'keys', id] as const,
 
   // Client Key management (product data keys)
@@ -238,6 +239,11 @@ export const integrationsKeys = {
   portalDiscoveryReport: (jobId: string | null) =>
     [...integrationsKeys.all, 'portal-discovery-report', jobId] as const,
   syncRun: (runId: string | null) => [...integrationsKeys.all, 'sync-run', runId] as const,
+  /** The provider/product book the Portfolio tab shows and a bot reads. */
+  portfolioTable: (providerId: string | null, categoryId: string | null) =>
+    [...integrationsKeys.all, 'portfolio-table', providerId, categoryId] as const,
+  /** Every outside agent's token for the portfolio table (super admin only). */
+  portfolioAgents: () => [...integrationsKeys.all, 'portfolio-agents'] as const,
 } as const;
 
 // ============================================================================
@@ -430,6 +436,36 @@ export const resourceKeys = {
   legalDocument: (slug: string) => [...resourceKeys.legalDocuments(), slug] as const,
   legalDocumentVersions: (slug: string) =>
     [...resourceKeys.legalDocument(slug), 'versions'] as const,
+} as const;
+
+// ============================================================================
+// CLIENT POLICIES & POLICY SCHEMAS
+// ============================================================================
+
+/**
+ * A client's policies, as `/integrations/policies?clientId=` returns them.
+ *
+ * Every screen that shows a client's policy values reads through these keys
+ * (shared/api/clientPolicies.ts), and every write invalidates
+ * `client(clientId)`, which covers both the active and the archived list.
+ */
+export const clientPolicyKeys = {
+  all: ['client-policies'] as const,
+  client: (clientId: string) => [...clientPolicyKeys.all, clientId] as const,
+  list: (clientId: string, archived: boolean) =>
+    [...clientPolicyKeys.client(clientId), { archived }] as const,
+} as const;
+
+/** Every category's policy table schema, from `/integrations/schemas/batch`. */
+export const policySchemaKeys = {
+  all: ['policy-schemas'] as const,
+  batch: () => [...policySchemaKeys.all, 'batch'] as const,
+} as const;
+
+/** A client's financial goals (`/goals/:clientId`). */
+export const clientGoalKeys = {
+  all: ['client-goals'] as const,
+  client: (clientId: string) => [...clientGoalKeys.all, clientId] as const,
 } as const;
 
 // ============================================================================

@@ -26,7 +26,6 @@ import {
 } from '../../../shared/legal-documents-registry.ts';
 import {
   buildLegalTocFromBlocks,
-  generateId,
   legalDefinitionKey,
   legalVersionKey,
 } from './resources-helpers.ts';
@@ -78,7 +77,7 @@ export async function bootstrapLegalDocumentDefinition(
   const now = new Date().toISOString();
 
   const definition: LegalDocumentDefinition = {
-    id: generateId(),
+    id: crypto.randomUUID(),
     slug: entry.slug,
     title: entry.name,
     section: entry.section,
@@ -111,7 +110,7 @@ async function bootstrapLegacyLegalDocumentVersion(
     return;
   }
 
-  const versionId = generateId();
+  const versionId = crypto.randomUUID();
   const createdAt = legacyResource.createdAt || new Date().toISOString();
   const version: LegalDocumentVersion = {
     id: versionId,

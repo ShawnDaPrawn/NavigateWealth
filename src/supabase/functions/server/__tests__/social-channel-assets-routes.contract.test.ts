@@ -33,8 +33,8 @@ const auth = vi.hoisted(() => ({
 
 const cron = vi.hoisted(() => ({ isAuthorizedCronRequest: vi.fn(async () => false) }));
 
-vi.mock('../social-channel-assets-service.ts', () => svc);
-vi.mock('../social-channel-assets-auth.ts', () => auth);
+vi.mock('../social/social-channel-assets-service.ts', () => svc);
+vi.mock('../social/social-channel-assets-auth.ts', () => auth);
 vi.mock('../cron-auth.ts', () => cron);
 vi.mock('../stderr-logger.ts', async () =>
   (await import('./helpers/contract-harness.ts')).makeLoggerMock(),
@@ -47,7 +47,7 @@ vi.mock('../auth-mw.ts', async () => {
   };
 });
 
-import app from '../social-channel-assets-routes.ts';
+import app from '../social/social-channel-assets-routes.ts';
 
 const TOKEN_HEADER = 'x-nw-social-assets-token';
 const ASSET = '3f4a1b2c-5d6e-4f7a-8b9c-0d1e2f3a4b5c';

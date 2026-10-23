@@ -46,14 +46,13 @@ const TIMELINE_STEPS = [
     status: 'complete' as const,
     icon: CheckCircle2,
     title: 'Application Submitted',
-    description: 'Your application has been successfully received by our team.',
+    description: 'Your application has been successfully received.',
   },
   {
     status: 'active' as const,
     icon: Clock,
     title: 'Under Review',
-    description:
-      'Our compliance team is verifying your information. This typically takes 1–2 business days.',
+    description: 'We are verifying your information. This typically takes 1–2 business days.',
   },
   {
     status: 'pending' as const,
@@ -139,8 +138,8 @@ export function PendingDashboardPage() {
             Thank you, {firstName}
           </h1>
           <p className="text-gray-400 text-base sm:text-lg max-w-lg mx-auto leading-relaxed">
-            Your application is being reviewed by our team. We'll notify you as soon as a decision
-            has been made.
+            Your application is being reviewed. We'll notify you as soon as a decision has been
+            made.
           </p>
 
           <div className="mt-5">
@@ -280,7 +279,7 @@ export function PendingDashboardPage() {
                   <span>+27 12 667 2505</span>
                 </a>
               </div>
-              <p className="text-xs text-gray-400 mt-3">Mon – Fri, 9:00 AM – 5:00 PM SAST</p>
+              <p className="text-xs text-gray-400 mt-3">Mon – Fri, 08:30 – 16:30 SAST</p>
             </div>
           </div>
 

@@ -18,6 +18,7 @@ import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
 import { ProviderSetupTab } from './integrations/ProviderSetupTab';
 import { PortalAutomationTab } from './integrations/PortalAutomationTab';
+import { PortfolioTableTab } from './integrations/PortfolioTableTab';
 import { isActivePortalJob } from './integrations/portal-automation/portalHelpers';
 import { usePortalFieldSelectors } from './integrations/portal-automation/usePortalFieldSelectors';
 import { toast } from 'sonner';
@@ -619,6 +620,15 @@ export function IntegrationsTab() {
                 portalJobItems={portalJobItemsData?.items || []}
                 stats={integrationStats}
                 matchedColumnsCount={matchedColumnsCount}
+              />
+            </TabsContent>
+
+            {/* Tab: Portfolio (the provider/product book, download / upload, agent endpoint) */}
+            <TabsContent value="portfolio" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+              <PortfolioTableTab
+                key={`${selectedProvider.id}:${selectedCategoryId}:portfolio`}
+                provider={selectedProvider}
+                selectedCategoryId={selectedCategoryId}
               />
             </TabsContent>
 

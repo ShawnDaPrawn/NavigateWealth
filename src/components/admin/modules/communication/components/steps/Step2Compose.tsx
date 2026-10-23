@@ -383,10 +383,10 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                         Independent Financial Advisory Services
                       </p>
                       <p style={{ margin: '8px 0 0' }}>
-                        First Floor, Milestone Place, Block A<br />
-                        25 Sovereign Dr, Route 21 Business Park
+                        First Floor, Milestone Place Block A<br />
+                        25 Sovereign Drive, Route 21 Business Park
                         <br />
-                        Irene, 0157
+                        Pretoria, 0157
                       </p>
                       <p style={{ margin: '8px 0 0' }}>
                         Email: <span style={{ color: '#6d28d9' }}>info@navigatewealth.co</span>
@@ -396,7 +396,7 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                         <br />
                         <span style={{ color: '#6d28d9' }}>LinkedIn</span> |{' '}
                         <span style={{ color: '#6d28d9' }}>Instagram</span> |{' '}
-                        <span style={{ color: '#6d28d9' }}>YouTube</span>
+                        <span style={{ color: '#6d28d9' }}>X</span>
                       </p>
                       <p style={{ margin: '12px 0 0', color: '#9ca3af' }}>
                         &copy; {new Date().getFullYear()} Navigate Wealth. All rights reserved.

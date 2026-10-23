@@ -2,7 +2,7 @@
  * Portal automation — credential records (Phase 5 decomposition).
  * ===============================================================
  *
- * Extracted verbatim from integrations.tsx. KV-backed portal credential storage
+ * Extracted verbatim from integrations.ts. KV-backed portal credential storage
  * + profile-id canonicalisation (the Capital Legacy alias) + status projection.
  * Deps: KV store + the shared portal credential types only. Behaviour-preserving.
  */

@@ -9,7 +9,7 @@ import {
 } from '../../../../ui/table';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { ImageWithFallback } from '../../../../figma/ImageWithFallback';
+import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 import {
   Provider,
   getPortalAutomationCategoryOptions,

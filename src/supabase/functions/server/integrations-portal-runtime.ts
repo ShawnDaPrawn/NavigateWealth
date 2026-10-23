@@ -2,7 +2,7 @@
  * Portal automation — worker runtime (Phase 5 decomposition).
  * ===========================================================
  *
- * Extracted verbatim from integrations.tsx. Live-view screenshot capture
+ * Extracted verbatim from integrations.ts. Live-view screenshot capture
  * (Supabase Storage bucket ensure + upload + signed URL) and the GitHub Actions
  * worker dispatch (run-mode normalisation, config, repository_dispatch). Deps:
  * Supabase client + getErrMsg + Deno.env/fetch + portal types. Behaviour-preserving.

@@ -436,11 +436,11 @@ const LetterPage = ({
                 <br />
                 t/a Navigate Wealth
                 <br />
-                Route 21 Corporate Park
+                First Floor, Milestone Place Block A
                 <br />
-                25 Sovereign Drive, Milestone Place A
+                25 Sovereign Drive, Route 21 Business Park
                 <br />
-                Centurion, 0178
+                Pretoria, 0157
                 <br />
                 <br />
                 Tel: (012) 667 2505
@@ -550,8 +550,8 @@ const LetterPage = ({
               Number: 2024/071953/07.
             </div>
             <div className="lf-col">
-              Route 21 Corporate Park, 25 Sovereign Drive, Milestone Place A, Centurion, 0178. Tel:
-              (012) 667 2505 | Email: info@navigatewealth.co
+              First Floor, Milestone Place Block A, 25 Sovereign Drive, Route 21 Business Park,
+              Pretoria, 0157. Tel: (012) 667 2505 | Email: info@navigatewealth.co
             </div>
             <div className="lf-page">
               Page {pageNum}/{totalPages}

@@ -76,6 +76,7 @@ import type { Context, MiddlewareHandler } from 'npm:hono';
 import { checkRateLimit, type RateLimitConfig } from './rateLimiter.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
+import { retryAfterSeconds } from './retry-after.ts';
 
 const log = createModuleLogger('ai-usage-limit');
 
@@ -186,7 +187,7 @@ export async function chargeAiUsage(
     c.header('X-RateLimit-Reset', String(Math.floor(result.resetAt.getTime() / 1000)));
 
     if (!result.allowed) {
-      const retryAfter = Math.max(1, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000));
+      const retryAfter = retryAfterSeconds(result.resetAt);
       c.header('Retry-After', String(retryAfter));
       log.warn('AI usage limit reached', {
         surface,

@@ -24,7 +24,7 @@ is refactored into a universal, adapter-based system.
 - Shared field semantics:
   `scripts/provider-adapters/field-semantics.mjs`
 - Server flow and job API:
-  `src/supabase/functions/server/integrations.tsx`
+  `src/supabase/functions/server/integrations.ts`
 - Server default portal flows:
   `src/supabase/functions/server/portal-default-flows.ts`
 - Product management UI:
@@ -110,8 +110,8 @@ Phase 4 moved common provider field semantics into a shared module. Future
 providers should use those shared rules before adding provider-specific
 validation overrides.
 
-Phase 5 moved default provider flow construction out of `integrations.tsx` into
-`portal-default-flows.ts`. The route cluster still lives in `integrations.tsx`
+Phase 5 moved default provider flow construction out of `integrations.ts` into
+`portal-default-flows.ts`. The route cluster still lives in `integrations.ts`
 for now; split routes only in a later behavior-preserving slice with the golden
 tests passing.
 

@@ -1,5 +1,6 @@
 import { BasePdfLayout } from '../../../../shared/pdf';
 import { RetirementInputs, RetirementResults } from './types';
+import { formatCurrencyWhole as formatCurrency } from '../../../../../utils/currencyFormatter';
 
 interface RetirementSummaryPdfProps {
   inputs: RetirementInputs;
@@ -12,15 +13,6 @@ export const RetirementSummaryPdf = ({
   results,
   clientName,
 }: RetirementSummaryPdfProps) => {
-  const formatCurrency = (val: number) => {
-    if (val === undefined || val === null || isNaN(val)) return 'R0';
-    const isNeg = val < 0;
-    const abs = Math.abs(val);
-    const intPart = Math.round(abs).toString();
-    const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return `${isNeg ? '-' : ''}R${withCommas}`;
-  };
-
   const formatPercent = (val: number) => {
     return new Intl.NumberFormat('en-ZA', { style: 'percent', maximumFractionDigits: 2 }).format(
       val / 100,

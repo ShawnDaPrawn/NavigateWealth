@@ -2,7 +2,7 @@
  * Provider / Config / Template routes (Phase 5 Slice A decomposition).
  * ====================================================================
  *
- * Extracted verbatim from integrations.tsx. No logic changes.
+ * Extracted verbatim from integrations.ts. No logic changes.
  *
  * Routes owned here:
  *   GET  /providers   — list + normalise providers

@@ -170,14 +170,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   const [proofOfBankToDelete, setProofOfBankToDelete] = useState<string | null>(null);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
 
-  // Display states for currency
-  const [grossIncomeDisplay, setGrossIncomeDisplay] = useState<string | null>(null);
-  const [netIncomeDisplay, setNetIncomeDisplay] = useState<string | null>(null);
-  const [assetDisplayValues, setAssetDisplayValues] = useState<{ [id: string]: string }>({});
-  const [liabilityDisplayValues, setLiabilityDisplayValues] = useState<{
-    [id: string]: { amount?: string; monthlyPayment?: string };
-  }>({});
-
   // Validation state for income fields
   const [incomeValidationError, setIncomeValidationError] = useState('');
 
@@ -364,7 +356,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
         profilePayload as ProfileData,
       );
       setProfileData(profilePayload as ProfileData);
-      await queryClient.invalidateQueries({ queryKey: clientKeys.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: clientKeys.lists() }),
+        // The open profile's own record (header name, ID number, email).
+        queryClient.invalidateQueries({ queryKey: clientKeys.detail(userId) }),
+      ]);
 
       toast.success('Profile updated successfully');
       setLoadedProfileSnapshot(createProfileSnapshot(profilePayload as ProfileData));
@@ -387,10 +383,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     setProfileData({ ...baseline });
     setHasChanges(false);
     setIncomeValidationError('');
-    setGrossIncomeDisplay(null);
-    setNetIncomeDisplay(null);
-    setAssetDisplayValues({});
-    setLiabilityDisplayValues({});
     setAssetsInEditMode(new Set());
     setLiabilitiesInEditMode(new Set());
     setFamilyMembersInEditMode(new Set());
@@ -541,7 +533,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   } = createAssetHandlers({
     assetToDelete,
     profileData,
-    setAssetDisplayValues,
     setAssetToDelete,
     setAssetsInEditMode,
     setHasChanges,
@@ -561,7 +552,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     profileData,
     setHasChanges,
     setLiabilitiesInEditMode,
-    setLiabilityDisplayValues,
     setLiabilityToDelete,
     setProfileData,
   });
@@ -592,10 +582,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       proofOfResidenceToDelete,
       proofOfBankToDelete,
       assessmentStarted,
-      grossIncomeDisplay,
-      netIncomeDisplay,
-      assetDisplayValues,
-      liabilityDisplayValues,
       incomeValidationError,
     },
     actions: {
@@ -676,10 +662,6 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       cancelEditLiability,
       setAssetToDelete,
       setLiabilityToDelete,
-      setAssetDisplayValues,
-      setLiabilityDisplayValues,
-      setGrossIncomeDisplay,
-      setNetIncomeDisplay,
       setIncomeValidationError,
       setFamilyMemberToDelete,
       setEmployerToDelete,

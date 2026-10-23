@@ -3,49 +3,48 @@ import { useSearchParams } from 'react-router';
 import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
+import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
-import { useAutoContentProcessor } from '../admin/modules/publications';
-import { useArticleNotificationProcessor } from '../admin/modules/publications';
-import { useScheduledPublishProcessor } from '../admin/modules/publications';
-import { useOverdueDigestProcessor } from '../admin/modules/tasks';
-import { useMaintenanceCronProcessor } from '../admin/modules/client-management';
-import { toast } from 'sonner';
-import { SocialMediaModule } from '../admin/modules/social-media';
-import { IssuesModule } from '../admin/modules/issues';
 
 // ============================================================================
-// EAGERLY IMPORTED SKELETONS
-// Each skeleton mirrors the full card/tab/table structure of its module so
-// the page layout is stable from the first paint, before the JS chunk loads.
-// These are intentionally NOT imported through the lazy module barrels.
+// SHELL ENTRIES, NOT BARRELS
+// Skeletons and the three self-lazy modules come from each module's
+// `shell.ts`, never from its `index.ts` barrel. This page also
+// `import()`s those barrels below, and Rollup cannot split out a module that is
+// imported both statically and dynamically: one static barrel import here puts
+// the whole module in this page's chunk, and every admin visit downloads it.
+// `admin-shell-static-graph.test.ts` fails if a barrel import comes back.
+// Each skeleton mirrors the full card/tab/table structure of its module so the
+// page layout is stable from the first paint, before the JS chunk loads.
 // ============================================================================
 
-import { DashboardSkeleton } from '../admin/modules/dashboard';
-import { ClientManagementSkeleton } from '../admin/modules/client-management';
-import { ApplicationsSkeleton } from '../admin/modules/applications';
-import { TasksSkeleton } from '../admin/modules/tasks';
-import { PersonnelSkeleton } from '../admin/modules/personnel';
-import { EsignSkeleton, EsignModule } from '../admin/modules/esign';
-import { AdviceEngineSkeleton } from '../admin/modules/advice-engine';
-import { ProductManagementSkeleton } from '../admin/modules/product-management';
-import { ResourcesSkeleton } from '../admin/modules/resources';
-import { PublicationsSkeleton } from '../admin/modules/publications';
-import { ComplianceSkeleton } from '../admin/modules/compliance';
-import { CommunicationSkeleton } from '../admin/modules/communication';
-import { NewsletterSkeleton, useNewsletterCampaignProcessor } from '../admin/modules/newsletter';
-import { SocialMediaSkeleton } from '../admin/modules/social-media';
-import { ReportingSkeleton } from '../admin/modules/reporting';
-import { CalendarSkeleton } from '../admin/modules/calendar';
-import { SubmissionsSkeleton } from '../admin/modules/submissions';
-import { NotesSkeleton } from '../admin/modules/notes';
-import { AIManagementSkeleton } from '../admin/modules/ai-management';
-import { IssuesSkeleton } from '../admin/modules/issues';
+import { PublicationsSkeleton } from '../admin/modules/publications/shell';
+import { TasksSkeleton } from '../admin/modules/tasks/shell';
+import { ClientManagementSkeleton } from '../admin/modules/client-management/shell';
+import { NewsletterSkeleton } from '../admin/modules/newsletter/shell';
+import { SocialMediaModule, SocialMediaSkeleton } from '../admin/modules/social-media/shell';
+import { IssuesModule, IssuesSkeleton } from '../admin/modules/issues/shell';
+import { EsignModule, EsignSkeleton } from '../admin/modules/esign/shell';
+import { DashboardSkeleton } from '../admin/modules/dashboard/shell';
+import { ApplicationsSkeleton } from '../admin/modules/applications/shell';
+import { PersonnelSkeleton } from '../admin/modules/personnel/shell';
+import { AdviceEngineSkeleton } from '../admin/modules/advice-engine/shell';
+import { ProductManagementSkeleton } from '../admin/modules/product-management/shell';
+import { ResourcesSkeleton } from '../admin/modules/resources/shell';
+import { ComplianceSkeleton } from '../admin/modules/compliance/shell';
+import { CommunicationSkeleton } from '../admin/modules/communication/shell';
+import { ReportingSkeleton } from '../admin/modules/reporting/shell';
+import { CalendarSkeleton } from '../admin/modules/calendar/shell';
+import { SubmissionsSkeleton } from '../admin/modules/submissions/shell';
+import { NotesSkeleton } from '../admin/modules/notes/shell';
+import { AIManagementSkeleton } from '../admin/modules/ai-management/shell';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS
-// Each module is only loaded when the user navigates to it, keeping the
-// initial bundle lean. The skeletons above provide structural continuity.
+// Each module is only loaded when the user navigates to it (or when its
+// sidebar item is hovered — see moduleLoaders.ts). The skeletons above provide
+// structural continuity.
 // ============================================================================
 
 const DashboardModule = React.lazy(() =>
@@ -140,18 +139,9 @@ export function AdminDashboardPage() {
   const handleModuleChange = useCallback(
     (module: string) => {
       const applyModuleChange = () => {
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev);
-            if (module === 'dashboard') {
-              next.delete('module');
-            } else {
-              next.set('module', module);
-            }
-            return next;
-          },
-          { replace: true },
-        );
+        // A fresh address bar: deep-link params belong to the module they
+        // were opened in (see moduleSearchParams).
+        setSearchParams(moduleSearchParams(module), { replace: true });
 
         if (module !== 'tasks') {
           setDeepLinkTaskId(null);
@@ -169,51 +159,13 @@ export function AdminDashboardPage() {
     [setSearchParams, unsavedChangesRegistry],
   );
 
-  // ── Background Processors ──
-  // These run at the AdminDashboardPage level (not inside PublicationsModule)
-  // so they stay active regardless of which admin tab is open.
-  // Previously they were only mounted when the Publications tab was active,
-  // which meant scheduled pipelines never fired unless someone was viewing
-  // that specific tab.
-
-  // Auto-publish scheduled articles every 5 minutes
-  useScheduledPublishProcessor({
-    onProcessed: (count) => {
-      toast.success(`${count} scheduled article${count === 1 ? '' : 's'} published automatically`);
-    },
-  });
-
-  // Trigger due auto-content pipelines every 15 minutes
-  useAutoContentProcessor({
-    onArticlesGenerated: (count, _pipelineNames) => {
-      toast.success(
-        `${count} article${count === 1 ? '' : 's'} auto-generated by content pipelines`,
-      );
-    },
-  });
-
-  // Best-effort accelerator only. Cron is the authoritative delivery driver.
-  useArticleNotificationProcessor();
-
-  // Same doctrine for newsletter campaign delivery.
-  useNewsletterCampaignProcessor();
-
-  // Send overdue task digest every 24 hours
-  useOverdueDigestProcessor({
-    onDigestSent: (count) => {
-      toast.success(`Overdue task digest sent with ${count} overdue task${count === 1 ? '' : 's'}`);
-    },
-  });
-
-  // Run maintenance cron job every 24 hours
-  useMaintenanceCronProcessor({
-    onClientCleanupRan: () => {
-      toast.success('Daily client data maintenance completed automatically');
-    },
-    onKvCleanupRan: () => {
-      toast.success('Daily KV store cleanup completed automatically');
-    },
-  });
+  // ── No background jobs here ──
+  // Scheduled publishing, auto-content, article and newsletter delivery, the
+  // overdue-task digest and data maintenance all run from pg_cron on the
+  // server (docs/runbooks/scheduled-jobs.md). They used to be pollers mounted
+  // on this page as well, so every open admin tab spent its first minute
+  // firing them and kept a timer running for each. Do not bring one back:
+  // a job that must run belongs in a cron job, not in whoever has a tab open.
 
   const renderModule = () => {
     switch (activeModule) {

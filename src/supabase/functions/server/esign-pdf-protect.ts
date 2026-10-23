@@ -29,7 +29,14 @@
  * tick with "Signature is valid" out of the box.
  */
 
-import forge from 'npm:node-forge@1.3.1';
+// 1.4.0, not 1.3.1: 1.3.1 carried seven advisories that 1.4.0 fixes, among
+// them two DoS bugs (unbounded ASN.1 recursion, an infinite loop in
+// BigInteger.modInverse) on exactly the paths used here — RSA key generation
+// and parsing the PKCS#12 handed to P12Signer. The one advisory left on 1.4.0,
+// GHSA-86w9-cpqp-85rv, is in RSA signature VERIFICATION, which this module
+// never performs (it only creates signatures); see the npm-audit floor note in
+// .github/workflows/quality-check.yml and quality/accepted-advisories.json.
+import forge from 'npm:node-forge@1.4.0';
 import { SignPdf } from 'npm:@signpdf/signpdf';
 import { P12Signer } from 'npm:@signpdf/signer-p12';
 import { pdflibAddPlaceholder } from 'npm:@signpdf/placeholder-pdf-lib';
@@ -110,11 +117,11 @@ function generateP12(passphrase: string): {
 
   const attrs = [
     { shortName: 'CN', value: 'Navigate Wealth E-Signature Platform' },
-    { shortName: 'O', value: 'Navigate Wealth (Pty) Ltd' },
+    { shortName: 'O', value: 'Wealthfront (Pty) Ltd t/a Navigate Wealth' },
     { shortName: 'OU', value: 'E-Signature Services' },
     { shortName: 'C', value: 'ZA' },
-    { shortName: 'ST', value: 'Western Cape' },
-    { shortName: 'L', value: 'Cape Town' },
+    { shortName: 'ST', value: 'Gauteng' },
+    { shortName: 'L', value: 'Pretoria' },
   ];
 
   cert.setSubject(attrs);
@@ -203,7 +210,7 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
     }
   } catch (err) {
     log.warn('get_esign_platform_cert threw — falling back to KV', {
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrMsg(err),
     });
   }
 
@@ -289,7 +296,7 @@ async function getOrCreatePlatformP12(): Promise<{ p12Buffer: Buffer; passphrase
       }
     } catch (err) {
       log.warn('Could not persist the new platform certificate to Vault', {
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrMsg(err),
       });
     }
 
@@ -331,7 +338,7 @@ export async function signAndProtectPdf(
   const {
     reason = 'Document electronically signed and sealed via Navigate Wealth',
     contactInfo = 'Navigate Wealth E-Signature Platform',
-    location = 'Cape Town, South Africa',
+    location = 'Pretoria, South Africa',
     envelopeId,
     envelopeTitle,
   } = options;

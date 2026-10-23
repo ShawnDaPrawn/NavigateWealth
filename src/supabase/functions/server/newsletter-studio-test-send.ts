@@ -20,6 +20,7 @@ import { buildPdfAttachment } from './newsletter-studio-attachment.ts';
 import { signedNewsletterPdfUrl } from './newsletter-studio-storage.ts';
 import { newsletterCampaigns } from './repositories/newsletter-studio-repository.ts';
 import { NotFoundError, ValidationError } from './error.middleware.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
 
 /** A test link should outlive the admin's inbox triage, not just one hour. */
 export const TEST_READ_URL_TTL_SECONDS = 7 * 24 * 3600;
@@ -78,7 +79,7 @@ export async function sendCampaignTestEmails(
       outcomes.push({
         email,
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
     }
   }

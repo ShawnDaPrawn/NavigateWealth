@@ -1,43 +1,30 @@
 /**
  * Opens the correct admin FNA wizard at Step 2 after accepting a client intake.
  *
- * Every wizard takes the same props (FNAWizardProps), so the hand-off treats
- * all six domains identically.
+ * The wizard comes from the FNA registry, like every other place that opens
+ * one, so the hand-off treats all six domains identically.
+ *
+ * Accepting an intake made a draft FNA from the client's answers
+ * (`linkedFnaId`). Publishing from the wizard creates the published FNA, so the
+ * draft has served its purpose: it is removed before the adviser lands on the
+ * FNA list, which would otherwise show the leftover draft beside the published
+ * FNA.
  */
 
-import { Suspense, type ComponentType } from 'react';
+import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
-import type { FnaIntakeDomain } from '../../../../../services/fna-intake-api';
-import type { FNAWizardProps } from '../../fna';
-import { RiskPlanningFNAWizard as LazyRiskWizard } from '../../risk-planning-fna';
-import { MedicalFNAWizard as LazyMedicalWizard } from '../../medical-fna';
-import { RetirementFNAWizard as LazyRetirementWizard } from '../../retirement-fna';
-import { TaxPlanningFNAWizard as LazyTaxWizard } from '../../tax-planning-fna';
-import { InvestmentINAWizard as LazyInvestmentWizard } from '../../investment-ina';
-import { EstatePlanningFNAWizard as LazyEstateWizard } from '../../estate-planning-fna';
+import { FNA_POLICY_CATEGORY } from '../../fna';
+import { getFNAConfig } from '../../../profile-sections/fna-config';
+import { removeIntakeDraft, type IntakeHandoffState } from './intakeHandoff';
 
-export interface IntakeHandoffState {
-  clientId: string;
-  clientName?: string;
-  domain: FnaIntakeDomain;
-  linkedFnaId: string;
-  initialStep: number;
-  inputs: Record<string, unknown>;
-}
+export type { IntakeHandoffState };
 
 interface IntakeWizardHandoffProps {
   handoff: IntakeHandoffState | null;
   onClose: () => void;
+  /** Called with the published FNA's id, so the caller can land on it. */
+  onFNAComplete?: (fnaId: string, handoff: IntakeHandoffState) => void;
 }
-
-const WIZARDS: Record<FnaIntakeDomain, ComponentType<FNAWizardProps>> = {
-  risk: LazyRiskWizard,
-  medical: LazyMedicalWizard,
-  retirement: LazyRetirementWizard,
-  tax: LazyTaxWizard,
-  investment: LazyInvestmentWizard,
-  estate: LazyEstateWizard,
-};
 
 function WizardFallback() {
   return (
@@ -48,21 +35,28 @@ function WizardFallback() {
   );
 }
 
-export function IntakeWizardHandoff({ handoff, onClose }: IntakeWizardHandoffProps) {
+export function IntakeWizardHandoff({ handoff, onClose, onFNAComplete }: IntakeWizardHandoffProps) {
   if (!handoff) return null;
 
-  const { clientId, clientName, domain, inputs, initialStep } = handoff;
-  const Wizard = WIZARDS[domain];
+  const config = getFNAConfig(FNA_POLICY_CATEGORY[handoff.domain]);
+  if (!config) return null;
+  const { Wizard } = config;
+
+  const handlePublished = async (fnaId: string) => {
+    await removeIntakeDraft(config, handoff, fnaId);
+    onFNAComplete?.(fnaId, handoff);
+  };
 
   return (
     <Suspense fallback={<WizardFallback />}>
       <Wizard
         open
         onClose={onClose}
-        clientId={clientId}
-        clientName={clientName}
-        startAtStep={initialStep}
-        intakePrefill={inputs}
+        clientId={handoff.clientId}
+        clientName={handoff.clientName}
+        startAtStep={handoff.initialStep}
+        intakePrefill={handoff.inputs}
+        onFNAComplete={(fnaId) => void handlePublished(fnaId)}
       />
     </Suspense>
   );

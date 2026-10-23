@@ -20,6 +20,7 @@ import {
   libertyLogo,
   momentumLogo,
   oldMutualLogo,
+  profinLogo,
   sanlamLogo,
   stanlibLogo,
   sygniaLogo,
@@ -94,8 +95,10 @@ const ESTATE_PROVIDERS: QuoteProvider[] = [
   { id: 'ew-serfontein', name: 'EW Serfontein & Associates', logo: ewSerfonteinLogo },
 ];
 
-// Tax planning is in-house — no external provider logos
-const TAX_PROVIDERS: QuoteProvider[] = [];
+// Tax work is done in partnership with Profin Accounting.
+const TAX_PROVIDERS: QuoteProvider[] = [
+  { id: 'profin', name: 'Profin Accounting', logo: profinLogo },
+];
 
 // ── Service configurations ────────────────────────────────────────────────────
 
@@ -108,7 +111,7 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     description: 'Life cover, disability, severe illness & income protection',
     topicChips: ['Life cover', 'Disability', 'Income protection', 'Severe illness'],
     heroDescription:
-      "Protect what matters most with comprehensive risk management solutions. Our independent advisers compare options from South Africa's leading insurers to find the best cover for your unique needs and budget.",
+      'Protect what matters most with comprehensive risk management solutions. We independently compare options from the insurers we work with to find the cover that suits your needs and budget.',
     providers: RISK_PROVIDERS,
     accentColor: '#6d28d9',
     productFields: [
@@ -146,8 +149,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'monthlyIncome',
         label: 'Gross monthly income (R)',
-        type: 'text',
-        placeholder: 'e.g. 45 000',
+        type: 'currency',
+        placeholder: '45,000',
         required: false,
       },
     ],
@@ -200,8 +203,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'monthlyBudget',
         label: 'Monthly budget (R)',
-        type: 'text',
-        placeholder: 'e.g. 5 000',
+        type: 'currency',
+        placeholder: '5,000',
         required: false,
       },
     ],
@@ -235,15 +238,15 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'monthlyContribution',
         label: 'Monthly contribution budget (R)',
-        type: 'text',
-        placeholder: 'e.g. 5 000',
+        type: 'currency',
+        placeholder: '5,000',
         required: false,
       },
       {
         id: 'existingFunds',
         label: 'Existing retirement savings (R)',
-        type: 'text',
-        placeholder: 'e.g. 500 000',
+        type: 'currency',
+        placeholder: '500,000',
         required: false,
       },
     ],
@@ -256,7 +259,7 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     description: 'Unit trusts, offshore, tax-free savings & more',
     topicChips: ['Unit trusts', 'Tax-free savings', 'Lump sums', 'Offshore investing'],
     heroDescription:
-      'Grow your wealth with professional investment management. Our experienced advisers create diversified strategies aligned with your risk tolerance, time horizon, and financial goals.',
+      'Grow your wealth with professional investment management. We create diversified strategies aligned with your risk tolerance, time horizon, and financial goals.',
     providers: INVESTMENT_PROVIDERS,
     accentColor: '#7c3aed',
     productFields: [
@@ -276,8 +279,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'investmentAmount',
         label: 'Investment amount (R)',
-        type: 'text',
-        placeholder: 'e.g. 100 000',
+        type: 'currency',
+        placeholder: '100,000',
         required: true,
       },
       {
@@ -368,7 +371,7 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
     description: 'Tax optimisation, structuring & compliance',
     topicChips: ['Tax returns', 'Provisional tax', 'CGT planning', 'Estate duty & structuring'],
     heroDescription:
-      'Minimise your tax liability and maximise your wealth with strategic tax planning. Our qualified professionals help you navigate complex tax regulations and identify opportunities for tax-efficient investing.',
+      'Minimise your tax liability and maximise your wealth with strategic tax planning, in partnership with Profin Accounting, to navigate complex tax regulations and identify opportunities for tax-efficient investing.',
     providers: TAX_PROVIDERS,
     accentColor: '#0284c7',
     productFields: [
@@ -387,8 +390,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'annualIncome',
         label: 'Estimated annual income (R)',
-        type: 'text',
-        placeholder: 'e.g. 750 000',
+        type: 'currency',
+        placeholder: '750,000',
         required: true,
       },
       {
@@ -457,8 +460,8 @@ export const QUOTE_SERVICES: QuoteServiceConfig[] = [
       {
         id: 'estimatedEstateValue',
         label: 'Estimated estate value (R)',
-        type: 'text',
-        placeholder: 'e.g. 5 000 000',
+        type: 'currency',
+        placeholder: '5,000,000',
         required: false,
       },
       {

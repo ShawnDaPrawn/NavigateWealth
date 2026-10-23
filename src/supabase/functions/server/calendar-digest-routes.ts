@@ -29,7 +29,7 @@ import { requireCronAuth } from './cron-auth.ts';
 import { withLinkedClient } from './calendar-client-link.ts';
 import { getAllClients } from './communication-business-logic.ts';
 import type { CommunicationClient, SupabaseAdminClient } from './communication-types.ts';
-import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.tsx';
+import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 
 const app = new Hono();
 const log = createModuleLogger('calendar-digest');

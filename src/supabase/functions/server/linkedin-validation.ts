@@ -6,7 +6,7 @@
  * @module linkedin/validation
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // ============================================================================
 // OAuth

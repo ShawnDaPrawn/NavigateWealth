@@ -1,10 +1,10 @@
 /**
  * Publications Module Validation Schemas
  *
- * P1 — Zod validation for publications-routes.tsx
+ * P1 — Zod validation for publications-routes.ts
  */
 
-import { z } from 'npm:zod';
+import { z } from 'npm:zod@4.6.5';
 
 // --- Categories ---
 
@@ -69,6 +69,21 @@ export const ArticleDeliveryRetrySchema = z.object({
   source: z.enum(['publish', 'reshare']).optional().default('publish'),
   /** When true (publish only), finalize stuck jobs and re-send to the full subscriber list, then queue failures for retry. */
   blastAll: z.boolean().optional().default(false),
+});
+
+/** Most ids one bulk delete or archive request may carry; the client splits larger selections. */
+export const MAX_BULK_ARTICLE_IDS = 200;
+
+/**
+ * Body of `POST /articles/bulk-delete` and `POST /articles/bulk-archive`.
+ * Ids are restricted to the shape `generateId()` produces. Each one becomes a
+ * key suffix (`article:<id>`), so a `:` or `%` must never get through.
+ */
+export const BulkArticleIdsSchema = z.object({
+  ids: z
+    .array(z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, 'Invalid article id'))
+    .min(1)
+    .max(MAX_BULK_ARTICLE_IDS),
 });
 
 export const ArticleEmailEngagementEventSchema = z.object({

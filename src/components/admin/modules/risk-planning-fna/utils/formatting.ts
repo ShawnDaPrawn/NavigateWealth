@@ -7,14 +7,7 @@
  * Uses manual formatting for consistent comma-separated thousands
  * and dot-separated decimals across all platforms.
  */
-export function formatCurrency(value: number): string {
-  if (value === undefined || value === null || isNaN(value)) return 'R0';
-  const isNeg = value < 0;
-  const abs = Math.abs(value);
-  const intPart = Math.round(abs).toString();
-  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${isNeg ? '-' : ''}R${withCommas}`;
-}
+export { formatCurrencyWhole as formatCurrency } from '../../../../../utils/currencyFormatter';
 
 /**
  * Format number as percentage

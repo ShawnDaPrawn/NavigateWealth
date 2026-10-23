@@ -9,7 +9,8 @@
 import { RotateCcw } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import { Input } from '../../../../ui/input';
+import { CurrencyInputField } from '../../../../ui/currency-input';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import {
@@ -71,25 +72,26 @@ export function FNAAssumptionOverrides({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
-                      {row.format === 'currency' && (
-                        <span className="text-muted-foreground">R</span>
-                      )}
-                      <Input
-                        id={inputId}
-                        type="number"
-                        step={row.format === 'currency' ? 1000 : 0.1}
-                        className="text-right w-36"
-                        value={toDisplay(row.value, row.format)}
-                        onChange={(e) => {
-                          const parsed = parseFloat(e.target.value);
-                          onChange(
-                            row.id,
-                            fromDisplay(Number.isNaN(parsed) ? 0 : parsed, row.format),
-                          );
-                        }}
-                      />
-                      {row.format !== 'currency' && (
-                        <span className="text-muted-foreground">%</span>
+                      {row.format === 'currency' ? (
+                        <div className="w-40">
+                          <CurrencyInputField
+                            id={inputId}
+                            className="text-right"
+                            value={row.value}
+                            onValueChange={(v) => onChange(row.id, v ?? 0)}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <NumberInputField
+                            id={inputId}
+                            decimals={2}
+                            className="text-right w-36"
+                            value={toDisplay(row.value, row.format)}
+                            onValueChange={(v) => onChange(row.id, fromDisplay(v ?? 0, row.format))}
+                          />
+                          <span className="text-muted-foreground">%</span>
+                        </>
                       )}
                     </div>
                   </td>

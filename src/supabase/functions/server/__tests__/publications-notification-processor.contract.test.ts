@@ -82,8 +82,7 @@ const storedCampaign = (campaignId: string) =>
 
 const processorState = () =>
   kvStore.get(ARTICLE_NOTIFICATION_PROCESSOR_STATE_KEY) as
-    | ArticleNotificationProcessorState
-    | undefined;
+    ArticleNotificationProcessorState | undefined;
 
 const queuePublishJob = async (count: number, article = ARTICLE) => {
   publish(article);

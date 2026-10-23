@@ -3,13 +3,15 @@ import { TaxPlanningFnaAPI, TaxPlanningApiService } from '../api';
 
 const mockApiGet = vi.fn();
 const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
 
 vi.mock('../../../../../utils/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
-    put: vi.fn(),
-    delete: vi.fn(),
+    put: (...args: unknown[]) => mockApiPut(...args),
+    delete: (...args: unknown[]) => mockApiDelete(...args),
   },
   APIError: class APIError extends Error {
     statusCode: number;
@@ -133,23 +135,44 @@ describe('TaxPlanningFnaAPI', () => {
     });
   });
 
+  // These were no-op stubs, so "Delete" on a Tax FNA reported success and
+  // deleted nothing. They now call the server.
   describe('deleteSession', () => {
-    it('resolves without calling API (stub)', async () => {
-      await expect(TaxPlanningFnaAPI.deleteSession('tp-001')).resolves.toBeUndefined();
-      expect(mockApiPost).not.toHaveBeenCalled();
-      expect(mockApiGet).not.toHaveBeenCalled();
+    it('deletes the session on the server', async () => {
+      mockApiDelete.mockResolvedValue({ success: true });
+      await TaxPlanningFnaAPI.deleteSession('tp-001');
+      expect(mockApiDelete).toHaveBeenCalledWith('/tax-planning-fna/tp-001');
+    });
+
+    it('names the client for a session whose id does not', async () => {
+      mockApiDelete.mockResolvedValue({ success: true });
+      await TaxPlanningFnaAPI.deleteSession('uuid-1', 'client-001');
+      expect(mockApiDelete).toHaveBeenCalledWith('/tax-planning-fna/uuid-1?clientId=client-001');
+    });
+
+    it('surfaces a failure instead of reporting success', async () => {
+      mockApiDelete.mockRejectedValue(new Error('Not found'));
+      await expect(TaxPlanningFnaAPI.deleteSession('tp-001')).rejects.toThrow('Not found');
     });
   });
 
   describe('publishSession', () => {
-    it('resolves without calling API (legacy stub)', async () => {
-      await expect(TaxPlanningFnaAPI.publishSession('tp-001')).resolves.toBeUndefined();
+    it('publishes the session on the server', async () => {
+      mockApiPut.mockResolvedValue({ success: true, data: { id: 'tp-001', status: 'published' } });
+      await expect(TaxPlanningFnaAPI.publishSession('tp-001')).resolves.toMatchObject({
+        status: 'published',
+      });
+      expect(mockApiPut).toHaveBeenCalledWith('/tax-planning-fna/tp-001/publish');
     });
   });
 
   describe('unpublishSession', () => {
-    it('resolves without calling API (not yet implemented stub)', async () => {
-      await expect(TaxPlanningFnaAPI.unpublishSession('tp-001')).resolves.toBeUndefined();
+    it('returns the session to a draft on the server', async () => {
+      mockApiPut.mockResolvedValue({ success: true, data: { id: 'tp-001', status: 'draft' } });
+      await TaxPlanningFnaAPI.unpublishSession('tp-001', 'client-001');
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/tax-planning-fna/tp-001/unpublish?clientId=client-001',
+      );
     });
   });
 

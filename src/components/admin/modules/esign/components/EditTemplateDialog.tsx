@@ -16,6 +16,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
+import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Badge } from '../../../../ui/badge';
 import {
@@ -227,13 +228,10 @@ export function EditTemplateDialog({
           {/* Default Expiry */}
           <div className="space-y-1.5">
             <Label htmlFor="tpl-expiry">Default Expiry (Days)</Label>
-            <Input
+            <NumberInputField
               id="tpl-expiry"
-              type="number"
-              min={1}
-              max={365}
               value={defaultExpiryDays}
-              onChange={(e) => setDefaultExpiryDays(parseInt(e.target.value) || 30)}
+              onValueChange={(v) => setDefaultExpiryDays(v || 30)}
             />
           </div>
 

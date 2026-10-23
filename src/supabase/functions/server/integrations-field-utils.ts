@@ -2,12 +2,12 @@
  * Integration field / schema / value utilities (Phase 5 decomposition).
  * =====================================================================
  *
- * Extracted verbatim from integrations.tsx. Schema lookup + policy-number
+ * Extracted verbatim from integrations.ts. Schema lookup + policy-number
  * resolution + field-value coercion + portal-meaning resolution, plus the tiny
  * value/date predicates (isBlank/valuesDiffer/isValidDate). Shared by the
  * spreadsheet-sync routes and the portal extraction path, so it lives in a
  * common module both import from (vs a circular import back into
- * integrations.tsx). Behaviour-preserving move.
+ * integrations.ts). Behaviour-preserving move.
  */
 import * as kv from './kv_store.tsx';
 import { DEFAULT_SCHEMAS } from './default-schemas.ts';

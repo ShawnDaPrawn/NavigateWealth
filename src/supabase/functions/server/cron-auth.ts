@@ -39,6 +39,8 @@ import { type Context, type Next } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { constantTimeEqual } from './crypto-utils.ts';
 import { createModuleLogger } from './stderr-logger.ts';
+import { getErrMsg } from './shared-logger-utils.ts';
+import { stripBearerPrefix } from './bearer-token.ts';
 
 const log = createModuleLogger('cron-auth');
 
@@ -81,12 +83,12 @@ export async function isAuthorizedCronRequest(c: CronAuthContext): Promise<boole
       }
     } catch (error) {
       log.warn('verify_cron_auth_token threw', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrMsg(error),
       });
     }
   }
 
-  const bearer = (c.req.header('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const bearer = stripBearerPrefix(c.req.header('Authorization') || '').trim();
   if (!bearer) return false;
 
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';

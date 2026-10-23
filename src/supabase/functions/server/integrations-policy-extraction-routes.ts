@@ -2,7 +2,7 @@
  * Policy-extraction and provider-terminology routes (Phase 5 Slice F).
  * =====================================================================
  *
- * Extracted verbatim from integrations.tsx.
+ * Extracted verbatim from integrations.ts.
  *
  * ACCESS: every route is requireAdmin. They were requireAuth, which any
  * self-registered client passes, and they take a clientId from the caller:
@@ -300,8 +300,7 @@ app.get('/policy-extraction/compare', requireAdmin, async (c) => {
 
     // Resolve right entry — 'current' means the live extraction's stored snapshot
     let rightSnapshot:
-      | Array<{ k: string; f: string; n: string; v: unknown; c: number }>
-      | undefined;
+      Array<{ k: string; f: string; n: string; v: unknown; c: number }> | undefined;
     let rightMeta: { confidence: number; extractedAt: string } | undefined;
 
     if (rightId === 'current') {

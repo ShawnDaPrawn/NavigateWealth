@@ -23,6 +23,26 @@ export const clientApi = {
     fetchClientDirectory<ApiUser>(params),
 
   /**
+   * One client's current entry: the same shape as one GET /all-users element.
+   * Resolves null only when the server says the client is not listed
+   * (CLIENT_NOT_FOUND). Any other failure throws, a bare 404 included: during
+   * a deploy the page can be newer than the server, and a missing route must
+   * read as "could not load", never as "this client does not exist".
+   */
+  getClientRecord: async (userId: string): Promise<ApiUser | null> => {
+    try {
+      const response = await api.get<{ success: boolean; user?: ApiUser }>(
+        ENDPOINTS.CLIENT_RECORD(userId),
+      );
+      if (!response.user) throw new Error('Client record response had no user');
+      return response.user;
+    } catch (error) {
+      if (error instanceof APIError && error.code === 'CLIENT_NOT_FOUND') return null;
+      throw error;
+    }
+  },
+
+  /**
    * Fetch client personal profile
    * Returns { success: false, data: null } for clients without a profile (404).
    * This is a valid state — not all clients have profiles yet.
@@ -41,6 +61,30 @@ export const clientApi = {
       logger.error('Failed to fetch client profile', error, { userId });
       throw error;
     }
+  },
+
+  /** Signed URL for the client's profile photo, or null when none is set. */
+  getClientAvatarUrl: async (userId: string): Promise<string | null> => {
+    const result = await api.get<{ url: string | null }>(
+      `/profile/avatar/${encodeURIComponent(userId)}`,
+    );
+    return result.url;
+  },
+
+  /** Set or replace the client's profile photo. Returns the new signed URL. */
+  uploadClientAvatar: async (userId: string, file: Blob): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file, 'avatar');
+    const result = await api.post<{ url: string | null }>(
+      `/profile/avatar/${encodeURIComponent(userId)}`,
+      formData,
+    );
+    return result.url;
+  },
+
+  /** Remove the client's profile photo. */
+  deleteClientAvatar: async (userId: string): Promise<void> => {
+    await api.delete(`/profile/avatar/${encodeURIComponent(userId)}`);
   },
 
   /**

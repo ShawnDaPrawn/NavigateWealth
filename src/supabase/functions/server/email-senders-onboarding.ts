@@ -2,8 +2,8 @@
  * email-senders-onboarding.ts — application / client-onboarding / admin notification emails (Phase 5c).
  * ============================================================================
  *
- * Extracted verbatim from email-service.tsx; the SendGrid transport + template
- * engine live in email-core.ts. email-service.tsx re-exports this module so the
+ * Extracted verbatim from email-service.ts; the SendGrid transport + template
+ * engine live in email-core.ts. email-service.ts re-exports this module so the
  * email-service.ts proxy surface is unchanged.
  */
 import { createModuleLogger } from './stderr-logger.ts';

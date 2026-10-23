@@ -3,27 +3,24 @@ import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { useAuth } from '../auth/AuthContext';
 import {
   User,
   Phone,
   Mail,
-  Star,
   Clock,
   Award,
-  Users,
-  CheckCircle,
   UserCheck,
   MapPin,
-  GraduationCap,
   Globe,
   Briefcase,
   Info,
-  Handshake,
 } from 'lucide-react';
 
-import { formatDate, formatRelativeDate } from './myAdviserPageShared';
+import type { AdviserCommunication, AdviserMeeting } from './myAdviserPageShared';
+import { COMPANY, FOUNDER } from '@/config/companyFacts';
+import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { AdviserQuickActionDialogs } from './AdviserQuickActionDialogs';
 import { AdviserContentTabs } from './AdviserContentTabs';
 
@@ -36,165 +33,37 @@ export function MyAdviserPage() {
   const [messageContent, setMessageContent] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Mock data for the adviser - will be empty if no adviser is assigned
-  const adviserData = user?.adviserAssigned
-    ? {
-        name: 'Sarah Johnson',
-        title: 'Senior Financial Planner',
-        photo:
-          'https://images.unsplash.com/photo-1494790108755-2616b2e07c7e?w=150&h=150&fit=crop&crop=face',
-        email: 'sarah.johnson@navigatewealth.co.za',
-        phone: '+27 11 555 0123',
-        directLine: '+27 11 555 0456',
-        location: 'Cape Town Office',
-        yearsExperience: 12,
-        clientsServed: 150,
-        qualifications: ['CFP®', 'BCom Finance (UCT)', 'FPSA®', 'CFA Level II'],
-        specializations: [
-          'Retirement Planning',
-          'Tax Optimization',
-          'Estate Planning',
-          'Investment Portfolio Management',
-          'Risk Management',
-          'Insurance Planning',
-        ],
-        languages: ['English', 'Afrikaans', 'Xhosa'],
-        rating: 4.9,
-        reviewCount: 89,
-        officeHours: 'Monday - Friday, 8:00 AM - 5:00 PM',
-        bio: 'Sarah is a seasoned financial planner with over 12 years of experience helping South African families achieve their financial goals. She specializes in comprehensive financial planning with a focus on retirement preparation and tax-efficient investment strategies. Sarah holds the prestigious CFP® designation and is committed to providing transparent, client-focused financial advice. She has helped over 150 clients navigate complex financial decisions and build sustainable wealth.',
-        lastContact: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        nextScheduledMeeting: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        totalMeetings: 18,
-        averageMeetingDuration: '45 minutes',
-        linkedinUrl: 'https://linkedin.com/in/sarah-johnson-cfp',
-        joinedDate: new Date('2023-06-15'),
-        clientSatisfactionScore: 4.9,
-        responseTime: '< 2 hours',
-      }
-    : {
-        name: '',
-        title: '',
-        photo: '',
-        email: '',
-        phone: '',
-        directLine: '',
-        location: '',
-        yearsExperience: 0,
-        clientsServed: 0,
-        qualifications: [],
-        specializations: [],
-        languages: [],
-        rating: 0,
-        reviewCount: 0,
-        officeHours: '',
-        bio: '',
-        lastContact: null,
-        nextScheduledMeeting: null,
-        totalMeetings: 0,
-        averageMeetingDuration: '',
-        linkedinUrl: '',
-        joinedDate: null,
-        clientSatisfactionScore: 0,
-        responseTime: '',
-      };
+  // Navigate Wealth is founder-led: an assigned client's adviser is the
+  // founder. Every detail comes from companyFacts — this page used to show a
+  // made-up adviser profile (with invented credentials, ratings, an office the
+  // firm does not have, and mock meetings and messages) to every approved client.
+  const isAdviserAssigned = Boolean(user?.adviserAssigned);
+  const adviserData = {
+    name: FOUNDER.name,
+    title: `${FOUNDER.title}, ${COMPANY.tradingName}`,
+    photo: getOptimizedImageUrl(FOUNDER.imageKey, 480, 'webp'),
+    email: COMPANY.email,
+    phone: COMPANY.phone.display,
+    phoneHref: COMPANY.phone.tel,
+    location: COMPANY.office,
+    specializations: [
+      'Financial Planning',
+      'Retirement Planning',
+      'Investment Management',
+      'Risk Management',
+      'Estate Planning',
+      'Medical Aid',
+    ],
+    languages: [...COMPANY.languages],
+    officeHours: COMPANY.officeHours.label,
+    bio: FOUNDER.note[1],
+  };
 
-  const isAdviserAssigned = user?.adviserAssigned;
-
-  // Mock meeting history data - expanded for full experience
-  const meetingHistory = isAdviserAssigned
-    ? [
-        {
-          id: 1,
-          date: new Date('2024-12-15'),
-          type: 'Annual Portfolio Review',
-          duration: '60 minutes',
-          status: 'completed',
-          summary:
-            'Comprehensive review of portfolio performance, rebalancing recommendations, and 2025 strategy planning. Discussed market outlook and risk tolerance reassessment.',
-          documents: [
-            { name: 'Portfolio Performance Report Q4 2024.pdf', size: '2.4 MB', type: 'report' },
-            {
-              name: 'Investment Recommendations 2025.pdf',
-              size: '1.8 MB',
-              type: 'recommendations',
-            },
-            { name: 'Meeting Notes - Annual Review.pdf', size: '0.9 MB', type: 'notes' },
-          ],
-          participants: ['Sarah Johnson', 'Michael Chen (Operations)', 'John Smith (Client)'],
-          objectives: [
-            'Review portfolio performance',
-            'Discuss rebalancing strategy',
-            'Plan for 2025 goals',
-            'Assess risk tolerance',
-          ],
-          outcomes: [
-            'Approved portfolio rebalancing',
-            'Increased RA contribution by R2,000',
-            'Set up tax-loss harvesting',
-            'Scheduled quarterly check-ins',
-          ],
-          meetingType: 'video_call',
-          rating: 5,
-        },
-        {
-          id: 2,
-          date: new Date('2024-11-20'),
-          type: 'Tax Planning Session',
-          duration: '45 minutes',
-          status: 'completed',
-          summary:
-            'Year-end tax planning strategies, retirement contribution optimization, and estate planning updates. Reviewed SARS submissions and tax certificates.',
-          documents: [
-            { name: 'Tax Planning Strategy 2024.pdf', size: '1.9 MB', type: 'strategy' },
-            { name: 'Estate Planning Updates.pdf', size: '2.1 MB', type: 'legal' },
-            { name: 'Tax Certificates 2024.pdf', size: '1.2 MB', type: 'certificates' },
-          ],
-          participants: ['Sarah Johnson', 'John Smith (Client)'],
-          objectives: [
-            'Optimize tax-deferred contributions',
-            'Review estate planning documents',
-            'Plan year-end strategies',
-            'Prepare SARS documentation',
-          ],
-          outcomes: [
-            'Maximized RA contributions',
-            'Updated will and trust documents',
-            'Implemented tax-loss harvesting',
-            'Prepared tax submission package',
-          ],
-          meetingType: 'in_person',
-          rating: 5,
-        },
-      ]
-    : [];
-
-  // Mock communication timeline data - expanded for full experience
-  const communicationHistory = isAdviserAssigned
-    ? [
-        {
-          id: 1,
-          date: new Date('2025-01-25'),
-          type: 'email',
-          subject: 'Market Update: January 2025 Economic Outlook',
-          summary:
-            'Monthly market commentary and economic outlook for the first quarter, including insights on rand strength and JSE performance.',
-          status: 'delivered',
-          attachments: ['Market Outlook Jan 2025.pdf', 'JSE Performance Summary.pdf'],
-          priority: 'normal',
-        },
-        {
-          id: 2,
-          date: new Date('2025-01-20'),
-          type: 'message',
-          subject: 'Tax Certificate Request Follow-up',
-          summary:
-            'Confirmation that tax certificates have been generated and are available for download in your secure portal.',
-          status: 'read',
-          priority: 'normal',
-        },
-      ]
-    : [];
+  // Meeting and message history will appear here once it is recorded against
+  // the client; until then the tabs show their empty states rather than
+  // invented meetings.
+  const meetingHistory: AdviserMeeting[] = [];
+  const communicationHistory: AdviserCommunication[] = [];
 
   // Generate time slots for next week
   const generateTimeSlots = () => {
@@ -207,7 +76,7 @@ export function MyAdviserPage() {
       const date = new Date(nextWeek);
       date.setDate(date.getDate() + i);
 
-      const times = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+      const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
       times.forEach((time) => {
         const slot = `${date.toLocaleDateString('en-ZA', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}`;
         slots.push(slot);
@@ -229,22 +98,33 @@ export function MyAdviserPage() {
     });
   };
 
+  // Requests go to the firm's mailbox through the client's own email app, so
+  // nothing claims to have been sent when it has not.
+  const openEmail = (subject: string, body: string) => {
+    window.location.href = `mailto:${COMPANY.email}?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
+  };
+
   const handleScheduleMeeting = () => {
     if (selectedTimeSlots.length === 3 && meetingPurpose) {
+      openEmail(
+        'Meeting request',
+        `Purpose: ${meetingPurpose}\n\nPreferred times:\n${selectedTimeSlots
+          .map((slot) => `- ${slot}`)
+          .join('\n')}`,
+      );
       setScheduleMeetingOpen(false);
       setSelectedTimeSlots([]);
       setMeetingPurpose('');
-      alert(
-        "Meeting request submitted! Sarah's PA will contact you within 24 hours to confirm the best time slot.",
-      );
     }
   };
 
   const handleSendMessage = () => {
     if (messageContent.trim()) {
+      openEmail('Message for my adviser', messageContent.trim());
       setMessageAdviserOpen(false);
       setMessageContent('');
-      alert('Message sent successfully! Sarah will respond within 24 hours.');
     }
   };
 
@@ -281,8 +161,8 @@ export function MyAdviserPage() {
                     <span className="text-sm font-medium">What happens next?</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    Our team is carefully matching you with the most suitable adviser based on your
-                    profile and needs. This typically takes 24-48 hours after account approval.
+                    We are setting up your adviser relationship. This typically takes 24–48 hours
+                    after account approval.
                   </p>
                 </div>
               </div>
@@ -314,49 +194,30 @@ export function MyAdviserPage() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h2 className="text-2xl font-bold text-black">{adviserData.name}</h2>
-                        <Badge className="bg-purple-100 text-purple-800">Primary Adviser</Badge>
-                        <Badge variant="outline" className="border-green-200 text-green-700">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Verified
-                        </Badge>
+                        <Badge className="bg-purple-100 text-purple-800">Your Adviser</Badge>
                       </div>
 
                       <p className="text-lg text-gray-700 mb-3">{adviserData.title}</p>
 
                       <div className="grid md:grid-cols-2 gap-4 mb-4">
                         <div className="flex items-center space-x-2">
-                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                          <span className="text-sm font-medium">{adviserData.rating}/5</span>
-                          <span className="text-sm text-gray-600">
-                            ({adviserData.reviewCount} reviews)
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Award className="h-4 w-4 text-purple-600" />
-                          <span className="text-sm text-gray-600">
-                            {adviserData.yearsExperience} years experience
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Users className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm text-gray-600">
-                            {adviserData.clientsServed}+ clients served
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
                           <MapPin className="h-4 w-4 text-gray-600" />
                           <span className="text-sm text-gray-600">{adviserData.location}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Clock className="h-4 w-4 text-orange-600" />
+                          <span className="text-sm text-gray-600">{adviserData.officeHours}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Globe className="h-4 w-4 text-green-600" />
                           <span className="text-sm text-gray-600">
-                            Response: {adviserData.responseTime}
+                            {adviserData.languages.join(' and ')}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Handshake className="h-4 w-4 text-green-600" />
+                          <Award className="h-4 w-4 text-purple-600" />
                           <span className="text-sm text-gray-600">
-                            Since {formatDate(adviserData.joinedDate)}
+                            FSCA-authorised FSP {COMPANY.fspNumber}
                           </span>
                         </div>
                       </div>
@@ -382,14 +243,7 @@ export function MyAdviserPage() {
                         <Phone className="h-4 w-4 text-purple-600" />
                         <div>
                           <p className="text-sm font-medium text-black">{adviserData.phone}</p>
-                          <p className="text-xs text-gray-500">Main line</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Phone className="h-4 w-4 text-green-600" />
-                        <div>
-                          <p className="text-sm font-medium text-black">{adviserData.directLine}</p>
-                          <p className="text-xs text-gray-500">Direct line</p>
+                          <p className="text-xs text-gray-500">Office line</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -433,9 +287,12 @@ export function MyAdviserPage() {
                     <Button
                       variant="outline"
                       className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                      asChild
                     >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Request Call Back
+                      <a href={adviserData.phoneHref}>
+                        <Phone className="h-4 w-4 mr-2" />
+                        Call the Office
+                      </a>
                     </Button>
                   </div>
                 </div>
@@ -448,18 +305,11 @@ export function MyAdviserPage() {
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <Card className="border-gray-200">
             <CardContent className="pt-6 text-center">
-              <GraduationCap className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-              <h3 className="font-medium text-black mb-2">Qualifications</h3>
+              <Award className="h-8 w-8 text-purple-600 mx-auto mb-3" />
+              <h3 className="font-medium text-black mb-2">Regulation</h3>
               <div className="space-y-1">
-                {isAdviserAssigned ? (
-                  adviserData.qualifications.map((qual, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {qual}
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-xs text-gray-500">Available once adviser is assigned</p>
-                )}
+                <p className="text-xs text-gray-600">FSCA-authorised</p>
+                <p className="text-xs text-gray-600">FSP {COMPANY.fspNumber}</p>
               </div>
             </CardContent>
           </Card>
@@ -510,23 +360,10 @@ export function MyAdviserPage() {
           <Card className="border-gray-200">
             <CardContent className="pt-6 text-center">
               <Clock className="h-8 w-8 text-orange-600 mx-auto mb-3" />
-              <h3 className="font-medium text-black mb-2">Meeting Stats</h3>
+              <h3 className="font-medium text-black mb-2">Office Hours</h3>
               <div className="space-y-1">
-                {isAdviserAssigned ? (
-                  <div className="contents">
-                    <p className="text-xs text-gray-600">
-                      {adviserData.totalMeetings} total meetings
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Avg. {adviserData.averageMeetingDuration}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Last: {formatRelativeDate(adviserData.lastContact)}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500">Available once adviser is assigned</p>
-                )}
+                <p className="text-xs text-gray-600">{adviserData.officeHours}</p>
+                <p className="text-xs text-gray-600">In person or online</p>
               </div>
             </CardContent>
           </Card>

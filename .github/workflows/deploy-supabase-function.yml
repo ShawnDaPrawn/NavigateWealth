@@ -52,10 +52,13 @@ jobs:
       # This rewrites the checkout in place. That is safe here and nowhere
       # else: this job only deploys, and the runner's checkout is discarded
       # afterwards. It must run AFTER checkout and BEFORE the deploy.
+      # Explicit rather than `node-version-file: .nvmrc`: on a rollback the
+      # checkout above is an older revision, whose .nvmrc may be missing or
+      # older. Keep it in step with .nvmrc by hand.
       - name: Setup Node.js for payload strip
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Shrink Edge Function payload (strip types and comments)
         env:
@@ -130,7 +133,7 @@ jobs:
         if: success()
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Blocking post-deploy smoke

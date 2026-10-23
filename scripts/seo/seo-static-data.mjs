@@ -139,32 +139,32 @@ export const publicSeoRoutes = [
   },
   {
     path: '/about',
-    lastmod: '2026-03-01',
+    lastmod: '2026-10-16',
     title: 'About Us | Navigate Wealth',
     description:
-      'Learn about Navigate Wealth — our mission, values and experienced team of independent financial advisors helping you achieve financial independence.',
+      'About Navigate Wealth, an independent, founder-led financial advisory practice (FSP 54606). Read a note from our founder, Shawn Francisco.',
     keywords:
-      'about navigate wealth, financial advisors team, independent financial planning, South Africa wealth management',
+      'about navigate wealth, founder-led financial advice, Shawn Francisco, independent financial planning, South Africa wealth management',
     ogType: 'website',
     schema: 'about',
   },
   {
     path: '/team',
-    lastmod: '2026-03-01',
-    title: 'Our Team | Meet the Advisors | Navigate Wealth',
+    lastmod: '2026-10-16',
+    title: 'Meet Our Founder | Navigate Wealth',
     description:
-      'Meet the experienced team of independent financial advisors at Navigate Wealth. Qualified professionals dedicated to your financial success across South Africa.',
+      'Meet Shawn Francisco, founder of Navigate Wealth — an independent, founder-led financial advisory practice authorised by the FSCA (FSP 54606).',
     keywords:
-      'Navigate Wealth team, financial advisors, certified financial planner, wealth management team, South Africa financial advisors',
+      'Navigate Wealth founder, Shawn Francisco, founder-led financial advice, independent financial advisor, South Africa',
     ogType: 'website',
     schema: 'webpage',
   },
   {
     path: '/contact',
-    lastmod: '2026-03-01',
+    lastmod: '2026-10-16',
     title: 'Contact Us | Navigate Wealth',
     description:
-      'Get in touch with Navigate Wealth for a free consultation. Our independent financial advisors are ready to help you plan your financial future.',
+      "Get in touch with Navigate Wealth for a free consultation. We're ready to help you plan your financial future.",
     keywords:
       'contact navigate wealth, financial advisor consultation, free consultation, South Africa financial planning',
     ogType: 'website',
@@ -196,12 +196,12 @@ export const publicSeoRoutes = [
   },
   {
     path: '/why-us',
-    lastmod: '2026-03-01',
+    lastmod: '2026-10-16',
     title: 'Why Choose Navigate Wealth | Independent Financial Advisory',
     description:
-      "Why Navigate Wealth is South Africa's trusted independent advisory: genuine independence, a personalised approach and long-term client relationships.",
+      'Why choose Navigate Wealth: genuinely independent financial advice in South Africa, a personal founder-led approach, and long-term client relationships.',
     keywords:
-      'why Navigate Wealth, independent financial advisor, best financial planner South Africa, trusted wealth management, personalised financial advice',
+      'why Navigate Wealth, independent financial advisor, founder-led financial advice, personalised financial advice, South Africa',
     ogType: 'website',
     schema: 'webpage',
   },
@@ -258,7 +258,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-07-01',
     title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
-      'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity from specialists.',
+      'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity through our estate planning partners.',
     keywords:
       'estate planning South Africa, wills, trusts, succession planning, estate duty, inheritance, business succession, Navigate Wealth',
     ogType: 'website',
@@ -272,7 +272,7 @@ export const publicSeoRoutes = [
     description:
       'Independent financial planning in South Africa. Strategies covering investments, retirement, tax, estate planning & debt management.',
     keywords:
-      'financial planning South Africa, comprehensive financial plan, wealth strategy, retirement planning, investment strategy, tax planning, estate planning, debt management, certified financial planner, Navigate Wealth',
+      'financial planning South Africa, comprehensive financial plan, wealth strategy, retirement planning, investment strategy, tax planning, estate planning, debt management, Navigate Wealth',
     ogType: 'website',
     schema: 'service',
     serviceType: 'Financial Planning',
@@ -306,7 +306,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Get a Free Quote | Navigate Wealth',
     description:
-      'Request a free, no-obligation quote for financial planning, insurance, investments, retirement or medical aid. We compare the market to find your best fit.',
+      'Request a free, no-obligation quote for insurance, investments, retirement or medical aid. We compare the providers we work with to find your fit.',
     keywords:
       'free financial quote, insurance quote South Africa, investment quote, retirement planning quote, medical aid quote, Navigate Wealth',
     ogType: 'website',
@@ -348,11 +348,11 @@ export const publicSeoRoutes = [
   {
     path: '/solutions/advisers',
     lastmod: '2026-03-01',
-    title: 'For Financial Advisers | Partner with Navigate Wealth',
+    title: 'For Advisers | Succession Planning | Navigate Wealth',
     description:
-      'Join Navigate Wealth as an independent financial adviser — access our technology platform, compliance support, product range and national network.',
+      'Succession planning for South African financial advisers: practice valuation, practice sales, client transitions and legacy planning, from Navigate Wealth.',
     keywords:
-      'financial adviser partnership, independent adviser network, financial services franchise, adviser support platform, Navigate Wealth partnership, South Africa',
+      'financial adviser succession planning, practice valuation, sell financial advisory practice, client transitions, legacy planning, Navigate Wealth, South Africa',
     ogType: 'website',
     schema: 'webpage',
   },
@@ -369,10 +369,10 @@ export const publicSeoRoutes = [
   },
   {
     path: '/careers',
-    lastmod: '2026-03-01',
-    title: 'Careers | Join Our Team | Navigate Wealth',
+    lastmod: '2026-10-16',
+    title: 'Careers | Navigate Wealth',
     description:
-      'Explore careers at Navigate Wealth and join a dynamic team of independent financial advisors helping South Africans achieve financial independence.',
+      'Explore careers at Navigate Wealth, an independent, founder-led financial advisory practice helping South Africans achieve financial independence.',
     keywords:
       'Navigate Wealth careers, financial advisor jobs, wealth management careers, financial planning jobs South Africa, independent financial advisor vacancy',
     ogType: 'website',
@@ -383,9 +383,9 @@ export const publicSeoRoutes = [
     lastmod: '2026-03-01',
     title: 'Press & Media | Navigate Wealth',
     description:
-      'Navigate Wealth press releases, media coverage and announcements. Access our media kit, brand assets and the latest news from our advisory firm.',
+      'Navigate Wealth press releases and company announcements. Request our media kit, with brand assets, founder photos and company information.',
     keywords:
-      'Navigate Wealth press, media coverage, financial advisor news, press releases, media kit, South Africa financial services news',
+      'Navigate Wealth press, press releases, company announcements, media kit, South Africa financial services news',
     ogType: 'website',
     schema: 'webpage',
   },
