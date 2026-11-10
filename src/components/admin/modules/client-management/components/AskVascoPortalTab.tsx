@@ -22,6 +22,7 @@ import type {
 } from '../../../../shared/vasco-chat';
 import { APIError, api } from '../../../../../utils/api';
 import { advisorKeys } from '../../../../../utils/queryKeys';
+import { PERSONNEL_ROLES } from '../constants';
 import type { Client } from '../types';
 
 interface AskVascoPortalTabProps {
@@ -253,6 +254,11 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  // The server refuses to open Ask Vasco for staff accounts (403). Skip the
+  // request for them and explain instead of raising a reported error.
+  const isStaffAccount =
+    !!selectedClient.profile?.role &&
+    (PERSONNEL_ROLES as readonly string[]).includes(selectedClient.profile.role);
 
   useEffect(() => {
     async function getToken() {
@@ -296,6 +302,7 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
 
   const sessionsQuery = useQuery({
     queryKey: advisorKeys.adminClientSessions(selectedClient.id),
+    enabled: !isStaffAccount,
     queryFn: async () =>
       api.get<{ sessions: VascoChatSessionSummary[] }>(
         `/ai-advisor/admin/sessions?clientUserId=${encodeURIComponent(selectedClient.id)}`,
@@ -504,6 +511,15 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
           client.
         </AlertDescription>
       </Alert>
+
+      {isStaffAccount && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            Ask Vasco is not available for staff accounts. Open it from a client profile instead.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {loadError && (
         <Alert variant="destructive">
