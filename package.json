@@ -118,7 +118,16 @@
   },
   "overrides": {
     "quill": "2.0.2",
-    "uuid": ">=11.1.1"
+    "uuid": ">=11.1.1",
+    "@eslint/config-array": {
+      "minimatch": "^11.0.8"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.8"
+    },
+    "eslint": {
+      "minimatch": "^11.0.8"
+    }
   },
   "scripts": {
     "dev": "vite",
