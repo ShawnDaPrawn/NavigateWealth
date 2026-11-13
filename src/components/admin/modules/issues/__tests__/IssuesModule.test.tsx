@@ -32,6 +32,7 @@ import {
   updateQualityIssueWorkflow,
 } from '@/components/admin/modules/issues/api';
 import { IssuesModule } from '../IssuesModule';
+import { MemoryRouter } from 'react-router';
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
 
@@ -93,7 +94,11 @@ beforeEach(() => {
 });
 
 async function renderLoaded() {
-  renderWithQueryClient(<IssuesModule />);
+  renderWithQueryClient(
+    <MemoryRouter>
+      <IssuesModule />
+    </MemoryRouter>,
+  );
   await screen.findByRole('heading', { name: /Unresolved issues/ });
 }
 
@@ -190,7 +195,8 @@ describe('IssuesModule', () => {
     await renderLoaded();
 
     fireEvent.click(screen.getByRole('button', { name: 'Calendar crashed' }));
-    const sheet = await screen.findByRole('dialog');
+    const sheet = (await screen.findByRole('button', { name: 'Back to issues' }))
+      .parentElement as HTMLElement;
     expect(within(sheet).getByText('The calendar crashed while loading events.')).toBeTruthy();
 
     const save = within(sheet).getByRole('button', { name: 'Save changes' });
@@ -215,7 +221,8 @@ describe('IssuesModule', () => {
     await renderLoaded();
 
     fireEvent.click(screen.getByRole('button', { name: 'Calendar crashed' }));
-    const sheet = await screen.findByRole('dialog');
+    const sheet = (await screen.findByRole('button', { name: 'Back to issues' }))
+      .parentElement as HTMLElement;
     expect(within(sheet).queryByLabelText(/How do you know it's fixed/)).toBeNull();
 
     fireEvent.click(within(sheet).getByRole('radio', { name: 'Resolved' }));
@@ -226,7 +233,8 @@ describe('IssuesModule', () => {
     await renderLoaded();
 
     fireEvent.click(screen.getByRole('button', { name: 'Calendar crashed' }));
-    const sheet = await screen.findByRole('dialog');
+    const sheet = (await screen.findByRole('button', { name: 'Back to issues' }))
+      .parentElement as HTMLElement;
     fireEvent.click(within(sheet).getByRole('radio', { name: 'Resolved' }));
     fireEvent.change(within(sheet).getByLabelText(/How do you know it's fixed/), {
       target: { value: 'PR #380' },
@@ -241,10 +249,32 @@ describe('IssuesModule', () => {
   it('explains a failed load and offers a retry', async () => {
     vi.mocked(fetchQualityIssuesSnapshot).mockRejectedValueOnce(new Error('Gateway timeout'));
 
-    renderWithQueryClient(<IssuesModule />);
+    renderWithQueryClient(
+      <MemoryRouter>
+        <IssuesModule />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText('Gateway timeout')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('heading', { name: /Unresolved issues/ })).toBeTruthy();
+  });
+
+  it('opens an issue as a page with its own address, and goes back to the list', async () => {
+    await renderLoaded();
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar crashed' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Calendar crashed' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Issue Manager' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to issues' }));
+    expect(await screen.findByRole('heading', { name: /Unresolved issues/ })).toBeTruthy();
+  });
+
+  it('opens the issue named in the address', async () => {
+    renderWithQueryClient(
+      <MemoryRouter initialEntries={[`/admin?module=issues&issue=${calendarCrash.fingerprint}`]}>
+        <IssuesModule />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Calendar crashed' })).toBeTruthy();
   });
 });
