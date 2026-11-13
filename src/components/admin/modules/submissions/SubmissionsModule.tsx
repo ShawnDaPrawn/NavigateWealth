@@ -378,6 +378,9 @@ export function SubmissionsModule() {
           </NavTabsTrigger>
         </NavTabsList>
       </Tabs>
+
+      {/* The header's Invite action works from the board and the archive. */}
+      <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
     </>
   );
 
@@ -597,9 +600,6 @@ export function SubmissionsModule() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Invite Modal */}
-        <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
       </div>
     </div>
   );
