@@ -109,6 +109,7 @@ vi.mock('../components/ClientFieldRepository', () => ({
 vi.mock('../components/IntakeWizardHandoff', () => ({ IntakeWizardHandoff: () => null }));
 
 import { ClientManagementModule } from '../ClientManagementModule';
+import { BreadcrumbContext, type Crumb } from '../../../layout/page';
 
 afterEach(() => cleanup());
 
@@ -257,5 +258,27 @@ describe('Client Management page', () => {
     });
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Bulk import clients' }));
     await waitFor(() => expect(screen.getByTestId('add-view').textContent).toBe('bulk'));
+  });
+
+  it('sets the top-bar breadcrumb for the tab, Add client and a group', async () => {
+    let trail: Crumb[] = [];
+    const setTrail = (t: Crumb[]) => {
+      trail = t;
+    };
+    render(
+      <BreadcrumbContext.Provider value={{ trail, setTrail }}>
+        <MemoryRouter initialEntries={['/admin?module=clients']}>
+          <ClientManagementModule />
+          <Location />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() => expect(trail.map((c) => c.label)).toEqual(['Personal clients']));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Groups' }));
+    await waitFor(() => expect(trail.map((c) => c.label)).toEqual(['Groups']));
+    act(() => goTo('/admin?module=clients&add=single'));
+    await waitFor(() =>
+      expect(trail.map((c) => c.label)).toEqual(['Personal clients', 'Add client']),
+    );
   });
 });

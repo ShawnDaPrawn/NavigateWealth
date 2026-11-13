@@ -78,6 +78,7 @@ vi.mock('../ClientNotesTab', () => ({ ClientNotesTab: Empty }));
 
 import { MemoryRouter, useLocation } from 'react-router';
 import { ClientDrawer } from '../ClientDrawer';
+import { BreadcrumbContext, type Crumb } from '../../../../layout/page';
 import { clientKeys } from '@/utils/queryKeys';
 import type { Client } from '../../types';
 
@@ -228,5 +229,19 @@ describe('Client page', () => {
     });
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Key inspector' }));
     expect(await screen.findByText('client keys')).toBeTruthy();
+  });
+
+  it('sets the breadcrumb to the client and the open tab', async () => {
+    let trail: Crumb[] = [];
+    render(
+      <BreadcrumbContext.Provider value={{ trail, setTrail: (t) => (trail = t) }}>
+        <QueryClientProvider client={makeTestQueryClient()}>
+          <MemoryRouter initialEntries={['/admin?module=clients&client=c-aaron&ctab=security']}>
+            <ClientDrawer client={STALE_ROW} open onOpenChange={vi.fn()} />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() => expect(trail.map((c) => c.label)).toEqual(['Aaron Teng', 'Security']));
   });
 });
