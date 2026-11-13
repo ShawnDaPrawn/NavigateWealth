@@ -7,7 +7,10 @@ const logout = vi.fn();
 
 vi.mock('react-router', () => ({ useNavigate: () => navigate }));
 vi.mock('../../../auth/AuthContext', () => ({
-  useAuth: () => ({ user: { name: 'Erica', role: 'super_admin' }, logout }),
+  useAuth: () => ({
+    user: { name: 'Erica', role: 'super_admin', email: 'erica@example.com' },
+    logout,
+  }),
 }));
 vi.mock('../../modules/personnel/shell', () => ({
   useCurrentUserPermissions: () => ({ can: () => true }),
@@ -124,5 +127,16 @@ describe('admin Sidebar', () => {
     expect(formatRole(undefined)).toBe('Administrator');
     renderSidebar();
     expect(within(desktopNav()).getByText('Super admin')).toBeDefined();
+  });
+
+  it('account menu shows who is signed in and opens account settings', async () => {
+    renderSidebar();
+    const trigger = within(desktopNav()).getByRole('button', { name: /Erica/ });
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+    const settings = await screen.findByRole('menuitem', { name: 'Account settings' });
+    expect(screen.getByText('Super admin · erica@example.com')).toBeDefined();
+    expect(screen.getByRole('menuitem', { name: 'Log out' })).toBeDefined();
+    fireEvent.click(settings);
+    expect(navigate).toHaveBeenCalledWith('/admin?module=personnel&profile=me');
   });
 });
