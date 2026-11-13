@@ -10,7 +10,11 @@
  * Written and made green BEFORE the extraction, then mutation-checked.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@/test/utils';
+import { render as rtlRender, screen, fireEvent } from '@/test/utils';
+import { MemoryRouter } from 'react-router';
+import type { ReactElement } from 'react';
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 const formStub = {
   formData: {
@@ -71,16 +75,16 @@ beforeEach(() => {
 });
 
 describe('the publish confirmation dialog', () => {
-  it('is absent until Publish Now is clicked', () => {
+  it('is absent until Publish… is clicked', () => {
     render(<ArticleEditor onBack={noop} onSaved={noop} />);
 
     expect(screen.queryByText(/notify newsletter subscribers/i)).toBeNull();
   });
 
-  it('opens on Publish Now, carrying the notify-subscribers choice', () => {
+  it('opens on Publish…, carrying the notify-subscribers choice', () => {
     render(<ArticleEditor onBack={noop} onSaved={noop} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /publish now/i }));
+    fireEvent.click(screen.getByRole('button', { name: /publish…/i }));
 
     // The dialog is the only place this toggle lives.
     expect(screen.getAllByText(/notify newsletter subscribers/i).length).toBeGreaterThan(0);
@@ -97,11 +101,13 @@ describe('the schedule dialog', () => {
   it('opens on Schedule with its date input', () => {
     render(<ArticleEditor onBack={noop} onSaved={noop} />);
 
-    const schedule = screen
-      .getAllByRole('button')
-      .find((b) => /schedule/i.test(b.textContent ?? ''));
-    expect(schedule, 'no Schedule button in the toolbar').toBeTruthy();
-    fireEvent.click(schedule!);
+    // Schedule lives under the ⋯ menu in the header.
+    fireEvent.pointerDown(screen.getByRole('button', { name: /more article actions/i }), {
+      button: 0,
+      ctrlKey: false,
+      pointerType: 'mouse',
+    });
+    fireEvent.click(screen.getByRole('menuitem', { name: /schedule/i }));
 
     const dateInput = document.querySelector('input[type="datetime-local"], input[type="date"]');
     expect(dateInput, 'schedule dialog did not open with a date field').toBeTruthy();

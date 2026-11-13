@@ -18,14 +18,6 @@ import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Skeleton } from '../../../../ui/skeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -35,10 +27,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
-import { Users, Plus, Pencil, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, Users, Plus, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';
+import { ErrorState, FormErrorBanner, PageHeader } from '../../../layout/page';
+import { Switch } from '../../../../ui/switch';
+import { useSubPage } from '../hooks/useSubPage';
 
 // ============================================================================
 // TYPES
@@ -117,7 +112,10 @@ export function TeamManager() {
   const [saving, setSaving] = useState(false);
 
   // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // The form is a page with its own address: ?page=team-new / team-<id>.
+  const [pageId, setPageId] = useSubPage('team');
+  const dialogOpen = pageId !== null;
+  const [submitted, setSubmitted] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM });
   const [specialtyInput, setSpecialtyInput] = useState('');
@@ -175,10 +173,11 @@ export function TeamManager() {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, sortOrder: members.length + 1 });
     setSpecialtyInput('');
-    setDialogOpen(true);
+    setSubmitted(false);
+    setPageId('new');
   };
 
-  const openEdit = (member: TeamMember) => {
+  const fillEdit = (member: TeamMember) => {
     setEditingId(member.id);
     setForm({
       name: member.name,
@@ -193,13 +192,26 @@ export function TeamManager() {
       active: member.active,
     });
     setSpecialtyInput('');
-    setDialogOpen(true);
+    setSubmitted(false);
   };
+
+  const openEdit = (member: Parameters<typeof fillEdit>[0]) => {
+    fillEdit(member);
+    setPageId(member.id);
+  };
+
+  // A reload or pasted link names a record: fill the form once the list is in.
+  useEffect(() => {
+    if (!pageId || pageId === 'new' || editingId === pageId) return;
+    const match = members.find((x) => x.id === pageId);
+    if (match) fillEdit(match);
+  }, [pageId, members, editingId]);
 
   // ── Save ────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.name.trim() || !form.title.trim()) {
-      toast.error('Name and title are required');
+    setSubmitted(true);
+    if (!form.name.trim() || !String(form.title).trim()) {
+      document.getElementById(!form.name.trim() ? 'tm-name' : 'tm-title')?.focus();
       return;
     }
     setSaving(true);
@@ -217,7 +229,7 @@ export function TeamManager() {
         });
         toast.success(`${form.name} added to team`);
       }
-      setDialogOpen(false);
+      setPageId(null);
       loadMembers();
     } catch (err) {
       console.error('Save failed:', err);
@@ -258,6 +270,240 @@ export function TeamManager() {
 
   // ── Render ──────────────────────────────────────────────────────────
   const activeCount = members.filter((m) => m.active).length;
+
+  // ── Create / edit form — a page of its own ──────────────────────────
+  const nameError = submitted && !form.name.trim() ? 'Add the full name' : null;
+  const secondError = submitted && !String(form.title).trim() ? 'Add a title' : null;
+  const formErrorCount = (nameError ? 1 : 0) + (secondError ? 1 : 0);
+
+  if (pageId !== null && pageId !== 'new' && !loading && !members.some((x) => x.id === pageId)) {
+    return (
+      <ErrorState
+        title="Not found"
+        description="It may have been removed."
+        onRetry={() => setPageId(null)}
+        retryLabel="Back to team"
+      />
+    );
+  }
+
+  if (dialogOpen) {
+    return (
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => setPageId(null)}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Team
+        </button>
+        <PageHeader
+          title={editingId ? 'Edit team member' : 'Add team member'}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setPageId(null)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {editingId ? 'Save changes' : 'Add member'}
+              </Button>
+            </>
+          }
+        />
+        <FormErrorBanner
+          count={formErrorCount}
+          action={editingId ? 'save the changes' : 'add member'}
+        />
+        <div className="max-w-3xl rounded-xl border border-nw-line bg-white p-6">
+          <div className="space-y-4 py-2">
+            {/* Name & Title */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="tm-name">
+                  Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="tm-name"
+                  aria-invalid={Boolean(nameError)}
+                  aria-describedby={nameError ? 'tm-name-error' : undefined}
+                  className={nameError ? 'border-red-500' : undefined}
+                  value={form.name}
+                  onChange={(e) => updateForm('name', e.target.value)}
+                  placeholder="Full name"
+                />
+                {nameError && (
+                  <p id="tm-name-error" className="text-xs text-red-600">
+                    {nameError}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tm-title">
+                  Title <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="tm-title"
+                  aria-invalid={Boolean(secondError)}
+                  aria-describedby={secondError ? 'tm-title-error' : undefined}
+                  className={secondError ? 'border-red-500' : undefined}
+                  value={form.title}
+                  onChange={(e) => updateForm('title', e.target.value)}
+                  placeholder="e.g. Senior Wealth Advisor"
+                />
+                {secondError && (
+                  <p id="tm-title-error" className="text-xs text-red-600">
+                    {secondError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Credentials */}
+            <div className="space-y-1.5">
+              <Label htmlFor="tm-credentials">Credentials</Label>
+              <Input
+                id="tm-credentials"
+                value={form.credentials}
+                onChange={(e) => updateForm('credentials', e.target.value)}
+                placeholder="e.g. CFP, CFA, MBA"
+              />
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-1.5">
+              <Label htmlFor="tm-bio">Bio</Label>
+              <Textarea
+                id="tm-bio"
+                value={form.bio}
+                onChange={(e) => updateForm('bio', e.target.value)}
+                placeholder="Brief biography..."
+                rows={3}
+              />
+            </div>
+
+            {/* Photo URL */}
+            <div className="space-y-1.5">
+              <Label htmlFor="tm-image">Photo URL</Label>
+              <Input
+                id="tm-image"
+                value={form.image}
+                onChange={(e) => updateForm('image', e.target.value)}
+                placeholder="https://images.unsplash.com/..."
+              />
+              {form.image && (
+                <div className="w-16 h-16 rounded-full overflow-hidden border">
+                  <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+
+            {/* Specialties */}
+            <div className="space-y-1.5">
+              <Label>Specialties</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={specialtyInput}
+                  onChange={(e) => setSpecialtyInput(e.target.value)}
+                  onKeyDown={handleSpecialtyKeyDown}
+                  placeholder="Type and press Enter"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addSpecialty}
+                  disabled={!specialtyInput.trim()}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {form.specialties.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {form.specialties.map((s) => (
+                    <Badge
+                      key={s}
+                      variant="secondary"
+                      className="text-xs bg-purple-50 text-purple-600 pr-1"
+                    >
+                      {s}
+                      <button
+                        type="button"
+                        onClick={() => removeSpecialty(s)}
+                        className="ml-1 hover:text-red-500"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* LinkedIn & Email */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="tm-linkedin">LinkedIn URL</Label>
+                <Input
+                  id="tm-linkedin"
+                  value={form.linkedinUrl}
+                  onChange={(e) => updateForm('linkedinUrl', e.target.value)}
+                  placeholder="https://linkedin.com/in/..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tm-email">Email</Label>
+                <Input
+                  id="tm-email"
+                  value={form.email}
+                  onChange={(e) => updateForm('email', e.target.value)}
+                  placeholder="name@navigatewealth.co"
+                />
+              </div>
+            </div>
+
+            {/* Sort order & Active */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="tm-sort">Display Order</Label>
+                <NumberInputField
+                  id="tm-sort"
+                  value={form.sortOrder}
+                  onValueChange={(v) => updateForm('sortOrder', v || 1)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Visibility</Label>
+                <div className="flex items-center gap-2 h-9">
+                  <input
+                    type="checkbox"
+                    id="tm-active"
+                    checked={form.active}
+                    onChange={(e) => updateForm('active', e.target.checked)}
+                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <label htmlFor="tm-active" className="text-sm">
+                    Show on public Team page
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {nameError || secondError ? (
+          <p className="sr-only" role="alert">
+            {[nameError, secondError].filter(Boolean).join('. ')}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -421,34 +667,26 @@ export function TeamManager() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
+                  <Switch
+                    checked={member.active}
+                    onCheckedChange={() => handleToggleActive(member)}
+                    aria-label={`Show ${member.name} on the team page`}
+                  />
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleToggleActive(member)}
-                    title={member.active ? 'Hide from team page' : 'Show on team page'}
-                  >
-                    {member.active ? (
-                      <Eye className="h-3.5 w-3.5 text-green-600" />
-                    ) : (
-                      <EyeOff className="h-3.5 w-3.5 text-gray-400" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
+                    variant="outline"
+                    className="h-8"
                     onClick={() => openEdit(member)}
                   >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    Edit
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 w-8 p-0"
+                    className="h-8 text-red-600 hover:text-red-700"
                     onClick={() => setDeleteTarget(member)}
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    Remove
                   </Button>
                 </div>
               </div>
@@ -463,195 +701,6 @@ export function TeamManager() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* CREATE / EDIT DIALOG                                             */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Team Member' : 'Add Team Member'}</DialogTitle>
-            <DialogDescription>
-              {editingId
-                ? "Update this team member's details."
-                : 'Add a new member to the public Team page.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Name & Title */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="tm-name">
-                  Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="tm-name"
-                  value={form.name}
-                  onChange={(e) => updateForm('name', e.target.value)}
-                  placeholder="Full name"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="tm-title">
-                  Title <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="tm-title"
-                  value={form.title}
-                  onChange={(e) => updateForm('title', e.target.value)}
-                  placeholder="e.g. Senior Wealth Advisor"
-                />
-              </div>
-            </div>
-
-            {/* Credentials */}
-            <div className="space-y-1.5">
-              <Label htmlFor="tm-credentials">Credentials</Label>
-              <Input
-                id="tm-credentials"
-                value={form.credentials}
-                onChange={(e) => updateForm('credentials', e.target.value)}
-                placeholder="e.g. CFP, CFA, MBA"
-              />
-            </div>
-
-            {/* Bio */}
-            <div className="space-y-1.5">
-              <Label htmlFor="tm-bio">Bio</Label>
-              <Textarea
-                id="tm-bio"
-                value={form.bio}
-                onChange={(e) => updateForm('bio', e.target.value)}
-                placeholder="Brief biography..."
-                rows={3}
-              />
-            </div>
-
-            {/* Photo URL */}
-            <div className="space-y-1.5">
-              <Label htmlFor="tm-image">Photo URL</Label>
-              <Input
-                id="tm-image"
-                value={form.image}
-                onChange={(e) => updateForm('image', e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-              />
-              {form.image && (
-                <div className="w-16 h-16 rounded-full overflow-hidden border">
-                  <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-              )}
-            </div>
-
-            {/* Specialties */}
-            <div className="space-y-1.5">
-              <Label>Specialties</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={specialtyInput}
-                  onChange={(e) => setSpecialtyInput(e.target.value)}
-                  onKeyDown={handleSpecialtyKeyDown}
-                  placeholder="Type and press Enter"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={addSpecialty}
-                  disabled={!specialtyInput.trim()}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              {form.specialties.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {form.specialties.map((s) => (
-                    <Badge
-                      key={s}
-                      variant="secondary"
-                      className="text-xs bg-purple-50 text-purple-600 pr-1"
-                    >
-                      {s}
-                      <button
-                        type="button"
-                        onClick={() => removeSpecialty(s)}
-                        className="ml-1 hover:text-red-500"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* LinkedIn & Email */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="tm-linkedin">LinkedIn URL</Label>
-                <Input
-                  id="tm-linkedin"
-                  value={form.linkedinUrl}
-                  onChange={(e) => updateForm('linkedinUrl', e.target.value)}
-                  placeholder="https://linkedin.com/in/..."
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="tm-email">Email</Label>
-                <Input
-                  id="tm-email"
-                  value={form.email}
-                  onChange={(e) => updateForm('email', e.target.value)}
-                  placeholder="name@navigatewealth.co"
-                />
-              </div>
-            </div>
-
-            {/* Sort order & Active */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="tm-sort">Display Order</Label>
-                <NumberInputField
-                  id="tm-sort"
-                  value={form.sortOrder}
-                  onValueChange={(v) => updateForm('sortOrder', v || 1)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Visibility</Label>
-                <div className="flex items-center gap-2 h-9">
-                  <input
-                    type="checkbox"
-                    id="tm-active"
-                    checked={form.active}
-                    onChange={(e) => updateForm('active', e.target.checked)}
-                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                  />
-                  <label htmlFor="tm-active" className="text-sm">
-                    Show on public Team page
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving || !form.name.trim() || !form.title.trim()}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1.5" />
-              )}
-              {editingId ? 'Save Changes' : 'Add Member'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* DELETE CONFIRMATION                                              */}

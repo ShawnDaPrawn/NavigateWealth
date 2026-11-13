@@ -12,16 +12,16 @@ import { useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import {
   History,
-  X,
+  ChevronLeft,
   RotateCcw,
   Eye,
   Loader2,
   AlertTriangle,
-  Check,
   User,
   Hash,
   Type,
 } from 'lucide-react';
+import { PageHeader, useConfirm } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
@@ -35,6 +35,8 @@ import { toast } from 'sonner';
 
 interface VersionHistoryProps {
   articleId: string;
+  /** Shown in the back link ("‹ <title>"). */
+  articleTitle?: string;
   isOpen: boolean;
   onClose: () => void;
   /** Called after a version is restored — the parent should refetch */
@@ -80,13 +82,19 @@ function timeAgo(iso: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function VersionHistory({ articleId, isOpen, onClose, onRestore }: VersionHistoryProps) {
+export function VersionHistory({
+  articleId,
+  articleTitle,
+  isOpen,
+  onClose,
+  onRestore,
+}: VersionHistoryProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [versions, setVersions] = useState<ArticleVersion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewVersion, setPreviewVersion] = useState<ArticleVersion | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
-  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
 
   // Fetch versions
   const loadVersions = useCallback(async () => {
@@ -129,7 +137,6 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
       try {
         await PublicationsAPI.Versions.restoreVersion(articleId, versionId);
         toast.success('Version restored successfully');
-        setConfirmRestore(null);
         setPreviewVersion(null);
         onRestore();
         await loadVersions();
@@ -162,43 +169,29 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+    <div className="space-y-6" data-testid="version-history-page">
+      <button
+        type="button"
+        onClick={onClose}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        {articleTitle || 'Back to the article'}
+      </button>
+      <PageHeader
+        title="Version history"
+        description={`Restore replaces the current content · ${versions.length} version${versions.length !== 1 ? 's' : ''} saved · up to 50 kept per article`}
+        actions={
+          <Button variant="outline" onClick={handleSaveVersion}>
+            <History className="h-4 w-4" aria-hidden="true" />
+            Save snapshot now
+          </Button>
+        }
+      />
+      {confirmDialog}
 
-      {/* Panel */}
-      <div className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <History className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">Version History</h3>
-              <p className="text-[10px] text-gray-500">
-                {versions.length} version{versions.length !== 1 ? 's' : ''} saved
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveVersion}
-              className="h-7 text-[11px]"
-            >
-              <History className="h-3 w-3 mr-1" />
-              Save Now
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+      <div className="max-w-3xl rounded-xl border border-nw-line bg-white">
+        <div>
           {isLoading && (
             <div className="flex items-center justify-center py-16 gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
@@ -227,7 +220,7 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
               </p>
               <Button variant="outline" size="sm" onClick={handleSaveVersion} className="gap-1.5">
                 <History className="h-3.5 w-3.5" />
-                Create First Snapshot
+                Create first snapshot
               </Button>
             </div>
           )}
@@ -243,7 +236,6 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
                   const change = getChangeIndicator(version, index);
                   const isFirst = index === 0;
                   const isPreviewing = previewVersion?.id === version.id;
-                  const isRestoreConfirm = confirmRestore === version.id;
 
                   return (
                     <div
@@ -313,42 +305,29 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
                             {isPreviewing ? 'Hide' : 'Preview'}
                           </Button>
 
-                          {!isFirst && !isRestoreConfirm && (
+                          {!isFirst && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setConfirmRestore(version.id)}
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: `Restore version ${version.version_number}?`,
+                                  description:
+                                    'This replaces the current content of the article. The current content is kept as a version first.',
+                                  confirmLabel: 'Restore',
+                                });
+                                if (ok) void handleRestore(version.id);
+                              }}
+                              disabled={restoring === version.id}
                               className="h-6 text-[10px] px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
-                              <RotateCcw className="h-3 w-3 mr-1" />
+                              {restoring === version.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                              )}
                               Restore
                             </Button>
-                          )}
-
-                          {isRestoreConfirm && (
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                onClick={() => handleRestore(version.id)}
-                                disabled={restoring === version.id}
-                                className="h-6 text-[10px] px-2 bg-blue-600 hover:bg-blue-700"
-                              >
-                                {restoring === version.id ? (
-                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                ) : (
-                                  <Check className="h-3 w-3 mr-1" />
-                                )}
-                                Confirm
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setConfirmRestore(null)}
-                                className="h-6 text-[10px] px-2"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
                           )}
                         </div>
 
@@ -390,13 +369,6 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
-          <p className="text-[10px] text-gray-400 text-center">
-            Up to 50 versions are retained per article
-          </p>
         </div>
       </div>
     </div>

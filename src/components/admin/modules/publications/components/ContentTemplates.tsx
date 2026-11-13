@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import {
+  ChevronLeft,
   FileText,
   Plus,
   Pencil,
@@ -21,11 +22,13 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
+import { cn } from '../../../../ui/utils';
 import { Badge } from '../../../../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { PublicationsAPI } from '../api';
 import type { ContentTemplate, CreateTemplateInput, UpdateTemplateInput } from '../types';
 import { toast } from 'sonner';
+import { ErrorState, FormErrorBanner, PageHeader, useConfirm } from '../../../layout/page';
+import { useSubPage } from '../hooks/useSubPage';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -38,7 +41,10 @@ interface TemplateFormProps {
   isSaving: boolean;
 }
 
-function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProps) {
+const TEMPLATE_FORM_ID = 'template-form';
+
+function TemplateForm({ template, onSave }: TemplateFormProps) {
+  const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [body, setBody] = useState(template?.body || '');
@@ -47,7 +53,11 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !description.trim()) return;
+    setSubmitted(true);
+    if (!name.trim() || !description.trim()) {
+      document.getElementById(!name.trim() ? 'template-name' : 'template-description')?.focus();
+      return;
+    }
 
     const input: CreateTemplateInput = {
       name: name.trim(),
@@ -63,8 +73,18 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
     onSave(input);
   };
 
+  const nameError = submitted && !name.trim() ? 'Add a name for the template' : null;
+  const descriptionError =
+    submitted && !description.trim() ? 'Say when to use this template' : null;
+  const errorCount = (nameError ? 1 : 0) + (descriptionError ? 1 : 0);
+  const errorClass = 'border-red-500 focus:ring-red-500';
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form id={TEMPLATE_FORM_ID} onSubmit={handleSubmit} noValidate className="space-y-4">
+      <FormErrorBanner
+        count={errorCount}
+        action={template ? 'save the template' : 'create the template'}
+      />
       <div className="grid grid-cols-[80px_1fr] gap-4">
         {/* Icon */}
         <div>
@@ -79,29 +99,56 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
         </div>
         {/* Name */}
         <div>
-          <label className="text-xs font-medium text-gray-700 block mb-1">Template Name *</label>
+          <label htmlFor="template-name" className="text-xs font-medium text-gray-700 block mb-1">
+            Name *
+          </label>
           <input
+            id="template-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Market Commentary"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            required
+            placeholder="e.g., Market commentary"
+            aria-invalid={Boolean(nameError)}
+            aria-describedby={nameError ? 'template-name-error' : undefined}
+            className={cn(
+              'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500',
+              nameError && errorClass,
+            )}
           />
+          {nameError && (
+            <p id="template-name-error" className="mt-1 text-xs text-red-600">
+              {nameError}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Description */}
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">Description *</label>
+        <label
+          htmlFor="template-description"
+          className="text-xs font-medium text-gray-700 block mb-1"
+        >
+          Description *
+        </label>
         <input
+          id="template-description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Brief description of when to use this template"
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-          required
+          aria-invalid={Boolean(descriptionError)}
+          aria-describedby={descriptionError ? 'template-description-error' : undefined}
+          className={cn(
+            'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500',
+            descriptionError && errorClass,
+          )}
         />
+        {descriptionError && (
+          <p id="template-description-error" className="mt-1 text-xs text-red-600">
+            {descriptionError}
+          </p>
+        )}
       </div>
 
       {/* Tags */}
@@ -120,7 +167,7 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
 
       {/* Body HTML */}
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-1">Template Body (HTML)</label>
+        <label className="text-xs font-medium text-gray-700 block mb-1">Content (HTML)</label>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -128,26 +175,6 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
           rows={10}
           className="w-full px-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y"
         />
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={isSaving || !name.trim() || !description.trim()}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
-          {isSaving ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-          ) : (
-            <Save className="h-3.5 w-3.5 mr-1" />
-          )}
-          {template ? 'Update Template' : 'Create Template'}
-        </Button>
       </div>
     </form>
   );
@@ -160,11 +187,17 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
 export function ContentTemplates() {
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingTemplate, setEditingTemplate] = useState<ContentTemplate | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // The form is a page with its own address: ?page=template-new / template-<id>.
+  const [pageId, setPageId] = useSubPage('template');
+  const showCreateForm = pageId === 'new';
+  const editingTemplate =
+    pageId && pageId !== 'new' ? (templates.find((t) => t.id === pageId) ?? null) : null;
+  const setShowCreateForm = (open: boolean) => setPageId(open ? 'new' : null);
+  const setEditingTemplate = (template: ContentTemplate | null) =>
+    setPageId(template ? template.id : null);
+  const { confirm, confirmDialog } = useConfirm();
   const [isSaving, setIsSaving] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<ContentTemplate | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -189,7 +222,7 @@ export function ContentTemplates() {
       try {
         await PublicationsAPI.Templates.createTemplate(input as CreateTemplateInput);
         toast.success('Template created successfully');
-        setShowCreateForm(false);
+        setPageId(null);
         await loadTemplates();
       } catch {
         toast.error('Failed to create template');
@@ -197,7 +230,7 @@ export function ContentTemplates() {
         setIsSaving(false);
       }
     },
-    [loadTemplates],
+    [loadTemplates, setPageId],
   );
 
   const handleUpdate = useCallback(
@@ -210,7 +243,7 @@ export function ContentTemplates() {
           input as UpdateTemplateInput,
         );
         toast.success('Template updated successfully');
-        setEditingTemplate(null);
+        setPageId(null);
         await loadTemplates();
       } catch {
         toast.error('Failed to update template');
@@ -218,7 +251,7 @@ export function ContentTemplates() {
         setIsSaving(false);
       }
     },
-    [editingTemplate, loadTemplates],
+    [editingTemplate, loadTemplates, setPageId],
   );
 
   const handleDelete = useCallback(
@@ -226,7 +259,6 @@ export function ContentTemplates() {
       try {
         await PublicationsAPI.Templates.deleteTemplate(id);
         toast.success('Template deleted');
-        setDeleteConfirm(null);
         await loadTemplates();
       } catch {
         toast.error('Failed to delete template');
@@ -254,35 +286,65 @@ export function ContentTemplates() {
     );
   }
 
-  // Show create/edit form
+  // A template named in the address that no longer exists.
+  if (pageId && pageId !== 'new' && !editingTemplate) {
+    return (
+      <ErrorState
+        title="Template not found"
+        description="It may have been deleted."
+        onRetry={() => setPageId(null)}
+        retryLabel="Back to templates"
+      />
+    );
+  }
+
+  // Create / edit form — a page of its own
   if (showCreateForm || editingTemplate) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              {editingTemplate ? 'Edit Template' : 'Create Template'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TemplateForm
-              template={editingTemplate}
-              onSave={editingTemplate ? handleUpdate : handleCreate}
-              onCancel={() => {
-                setShowCreateForm(false);
-                setEditingTemplate(null);
-              }}
-              isSaving={isSaving}
-            />
-          </CardContent>
-        </Card>
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => setPageId(null)}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Templates
+        </button>
+        <PageHeader
+          title={editingTemplate ? 'Edit template' : 'New template'}
+          description="Shown in the template picker"
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setPageId(null)} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button type="submit" form={TEMPLATE_FORM_ID} disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {editingTemplate ? 'Save template' : 'Create template'}
+              </Button>
+            </>
+          }
+        />
+        <div className="max-w-3xl rounded-xl border border-nw-line bg-white p-6">
+          <TemplateForm
+            key={editingTemplate?.id ?? 'new'}
+            template={editingTemplate}
+            onSave={editingTemplate ? handleUpdate : handleCreate}
+            onCancel={() => setPageId(null)}
+            isSaving={isSaving}
+          />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -290,7 +352,7 @@ export function ContentTemplates() {
             <Sparkles className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Content Templates</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Content templates</h2>
             <p className="text-xs text-gray-500">
               Pre-built article structures for faster content creation
             </p>
@@ -404,36 +466,23 @@ export function ContentTemplates() {
                   Edit
                 </Button>
 
-                {deleteConfirm === template.id ? (
-                  <div className="flex items-center gap-1 ml-auto">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(template.id)}
-                      className="h-7 text-[11px] px-2"
-                    >
-                      Confirm
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteConfirm(null)}
-                      className="h-7 text-[11px] px-2"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteConfirm(template.id)}
-                    className="h-7 text-[11px] px-2 text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Delete
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `Delete “${template.name}”?`,
+                      description: 'The template is removed from the template picker.',
+                      confirmLabel: 'Delete',
+                      destructive: true,
+                    });
+                    if (ok) void handleDelete(template.id);
+                  }}
+                  className="h-7 text-[11px] px-2 text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete
+                </Button>
               </div>
 
               {/* Preview expansion */}

@@ -10,10 +10,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import {
-  ArrowLeft,
+  ChevronLeft,
+  MoreHorizontal,
+  Send,
   Save,
-  Eye,
-  Calendar,
   Loader2,
   AlertCircle,
   CheckCircle,
@@ -21,8 +21,30 @@ import {
   Clock,
   History,
 } from 'lucide-react';
-import { cn } from '../../../ui/utils';
 import { VersionHistory } from './components/VersionHistory';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../ui/dropdown-menu';
+import { Tabs } from '../../../ui/tabs';
+import { NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
+
+/** "2 min ago" / "3 h ago" / a date — for the header's "Saved …" line. */
+function formatSavedAt(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return new Date(iso).toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 // Import from refactored modules
 import { PublicationsAPI } from './api';
@@ -53,6 +75,9 @@ import { toast } from 'sonner';
 import { PublishProgressDialog } from './editor/PublishProgressDialog';
 import { ScheduleDialog } from './editor/ScheduleDialog';
 import { EditorTabContent } from './editor/EditorTabContent';
+
+const EDITOR_VIEWS = ['editor', 'preview', 'seo'] as const;
+type EditorView = (typeof EDITOR_VIEWS)[number];
 
 interface ArticleEditorProps {
   article?: Article | null;
@@ -112,7 +137,8 @@ export function ArticleEditor({
   });
 
   // UI state
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'seo'>('editor');
+  // Editor | Preview | SEO & meta, and the version-history page, live in the address.
+  const [activeTab, setActiveTab] = useUrlState<EditorView>('editorTab', 'editor', EDITOR_VIEWS);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +161,12 @@ export function ArticleEditor({
   const [notifyOnScheduledPublish, setNotifyOnScheduledPublish] = useState(true);
 
   // Version history
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [historyParam, setHistoryParam] = useUrlState<'' | 'history'>('editorPage', '', [
+    '',
+    'history',
+  ]);
+  const showVersionHistory = historyParam === 'history';
+  const setShowVersionHistory = (open: boolean) => setHistoryParam(open ? 'history' : '');
 
   // Confirm dialog
   const confirmDialog = useConfirmDialog();
@@ -164,14 +195,14 @@ export function ArticleEditor({
         meta_title: restoredArticle.seo_title || '',
         meta_description: restoredArticle.meta_description || restoredArticle.seo_description || '',
       });
-      setShowVersionHistory(false);
+      setHistoryParam('');
       toast.success('Version restored — editor updated with restored content');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to refetch restored article';
       setError(msg);
       console.error('Version restore refetch error:', err);
     }
-  }, [article?.id, updateMultipleFields]);
+  }, [article?.id, updateMultipleFields, setHistoryParam]);
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -602,80 +633,97 @@ export function ArticleEditor({
     return <LoadingState message="Loading editor..." />;
   }
 
+  const saveLabel = isSaving
+    ? 'Saving…'
+    : imageUploadInProgress
+      ? 'Uploading image…'
+      : article?.status === 'published'
+        ? 'Update article'
+        : 'Save draft';
+  const busy = isProcessing || isSaving || imageUploadInProgress;
+  const articleTitle = formData.title?.trim() || article?.title || 'Untitled article';
+
+  if (showVersionHistory && article?.id) {
+    return (
+      <VersionHistory
+        articleId={article.id}
+        articleTitle={articleTitle}
+        isOpen
+        onClose={() => setShowVersionHistory(false)}
+        onRestore={handleVersionRestore}
+        currentBody={formData.body}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={handleBackClick}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Article' : 'New Article'}</h1>
-            {article && (
-              <div className="flex items-center gap-2 mt-1">
-                <StatusBadge status={article.status} />
-                {isSaving && (
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Saving...
-                  </span>
-                )}
-                {isDirty && !isSaving && (
-                  <span className="text-xs text-orange-600">Unsaved changes</span>
-                )}
-              </div>
+      <button
+        type="button"
+        onClick={handleBackClick}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        Back to articles
+      </button>
+      <PageHeader
+        title={isEditMode ? 'Edit article' : 'New article'}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            {article ? <StatusBadge status={article.status} /> : null}
+            {isSaving ? (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                Saving…
+              </span>
+            ) : isDirty ? (
+              <span className="text-xs text-orange-600">· Unsaved changes</span>
+            ) : article?.updated_at ? (
+              <span className="text-xs">· Saved {formatSavedAt(article.updated_at)}</span>
+            ) : null}
+          </span>
+        }
+        actions={
+          <>
+            {isEditMode && article?.id && (
+              <Button variant="outline" onClick={() => setShowVersionHistory(true)}>
+                <History className="h-4 w-4" aria-hidden="true" />
+                History
+              </Button>
             )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setActiveTab(activeTab === 'preview' ? 'editor' : 'preview')}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            {activeTab === 'preview' ? 'Edit' : 'Preview'}
-          </Button>
-          {isEditMode && article?.id && (
-            <Button variant="outline" onClick={() => setShowVersionHistory(true)}>
-              <History className="h-4 w-4 mr-2" />
-              History
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={handleScheduleClick}
-            disabled={isProcessing || isSaving || imageUploadInProgress}
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            {imageUploadInProgress ? 'Uploading image...' : 'Schedule'}
-          </Button>
-          {article?.status !== 'published' && (
-            <Button
-              onClick={handlePublishClick}
-              disabled={isProcessing || isSaving || imageUploadInProgress}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              {imageUploadInProgress ? 'Uploading image...' : 'Publish Now'}
-            </Button>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={isProcessing || isSaving || imageUploadInProgress || !isDirty}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving
-              ? 'Saving...'
-              : imageUploadInProgress
-                ? 'Uploading image...'
-                : article?.status === 'published'
-                  ? 'Update Article'
-                  : 'Save Draft'}
-          </Button>
-        </div>
-      </div>
+            {article?.status !== 'published' ? (
+              <>
+                <Button variant="outline" onClick={handleSave} disabled={busy || !isDirty}>
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                  {saveLabel}
+                </Button>
+                <Button onClick={handlePublishClick} disabled={busy}>
+                  <Send className="h-4 w-4" aria-hidden="true" />
+                  {imageUploadInProgress ? 'Uploading image…' : 'Publish…'}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleSave} disabled={busy || !isDirty}>
+                <Save className="h-4 w-4" aria-hidden="true" />
+                {saveLabel}
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More article actions">
+                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={handleScheduleClick} disabled={busy}>
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  Schedule…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
       {/* Success Message */}
       {successMessage && (
@@ -707,43 +755,13 @@ export function ArticleEditor({
       {errors.length > 0 && <ErrorList errors={errors} title="Please fix the following errors:" />}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <div className="flex gap-4">
-          <button
-            onClick={() => setActiveTab('editor')}
-            className={cn(
-              'px-4 py-2 border-b-2 font-medium transition-colors',
-              activeTab === 'editor'
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700',
-            )}
-          >
-            Editor
-          </button>
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={cn(
-              'px-4 py-2 border-b-2 font-medium transition-colors',
-              activeTab === 'preview'
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700',
-            )}
-          >
-            Preview
-          </button>
-          <button
-            onClick={() => setActiveTab('seo')}
-            className={cn(
-              'px-4 py-2 border-b-2 font-medium transition-colors',
-              activeTab === 'seo'
-                ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700',
-            )}
-          >
-            SEO & Meta
-          </button>
-        </div>
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as EditorView)}>
+        <NavTabsList aria-label="Article">
+          <NavTabsTrigger value="editor">Editor</NavTabsTrigger>
+          <NavTabsTrigger value="preview">Preview</NavTabsTrigger>
+          <NavTabsTrigger value="seo">SEO &amp; meta</NavTabsTrigger>
+        </NavTabsList>
+      </Tabs>
 
       {/* Editor Tab */}
       <EditorTabContent
@@ -780,7 +798,7 @@ export function ArticleEditor({
       {activeTab === 'seo' && (
         <Card>
           <CardHeader>
-            <CardTitle>SEO & Meta Tags</CardTitle>
+            <CardTitle>SEO &amp; meta tags</CardTitle>
             <CardDescription>Optimize your article for search engines</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -861,17 +879,6 @@ export function ArticleEditor({
           title={confirmDialog.config.title}
           description={confirmDialog.config.description}
           variant="warning"
-        />
-      )}
-
-      {/* Version History */}
-      {showVersionHistory && (
-        <VersionHistory
-          articleId={article?.id || ''}
-          isOpen={showVersionHistory}
-          onClose={() => setShowVersionHistory(false)}
-          onRestore={handleVersionRestore}
-          currentBody={formData.body}
         />
       )}
     </div>
