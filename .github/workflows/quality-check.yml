@@ -285,24 +285,16 @@ jobs:
         # Floor was 0 from the `sharp` ^0.35.3 upgrade (libvips CVEs) until
         # 2026-10-02.
         #
-        # Floor is currently 2, ACCEPTED BY THE OWNER on 2026-10-02 (PR #402):
-        # GHSA-86w9-cpqp-85rv, high, in `node-forge`, counted twice (node-forge
-        # itself and @signpdf/signer-p12, which depends on it). The flaw is in
-        # RSA PKCS#1 v1.5 signature VERIFICATION, and no fixed release exists.
-        # Our only user, server/esign-pdf-protect.ts, creates signatures: key and
-        # self-signed certificate generation, PKCS#12 packaging, and P12Signer's
-        # pkcs7.createSignedData()/p7.sign(). Nothing here, nor in the signer,
-        # verifies a signature, so the advisory cannot be reached.
+        # Floor was 2 from 2026-10-02 (accepted by the owner, PR #402) while
+        # GHSA-86w9-cpqp-85rv, high, in `node-forge` (counted twice: node-forge
+        # and @signpdf/signer-p12) had no fixed release. node-forge 1.4.3 fixes
+        # it, the lockfile resolves to it, and `npm audit` reports 0
+        # high/critical again, so the floor is back to 0 (2026-11-13). A
+        # Dependabot bump that adds any high/critical now fails this gate
+        # instead of hiding behind the old headroom of 2 (#472, #411).
         #
-        # The floor is a COUNT, so while it is 2 it would also hide two new
-        # findings once these two are gone. Put it back to 0 the moment
-        # node-forge ships a fix (the gate prints a notice when the count drops
-        # below the floor). Any third high/critical still fails the job.
-        #
-        # The same acceptance is recorded in quality/accepted-advisories.json,
-        # which keeps it out of the Issue Manager snapshot (it used to reopen
-        # as a "regression" and mint a task on every push to main). That file
-        # does not affect this count.
+        # quality/accepted-advisories.json still lists the old acceptance; it
+        # lapses by itself because the package now has a fix.
         #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,
@@ -426,24 +418,16 @@ jobs:
         # Floor was 0 from the `sharp` ^0.35.3 upgrade (libvips CVEs) until
         # 2026-10-02.
         #
-        # Floor is currently 2, ACCEPTED BY THE OWNER on 2026-10-02 (PR #402):
-        # GHSA-86w9-cpqp-85rv, high, in `node-forge`, counted twice (node-forge
-        # itself and @signpdf/signer-p12, which depends on it). The flaw is in
-        # RSA PKCS#1 v1.5 signature VERIFICATION, and no fixed release exists.
-        # Our only user, server/esign-pdf-protect.ts, creates signatures: key and
-        # self-signed certificate generation, PKCS#12 packaging, and P12Signer's
-        # pkcs7.createSignedData()/p7.sign(). Nothing here, nor in the signer,
-        # verifies a signature, so the advisory cannot be reached.
+        # Floor was 2 from 2026-10-02 (accepted by the owner, PR #402) while
+        # GHSA-86w9-cpqp-85rv, high, in `node-forge` (counted twice: node-forge
+        # and @signpdf/signer-p12) had no fixed release. node-forge 1.4.3 fixes
+        # it, the lockfile resolves to it, and `npm audit` reports 0
+        # high/critical again, so the floor is back to 0 (2026-11-13). A
+        # Dependabot bump that adds any high/critical now fails this gate
+        # instead of hiding behind the old headroom of 2 (#472, #411).
         #
-        # The floor is a COUNT, so while it is 2 it would also hide two new
-        # findings once these two are gone. Put it back to 0 the moment
-        # node-forge ships a fix (the gate prints a notice when the count drops
-        # below the floor). Any third high/critical still fails the job.
-        #
-        # The same acceptance is recorded in quality/accepted-advisories.json,
-        # which keeps it out of the Issue Manager snapshot (it used to reopen
-        # as a "regression" and mint a task on every push to main). That file
-        # does not affect this count.
+        # quality/accepted-advisories.json still lists the old acceptance; it
+        # lapses by itself because the package now has a fix.
         #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,
