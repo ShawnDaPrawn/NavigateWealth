@@ -118,3 +118,26 @@ describe('DraftRoAInterface — new draft creation', () => {
     expect(await screen.findByText('client-step')).toBeTruthy();
   });
 });
+
+describe('DraftRoAInterface — step progress', () => {
+  it('shows the four steps with the current one marked, and Back / Continue to modules', async () => {
+    mockedSaveDraft.mockResolvedValue(serverDraft);
+    renderInterface();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Begin RoA draft/i }));
+    expect(await screen.findByText('client-step')).toBeTruthy();
+
+    const steps = screen.getByRole('list', { name: 'Record of Advice steps' });
+    expect(steps.textContent).toContain('Client');
+    expect(steps.textContent).toContain('Modules');
+    expect(steps.textContent).toContain('Module details');
+    expect(steps.textContent).toContain('Review & compile');
+    expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe('1');
+
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    // No client chosen yet, so the wizard cannot move on.
+    expect(
+      (screen.getByRole('button', { name: 'Continue to modules' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+});

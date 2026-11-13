@@ -135,7 +135,7 @@ export function AskAIInterface() {
                 disabled={isLoading}
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
-                Clear Chat
+                Clear chat
               </Button>
             </div>
           </div>
@@ -182,8 +182,8 @@ export function AskAIInterface() {
         onClose={() => setShowClearConfirm(false)}
         onConfirm={handleConfirmClearChat}
         title="Clear chat history?"
-        description="Are you sure you want to clear this Ask Vasco conversation? This cannot be undone."
-        confirmLabel="Clear chat"
+        description="This removes the conversation from this screen. It cannot be undone."
+        confirmLabel="Clear history"
         cancelLabel="Cancel"
         variant="danger"
       />

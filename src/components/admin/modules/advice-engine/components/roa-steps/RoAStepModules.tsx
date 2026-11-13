@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
+import { Card, CardContent } from '../../../../../ui/card';
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Badge } from '../../../../../ui/badge';
 import { Input } from '../../../../../ui/input';
@@ -165,7 +165,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
       case 'in-progress':
         return (
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-            In Progress
+            In progress
           </Badge>
         );
       default:
@@ -177,7 +177,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold mb-2">Select Advice Modules</h2>
+        <h2 className="text-xl font-semibold mb-2">Select advice modules</h2>
         <p className="text-muted-foreground">
           Choose the areas of advice that will be included in this Record of Advice. Each module has
           specific regulatory requirements and disclosures.
@@ -189,7 +189,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
         <CardContent className="p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-medium text-blue-900">Selected Modules</p>
+              <p className="font-medium text-blue-900">Selected modules</p>
               <p className="text-sm text-blue-700">
                 {selectedModules.length} module{selectedModules.length !== 1 ? 's' : ''} selected ·{' '}
                 {filteredModules.length} shown in library
@@ -249,121 +249,70 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
           <div key={categoryName} className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">{categoryName}</h3>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="divide-y divide-nw-line overflow-hidden rounded-xl border border-nw-line bg-white">
               {moduleIds.map((moduleId) => {
                 const module = allModules.find((m) => m.id === moduleId);
                 if (!module) return null;
-
                 const isSelected = selectedModules.includes(moduleId);
-
+                const mode =
+                  (module.authoringMode ?? 'conversation') === 'form' ? 'Form' : 'AI conversation';
+                const runtime = isSelected
+                  ? getModuleRuntimeStatus(
+                      module,
+                      draft?.moduleData[moduleId] || {},
+                      draft?.moduleEvidence?.[moduleId] || {},
+                    )
+                  : null;
                 return (
-                  <Card
+                  <label
                     key={moduleId}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      isSelected ? 'ring-2 ring-primary bg-primary/5' : ''
+                    className={`flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
+                      isSelected ? 'bg-nw-violet/5' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => handleModuleToggle(moduleId, !isSelected)}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) =>
-                              handleModuleToggle(moduleId, checked === true)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div className="flex flex-wrap items-center gap-2">
-                            {getModuleIcon(moduleId)}
-                            <CardTitle className="text-base">{module.title}</CardTitle>
-                            {isFlagshipModule(module) && (
-                              <Badge
-                                variant="secondary"
-                                className="gap-1 border-amber-200 bg-amber-50 text-amber-900"
-                              >
-                                <Star className="h-3 w-3" />
-                                Flagship
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        {isSelected && getCompletionBadge(moduleId)}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">{module.description}</p>
-
-                      {/* Module Details */}
-                      <div className="space-y-2 text-xs">
-                        {(module.contractVersion !== undefined || module.schemaVersion) && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Contract:</span>
-                            <span className="font-mono font-medium text-[11px]">
-                              {module.contractVersion !== undefined
-                                ? `v${module.contractVersion}`
-                                : '—'}
-                              {module.schemaVersion ? ` · ${module.schemaVersion}` : ''}
-                            </span>
-                          </div>
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={isSelected}
+                      onCheckedChange={(checked) => handleModuleToggle(moduleId, checked === true)}
+                      aria-label={module.title}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {getModuleIcon(moduleId)}
+                        <span className="font-medium text-nw-ink">{module.title}</span>
+                        {isFlagshipModule(module) && (
+                          <Badge
+                            variant="secondary"
+                            className="gap-1 border-amber-200 bg-amber-50 text-amber-900"
+                          >
+                            <Star className="h-3 w-3" aria-hidden="true" />
+                            Flagship
+                          </Badge>
                         )}
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Required fields:</span>
-                          <span className="font-medium">
-                            {module.fields.filter((f) => f.required).length}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Evidence slots:</span>
-                          <span className="font-medium">
-                            {module.evidence?.requirements.filter((r) => r.required).length ?? 0}
-                            {module.evidence?.requirements.length
-                              ? ` / ${module.evidence.requirements.length}`
-                              : ''}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Disclosures:</span>
-                          <span className="font-medium">{module.disclosures.length}</span>
-                        </div>
                       </div>
-
-                      {/* Progress indicator for selected modules */}
-                      {isSelected && (
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-muted-foreground">Completion</span>
-                            <span className="font-medium">
-                              {(() => {
-                                const moduleData = draft?.moduleData[moduleId] || {};
-                                const status = getModuleRuntimeStatus(
-                                  module,
-                                  moduleData,
-                                  draft?.moduleEvidence?.[moduleId] || {},
-                                );
-                                return `${status.percentage}%`;
-                              })()}
-                            </span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-1.5">
-                            <div
-                              className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${(() => {
-                                  const moduleData = draft?.moduleData[moduleId] || {};
-                                  return getModuleRuntimeStatus(
-                                    module,
-                                    moduleData,
-                                    draft?.moduleEvidence?.[moduleId] || {},
-                                  ).percentage;
-                                })()}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
+                      <p className="text-sm text-nw-text-3">
+                        {categoryName} · {mode}
+                        {module.contractVersion !== undefined
+                          ? ` · contract v${module.contractVersion}`
+                          : ''}
+                        {` · ${module.fields.filter((f) => f.required).length} required fields`}
+                        {` · ${module.disclosures.length} disclosures`}
+                      </p>
+                      {module.description && (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-nw-text-3">
+                          {module.description}
+                        </p>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {isSelected && getCompletionBadge(moduleId)}
+                      {runtime && (
+                        <span className="text-xs tabular-nums text-nw-text-3">
+                          {runtime.percentage}% complete
+                        </span>
+                      )}
+                    </div>
+                  </label>
                 );
               })}
             </div>

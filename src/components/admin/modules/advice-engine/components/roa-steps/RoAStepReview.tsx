@@ -93,6 +93,46 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
     ).complete;
   });
   const hasCompiledOutput = Boolean(draft.compiledOutput);
+
+  // Section readiness for the "Compiled sections" list beside the preview.
+  const sectionReadiness: Array<{ id: string; label: string; ready: boolean; note?: string }> = [
+    {
+      id: 'client',
+      label: 'Client details',
+      ready: Boolean(draft.clientId || draft.clientData),
+    },
+    ...draft.selectedModules.map((moduleId) => {
+      const module =
+        modules?.find((item) => item.id === moduleId) || getFallbackRuntimeModule(moduleId);
+      if (!module) return { id: moduleId, label: moduleId, ready: false, note: 'unknown module' };
+      if (isConversationModule(module)) {
+        const ready = draft.moduleConversationStatus?.[moduleId] === 'complete';
+        return {
+          id: moduleId,
+          label: module.title,
+          ready,
+          note: ready ? undefined : 'conversation not finished',
+        };
+      }
+      const status = getModuleRuntimeStatus(
+        module,
+        draft.moduleData[moduleId] || {},
+        draft.moduleEvidence?.[moduleId] || {},
+      );
+      const missing = status.missingFields.length + status.missingEvidence.length;
+      return {
+        id: moduleId,
+        label: module.title,
+        ready: status.complete,
+        note: missing > 0 ? `${missing} ${missing === 1 ? 'item' : 'items'} missing` : undefined,
+      };
+    }),
+  ];
+  sectionReadiness.push({
+    id: 'disclosures',
+    label: 'Disclosures',
+    ready: sectionReadiness.every((section) => section.ready),
+  });
   const isLocked = Boolean(draft.lockedAt);
 
   const downloadBase64 = (base64: string, contentType: string, fileName: string) => {
@@ -294,13 +334,13 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
       ? 'Compiled'
       : allModulesComplete
         ? 'Complete - compile required'
-        : 'In Progress';
+        : 'In progress';
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold mb-2">Review & Compile</h2>
+          <h2 className="text-xl font-semibold mb-2">Review & compile</h2>
           <p className="text-muted-foreground">
             Review your Record of Advice and generate the final documents
           </p>
@@ -312,7 +352,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            RoA Summary
+            RoA summary
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -341,53 +381,79 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Document Preview
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Review the canonical Record of Advice generated from the client snapshot, adviser
-            details, module contracts and completed module outputs.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[600px] pr-4">
-            <div className="space-y-6">
-              <div className="text-center space-y-2 pb-6 border-b">
-                <h1 className="text-2xl font-bold">RECORD OF ADVICE</h1>
-                <p className="text-lg">{clientName}</p>
-                <p className="text-sm text-muted-foreground">
-                  Prepared by Navigate Wealth | {new Date().toLocaleDateString()}
-                </p>
-              </div>
-
-              {renderCanonicalPreview()}
-
-              <div className="space-y-3 border-t pt-6">
-                <h2 className="text-xl font-semibold">Client Acknowledgment</h2>
-                <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-                  <p className="text-sm">
-                    I acknowledge that I have read and understood this Record of Advice and the
-                    recommendations contained herein.
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Document preview
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Review the canonical Record of Advice generated from the client snapshot, adviser
+              details, module contracts and completed module outputs.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[600px] pr-4">
+              <div className="space-y-6">
+                <div className="text-center space-y-2 pb-6 border-b">
+                  <h1 className="text-2xl font-bold">RECORD OF ADVICE</h1>
+                  <p className="text-lg">{clientName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Prepared by Navigate Wealth | {new Date().toLocaleDateString()}
                   </p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <Label>Client Signature:</Label>
-                      <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />
-                    </div>
-                    <div>
-                      <Label>Date:</Label>
-                      <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />
+                </div>
+
+                {renderCanonicalPreview()}
+
+                <div className="space-y-3 border-t pt-6">
+                  <h2 className="text-xl font-semibold">Client acknowledgment</h2>
+                  <div className="bg-muted/30 p-4 rounded-lg space-y-3">
+                    <p className="text-sm">
+                      I acknowledge that I have read and understood this Record of Advice and the
+                      recommendations contained herein.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label>Client signature:</Label>
+                        <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />
+                      </div>
+                      <div>
+                        <Label>Date:</Label>
+                        <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <section
+          aria-label="Compiled sections"
+          className="rounded-xl border border-nw-line bg-white p-4"
+        >
+          <h3 className="mb-3 text-sm font-semibold text-nw-ink">Compiled sections</h3>
+          <ul className="space-y-2">
+            {sectionReadiness.map((section) => (
+              <li key={section.id} className="flex items-start gap-2 text-sm">
+                <span
+                  className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    section.ready ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {section.ready ? 'Ready' : 'Check'}
+                </span>
+                <span className="min-w-0 text-nw-text-2">
+                  {section.label}
+                  {section.note ? ` · ${section.note}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
 
       <ModuleNarrativesEditor draft={draft} onUpdate={onUpdate} modules={modules} />
 
@@ -407,7 +473,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <AlertTriangle className="h-4 w-4" />
-                Validation Results
+                Validation results
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -429,7 +495,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Generate Documents
+            Generate documents
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
