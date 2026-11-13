@@ -151,20 +151,54 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
 
   const triggerRefresh = useCallback(() => setRefreshToken((n) => n + 1), []);
 
+  // A message named in the address but not on the loaded page (an older one,
+  // or one found through filters before a reload) is looked up on its own.
+  const [lookup, setLookup] = useState<{
+    id: string;
+    done: boolean;
+    entry: ActivityLogEntry | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!lookup || lookup.done) return;
+    let cancelled = false;
+    const { id } = lookup;
+    communicationApi
+      .findHistoryEntry(id)
+      .catch((err) => {
+        console.error('Failed to look up history message:', err);
+        return null;
+      })
+      .then((entry) => {
+        if (!cancelled) setLookup({ id, done: true, entry });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lookup]);
+
   // The open message is in the address (?message=<id>): reload, Back and a
-  // pasted link land on it. Only messages on the loaded history page can be
-  // opened from the address; there is no single-message endpoint.
+  // pasted link land on it, whichever list page it is on.
   useRecordInUrl('message', detailLog ? detailLog.id : null, {
-    ready: !loading,
+    ready: !loading && !(lookup && !lookup.done),
     openFromUrl: (id) => {
       if (loading) return 'waiting';
       const match = logs.find((log) => log.id === id);
-      if (!match) {
-        if (!error) toast.error('Message not found in the history list');
-        return 'missing';
+      if (match) {
+        setDetailLog(match);
+        return 'opened';
       }
-      setDetailLog(match);
-      return 'opened';
+      if (!lookup || lookup.id !== id) {
+        setLookup({ id, done: false, entry: null });
+        return 'waiting';
+      }
+      if (!lookup.done) return 'waiting';
+      if (lookup.entry) {
+        setDetailLog(lookup.entry);
+        return 'opened';
+      }
+      if (!error) toast.error('Message not found in the history list');
+      return 'missing';
     },
     closeFromUrl: (previousId) => {
       setDetailLog((current) => (current && current.id === previousId ? null : current));

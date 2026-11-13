@@ -34,6 +34,7 @@ const templates = [
 
 const api = vi.hoisted(() => ({
   getHistoryPage: vi.fn(),
+  findHistoryEntry: vi.fn(),
   getAllTemplates: vi.fn(),
   toggleTemplate: vi.fn(),
 }));
@@ -85,6 +86,7 @@ import { CommunicationModule } from '../CommunicationModule';
 beforeEach(() => {
   toastError.mockReset();
   api.getHistoryPage.mockResolvedValue({ entries: logs, total: 1, senderOptions: [] });
+  api.findHistoryEntry.mockResolvedValue(null);
   api.getAllTemplates.mockResolvedValue(templates);
 });
 afterEach(() => cleanup());
@@ -193,6 +195,21 @@ describe('Communication history', () => {
     act(() => goTo('/admin?module=communication&tab=history'));
     await screen.findByRole('heading', { level: 1, name: 'Communication' });
     expect(screen.getByText('Your year-end planning checklist')).toBeDefined();
+  });
+
+  it('opens an older message from the address even when it is not on the first page', async () => {
+    api.findHistoryEntry.mockResolvedValue({
+      ...logs[0],
+      id: 'camp-old',
+      subject: 'Budget speech highlights',
+    });
+    renderAt('/admin?module=communication&tab=history&message=camp-old');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Budget speech highlights' }),
+    ).toBeDefined();
+    expect(api.findHistoryEntry).toHaveBeenCalledWith('camp-old');
+    expect(search()).toBe('?module=communication&tab=history&message=camp-old');
+    expect(toastError).not.toHaveBeenCalled();
   });
 
   it('says so when the message in the address is not in the list', async () => {

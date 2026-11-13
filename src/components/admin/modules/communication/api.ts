@@ -318,6 +318,25 @@ export const communicationApi = {
     };
   },
 
+  /**
+   * Finds one history entry by id, whatever list page or filters the screen
+   * is on, so a message link still opens after a reload or when shared.
+   * There is no single-message endpoint, so this walks the unfiltered history
+   * newest first, up to `maxPages` pages of `limit`.
+   */
+  async findHistoryEntry(
+    id: string,
+    { limit = 100, maxPages = 10 }: { limit?: number; maxPages?: number } = {},
+  ): Promise<ActivityLogEntry | null> {
+    for (let page = 1; page <= maxPages; page += 1) {
+      const result = await this.getHistoryPage({ page, limit });
+      const match = result.entries.find((entry) => entry.id === id);
+      if (match) return match;
+      if (result.entries.length < limit || page * limit >= result.total) return null;
+    }
+    return null;
+  },
+
   /** Paginated campaign rows (server page/limit, no extra filters). */
   async getHistory(page = 1, limit = 50): Promise<ActivityLogEntry[]> {
     const r = await this.getHistoryPage({ page, limit });
