@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader } from '../../../../ui/card';
+import { Inbox } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import {
@@ -24,11 +24,6 @@ import { FNAIntakeStatusBadge } from '@/shared/fna-intake/components/FNAIntakeSt
 import { PrefillReviewModal } from '../../form-prefill';
 import { useClientList } from '../hooks/useClientList';
 import type { IntakeHandoffState } from './IntakeWizardHandoff';
-import {
-  FNAIntakeQueueSkeleton,
-  FNAIntakeQueueTitle,
-  INTAKE_RESULTS_CLASS,
-} from './FNAIntakeQueueSkeleton';
 
 interface FNAIntakeQueueProps {
   onAccept?: (result: IntakeHandoffState) => void;
@@ -173,78 +168,77 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
     }
   };
 
-  if (loading) {
-    return <FNAIntakeQueueSkeleton />;
-  }
+  // An attention banner above the figures (design: CM 1). Nothing waiting,
+  // or still loading, shows nothing.
+  if (loading) return null;
+
+  const fmtSubmitted = (iso?: string) =>
+    iso
+      ? new Date(iso).toLocaleString('en-ZA', {
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
 
   return (
     <>
-      <Card className="border-gray-200">
-        <CardHeader>
-          <FNAIntakeQueueTitle loading={false} />
-        </CardHeader>
-        <CardContent>
-          <div className={INTAKE_RESULTS_CLASS}>
-            {items.length === 0 ? (
-              <div className="flex min-h-[94px] items-center rounded-lg border border-dashed border-gray-200 px-4">
-                <p className="text-sm text-gray-500">No client intakes awaiting review.</p>
-              </div>
-            ) : (
-              items.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex flex-col gap-3 rounded-lg border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {DOMAIN_LABELS[session.domain] ?? session.domain}
-                      </p>
-                      <FNAIntakeStatusBadge status="submitted" mode="adviser" />
-                      <Badge variant="outline" className="text-[10px]">
-                        {session.progressPercent}% complete
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Client:{' '}
-                      <button
-                        type="button"
-                        className="font-medium text-primary hover:underline"
-                        onClick={() => onOpenClient?.(session.clientId)}
-                      >
-                        {clientNameFor(session.clientId)}
-                      </button>
-                    </p>
-                    {session.submittedAt && (
-                      <p className="text-xs text-gray-500">
-                        Submitted: {new Date(session.submittedAt).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={actingId === session.id}
-                      onClick={() => void handleRequestInfo(session)}
-                    >
-                      Request info
-                    </Button>
-                    <Button
-                      size="sm"
-                      disabled={actingId === session.id}
-                      onClick={() => void handleAccept(session)}
-                      className="bg-primary text-primary-foreground"
-                    >
-                      Accept & open wizard
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
+      {items.length > 0 && (
+        <section
+          aria-label="FNA intake queue"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold text-nw-ink">
+            <Inbox className="h-4 w-4 text-nw-amber-700" aria-hidden="true" />
+            FNA intake queue · {items.length} waiting
           </div>
-        </CardContent>
-      </Card>
+          <ul className="mt-2 max-h-[16rem] space-y-2 overflow-y-auto">
+            {items.map((session) => (
+              <li
+                key={session.id}
+                className="flex flex-col gap-2 border-t border-amber-200/70 pt-2 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-nw-amber-700">
+                  <span>{DOMAIN_LABELS[session.domain] ?? session.domain} FNA intake from</span>
+                  <button
+                    type="button"
+                    className="font-medium text-nw-ink underline-offset-2 hover:underline"
+                    onClick={() => onOpenClient?.(session.clientId)}
+                  >
+                    {clientNameFor(session.clientId)}
+                  </button>
+                  {session.submittedAt && (
+                    <span>· submitted {fmtSubmitted(session.submittedAt)}</span>
+                  )}
+                  <FNAIntakeStatusBadge status="submitted" mode="adviser" />
+                  <Badge variant="outline" className="bg-white text-[10px]">
+                    {session.progressPercent}% complete
+                  </Badge>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-white"
+                    disabled={actingId === session.id}
+                    onClick={() => void handleRequestInfo(session)}
+                  >
+                    Request info
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={actingId === session.id}
+                    onClick={() => void handleAccept(session)}
+                  >
+                    Accept & open wizard
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <PrefillReviewModal
         open={reviewOpen}
