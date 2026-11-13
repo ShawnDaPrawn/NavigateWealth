@@ -80,7 +80,7 @@ describe('TaskPage', () => {
     render(<TaskPage onClose={noop} mode="create" />);
     fireEvent.click(screen.getByRole('button', { name: 'Create task' }));
     expect(await screen.findByText('Give the task a title')).toBeTruthy();
-    expect(screen.getByRole('alert').textContent).toBe('Fix 1 field to create the task');
+    expect(screen.getByRole('alert').textContent).toContain('Fix 1 field to create the task');
     expect(created).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'Call the client' } });

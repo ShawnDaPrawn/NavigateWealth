@@ -63,6 +63,7 @@ import {
   NavTabsTrigger,
   PageHeader,
   StatCard,
+  useBreadcrumbTrail,
   useRecordInUrl,
   useUrlState,
 } from '../../layout/page';
@@ -552,6 +553,18 @@ export function NotesModule() {
     setEditorOpen(false);
     setSelectedNote(null);
   }, []);
+
+  // Top-bar breadcrumb: Work / Notes / Active (/ the open note).
+  const tabLabel =
+    archiveFilter === 'archived' ? 'Archived' : archiveFilter === 'all' ? 'All' : 'Active';
+  useBreadcrumbTrail(
+    editorOpen
+      ? [
+          { label: tabLabel, onClick: closeEditor },
+          { label: selectedNote ? selectedNote.title || 'Untitled note' : 'New note' },
+        ]
+      : [{ label: tabLabel }],
+  );
 
   if (editorOpen) {
     // Keep the open note current as the list refetches (pin, archive, save).

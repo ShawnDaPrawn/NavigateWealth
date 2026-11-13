@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { BackLink } from '../../../layout/page/FilterControls';
-import { useConfirm } from '../../../layout/page';
+import { FormErrorBanner, useConfirm } from '../../../layout/page';
 import { DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { logger } from '../../../../../utils/logger';
@@ -373,11 +373,13 @@ export function TaskPage({
 
     if (!formData.title?.trim()) {
       setTitleError('Give the task a title');
+      document.getElementById('task-title')?.focus();
       return;
     }
 
     if (formData.title.trim().length < 3) {
       setTitleError('Use at least 3 characters');
+      document.getElementById('task-title')?.focus();
       return;
     }
     setTitleError(null);
@@ -563,12 +565,10 @@ export function TaskPage({
         className="flex max-w-[880px] flex-col gap-8 rounded-xl border border-nw-line bg-white p-6"
       >
         {titleError && (
-          <div
-            role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-          >
-            Fix 1 field to {mode === 'create' ? 'create' : 'save'} the task
-          </div>
+          <FormErrorBanner
+            count={1}
+            action={mode === 'create' ? 'create the task' : 'save the task'}
+          />
         )}
         <div className="space-y-1.5">
           <Label htmlFor="task-title">

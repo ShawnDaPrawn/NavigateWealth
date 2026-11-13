@@ -37,6 +37,7 @@ import {
 import { cn } from '../../../../ui/utils';
 import { toast } from 'sonner';
 import { submissionsApi } from '../api';
+import { FormErrorBanner } from '../../../layout/page';
 import { SUBMISSION_INVITE_TYPES, SITE_BASE_URL, type SubmissionInviteType } from '../constants';
 
 // ── Icon Resolver ─────────────────────────────────────────────────────────────
@@ -145,10 +146,12 @@ export function SubmissionInviteModal({ open, onClose }: SubmissionInviteModalPr
     const email = recipientEmail.trim();
     if (!email) {
       setEmailError("Enter the recipient's email address");
+      document.getElementById('invite-email')?.focus();
       return;
     }
     if (!EMAIL_RE.test(email)) {
       setEmailError('Enter a valid email address, e.g. client@example.com');
+      document.getElementById('invite-email')?.focus();
       return;
     }
     setEmailError(null);
@@ -213,6 +216,8 @@ export function SubmissionInviteModal({ open, onClose }: SubmissionInviteModalPr
             <DialogDescription className="text-sm text-nw-text-3">
               Send them a link to one of the website forms. Their reply arrives on the board as New.
             </DialogDescription>
+
+            {emailError && <FormErrorBanner count={1} action="send the invitation" />}
 
             <fieldset className="space-y-2">
               <legend className="mb-2 text-sm font-medium text-nw-ink">Form</legend>

@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { Label } from '../../../../ui/label';
-import { useConfirm } from '../../../layout/page';
+import { FormErrorBanner, useConfirm } from '../../../layout/page';
 import { BackLink } from '../../../layout/page/FilterControls';
 import { cn } from '../../../../ui/utils';
 import {
@@ -249,6 +249,7 @@ export function NoteEditorModal({
   const handleSave = useCallback(async () => {
     if (!title.trim()) {
       setTitleError('Give the note a title');
+      document.getElementById('note-title')?.focus();
       return;
     }
     setTitleError(null);
@@ -746,12 +747,7 @@ export function NoteEditorModal({
           )}
         >
           {titleError && (
-            <div
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-            >
-              Fix 1 field to {isEditing ? 'save' : 'create'} the note
-            </div>
+            <FormErrorBanner count={1} action={isEditing ? 'save the note' : 'create the note'} />
           )}
           <div className="space-y-1.5">
             <Label htmlFor="note-title">

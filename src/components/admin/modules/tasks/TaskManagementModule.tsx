@@ -15,6 +15,7 @@ import {
   NavTabsList,
   NavTabsTrigger,
   ErrorState,
+  useBreadcrumbTrail,
   useRecordInUrl,
   useUrlState,
 } from '../../layout/page';
@@ -102,6 +103,22 @@ export function TaskManagementModule() {
     },
     closeFromUrl: () => handleCloseModal(),
   });
+
+  // Top-bar breadcrumb: Work / To-Do / Board (/ Task), or / New task.
+  const tabLabel = tab === 'archived' ? 'Archived' : 'Board';
+  useBreadcrumbTrail(
+    isModalOpen
+      ? selectedTask
+        ? [
+            {
+              label: selectedTask.status === 'archived' ? 'Archived' : 'Board',
+              onClick: handleCloseModal,
+            },
+            { label: 'Task' },
+          ]
+        : [{ label: 'New task' }]
+      : [{ label: tabLabel }],
+  );
 
   if (isModalOpen) {
     return (

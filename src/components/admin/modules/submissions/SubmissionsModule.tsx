@@ -43,6 +43,7 @@ import {
   NavTabsList,
   NavTabsTrigger,
   PageHeader,
+  useBreadcrumbTrail,
   useConfirm,
   useRecordInUrl,
   useUrlState,
@@ -327,6 +328,19 @@ export function SubmissionsModule() {
 
   const inviteDialog = (
     <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
+  );
+
+  // Top-bar breadcrumb: Work / Submissions / Board (/ the submitter).
+  const listLabel = (selectedSubmission ? selectedSubmission.status === 'archived' : showArchived)
+    ? 'Archived'
+    : 'Board';
+  useBreadcrumbTrail(
+    selectedSubmission
+      ? [
+          { label: listLabel, onClick: () => setSelectedSubmission(null) },
+          { label: selectedSubmission.submitterName || 'Submission' },
+        ]
+      : [{ label: listLabel }],
   );
 
   // ── Render: an open submission is a page ──
