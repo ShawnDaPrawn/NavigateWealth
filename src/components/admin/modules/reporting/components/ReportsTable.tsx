@@ -166,6 +166,11 @@ export function ReportsTable({
                     <p className="text-muted-foreground mb-4">
                       {searchQuery ? 'Try another search.' : 'There are no reports to run.'}
                     </p>
+                    {searchQuery && (
+                      <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+                        Clear search
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Plus } from 'lucide-react';
-import { Badge } from '../../../ui/badge';
-import { PageHeader } from '../../layout/page';
+import { PageHeader, SoonBadge, useBreadcrumbTrail } from '../../layout/page';
 import { toast } from 'sonner';
 
 // Import types
@@ -85,6 +84,9 @@ export function ReportingModule() {
   const { canDo } = useCurrentUserPermissions();
 
   const canCreate = canDo('reporting', 'create');
+
+  // Top-bar breadcrumb: Reporting / <report> while its settings are open.
+  useBreadcrumbTrail(reportDialogOpen && selectedReport ? [{ label: selectedReport.name }] : []);
 
   /**
    * Execute a report with progress tracking
@@ -182,17 +184,11 @@ export function ReportingModule() {
           canCreate ? (
             <Button disabled>
               <Plus className="h-4 w-4" aria-hidden="true" />
-              New report
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
-                Soon
-              </Badge>
+              New report <SoonBadge />
             </Button>
           ) : null
         }
       />
-
-      {/* Recent Report Runs */}
-      <ReportRunsList runs={reportRuns} reports={reports} />
 
       {/* Reports Table */}
       <ReportsTable
@@ -201,6 +197,9 @@ export function ReportingModule() {
         onRunReport={runReport}
         onOpenSettings={openReportDialog}
       />
+
+      {/* Recent report runs: under the table, once something has run */}
+      <ReportRunsList runs={reportRuns} reports={reports} />
 
       {/* Report Configuration Dialog */}
       <ReportDialog
