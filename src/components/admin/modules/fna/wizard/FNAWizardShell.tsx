@@ -13,7 +13,7 @@ import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, ChevronLeft, Loader2 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
 import { PageHeader } from '../../../layout/page';
-import { useAppendBreadcrumb } from './useAppendBreadcrumb';
+import { useAppendBreadcrumb } from '../../../layout/page';
 import {
   FNA_WIZARD_TITLES,
   type FNAWizardFlowStep,

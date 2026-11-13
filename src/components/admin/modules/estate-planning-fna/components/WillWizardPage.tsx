@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { PageHeader } from '../../../layout/page';
-import { useAppendBreadcrumb } from '../../fna/wizard/useAppendBreadcrumb';
+import { useAppendBreadcrumb } from '../../../layout/page';
 
 interface WillWizardPageProps {
   open: boolean;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect } from 'react';
-import type { Crumb } from '../../../layout/page';
+import type { Crumb } from './breadcrumbContext';
 
 /**
  * Lets a tab of the client page add its own steps after the tab label

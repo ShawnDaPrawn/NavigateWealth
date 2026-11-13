@@ -22,7 +22,7 @@ import { deriveAccountStatus } from '../utils';
 import { CLIENT_PAGE_PARAMS, CLIENT_TABS, type ClientTab } from './clientPageParams';
 import type { OverviewActions } from './ClientOverviewTab';
 import { Crumbs } from './Crumbs';
-import { ClientSubCrumbContext } from './crumbsContext';
+import { ClientSubCrumbContext } from '../../../layout/page';
 import type { Crumb } from '../../../layout/page';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

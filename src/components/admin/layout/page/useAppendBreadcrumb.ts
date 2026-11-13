@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef } from 'react';
-import { BreadcrumbContext, type Crumb } from '../../../layout/page';
+import { BreadcrumbContext, type Crumb } from './breadcrumbContext';
 
 /**
  * Adds steps to the END of the breadcrumb the client page already shows

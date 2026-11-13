@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronLeft, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
@@ -19,10 +19,14 @@ import {
   useConfirm,
   useUrlState,
 } from '../../../../layout/page';
-import { communicationApi } from '../../../communication';
-import type { ClientGroup, ExternalContact, GroupFilterConfig } from '../../../communication/types';
-import { FilterBuilder } from '../../../communication/components/groups/FilterBuilder';
-import { ManualSelection } from '../../../communication/components/groups/ManualSelection';
+import {
+  communicationApi,
+  FilterBuilder,
+  ManualSelection,
+  type ClientGroup,
+  type ExternalContact,
+  type GroupFilterConfig,
+} from '../../../communication';
 import {
   GROUP_EDITOR_VIEWS,
   NEWSLETTER_GROUP_ID,
@@ -289,11 +293,15 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
               Clients matching these rules are included automatically. Ranges within a rule use OR
               logic.
             </p>
-            <FilterBuilder
-              filterConfig={filterConfig}
-              onChange={setFilterConfig}
-              providers={providers}
-            />
+            <Suspense
+              fallback={<div className="h-40 animate-pulse rounded-xl bg-muted" aria-busy="true" />}
+            >
+              <FilterBuilder
+                filterConfig={filterConfig}
+                onChange={setFilterConfig}
+                providers={providers}
+              />
+            </Suspense>
           </TabsContent>
         )}
 
@@ -302,13 +310,19 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
             {loading ? (
               <div className="h-40 animate-pulse rounded-xl bg-muted" aria-busy="true" />
             ) : (
-              <ManualSelection
-                clients={clients}
-                selectedIds={selectedClientIds}
-                onToggle={toggleClient}
-                searchTerm={manualSearch}
-                onSearchChange={setManualSearch}
-              />
+              <Suspense
+                fallback={
+                  <div className="h-40 animate-pulse rounded-xl bg-muted" aria-busy="true" />
+                }
+              >
+                <ManualSelection
+                  clients={clients}
+                  selectedIds={selectedClientIds}
+                  onToggle={toggleClient}
+                  searchTerm={manualSearch}
+                  onSearchChange={setManualSearch}
+                />
+              </Suspense>
             )}
           </TabsContent>
         )}

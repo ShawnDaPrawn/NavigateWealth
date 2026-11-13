@@ -11,7 +11,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { Notice } from '../../../layout/page';
-import { useClientSubCrumbs } from './crumbsContext';
+import { useClientSubCrumbs } from '../../../layout/page';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../../auth/AuthContext';
 import type { Client } from '../types';

@@ -54,7 +54,7 @@ import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
 import { ProfileSectionView } from './ProfileSectionView';
 import { contactGroups, personalGroups } from './profileSectionRows';
 import { useUrlState } from '../../../../layout/page';
-import { useClientSubCrumbs } from '../crumbsContext';
+import { useClientSubCrumbs } from '../../../../layout/page';
 
 const PROFILE_SECTIONS = [
   'personal',

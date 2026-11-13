@@ -1,4 +1,4 @@
-import type { ClientGroup, GroupFilterConfig } from '../../../communication/types';
+import type { ClientGroup, GroupFilterConfig } from '../../../communication';
 
 export const NEWSLETTER_GROUP_ID = 'sys_newsletter_contacts';
 

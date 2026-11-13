@@ -14,7 +14,7 @@ import { useState, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
-import { useClientSubCrumbs } from './crumbsContext';
+import { useClientSubCrumbs } from '../../../layout/page';
 
 const COMMUNICATION_VIEWS = ['compose', 'history'] as const;
 type CommunicationView = (typeof COMMUNICATION_VIEWS)[number];

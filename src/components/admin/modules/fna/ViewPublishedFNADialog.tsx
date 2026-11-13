@@ -19,7 +19,7 @@ import {
 } from '../../../ui/dropdown-menu';
 import { ChevronLeft, Download, Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
 import { PageHeader, useConfirm } from '../../layout/page';
-import { exportComponentToPdf } from '../risk-planning-fna/utils/pdfExport';
+import { exportComponentToPdf } from '../../../shared/pdf/exportComponentToPdf';
 import { toast } from 'sonner';
 import { api, resolveApiEndpoint } from '../../../../utils/api';
 

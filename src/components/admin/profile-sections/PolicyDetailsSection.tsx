@@ -23,7 +23,7 @@ import { PolicyOverviewTab } from './PolicyOverviewTab';
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
 import type { FNAListFocus } from '../modules/fna';
 import { useUrlState } from '../layout/page';
-import { useClientSubCrumbs } from '../modules/client-management/components/crumbsContext';
+import { useClientSubCrumbs } from '../layout/page';
 import {
   clientPoliciesQueryOptions,
   filterPoliciesForCategory,

@@ -33,7 +33,7 @@ import {
   type Provider,
   type ProductField,
 } from './policyFormModel';
-import { useClientSubCrumbs } from '../modules/client-management/components/crumbsContext';
+import { useClientSubCrumbs } from '../layout/page';
 import { renderPolicyFieldInput } from './policyFieldInputs';
 
 interface PolicyFormDialogProps {

@@ -4,7 +4,7 @@
  */
 
 import { createRoot } from 'react-dom/client';
-import { withNavigateWealthPrintTitle } from '../../../../../utils/pdfPrintTitle';
+import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 
 export interface PdfExportOptions {
   /** Legacy; used as fallback for print title when printTitle is omitted */

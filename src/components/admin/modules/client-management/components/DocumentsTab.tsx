@@ -15,7 +15,7 @@ import { Button } from '../../../../ui/button';
 import { Mail, Plus, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
-import { useClientSubCrumbs } from './crumbsContext';
+import { useClientSubCrumbs } from '../../../layout/page';
 
 const DOCUMENTS_VIEWS = ['docs', 'timeline'] as const;
 type DocumentsView = (typeof DOCUMENTS_VIEWS)[number];
