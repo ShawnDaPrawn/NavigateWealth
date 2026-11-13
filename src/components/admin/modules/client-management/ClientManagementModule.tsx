@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useMemo, useCallback, useRef, Suspense } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
@@ -127,24 +127,28 @@ export function ClientManagementModule() {
     });
   }, [safeClients, selectedClient?.id]);
 
+  // The id of the client most recently asked for, by any route (row, search,
+  // deep link, intake). The address sync below must not close a client that
+  // was opened in the same update as the old one's address was cleared.
+  const lastOpenedIdRef = useRef<string | null>(null);
+  const showClient = useCallback((target: Client) => {
+    lastOpenedIdRef.current = target.id;
+    setSelectedClient(target);
+    setDrawerOpen(true);
+  }, []);
+
   // ── GlobalSearch deep-link: auto-open drawer for pending client selection ──
   React.useEffect(() => {
     if (pendingSelection?.type === 'client' && !loading && safeClients.length > 0) {
       const target = safeClients.find((c) => c.id === pendingSelection.id);
-      if (target) {
-        setSelectedClient(target);
-        setDrawerOpen(true);
-      }
+      if (target) showClient(target);
       clearPendingSelection();
     }
-  }, [pendingSelection, loading, safeClients, clearPendingSelection]);
+  }, [pendingSelection, loading, safeClients, clearPendingSelection, showClient]);
 
   // Deep link: /admin?module=clients&clientId=… (prefill banner, external form
   // link, submissions). Opens the drawer once, then drops the id from the URL.
-  const openDeepLinkedClient = useCallback((target: Client) => {
-    setSelectedClient(target);
-    setDrawerOpen(true);
-  }, []);
+  const openDeepLinkedClient = showClient;
   useClientDeepLink(safeClients, loading, openDeepLinkedClient);
 
   // An open client is a page with its own address (?client=<id>).
@@ -158,11 +162,13 @@ export function ClientManagementModule() {
         return 'missing';
       }
       setDrawerFnaFocus(null);
-      setSelectedClient(target);
-      setDrawerOpen(true);
+      showClient(target);
       return 'opened';
     },
-    closeFromUrl: () => setDrawerOpen(false),
+    closeFromUrl: (previousId) => {
+      if (lastOpenedIdRef.current && lastOpenedIdRef.current !== previousId) return;
+      setDrawerOpen(false);
+    },
   });
 
   const canCreate = canDo('clients', 'create');
@@ -172,8 +178,7 @@ export function ClientManagementModule() {
 
   const openClientDrawer = (client: Client) => {
     setDrawerFnaFocus(null);
-    setSelectedClient(client);
-    setDrawerOpen(true);
+    showClient(client);
   };
 
   // A wizard opened from an accepted intake lands, on publish, where the FNA
@@ -187,8 +192,7 @@ export function ClientManagementModule() {
       fnaId,
       nonce: Date.now(),
     });
-    setSelectedClient(target);
-    setDrawerOpen(true);
+    showClient(target);
   };
 
   const handleRowClick = (client: Client) => {

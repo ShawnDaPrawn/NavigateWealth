@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router';
+import { act } from 'react';
 import type { Client } from '../types';
 
 const clients = [
@@ -32,8 +33,17 @@ vi.mock('../hooks/useClientList', () => ({
 vi.mock('../../personnel', () => ({
   useCurrentUserPermissions: () => ({ canDo: () => true }),
 }));
+const nav = vi.hoisted(() => ({
+  pending: null as null | { type: 'client'; id: string },
+  clear: () => {
+    nav.pending = null;
+  },
+}));
 vi.mock('../../../layout/AdminNavigationContext', () => ({
-  useAdminNavigation: () => ({ pendingSelection: null, clearPendingSelection: vi.fn() }),
+  useAdminNavigation: () => ({
+    pendingSelection: nav.pending,
+    clearPendingSelection: () => nav.clear(),
+  }),
 }));
 vi.mock('../../../../shared/unsaved-changes', () => ({
   useOptionalUnsavedChangesRegistry: () => null,
@@ -66,7 +76,10 @@ import { ClientManagementModule } from '../ClientManagementModule';
 
 afterEach(() => cleanup());
 
+let goTo: (url: string) => void = () => undefined;
 function Location() {
+  const navigate = useNavigate();
+  goTo = (url) => navigate(url);
   return <output data-testid="search">{useLocation().search}</output>;
 }
 
@@ -128,5 +141,20 @@ describe('Client Management page', () => {
     });
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Field repository' }));
     await waitFor(() => screen.getByText('field repository'));
+  });
+
+  it('opens a client picked in global search while another client is open', async () => {
+    renderAt('/admin?module=clients&client=c-elsa');
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Elsa van Wyk' }));
+    // Global search sets the pending selection and switches module, which
+    // clears ?client= in the same update.
+    act(() => {
+      nav.pending = { type: 'client', id: 'c-faizel' };
+      goTo('/admin?module=clients');
+    });
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Faizel Khan' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe('?module=clients&client=c-faizel'),
+    );
   });
 });

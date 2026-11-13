@@ -28,7 +28,12 @@ export function useRecordInUrl(
   }: {
     ready: boolean;
     openFromUrl: (id: string) => RecordOpenResult;
-    closeFromUrl: () => void;
+    /**
+     * The address no longer names a record. `previousId` is the record it
+     * named; a page that has just opened a different record (in the same
+     * update, e.g. from global search) should ignore the call.
+     */
+    closeFromUrl: (previousId: string | null) => void;
   },
 ) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,8 +57,9 @@ export function useRecordInUrl(
     if (urlId !== synced.current) {
       // The address changed on its own: follow it.
       if (!urlId) {
+        const previousId = synced.current;
         synced.current = null;
-        closeRef.current();
+        closeRef.current(previousId);
         return;
       }
       if (openId === urlId) {
