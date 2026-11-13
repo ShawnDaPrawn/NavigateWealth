@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
+  DialogFooter,
   DialogTitle,
 } from '../../../../ui/dialog';
 import {
@@ -659,7 +660,7 @@ export function ArticleEmailEngagementPanel() {
       >
         <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>{detail?.summary.articleTitle || 'Recipient Engagement'}</DialogTitle>
+            <DialogTitle>{detail?.summary.articleTitle || 'Recipient engagement'}</DialogTitle>
             <DialogDescription>
               Recipient-level article email activity, including send status, opens, and read
               completions.
@@ -726,18 +727,6 @@ export function ArticleEmailEngagementPanel() {
                         stay on the retry queue.
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => void retryUndelivered(detail.summary.articleId)}
-                      disabled={retryingArticleId === detail.summary.articleId}
-                    >
-                      {retryingArticleId === detail.summary.articleId ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                      <span className="ml-1.5">Re-send all</span>
-                    </Button>
                   </div>
                 )}
 
@@ -818,6 +807,30 @@ export function ArticleEmailEngagementPanel() {
               </div>
             )}
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedArticleId(null);
+                setDetail(null);
+              }}
+            >
+              Close
+            </Button>
+            {detail && detail.summary.publishUndelivered > 0 && !detail.summary.isDeleted && (
+              <Button
+                onClick={() => void retryUndelivered(detail.summary.articleId)}
+                disabled={retryingArticleId === detail.summary.articleId}
+              >
+                {retryingArticleId === detail.summary.articleId ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                )}
+                Retry undelivered ({detail.summary.publishUndelivered})
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
