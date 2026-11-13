@@ -133,6 +133,7 @@ interface ReviewPageProps {
   onApplicationUpdated?: (app: Application) => void;
   onCompleteOnBehalf?: (app: Application) => void;
   onResendInvite?: (app: Application) => void;
+  onDownloadPdf?: (app: Application) => void;
   /** Hides Approve / Reject when the person may not decide. */
   canApprove?: boolean;
 }
@@ -149,6 +150,7 @@ export function ReviewPage({
   onApplicationUpdated,
   onCompleteOnBehalf,
   onResendInvite,
+  onDownloadPdf,
   canApprove = true,
 }: ReviewPageProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -291,7 +293,8 @@ export function ReviewPage({
 
   const showMenu =
     (isActionable && !!onCompleteOnBehalf) ||
-    (selectedApplication.status === 'invited' && !!onResendInvite);
+    (selectedApplication.status === 'invited' && !!onResendInvite) ||
+    !!onDownloadPdf;
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6 pb-28 lg:p-8 lg:pb-28">
@@ -356,6 +359,11 @@ export function ReviewPage({
                 {selectedApplication.status === 'invited' && onResendInvite && (
                   <DropdownMenuItem onSelect={() => onResendInvite(selectedApplication)}>
                     Resend invite
+                  </DropdownMenuItem>
+                )}
+                {onDownloadPdf && (
+                  <DropdownMenuItem onSelect={() => onDownloadPdf(selectedApplication)}>
+                    Download PDF
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

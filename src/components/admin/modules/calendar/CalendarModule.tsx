@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -23,7 +23,7 @@ import { useTasks } from '../tasks';
 import type { CalendarEvent, CalendarFilters, CreateEventInput } from './types';
 import type { Task } from '../tasks';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, isToday, isValid, parse } from 'date-fns';
 
 import {
   DropdownMenu,
@@ -40,10 +40,18 @@ import {
   useBreadcrumbTrail,
   useConfirm,
   useRecordInUrl,
-  useUrlState,
 } from '../../layout/page';
 
 const CALENDAR_VIEWS = ['month', 'week', 'day', 'agenda'] as const;
+
+/** ?date=2026-11-09 → that day; missing or invalid → today. */
+function parseDateParam(raw: string | null): Date {
+  if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const parsed = parse(raw, 'yyyy-MM-dd', new Date());
+    if (isValid(parsed)) return parsed;
+  }
+  return new Date();
+}
 /** The address names a new event with this id. */
 const NEW_EVENT = 'new';
 const FILTER_TYPES: EventType[] = [
@@ -76,9 +84,50 @@ export function CalendarModule() {
   });
 
   const [showEventModal, setShowEventModal] = useState(false);
-  // Month · Week · Day · Agenda lives in the address (?view=week).
-  const [view, setView] = useUrlState<CalendarView>('view', 'month', CALENDAR_VIEWS);
-  const [, setSearchParams] = useSearchParams();
+  // Month · Week · Day · Agenda and the date shown live in the address
+  // (?view=week&date=2026-11-09; month and today are left out), so reload and
+  // Back return to the same place.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawView = searchParams.get('view');
+  const view: CalendarView = (CALENDAR_VIEWS as readonly string[]).includes(rawView ?? '')
+    ? (rawView as CalendarView)
+    : 'month';
+  const currentDate = useMemo(() => parseDateParam(searchParams.get('date')), [searchParams]);
+  // A day click sets the date and the view in one go: collect changes made
+  // in the same tick and write the address once (router updates don't chain).
+  const pendingParams = useRef<Record<string, string | null> | null>(null);
+  const writeParams = useCallback(
+    (changes: Record<string, string | null>) => {
+      if (!pendingParams.current) {
+        pendingParams.current = {};
+        queueMicrotask(() => {
+          const all = pendingParams.current ?? {};
+          pendingParams.current = null;
+          setSearchParams(
+            (current) => {
+              const next = new URLSearchParams(current);
+              for (const [key, value] of Object.entries(all)) {
+                if (value === null) next.delete(key);
+                else next.set(key, value);
+              }
+              return next;
+            },
+            { replace: true },
+          );
+        });
+      }
+      Object.assign(pendingParams.current, changes);
+    },
+    [setSearchParams],
+  );
+  const setView = useCallback(
+    (next: CalendarView) => writeParams({ view: next === 'month' ? null : next }),
+    [writeParams],
+  );
+  const setCurrentDate = useCallback(
+    (next: Date) => writeParams({ date: isToday(next) ? null : format(next, 'yyyy-MM-dd') }),
+    [writeParams],
+  );
   const { data: clientList = [] } = useClients();
   const [showPDFModal, setShowPDFModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -86,7 +135,6 @@ export function CalendarModule() {
   const [searchText, setSearchText] = useState('');
 
   // Lifted state for date navigation
-  const [currentDate, setCurrentDate] = useState(new Date());
   const { canDo } = useCurrentUserPermissions();
 
   const canCreateEvent = canDo('calendar', 'create');

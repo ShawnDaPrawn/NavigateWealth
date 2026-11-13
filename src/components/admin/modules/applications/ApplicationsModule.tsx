@@ -35,10 +35,13 @@ import {
   NoAccess,
   PageHeader,
   useBreadcrumbTrail,
+  useConfirm,
   useRecordInUrl,
   useUrlState,
 } from '../../layout/page';
 import { moduleSearchParams } from '../../layout/moduleSearchParams';
+import { communicationApi } from '../communication';
+import { downloadApplicationAsPdf } from './components/application-pdf';
 
 const APPLICATION_STATUSES: readonly TabStatus[] = [
   'incomplete',
@@ -124,6 +127,7 @@ export function ApplicationsModule() {
   const [actionLoading, setActionLoading] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   // Read through a ref, not a dependency: depending on `applications.length`
   // changed this callback's identity when the first response arrived, which
@@ -367,6 +371,66 @@ export function ApplicationsModule() {
     }
   }, []);
 
+  // Incomplete applications: the invite resend only serves invited ones, so a
+  // reminder goes as a message (portal + email) through Communication.
+  const handleSendReminder = useCallback(
+    async (application: Application) => {
+      const data = normalizeApplicationData(application.application_data);
+      const email = data.emailAddress || application.user_email;
+      const name = applicantName(application);
+      if (!email) {
+        toast.error('No email address on this application');
+        return;
+      }
+      const ok = await confirm({
+        title: `Send a reminder to ${name}?`,
+        description: `${email} gets an email asking them to sign in and finish their application.`,
+        confirmLabel: 'Send reminder',
+      });
+      if (!ok) return;
+      const signIn = `${window.location.origin}/login`;
+      try {
+        const result = await communicationApi.sendDirectMessage({
+          clientId: application.user_id,
+          subject: 'Finish your Navigate Wealth application',
+          message: `<p>Hello ${data.firstName || 'there'},</p><p>You started an application with Navigate Wealth${
+            application.application_number ? ` (${application.application_number})` : ''
+          } but have not finished it yet. Sign in to pick up where you left off:</p><p><a href="${signIn}">${signIn}</a></p><p>If you have any questions, reply to this email and we will help.</p>`,
+          category: 'General',
+          priority: 'normal',
+          sendEmail: true,
+          clientEmail: email,
+        });
+        if (result.success && result.status !== 'failed' && result.status !== 'rejected') {
+          toast.success(`Reminder sent to ${email}`);
+        } else {
+          toast.error('Failed to send the reminder. Please try again.', {
+            description: result.failureReason,
+          });
+        }
+      } catch (error) {
+        toast.error('Failed to send the reminder. Please try again.', {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      }
+    },
+    [confirm],
+  );
+
+  const handleDownloadPdf = useCallback(async (application: Application) => {
+    try {
+      // The detail holds every field the review shows.
+      const detail = await applicationsApi
+        .getApplicationDetail(application.id)
+        .catch(() => application);
+      await downloadApplicationAsPdf(detail);
+      toast.success('PDF downloaded');
+    } catch (error) {
+      console.error('Application PDF error:', error);
+      toast.error('Failed to generate PDF');
+    }
+  }, []);
+
   // ── Breadcrumb: Work / Applications / Pending review (/ APP-number) ──────
   const tabLabel = TAB_LABEL[activeTab];
   const backToList = () => {
@@ -404,6 +468,7 @@ export function ApplicationsModule() {
         setReason={setDeclineReason}
         applicantName={applicantName(actionApp)}
       />
+      {confirmDialog}
       <InviteDialog
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
@@ -468,6 +533,7 @@ export function ApplicationsModule() {
             setCompleteOnBehalfApp(app);
           }}
           onResendInvite={handleResendInvite}
+          onDownloadPdf={(app) => void handleDownloadPdf(app)}
           canApprove={canApprove}
         />
         {dialogs}
@@ -526,6 +592,8 @@ export function ApplicationsModule() {
           onResendInvite={handleResendInvite}
           onCompleteOnBehalf={setCompleteOnBehalfApp}
           onOpenClient={(app) => openClient(app.user_id)}
+          onSendReminder={(app) => void handleSendReminder(app)}
+          onDownloadPdf={(app) => void handleDownloadPdf(app)}
           onInvite={() => setInviteDialogOpen(true)}
           resendingInviteId={resendingInviteId}
           canApprove={canApprove}

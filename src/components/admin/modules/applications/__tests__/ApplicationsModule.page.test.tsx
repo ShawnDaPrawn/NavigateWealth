@@ -25,7 +25,11 @@ const app = (id: string, status: Application['status'], first: string): Applicat
     origin: 'admin_import',
   }) as unknown as Application;
 
-const rows = [app('0190', 'submitted', 'Nadia'), app('0191', 'approved', 'Riaan')];
+const rows = [
+  app('0190', 'submitted', 'Nadia'),
+  app('0191', 'approved', 'Riaan'),
+  app('0192', 'in_progress', 'Lindiwe'),
+];
 const api = vi.hoisted(() => ({
   getApplications: vi.fn(),
   getStats: vi.fn(),
@@ -35,10 +39,23 @@ const api = vi.hoisted(() => ({
   resendInvite: vi.fn(),
 }));
 const toastError = vi.hoisted(() => vi.fn());
+const toastSuccess = vi.hoisted(() => vi.fn());
+const sendDirectMessage = vi.hoisted(() => vi.fn());
+const downloadPdf = vi.hoisted(() => vi.fn());
+vi.mock('../../communication', () => ({
+  communicationApi: { sendDirectMessage: (p: unknown) => sendDirectMessage(p) },
+}));
+vi.mock('../components/application-pdf', () => ({
+  downloadApplicationAsPdf: (a: unknown) => downloadPdf(a),
+}));
 
 vi.mock('../api', () => ({ applicationsApi: api }));
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: (m: string) => toastError(m), info: vi.fn() },
+  toast: {
+    success: (m: string) => toastSuccess(m),
+    error: (m: string) => toastError(m),
+    info: vi.fn(),
+  },
 }));
 vi.mock('../../../../auth/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { id: 'admin-1', role: 'admin' } }),
@@ -89,7 +106,13 @@ function setup() {
   api.getApplications.mockImplementation(async (tab: string) =>
     tab === 'all'
       ? rows
-      : rows.filter((r) => (tab === 'pending' ? r.status === 'submitted' : r.status === tab)),
+      : rows.filter((r) =>
+          tab === 'pending'
+            ? r.status === 'submitted'
+            : tab === 'incomplete'
+              ? r.status === 'in_progress'
+              : r.status === tab,
+        ),
   );
   api.getStats.mockResolvedValue({
     total: 187,
@@ -135,7 +158,11 @@ describe('Applications page', () => {
     expect(screen.getByRole('button', { name: 'Filter by origin' })).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Review' }));
     await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Nadia Hendricks' }));
-    expect(screen.getByTestId('search').textContent).toBe('?module=applications&application=0190');
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe(
+        '?module=applications&application=0190',
+      ),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Back to pending review' }));
     await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Applications' }));
   });
@@ -178,5 +205,45 @@ describe('Applications page', () => {
     renderAt('/admin?module=applications&status=invited');
     await screen.findByRole('heading', { name: 'No invited applicants' });
     expect(screen.getAllByRole('button', { name: /Invite applicant/ }).length).toBe(2);
+  });
+
+  it('sends a reminder to an incomplete applicant after confirming', async () => {
+    setup();
+    sendDirectMessage.mockResolvedValue({ success: true, messageId: 'm1', status: 'completed' });
+    renderAt('/admin?module=applications&status=incomplete');
+    await screen.findByText('Lindiwe Hendricks');
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'More actions for Lindiwe Hendricks' }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Send reminder' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Send a reminder to Lindiwe Hendricks?')).toBeDefined();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Send reminder' }));
+    await waitFor(() => expect(sendDirectMessage).toHaveBeenCalled());
+    expect(sendDirectMessage.mock.calls[0][0]).toMatchObject({
+      clientId: 'u-0192',
+      sendEmail: true,
+      clientEmail: 'Lindiwe@x.co',
+    });
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Reminder sent to Lindiwe@x.co'));
+  });
+
+  it('downloads an approved application as a PDF', async () => {
+    setup();
+    downloadPdf.mockResolvedValue(undefined);
+    renderAt('/admin?module=applications&status=approved');
+    await screen.findByText('Riaan Hendricks');
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'More actions for Riaan Hendricks' }),
+      {
+        button: 0,
+        ctrlKey: false,
+      },
+    );
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Download PDF' }));
+    await waitFor(() => expect(downloadPdf).toHaveBeenCalled());
+    expect(downloadPdf.mock.calls[0][0]).toMatchObject({ id: '0191' });
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('PDF downloaded'));
   });
 });

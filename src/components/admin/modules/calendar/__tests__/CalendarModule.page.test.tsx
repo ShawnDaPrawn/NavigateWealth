@@ -121,4 +121,21 @@ describe('Calendar page', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Event not found'));
     expect(screen.getByTestId('search').textContent).toBe('?module=calendar');
   });
+
+  it('keeps the shown date in the address and opens on it after a reload', async () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Next month' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toMatch(
+        /^\?module=calendar&date=\d{4}-\d{2}-\d{2}$/,
+      ),
+    );
+    cleanup();
+    renderAt('/admin?module=calendar&view=day&date=2026-11-12');
+    expect(screen.getByRole('heading', { name: 'Thursday, 12 November 2026' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe('?module=calendar&view=day'),
+    );
+  });
 });

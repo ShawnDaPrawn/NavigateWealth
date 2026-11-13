@@ -30,7 +30,6 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { Search, RefreshCw, Loader2, MoreHorizontal } from 'lucide-react';
-import { SoonBadge } from '../../../layout/page';
 import { ClearFiltersButton, FilterChip } from '../../../layout/page/FilterControls';
 
 const PAGE_SIZE = 25;
@@ -52,6 +51,10 @@ interface ApplicationsTableProps {
   onResendInvite?: (app: Application) => void;
   onCompleteOnBehalf?: (app: Application) => void;
   onOpenClient?: (app: Application) => void;
+  /** Incomplete: email the applicant to finish their application. */
+  onSendReminder?: (app: Application) => void;
+  /** Approved / rejected: the application as a PDF. */
+  onDownloadPdf?: (app: Application) => void;
   onInvite?: () => void;
   resendingInviteId?: string | null;
   /** Approve / Reject show only with the approve permission. */
@@ -122,6 +125,8 @@ export function ApplicationsTable({
   onResendInvite,
   onCompleteOnBehalf,
   onOpenClient,
+  onSendReminder,
+  onDownloadPdf,
   onInvite,
   resendingInviteId,
   canApprove = true,
@@ -267,10 +272,10 @@ export function ApplicationsTable({
         </DropdownMenuItem>,
       );
     }
-    if (isIncomplete) {
+    if (isIncomplete && onSendReminder) {
       items.push(
-        <DropdownMenuItem key="remind" disabled>
-          Send reminder <SoonBadge />
+        <DropdownMenuItem key="remind" onSelect={() => onSendReminder(app)}>
+          Send reminder
         </DropdownMenuItem>,
       );
     }
@@ -281,10 +286,10 @@ export function ApplicationsTable({
         </DropdownMenuItem>,
       );
     }
-    if (isApproved || isRejected) {
+    if ((isApproved || isRejected) && onDownloadPdf) {
       items.push(
-        <DropdownMenuItem key="pdf" disabled>
-          Download PDF <SoonBadge />
+        <DropdownMenuItem key="pdf" onSelect={() => onDownloadPdf(app)}>
+          Download PDF
         </DropdownMenuItem>,
       );
     }
