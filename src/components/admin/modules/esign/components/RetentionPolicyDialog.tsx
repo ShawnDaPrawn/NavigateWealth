@@ -13,13 +13,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Surface, SurfaceDescription, SurfaceHeader, SurfaceTitle } from './manage/Surface';
 import { Label } from '../../../../ui/label';
 import { NumberInputField } from '../../../../ui/number-input';
 import { Button } from '../../../../ui/button';
@@ -32,6 +26,8 @@ import { logger } from '../../../../../utils/logger';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
 }
 
 function toInput(n: number | null | undefined): string {
@@ -46,7 +42,7 @@ function fromInput(s: string): number | null {
   return n;
 }
 
-export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
+export function RetentionPolicyDialog({ open, onOpenChange, inline = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState('');
@@ -129,103 +125,103 @@ export function RetentionPolicyDialog({ open, onOpenChange }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Retention policy</DialogTitle>
-          <DialogDescription>
-            Configure how long envelopes are kept before the daily sweep purges them. Leave a field
-            blank to keep that category indefinitely.
-          </DialogDescription>
-        </DialogHeader>
+    <Surface open={open} onOpenChange={onOpenChange} inline={inline} className="max-w-lg">
+      <SurfaceHeader>
+        <SurfaceTitle>Retention policy</SurfaceTitle>
+        <SurfaceDescription>
+          Configure how long envelopes are kept before the daily sweep purges them. Leave a field
+          blank to keep that category indefinitely.
+        </SurfaceDescription>
+      </SurfaceHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="retention-completed">Completed envelopes (days)</Label>
+            <NumberInputField
+              id="retention-completed"
+              value={completed}
+              onChange={(e) => setCompleted(e.target.value)}
+              placeholder="e.g. 2555 (seven years)"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Measured from the envelope's completed timestamp.
+            </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="retention-completed">Completed envelopes (days)</Label>
-              <NumberInputField
-                id="retention-completed"
-                value={completed}
-                onChange={(e) => setCompleted(e.target.value)}
-                placeholder="e.g. 2555 (seven years)"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Measured from the envelope's completed timestamp.
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="retention-terminated">Terminated envelopes (days)</Label>
-              <NumberInputField
-                id="retention-terminated"
-                value={terminated}
-                onChange={(e) => setTerminated(e.target.value)}
-                placeholder="e.g. 365"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Applies to declined, expired, or voided envelopes.
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="retention-draft">Inactive drafts (days)</Label>
-              <NumberInputField
-                id="retention-draft"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="e.g. 90"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Drafts that have not been edited for this many days are removed.
-              </p>
-            </div>
+          <div>
+            <Label htmlFor="retention-terminated">Terminated envelopes (days)</Label>
+            <NumberInputField
+              id="retention-terminated"
+              value={terminated}
+              onChange={(e) => setTerminated(e.target.value)}
+              placeholder="e.g. 365"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Applies to declined, expired, or voided envelopes.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="retention-draft">Inactive drafts (days)</Label>
+            <NumberInputField
+              id="retention-draft"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="e.g. 90"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Drafts that have not been edited for this many days are removed.
+            </p>
+          </div>
 
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 flex items-start gap-3">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-              <div className="flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="retention-purge" className="text-sm">
-                    Permanently delete artifacts
-                  </Label>
-                  <Switch
-                    id="retention-purge"
-                    checked={deleteArtifacts}
-                    onCheckedChange={setDeleteArtifacts}
-                  />
-                </div>
-                <p className="text-[11px] text-amber-900 mt-1">
-                  When on, the sweep removes the signed PDF, certificate, and attachments from
-                  Storage. When off, envelopes are moved to the recovery bin where they remain
-                  restorable for 90 days.
-                </p>
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 flex items-start gap-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="retention-purge" className="text-sm">
+                  Permanently delete artifacts
+                </Label>
+                <Switch
+                  id="retention-purge"
+                  checked={deleteArtifacts}
+                  onCheckedChange={setDeleteArtifacts}
+                />
               </div>
-            </div>
-
-            {updatedAt && (
-              <p className="text-[10px] text-muted-foreground">
-                Last updated {new Date(updatedAt).toLocaleString('en-ZA')}.
+              <p className="text-[11px] text-amber-900 mt-1">
+                When on, the sweep removes the signed PDF, certificate, and attachments from
+                Storage. When off, envelopes are moved to the recovery bin where they remain
+                restorable for 90 days.
               </p>
-            )}
+            </div>
+          </div>
 
-            <div className="flex justify-between gap-2 pt-2">
-              <Button variant="ghost" onClick={handleReset} disabled={saving}>
-                Revert to default
-              </Button>
-              <div className="flex gap-2">
+          {updatedAt && (
+            <p className="text-[10px] text-muted-foreground">
+              Last updated {new Date(updatedAt).toLocaleString('en-ZA')}.
+            </p>
+          )}
+
+          <div className="flex justify-between gap-2 pt-2">
+            <Button variant="ghost" onClick={handleReset} disabled={saving}>
+              Revert to default
+            </Button>
+            <div className="flex gap-2">
+              {!inline && (
                 <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-                  Save
-                </Button>
-              </div>
+              )}
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                Save
+              </Button>
             </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </Surface>
   );
 }

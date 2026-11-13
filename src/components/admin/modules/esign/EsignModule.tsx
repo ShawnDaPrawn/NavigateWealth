@@ -76,13 +76,6 @@ export function EsignModule() {
   const [templateContext, setTemplateContext] = useState<TemplateContext | null>(null);
   const [templateBuilder, setTemplateBuilder] = useState<TemplateBuilderContext | null>(null);
   const [bulkSendOpen, setBulkSendOpen] = useState(false);
-  const [packetsOpen, setPacketsOpen] = useState(false);
-  const [notificationPrefsOpen, setNotificationPrefsOpen] = useState(false);
-  const [webhooksOpen, setWebhooksOpen] = useState(false);
-  const [recoveryBinOpen, setRecoveryBinOpen] = useState(false);
-  const [auditLogOpen, setAuditLogOpen] = useState(false);
-  const [retentionOpen, setRetentionOpen] = useState(false);
-  const [brandingOpen, setBrandingOpen] = useState(false);
   const [autoPopulateSuggestedFields, setAutoPopulateSuggestedFields] = useState(true);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -829,6 +822,16 @@ export function EsignModule() {
 
   // ==================== RENDER ====================
 
+  /** Audit-log rows can point at envelopes outside the loaded list. */
+  const handleOpenEnvelopeById = (envelopeId: string) => {
+    esignApi
+      .getEnvelope(envelopeId)
+      .then((env) => {
+        if (env) handleViewEnvelope(env);
+      })
+      .catch((err) => logger.warn('Failed to open envelope from audit log', err));
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
       {/* View Content */}
@@ -989,13 +992,17 @@ export function EsignModule() {
               onStartTemplateBuilder={handleStartTemplateBuilder}
               onConfigureTemplate={handleConfigureTemplate}
               onBulkSend={canSend ? () => setBulkSendOpen(true) : undefined}
-              onPackets={canSend ? () => setPacketsOpen(true) : undefined}
-              onNotificationPrefs={() => setNotificationPrefsOpen(true)}
-              onWebhooks={canSend ? () => setWebhooksOpen(true) : undefined}
-              onRecoveryBin={canDelete ? () => setRecoveryBinOpen(true) : undefined}
-              onAuditLog={() => setAuditLogOpen(true)}
-              onRetentionPolicy={canDelete ? () => setRetentionOpen(true) : undefined}
-              onBranding={canCreate ? () => setBrandingOpen(true) : undefined}
+              manageAccess={{
+                notifications: true,
+                webhooks: canSend,
+                packets: canSend,
+                recovery: canDelete,
+                audit: true,
+                retention: canDelete,
+                branding: canCreate,
+              }}
+              onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
+              onOpenEnvelopeById={handleOpenEnvelopeById}
               refreshTrigger={refreshTrigger}
             />
           )}
@@ -1027,22 +1034,7 @@ export function EsignModule() {
         onSelectTemplate={handleSelectTemplate}
         bulkSendOpen={bulkSendOpen}
         onBulkSendOpenChange={setBulkSendOpen}
-        packetsOpen={packetsOpen}
-        onPacketsOpenChange={setPacketsOpen}
-        notificationPrefsOpen={notificationPrefsOpen}
-        onNotificationPrefsOpenChange={setNotificationPrefsOpen}
-        webhooksOpen={webhooksOpen}
-        onWebhooksOpenChange={setWebhooksOpen}
-        recoveryBinOpen={recoveryBinOpen}
-        onRecoveryBinOpenChange={setRecoveryBinOpen}
-        auditLogOpen={auditLogOpen}
-        onAuditLogOpenChange={setAuditLogOpen}
-        retentionOpen={retentionOpen}
-        onRetentionOpenChange={setRetentionOpen}
-        brandingOpen={brandingOpen}
-        onBrandingOpenChange={setBrandingOpen}
         onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
-        onInspectEnvelope={handleViewEnvelope}
         selectedEnvelope={selectedEnvelope}
         detailsDialogOpen={detailsDialogOpen}
         onDetailsOpenChange={setDetailsDialogOpen}

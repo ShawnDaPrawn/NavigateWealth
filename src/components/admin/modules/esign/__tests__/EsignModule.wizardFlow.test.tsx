@@ -164,8 +164,8 @@ vi.mock('../components/EsignDashboard', () => ({
     onUseTemplate: (t: unknown) => void;
     onResumePrepare: (e: { id: string }) => void;
     onBulkSend?: () => void;
-    onAuditLog?: () => void;
-    onRecoveryBin?: () => void;
+    manageAccess: Record<string, boolean>;
+    onOpenEnvelopeById: (id: string) => void;
   }) => (
     <div data-testid="esign-dashboard">
       <button data-testid="use-tpl-ready" onClick={() => props.onUseTemplate(fixtures.TPL_READY)}>
@@ -192,11 +192,9 @@ vi.mock('../components/EsignDashboard', () => ({
       <button data-testid="open-bulk-send" onClick={props.onBulkSend}>
         bulk
       </button>
-      <button data-testid="open-audit-log" onClick={props.onAuditLog}>
-        audit
-      </button>
-      <button data-testid="open-recovery-bin" onClick={props.onRecoveryBin}>
-        bin
+      <output data-testid="manage-access">{JSON.stringify(props.manageAccess)}</output>
+      <button data-testid="open-env-by-id" onClick={() => props.onOpenEnvelopeById('env-9')}>
+        open by id
       </button>
     </div>
   ),
@@ -643,14 +641,27 @@ describe('EsignModule wizard flow', () => {
     await waitFor(() => screen.getByTestId('esign-dashboard'));
   });
 
-  it('dashboard actions mount the bulk-send, audit-log, and recovery-bin dialogs', async () => {
+  it('bulk send opens its dialog; Manage tools are on the page, not in dialogs', async () => {
     render(<EsignModule />);
     fireEvent.click(screen.getByTestId('open-bulk-send'));
     await waitFor(() => screen.getByTestId('bulk-send-dialog'));
-    fireEvent.click(screen.getByTestId('open-audit-log'));
-    await waitFor(() => screen.getByTestId('audit-log-dialog'));
-    fireEvent.click(screen.getByTestId('open-recovery-bin'));
-    await waitFor(() => screen.getByTestId('recovery-bin-dialog'));
+    expect(JSON.parse(screen.getByTestId('manage-access').textContent ?? '{}')).toEqual({
+      notifications: true,
+      webhooks: true,
+      packets: true,
+      recovery: true,
+      audit: true,
+      retention: true,
+      branding: true,
+    });
+    expect(screen.queryByTestId('audit-log-dialog')).toBeNull();
+    expect(screen.queryByTestId('recovery-bin-dialog')).toBeNull();
+  });
+
+  it('opens an envelope found only by id (audit log rows)', async () => {
+    render(<EsignModule />);
+    fireEvent.click(screen.getByTestId('open-env-by-id'));
+    await waitFor(() => expect(spies.getEnvelope).toHaveBeenCalledWith('env-9'));
   });
 });
 

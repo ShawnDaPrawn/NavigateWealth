@@ -17,13 +17,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+  Surface,
+  SurfaceDescription,
+  SurfaceFooter,
+  SurfaceHeader,
+  SurfaceTitle,
+} from './manage/Surface';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { ScrollArea } from '../../../../ui/scroll-area';
@@ -34,6 +33,8 @@ import { logger } from '../../../../../utils/logger';
 interface RecoveryBinDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
   /** Called after any restore/purge so the dashboard can refetch. */
   onChanged?: () => void;
 }
@@ -58,7 +59,12 @@ function daysUntilPurge(deletedAt: string | undefined, retentionDays: number): n
   return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
 }
 
-export function RecoveryBinDialog({ open, onOpenChange, onChanged }: RecoveryBinDialogProps) {
+export function RecoveryBinDialog({
+  open,
+  onOpenChange,
+  inline = false,
+  onChanged,
+}: RecoveryBinDialogProps) {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [items, setItems] = useState<BinEnvelope[]>([]);
@@ -120,118 +126,118 @@ export function RecoveryBinDialog({ open, onOpenChange, onChanged }: RecoveryBin
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Inbox className="h-5 w-5 text-purple-600" />
-            Recovery Bin
-          </DialogTitle>
-          <DialogDescription>
-            Soft-deleted envelopes stay here for {retentionDays} days before being permanently
-            purged. Restore an envelope to return it to the active workspace, or purge now to remove
-            it immediately.
-          </DialogDescription>
-        </DialogHeader>
+    <Surface open={open} onOpenChange={onOpenChange} inline={inline} className="max-w-3xl">
+      <SurfaceHeader>
+        <SurfaceTitle className="flex items-center gap-2">
+          <Inbox className="h-5 w-5 text-purple-600" />
+          Recovery Bin
+        </SurfaceTitle>
+        <SurfaceDescription>
+          Soft-deleted envelopes stay here for {retentionDays} days before being permanently purged.
+          Restore an envelope to return it to the active workspace, or purge now to remove it
+          immediately.
+        </SurfaceDescription>
+      </SurfaceHeader>
 
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs text-muted-foreground">
-            {sortedItems.length} item{sortedItems.length === 1 ? '' : 's'} in bin
-          </span>
-          <Button variant="ghost" size="sm" onClick={refresh} disabled={loading}>
-            {loading ? (
-              <div className="contents">
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Refreshing…
-              </div>
-            ) : (
-              <div className="contents">
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Refresh
-              </div>
-            )}
-          </Button>
-        </div>
-
-        <ScrollArea className="max-h-[480px] -mx-6 px-6 border-t mt-2">
-          {sortedItems.length === 0 && !loading ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">
-              Nothing in the recovery bin.
+      <div className="flex items-center justify-between pt-2">
+        <span className="text-xs text-muted-foreground">
+          {sortedItems.length} item{sortedItems.length === 1 ? '' : 's'} in bin
+        </span>
+        <Button variant="ghost" size="sm" onClick={refresh} disabled={loading}>
+          {loading ? (
+            <div className="contents">
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              Refreshing…
             </div>
           ) : (
-            <ul className="divide-y">
-              {sortedItems.map((envelope) => {
-                const remaining = daysUntilPurge(envelope.deleted_at, retentionDays);
-                return (
-                  <li key={envelope.id} className="py-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate font-medium text-sm text-gray-900">
-                          {envelope.title || envelope.id}
-                        </span>
-                        {envelope.status && (
-                          <Badge variant="outline" className="text-[10px] uppercase">
-                            {envelope.status}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Deleted{' '}
-                        {envelope.deleted_at
-                          ? format(new Date(envelope.deleted_at), 'dd MMM yyyy HH:mm')
-                          : 'unknown'}
-                        {remaining !== null && (
-                          <span className="ml-2">
-                            · purges in {remaining} day{remaining === 1 ? '' : 's'}
-                          </span>
-                        )}
-                      </div>
-                      {envelope.delete_reason && (
-                        <div className="text-xs text-muted-foreground italic mt-0.5 truncate">
-                          “{envelope.delete_reason}”
-                        </div>
+            <div className="contents">
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Refresh
+            </div>
+          )}
+        </Button>
+      </div>
+
+      <ScrollArea className="max-h-[480px] -mx-6 px-6 border-t mt-2">
+        {sortedItems.length === 0 && !loading ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">
+            Nothing in the recovery bin.
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {sortedItems.map((envelope) => {
+              const remaining = daysUntilPurge(envelope.deleted_at, retentionDays);
+              return (
+                <li key={envelope.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-medium text-sm text-gray-900">
+                        {envelope.title || envelope.id}
+                      </span>
+                      {envelope.status && (
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {envelope.status}
+                        </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busyId === envelope.id}
-                        onClick={() => handleRestore(envelope.id)}
-                      >
-                        {busyId === envelope.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <div className="contents">
-                            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                            Restore
-                          </div>
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        disabled={busyId === envelope.id}
-                        onClick={() => handlePurge(envelope.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                        Purge
-                      </Button>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Deleted{' '}
+                      {envelope.deleted_at
+                        ? format(new Date(envelope.deleted_at), 'dd MMM yyyy HH:mm')
+                        : 'unknown'}
+                      {remaining !== null && (
+                        <span className="ml-2">
+                          · purges in {remaining} day{remaining === 1 ? '' : 's'}
+                        </span>
+                      )}
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </ScrollArea>
+                    {envelope.delete_reason && (
+                      <div className="text-xs text-muted-foreground italic mt-0.5 truncate">
+                        “{envelope.delete_reason}”
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === envelope.id}
+                      onClick={() => handleRestore(envelope.id)}
+                    >
+                      {busyId === envelope.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <div className="contents">
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                          Restore
+                        </div>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      disabled={busyId === envelope.id}
+                      onClick={() => handlePurge(envelope.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      Purge
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </ScrollArea>
 
-        <DialogFooter>
+      {!inline && (
+        <SurfaceFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SurfaceFooter>
+      )}
+    </Surface>
   );
 }
