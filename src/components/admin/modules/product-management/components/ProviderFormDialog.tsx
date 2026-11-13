@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
+import { FormErrorBanner } from '../../../layout/page';
 import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 import {
   PRODUCT_CATEGORIES,
@@ -60,6 +61,7 @@ export function ProviderFormDialog({
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const automationCategories = PRODUCT_CATEGORIES.filter((category) => isPortalAutomationCategory(category.id));
   const unsupportedCategoryIds = formData.categoryIds.filter((categoryId) => !isPortalAutomationCategory(categoryId));
 
@@ -127,6 +129,7 @@ export function ProviderFormDialog({
   const handleSubmit = async () => {
       if (!formData.name.trim()) {
         setNameError('Enter the provider name');
+        nameInputRef.current?.focus();
         return;
       }
       await onSave({
@@ -145,6 +148,10 @@ export function ProviderFormDialog({
           </DialogDescription>
         </DialogHeader>
         
+        <FormErrorBanner
+          count={nameError ? 1 : 0}
+          action={initialData ? 'save the provider' : 'add the provider'}
+        />
         <div className="grid gap-6 py-4">
           <div className="flex items-start gap-6">
             <div className="flex-shrink-0">
@@ -202,6 +209,7 @@ export function ProviderFormDialog({
               <div className="grid gap-2">
                 <Label htmlFor="name">Provider name</Label>
                 <Input
+                  ref={nameInputRef}
                   id="name"
                   value={formData.name}
                   onChange={(e) => {
@@ -211,6 +219,7 @@ export function ProviderFormDialog({
                   placeholder="e.g. Discovery"
                   aria-invalid={!!nameError}
                   aria-describedby={nameError ? 'provider-name-error' : undefined}
+                  className={nameError ? 'border-red-500' : undefined}
                 />
                 {nameError && (
                   <p id="provider-name-error" className="text-xs text-red-600">

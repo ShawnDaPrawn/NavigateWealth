@@ -9,6 +9,7 @@ import { Checkbox } from '../../../../../ui/checkbox';
 import { RoADraft, RoAModule } from '../DraftRoAInterface';
 import { useClient } from '../../hooks/useClient';
 import { roaApi } from '../../api';
+import { Notice } from '../../../../layout/page';
 import { getFallbackRuntimeModule, getModuleRuntimeStatus } from '../../roaModuleRuntime';
 import type { RoAGeneratedDocument } from '../../types';
 import {
@@ -463,32 +464,18 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
       {draft.validationResults &&
         (!draft.validationResults.valid || draft.validationResults.warnings.length > 0) && (
-          <Card
-            className={
-              draft.validationResults.valid
-                ? 'border-yellow-200 bg-yellow-50'
-                : 'border-red-200 bg-red-50'
-            }
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangle className="h-4 w-4" />
-                Validation results
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {draft.validationResults.blocking.map((issue) => (
-                <p key={issue.id} className="text-red-700">
-                  {issue.message}
-                </p>
-              ))}
-              {draft.validationResults.warnings.map((issue) => (
-                <p key={issue.id} className="text-yellow-800">
-                  {issue.message}
-                </p>
-              ))}
-            </CardContent>
-          </Card>
+          <div className="space-y-2">
+            {draft.validationResults.blocking.map((issue) => (
+              <Notice key={issue.id} kind="error" title="Validate & compile —">
+                {issue.message}
+              </Notice>
+            ))}
+            {draft.validationResults.warnings.map((issue) => (
+              <Notice key={issue.id} kind="attention" title="Check —">
+                {issue.message}
+              </Notice>
+            ))}
+          </div>
         )}
 
       <Card>
