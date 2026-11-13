@@ -83,8 +83,14 @@ export const CompletePersonnelSchema = z.object({
   status: PersonnelStatusSchema.default('active'),
   department: DepartmentSchema.optional(),
 
+  // Professional details (Personnel › Profile)
+  jobTitle: z.string().trim().max(120).optional(),
+  // null clears the reporting line ("None").
+  managerId: z.string().trim().min(1).max(128).nullable().optional(),
+
   // Financial
   commissionSplit: DecimalPercentageSchema.optional(),
+  commissionEntity: z.enum(['personal', 'company']).optional(),
 
   // Regulatory
   fscaNumber: OptionalStringSchema,
@@ -116,17 +122,23 @@ export const CreatePersonnelSchema = CompletePersonnelSchema.omit({
 
 /**
  * Update Personnel Schema
+ *
+ * `status` is re-declared without its create-time default: `.partial()` keeps
+ * defaults, so every profile edit used to write `status: 'active'` and quietly
+ * lift a suspension from the staff record.
  */
-export const UpdatePersonnelSchema = CompletePersonnelSchema.partial().refine(
-  (data) => {
-    // Must have at least one update field
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = data;
-    return Object.keys(rest).length > 0;
-  },
-  {
-    message: 'At least one field must be provided for update',
-  },
-);
+export const UpdatePersonnelSchema = CompletePersonnelSchema.partial()
+  .extend({ status: PersonnelStatusSchema.optional() })
+  .refine(
+    (data) => {
+      // Must have at least one update field
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = data;
+      return Object.keys(rest).length > 0;
+    },
+    {
+      message: 'At least one field must be provided for update',
+    },
+  );
 
 /**
  * Personnel Query/Filter Schema

@@ -46,6 +46,11 @@ export function PersonnelDrawer({
   });
   // The Permissions tab hands its save over so the page header can run it.
   const savePermissionsRef = useRef<(() => void) | null>(null);
+  const [commissionForm, setCommissionForm] = useState<ProfileFormState>({
+    dirty: false,
+    saving: false,
+  });
+  const saveCommissionRef = useRef<(() => void) | null>(null);
 
   if (!selectedPersonnel || !open) return null;
 
@@ -105,6 +110,16 @@ export function PersonnelDrawer({
                 {permissionsForm.saving ? 'Saving…' : 'Save'}
               </Button>
             )}
+            {tab === 'commission' && (
+              <Button
+                type="button"
+                disabled={!commissionForm.dirty || commissionForm.saving}
+                onClick={() => saveCommissionRef.current?.()}
+              >
+                <Save className="h-4 w-4" aria-hidden="true" />
+                {commissionForm.saving ? 'Saving…' : 'Save'}
+              </Button>
+            )}
           </div>
         </div>
         <p className="mt-2 text-sm text-nw-text-3">
@@ -145,7 +160,12 @@ export function PersonnelDrawer({
         </TabsContent>
 
         <TabsContent value="commission">
-          <TabCommission selectedPersonnel={selectedPersonnel} />
+          <TabCommission
+            selectedPersonnel={selectedPersonnel}
+            onSave={onUpdate}
+            saveRef={saveCommissionRef}
+            onFormStateChange={setCommissionForm}
+          />
         </TabsContent>
 
         <TabsContent value="clients">

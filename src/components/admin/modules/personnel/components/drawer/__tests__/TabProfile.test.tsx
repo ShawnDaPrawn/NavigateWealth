@@ -17,6 +17,7 @@ vi.mock('../../../hooks', () => ({
   useSuspendPersonnelAccess: () => ({ mutate: suspend, isPending: false }),
   useRestorePersonnelAccess: () => ({ mutate: restore, isPending: false }),
   useSendPersonnelPasswordReset: () => ({ mutate: sendReset, isPending: false }),
+  usePersonnel: () => ({ data: [] }),
 }));
 vi.mock('../../../hooks/usePermissions', () => ({
   useCurrentUserPermissions: () => ({

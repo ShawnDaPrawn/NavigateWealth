@@ -23,7 +23,7 @@ export interface PersonnelProfile {
   // Professional Details
   jobTitle?: string;
   branch?: string;
-  managerId?: string; // Reporting line
+  managerId?: string | null; // Reporting line (null: none)
 
   // Compliance & Regulatory
   fspReference?: string;
