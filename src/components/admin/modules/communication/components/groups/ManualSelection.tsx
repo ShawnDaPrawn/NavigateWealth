@@ -44,7 +44,7 @@ export function ManualSelection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Manual Selection</CardTitle>
+        <CardTitle>Manual selection</CardTitle>
         <CardDescription>
           Explicitly include specific clients regardless of filters.
         </CardDescription>
@@ -52,7 +52,7 @@ export function ManualSelection({
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             {...searchInputGuard}
-            placeholder="Search clients..."
+            placeholder="Search clients"
             className="pl-9"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}

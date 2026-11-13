@@ -225,7 +225,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Filter Rules</CardTitle>
+        <CardTitle>Filter rules</CardTitle>
         <CardDescription>
           Clients matching these rules will be automatically included.
         </CardDescription>
@@ -234,9 +234,9 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Product Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Product Requirements</h4>
+            <h4 className="text-sm font-medium">Product requirements</h4>
             <Button variant="outline" size="sm" onClick={addProductFilter}>
-              <Plus className="h-3 w-3 mr-1" /> Add Rule
+              <Plus className="h-3 w-3 mr-1" /> Add rule
             </Button>
           </div>
 
@@ -255,10 +255,10 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
                   onValueChange={(val) => updateProductFilter(index, 'provider', val)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Any Provider" />
+                    <SelectValue placeholder="Any provider" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Any Provider</SelectItem>
+                    <SelectItem value="all">Any provider</SelectItem>
                     {providers.map((p) => (
                       <SelectItem key={p.id} value={p.name}>
                         {p.name}
@@ -268,16 +268,16 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
                 </Select>
               </div>
               <div className="flex-1 space-y-1">
-                <label className="text-xs font-medium">Product Type</label>
+                <label className="text-xs font-medium">Product type</label>
                 <Select
                   value={filter.type || 'all'}
                   onValueChange={(val) => updateProductFilter(index, 'type', val)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Any Type" />
+                    <SelectValue placeholder="Any type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Any Type</SelectItem>
+                    <SelectItem value="all">Any type</SelectItem>
                     {getCategoriesForProvider(filter.provider).map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {cat.name}
@@ -303,9 +303,9 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Net Worth Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Net Worth Range (OR Logic)</h4>
+            <h4 className="text-sm font-medium">Net worth range (OR logic)</h4>
             <Button variant="outline" size="sm" onClick={addNetWorthFilter}>
-              <Plus className="h-3 w-3 mr-1" /> Add Range
+              <Plus className="h-3 w-3 mr-1" /> Add range
             </Button>
           </div>
 
@@ -321,7 +321,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
                 <label className="text-xs font-medium">Min (R)</label>
                 <CurrencyInputField
                   allowNegative
-                  placeholder="Min Value"
+                  placeholder="Min (R)"
                   value={filter.min ?? ''}
                   onValueChange={(v) => updateNetWorthFilter(index, 'min', v)}
                 />
@@ -330,7 +330,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
                 <label className="text-xs font-medium">Max (R)</label>
                 <CurrencyInputField
                   allowNegative
-                  placeholder="Max Value"
+                  placeholder="Max (R)"
                   value={filter.max ?? ''}
                   onValueChange={(v) => updateNetWorthFilter(index, 'max', v)}
                 />
@@ -353,9 +353,9 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Age Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Age Range (OR Logic)</h4>
+            <h4 className="text-sm font-medium">Age range (OR logic)</h4>
             <Button variant="outline" size="sm" onClick={addAgeFilter}>
-              <Plus className="h-3 w-3 mr-1" /> Add Range
+              <Plus className="h-3 w-3 mr-1" /> Add range
             </Button>
           </div>
 
@@ -368,14 +368,14 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
           {(filterConfig.ageFilters || []).map((filter, index) => (
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
-                <label className="text-xs font-medium">Min Age</label>
+                <label className="text-xs font-medium">Min age</label>
                 <NumberInputField
                   value={filter.min ?? ''}
                   onValueChange={(v) => updateAgeFilter(index, 'min', v)}
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs font-medium">Max Age</label>
+                <label className="text-xs font-medium">Max age</label>
                 <NumberInputField
                   value={filter.max ?? ''}
                   onValueChange={(v) => updateAgeFilter(index, 'max', v)}
@@ -399,7 +399,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Additional Demographics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">Marital Status</h4>
+            <h4 className="text-sm font-medium">Marital status</h4>
             <div className="flex flex-wrap gap-2">
               {MARITAL_STATUS_OPTIONS.map((status) => (
                 <Badge
@@ -417,7 +417,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">Employment Status</h4>
+            <h4 className="text-sm font-medium">Employment status</h4>
             <div className="flex flex-wrap gap-2">
               {EMPLOYMENT_STATUS_OPTIONS.map((status) => (
                 <Badge
@@ -440,9 +440,9 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Income Range Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Monthly Income Range (OR Logic)</h4>
+            <h4 className="text-sm font-medium">Monthly income range (OR logic)</h4>
             <Button variant="outline" size="sm" onClick={addIncomeFilter}>
-              <Plus className="h-3 w-3 mr-1" /> Add Range
+              <Plus className="h-3 w-3 mr-1" /> Add range
             </Button>
           </div>
 
@@ -457,7 +457,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
               <div className="flex-1">
                 <label className="text-xs font-medium">Min (R)</label>
                 <CurrencyInputField
-                  placeholder="Min Income"
+                  placeholder="Min income"
                   value={filter.min ?? ''}
                   onValueChange={(v) => updateIncomeFilter(index, 'min', v)}
                 />
@@ -465,7 +465,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
               <div className="flex-1">
                 <label className="text-xs font-medium">Max (R)</label>
                 <CurrencyInputField
-                  placeholder="Max Income"
+                  placeholder="Max income"
                   value={filter.max ?? ''}
                   onValueChange={(v) => updateIncomeFilter(index, 'max', v)}
                 />
@@ -546,9 +546,9 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Dependant Count Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Number of Dependants (OR Logic)</h4>
+            <h4 className="text-sm font-medium">Number of dependants (OR logic)</h4>
             <Button variant="outline" size="sm" onClick={addDependantCountFilter}>
-              <Plus className="h-3 w-3 mr-1" /> Add Range
+              <Plus className="h-3 w-3 mr-1" /> Add range
             </Button>
           </div>
 
@@ -561,7 +561,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
           {(filterConfig.dependantCountFilters || []).map((filter, index) => (
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
-                <label className="text-xs font-medium">Min Count</label>
+                <label className="text-xs font-medium">Min count</label>
                 <NumberInputField
                   placeholder="Min"
                   value={filter.min ?? ''}
@@ -569,7 +569,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs font-medium">Max Count</label>
+                <label className="text-xs font-medium">Max count</label>
                 <NumberInputField
                   placeholder="Max"
                   value={filter.max ?? ''}
@@ -594,9 +594,9 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
         {/* Retirement Age Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Expected Retirement Age (OR Logic)</h4>
+            <h4 className="text-sm font-medium">Expected retirement age (OR logic)</h4>
             <Button variant="outline" size="sm" onClick={addRetirementAgeFilter}>
-              <Plus className="h-3 w-3 mr-1" /> Add Range
+              <Plus className="h-3 w-3 mr-1" /> Add range
             </Button>
           </div>
 
@@ -609,7 +609,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
           {(filterConfig.retirementAgeFilters || []).map((filter, index) => (
             <div key={index} className="flex items-center gap-4 p-3 border rounded-md bg-muted/20">
               <div className="flex-1">
-                <label className="text-xs font-medium">Min Age</label>
+                <label className="text-xs font-medium">Min age</label>
                 <NumberInputField
                   placeholder="Min"
                   value={filter.min ?? ''}
@@ -617,7 +617,7 @@ export function FilterBuilder({ filterConfig, onChange, providers }: FilterBuild
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs font-medium">Max Age</label>
+                <label className="text-xs font-medium">Max age</label>
                 <NumberInputField
                   placeholder="Max"
                   value={filter.max ?? ''}
