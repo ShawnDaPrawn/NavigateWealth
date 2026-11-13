@@ -134,4 +134,15 @@ describe('PolicyFormDialog assumptions tool', () => {
       '5',
     );
   });
+
+  it('is a page with a back link, steps and Cancel / Update in its header', async () => {
+    renderDialog();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Edit policy — Retirement' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Retirement' })).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Steps' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: /Edit policy/ })).toBeNull();
+  });
 });

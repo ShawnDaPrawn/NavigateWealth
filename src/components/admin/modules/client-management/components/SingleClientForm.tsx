@@ -11,6 +11,7 @@ import {
 } from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Badge } from '../../../../ui/badge';
+import { FormErrorBanner } from '../../../layout/page';
 import { toast } from 'sonner';
 import {
   Loader2,
@@ -21,7 +22,6 @@ import {
   ShieldCheck,
   Info,
   CheckCircle2,
-  AlertCircle,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -111,6 +111,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
 
   // --- helpers ---
   const formDataRef = useRef(formData);
+  const formRef = useRef<HTMLDivElement>(null);
   formDataRef.current = formData;
 
   const runValidation = useCallback(
@@ -248,13 +249,24 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
    * the address belongs to another household member, which makes the server
    * derive a unique sign-in alias instead of rejecting the duplicate.
    */
+  // Moves focus to the first field with a problem (design system: Form errors).
+  const focusFirstError = () =>
+    window.setTimeout(() => {
+      const first = formRef.current?.querySelector<HTMLElement>(
+        '.border-red-400, [aria-invalid="true"]',
+      );
+      first?.focus();
+    }, 0);
+
   const handleSubmit = async (shareMailbox = false) => {
     if (!validateAll()) {
       toast.error('Please fix the highlighted errors before submitting');
+      focusFirstError();
       return;
     }
     if (!consentConfirmed) {
       toast.error('Please confirm you have obtained consent from this client');
+      focusFirstError();
       return;
     }
 
@@ -373,7 +385,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
     `${selectBase} ${showError(field) ? selectError : ''}`;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" ref={formRef}>
       {/* Completion indicator */}
       <div className="flex items-center gap-3 px-1">
         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -387,14 +399,11 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         </span>
       </div>
 
-      {submitAttempted && activeErrorCount > 0 && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Fix {activeErrorCount} {activeErrorCount === 1 ? 'field' : 'fields'} to add the client
-        </div>
+      {submitAttempted && (
+        <FormErrorBanner
+          count={activeErrorCount + (consentConfirmed ? 0 : 1)}
+          action="add the client"
+        />
       )}
 
       {/* ================================================================ */}

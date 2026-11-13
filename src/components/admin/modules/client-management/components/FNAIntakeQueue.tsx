@@ -4,9 +4,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Inbox } from 'lucide-react';
+import { Notice } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
+
 import {
   acceptIntakeSession,
   listSubmittedIntakes,
@@ -20,7 +20,7 @@ import {
   mergePrefillValues,
   normalizeIntakeToWizard,
 } from '../../../../../shared/form-prefill/intake-field-mapping';
-import { FNAIntakeStatusBadge } from '@/shared/fna-intake/components/FNAIntakeStatusBadge';
+
 import { PrefillReviewModal } from '../../form-prefill';
 import { useClientList } from '../hooks/useClientList';
 import type { IntakeHandoffState } from './IntakeWizardHandoff';
@@ -182,61 +182,65 @@ export function FNAIntakeQueue({ onAccept, onOpenClient }: FNAIntakeQueueProps) 
         })
       : null;
 
+  const renderLine = (session: (typeof items)[number]) => (
+    <>
+      {DOMAIN_LABELS[session.domain] ?? session.domain} FNA intake from{' '}
+      <button
+        type="button"
+        className="font-medium text-nw-ink underline-offset-2 hover:underline"
+        onClick={() => onOpenClient?.(session.clientId)}
+      >
+        {clientNameFor(session.clientId)}
+      </button>
+      {session.submittedAt && <> · submitted {fmtSubmitted(session.submittedAt)}</>} ·{' '}
+      {session.progressPercent}% complete
+    </>
+  );
+  const renderActions = (session: (typeof items)[number]) => (
+    <div className="flex shrink-0 flex-wrap gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="bg-white"
+        disabled={actingId === session.id}
+        onClick={() => void handleRequestInfo(session)}
+      >
+        Request info
+      </Button>
+      <Button
+        size="sm"
+        disabled={actingId === session.id}
+        onClick={() => void handleAccept(session)}
+      >
+        Accept & open wizard
+      </Button>
+    </div>
+  );
+
   return (
     <>
       {items.length > 0 && (
-        <section
-          aria-label="FNA intake queue"
-          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
-        >
-          <div className="flex items-center gap-2 text-sm font-semibold text-nw-ink">
-            <Inbox className="h-4 w-4 text-nw-amber-700" aria-hidden="true" />
-            FNA intake queue · {items.length} waiting
-          </div>
-          <ul className="mt-2 max-h-[16rem] space-y-2 overflow-y-auto">
-            {items.map((session) => (
-              <li
-                key={session.id}
-                className="flex flex-col gap-2 border-t border-amber-200/70 pt-2 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-nw-amber-700">
-                  <span>{DOMAIN_LABELS[session.domain] ?? session.domain} FNA intake from</span>
-                  <button
-                    type="button"
-                    className="font-medium text-nw-ink underline-offset-2 hover:underline"
-                    onClick={() => onOpenClient?.(session.clientId)}
-                  >
-                    {clientNameFor(session.clientId)}
-                  </button>
-                  {session.submittedAt && (
-                    <span>· submitted {fmtSubmitted(session.submittedAt)}</span>
-                  )}
-                  <FNAIntakeStatusBadge status="submitted" mode="adviser" />
-                  <Badge variant="outline" className="bg-white text-[10px]">
-                    {session.progressPercent}% complete
-                  </Badge>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-white"
-                    disabled={actingId === session.id}
-                    onClick={() => void handleRequestInfo(session)}
-                  >
-                    Request info
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={actingId === session.id}
-                    onClick={() => void handleAccept(session)}
-                  >
-                    Accept & open wizard
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <section aria-label="FNA intake queue" className="flex flex-col gap-2">
+          <Notice
+            kind="attention"
+            title={`FNA intake queue · ${items.length} waiting`}
+            action={items.length === 1 ? renderActions(items[0]) : undefined}
+          >
+            {items.length === 1 ? renderLine(items[0]) : null}
+          </Notice>
+          {items.length > 1 && (
+            <ul className="max-h-[16rem] space-y-2 overflow-y-auto rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm text-nw-text-2">
+              {items.map((session) => (
+                <li
+                  key={session.id}
+                  className="flex flex-col gap-2 border-t border-nw-line-2 pt-2 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span>{renderLine(session)}</span>
+                  {renderActions(session)}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

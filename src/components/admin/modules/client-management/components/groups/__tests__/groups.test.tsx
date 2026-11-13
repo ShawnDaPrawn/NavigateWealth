@@ -121,7 +121,7 @@ describe('Group editor page', () => {
     const onClose = vi.fn();
     wrap(<GroupEditorRoute groupId="new" onClose={onClose} />);
     fireEvent.click(screen.getByRole('button', { name: 'Save group' }));
-    expect(await screen.findByText('Fix 1 field to save the group')).toBeDefined();
+    expect(await screen.findByText('Fix 1 field to save the group.')).toBeDefined();
     expect(screen.getByText('Give the group a name')).toBeDefined();
     expect(api.createGroup).not.toHaveBeenCalled();
 

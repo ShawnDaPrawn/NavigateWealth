@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertCircle, ChevronLeft, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
@@ -14,6 +14,7 @@ import {
 import {
   SegmentedList,
   SegmentedTrigger,
+  FormErrorBanner,
   SoonBadge,
   useConfirm,
   useUrlState,
@@ -103,6 +104,12 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
     setSubmitAttempted(true);
     if (errorCount > 0) {
       if (contactErrors.some(Boolean) && !nameError) setView('contacts');
+      // Focus the first field with a problem.
+      window.setTimeout(() => {
+        document
+          .querySelector<HTMLElement>('main [aria-invalid="true"], [aria-invalid="true"]')
+          ?.focus();
+      }, 0);
       return;
     }
     const now = new Date().toISOString();
@@ -223,15 +230,7 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
         </div>
       </header>
 
-      {submitAttempted && errorCount > 0 && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Fix {errorCount} {errorCount === 1 ? 'field' : 'fields'} to save the group
-        </div>
-      )}
+      {submitAttempted && <FormErrorBanner count={errorCount} action="save the group" />}
 
       <section className="rounded-xl border border-nw-line bg-white p-5" aria-label="Group details">
         <h2 className="text-[15px] font-semibold text-nw-ink">Group details</h2>
