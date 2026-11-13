@@ -1,7 +1,26 @@
-import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
-import { AlertTriangle, ChevronLeft, Loader2, UserX } from 'lucide-react';
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ChevronLeft, Download, KeyRound, Loader2, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useSearchParams } from 'react-router';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { NavTabsList, NavTabsTrigger } from '../../../layout/page';
+import { ErrorState, NavTabsList, NavTabsTrigger, useUrlState } from '../../../layout/page';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
+import { invalidateClientPolicies } from '../../../../../shared/api/clientPolicies';
+import { deriveAccountStatus } from '../utils';
+import { CLIENT_PAGE_PARAMS, CLIENT_TABS, type ClientTab } from './clientPageParams';
+import type { OverviewActions } from './ClientOverviewTab';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { communicationApi } from '../../communication';
@@ -46,6 +65,9 @@ const ClientOverviewTab = React.lazy(loadClientOverviewTab);
 const loadClientNotesTab = () =>
   import('./ClientNotesTab').then((m) => ({ default: m.ClientNotesTab }));
 const ClientNotesTab = React.lazy(loadClientNotesTab);
+const KeyInspectorTab = React.lazy(() =>
+  import('./KeyInspectorTab').then((m) => ({ default: m.KeyInspectorTab })),
+);
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -103,17 +125,7 @@ function TabPanelFallback() {
   );
 }
 
-type DrawerTab =
-  | 'overview'
-  | 'personal'
-  | 'policies'
-  | 'security'
-  | 'documents'
-  | 'askVasco'
-  | 'esign'
-  | 'compliance'
-  | 'communication'
-  | 'notes';
+type DrawerTab = ClientTab;
 
 /**
  * The client record, shown as a full page in place of the client list
@@ -130,7 +142,14 @@ function ClientDrawerInner({
 }: ClientDrawerInnerProps) {
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
   const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<DrawerTab>(fnaFocus ? 'policies' : 'overview');
+  // The open tab lives in the address (?ctab=), next to ?client=.
+  const [activeTab, setActiveTab] = useUrlState<DrawerTab>('ctab', 'overview', CLIENT_TABS);
+  const [, setSearchParams] = useSearchParams();
+  // An FNA published from outside lands on Policy details.
+  useEffect(() => {
+    if (fnaFocus) setActiveTab('policies');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per open
+  }, []);
   // Never the list row: everything below the shell reads the record fetched by
   // this open (useFreshClientOnOpen explains why).
   const fresh = useFreshClientOnOpen(listClient.id, open);
@@ -149,12 +168,23 @@ function ClientDrawerInner({
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      const closeDrawer = () => onOpenChange(false);
+      const closeDrawer = () => {
+        // The tab and section of this client do not belong on the list.
+        setSearchParams(
+          (current) => {
+            const params = new URLSearchParams(current);
+            CLIENT_PAGE_PARAMS.forEach((k) => params.delete(k));
+            return params;
+          },
+          { replace: true },
+        );
+        onOpenChange(false);
+      };
       if (activeTab === 'personal' && unsavedChangesRegistry?.getDirtyEntries().length) {
         unsavedChangesRegistry.tryLeaveAny(closeDrawer);
         return;
       }
-      onOpenChange(false);
+      closeDrawer();
       return;
     }
     onOpenChange(true);
@@ -167,10 +197,6 @@ function ClientDrawerInner({
       setSanctionsScreeningRunning(false);
     }, 3000);
   };
-
-  useEffect(() => {
-    if (!open) setActiveTab('overview');
-  }, [open]);
 
   // Keep the profile on screen while the drawer animates closed. A new open
   // forgets it, so it can never stand in for the record that open fetches.
@@ -208,7 +234,7 @@ function ClientDrawerInner({
       ) : (
         <ClientDrawerPending
           state={fresh.status === 'ready' ? { status: 'loading' } : fresh}
-          onClose={() => onOpenChange(false)}
+          onClose={() => handleOpenChange(false)}
         />
       )}
     </div>
@@ -225,45 +251,30 @@ function ClientDrawerPending({
 }) {
   if (state.status === 'missing') {
     return (
-      <>
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-nw-ink">
-            <UserX className="h-5 w-5 text-muted-foreground" aria-hidden />
-            Client not available
-          </h1>
-          <p className="text-sm text-nw-text-3">
-            This client is no longer listed in Client Management. They may have been removed or
-            their application declined.
-          </p>
-        </div>
-        <div className="mt-6">
+      <ErrorState
+        title="This client could not be opened"
+        description="This client is no longer listed in Client Management. They may have been removed or their application declined."
+        secondaryAction={
           <Button variant="outline" onClick={onClose}>
-            Close
+            Back to clients
           </Button>
-        </div>
-      </>
+        }
+      />
     );
   }
 
   if (state.status === 'error') {
     return (
-      <>
-        <div className="flex flex-col gap-1">
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-nw-ink">
-            <AlertTriangle className="h-5 w-5 text-amber-600" aria-hidden />
-            Could not load this client
-          </h1>
-          <p className="text-sm text-nw-text-3">
-            The latest details could not be loaded. Nothing is shown rather than an older copy.
-          </p>
-        </div>
-        <div className="mt-6 flex gap-2">
-          <Button onClick={state.retry}>Try again</Button>
+      <ErrorState
+        title="This client could not be opened"
+        description="The latest details could not be loaded. Nothing is shown rather than an older copy."
+        onRetry={state.retry}
+        secondaryAction={
           <Button variant="outline" onClick={onClose}>
-            Close
+            Back to clients
           </Button>
-        </div>
-      </>
+        }
+      />
     );
   }
 
@@ -392,30 +403,179 @@ function ClientWorkspace({
     };
   }, [client.email, client.id, open, queryClient]);
 
+  // Refresh and Download PDF sit in the record header (design: CM 5). The PDF
+  // is built from the Overview's figures, so the Overview hands its actions up;
+  // from another tab, Download PDF opens the Overview and runs once it is ready.
+  const overviewActionsRef = useRef<OverviewActions | null>(null);
+  const [overviewGenerating, setOverviewGenerating] = useState(false);
+  const pendingPdfRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
+  const registerOverviewActions = useCallback((actions: OverviewActions | null) => {
+    overviewActionsRef.current = actions;
+    setOverviewGenerating(actions?.generatingPdf ?? false);
+    if (actions && pendingPdfRef.current) {
+      pendingPdfRef.current = false;
+      void actions.downloadPdf();
+    }
+  }, []);
+
+  const handleDownloadPdf = () => {
+    const actions = overviewActionsRef.current;
+    if (actions) {
+      void actions.downloadPdf();
+      return;
+    }
+    pendingPdfRef.current = true;
+    onTabChange('overview');
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      overviewActionsRef.current?.refresh();
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: getClientProfileQueryOptions(client.id).queryKey,
+        }),
+        queryClient.invalidateQueries({ queryKey: clientKeys.detail(client.id) }),
+        invalidateClientPolicies(queryClient, client.id),
+        queryClient.invalidateQueries({ queryKey: clientKeys.communicationLogs(client.id) }),
+      ]);
+      toast.success('Client details refreshed');
+    } catch (error) {
+      console.error('Failed to refresh client:', error);
+      toast.error('Could not refresh the client');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const accountStatus = deriveAccountStatus(client);
+  const approved = client.applicationStatus === 'approved';
+  const shortId =
+    client.id.length > 12 ? `${client.id.slice(0, 4)}…${client.id.slice(-4)}` : client.id;
+  const joined = client.createdAt
+    ? new Date(client.createdAt).toLocaleDateString('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+
+  const copyClientId = async () => {
+    try {
+      await navigator.clipboard.writeText(client.id);
+      toast.success('Client ID copied');
+    } catch {
+      toast.error('Could not copy the client ID');
+    }
+  };
+
   return (
     <>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ClientAvatar
-              clientId={client.id}
-              firstName={client.firstName}
-              lastName={client.lastName}
-              className="h-12 w-12"
-              editable={canEdit}
-            />
-            <div>
-              <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <ClientAvatar
+            clientId={client.id}
+            firstName={client.firstName}
+            lastName={client.lastName}
+            className="h-12 w-12"
+            editable={canEdit}
+          />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-nw-ink">
                 {client.firstName} {client.lastName}
               </h1>
-              <div className="text-sm text-nw-text-3 font-normal">
-                {client.preferredName !== client.firstName && `"${client.preferredName}" • `}
-                Client ID: {client.id}
-              </div>
+              <StatusPill
+                tone={
+                  accountStatus === 'active'
+                    ? 'green'
+                    : accountStatus === 'suspended'
+                      ? 'amber'
+                      : 'red'
+                }
+              >
+                {ACCOUNT_LABEL[accountStatus]}
+              </StatusPill>
+              <StatusPill tone={approved ? 'violet' : 'gray'}>
+                {approved ? 'Approved' : 'In application'}
+              </StatusPill>
             </div>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-nw-text-3">
+              {client.preferredName && client.preferredName !== client.firstName && (
+                <span>“{client.preferredName}” ·</span>
+              )}
+              <span>{client.email}</span>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => void copyClientId()}
+                className="rounded font-mono text-xs hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+                title={client.id}
+                aria-label={`Copy client ID ${client.id}`}
+              >
+                Client ID {shortId}
+              </button>
+              {joined && <span>· Joined {joined}</span>}
+            </p>
           </div>
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing}
+            aria-label="Refresh"
+            title="Refresh"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+              aria-hidden="true"
+            />
+          </Button>
+          <Button variant="outline" onClick={handleDownloadPdf} disabled={overviewGenerating}>
+            {overviewGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Download className="h-4 w-4" aria-hidden="true" />
+            )}
+            Download PDF
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="More actions">
+                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setKeysOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" aria-hidden="true" />
+                Key inspector
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      <Dialog open={keysOpen} onOpenChange={setKeysOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Key inspector</DialogTitle>
+            <DialogDescription>
+              The calculated keys for {client.firstName} {client.lastName}, and the policies behind
+              them.
+            </DialogDescription>
+          </DialogHeader>
+          {keysOpen && (
+            <Suspense fallback={<TabPanelFallback />}>
+              <KeyInspectorTab selectedClient={client} />
+            </Suspense>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* MAIN TABS - Level 1: Primary Navigation
             Uses ShadCN Tabs component with rounded, filled style
@@ -427,7 +587,7 @@ function ClientWorkspace({
           <NavTabsTrigger value="policies">Policy details</NavTabsTrigger>
           <NavTabsTrigger value="security">Security</NavTabsTrigger>
           <NavTabsTrigger value="documents">Documents</NavTabsTrigger>
-          <NavTabsTrigger value="askVasco">Ask Vasco</NavTabsTrigger>
+          <NavTabsTrigger value="vasco">Ask Vasco</NavTabsTrigger>
           <NavTabsTrigger value="esign">E-Sign</NavTabsTrigger>
           <NavTabsTrigger value="compliance">Compliance</NavTabsTrigger>
           <NavTabsTrigger value="communication" count={communicationCount || undefined}>
@@ -439,7 +599,11 @@ function ClientWorkspace({
         {/* 0. Overview — Client-side dashboard view */}
         <TabsContent value="overview" className="space-y-4">
           <Suspense fallback={<TabPanelFallback />}>
-            <ClientOverviewTab client={client} />
+            <ClientOverviewTab
+              client={client}
+              onRegisterActions={registerOverviewActions}
+              onOpenTab={onTabChange}
+            />
           </Suspense>
         </TabsContent>
 
@@ -479,7 +643,7 @@ function ClientWorkspace({
         </TabsContent>
 
         {/* 5. Ask Vasco Section */}
-        <TabsContent value="askVasco" className="space-y-4">
+        <TabsContent value="vasco" className="space-y-4">
           <AskVascoPortalTab selectedClient={client} />
         </TabsContent>
 
@@ -517,5 +681,32 @@ function ClientWorkspace({
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+const ACCOUNT_LABEL = { active: 'Active', suspended: 'Suspended', closed: 'Closed' } as const;
+
+const PILL_TONES = {
+  green: 'border-green-200 bg-green-50 text-green-700',
+  amber: 'border-amber-200 bg-amber-50 text-nw-amber-700',
+  red: 'border-red-200 bg-red-50 text-red-700',
+  violet: 'border-violet-200 bg-nw-violet-50 text-nw-violet-600',
+  gray: 'border-gray-200 bg-gray-50 text-nw-text-2',
+} as const;
+
+/** A small status pill next to the client's name. */
+function StatusPill({
+  tone,
+  children,
+}: {
+  tone: keyof typeof PILL_TONES;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${PILL_TONES[tone]}`}
+    >
+      {children}
+    </span>
   );
 }

@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef, Suspense } from 'react';
-import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import { Card, CardContent } from '../../../ui/card';
 import {
   PageHeader,
+  ErrorState,
   NavTabsList,
   NavTabsTrigger,
   useUrlState,
@@ -14,6 +14,7 @@ import {
 } from '../../layout/page';
 import {
   Plus,
+  ChevronLeft,
   Download,
   Users,
   Search,
@@ -207,8 +208,11 @@ export function ClientManagementModule() {
   // deep link, intake). The address sync below must not close a client that
   // was opened in the same update as the old one's address was cleared.
   const lastOpenedIdRef = useRef<string | null>(null);
+  // A client named in the address that is not in the list: an error page.
+  const [missingClientId, setMissingClientId] = useState<string | null>(null);
   const showClient = useCallback((target: Client) => {
     lastOpenedIdRef.current = target.id;
+    setMissingClientId(null);
     setSelectedClient(target);
     setDrawerOpen(true);
   }, []);
@@ -234,7 +238,7 @@ export function ClientManagementModule() {
       if (loading || safeClients.length === 0) return 'waiting';
       const target = safeClients.find((c) => c.id === id);
       if (!target) {
-        toast.error('Client not found');
+        setMissingClientId(id);
         return 'missing';
       }
       setDrawerFnaFocus(null);
@@ -438,6 +442,41 @@ export function ClientManagementModule() {
             onFNAComplete={handleIntakeFNAPublished}
           />
         </Suspense>
+      </div>
+    );
+  }
+
+  if (missingClientId) {
+    const retry = async () => {
+      const id = missingClientId;
+      await refetch();
+      setMissingClientId(null);
+      setSearchParams((current) => {
+        const params = new URLSearchParams(current);
+        params.set('client', id);
+        return params;
+      });
+    };
+    return (
+      <div className="flex flex-col gap-4 p-6 lg:p-8">
+        <button
+          type="button"
+          onClick={() => setMissingClientId(null)}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Personal clients
+        </button>
+        <ErrorState
+          title="This client could not be opened"
+          description="It may have been deleted, or the link may be wrong."
+          onRetry={() => void retry()}
+          secondaryAction={
+            <Button variant="outline" onClick={() => setMissingClientId(null)}>
+              Back to clients
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -650,7 +689,7 @@ export function ClientManagementModule() {
               loading={loading}
               searchable={false}
               exportable={false}
-              paginate={false}
+              pageSize={25}
               getRowKey={(row) => row.id as React.Key}
               emptyState={
                 <div className="py-10 text-center">

@@ -174,9 +174,10 @@ describe('Client Management page', () => {
 
   it('says so when the client in the address is not in the list', async () => {
     renderAt('/admin?module=clients&client=nobody');
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Client not found'));
-    expect(screen.getByRole('heading', { level: 1, name: 'Client Management' })).toBeDefined();
+    await screen.findByText('This client could not be opened');
     expect(screen.getByTestId('search').textContent).toBe('?module=clients');
+    fireEvent.click(screen.getByRole('button', { name: 'Back to clients' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Client Management' })).toBeDefined();
   });
 
   it('keeps the field repository under the more menu', async () => {

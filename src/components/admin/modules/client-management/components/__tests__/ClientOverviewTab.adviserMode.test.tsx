@@ -64,17 +64,17 @@ describe('ClientOverviewTab adviser mode', () => {
     vi.clearAllMocks();
   });
 
-  it('renders without throwing and shows the Portfolio Summary accordion header', async () => {
+  it('renders without throwing and shows the Portfolio summary card header', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Portfolio summary').length).toBeGreaterThan(0);
     });
   });
 
   it('shows the Financial Reviews intake section', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getByText('Financial Reviews')).toBeTruthy();
+      expect(screen.getByText('Financial reviews')).toBeTruthy();
     });
   });
 
@@ -94,7 +94,7 @@ describe('ClientOverviewTab adviser mode', () => {
   it('does not show the client welcome greeting in adviser mode', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getAllByText('Financial Reviews').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Financial reviews').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText(/welcome back/i).length).toBe(0);
   });
@@ -102,7 +102,7 @@ describe('ClientOverviewTab adviser mode', () => {
   it('hides client-only accordion labels in adviser mode', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Portfolio summary').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText('My Policies').length).toBe(0);
     expect(screen.queryAllByText('My Net Worth').length).toBe(0);
