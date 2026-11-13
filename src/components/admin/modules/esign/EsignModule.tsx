@@ -21,7 +21,8 @@
  * different on screen.
  */
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'react-router';
 import { ArrowRight, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '../../../../utils/logger';
@@ -60,6 +61,9 @@ import { useCurrentUserPermissions } from '../personnel';
 const DocumentUploadStep = React.lazy(() =>
   import('./components/DocumentUploadStep').then((m) => ({ default: m.DocumentUploadStep })),
 );
+const EnvelopeInspector = React.lazy(() =>
+  import('./components/EnvelopeInspector').then((m) => ({ default: m.EnvelopeInspector })),
+);
 const PrepareFormStudio = React.lazy(() =>
   import('./components/PrepareFormStudio').then((m) => ({ default: m.PrepareFormStudio })),
 );
@@ -70,6 +74,10 @@ export function EsignModule() {
   const [view, setView] = useState<ViewState>('dashboard');
   const [selectedEnvelope, setSelectedEnvelope] = useState<EsignEnvelope | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  // An open envelope is a page with its own address (?envelope=<id>), so
+  // reload, Back and shared links land on it (design system: records).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const envelopeParam = searchParams.get('envelope');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [resumingEnvelopeId, setResumingEnvelopeId] = useState<string | null>(null);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -668,7 +676,65 @@ export function EsignModule() {
   const handleViewEnvelope = (envelope: EsignEnvelope) => {
     setSelectedEnvelope(envelope);
     setDetailsDialogOpen(true);
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.set('envelope', envelope.id);
+      return params;
+    });
   };
+
+  /** Leave the envelope page and drop it from the address. */
+  const closeEnvelope = useCallback(() => {
+    setDetailsDialogOpen(false);
+    setSearchParams((current) => {
+      if (!current.has('envelope')) return current;
+      const params = new URLSearchParams(current);
+      params.delete('envelope');
+      return params;
+    });
+  }, [setSearchParams]);
+
+  // Follow the address: Back closes the envelope; a link or reload opens it.
+  useEffect(() => {
+    if (!envelopeParam) {
+      setDetailsDialogOpen(false);
+      return;
+    }
+    if (selectedEnvelope?.id === envelopeParam) {
+      setDetailsDialogOpen(true);
+      return;
+    }
+    let cancelled = false;
+    esignApi
+      .getEnvelope(envelopeParam)
+      .then((env) => {
+        if (cancelled) return;
+        if (env) {
+          setSelectedEnvelope(env);
+          setDetailsDialogOpen(true);
+        } else {
+          toast.error('Envelope not found');
+          closeEnvelope();
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // The API answers an unknown or deleted id with a 404 (APIError).
+        const status = (err as { statusCode?: number } | null)?.statusCode;
+        if (status === 404) {
+          toast.error('Envelope not found');
+        } else {
+          logger.warn('Failed to open envelope from the address', { error: String(err) });
+          toast.error('Could not open this envelope. Please try again.');
+        }
+        closeEnvelope();
+      });
+    return () => {
+      cancelled = true;
+    };
+    // selectedEnvelope is read only to skip a refetch of the open envelope.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [envelopeParam]);
 
   const handleDownloadDocument = (envelopeId: string) => {
     // Try to use title from selected envelope if it matches
@@ -739,7 +805,7 @@ export function EsignModule() {
       setDocumentUrl(docUrl);
 
       // 5. Close the inspector if open
-      setDetailsDialogOpen(false);
+      closeEnvelope();
 
       // 6. Navigate to prepare view
       setView('prepare');
@@ -979,32 +1045,77 @@ export function EsignModule() {
       ) : (
         <div className="flex-1 overflow-auto p-6">
           {view === 'dashboard' && (
-            <EsignDashboard
-              onCreateNew={handleStartNew}
-              onViewEnvelope={handleViewEnvelope}
-              onResumePrepare={handleResumePrepare}
-              resumingEnvelopeId={resumingEnvelopeId}
-              onUseTemplate={(template) => {
-                if (!canCreate) return;
-                resetWizardState();
-                handleSelectTemplate(template);
-              }}
-              onStartTemplateBuilder={handleStartTemplateBuilder}
-              onConfigureTemplate={handleConfigureTemplate}
-              onBulkSend={canSend ? () => setBulkSendOpen(true) : undefined}
-              manageAccess={{
-                notifications: true,
-                webhooks: canSend,
-                packets: canSend,
-                recovery: canDelete,
-                audit: true,
-                retention: canDelete,
-                branding: canCreate,
-              }}
-              onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
-              onOpenEnvelopeById={handleOpenEnvelopeById}
-              refreshTrigger={refreshTrigger}
-            />
+            <>
+              {detailsDialogOpen && selectedEnvelope && (
+                <Suspense fallback={<StepFallback />}>
+                  <EnvelopeInspector
+                    envelope={selectedEnvelope}
+                    open
+                    onOpenChange={(open) => {
+                      if (!open) closeEnvelope();
+                    }}
+                    onDownloadDocument={handleDownloadDocument}
+                    onResumePrepare={canCreate ? handleResumePrepare : undefined}
+                    resumingEnvelopeId={resumingEnvelopeId}
+                    onVoidEnvelope={
+                      canSend
+                        ? async (id, reason) => {
+                            await voidEnvelope(id, reason);
+                            closeEnvelope();
+                            setRefreshTrigger((prev) => prev + 1);
+                            toast.success('Voided successfully');
+                          }
+                        : undefined
+                    }
+                    onDeleteEnvelope={
+                      canDelete
+                        ? async (id) => {
+                            await deleteEnvelope(id);
+                            closeEnvelope();
+                            setRefreshTrigger((prev) => prev + 1);
+                            // P6.8 — soft delete: signal to the user that this is
+                            // recoverable, so they feel safe discarding without
+                            // reaching for "Are you sure?" guardrails.
+                            toast.success(
+                              'Envelope moved to Recovery Bin (restorable for 90 days).',
+                            );
+                          }
+                        : undefined
+                    }
+                  />
+                </Suspense>
+              )}
+              {/* Stays mounted under the envelope page so the list keeps its
+                  search, filters and selection when you come back. */}
+              <div hidden={detailsDialogOpen && !!selectedEnvelope}>
+                <EsignDashboard
+                  onCreateNew={handleStartNew}
+                  onViewEnvelope={handleViewEnvelope}
+                  onResumePrepare={handleResumePrepare}
+                  resumingEnvelopeId={resumingEnvelopeId}
+                  onUseTemplate={(template) => {
+                    if (!canCreate) return;
+                    resetWizardState();
+                    handleSelectTemplate(template);
+                  }}
+                  onStartTemplateBuilder={handleStartTemplateBuilder}
+                  onConfigureTemplate={handleConfigureTemplate}
+                  onBulkSend={canSend ? () => setBulkSendOpen(true) : undefined}
+                  manageAccess={{
+                    notifications: true,
+                    webhooks: canSend,
+                    packets: canSend,
+                    recovery: canDelete,
+                    audit: true,
+                    retention: canDelete,
+                    branding: canCreate,
+                  }}
+                  onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
+                  onOpenEnvelopeById={handleOpenEnvelopeById}
+                  refreshTrigger={refreshTrigger}
+                />
+              </div>
+            </>
           )}
         </div>
       )}
@@ -1035,35 +1146,6 @@ export function EsignModule() {
         bulkSendOpen={bulkSendOpen}
         onBulkSendOpenChange={setBulkSendOpen}
         onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
-        selectedEnvelope={selectedEnvelope}
-        detailsDialogOpen={detailsDialogOpen}
-        onDetailsOpenChange={setDetailsDialogOpen}
-        onDownloadDocument={handleDownloadDocument}
-        onResumePrepare={canCreate ? handleResumePrepare : undefined}
-        resumingEnvelopeId={resumingEnvelopeId}
-        onVoidEnvelope={
-          canSend
-            ? async (id, reason) => {
-                await voidEnvelope(id, reason);
-                setDetailsDialogOpen(false);
-                setRefreshTrigger((prev) => prev + 1);
-                toast.success('Voided successfully');
-              }
-            : undefined
-        }
-        onDeleteEnvelope={
-          canDelete
-            ? async (id) => {
-                await deleteEnvelope(id);
-                setDetailsDialogOpen(false);
-                setRefreshTrigger((prev) => prev + 1);
-                // P6.8 — soft delete: signal to the user that this is
-                // recoverable, so they feel safe discarding without
-                // reaching for "Are you sure?" guardrails.
-                toast.success('Envelope moved to Recovery Bin (restorable for 90 days).');
-              }
-            : undefined
-        }
       />
     </div>
   );

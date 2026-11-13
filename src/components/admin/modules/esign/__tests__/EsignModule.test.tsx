@@ -7,6 +7,7 @@
  * exercised here (lazy children never mount unless the user navigates into
  * them). Hooks + heavy children are mocked so this stays fast and deterministic.
  */
+import { MemoryRouter } from 'react-router';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test/utils';
 
@@ -139,12 +140,12 @@ import { EsignModule } from '../EsignModule';
 
 describe('EsignModule', () => {
   it('renders the dashboard view on mount', () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     expect(screen.getByTestId('esign-dashboard')).toBeTruthy();
   });
 
   it('opens the template picker when Start New Envelope is clicked', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByRole('button', { name: /start new envelope/i }));
     await waitFor(() => {
       expect(screen.getByTestId('start-blank')).toBeTruthy();
@@ -152,7 +153,7 @@ describe('EsignModule', () => {
   });
 
   it('transitions to the upload wizard after choosing Start from scratch', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByRole('button', { name: /start new envelope/i }));
     await waitFor(() => screen.getByTestId('start-blank'));
     fireEvent.click(screen.getByTestId('start-blank'));
@@ -162,7 +163,7 @@ describe('EsignModule', () => {
   });
 
   it('leaves an untouched wizard immediately, without the exit gate', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByRole('button', { name: /start new envelope/i }));
     await waitFor(() => screen.getByTestId('start-blank'));
     fireEvent.click(screen.getByTestId('start-blank'));
