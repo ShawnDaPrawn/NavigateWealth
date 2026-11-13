@@ -22,6 +22,15 @@ import { InviteDialog } from './components/InviteDialog';
 import { AdminCompleteDialog } from './components/AdminCompleteDialog';
 import { useCurrentUserPermissions } from '../personnel';
 import { pendingCountsKeys } from '../../../../utils/queryKeys';
+import { PageHeader, useUrlState } from '../../layout/page';
+
+const APPLICATION_STATUSES: readonly TabStatus[] = [
+  'pending',
+  'approved',
+  'rejected',
+  'invited',
+  'incomplete',
+];
 
 export function ApplicationsModule() {
   const queryClient = useQueryClient();
@@ -33,7 +42,12 @@ export function ApplicationsModule() {
   const canApprove = canDo('applications', 'approve');
 
   // State
-  const [activeTab, setActiveTab] = useState<TabStatus>('pending');
+  // The status being viewed is in the address (?status=approved).
+  const [activeTab, setActiveTab] = useUrlState<TabStatus>(
+    'status',
+    'pending',
+    APPLICATION_STATUSES,
+  );
   const [applications, setApplications] = useState<Application[]>([]);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,10 +115,13 @@ export function ApplicationsModule() {
     await Promise.all([loadApplications(), loadStats()]);
   }, [loadApplications, loadStats]);
 
-  const handleTabChange = useCallback((tab: TabStatus) => {
-    setActiveTab(tab);
-    setSearchQuery(''); // Clear search when switching tabs
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: TabStatus) => {
+      setActiveTab(tab);
+      setSearchQuery(''); // Clear search when switching tabs
+    },
+    [setActiveTab],
+  );
 
   const handleReview = useCallback(async (application: Application) => {
     try {
@@ -227,39 +244,25 @@ export function ApplicationsModule() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8">
       {!isAdmin && <AdminAuthNotice />}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Applications</h2>
-          <p className="text-muted-foreground mt-1">
-            Review, approve, and manage client applications
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPreviewOpen(true)}
-            className="gap-2"
-          >
-            <Eye className="h-4 w-4" />
-            Preview Form
-          </Button>
-          <Button
-            onClick={() => setInviteDialogOpen(true)}
-            size="sm"
-            className="gap-2"
-            disabled={!isAdmin || !canCreateApp}
-          >
-            <Send className="h-4 w-4" />
-            Invite Applicant
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Applications"
+        description="Review, approve and manage client applications."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setPreviewOpen(true)}>
+              <Eye className="h-4 w-4" aria-hidden="true" />
+              Preview form
+            </Button>
+            <Button onClick={() => setInviteDialogOpen(true)} disabled={!isAdmin || !canCreateApp}>
+              <Send className="h-4 w-4" aria-hidden="true" />
+              Invite applicant
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards — serve as tab navigation */}
       <StatsCards stats={stats} activeTab={activeTab} setActiveTab={handleTabChange} />

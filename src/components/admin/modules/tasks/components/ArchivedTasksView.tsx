@@ -50,7 +50,8 @@ import {
 
 interface ArchivedTasksViewProps {
   tasks: Task[];
-  onBack: () => void;
+  /** Shows a back button and heading when the view replaces the board. */
+  onBack?: () => void;
   onViewTask: (task: Task) => void;
 }
 
@@ -90,20 +91,27 @@ export function ArchivedTasksView({ tasks, onBack, onViewTask }: ArchivedTasksVi
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-10 w-10 rounded-xl hover:bg-gray-100"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-600" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Archived Tasks</h1>
-            <p className="mt-1 text-sm text-gray-500">View and restore previously archived tasks</p>
+        {onBack ? (
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-10 w-10 rounded-xl hover:bg-gray-100"
+              aria-label="Back to board"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">Archived Tasks</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                View and restore previously archived tasks
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <span />
+        )}
 
         <div className="text-sm font-medium text-gray-500">
           {filteredTasks.length} archived task{filteredTasks.length !== 1 ? 's' : ''}
