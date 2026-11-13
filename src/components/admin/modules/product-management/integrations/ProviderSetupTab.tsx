@@ -14,6 +14,7 @@ import {
   ListChecks,
   Loader2,
   RotateCcw,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   IntegrationFieldBinding,
@@ -36,8 +37,8 @@ import {
 } from './portal-automation/portalHelpers';
 import { SetupStepIndicator } from './SetupStepIndicator';
 import { ProviderCredentialsSection } from './ProviderCredentialsSection';
-import { ProviderAdvancedSheet } from './ProviderAdvancedSheet';
-import { useConfirm } from '../../../layout/page';
+import { ProviderAdvancedSections } from './ProviderAdvancedSections';
+import { PageHeader, useConfirm } from '../../../layout/page';
 
 interface ProviderSetupTabProps {
   provider: IntegrationProvider;
@@ -63,6 +64,14 @@ interface ProviderSetupTabProps {
   updateFieldSelector: (index: number, selector: string) => void;
   updateFieldRequired: (index: number, required: boolean) => void;
   buildProviderFallbackFields: () => PortalFlowField[];
+  /**
+   * 'advanced' renders the Advanced & diagnostics page (opened from the
+   * integration header) instead of the setup card. It edits the same draft
+   * and saves through the same `onSaveFlow`.
+   */
+  view?: 'setup' | 'advanced';
+  /** Leaves the Advanced & diagnostics page ("‹ <Provider> integration", Cancel). */
+  onCloseAdvanced?: () => void;
 }
 
 export function ProviderSetupTab({
@@ -86,6 +95,8 @@ export function ProviderSetupTab({
   updateFieldSelector,
   updateFieldRequired,
   buildProviderFallbackFields,
+  view = 'setup',
+  onCloseAdvanced,
 }: ProviderSetupTabProps) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [credentialUsername, setCredentialUsername] = useState('');
@@ -346,6 +357,85 @@ export function ProviderSetupTab({
       Save Setup
     </Button>
   );
+
+  if (view === 'advanced') {
+    return (
+      <div className="flex flex-col gap-4">
+        <button
+          type="button"
+          onClick={onCloseAdvanced}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          {provider.name} integration
+        </button>
+        <PageHeader
+          title="Advanced & diagnostics"
+          description={`${provider.name} · portal automation selectors for ${selectedScopeLabel}. The worker discovers most of this on its own — only fill these in when a run gets stuck.`}
+          actions={
+            <>
+              <Button type="button" variant="outline" onClick={onCloseAdvanced}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={saveFlowConfiguration}
+                disabled={isSavingFlow || !flow}
+              >
+                {isSavingFlow && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                Save
+              </Button>
+            </>
+          }
+        />
+        {isLoadingFlow ? (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading portal flow...
+          </div>
+        ) : flow ? (
+          <ProviderAdvancedSections
+            provider={provider}
+            brainMemory={brainMemory}
+            smartAssistReady={smartAssistReady}
+            usernameSelector={usernameSelector}
+            setUsernameSelector={setUsernameSelector}
+            passwordSelector={passwordSelector}
+            setPasswordSelector={setPasswordSelector}
+            submitSelector={submitSelector}
+            setSubmitSelector={setSubmitSelector}
+            searchInputSelector={searchInputSelector}
+            setSearchInputSelector={setSearchInputSelector}
+            searchSubmitSelector={searchSubmitSelector}
+            setSearchSubmitSelector={setSearchSubmitSelector}
+            resultContainerSelector={resultContainerSelector}
+            setResultContainerSelector={setResultContainerSelector}
+            resultLinkSelector={resultLinkSelector}
+            setResultLinkSelector={setResultLinkSelector}
+            postLoginUrl={postLoginUrl}
+            setPostLoginUrl={setPostLoginUrl}
+            nextPageSelector={nextPageSelector}
+            setNextPageSelector={setNextPageSelector}
+            policyListStepsJson={policyListStepsJson}
+            setPolicyListStepsJson={setPolicyListStepsJson}
+            policyListStepsError={policyListStepsError}
+            smartAssistGoal={smartAssistGoal}
+            setSmartAssistGoal={setSmartAssistGoal}
+            policyScheduleLabelsText={policyScheduleLabelsText}
+            setPolicyScheduleLabelsText={setPolicyScheduleLabelsText}
+            policyScheduleSelector={policyScheduleSelector}
+            setPolicyScheduleSelector={setPolicyScheduleSelector}
+            fieldSelectors={fieldSelectors}
+            updateFieldSelector={updateFieldSelector}
+          />
+        ) : (
+          <p className="text-sm text-gray-500">
+            No portal flow is available for this provider yet.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Card>
@@ -661,43 +751,6 @@ export function ProviderSetupTab({
               </Button>
               {saveSetupButton}
             </div>
-
-            <ProviderAdvancedSheet
-              selectedScopeLabel={selectedScopeLabel}
-              provider={provider}
-              brainMemory={brainMemory}
-              smartAssistReady={smartAssistReady}
-              usernameSelector={usernameSelector}
-              setUsernameSelector={setUsernameSelector}
-              passwordSelector={passwordSelector}
-              setPasswordSelector={setPasswordSelector}
-              submitSelector={submitSelector}
-              setSubmitSelector={setSubmitSelector}
-              searchInputSelector={searchInputSelector}
-              setSearchInputSelector={setSearchInputSelector}
-              searchSubmitSelector={searchSubmitSelector}
-              setSearchSubmitSelector={setSearchSubmitSelector}
-              resultContainerSelector={resultContainerSelector}
-              setResultContainerSelector={setResultContainerSelector}
-              resultLinkSelector={resultLinkSelector}
-              setResultLinkSelector={setResultLinkSelector}
-              postLoginUrl={postLoginUrl}
-              setPostLoginUrl={setPostLoginUrl}
-              nextPageSelector={nextPageSelector}
-              setNextPageSelector={setNextPageSelector}
-              policyListStepsJson={policyListStepsJson}
-              setPolicyListStepsJson={setPolicyListStepsJson}
-              policyListStepsError={policyListStepsError}
-              smartAssistGoal={smartAssistGoal}
-              setSmartAssistGoal={setSmartAssistGoal}
-              policyScheduleLabelsText={policyScheduleLabelsText}
-              setPolicyScheduleLabelsText={setPolicyScheduleLabelsText}
-              policyScheduleSelector={policyScheduleSelector}
-              setPolicyScheduleSelector={setPolicyScheduleSelector}
-              fieldSelectors={fieldSelectors}
-              updateFieldSelector={updateFieldSelector}
-              saveSetupButton={saveSetupButton}
-            />
           </>
         ) : (
           <p className="text-sm text-gray-500">

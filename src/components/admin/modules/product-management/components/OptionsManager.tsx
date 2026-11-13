@@ -1,44 +1,66 @@
 import React, { useState } from 'react';
-import { Plus, Settings2, X, GripVertical } from 'lucide-react';
+import { Plus, Settings2, GripVertical } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface OptionsManagerProps {
   options?: string[];
   onChange: (options: string[]) => void;
+  /** The field's name, shown in the dialog title ("Dropdown options · Premium escalation"). */
+  fieldName?: string;
 }
 
-export const OptionsManager = ({ options = [], onChange }: OptionsManagerProps) => {
-  const [newOption, setNewOption] = useState('');
+/**
+ * Dropdown options for a schema field. The trigger shows the current options;
+ * editing happens in a centred dialog on a draft, so Cancel discards and
+ * "Save options" applies.
+ */
+export const OptionsManager = ({ options = [], onChange, fieldName }: OptionsManagerProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [draft, setDraft] = useState<string[]>(options);
+  const [newOption, setNewOption] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const open = () => {
+    setDraft(options);
+    setNewOption('');
+    setError(null);
+    setIsOpen(true);
+  };
 
   const addOption = () => {
-    if (!newOption.trim()) return;
-    // Prevent duplicates
-    if (options.includes(newOption.trim())) {
-      setNewOption('');
+    const value = newOption.trim();
+    if (!value) return;
+    if (draft.includes(value)) {
+      setError(`“${value}” is already an option`);
       return;
     }
-    onChange([...options, newOption.trim()]);
+    setDraft([...draft, value]);
     setNewOption('');
+    setError(null);
   };
 
   const removeOption = (index: number) => {
-    const newOptions = [...options];
-    newOptions.splice(index, 1);
-    onChange(newOptions);
+    const next = [...draft];
+    next.splice(index, 1);
+    setDraft(next);
   };
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-
-    const items = Array.from(options);
+    const items = Array.from(draft);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
-
-    onChange(items);
+    setDraft(items);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -48,95 +70,80 @@ export const OptionsManager = ({ options = [], onChange }: OptionsManagerProps) 
     }
   };
 
+  const save = () => {
+    onChange(draft);
+    setIsOpen(false);
+  };
+
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          className="w-full justify-between h-8 text-sm font-normal px-3 border-gray-200 bg-white hover:bg-gray-50 hover:border-purple-300 transition-colors text-left"
-        >
-          {options.length > 0 ? (
-            <span className="truncate text-gray-700">{options.join(', ')}</span>
-          ) : (
-            <span className="text-gray-400 italic">Configure options...</span>
-          )}
-          <Settings2 className="ml-2 h-3 w-3 shrink-0 text-gray-400" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-4" align="start">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium text-sm text-gray-900">Dropdown Options</h4>
-            <p className="text-xs text-gray-500 mt-1">
-              Define the choices available for this field. Users will select one of these values.
-            </p>
-          </div>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={open}
+        className="h-8 w-full justify-between border-gray-200 bg-white px-3 text-left text-sm font-normal transition-colors hover:border-purple-300 hover:bg-gray-50"
+      >
+        {options.length > 0 ? (
+          <span className="truncate text-gray-700">{options.join(', ')}</span>
+        ) : (
+          <span className="italic text-gray-400">Configure options...</span>
+        )}
+        <Settings2 className="ml-2 h-3 w-3 shrink-0 text-gray-400" aria-hidden="true" />
+      </Button>
 
-          {/* Input Area */}
-          <div className="flex gap-2">
-            <Input
-              value={newOption}
-              onChange={(e) => setNewOption(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type option and press Enter..."
-              className="h-9 text-sm"
-            />
-            <Button
-              size="sm"
-              onClick={addOption}
-              disabled={!newOption.trim()}
-              className="h-9 w-9 p-0 bg-purple-600 hover:bg-purple-700 text-white shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Dropdown options{fieldName ? ` · ${fieldName}` : ''}</DialogTitle>
+            <DialogDescription>
+              The choices available for this field. Drag to reorder.
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* Options List */}
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="options-list">
               {(provided) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="max-h-[240px] overflow-y-auto pr-1 -mr-1 space-y-2"
+                  className="max-h-[280px] space-y-2 overflow-y-auto"
                 >
-                  {options.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-6 text-center border-2 border-dashed border-gray-100 rounded-lg bg-gray-50/50">
+                  {draft.length === 0 && (
+                    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-100 bg-gray-50/50 py-6 text-center">
                       <span className="text-xs text-gray-400">No options added yet</span>
                     </div>
                   )}
-                  {options.map((option, idx) => (
+                  {draft.map((option, idx) => (
                     <Draggable key={option} draggableId={option} index={idx}>
-                      {(provided, snapshot) => (
+                      {(dragProvided, snapshot) => (
                         <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`
-                             flex items-center justify-between px-3 py-2 rounded-md border 
-                             ${snapshot.isDragging ? 'bg-purple-50 border-purple-300 shadow-md z-50' : 'bg-white border-gray-200 hover:border-purple-200 hover:shadow-sm'} 
-                             transition-all
-                           `}
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          className={`flex items-center justify-between rounded-md border px-3 py-2 transition-all ${
+                            snapshot.isDragging
+                              ? 'z-50 border-purple-300 bg-purple-50 shadow-md'
+                              : 'border-gray-200 bg-white'
+                          }`}
                         >
-                          <div className="flex items-center gap-2 overflow-hidden flex-1">
+                          <div className="flex flex-1 items-center gap-2 overflow-hidden">
                             <div
-                              {...provided.dragHandleProps}
-                              className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500"
+                              {...dragProvided.dragHandleProps}
+                              className="cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing"
                             >
-                              <GripVertical className="h-3.5 w-3.5" />
+                              <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
                             </div>
-                            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
-                            <span className="text-sm text-gray-700 truncate">{option}</span>
+                            <span className="truncate text-sm text-gray-700">{option}</span>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeOption(idx);
-                            }}
-                            className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-all ml-2"
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-nw-text-2 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => removeOption(idx)}
+                            aria-label={`Remove ${option}`}
                           >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
+                            Remove
+                          </Button>
                         </div>
                       )}
                     </Draggable>
@@ -147,21 +154,58 @@ export const OptionsManager = ({ options = [], onChange }: OptionsManagerProps) 
             </Droppable>
           </DragDropContext>
 
-          {options.length > 0 && (
-            <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
-              <span className="text-xs text-gray-400">{options.length} options configured</span>
+          <div className="space-y-1">
+            <div className="flex gap-2">
+              <Input
+                value={newOption}
+                onChange={(e) => {
+                  setNewOption(e.target.value);
+                  if (error) setError(null);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="New option"
+                aria-label="New option"
+                aria-invalid={!!error}
+                className="h-9 text-sm"
+              />
               <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 px-2"
-                onClick={() => onChange([])}
+                type="button"
+                variant="outline"
+                onClick={addOption}
+                disabled={!newOption.trim()}
+                className="h-9 shrink-0"
               >
-                Clear All
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add
               </Button>
             </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+            {error && <p className="text-xs text-red-600">{error}</p>}
+          </div>
+
+          <DialogFooter className="sm:justify-between">
+            {draft.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setDraft([])}
+              >
+                Clear all
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={save}>
+                Save options
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

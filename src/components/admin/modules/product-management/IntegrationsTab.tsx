@@ -14,6 +14,10 @@ import { productManagementApi } from './api';
 import { ProviderConnectionList } from './integrations/connections/ProviderConnectionList';
 import { GuidedSignInDialog } from './integrations/connections/GuidedSignInDialog';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
+import { INTEGRATION_SECTIONS, type IntegrationSection } from './integrations/integrationSections';
+import { describeConnection } from './integrations/connections/connectionPresentation';
+import { useSearchParams } from 'react-router';
+import { useUrlState } from '../../layout/page';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
 import { ProviderSetupTab } from './integrations/ProviderSetupTab';
@@ -22,7 +26,7 @@ import { PortfolioTableTab } from './integrations/PortfolioTableTab';
 import { isActivePortalJob } from './integrations/portal-automation/portalHelpers';
 import { usePortalFieldSelectors } from './integrations/portal-automation/usePortalFieldSelectors';
 import { toast } from 'sonner';
-import { Inbox, LayoutList } from 'lucide-react';
+import { ChevronLeft, Inbox, Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { integrationsKeys } from '../../../../utils/queryKeys';
 import { useProductSchema } from './hooks/useProductSchema';
@@ -32,9 +36,17 @@ import { buildIntegrationBindingsForFields } from '@/shared/integrations/binding
 export function IntegrationsTab() {
   const queryClient = useQueryClient();
 
-  // UI State
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('upload');
+  // UI State. The open integration, its section and the Advanced &
+  // diagnostics page all live in the address (?integration=<id>&section=mapping
+  // &advanced=1), so reload, Back and a pasted link land on the same page.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openProviderId = searchParams.get('integration');
+  const advancedOpen = !!openProviderId && searchParams.get('advanced') === '1';
+  const [activeTab, setActiveTab] = useUrlState<IntegrationSection>(
+    'section',
+    'review',
+    INTEGRATION_SECTIONS,
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
   // Upload State
@@ -79,12 +91,42 @@ export function IntegrationsTab() {
     queryFn: () => productManagementApi.fetchPortalConnections(),
   });
 
-  // Select first provider automatically if needed
-  useEffect(() => {
-    if (!selectedProviderId && providers.length > 0) {
-      setSelectedProviderId(providers[0].id);
-    }
-  }, [providers, selectedProviderId]);
+  // Every query and mutation below is bound to one provider: the open
+  // integration page, or — on the list — the provider whose guided sign-in is
+  // open (the dialog stays over the list).
+  const selectedProviderId = openProviderId ?? guidedSignInProviderId;
+
+  const openIntegration = (providerId: string) => {
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.set('integration', providerId);
+      params.delete('section');
+      params.delete('advanced');
+      return params;
+    });
+  };
+
+  const closeIntegration = () => {
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.delete('integration');
+      params.delete('section');
+      params.delete('advanced');
+      return params;
+    });
+  };
+
+  const setAdvancedOpen = (open: boolean) => {
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        if (open) params.set('advanced', '1');
+        else params.delete('advanced');
+        return params;
+      },
+      { replace: !open },
+    );
+  };
 
   const selectedProvider = providers.find((p) => p.id === selectedProviderId);
 
@@ -107,7 +149,6 @@ export function IntegrationsTab() {
         strictMode: false,
         autoPublish: false,
       });
-      setActiveTab('upload');
     }
   }, [selectedProviderId, providers, selectedProvider]);
 
@@ -498,9 +539,6 @@ export function IntegrationsTab() {
    * of duplication that let setup completeness disagree with itself before.
    */
   const handleOpenGuidedSignIn = (connection: PortalProviderConnection) => {
-    if (connection.providerId !== selectedProviderId) {
-      setSelectedProviderId(connection.providerId);
-    }
     setGuidedSignInProviderId(connection.providerId);
   };
 
@@ -547,207 +585,302 @@ export function IntegrationsTab() {
     (binding) => binding.targetFieldId && binding.columnName,
   ).length;
 
-  return (
-    <div className="flex h-[calc(100vh-200px)] min-h-[800px] gap-6">
-      {/* Left Panel: Connections */}
-      <ProviderConnectionList
-        providers={providers}
-        connections={portalConnections}
-        selectedProviderId={selectedProviderId}
-        onSelect={setSelectedProviderId}
-        onConnect={handleOpenGuidedSignIn}
-      />
+  const openConnection = openProviderId
+    ? portalConnections.find((entry) => entry.providerId === openProviderId) || null
+    : null;
+  const openConnectionAction = openConnection
+    ? describeConnection(openConnection.state).action
+    : undefined;
 
-      <GuidedSignInDialog
-        connection={guidedSignInConnection}
-        open={!!guidedSignInConnection}
-        onOpenChange={(next) => setGuidedSignInProviderId(next ? guidedSignInProviderId : null)}
-        job={connectionTestJob}
-        onSaveLoginUrl={handleSaveGuidedLoginUrl}
-        onSaveCredentials={handleSaveGuidedCredentials}
-        onStartTest={handleStartConnectionTest}
-        onSubmitOtp={async (otp) => {
-          await submitPortalOtpMutation.mutateAsync(otp);
-        }}
-        isSaving={savePortalFlowMutation.isPending || savePortalCredentialsMutation.isPending}
-        isStartingTest={startConnectionTestMutation.isPending}
-        isSubmittingOtp={submitPortalOtpMutation.isPending}
-      />
+  const guidedSignIn = (
+    <GuidedSignInDialog
+      connection={guidedSignInConnection}
+      open={!!guidedSignInConnection}
+      onOpenChange={(next) => setGuidedSignInProviderId(next ? guidedSignInProviderId : null)}
+      job={connectionTestJob}
+      onSaveLoginUrl={handleSaveGuidedLoginUrl}
+      onSaveCredentials={handleSaveGuidedCredentials}
+      onStartTest={handleStartConnectionTest}
+      onSubmitOtp={async (otp) => {
+        await submitPortalOtpMutation.mutateAsync(otp);
+      }}
+      isSaving={savePortalFlowMutation.isPending || savePortalCredentialsMutation.isPending}
+      isStartingTest={startConnectionTestMutation.isPending}
+      isSubmittingOtp={submitPortalOtpMutation.isPending}
+    />
+  );
 
-      {/* Right Panel: Details & Actions */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden rounded-lg border bg-white shadow-sm">
-        {selectedProvider ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-            <IntegrationHeader
-              provider={selectedProvider}
-              selectedCategoryId={selectedCategoryId}
-              stats={integrationStats}
-              onCategoryChange={handleCategoryChange}
-              pendingReviewCount={pendingReviewCount}
-            />
-
-            {/* Tab: Review (proposed changes) and spreadsheet upload */}
-            <TabsContent value="upload" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".csv, .xlsx, .xls"
-                onChange={handleFileSelect}
-              />
-              <UploadTab
-                provider={selectedProvider}
-                selectedCategoryId={selectedCategoryId}
-                uploadedFile={uploadedFile}
-                isProcessing={processFileMutation.isPending}
-                showPreview={showUploadPreview}
-                onDrop={handleFileDrop}
-                onManualUpload={() => fileInputRef.current?.click()}
-                onProcess={handleProcessFile}
-                onClear={() => {
-                  setUploadedFile(null);
-                  setRawFile(null);
-                  setShowUploadPreview(false);
-                  setPreviewData(null);
-                  setStagedRun(null);
-                }}
-                onConfirm={handleConfirmImport}
-                onPublishRun={() => publishRunMutation.mutate()}
-                isPublishingRun={publishRunMutation.isPending}
-                isColumnMapped={isColumnMapped}
-                previewData={previewData}
-                stagedRun={visibleStagedRunForSelection}
-                portalJobItems={portalJobItemsData?.items || []}
-                stats={integrationStats}
-                matchedColumnsCount={matchedColumnsCount}
-              />
-            </TabsContent>
-
-            {/* Tab: Portfolio (the provider/product book, download / upload, agent endpoint) */}
-            <TabsContent value="portfolio" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-              <PortfolioTableTab
-                key={`${selectedProvider.id}:${selectedCategoryId}:portfolio`}
-                provider={selectedProvider}
-                selectedCategoryId={selectedCategoryId}
-              />
-            </TabsContent>
-
-            {/* Tab: Provider Setup */}
-            <TabsContent value="setup" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-              <div className="space-y-6 max-w-4xl mx-auto">
-                <ProviderSetupTab
-                  key={`${selectedProvider.id}:${selectedCategoryId}:setup`}
-                  provider={selectedProvider}
-                  selectedCategoryId={selectedCategoryId}
-                  flow={portalFlow}
-                  brainMemory={portalBrainMemory}
-                  isLoadingFlow={isLoadingPortalFlow}
-                  credentialStatus={portalCredentialStatus}
-                  mappingBindings={mappingBindings}
-                  selectedCredentialProfileId={selectedPortalCredentialProfileId}
-                  onCredentialProfileChange={setSelectedPortalCredentialProfileId}
-                  isSavingCredentials={savePortalCredentialsMutation.isPending}
-                  isSavingFlow={savePortalFlowMutation.isPending}
-                  isResettingFlow={resetPortalFlowMutation.isPending}
-                  onSaveCredentials={(profileId, credentials) =>
-                    savePortalCredentialsMutation.mutate({ profileId, ...credentials })
-                  }
-                  onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
-                  onResetFlow={() => resetPortalFlowMutation.mutate()}
-                  onOpenMappingTab={() => setActiveTab('mapping')}
-                  fieldSelectors={portalFieldSelectors}
-                  updateFieldSelector={updatePortalFieldSelector}
-                  updateFieldRequired={updatePortalFieldRequired}
-                  buildProviderFallbackFields={buildPortalProviderFallbackFields}
-                />
-              </div>
-            </TabsContent>
-
-            {/* Tab: Mapping Configuration */}
-            <TabsContent value="mapping" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-              <MappingTab
-                provider={selectedProvider}
-                selectedCategoryId={selectedCategoryId}
-                categoryFields={categoryFields}
-                configBindings={configBindings}
-                configSettings={configSettings}
-                onUpdateBinding={handleUpdateBinding}
-                onUpdateSetting={handleSettingChange}
-                onSave={handleSaveConfiguration}
-                onDownloadTemplate={() => downloadTemplateMutation.mutate()}
-                isDownloadingTemplate={downloadTemplateMutation.isPending}
-                isLoadingFields={isLoadingCategoryFields}
-              />
-            </TabsContent>
-
-            {/* Tab: Portal Automation */}
-            <TabsContent value="portal" className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
-              <PortalAutomationTab
-                key={`${selectedProvider.id}:${selectedCategoryId}:portal`}
-                provider={selectedProvider}
-                selectedCategoryId={selectedCategoryId}
-                flow={portalFlow}
-                job={visiblePortalJobForSelection}
-                stagedRun={visibleStagedRunForSelection}
-                jobItems={portalJobItemsData?.items || []}
-                jobHistory={portalJobHistory}
-                discoveryReport={portalDiscoveryReport}
-                isLoadingFlow={isLoadingPortalFlow}
-                isLoadingDiscoveryReport={isLoadingPortalDiscoveryReport}
-                isLoadingJobItems={isLoadingPortalJobItems}
-                isLoadingJobHistory={isLoadingPortalJobHistory}
-                isCreatingJob={createPortalJobMutation.isPending}
-                credentialStatus={portalCredentialStatus}
-                mappingBindings={mappingBindings}
-                selectedCredentialProfileId={selectedPortalCredentialProfileId}
-                isSubmittingOtp={submitPortalOtpMutation.isPending}
-                isRefreshingJob={refreshPortalJobMutation.isPending}
-                onCreateJob={(credentialProfileId, runMode, options) =>
-                  createPortalJobMutation.mutate({ credentialProfileId, runMode, ...options })
-                }
-                onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
-                onRefreshJob={() => refreshPortalJobMutation.mutate()}
-                onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}
-                onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
-                onOpenUploadTab={() => setActiveTab('upload')}
-                onOpenSetupTab={() => setActiveTab('setup')}
-                isApplyingFlow={applyPortalFlowMutation.isPending}
-                fieldSelectors={portalFieldSelectors}
-                updateFieldSelector={updatePortalFieldSelector}
-                buildProviderFallbackFields={buildPortalProviderFallbackFields}
-              />
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50/30">
+  // --- Integration page (?integration=<id>) ---
+  if (openProviderId) {
+    if (!selectedProvider) {
+      return (
+        <div className="flex flex-col gap-4">
+          <BackToIntegrations onClick={closeIntegration} />
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-nw-line bg-white p-10 text-center">
             {isLoadingProviders ? (
-              <div className="flex flex-col items-center gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
-                <p className="text-sm text-gray-500">Loading providers...</p>
-              </div>
-            ) : providers.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 max-w-md text-center p-8">
-                <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                  <Inbox className="h-6 w-6 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">No Providers Configured</h3>
-                <p className="text-sm text-gray-500">
-                  You haven't set up any product providers yet. Go to the{' '}
-                  <span className="font-medium text-gray-700">Provider Management</span> tab to add
-                  your first provider.
-                </p>
-              </div>
+              <>
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" aria-hidden="true" />
+                <p className="text-sm text-gray-500">Loading integration...</p>
+              </>
             ) : (
-              <div className="flex flex-col items-center gap-3">
-                <LayoutList className="h-12 w-12 text-gray-300" />
-                <p className="text-lg font-medium text-gray-500">
-                  Select a provider to view details
+              <>
+                <h2 className="text-base font-semibold text-nw-ink">Integration not found</h2>
+                <p className="text-sm text-nw-text-3">
+                  This provider may have been removed. Go back to the connections list.
                 </p>
-              </div>
+              </>
             )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      );
+    }
+
+    if (advancedOpen) {
+      return (
+        <>
+          <ProviderSetupTab
+            key={`${selectedProvider.id}:${selectedCategoryId}:advanced`}
+            view="advanced"
+            onCloseAdvanced={() => setAdvancedOpen(false)}
+            provider={selectedProvider}
+            selectedCategoryId={selectedCategoryId}
+            flow={portalFlow}
+            brainMemory={portalBrainMemory}
+            isLoadingFlow={isLoadingPortalFlow}
+            credentialStatus={portalCredentialStatus}
+            mappingBindings={mappingBindings}
+            selectedCredentialProfileId={selectedPortalCredentialProfileId}
+            onCredentialProfileChange={setSelectedPortalCredentialProfileId}
+            isSavingCredentials={savePortalCredentialsMutation.isPending}
+            isSavingFlow={savePortalFlowMutation.isPending}
+            isResettingFlow={resetPortalFlowMutation.isPending}
+            onSaveCredentials={(profileId, credentials) =>
+              savePortalCredentialsMutation.mutate({ profileId, ...credentials })
+            }
+            onSaveFlow={(flow) =>
+              savePortalFlowMutation.mutate(flow, { onSuccess: () => setAdvancedOpen(false) })
+            }
+            onResetFlow={() => resetPortalFlowMutation.mutate()}
+            onOpenMappingTab={() => {
+              setAdvancedOpen(false);
+              setActiveTab('mapping');
+            }}
+            fieldSelectors={portalFieldSelectors}
+            updateFieldSelector={updatePortalFieldSelector}
+            updateFieldRequired={updatePortalFieldRequired}
+            buildProviderFallbackFields={buildPortalProviderFallbackFields}
+          />
+          {guidedSignIn}
+        </>
+      );
+    }
+
+    return (
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as IntegrationSection)}
+        className="flex flex-col gap-5"
+      >
+        <IntegrationHeader
+          provider={selectedProvider}
+          selectedCategoryId={selectedCategoryId}
+          stats={integrationStats}
+          onCategoryChange={handleCategoryChange}
+          pendingReviewCount={pendingReviewCount}
+          onBack={closeIntegration}
+          onOpenAdvanced={() => setAdvancedOpen(true)}
+          statusLabel={openConnection ? describeConnection(openConnection.state).label : undefined}
+          connectAction={
+            openConnection && openConnectionAction
+              ? {
+                  label: openConnectionAction,
+                  onClick: () => handleOpenGuidedSignIn(openConnection),
+                }
+              : undefined
+          }
+        />
+
+        {/* Tab: Review (proposed changes) and spreadsheet upload */}
+        <TabsContent value="review" className="m-0 focus-visible:outline-none">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".csv, .xlsx, .xls"
+            onChange={handleFileSelect}
+          />
+          <UploadTab
+            provider={selectedProvider}
+            selectedCategoryId={selectedCategoryId}
+            uploadedFile={uploadedFile}
+            isProcessing={processFileMutation.isPending}
+            showPreview={showUploadPreview}
+            onDrop={handleFileDrop}
+            onManualUpload={() => fileInputRef.current?.click()}
+            onProcess={handleProcessFile}
+            onClear={() => {
+              setUploadedFile(null);
+              setRawFile(null);
+              setShowUploadPreview(false);
+              setPreviewData(null);
+              setStagedRun(null);
+            }}
+            onConfirm={handleConfirmImport}
+            onPublishRun={() => publishRunMutation.mutate()}
+            isPublishingRun={publishRunMutation.isPending}
+            isColumnMapped={isColumnMapped}
+            previewData={previewData}
+            stagedRun={visibleStagedRunForSelection}
+            portalJobItems={portalJobItemsData?.items || []}
+            stats={integrationStats}
+            matchedColumnsCount={matchedColumnsCount}
+          />
+        </TabsContent>
+
+        {/* Tab: Portfolio (the provider/product book, download / upload, agent endpoint) */}
+        <TabsContent value="portfolio" className="m-0 focus-visible:outline-none">
+          <PortfolioTableTab
+            key={`${selectedProvider.id}:${selectedCategoryId}:portfolio`}
+            provider={selectedProvider}
+            selectedCategoryId={selectedCategoryId}
+          />
+        </TabsContent>
+
+        {/* Tab: Provider Setup */}
+        <TabsContent value="setup" className="m-0 focus-visible:outline-none">
+          <div className="space-y-6 max-w-4xl mx-auto">
+            <ProviderSetupTab
+              key={`${selectedProvider.id}:${selectedCategoryId}:setup`}
+              provider={selectedProvider}
+              selectedCategoryId={selectedCategoryId}
+              flow={portalFlow}
+              brainMemory={portalBrainMemory}
+              isLoadingFlow={isLoadingPortalFlow}
+              credentialStatus={portalCredentialStatus}
+              mappingBindings={mappingBindings}
+              selectedCredentialProfileId={selectedPortalCredentialProfileId}
+              onCredentialProfileChange={setSelectedPortalCredentialProfileId}
+              isSavingCredentials={savePortalCredentialsMutation.isPending}
+              isSavingFlow={savePortalFlowMutation.isPending}
+              isResettingFlow={resetPortalFlowMutation.isPending}
+              onSaveCredentials={(profileId, credentials) =>
+                savePortalCredentialsMutation.mutate({ profileId, ...credentials })
+              }
+              onSaveFlow={(flow) => savePortalFlowMutation.mutate(flow)}
+              onResetFlow={() => resetPortalFlowMutation.mutate()}
+              onOpenMappingTab={() => setActiveTab('mapping')}
+              fieldSelectors={portalFieldSelectors}
+              updateFieldSelector={updatePortalFieldSelector}
+              updateFieldRequired={updatePortalFieldRequired}
+              buildProviderFallbackFields={buildPortalProviderFallbackFields}
+            />
+          </div>
+        </TabsContent>
+
+        {/* Tab: Mapping Configuration */}
+        <TabsContent value="mapping" className="m-0 focus-visible:outline-none">
+          <MappingTab
+            provider={selectedProvider}
+            selectedCategoryId={selectedCategoryId}
+            categoryFields={categoryFields}
+            configBindings={configBindings}
+            configSettings={configSettings}
+            onUpdateBinding={handleUpdateBinding}
+            onUpdateSetting={handleSettingChange}
+            onSave={handleSaveConfiguration}
+            onDownloadTemplate={() => downloadTemplateMutation.mutate()}
+            isDownloadingTemplate={downloadTemplateMutation.isPending}
+            isLoadingFields={isLoadingCategoryFields}
+          />
+        </TabsContent>
+
+        {/* Tab: Portal Automation */}
+        <TabsContent value="portal" className="m-0 focus-visible:outline-none">
+          <PortalAutomationTab
+            key={`${selectedProvider.id}:${selectedCategoryId}:portal`}
+            provider={selectedProvider}
+            selectedCategoryId={selectedCategoryId}
+            flow={portalFlow}
+            job={visiblePortalJobForSelection}
+            stagedRun={visibleStagedRunForSelection}
+            jobItems={portalJobItemsData?.items || []}
+            jobHistory={portalJobHistory}
+            discoveryReport={portalDiscoveryReport}
+            isLoadingFlow={isLoadingPortalFlow}
+            isLoadingDiscoveryReport={isLoadingPortalDiscoveryReport}
+            isLoadingJobItems={isLoadingPortalJobItems}
+            isLoadingJobHistory={isLoadingPortalJobHistory}
+            isCreatingJob={createPortalJobMutation.isPending}
+            credentialStatus={portalCredentialStatus}
+            mappingBindings={mappingBindings}
+            selectedCredentialProfileId={selectedPortalCredentialProfileId}
+            isSubmittingOtp={submitPortalOtpMutation.isPending}
+            isRefreshingJob={refreshPortalJobMutation.isPending}
+            onCreateJob={(credentialProfileId, runMode, options) =>
+              createPortalJobMutation.mutate({ credentialProfileId, runMode, ...options })
+            }
+            onSubmitOtp={(otp) => submitPortalOtpMutation.mutate(otp)}
+            onRefreshJob={() => refreshPortalJobMutation.mutate()}
+            onRetryItem={(item) => retryPortalJobItemMutation.mutate(item)}
+            onApplyFlow={(patch) => applyPortalFlowMutation.mutate(patch)}
+            onOpenUploadTab={() => setActiveTab('review')}
+            onOpenSetupTab={() => setActiveTab('setup')}
+            isApplyingFlow={applyPortalFlowMutation.isPending}
+            fieldSelectors={portalFieldSelectors}
+            updateFieldSelector={updatePortalFieldSelector}
+            buildProviderFallbackFields={buildPortalProviderFallbackFields}
+          />
+        </TabsContent>
+      </Tabs>
+    );
+  }
+
+  // --- Connections list ---
+  return (
+    <>
+      {providers.length > 0 ? (
+        <ProviderConnectionList
+          providers={providers}
+          connections={portalConnections}
+          onSelect={openIntegration}
+          onConnect={handleOpenGuidedSignIn}
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white py-16 text-gray-400">
+          {isLoadingProviders ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+              <p className="text-sm text-gray-500">Loading providers...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 max-w-md text-center p-8">
+              <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                <Inbox className="h-6 w-6 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">No providers configured</h3>
+              <p className="text-sm text-gray-500">
+                You haven't set up any product providers yet. Go to the{' '}
+                <span className="font-medium text-gray-700">Providers</span> tab to add your first
+                provider.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      {guidedSignIn}
+    </>
+  );
+}
+
+function BackToIntegrations({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+    >
+      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+      Integrations
+    </button>
   );
 }
