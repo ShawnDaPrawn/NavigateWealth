@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
+import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
@@ -19,14 +19,6 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../../../../ui/sheet';
-import {
-  History,
   Mail,
   MessageSquare,
   Search,
@@ -50,6 +42,8 @@ import {
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
+import { useRecordInUrl } from '../../../layout/page';
+import { toast } from 'sonner';
 
 const SENDER_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -74,10 +68,14 @@ function formatRecipientLine(log: ActivityLogEntry): string {
 }
 
 interface CommunicationHistoryProps {
-  onClose?: () => void;
+  /**
+   * Called with true while one message is open as a page of its own, so the
+   * module can hide its header and tabs.
+   */
+  onRecordPageChange?: (open: boolean) => void;
 }
 
-export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
+export function CommunicationHistory({ onRecordPageChange }: CommunicationHistoryProps) {
   const [logs, setLogs] = useState<ActivityLogEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [senderOptions, setSenderOptions] = useState<CampaignHistorySenderOption[]>([]);
@@ -152,6 +150,30 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
   ]);
 
   const triggerRefresh = useCallback(() => setRefreshToken((n) => n + 1), []);
+
+  // The open message is in the address (?message=<id>): reload, Back and a
+  // pasted link land on it. Only messages on the loaded history page can be
+  // opened from the address; there is no single-message endpoint.
+  useRecordInUrl('message', detailLog ? detailLog.id : null, {
+    ready: !loading,
+    openFromUrl: (id) => {
+      if (loading) return 'waiting';
+      const match = logs.find((log) => log.id === id);
+      if (!match) {
+        if (!error) toast.error('Message not found in the history list');
+        return 'missing';
+      }
+      setDetailLog(match);
+      return 'opened';
+    },
+    closeFromUrl: (previousId) => {
+      setDetailLog((current) => (current && current.id === previousId ? null : current));
+    },
+  });
+
+  useEffect(() => {
+    onRecordPageChange?.(!!detailLog);
+  }, [detailLog, onRecordPageChange]);
 
   const formatTimestamp = (timestamp: Date): string => {
     return new Date(timestamp).toLocaleDateString('en-ZA', {
@@ -241,33 +263,24 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
     }
   };
 
+  // One message is a page of its own (design system: records are pages,
+  // never side panels). The list keeps its filters and page underneath.
+  if (detailLog) {
+    return (
+      <HistoryMessagePage
+        log={detailLog}
+        onBack={() => setDetailLog(null)}
+        formatTimestamp={formatTimestamp}
+        statusBadge={getStatusBadge(detailLog.status)}
+        deliveryLine={formatDeliveryLine(detailLog)}
+        channelLabel={CHANNEL_LABEL[detailLog.channel] ?? detailLog.channel}
+      />
+    );
+  }
+
   return (
     <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" aria-hidden />
-            Communication History
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={triggerRefresh}
-              disabled={loading}
-              aria-label="Refresh history"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
-            </Button>
-            {onClose && (
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                Close
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex-1 min-w-[200px]">
             <label htmlFor="comm-history-search" className="sr-only">
@@ -296,10 +309,10 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
             }}
           >
             <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by channel">
-              <SelectValue placeholder="All Channels" />
+              <SelectValue placeholder="All channels" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Channels</SelectItem>
+              <SelectItem value="all">All channels</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="whatsapp">WhatsApp</SelectItem>
               <SelectItem value="portal">Portal only</SelectItem>
@@ -314,10 +327,10 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
             }}
           >
             <SelectTrigger className="w-full sm:w-[190px]" aria-label="Filter by status">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               {COMMUNICATION_STATUS_FILTERS.map(({ value, label }) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -334,10 +347,10 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
             }}
           >
             <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by source">
-              <SelectValue placeholder="All Sources" />
+              <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
+              <SelectItem value="all">All sources</SelectItem>
               <SelectItem value="campaign">Campaigns</SelectItem>
               <SelectItem value="direct">Individual messages</SelectItem>
             </SelectContent>
@@ -351,13 +364,13 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
             }}
           >
             <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by recipient type">
-              <SelectValue placeholder="All Types" />
+              <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="single">Single Client</SelectItem>
-              <SelectItem value="group">Client Group</SelectItem>
-              <SelectItem value="multiple">Multiple Clients</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="single">Single client</SelectItem>
+              <SelectItem value="group">Client group</SelectItem>
+              <SelectItem value="multiple">Multiple clients</SelectItem>
             </SelectContent>
           </Select>
 
@@ -369,7 +382,7 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
             }}
           >
             <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by sender">
-              <SelectValue placeholder="All Users" />
+              <SelectValue placeholder="All senders" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All senders</SelectItem>
@@ -380,6 +393,11 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
               ))}
             </SelectContent>
           </Select>
+
+          <Button variant="outline" onClick={triggerRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+            Refresh
+          </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -415,11 +433,11 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
           <Table className="min-w-[920px]">
             <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
               <TableRow className="hover:bg-transparent">
-                <TableHead scope="col">Date &amp; Time</TableHead>
+                <TableHead scope="col">Date &amp; time</TableHead>
                 <TableHead scope="col">Status</TableHead>
                 <TableHead scope="col">Channel</TableHead>
                 <TableHead scope="col">Recipients</TableHead>
-                <TableHead scope="col">Subject / Preview</TableHead>
+                <TableHead scope="col">Subject / preview</TableHead>
                 <TableHead scope="col">Sent by</TableHead>
                 <TableHead scope="col">Attachments</TableHead>
               </TableRow>
@@ -580,92 +598,101 @@ export function CommunicationHistory({ onClose }: CommunicationHistoryProps) {
           </div>
         )}
       </CardContent>
-
-      <Sheet open={!!detailLog} onOpenChange={(open) => !open && setDetailLog(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          {detailLog && (
-            <>
-              <SheetHeader className="text-left pr-8">
-                <SheetTitle className="line-clamp-3">
-                  {detailLog.subject || 'Communication'}
-                </SheetTitle>
-                <SheetDescription asChild>
-                  <div className="space-y-1 text-left">
-                    <p>{formatTimestamp(detailLog.timestamp)}</p>
-                    <p>
-                      Sent by{' '}
-                      <span className="font-medium text-foreground">
-                        {displaySenderName(detailLog)}
-                      </span>
-                    </p>
-                    <p className="capitalize">
-                      {detailLog.channel} · {formatRecipientLine(detailLog)}
-                    </p>
-                  </div>
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6 space-y-4">
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                    Status
-                  </div>
-                  <div className="flex flex-col gap-1.5 items-start">
-                    {getStatusBadge(detailLog.status)}
-                    {formatDeliveryLine(detailLog) && (
-                      <span className="text-sm text-muted-foreground">
-                        {formatDeliveryLine(detailLog)}
-                      </span>
-                    )}
-                    {detailLog.failureReason && (
-                      <p className="text-sm text-red-700 break-words">{detailLog.failureReason}</p>
-                    )}
-                  </div>
-                </div>
-                {detailLog.cc && detailLog.cc.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                      CC
-                    </div>
-                    <p className="text-sm text-foreground break-words">{detailLog.cc.join(', ')}</p>
-                  </div>
-                )}
-                {detailLog.templateUsed && (
-                  <div>
-                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                      Template
-                    </div>
-                    <Badge variant="outline" className="gap-1">
-                      <FileText className="h-3 w-3" aria-hidden />
-                      {detailLog.templateUsed}
-                    </Badge>
-                  </div>
-                )}
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                    Preview
-                  </div>
-                  <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-                    {detailLog.messagePreviewFull || detailLog.messagePreview || '—'}
-                  </p>
-                </div>
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                    Attachments
-                  </div>
-                  {detailLog.attachmentCount > 0 ? (
-                    <p className="text-sm">
-                      {detailLog.attachmentCount}{' '}
-                      {detailLog.attachmentCount === 1 ? 'file' : 'files'}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">None</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </Card>
+  );
+}
+
+function DetailSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+        {label}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/** One sent message, in place of the history list, with its own address. */
+function HistoryMessagePage({
+  log,
+  onBack,
+  formatTimestamp,
+  statusBadge,
+  deliveryLine,
+  channelLabel,
+}: {
+  log: ActivityLogEntry;
+  onBack: () => void;
+  formatTimestamp: (timestamp: Date) => string;
+  statusBadge: React.ReactNode;
+  deliveryLine: string | null;
+  channelLabel: string;
+}) {
+  return (
+    <div className="mx-auto flex max-w-[960px] flex-col gap-4">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        Back to history
+      </button>
+
+      <div className="overflow-hidden rounded-xl border border-nw-line bg-white">
+        <div className="space-y-2 border-b border-gray-100 px-6 py-5">
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink wrap-anywhere">
+            {log.subject || 'Communication'}
+          </h1>
+          <p className="text-sm text-nw-text-3">
+            {formatTimestamp(log.timestamp)} · Sent by{' '}
+            <span className="font-medium text-nw-ink">{displaySenderName(log)}</span> ·{' '}
+            {channelLabel} · {formatRecipientLine(log)}
+          </p>
+        </div>
+
+        <div className="space-y-6 px-6 py-6">
+          <DetailSection label="Status">
+            <div className="flex flex-col gap-1.5 items-start">
+              {statusBadge}
+              {deliveryLine && (
+                <span className="text-sm text-muted-foreground">{deliveryLine}</span>
+              )}
+              {log.failureReason && (
+                <p className="text-sm text-red-700 break-words">{log.failureReason}</p>
+              )}
+            </div>
+          </DetailSection>
+          {log.cc && log.cc.length > 0 && (
+            <DetailSection label="CC">
+              <p className="text-sm text-foreground break-words">{log.cc.join(', ')}</p>
+            </DetailSection>
+          )}
+          {log.templateUsed && (
+            <DetailSection label="Template">
+              <Badge variant="outline" className="gap-1">
+                <FileText className="h-3 w-3" aria-hidden />
+                {log.templateUsed}
+              </Badge>
+            </DetailSection>
+          )}
+          <DetailSection label="Preview">
+            <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+              {log.messagePreviewFull || log.messagePreview || '—'}
+            </p>
+          </DetailSection>
+          <DetailSection label="Attachments">
+            {log.attachmentCount > 0 ? (
+              <p className="text-sm">
+                {log.attachmentCount} {log.attachmentCount === 1 ? 'file' : 'files'}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">None</p>
+            )}
+          </DetailSection>
+        </div>
+      </div>
+    </div>
   );
 }
