@@ -1,8 +1,17 @@
 import React, { useState, useMemo, useCallback, Suspense } from 'react';
+import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import { Card, CardContent } from '../../../ui/card';
+import {
+  PageHeader,
+  StatCard,
+  NavTabsList,
+  NavTabsTrigger,
+  useUrlState,
+  useRecordInUrl,
+} from '../../layout/page';
 import {
   Plus,
   Filter,
@@ -11,10 +20,8 @@ import {
   Search,
   Building,
   Database,
-  UserCheck,
-  Ban,
-  XCircle,
   ChevronDown,
+  MoreHorizontal,
   Loader2,
 } from 'lucide-react';
 import { Button } from '../../../ui/button';
@@ -22,6 +29,7 @@ import { Input } from '../../../ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -65,6 +73,8 @@ const IntakeWizardHandoff = React.lazy(() =>
   import('./components/IntakeWizardHandoff').then((m) => ({ default: m.IntakeWizardHandoff })),
 );
 
+const CLIENT_TABS = ['personal', 'groups', 'corporate', 'adviser'] as const;
+
 /** Shared spinner for lazy-loaded sub-components */
 function LazyFallback() {
   return (
@@ -81,7 +91,6 @@ export function ClientManagementModule() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showRepository, setShowRepository] = useState(false);
-  const [showGroupManager, setShowGroupManager] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [intakeHandoff, setIntakeHandoff] = useState<IntakeHandoffState | null>(null);
   // Set when a publish should open the drawer on that FNA's list; the nonce
@@ -90,7 +99,7 @@ export function ClientManagementModule() {
     null,
   );
   const invalidateFnaBatchStatus = useInvalidateFnaBatchStatus();
-  const [clientType, setClientType] = useState('personal');
+  const [clientType, setClientType] = useUrlState('tab', 'personal', CLIENT_TABS);
   const { canDo } = useCurrentUserPermissions();
   const { pendingSelection, clearPendingSelection } = useAdminNavigation();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
@@ -137,6 +146,24 @@ export function ClientManagementModule() {
     setDrawerOpen(true);
   }, []);
   useClientDeepLink(safeClients, loading, openDeepLinkedClient);
+
+  // An open client is a page with its own address (?client=<id>).
+  useRecordInUrl('client', drawerOpen && selectedClient ? selectedClient.id : null, {
+    ready: !loading && safeClients.length > 0,
+    openFromUrl: (id) => {
+      if (loading || safeClients.length === 0) return 'waiting';
+      const target = safeClients.find((c) => c.id === id);
+      if (!target) {
+        toast.error('Client not found');
+        return 'missing';
+      }
+      setDrawerFnaFocus(null);
+      setSelectedClient(target);
+      setDrawerOpen(true);
+      return 'opened';
+    },
+    closeFromUrl: () => setDrawerOpen(false),
+  });
 
   const canCreate = canDo('clients', 'create');
   const canExport = canDo('clients', 'export');
@@ -287,7 +314,7 @@ export function ClientManagementModule() {
         return (
           <Badge
             variant={isActive ? 'default' : 'secondary'}
-            className={isActive ? 'bg-green-600 hover:bg-green-700' : ''}
+            className={isActive ? 'bg-green-600 text-white hover:bg-green-700' : ''}
           >
             {isActive ? 'Active' : 'Application'}
           </Badge>
@@ -297,44 +324,67 @@ export function ClientManagementModule() {
     },
   ];
 
-  if (showGroupManager) {
+  // A client is open: show its page instead of the list.
+  if (drawerOpen && selectedClient) {
     return (
-      <div className="p-6 bg-white min-h-screen">
+      <div className="p-6 lg:p-8">
         <Suspense fallback={<LazyFallback />}>
-          <CustomGroupManager onClose={() => setShowGroupManager(false)} />
+          <ClientDrawer
+            key={`${selectedClient.id}:${drawerFnaFocus?.nonce ?? 0}`}
+            client={selectedClient}
+            fnaFocus={drawerFnaFocus ?? undefined}
+            open
+            onOpenChange={setDrawerOpen}
+            canEdit={canEditClient}
+            canDelete={canDeleteClient}
+          />
+        </Suspense>
+        <Suspense fallback={<LazyFallback />}>
+          <IntakeWizardHandoff
+            handoff={intakeHandoff}
+            onClose={() => setIntakeHandoff(null)}
+            onFNAComplete={handleIntakeFNAPublished}
+          />
         </Suspense>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Client Management</h2>
-          <p className="text-muted-foreground">
-            Manage client profiles, policies, and compliance documentation.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setShowGroupManager(true)}>
-            <Users className="mr-2 h-4 w-4" />
-            Manage Groups
-          </Button>
-          {canExport && (
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-          )}
-          {canCreate && (
-            <Button onClick={() => setShowAddClient(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Client
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <PageHeader
+        title="Client Management"
+        description="Client profiles, policies and compliance documentation."
+        actions={
+          <>
+            {canExport && (
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Export CSV
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More actions">
+                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowRepository(true)}>
+                  <Database className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Field repository
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {canCreate && (
+              <Button onClick={() => setShowAddClient(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add client
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <Suspense fallback={<FNAIntakeQueueSkeleton />}>
         <FNAIntakeQueue
@@ -352,134 +402,102 @@ export function ClientManagementModule() {
         />
       </Suspense>
 
-      {/* Stat Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-            <div className="rounded-md bg-gray-50 p-1.5">
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{baseClients.length}</div>
-            <p className="text-xs text-muted-foreground">
-              +{totalStats.growthRate}% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <div className="rounded-md bg-green-50 p-1.5">
-              <UserCheck className="h-4 w-4 text-green-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{statusCounts.active}</div>
-            <p className="text-xs text-muted-foreground">Active individual portfolios</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suspended</CardTitle>
-            <div className="rounded-md bg-amber-50 p-1.5">
-              <Ban className="h-4 w-4 text-amber-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{statusCounts.suspended}</div>
-            <p className="text-xs text-muted-foreground">Accounts temporarily suspended</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Closed</CardTitle>
-            <div className="rounded-md bg-red-50 p-1.5">
-              <XCircle className="h-4 w-4 text-red-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{statusCounts.closed}</div>
-            <p className="text-xs text-muted-foreground">Soft-deleted or closed accounts</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="All clients"
+          value={baseClients.length}
+          meta={`+${totalStats.growthRate}% vs last month`}
+        />
+        <StatCard label="Active" value={statusCounts.active} meta="Active individual portfolios" />
+        <StatCard
+          label="Suspended"
+          value={statusCounts.suspended}
+          meta="Access temporarily suspended"
+          tone={statusCounts.suspended > 0 ? 'attention' : 'default'}
+        />
+        <StatCard
+          label="Closed"
+          value={statusCounts.closed}
+          meta="Soft-deleted or closed accounts"
+        />
       </div>
 
       {/* MAIN TABS */}
-      <Tabs value={clientType} onValueChange={setClientType} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="personal">Personal Clients</TabsTrigger>
-          <TabsTrigger value="corporate">Corporate Clients</TabsTrigger>
-          <TabsTrigger value="adviser">Adviser Clients</TabsTrigger>
-        </TabsList>
+      <Tabs
+        value={clientType}
+        onValueChange={(v) => setClientType(v as (typeof CLIENT_TABS)[number])}
+        className="gap-4"
+      >
+        <NavTabsList aria-label="Client Management">
+          <NavTabsTrigger value="personal" count={baseClients.length}>
+            Personal clients
+          </NavTabsTrigger>
+          <NavTabsTrigger value="groups">Groups</NavTabsTrigger>
+          <NavTabsTrigger value="corporate">
+            Corporate clients
+            <SoonTag />
+          </NavTabsTrigger>
+          <NavTabsTrigger value="adviser">
+            Adviser clients
+            <SoonTag />
+          </NavTabsTrigger>
+        </NavTabsList>
 
-        {/* Filter bar */}
-        <div className="flex items-center gap-2 my-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search clients..."
-              className="pl-8"
-              value={filters.search || ''}
-              readOnly={blockSearchAutofill}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              name="nw-client-management-search"
-              id="nw-client-management-search"
-              type="text"
-              inputMode="search"
-              role="combobox"
-              aria-autocomplete="list"
-              data-1p-ignore="true"
-              data-lpignore="true"
-              data-form-type="other"
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              onFocus={() => setBlockSearchAutofill(false)}
-            />
+        <TabsContent value="personal" className="mt-0 space-y-4">
+          {/* Filter bar */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search clients..."
+                className="pl-8"
+                value={filters.search || ''}
+                readOnly={blockSearchAutofill}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                name="nw-client-management-search"
+                id="nw-client-management-search"
+                type="text"
+                inputMode="search"
+                role="combobox"
+                aria-autocomplete="list"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                onFocus={() => setBlockSearchAutofill(false)}
+              />
+            </div>
+
+            {/* Account status dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[140px] justify-between">
+                  <div className="contents">
+                    <Filter className="mr-2 h-4 w-4" />
+                    {activeStatusLabel}
+                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[160px]">
+                <DropdownMenuRadioGroup
+                  value={activeStatusFilter}
+                  onValueChange={(v) =>
+                    setFilters({ ...filters, accountStatus: v as ClientFilters['accountStatus'] })
+                  }
+                >
+                  {ACCOUNT_STATUS_FILTER_OPTIONS.map((opt) => (
+                    <DropdownMenuRadioItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          {/* Account status dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-w-[140px] justify-between">
-                <div className="contents">
-                  <Filter className="mr-2 h-4 w-4" />
-                  {activeStatusLabel}
-                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[160px]">
-              <DropdownMenuRadioGroup
-                value={activeStatusFilter}
-                onValueChange={(v) =>
-                  setFilters({ ...filters, accountStatus: v as ClientFilters['accountStatus'] })
-                }
-              >
-                {ACCOUNT_STATUS_FILTER_OPTIONS.map((opt) => (
-                  <DropdownMenuRadioItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowRepository(true)}
-            title="Field Repository"
-            aria-label="Field Repository"
-          >
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </div>
-
-        <TabsContent value="personal" className="space-y-4">
           <DataTable
             columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
             data={filteredSortedClients as unknown as Record<string, unknown>[]}
@@ -492,7 +510,13 @@ export function ClientManagementModule() {
           />
         </TabsContent>
 
-        <TabsContent value="corporate">
+        <TabsContent value="groups" className="mt-0">
+          <Suspense fallback={<LazyFallback />}>
+            <CustomGroupManager />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="corporate" className="mt-0">
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
               <Building className="h-10 w-10 text-muted-foreground mb-4" />
@@ -505,7 +529,7 @@ export function ClientManagementModule() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="adviser">
+        <TabsContent value="adviser" className="mt-0">
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
               <Users className="h-10 w-10 text-muted-foreground mb-4" />
@@ -518,18 +542,6 @@ export function ClientManagementModule() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Suspense fallback={<LazyFallback />}>
-        <ClientDrawer
-          key={`${selectedClient?.id ?? 'drawer-closed'}:${drawerFnaFocus?.nonce ?? 0}`}
-          client={selectedClient}
-          fnaFocus={drawerFnaFocus ?? undefined}
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          canEdit={canEditClient}
-          canDelete={canDeleteClient}
-        />
-      </Suspense>
 
       <Suspense fallback={<LazyFallback />}>
         <ClientFieldRepository open={showRepository} onOpenChange={setShowRepository} />
@@ -551,5 +563,14 @@ export function ClientManagementModule() {
         />
       </Suspense>
     </div>
+  );
+}
+
+/** Marks a tab whose feature is not switched on yet. */
+function SoonTag() {
+  return (
+    <span className="rounded-full border border-dashed border-gray-300 px-1.5 text-[10px] font-semibold tracking-wide text-nw-text-3 uppercase">
+      Soon
+    </span>
   );
 }
