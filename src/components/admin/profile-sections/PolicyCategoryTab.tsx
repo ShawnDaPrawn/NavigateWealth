@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
+import { usePageTakeover } from '../layout/page';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -418,6 +419,13 @@ export function PolicyCategoryTab({
     (hasFNA && !!fnaConfig && !!selectedHistoricalFnaId && viewFNADialogOpen) ||
     (categorySubtabId === 'estate-planning' &&
       (willDraftingWizardOpen || livingWillDraftingWizardOpen));
+  // These pages take the whole client page (no client header, tabs or rails);
+  // the AI will builder does too. The add / edit policy page only hides the rail.
+  usePageTakeover(
+    fnaPageOpen || (categorySubtabId === 'estate-planning' && willChatInterfaceOpen),
+    'page',
+  );
+  usePageTakeover(isFormOpen, 'section');
 
   return (
     <div className="space-y-4">

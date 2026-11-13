@@ -66,9 +66,19 @@ vi.mock('../ClientOverviewTab', async () => {
 vi.mock('../KeyInspectorTab', () => ({ KeyInspectorTab: () => <div>client keys</div> }));
 const Empty = () => null;
 vi.mock('../clientProfile/ClientProfileViewerFull', () => ({ ClientProfileViewerFull: Empty }));
-vi.mock('../../../../profile-sections/PolicyDetailsSection', () => ({
-  PolicyDetailsSection: Empty,
-}));
+vi.mock('../../../../profile-sections/PolicyDetailsSection', async () => {
+  const { useState } = await import('react');
+  const { usePageTakeover } = await import('../../../../layout/page');
+  return {
+    PolicyDetailsSection: () => {
+      const [open, setOpen] = useState(false);
+      usePageTakeover(open);
+      return (
+        <button onClick={() => setOpen((v) => !v)}>{open ? 'Close wizard' : 'Open wizard'}</button>
+      );
+    },
+  };
+});
 vi.mock('../DocumentsTab', () => ({ DocumentsTab: Empty }));
 vi.mock('../SecurityTab', () => ({ SecurityTab: Empty }));
 vi.mock('../ComplianceTab', () => ({ ComplianceTab: Empty }));
@@ -243,5 +253,17 @@ describe('Client page', () => {
       </BreadcrumbContext.Provider>,
     );
     await waitFor(() => expect(trail.map((c) => c.label)).toEqual(['Aaron Teng', 'Security']));
+  });
+
+  it('hides the client header and tabs while an FNA page takes over', async () => {
+    renderPage('/admin?module=clients&client=c-aaron&ctab=policies');
+    await screen.findByRole('heading', { level: 1, name: 'Aaron Teng' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Open wizard' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { level: 1, name: 'Aaron Teng' })).toBeNull(),
+    );
+    expect(screen.queryByRole('tab', { name: 'Security' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Close wizard' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Aaron Teng' })).toBeTruthy();
   });
 });

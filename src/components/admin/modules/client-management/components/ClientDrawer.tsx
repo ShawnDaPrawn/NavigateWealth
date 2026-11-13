@@ -22,7 +22,13 @@ import { deriveAccountStatus } from '../utils';
 import { CLIENT_PAGE_PARAMS, CLIENT_TABS, type ClientTab } from './clientPageParams';
 import type { OverviewActions } from './ClientOverviewTab';
 import { Crumbs } from './Crumbs';
-import { ClientSubCrumbContext } from '../../../layout/page';
+import {
+  ClientSubCrumbContext,
+  PageTakeoverContext,
+  usePageTakeoverActive,
+  type PageTakeoverValue,
+  type TakeoverLevel,
+} from '../../../layout/page';
 import type { Crumb } from '../../../layout/page';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -215,6 +221,28 @@ function ClientDrawerInner({
 
   // Top-bar breadcrumb: Client Management / <name> / <tab> / <section>.
   const [subSteps, setSubSteps] = useState<Crumb[]>([]);
+  // A descendant (FNA wizard, published FNA report, will wizard) can take over
+  // the whole client page; the header, tabs and rails hide while it is open.
+  const [takeovers, setTakeovers] = useState<TakeoverLevel[]>([]);
+  const acquireTakeover = useCallback((level: TakeoverLevel) => {
+    setTakeovers((prev) => [...prev, level]);
+    return () =>
+      setTakeovers((prev) => {
+        const i = prev.indexOf(level);
+        return i === -1 ? prev : [...prev.slice(0, i), ...prev.slice(i + 1)];
+      });
+  }, []);
+  const activeTakeover: TakeoverLevel | null = takeovers.includes('page')
+    ? 'page'
+    : takeovers.length > 0
+      ? 'section'
+      : null;
+  const takeoverValue = React.useMemo<PageTakeoverValue>(
+    () => ({ acquire: acquireTakeover, active: activeTakeover }),
+    [acquireTakeover, activeTakeover],
+  );
+  const pageTakeover = activeTakeover === 'page';
+
   const trail: Crumb[] = workspaceClient
     ? [
         {
@@ -230,6 +258,7 @@ function ClientDrawerInner({
     <div className="flex flex-col gap-4">
       <Crumbs trail={trail} />
       <button
+        hidden={pageTakeover}
         type="button"
         onClick={() => handleOpenChange(false)}
         className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
@@ -238,18 +267,20 @@ function ClientDrawerInner({
         Personal clients
       </button>
       {workspaceClient ? (
-        <ClientSubCrumbContext.Provider value={setSubSteps}>
-          <ClientWorkspace
-            client={workspaceClient}
-            open={open}
-            canEdit={canEdit}
-            fnaFocus={fnaFocus}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            sanctionsScreeningRunning={sanctionsScreeningRunning}
-            onRunSanctionsScreening={handleSanctionsScreening}
-          />
-        </ClientSubCrumbContext.Provider>
+        <PageTakeoverContext.Provider value={takeoverValue}>
+          <ClientSubCrumbContext.Provider value={setSubSteps}>
+            <ClientWorkspace
+              client={workspaceClient}
+              open={open}
+              canEdit={canEdit}
+              fnaFocus={fnaFocus}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              sanctionsScreeningRunning={sanctionsScreeningRunning}
+              onRunSanctionsScreening={handleSanctionsScreening}
+            />
+          </ClientSubCrumbContext.Provider>
+        </PageTakeoverContext.Provider>
       ) : (
         <ClientDrawerPending
           state={fresh.status === 'ready' ? { status: 'loading' } : fresh}
@@ -338,6 +369,7 @@ function ClientWorkspace({
   onRunSanctionsScreening,
 }: ClientWorkspaceProps) {
   const queryClient = useQueryClient();
+  const pageTakeover = usePageTakeoverActive() === 'page';
   // Hardcoded for now as in original file
   const lastSanctionsCheck = '2024-01-15 14:30:00';
 
@@ -493,7 +525,7 @@ function ClientWorkspace({
 
   return (
     <>
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4" hidden={pageTakeover}>
         <div className="flex min-w-0 items-center gap-3">
           <ClientAvatar
             clientId={client.id}
@@ -599,8 +631,12 @@ function ClientWorkspace({
       {/* MAIN TABS - Level 1: Primary Navigation
             Uses ShadCN Tabs component with rounded, filled style
             See: /components/admin/TAB_DESIGN_STANDARDS.md */}
-      <Tabs value={activeTab} onValueChange={onTabChange} className="mt-6 gap-5">
-        <NavTabsList aria-label="Client record">
+      <Tabs
+        value={activeTab}
+        onValueChange={onTabChange}
+        className={pageTakeover ? 'gap-5' : 'mt-6 gap-5'}
+      >
+        <NavTabsList aria-label="Client record" hidden={pageTakeover}>
           <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
           <NavTabsTrigger value="personal">Personal details</NavTabsTrigger>
           <NavTabsTrigger value="policies">Policy details</NavTabsTrigger>
