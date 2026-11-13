@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { act } from 'react';
 import type { Personnel } from '../types';
+import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 const personnel = [
   {
@@ -280,5 +281,24 @@ describe('Personnel page', () => {
     await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Naledi Khumalo' }));
     expect(screen.queryByText('admin profile card')).toBeNull();
     expect(screen.getByTestId('search').textContent).toBe('?module=personnel&person=p-naledi');
+  });
+
+  it('sets the top-bar breadcrumb to the staff member and tab', async () => {
+    const setTrail = vi.fn();
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter
+          initialEntries={['/admin?module=personnel&person=p-naledi&personTab=clients']}
+        >
+          <PersonnelModule />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() =>
+      expect(setTrail).toHaveBeenLastCalledWith([
+        expect.objectContaining({ label: 'Naledi Khumalo' }),
+        { label: 'Client book' },
+      ]),
+    );
   });
 });

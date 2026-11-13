@@ -6,6 +6,7 @@ import {
   SegmentedList,
   SegmentedTrigger,
   SoonBadge,
+  useBreadcrumbTrail,
   useUrlState,
 } from '../../layout/page';
 import { DashboardHeader } from './components/DashboardHeader';
@@ -31,6 +32,8 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
   const { isAuthenticated, user } = useAuth();
   const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin');
   const [view, setView] = useUrlState<DashboardView>('view', 'home', DASHBOARD_VIEWS);
+  // Top-bar breadcrumb: Dashboard / Audit trail.
+  useBreadcrumbTrail(view === 'audit' ? [{ label: 'Audit trail' }] : []);
 
   // Fetch all dashboard data
   const { stats, metrics, tasks, errors, refetchStats, loadingStates } = useDashboardData();

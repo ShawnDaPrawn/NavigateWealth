@@ -63,6 +63,7 @@ vi.mock('../components/PublicationsCard', () => ({ PublicationsCard: () => null 
 vi.mock('../components/NewsletterKPICard', () => ({ NewsletterKPICard: () => null }));
 
 import { DashboardModule } from '../DashboardModule';
+import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 function Search() {
   return <output data-testid="search">{useLocation().search}</output>;
@@ -175,5 +176,20 @@ describe('Dashboard', () => {
     renderAt('/admin', { onViewTask });
     fireEvent.click(screen.getByRole('button', { name: 'Open Pay FSCA levy' }));
     expect(onViewTask).toHaveBeenCalledWith('t1');
+  });
+
+  it('sets the top-bar breadcrumb on the audit trail', async () => {
+    const setTrail = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/admin?view=audit']}>
+            <DashboardModule />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() => expect(setTrail).toHaveBeenLastCalledWith([{ label: 'Audit trail' }]));
   });
 });

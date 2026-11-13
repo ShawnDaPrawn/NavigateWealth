@@ -9,7 +9,13 @@ import { cn } from '../../../ui/utils';
 import { Personnel, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
 import type { AdminModule } from '../../layout/types';
-import { PageHeader, StatCard, useRecordInUrl, useUrlState } from '../../layout/page';
+import {
+  PageHeader,
+  StatCard,
+  useBreadcrumbTrail,
+  useRecordInUrl,
+  useUrlState,
+} from '../../layout/page';
 
 // Components
 import { PersonnelTable } from './components/PersonnelTable';
@@ -78,6 +84,14 @@ function TableSkeleton() {
 /** The staff member page's tabs; the open one is in the address (?personTab=). */
 const PERSON_TABS = ['profile', 'permissions', 'compliance', 'commission', 'clients'] as const;
 const PROFILE_VIEWS = ['', 'me'] as const;
+
+const PERSON_TAB_LABELS: Record<PersonTab, string> = {
+  profile: 'Profile',
+  permissions: 'Permissions',
+  compliance: 'Compliance',
+  commission: 'Commission',
+  clients: 'Client book',
+};
 type PersonTab = (typeof PERSON_TABS)[number];
 
 // ============================================================================
@@ -202,6 +216,22 @@ export function PersonnelModule() {
       setDrawerOpen(false);
     },
   });
+
+  // Top-bar breadcrumb: Personnel / <name> / <tab>, or Personnel / Admin profile.
+  const openPerson = drawerOpen ? selectedPersonnel : null;
+  useBreadcrumbTrail(
+    openPerson
+      ? [
+          {
+            label: `${openPerson.firstName} ${openPerson.lastName}`.trim() || openPerson.email,
+            onClick: () => setActiveTab('profile'),
+          },
+          { label: PERSON_TAB_LABELS[activeTab] },
+        ]
+      : showSuperAdmin
+        ? [{ label: 'Admin profile' }]
+        : [],
+  );
 
   const canInvite = canDo('personnel', 'create');
 
