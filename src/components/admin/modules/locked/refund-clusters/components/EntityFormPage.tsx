@@ -1,5 +1,6 @@
 /**
- * Add / edit dialog for a refund-cluster entity.
+ * Add / edit page for a refund-cluster entity (a long form, so a page with
+ * "‹ Back to <cluster>", never a dialog).
  *
  * Creating: first pick the entity type (Sole Proprietor / Company), then the
  * matching form is shown. Editing: the type is fixed and the form is
@@ -9,16 +10,9 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Building2, Eye, EyeOff, User } from 'lucide-react';
+import { Building2, ChevronLeft, Eye, EyeOff, User } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../../ui/dialog';
+import { PageHeader } from '../../../../layout/page';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { Textarea } from '../../../../../ui/textarea';
@@ -46,40 +40,42 @@ import {
 } from '../hooks/useRefundClusters';
 import type { BankAccountSlot, RefundEntity, RefundEntityInput, RefundEntityType } from '../types';
 
-interface EntityFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface EntityFormPageProps {
+  /** Leave the page without saving. */
+  onClose: () => void;
+  /** Wording of the back link, e.g. "Back to Q3 VAT refunds". */
+  backLabel: string;
   clusterId: string;
-  /** When set the dialog edits this entity; otherwise it creates a new one. */
+  /** When set the page edits this entity; otherwise it creates a new one. */
   entity?: RefundEntity | null;
   onSubmit: (payload: RefundEntityInput) => void;
   isSubmitting: boolean;
 }
 
-export function EntityFormDialog({
-  open,
-  onOpenChange,
+const FORM_ID = 'refund-entity-form';
+
+export function EntityFormPage({
+  onClose,
+  backLabel,
   clusterId,
   entity,
   onSubmit,
   isSubmitting,
-}: EntityFormDialogProps) {
+}: EntityFormPageProps) {
   const [typeChosen, setTypeChosen] = useState(false);
   const [form, setForm] = useState<EntityFormState>(() => emptyEntityForm('sole_proprietor'));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setError(null);
-      if (entity) {
-        setForm(formFromEntity(entity));
-        setTypeChosen(true);
-      } else {
-        setForm(emptyEntityForm('sole_proprietor'));
-        setTypeChosen(false);
-      }
+    setError(null);
+    if (entity) {
+      setForm(formFromEntity(entity));
+      setTypeChosen(true);
+    } else {
+      setForm(emptyEntityForm('sole_proprietor'));
+      setTypeChosen(false);
     }
-  }, [open, entity]);
+  }, [entity]);
 
   const patch = (changes: Partial<EntityFormState>) => setForm((prev) => ({ ...prev, ...changes }));
 
@@ -100,23 +96,45 @@ export function EntityFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {entity
-              ? `Edit ${ENTITY_TYPE_LABELS[entity.entityType]}`
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex items-center gap-1 text-sm text-nw-text-3 hover:text-nw-ink"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          {backLabel}
+        </button>
+        <PageHeader
+          title={
+            entity
+              ? `Edit ${ENTITY_TYPE_LABELS[entity.entityType].toLowerCase()}`
               : typeChosen
-                ? `Add ${ENTITY_TYPE_LABELS[form.entityType]}`
-                : 'Add Entity'}
-          </DialogTitle>
-          <DialogDescription>
-            {typeChosen
+                ? `Add ${ENTITY_TYPE_LABELS[form.entityType].toLowerCase()}`
+                : 'Add entity'
+          }
+          description={
+            typeChosen
               ? 'Capture the details for this entity. Sensitive values are encrypted at rest.'
-              : 'Choose the entity type to show the correct form.'}
-          </DialogDescription>
-        </DialogHeader>
+              : 'Choose the entity type to show the correct form.'
+          }
+          actions={
+            <>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              {typeChosen && (
+                <Button type="submit" form={FORM_ID} disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving…' : entity ? 'Save changes' : 'Add entity'}
+                </Button>
+              )}
+            </>
+          }
+        />
+      </div>
 
+      <div className="max-w-[880px] rounded-xl border border-nw-line bg-white p-5 sm:p-6">
         {!typeChosen ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <button
@@ -143,7 +161,7 @@ export function EntityFormDialog({
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-6">
             {form.entityType === 'sole_proprietor' ? (
               <PersonalDetailsSection form={form} patch={patch} />
             ) : (
@@ -183,19 +201,10 @@ export function EntityFormDialog({
                 {error}
               </p>
             )}
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving…' : entity ? 'Save Changes' : 'Add Entity'}
-              </Button>
-            </DialogFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 

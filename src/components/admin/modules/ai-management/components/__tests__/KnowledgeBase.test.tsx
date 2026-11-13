@@ -1,11 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, useLocation } from 'react-router';
 import type { KBEntry, KnowledgeIndexStatus } from '../../types';
 
-function wrapper({ children }: { children: React.ReactNode }) {
+function Search() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+
+function renderKB(url = '/admin?module=ai-management&tab=knowledge') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[url]}>
+        <KnowledgeBase />
+        <Search />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 const hooks = vi.hoisted(() => ({
@@ -13,7 +25,10 @@ const hooks = vi.hoisted(() => ({
   indexStatus: null as KnowledgeIndexStatus | null,
   updateMutate: vi.fn(),
   rebuildMutate: vi.fn(),
+  toastError: vi.fn(),
 }));
+
+vi.mock('sonner', () => ({ toast: { error: hooks.toastError, success: vi.fn() } }));
 
 vi.mock('../../hooks', () => ({
   useKBEntries: () => ({ data: hooks.entries, isLoading: false }),
@@ -25,8 +40,15 @@ vi.mock('../../hooks', () => ({
   useAgents: () => ({ data: [], isLoading: false }),
 }));
 
-vi.mock('../KBEntryModal', () => ({
-  KBEntryModal: ({ open }: { open: boolean }) => (open ? <div data-testid="kb-modal" /> : null),
+vi.mock('../KBEntryPage', () => ({
+  KBEntryPage: ({ entry, onClose }: { entry: KBEntry | null; onClose: () => void }) => (
+    <div data-testid="kb-entry-page">
+      {entry ? entry.title : 'new entry'}
+      <button type="button" onClick={onClose}>
+        Back to knowledge
+      </button>
+    </div>
+  ),
 }));
 
 import { KnowledgeBase } from '../KnowledgeBase';
@@ -73,21 +95,23 @@ beforeEach(() => {
   hooks.indexStatus = status();
   hooks.updateMutate.mockReset();
   hooks.rebuildMutate.mockReset();
+  hooks.toastError.mockReset();
 });
 
 describe('KnowledgeBase (Knowledge tab)', () => {
   it('leads with what Vasco can draw on and offers a rebuild', () => {
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
     expect(screen.getByText('What Vasco can draw on')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: /rebuild index/i }));
     expect(hooks.rebuildMutate).toHaveBeenCalledTimes(1);
   });
 
   it('explains the empty state in plain words with a single call to action', () => {
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
     expect(screen.getByText('No entries yet')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: /add your first entry/i }));
-    expect(screen.getByTestId('kb-modal')).toBeDefined();
+    expect(screen.getByTestId('kb-entry-page').textContent).toContain('new entry');
+    expect(screen.getByTestId('search').textContent).toContain('entry=new');
   });
 
   it('shows status counts on the segmented filter and filters by it', () => {
@@ -101,11 +125,13 @@ describe('KnowledgeBase (Knowledge tab)', () => {
         content: '8–5',
       }),
     ];
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
 
-    const draftFilter = screen.getByRole('button', { name: /^Draft/ });
+    const draftFilter = screen.getByRole('tab', { name: /^Draft/ });
     expect(draftFilter.textContent).toContain('1');
+    fireEvent.mouseDown(draftFilter);
     fireEvent.click(draftFilter);
+    expect(screen.getByTestId('search').textContent).toContain('status=draft');
 
     expect(screen.getByText('Office hours')).toBeDefined();
     expect(screen.queryByText('TFSA annual limit')).toBeNull();
@@ -114,7 +140,7 @@ describe('KnowledgeBase (Knowledge tab)', () => {
 
   it('each live entry has a Live switch that turns it into a draft', () => {
     hooks.entries = [entry()];
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
 
     const toggle = screen.getByRole('switch', { name: /TFSA annual limit: available to Vasco/ });
     expect(toggle.getAttribute('aria-checked')).toBe('true');
@@ -125,7 +151,7 @@ describe('KnowledgeBase (Knowledge tab)', () => {
 
   it('archived entries have no Live switch', () => {
     hooks.entries = [entry({ status: 'archived' })];
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
     expect(screen.queryByRole('switch')).toBeNull();
     // "Archived" appears on the status filter and again as the card's badge.
     expect(screen.getAllByText('Archived').length).toBeGreaterThan(1);
@@ -137,7 +163,7 @@ describe('KnowledgeBase (Knowledge tab)', () => {
       entry(),
       entry({ id: 'kb-2', title: 'Something else', question: 'estate duty?' }),
     ];
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
 
     fireEvent.change(screen.getByPlaceholderText(/search entries/i), {
       target: { value: 'estate' },
@@ -148,8 +174,46 @@ describe('KnowledgeBase (Knowledge tab)', () => {
 
   it('flags high importance and restricted assistants on the card', () => {
     hooks.entries = [entry({ priority: 10, agentScope: ['vasco-authenticated'] })];
-    render(<KnowledgeBase />, { wrapper });
+    renderKB();
     expect(screen.getByText(/Essential importance/)).toBeDefined();
     expect(screen.getByText(/Only 1 assistant/)).toBeDefined();
+  });
+
+  it('keeps the status filter in the address', () => {
+    hooks.entries = [entry(), entry({ id: 'kb-2', title: 'Office hours', status: 'draft' })];
+    renderKB('/admin?module=ai-management&tab=knowledge&status=draft');
+    expect(screen.getByRole('tab', { name: /^Draft/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByText('TFSA annual limit')).toBeNull();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
+    expect(screen.getByTestId('search').textContent).not.toContain('status=');
+    expect(screen.getByText('TFSA annual limit')).toBeDefined();
+  });
+
+  it('opens New entry as a page with its own address, and goes back to the list', () => {
+    hooks.entries = [entry()];
+    renderKB();
+    fireEvent.click(screen.getByRole('button', { name: /new entry/i }));
+    expect(screen.getByTestId('kb-entry-page')).toBeDefined();
+    expect(screen.queryByText('What Vasco can draw on')).toBeNull();
+    expect(screen.getByTestId('search').textContent).toContain('entry=new');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to knowledge' }));
+    expect(screen.getByText('What Vasco can draw on')).toBeDefined();
+    expect(screen.getByTestId('search').textContent).not.toContain('entry=');
+  });
+
+  it('opens the entry named in the address for editing', () => {
+    hooks.entries = [entry()];
+    renderKB('/admin?module=ai-management&tab=knowledge&entry=kb-1');
+    expect(screen.getByTestId('kb-entry-page').textContent).toContain('TFSA annual limit');
+  });
+
+  it('says so and shows the list when the address names an entry that does not exist', () => {
+    hooks.entries = [entry()];
+    renderKB('/admin?module=ai-management&tab=knowledge&entry=gone');
+    expect(hooks.toastError).toHaveBeenCalledWith('Entry not found');
+    expect(screen.queryByTestId('kb-entry-page')).toBeNull();
+    expect(screen.getByTestId('search').textContent).not.toContain('entry=');
   });
 });
