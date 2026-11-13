@@ -15,13 +15,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../../../ui/dialog';
+import { Surface, SurfaceDescription, SurfaceHeader, SurfaceTitle } from './manage/Surface';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -35,12 +29,14 @@ import { SkeletonList } from './EsignSkeleton';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
   onOpenEnvelope?: (envelopeId: string) => void;
 }
 
 type Hit = Awaited<ReturnType<typeof esignApi.searchAudit>>['hits'][number];
 
-export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
+export function AuditLogDialog({ open, onOpenChange, inline = false, onOpenEnvelope }: Props) {
   const [signerEmail, setSignerEmail] = useState('');
   const [action, setAction] = useState('');
   const [from, setFrom] = useState('');
@@ -86,130 +82,128 @@ export function AuditLogDialog({ open, onOpenChange, onOpenEnvelope }: Props) {
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Global audit log</DialogTitle>
-          <DialogDescription>
-            Search every e-signature event across your firm. Use filters to narrow the result set.
-          </DialogDescription>
-        </DialogHeader>
+    <Surface open={open} onOpenChange={onOpenChange} inline={inline} className="max-w-4xl">
+      <SurfaceHeader>
+        <SurfaceTitle>Global audit log</SurfaceTitle>
+        <SurfaceDescription>
+          Search every e-signature event across your firm. Use filters to narrow the result set.
+        </SurfaceDescription>
+      </SurfaceHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="md:col-span-2">
-            <Label htmlFor="audit-signer-email" className="text-xs">
-              Signer email
-            </Label>
-            <Input
-              id="audit-signer-email"
-              value={signerEmail}
-              onChange={(e) => setSignerEmail(e.target.value)}
-              placeholder="signer@example.com"
-              type="email"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Label htmlFor="audit-action" className="text-xs">
-              Action contains
-            </Label>
-            <Input
-              id="audit-action"
-              value={action}
-              onChange={(e) => setAction(e.target.value)}
-              placeholder="e.g. signed, declined, viewed"
-            />
-          </div>
-          <div>
-            <Label htmlFor="audit-from" className="text-xs">
-              From
-            </Label>
-            <Input
-              id="audit-from"
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="audit-to" className="text-xs">
-              To
-            </Label>
-            <Input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <div className="md:col-span-2 flex items-end gap-2">
-            <Button onClick={runSearch} disabled={loading} className="flex-1">
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4 mr-1.5" />
-              )}
-              Search
-            </Button>
-            <Button variant="ghost" onClick={reset} disabled={loading || !hasQuery}>
-              Reset
-            </Button>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="md:col-span-2">
+          <Label htmlFor="audit-signer-email" className="text-xs">
+            Signer email
+          </Label>
+          <Input
+            id="audit-signer-email"
+            value={signerEmail}
+            onChange={(e) => setSignerEmail(e.target.value)}
+            placeholder="signer@example.com"
+            type="email"
+          />
         </div>
+        <div className="md:col-span-2">
+          <Label htmlFor="audit-action" className="text-xs">
+            Action contains
+          </Label>
+          <Input
+            id="audit-action"
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            placeholder="e.g. signed, declined, viewed"
+          />
+        </div>
+        <div>
+          <Label htmlFor="audit-from" className="text-xs">
+            From
+          </Label>
+          <Input
+            id="audit-from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="audit-to" className="text-xs">
+            To
+          </Label>
+          <Input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <div className="md:col-span-2 flex items-end gap-2">
+          <Button onClick={runSearch} disabled={loading} className="flex-1">
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4 mr-1.5" />
+            )}
+            Search
+          </Button>
+          <Button variant="ghost" onClick={reset} disabled={loading || !hasQuery}>
+            Reset
+          </Button>
+        </div>
+      </div>
 
-        <div className="mt-4">
-          {error && (
-            <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-              {error}
-            </div>
-          )}
+      <div className="mt-4">
+        {error && (
+          <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            {error}
+          </div>
+        )}
 
-          {!result && !error && !loading && (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              Enter filters and press search to browse recent events.
-            </p>
-          )}
+        {!result && !error && !loading && (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Enter filters and press search to browse recent events.
+          </p>
+        )}
 
-          {/* P8.3 — Skeleton list while a search is in flight, instead of
+        {/* P8.3 — Skeleton list while a search is in flight, instead of
                leaving the panel blank or showing only a spinner badge in the
                button. */}
-          {loading && !result && (
-            <div className="mt-2">
-              <SkeletonList items={6} />
-            </div>
-          )}
+        {loading && !result && (
+          <div className="mt-2">
+            <SkeletonList items={6} />
+          </div>
+        )}
 
-          {result && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {result.total} event{result.total === 1 ? '' : 's'}
-                  {result.truncated && ' (capped at 500 — refine filters)'}
-                </span>
-                <span>
-                  Scanned {result.scanned.toLocaleString()} in {result.durationMs}ms
-                </span>
-              </div>
-
-              <ScrollArea className="h-[440px] border rounded-md">
-                {result.hits.length === 0 ? (
-                  // P8.2 — empty result still offers an obvious next action.
-                  <div className="py-12 text-center space-y-3">
-                    <p className="text-sm text-muted-foreground">No events matched this query.</p>
-                    {hasQuery && (
-                      <Button variant="outline" size="sm" onClick={reset}>
-                        Clear filters
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <ul className="divide-y">
-                    {result.hits.map((hit) => (
-                      <AuditRow key={hit.id} hit={hit} onOpenEnvelope={onOpenEnvelope} />
-                    ))}
-                  </ul>
-                )}
-              </ScrollArea>
+        {result && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {result.total} event{result.total === 1 ? '' : 's'}
+                {result.truncated && ' (capped at 500 — refine filters)'}
+              </span>
+              <span>
+                Scanned {result.scanned.toLocaleString()} in {result.durationMs}ms
+              </span>
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            <ScrollArea className="h-[440px] border rounded-md">
+              {result.hits.length === 0 ? (
+                // P8.2 — empty result still offers an obvious next action.
+                <div className="py-12 text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">No events matched this query.</p>
+                  {hasQuery && (
+                    <Button variant="outline" size="sm" onClick={reset}>
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <ul className="divide-y">
+                  {result.hits.map((hit) => (
+                    <AuditRow key={hit.id} hit={hit} onOpenEnvelope={onOpenEnvelope} />
+                  ))}
+                </ul>
+              )}
+            </ScrollArea>
+          </div>
+        )}
+      </div>
+    </Surface>
   );
 }
 

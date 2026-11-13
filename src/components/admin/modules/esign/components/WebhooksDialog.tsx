@@ -12,18 +12,13 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../../ui/dialog';
+import { Surface, SurfaceFooter, SurfaceHeader, SurfaceTitle } from './manage/Surface';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
-import { Tabs, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Badge } from '../../../../ui/badge';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { toast } from 'sonner';
@@ -34,6 +29,8 @@ import { logger } from '../../../../../utils/logger';
 interface WebhooksDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
 }
 
 const ALL_EVENTS: Array<{ value: string; label: string }> = [
@@ -74,7 +71,7 @@ type Delivery = {
   delivered_at?: string;
 };
 
-export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
+export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksDialogProps) {
   const [tab, setTab] = useState<'endpoints' | 'recent' | 'dlq'>('endpoints');
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
@@ -273,193 +270,194 @@ export function WebhooksDialog({ open, onOpenChange }: WebhooksDialogProps) {
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Webhooks</DialogTitle>
-        </DialogHeader>
+    <Surface
+      open={open}
+      onOpenChange={onOpenChange}
+      inline={inline}
+      className="sm:max-w-[720px] max-h-[85vh] overflow-hidden flex flex-col"
+    >
+      <SurfaceHeader>
+        <SurfaceTitle>Webhooks</SurfaceTitle>
+      </SurfaceHeader>
 
-        <div className="flex items-center justify-between mb-2">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex-1">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="endpoints">Endpoints ({subs.length})</TabsTrigger>
-              <TabsTrigger value="recent">Recent ({deliveries.length})</TabsTrigger>
-              <TabsTrigger value="dlq">
-                Dead letters {deadLetters.length > 0 ? `(${deadLetters.length})` : ''}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button size="sm" variant="ghost" onClick={refresh} disabled={loading} className="ml-2">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex-1">
+          <SegmentedList>
+            <SegmentedTrigger value="endpoints">Endpoints · {subs.length}</SegmentedTrigger>
+            <SegmentedTrigger value="recent">Recent · {deliveries.length}</SegmentedTrigger>
+            <SegmentedTrigger value="dlq">Dead letters · {deadLetters.length}</SegmentedTrigger>
+          </SegmentedList>
+        </Tabs>
+        <Button size="sm" variant="ghost" onClick={refresh} disabled={loading} className="ml-2">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
 
-        <div className="flex-1 overflow-hidden">
-          {tab === 'endpoints' && (
-            <div className="space-y-3">
-              <Button size="sm" variant="outline" onClick={() => setShowAdd((v) => !v)}>
-                <Plus className="h-4 w-4 mr-1" /> New endpoint
-              </Button>
+      <div className="flex-1 overflow-hidden">
+        {tab === 'endpoints' && (
+          <div className="space-y-3">
+            <Button size="sm" variant="outline" onClick={() => setShowAdd((v) => !v)}>
+              <Plus className="h-4 w-4 mr-1" /> New endpoint
+            </Button>
 
-              {showAdd && (
-                <div className="border rounded-md p-3 space-y-2 bg-gray-50">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Endpoint URL</Label>
-                    <Input
-                      placeholder="https://api.example.com/hooks/navigate"
-                      value={newUrl}
-                      onChange={(e) => setNewUrl(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Description (optional)</Label>
-                    <Input
-                      placeholder="Shared with ops team"
-                      value={newDesc}
-                      onChange={(e) => setNewDesc(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Events</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {ALL_EVENTS.map((evt) => (
-                        <label key={evt.value} className="flex items-center gap-2 text-xs">
-                          <Checkbox
-                            checked={newEvents.includes(evt.value)}
-                            onCheckedChange={(checked) => {
-                              setNewEvents((prev) =>
-                                checked
-                                  ? [...prev, evt.value]
-                                  : prev.filter((v) => v !== evt.value),
-                              );
-                            }}
-                          />
-                          {evt.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleCreate}
-                      disabled={busy}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      {busy ? 'Creating…' : 'Create'}
-                    </Button>
+            {showAdd && (
+              <div className="border rounded-md p-3 space-y-2 bg-gray-50">
+                <div className="space-y-1">
+                  <Label className="text-xs">Endpoint URL</Label>
+                  <Input
+                    placeholder="https://api.example.com/hooks/navigate"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Description (optional)</Label>
+                  <Input
+                    placeholder="Shared with ops team"
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Events</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ALL_EVENTS.map((evt) => (
+                      <label key={evt.value} className="flex items-center gap-2 text-xs">
+                        <Checkbox
+                          checked={newEvents.includes(evt.value)}
+                          onCheckedChange={(checked) => {
+                            setNewEvents((prev) =>
+                              checked ? [...prev, evt.value] : prev.filter((v) => v !== evt.value),
+                            );
+                          }}
+                        />
+                        {evt.label}
+                      </label>
+                    ))}
                   </div>
                 </div>
-              )}
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCreate}
+                    disabled={busy}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {busy ? 'Creating…' : 'Create'}
+                  </Button>
+                </div>
+              </div>
+            )}
 
-              <ScrollArea className="h-[360px] border rounded-md">
-                <div className="divide-y">
-                  {subs.length === 0 ? (
-                    <p className="p-6 text-center text-sm text-gray-500">No endpoints yet.</p>
-                  ) : (
-                    subs.map((sub) => (
-                      <div key={sub.id} className="p-3 space-y-2 text-sm">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <code
-                                className="text-xs text-gray-700 truncate max-w-[340px]"
-                                title={sub.url}
-                              >
-                                {sub.url}
-                              </code>
-                              <Badge
-                                variant={sub.active ? 'default' : 'outline'}
-                                className={
-                                  sub.active ? 'bg-green-100 text-green-700 border-green-200' : ''
-                                }
-                              >
-                                {sub.active ? 'active' : 'paused'}
-                              </Badge>
-                            </div>
-                            {sub.description ? (
-                              <p className="text-xs text-gray-500 mt-0.5">{sub.description}</p>
-                            ) : null}
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {sub.events.map((e) => (
-                                <Badge key={e} variant="outline" className="text-[10px] font-mono">
-                                  {e}
-                                </Badge>
-                              ))}
-                            </div>
-                            {sub.last_failure_message ? (
-                              <p className="text-[11px] text-red-600 mt-1">
-                                Last failure: {sub.last_failure_message}
-                              </p>
-                            ) : null}
+            <ScrollArea className="h-[360px] border rounded-md">
+              <div className="divide-y">
+                {subs.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-gray-500">No endpoints yet.</p>
+                ) : (
+                  subs.map((sub) => (
+                    <div key={sub.id} className="p-3 space-y-2 text-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <code
+                              className="text-xs text-gray-700 truncate max-w-[340px]"
+                              title={sub.url}
+                            >
+                              {sub.url}
+                            </code>
+                            <Badge
+                              variant={sub.active ? 'default' : 'outline'}
+                              className={
+                                sub.active ? 'bg-green-100 text-green-700 border-green-200' : ''
+                              }
+                            >
+                              {sub.active ? 'active' : 'paused'}
+                            </Badge>
                           </div>
-                          <div className="flex items-center gap-1">
+                          {sub.description ? (
+                            <p className="text-xs text-gray-500 mt-0.5">{sub.description}</p>
+                          ) : null}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {sub.events.map((e) => (
+                              <Badge key={e} variant="outline" className="text-[10px] font-mono">
+                                {e}
+                              </Badge>
+                            ))}
+                          </div>
+                          {sub.last_failure_message ? (
+                            <p className="text-[11px] text-red-600 mt-1">
+                              Last failure: {sub.last_failure_message}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggle(sub)}
+                            title={sub.active ? 'Pause' : 'Resume'}
+                          >
+                            {sub.active ? 'Pause' : 'Resume'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRotate(sub)}
+                            title="Rotate secret"
+                          >
+                            <RotateCw className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(sub)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3 w-3 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                      {expandedSecret === sub.id && (
+                        <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs">
+                          <div className="font-medium text-amber-800 mb-1">
+                            Signing secret (save now — won't be shown again by default):
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <code className="font-mono text-[11px] break-all flex-1">
+                              {sub.secret}
+                            </code>
                             <Button
                               size="sm"
-                              variant="ghost"
-                              onClick={() => handleToggle(sub)}
-                              title={sub.active ? 'Pause' : 'Resume'}
+                              variant="outline"
+                              onClick={() => handleCopy(sub.secret, 'Secret')}
                             >
-                              {sub.active ? 'Pause' : 'Resume'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleRotate(sub)}
-                              title="Rotate secret"
-                            >
-                              <RotateCw className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(sub)}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3 w-3 text-red-600" />
+                              <Copy className="h-3 w-3 mr-1" /> Copy
                             </Button>
                           </div>
                         </div>
-                        {expandedSecret === sub.id && (
-                          <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs">
-                            <div className="font-medium text-amber-800 mb-1">
-                              Signing secret (save now — won't be shown again by default):
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <code className="font-mono text-[11px] break-all flex-1">
-                                {sub.secret}
-                              </code>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleCopy(sub.secret, 'Secret')}
-                              >
-                                <Copy className="h-3 w-3 mr-1" /> Copy
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          )}
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
 
-          {tab === 'recent' && renderDeliveries(deliveries, 'No deliveries yet.')}
-          {tab === 'dlq' && renderDeliveries(deadLetters, 'No dead letters. Healthy inbox.', true)}
-        </div>
+        {tab === 'recent' && renderDeliveries(deliveries, 'No deliveries yet.')}
+        {tab === 'dlq' && renderDeliveries(deadLetters, 'No dead letters. Healthy inbox.', true)}
+      </div>
 
-        <DialogFooter>
+      {!inline && (
+        <SurfaceFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SurfaceFooter>
+      )}
+    </Surface>
   );
 }

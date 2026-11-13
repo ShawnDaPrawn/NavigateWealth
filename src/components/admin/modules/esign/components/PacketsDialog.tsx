@@ -18,13 +18,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+  Surface,
+  SurfaceDescription,
+  SurfaceFooter,
+  SurfaceHeader,
+  SurfaceTitle,
+} from './manage/Surface';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -59,10 +58,17 @@ import { logger } from '../../../../../utils/logger';
 interface PacketsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
   onCompleted?: () => void;
 }
 
-export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialogProps) {
+export function PacketsDialog({
+  open,
+  onOpenChange,
+  inline = false,
+  onCompleted,
+}: PacketsDialogProps) {
   const [tab, setTab] = useState<'library' | 'author' | 'runs'>('library');
 
   // shared data
@@ -388,284 +394,284 @@ export function PacketsDialog({ open, onOpenChange, onCompleted }: PacketsDialog
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[760px] max-h-[88vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="h-5 w-5 text-purple-600" />
-            Packet workflows
-          </DialogTitle>
-          <DialogDescription>
-            Chain templates so envelope <strong>N+1</strong> auto-sends as soon as envelope{' '}
-            <strong>N</strong> is signed.
-          </DialogDescription>
-        </DialogHeader>
+    <Surface
+      open={open}
+      onOpenChange={onOpenChange}
+      inline={inline}
+      className="sm:max-w-[760px] max-h-[88vh] flex flex-col"
+    >
+      <SurfaceHeader>
+        <SurfaceTitle className="flex items-center gap-2">
+          <Layers className="h-5 w-5 text-purple-600" />
+          Packet workflows
+        </SurfaceTitle>
+        <SurfaceDescription>
+          Chain templates so envelope <strong>N+1</strong> auto-sends as soon as envelope{' '}
+          <strong>N</strong> is signed.
+        </SurfaceDescription>
+      </SurfaceHeader>
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) => setTab(v as typeof tab)}
-          className="flex-1 flex flex-col min-h-0"
-        >
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="library">Library</TabsTrigger>
-            <TabsTrigger value="author">Author</TabsTrigger>
-            <TabsTrigger value="runs">Runs</TabsTrigger>
-          </TabsList>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        className="flex-1 flex flex-col min-h-0"
+      >
+        <TabsList className="grid grid-cols-3">
+          <TabsTrigger value="library">Library</TabsTrigger>
+          <TabsTrigger value="author">Author</TabsTrigger>
+          <TabsTrigger value="runs">Runs</TabsTrigger>
+        </TabsList>
 
-          {/* ------------- Library ------------- */}
-          <TabsContent value="library" className="flex-1 min-h-0 mt-2">
-            <ScrollArea className="h-full pr-2">
-              <div className="space-y-2 py-2">
-                {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
-                {!loading && packets.length === 0 && (
-                  <div className="border rounded-md bg-gray-50 p-3 text-sm text-muted-foreground">
-                    No packets yet. Switch to the <strong>Author</strong> tab to create one.
-                  </div>
-                )}
-                {packets.map((p) => (
-                  <div key={p.id} className="border rounded-md p-3 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium text-sm">{p.name}</p>
-                        {p.description && (
-                          <p className="text-xs text-muted-foreground">{p.description}</p>
-                        )}
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {p.steps.length} step{p.steps.length === 1 ? '' : 's'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStartFromLibrary(p)}
-                          className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                        >
-                          <Play className="h-3.5 w-3.5 mr-1" />
-                          Start
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeletePacket(p.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {p.steps.map((s, idx) => (
-                        <Badge key={idx} variant="outline" className="text-[10px]">
-                          {idx + 1}. {s.label || templateById.get(s.templateId)?.name || 'Template'}
-                          <span className="ml-1 text-muted-foreground">v{s.templateVersion}</span>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {renderRunStartUI()}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* ------------- Author ------------- */}
-          <TabsContent value="author" className="flex-1 min-h-0 mt-2">
-            <ScrollArea className="h-full pr-2">
-              <div className="space-y-3 py-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-xs">Packet name</Label>
-                    <Input
-                      value={authorName}
-                      onChange={(e) => setAuthorName(e.target.value)}
-                      placeholder="Onboarding chain"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Description (optional)</Label>
-                    <Input
-                      value={authorDescription}
-                      onChange={(e) => setAuthorDescription(e.target.value)}
-                      placeholder="Engagement → FNA → ROA"
-                    />
-                  </div>
+        {/* ------------- Library ------------- */}
+        <TabsContent value="library" className="flex-1 min-h-0 mt-2">
+          <ScrollArea className="h-full pr-2">
+            <div className="space-y-2 py-2">
+              {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
+              {!loading && packets.length === 0 && (
+                <div className="border rounded-md bg-gray-50 p-3 text-sm text-muted-foreground">
+                  No packets yet. Switch to the <strong>Author</strong> tab to create one.
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Add step from template</Label>
-                  <Select onValueChange={handleAddStep} value="">
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={
-                          templates.length === 0
-                            ? 'No templates yet — create one first'
-                            : 'Pick a template to append'
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}{' '}
-                          <span className="text-muted-foreground ml-1">v{t.version ?? 1}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  {authorSteps.length === 0 ? (
-                    <p className="text-xs text-muted-foreground border rounded-md bg-gray-50 p-3">
-                      Pick templates above to build your chain. Order matters — step 2 is sent the
-                      moment step 1 completes.
-                    </p>
-                  ) : (
-                    authorSteps.map((s, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 border rounded-md p-2 text-xs"
+              )}
+              {packets.map((p) => (
+                <div key={p.id} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-sm">{p.name}</p>
+                      {p.description && (
+                        <p className="text-xs text-muted-foreground">{p.description}</p>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {p.steps.length} step{p.steps.length === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStartFromLibrary(p)}
+                        className="text-purple-700 border-purple-300 hover:bg-purple-50"
                       >
-                        <Badge variant="outline">Step {idx + 1}</Badge>
-                        <span className="flex-1 truncate font-medium">
-                          {s.label || templateById.get(s.templateId)?.name}
-                          <span className="text-muted-foreground ml-1">v{s.templateVersion}</span>
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleMoveStep(idx, -1)}
-                          disabled={idx === 0}
-                        >
-                          <ArrowUpDown className="h-3.5 w-3.5 rotate-180" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleMoveStep(idx, 1)}
-                          disabled={idx === authorSteps.length - 1}
-                        >
-                          <ArrowUpDown className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleRemoveStep(idx)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
+                        <Play className="h-3.5 w-3.5 mr-1" />
+                        Start
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDeletePacket(p.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {p.steps.map((s, idx) => (
+                      <Badge key={idx} variant="outline" className="text-[10px]">
+                        {idx + 1}. {s.label || templateById.get(s.templateId)?.name || 'Template'}
+                        <span className="ml-1 text-muted-foreground">v{s.templateVersion}</span>
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
+              ))}
+              {renderRunStartUI()}
+            </div>
+          </ScrollArea>
+        </TabsContent>
 
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleCreatePacket}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-2" /> Save packet
-                  </Button>
+        {/* ------------- Author ------------- */}
+        <TabsContent value="author" className="flex-1 min-h-0 mt-2">
+          <ScrollArea className="h-full pr-2">
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Packet name</Label>
+                  <Input
+                    value={authorName}
+                    onChange={(e) => setAuthorName(e.target.value)}
+                    placeholder="Onboarding chain"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Description (optional)</Label>
+                  <Input
+                    value={authorDescription}
+                    onChange={(e) => setAuthorDescription(e.target.value)}
+                    placeholder="Engagement → FNA → ROA"
+                  />
                 </div>
               </div>
-            </ScrollArea>
-          </TabsContent>
 
-          {/* ------------- Runs ------------- */}
-          <TabsContent value="runs" className="flex-1 min-h-0 mt-2">
-            <ScrollArea className="h-full pr-2">
-              <div className="space-y-2 py-2">
-                {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
-                {!loading && runs.length === 0 && (
-                  <div className="border rounded-md bg-gray-50 p-3 text-sm text-muted-foreground">
-                    No runs yet — start one from the Library tab.
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Add step from template</Label>
+                <Select onValueChange={handleAddStep} value="">
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        templates.length === 0
+                          ? 'No templates yet — create one first'
+                          : 'Pick a template to append'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}{' '}
+                        <span className="text-muted-foreground ml-1">v{t.version ?? 1}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                {authorSteps.length === 0 ? (
+                  <p className="text-xs text-muted-foreground border rounded-md bg-gray-50 p-3">
+                    Pick templates above to build your chain. Order matters — step 2 is sent the
+                    moment step 1 completes.
+                  </p>
+                ) : (
+                  authorSteps.map((s, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 border rounded-md p-2 text-xs"
+                    >
+                      <Badge variant="outline">Step {idx + 1}</Badge>
+                      <span className="flex-1 truncate font-medium">
+                        {s.label || templateById.get(s.templateId)?.name}
+                        <span className="text-muted-foreground ml-1">v{s.templateVersion}</span>
+                      </span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleMoveStep(idx, -1)}
+                        disabled={idx === 0}
+                      >
+                        <ArrowUpDown className="h-3.5 w-3.5 rotate-180" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleMoveStep(idx, 1)}
+                        disabled={idx === authorSteps.length - 1}
+                      >
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => handleRemoveStep(idx)}>
+                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  ))
                 )}
-                {runs.map((run) => {
-                  const packet = packets.find((p) => p.id === run.packet_id);
-                  return (
-                    <div key={run.id} className="border rounded-md p-3 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-sm">
-                          {packet?.name || run.packet_id.slice(0, 8)}
-                        </p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleCreatePacket} className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="h-3.5 w-3.5 mr-2" /> Save packet
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {/* ------------- Runs ------------- */}
+        <TabsContent value="runs" className="flex-1 min-h-0 mt-2">
+          <ScrollArea className="h-full pr-2">
+            <div className="space-y-2 py-2">
+              {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
+              {!loading && runs.length === 0 && (
+                <div className="border rounded-md bg-gray-50 p-3 text-sm text-muted-foreground">
+                  No runs yet — start one from the Library tab.
+                </div>
+              )}
+              {runs.map((run) => {
+                const packet = packets.find((p) => p.id === run.packet_id);
+                return (
+                  <div key={run.id} className="border rounded-md p-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-sm">
+                        {packet?.name || run.packet_id.slice(0, 8)}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={`capitalize text-[10px] ${
+                          run.status === 'completed'
+                            ? 'text-emerald-700 border-emerald-300'
+                            : run.status === 'failed'
+                              ? 'text-red-700 border-red-300'
+                              : run.status === 'cancelled'
+                                ? 'text-gray-500'
+                                : 'text-purple-700 border-purple-300'
+                        }`}
+                      >
+                        {run.status}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Started {new Date(run.created_at).toLocaleString()} ·{' '}
+                      {run.recipients.map((r) => r.email).join(', ')}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {run.steps.map((s) => (
                         <Badge
+                          key={s.step_index}
                           variant="outline"
-                          className={`capitalize text-[10px] ${
-                            run.status === 'completed'
+                          className={`text-[10px] flex items-center gap-1 ${
+                            s.status === 'completed'
                               ? 'text-emerald-700 border-emerald-300'
-                              : run.status === 'failed'
+                              : s.status === 'failed'
                                 ? 'text-red-700 border-red-300'
-                                : run.status === 'cancelled'
-                                  ? 'text-gray-500'
-                                  : 'text-purple-700 border-purple-300'
+                                : s.status === 'sent'
+                                  ? 'text-purple-700 border-purple-300'
+                                  : s.status === 'skipped'
+                                    ? 'text-gray-400'
+                                    : 'text-gray-500'
                           }`}
                         >
-                          {run.status}
+                          {s.status === 'completed' && <CheckCircle2 className="h-2.5 w-2.5" />}
+                          {s.status === 'failed' && <AlertCircle className="h-2.5 w-2.5" />}
+                          {s.status === 'sent' && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
+                          Step {s.step_index + 1}: {s.status}
                         </Badge>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Started {new Date(run.created_at).toLocaleString()} ·{' '}
-                        {run.recipients.map((r) => r.email).join(', ')}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {run.steps.map((s) => (
-                          <Badge
-                            key={s.step_index}
-                            variant="outline"
-                            className={`text-[10px] flex items-center gap-1 ${
-                              s.status === 'completed'
-                                ? 'text-emerald-700 border-emerald-300'
-                                : s.status === 'failed'
-                                  ? 'text-red-700 border-red-300'
-                                  : s.status === 'sent'
-                                    ? 'text-purple-700 border-purple-300'
-                                    : s.status === 'skipped'
-                                      ? 'text-gray-400'
-                                      : 'text-gray-500'
-                            }`}
-                          >
-                            {s.status === 'completed' && <CheckCircle2 className="h-2.5 w-2.5" />}
-                            {s.status === 'failed' && <AlertCircle className="h-2.5 w-2.5" />}
-                            {s.status === 'sent' && (
-                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                            )}
-                            Step {s.step_index + 1}: {s.status}
-                          </Badge>
-                        ))}
-                      </div>
-                      {run.status === 'running' && (
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (
-                                !confirm(
-                                  'Cancel this packet run? In-flight envelopes are unaffected.',
-                                )
-                              )
-                                return;
-                              try {
-                                await esignApi.cancelPacketRun(run.id);
-                                toast.success('Run cancelled.');
-                                await refresh();
-                              } catch (err) {
-                                toast.error(err instanceof Error ? err.message : 'Cancel failed');
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            Cancel run
-                          </Button>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
+                    {run.status === 'running' && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            if (
+                              !confirm(
+                                'Cancel this packet run? In-flight envelopes are unaffected.',
+                              )
+                            )
+                              return;
+                            try {
+                              await esignApi.cancelPacketRun(run.id);
+                              toast.success('Run cancelled.');
+                              await refresh();
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'Cancel failed');
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Cancel run
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
 
-        <DialogFooter className="border-t pt-3">
+      {!inline && (
+        <SurfaceFooter className="border-t pt-3">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SurfaceFooter>
+      )}
+    </Surface>
   );
 }

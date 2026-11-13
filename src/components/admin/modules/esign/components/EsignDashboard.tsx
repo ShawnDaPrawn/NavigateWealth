@@ -1,37 +1,77 @@
 /**
- * E-Signature Dashboard
- * The main landing view for the E-Signature module.
- * Provides high-level metrics, envelope management, and templates via tabs.
+ * E-Signature home: page header, figures, and the module's four tabs
+ * (Envelopes · Templates · Metrics · Manage). The open tab and the Manage
+ * tool live in the address bar (`?tab=manage&tool=webhooks`), so reload,
+ * Back and shared links land in the same place.
+ *
+ * The Manage tools used to open as dialogs from launcher cards; they now
+ * render on the page under a segmented control (design system: no pop-ups
+ * for tools, no third navigation level).
  */
 
 import React, { Suspense } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
+import { Plus, AlertCircle, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
 import {
-  FileText,
-  Plus,
-  Clock,
-  List,
-  Bookmark,
-  TrendingUp,
-  Timer,
-  AlertCircle,
-  Activity,
-  Loader2,
-  Settings2,
-  CheckCircle2,
-} from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+  PageHeader,
+  StatCard,
+  NavTabsList,
+  NavTabsTrigger,
+  SegmentedList,
+  SegmentedTrigger,
+  useUrlState,
+} from '../../../layout/page';
 import { EnvelopesList } from './EnvelopesList';
 import { TemplateLibrary } from './TemplateLibrary';
 import { NotificationBell } from './NotificationBell';
-// P7.1 — metrics panel is lazily loaded so the envelopes tab stays fast.
-const MetricsPanel = React.lazy(() =>
-  import('./MetricsPanel').then((m) => ({ default: m.MetricsPanel })),
-);
 import type { EsignEnvelope, EsignTemplateRecord } from '../types';
 import { useEnvelopes } from '../hooks/useEnvelopes';
 import { EXPIRING_SOON_DAYS } from '../constants';
+import {
+  ESIGN_TABS,
+  MANAGE_TOOLS,
+  computeEnvelopeMetrics,
+  type EsignTab,
+  type ManageAccess,
+  type ManageTool,
+} from './dashboardModel';
+
+// Lazy so the envelopes tab stays fast.
+const MetricsPanel = React.lazy(() =>
+  import('./MetricsPanel').then((m) => ({ default: m.MetricsPanel })),
+);
+const NotificationPrefsDialog = React.lazy(() =>
+  import('./NotificationPrefsDialog').then((m) => ({ default: m.NotificationPrefsDialog })),
+);
+const WebhooksDialog = React.lazy(() =>
+  import('./WebhooksDialog').then((m) => ({ default: m.WebhooksDialog })),
+);
+const PacketsDialog = React.lazy(() =>
+  import('./PacketsDialog').then((m) => ({ default: m.PacketsDialog })),
+);
+const RecoveryBinDialog = React.lazy(() =>
+  import('./RecoveryBinDialog').then((m) => ({ default: m.RecoveryBinDialog })),
+);
+const AuditLogDialog = React.lazy(() =>
+  import('./AuditLogDialog').then((m) => ({ default: m.AuditLogDialog })),
+);
+const RetentionPolicyDialog = React.lazy(() =>
+  import('./RetentionPolicyDialog').then((m) => ({ default: m.RetentionPolicyDialog })),
+);
+const BrandingDialog = React.lazy(() =>
+  import('./BrandingDialog').then((m) => ({ default: m.BrandingDialog })),
+);
+
+const MANAGE_LABELS: Record<ManageTool, string> = {
+  notifications: 'Notifications',
+  webhooks: 'Webhooks',
+  packets: 'Packets',
+  recovery: 'Recovery bin',
+  audit: 'Audit log',
+  retention: 'Retention',
+  branding: 'Branding',
+};
 
 interface EsignDashboardProps {
   onCreateNew: () => void;
@@ -45,22 +85,14 @@ interface EsignDashboardProps {
     category?: string;
   }) => void;
   onConfigureTemplate?: (template: EsignTemplateRecord) => void;
-  /** P4.7 — opens the bulk-send dialog. */
+  /** Opens the bulk-send dialog. Absent when the person cannot send. */
   onBulkSend?: () => void;
-  /** P4.8 — opens the packet workflows dialog. */
-  onPackets?: () => void;
-  /** P5.2 — opens the sender notification preferences dialog. */
-  onNotificationPrefs?: () => void;
-  /** P5.4 — opens the webhook management dialog. */
-  onWebhooks?: () => void;
-  /** P6.8 — opens the recovery bin dialog. */
-  onRecoveryBin?: () => void;
-  /** P7.3 — opens the global audit log dialog. */
-  onAuditLog?: () => void;
-  /** P7.7 — opens the retention policy dialog. */
-  onRetentionPolicy?: () => void;
-  /** P8.6 — opens the firm-branding editor. */
-  onBranding?: () => void;
+  /** Which Manage tools to show. */
+  manageAccess: ManageAccess;
+  /** Reload envelopes after a Manage tool changed them (packets, recovery bin). */
+  onRefresh: () => void;
+  /** Open an envelope from the audit log. */
+  onOpenEnvelopeById: (envelopeId: string) => void;
   refreshTrigger?: number;
 }
 
@@ -73,204 +105,92 @@ export function EsignDashboard({
   onStartTemplateBuilder,
   onConfigureTemplate,
   onBulkSend,
-  onPackets,
-  onNotificationPrefs,
-  onWebhooks,
-  onRecoveryBin,
-  onAuditLog,
-  onRetentionPolicy,
-  onBranding,
+  manageAccess,
+  onRefresh,
+  onOpenEnvelopeById,
   refreshTrigger,
 }: EsignDashboardProps) {
   const { envelopes } = useEnvelopes({ autoLoad: true, refreshTrigger });
+  const [tab, setTab] = useUrlState<EsignTab>('tab', 'envelopes', ESIGN_TABS);
 
-  // Calculate metrics
-  const now = new Date();
-  const soonThreshold = new Date(now.getTime() + EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000);
+  const availableTools = MANAGE_TOOLS.filter((tool) => manageAccess[tool]);
+  const [tool, setTool] = useUrlState<ManageTool>(
+    'tool',
+    availableTools[0] ?? 'notifications',
+    availableTools,
+  );
 
-  const metrics = {
-    total: envelopes.length,
-    completed: envelopes.filter((e) => e.status === 'completed').length,
-    pending: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status))
-      .length,
-    draft: envelopes.filter((e) => e.status === 'draft').length,
-    expired: envelopes.filter((e) => e.status === 'expired').length,
-    expiringSoon: envelopes.filter((e) => {
-      if (!['sent', 'viewed', 'partially_signed'].includes(e.status)) return false;
-      const expiresAt = e.expires_at;
-      if (!expiresAt) return false;
-      const expDate = new Date(expiresAt);
-      return expDate > now && expDate <= soonThreshold;
-    }).length,
+  const metrics = computeEnvelopeMetrics(envelopes, new Date());
+  const openEnvelopeById = (envelopeId: string) => {
+    const target = envelopes.find((e) => e.id === envelopeId);
+    if (target) onViewEnvelope(target);
+    else onOpenEnvelopeById(envelopeId);
   };
 
-  const completionRate =
-    metrics.total > 0 ? Math.round((metrics.completed / (metrics.total - metrics.draft)) * 100) : 0;
-
-  const manageTabs = [
-    {
-      value: 'notifications',
-      label: 'Notifications',
-      title: 'Notifications',
-      description:
-        'Check recent signer activity and adjust how in-app notifications behave for your team.',
-      render: onNotificationPrefs ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-            <NotificationBell
-              onOpenEnvelope={(envelopeId) => {
-                const target = envelopes.find((e) => e.id === envelopeId);
-                if (target) onViewEnvelope(target);
-              }}
-            />
-            <div className="text-sm">
-              <div className="font-medium text-gray-900">Open inbox</div>
-              <div className="text-xs text-muted-foreground">Review unread envelope activity.</div>
+  const noop = () => undefined;
+  const renderTool = (which: ManageTool) => {
+    switch (which) {
+      case 'notifications':
+        return (
+          <div className="flex flex-col gap-4">
+            <div className="flex w-fit items-center gap-3 rounded-xl border border-nw-line bg-white px-4 py-3">
+              <NotificationBell onOpenEnvelope={openEnvelopeById} />
+              <div className="text-sm">
+                <div className="font-medium text-nw-ink">Inbox</div>
+                <div className="text-xs text-nw-text-3">Unread envelope activity</div>
+              </div>
             </div>
+            <NotificationPrefsDialog open onOpenChange={noop} inline />
           </div>
-          <Button
-            variant="outline"
-            onClick={onNotificationPrefs}
-            className="border-purple-300 text-purple-700 hover:bg-purple-50"
-          >
-            Notification preferences
-          </Button>
-        </div>
-      ) : null,
-    },
-    {
-      value: 'webhooks',
-      label: 'Webhooks',
-      title: 'Webhooks',
-      description:
-        'Manage delivery endpoints and inspect e-sign integration hooks for downstream systems.',
-      render: onWebhooks ? (
-        <Button
-          variant="outline"
-          onClick={onWebhooks}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          Open webhooks
-        </Button>
-      ) : null,
-    },
-    {
-      value: 'packets',
-      label: 'Packets',
-      title: 'Packets',
-      description:
-        'Chain template steps into a guided packet flow for multi-stage signature journeys.',
-      render: onPackets ? (
-        <Button
-          variant="outline"
-          onClick={onPackets}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          Open packets
-        </Button>
-      ) : null,
-    },
-    {
-      value: 'recovery',
-      label: 'Recovery Bin',
-      title: 'Recovery Bin',
-      description:
-        'Restore soft-deleted envelopes or permanently purge old records inside the retention window.',
-      render: onRecoveryBin ? (
-        <Button
-          variant="outline"
-          onClick={onRecoveryBin}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          Open recovery bin
-        </Button>
-      ) : null,
-    },
-    {
-      value: 'audit',
-      label: 'Audit Log',
-      title: 'Audit Log',
-      description:
-        'Search firm-wide envelope activity, delivery events, and signature actions from one place.',
-      render: onAuditLog ? (
-        <Button
-          variant="outline"
-          onClick={onAuditLog}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          Open audit log
-        </Button>
-      ) : null,
-    },
-    {
-      value: 'retention',
-      label: 'Retention',
-      title: 'Retention',
-      description:
-        'Adjust how long documents and certificates remain available for operational and compliance use.',
-      render: onRetentionPolicy ? (
-        <Button
-          variant="outline"
-          onClick={onRetentionPolicy}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          Open retention policy
-        </Button>
-      ) : null,
-    },
-    {
-      value: 'branding',
-      label: 'Branding',
-      title: 'Branding',
-      description:
-        'Control the signer-facing branding applied to your envelopes, notifications, and completion flow.',
-      render: onBranding ? (
-        <Button
-          variant="outline"
-          onClick={onBranding}
-          className="border-purple-300 text-purple-700 hover:bg-purple-50"
-        >
-          Open branding
-        </Button>
-      ) : null,
-    },
-  ].filter((tab) => tab.render !== null);
+        );
+      case 'webhooks':
+        return <WebhooksDialog open onOpenChange={noop} inline />;
+      case 'packets':
+        return <PacketsDialog open onOpenChange={noop} onCompleted={onRefresh} inline />;
+      case 'recovery':
+        return <RecoveryBinDialog open onOpenChange={noop} onChanged={onRefresh} inline />;
+      case 'audit':
+        return <AuditLogDialog open onOpenChange={noop} onOpenEnvelope={openEnvelopeById} inline />;
+      case 'retention':
+        return <RetentionPolicyDialog open onOpenChange={noop} inline />;
+      case 'branding':
+        return <BrandingDialog open onOpenChange={noop} inline />;
+    }
+  };
+
+  const loading = (
+    <div className="flex items-center justify-center py-16">
+      <Loader2 className="h-5 w-5 animate-spin text-nw-violet" aria-label="Loading" />
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">E-Signature</h2>
-          <p className="text-muted-foreground">
-            Manage signature envelopes, templates, and signer workflows.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 md:justify-end">
-          {onBulkSend && (
-            <Button
-              variant="outline"
-              onClick={onBulkSend}
-              className="h-auto min-h-10 max-w-full border-purple-300 px-4 py-2 text-center whitespace-normal leading-snug text-purple-700 hover:bg-purple-50"
-            >
-              Bulk send from template
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="E-Signature"
+        description="Signature envelopes, templates and signer workflows."
+        actions={
+          <>
+            {onBulkSend && (
+              <Button variant="outline" onClick={onBulkSend}>
+                Bulk send from template
+              </Button>
+            )}
+            <Button onClick={onCreateNew}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New envelope
             </Button>
-          )}
-          <Button
-            onClick={onCreateNew}
-            className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Start New Envelope
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {/* Expiring Soon Alert */}
       {metrics.expiringSoon > 0 && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
-          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-          <span className="text-sm text-amber-800">
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-lg border border-amber-200 bg-nw-amber-100/40 px-4 py-2.5"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+          <span className="text-sm text-nw-amber-700">
             <strong>{metrics.expiringSoon}</strong> envelope{metrics.expiringSoon > 1 ? 's' : ''}{' '}
             expiring within {EXPIRING_SOON_DAYS} days. Consider sending reminders. Expired envelopes
             are swept automatically.
@@ -278,195 +198,82 @@ export function EsignDashboard({
         </div>
       )}
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Action Required</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">{metrics.pending}</h3>
-              <p className="text-xs text-orange-600 mt-1">Pending signatures</p>
-            </div>
-            <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Clock className="h-5 w-5 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Completed</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">{metrics.completed}</h3>
-              <p className="text-xs text-green-600 mt-1">Fully signed</p>
-            </div>
-            <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Drafts</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">{metrics.draft}</h3>
-              <p className="text-xs text-gray-500 mt-1">Not yet sent</p>
-            </div>
-            <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-gray-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Expired</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">{metrics.expired}</h3>
-              <p className="text-xs text-orange-600 mt-1">Past deadline</p>
-            </div>
-            <div className="h-10 w-10 bg-orange-50 rounded-lg flex items-center justify-center">
-              <Timer className="h-5 w-5 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Completion Rate</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                {isNaN(completionRate) ? 0 : completionRate}%
-              </h3>
-              <p className="text-xs text-blue-600 mt-1">Of sent envelopes</p>
-            </div>
-            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <StatCard
+          label="Action required"
+          value={metrics.pending}
+          meta="Pending signatures"
+          tone={metrics.pending > 0 ? 'attention' : 'default'}
+        />
+        <StatCard label="Completed" value={metrics.completed} meta="Fully signed" />
+        <StatCard label="Drafts" value={metrics.draft} meta="Not yet sent" />
+        <StatCard
+          label="Expired"
+          value={metrics.expired}
+          meta="Past deadline"
+          tone={metrics.expired > 0 ? 'attention' : 'default'}
+        />
+        <StatCard
+          label="Completion rate"
+          value={`${metrics.completionRate}%`}
+          meta="Of sent envelopes"
+        />
       </div>
 
-      {/* Tabbed Content: Envelopes & Templates */}
-      <Tabs defaultValue="envelopes" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="envelopes" className="gap-1.5">
-            <List className="h-4 w-4" />
+      <Tabs value={tab} onValueChange={(v) => setTab(v as EsignTab)} className="gap-5">
+        <NavTabsList aria-label="E-Signature">
+          <NavTabsTrigger value="envelopes" count={metrics.total}>
             Envelopes
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-1.5">
-            <Bookmark className="h-4 w-4" />
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="metrics" className="gap-1.5">
-            <Activity className="h-4 w-4" />
-            Metrics
-          </TabsTrigger>
-          {manageTabs.length > 0 && (
-            <TabsTrigger value="manage" className="gap-1.5">
-              <Settings2 className="h-4 w-4" />
-              Manage
-            </TabsTrigger>
-          )}
-        </TabsList>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="templates">Templates</NavTabsTrigger>
+          <NavTabsTrigger value="metrics">Metrics</NavTabsTrigger>
+          {availableTools.length > 0 && <NavTabsTrigger value="manage">Manage</NavTabsTrigger>}
+        </NavTabsList>
 
-        {/* Envelopes Tab */}
         <TabsContent value="envelopes" className="mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Envelopes</CardTitle>
-              <CardDescription>
-                View and manage all your envelope status and history
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EnvelopesList
-                onViewEnvelope={onViewEnvelope}
-                onCreateNew={onCreateNew}
-                onResumePrepare={onResumePrepare}
-                resumingEnvelopeId={resumingEnvelopeId}
-                refreshTrigger={refreshTrigger}
-              />
-            </CardContent>
-          </Card>
+          <div className="rounded-xl border border-nw-line bg-white p-4">
+            <EnvelopesList
+              onViewEnvelope={onViewEnvelope}
+              onCreateNew={onCreateNew}
+              onResumePrepare={onResumePrepare}
+              resumingEnvelopeId={resumingEnvelopeId}
+              refreshTrigger={refreshTrigger}
+            />
+          </div>
         </TabsContent>
 
-        {/* Metrics Tab (P7.1) */}
-        <TabsContent value="metrics" className="mt-0">
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-              </div>
-            }
-          >
-            <MetricsPanel
-              onOpenEnvelope={(envelopeId) => {
-                const target = envelopes.find((e) => e.id === envelopeId);
-                if (target) onViewEnvelope(target);
-              }}
+        <TabsContent value="templates" className="mt-0">
+          <div className="rounded-xl border border-nw-line bg-white p-4">
+            <TemplateLibrary
+              onUseTemplate={(template) => onUseTemplate?.(template)}
+              onStartTemplateBuilder={onStartTemplateBuilder}
+              onConfigureTemplate={onConfigureTemplate}
             />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="metrics" className="mt-0">
+          <Suspense fallback={loading}>
+            <MetricsPanel onOpenEnvelope={openEnvelopeById} />
           </Suspense>
         </TabsContent>
 
-        {/* Templates Tab */}
-        <TabsContent value="templates" className="mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle>Template Library</CardTitle>
-              <CardDescription>
-                Save and reuse envelope configurations across documents
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TemplateLibrary
-                onUseTemplate={(template) => onUseTemplate?.(template)}
-                onStartTemplateBuilder={onStartTemplateBuilder}
-                onConfigureTemplate={onConfigureTemplate}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {manageTabs.length > 0 && (
+        {availableTools.length > 0 && (
           <TabsContent value="manage" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>E-Signature Management</CardTitle>
-                <CardDescription>
-                  Open delivery settings, operational tools, and maintenance controls without
-                  crowding the page header.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue={manageTabs[0]?.value} className="w-full">
-                  <TabsList className="mb-4 h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
-                    {manageTabs.map((tab) => (
-                      <TabsTrigger
-                        key={tab.value}
-                        value={tab.value}
-                        className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm data-[state=active]:border-purple-300 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
-                      >
-                        {tab.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-
-                  {manageTabs.map((tab) => (
-                    <TabsContent key={tab.value} value={tab.value} className="mt-0">
-                      <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-5">
-                        <h3 className="text-lg font-semibold text-gray-900">{tab.title}</h3>
-                        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                          {tab.description}
-                        </p>
-                        <div className="mt-4 flex flex-wrap items-center gap-3">{tab.render}</div>
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </CardContent>
-            </Card>
+            <Tabs value={tool} onValueChange={(v) => setTool(v as ManageTool)} className="gap-4">
+              <SegmentedList aria-label="Manage">
+                {availableTools.map((t) => (
+                  <SegmentedTrigger key={t} value={t}>
+                    {MANAGE_LABELS[t]}
+                  </SegmentedTrigger>
+                ))}
+              </SegmentedList>
+              {availableTools.map((t) => (
+                <TabsContent key={t} value={t} className="mt-0">
+                  {tool === t && <Suspense fallback={loading}>{renderTool(t)}</Suspense>}
+                </TabsContent>
+              ))}
+            </Tabs>
           </TabsContent>
         )}
       </Tabs>

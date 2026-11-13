@@ -12,13 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Surface, SurfaceDescription, SurfaceHeader, SurfaceTitle } from './manage/Surface';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import { Button } from '../../../../ui/button';
@@ -30,6 +24,8 @@ import { logger } from '../../../../../utils/logger';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
 }
 
 const HEX_RE = /^#([0-9a-fA-F]{6})$/;
@@ -46,7 +42,7 @@ function deriveStripGradient(hex: string): string {
   return `linear-gradient(90deg, ${safe} 0%, ${safe}cc 50%, ${safe} 100%)`;
 }
 
-export function BrandingDialog({ open, onOpenChange }: Props) {
+export function BrandingDialog({ open, onOpenChange, inline = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -140,147 +136,147 @@ export function BrandingDialog({ open, onOpenChange }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Signer-page branding</DialogTitle>
-          <DialogDescription>
-            Customise the logo, accent colour, and support email shown to signers receiving
-            envelopes from your firm. Leave a field blank to use the platform default.
-          </DialogDescription>
-        </DialogHeader>
+    <Surface open={open} onOpenChange={onOpenChange} inline={inline} className="max-w-2xl">
+      <SurfaceHeader>
+        <SurfaceTitle>Signer-page branding</SurfaceTitle>
+        <SurfaceDescription>
+          Customise the logo, accent colour, and support email shown to signers receiving envelopes
+          from your firm. Leave a field blank to use the platform default.
+        </SurfaceDescription>
+      </SurfaceHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {/* Live preview */}
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="h-1.5" style={{ background: deriveStripGradient(previewAccent) }} />
-              <div className="p-4 flex items-center gap-3 bg-white">
-                {logoUrl.trim() && HTTPS_URL_RE.test(logoUrl.trim()) ? (
-                  <img
-                    src={logoUrl.trim()}
-                    alt={`${previewName} logo`}
-                    className="h-10 w-10 object-contain rounded"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="h-10 w-10 rounded flex items-center justify-center text-white font-semibold"
-                    style={{ background: previewAccent }}
-                  >
-                    {previewName.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-gray-900">{previewName}</div>
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Sample signer page header
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  className="text-white"
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {/* Live preview */}
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="h-1.5" style={{ background: deriveStripGradient(previewAccent) }} />
+            <div className="p-4 flex items-center gap-3 bg-white">
+              {logoUrl.trim() && HTTPS_URL_RE.test(logoUrl.trim()) ? (
+                <img
+                  src={logoUrl.trim()}
+                  alt={`${previewName} logo`}
+                  className="h-10 w-10 object-contain rounded"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div
+                  className="h-10 w-10 rounded flex items-center justify-center text-white font-semibold"
                   style={{ background: previewAccent }}
-                  type="button"
                 >
-                  Sign now
-                </Button>
+                  {previewName.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{previewName}</div>
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" /> Sample signer page header
+                </div>
               </div>
+              <Button
+                size="sm"
+                className="text-white"
+                style={{ background: previewAccent }}
+                type="button"
+              >
+                Sign now
+              </Button>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="branding-name">Display name</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="branding-name">Display name</Label>
+              <Input
+                id="branding-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your firm name"
+                maxLength={80}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="branding-accent">Accent colour</Label>
+              <div className="flex items-center gap-2">
                 <Input
-                  id="branding-name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your firm name"
-                  maxLength={80}
+                  id="branding-accent"
+                  value={accentHex}
+                  onChange={(e) => setAccentHex(e.target.value)}
+                  placeholder="#4f46e5"
+                  aria-invalid={!!errors.accent}
+                />
+                <input
+                  type="color"
+                  aria-label="Pick accent colour"
+                  value={HEX_RE.test(accentHex.trim()) ? accentHex.trim() : DEFAULT_ACCENT}
+                  onChange={(e) => setAccentHex(e.target.value)}
+                  className="h-9 w-10 rounded border border-input cursor-pointer"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="branding-accent">Accent colour</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="branding-accent"
-                    value={accentHex}
-                    onChange={(e) => setAccentHex(e.target.value)}
-                    placeholder="#4f46e5"
-                    aria-invalid={!!errors.accent}
-                  />
-                  <input
-                    type="color"
-                    aria-label="Pick accent colour"
-                    value={HEX_RE.test(accentHex.trim()) ? accentHex.trim() : DEFAULT_ACCENT}
-                    onChange={(e) => setAccentHex(e.target.value)}
-                    className="h-9 w-10 rounded border border-input cursor-pointer"
-                  />
-                </div>
-                {errors.accent && <p className="text-xs text-red-600">{errors.accent}</p>}
-              </div>
+              {errors.accent && <p className="text-xs text-red-600">{errors.accent}</p>}
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="branding-logo">Logo URL</Label>
-              <Input
-                id="branding-logo"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://example.com/logo.png"
-                aria-invalid={!!errors.logo}
-              />
-              {errors.logo && <p className="text-xs text-red-600">{errors.logo}</p>}
-              <p className="text-xs text-muted-foreground">
-                Square PNG / SVG works best. The image must be hosted over HTTPS.
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="branding-logo">Logo URL</Label>
+            <Input
+              id="branding-logo"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="https://example.com/logo.png"
+              aria-invalid={!!errors.logo}
+            />
+            {errors.logo && <p className="text-xs text-red-600">{errors.logo}</p>}
+            <p className="text-xs text-muted-foreground">
+              Square PNG / SVG works best. The image must be hosted over HTTPS.
+            </p>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="branding-support">Support email</Label>
-              <Input
-                id="branding-support"
-                type="email"
-                value={supportEmail}
-                onChange={(e) => setSupportEmail(e.target.value)}
-                placeholder="support@example.com"
-                aria-invalid={!!errors.support}
-              />
-              {errors.support && <p className="text-xs text-red-600">{errors.support}</p>}
-              <p className="text-xs text-muted-foreground">
-                Shown in the signer-page footer so recipients know who to contact for help.
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="branding-support">Support email</Label>
+            <Input
+              id="branding-support"
+              type="email"
+              value={supportEmail}
+              onChange={(e) => setSupportEmail(e.target.value)}
+              placeholder="support@example.com"
+              aria-invalid={!!errors.support}
+            />
+            {errors.support && <p className="text-xs text-red-600">{errors.support}</p>}
+            <p className="text-xs text-muted-foreground">
+              Shown in the signer-page footer so recipients know who to contact for help.
+            </p>
+          </div>
 
-            {updatedAt && (
-              <p className="text-xs text-muted-foreground">
-                Last updated {new Date(updatedAt).toLocaleString()}
-              </p>
-            )}
+          {updatedAt && (
+            <p className="text-xs text-muted-foreground">
+              Last updated {new Date(updatedAt).toLocaleString()}
+            </p>
+          )}
 
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t border-border">
-              <Button variant="ghost" onClick={handleReset} disabled={saving}>
-                Revert to defaults
-              </Button>
-              <div className="flex gap-2">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t border-border">
+            <Button variant="ghost" onClick={handleReset} disabled={saving}>
+              Revert to defaults
+            </Button>
+            <div className="flex gap-2">
+              {!inline && (
                 <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} disabled={saving || hasErrors}>
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Save
-                </Button>
-              </div>
+              )}
+              <Button onClick={handleSave} disabled={saving || hasErrors}>
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save
+              </Button>
             </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </Surface>
   );
 }

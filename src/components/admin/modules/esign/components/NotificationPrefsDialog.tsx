@@ -13,13 +13,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { Surface, SurfaceFooter, SurfaceHeader, SurfaceTitle } from './manage/Surface';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
@@ -32,6 +26,8 @@ type Mode = 'every_event' | 'completion_only' | 'digest' | 'off';
 interface NotificationPrefsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Render on the Manage tab instead of in a dialog. */
+  inline?: boolean;
 }
 
 const OPTIONS: Array<{ value: Mode; label: string; description: string }> = [
@@ -58,7 +54,11 @@ const OPTIONS: Array<{ value: Mode; label: string; description: string }> = [
   },
 ];
 
-export function NotificationPrefsDialog({ open, onOpenChange }: NotificationPrefsDialogProps) {
+export function NotificationPrefsDialog({
+  open,
+  onOpenChange,
+  inline = false,
+}: NotificationPrefsDialogProps) {
   const [mode, setMode] = useState<Mode>('every_event');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -99,58 +99,54 @@ export function NotificationPrefsDialog({ open, onOpenChange }: NotificationPref
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Notification preferences</DialogTitle>
-        </DialogHeader>
-        <div className="py-2">
-          {loading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
-          ) : (
-            <RadioGroup
-              value={mode}
-              onValueChange={(v) => setMode(v as Mode)}
-              className="space-y-3"
-            >
-              {OPTIONS.map((opt) => (
-                <label
-                  key={opt.value}
-                  htmlFor={`prefs-${opt.value}`}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    mode === opt.value
-                      ? 'border-purple-400 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <RadioGroupItem id={`prefs-${opt.value}`} value={opt.value} className="mt-0.5" />
-                  <div className="flex-1">
-                    <Label
-                      htmlFor={`prefs-${opt.value}`}
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      {opt.label}
-                    </Label>
-                    <p className="text-xs text-gray-500 mt-1">{opt.description}</p>
-                  </div>
-                </label>
-              ))}
-            </RadioGroup>
-          )}
-        </div>
-        <DialogFooter>
+    <Surface open={open} onOpenChange={onOpenChange} inline={inline} className="sm:max-w-[480px]">
+      <SurfaceHeader>
+        <SurfaceTitle>Notification preferences</SurfaceTitle>
+      </SurfaceHeader>
+      <div className="py-2">
+        {loading ? (
+          <p className="text-sm text-gray-500">Loading…</p>
+        ) : (
+          <RadioGroup value={mode} onValueChange={(v) => setMode(v as Mode)} className="space-y-3">
+            {OPTIONS.map((opt) => (
+              <label
+                key={opt.value}
+                htmlFor={`prefs-${opt.value}`}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  mode === opt.value
+                    ? 'border-purple-400 bg-purple-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <RadioGroupItem id={`prefs-${opt.value}`} value={opt.value} className="mt-0.5" />
+                <div className="flex-1">
+                  <Label
+                    htmlFor={`prefs-${opt.value}`}
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    {opt.label}
+                  </Label>
+                  <p className="text-xs text-gray-500 mt-1">{opt.description}</p>
+                </div>
+              </label>
+            ))}
+          </RadioGroup>
+        )}
+      </div>
+      <SurfaceFooter>
+        {!inline && (
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={loading || saving}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        )}
+        <Button
+          onClick={handleSave}
+          disabled={loading || saving}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </SurfaceFooter>
+    </Surface>
   );
 }
