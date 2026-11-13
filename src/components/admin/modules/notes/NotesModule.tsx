@@ -64,6 +64,7 @@ import {
 import { EmptyState, NoteGrid, StatCard } from './notesModuleParts';
 import { sortNotes } from './notesSort';
 import { NotesToolbar } from './NotesToolbar';
+import { PageHeader } from '../../layout/page';
 
 export function NotesModule() {
   const { user } = useAuth();
@@ -498,30 +499,22 @@ export function NotesModule() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notes</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Your personal notes — link to clients, convert to tasks, stay organised.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isSelecting ? 'default' : 'outline'}
-            size="sm"
-            className={`gap-1.5 text-xs h-9 ${isSelecting ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
-            onClick={handleToggleSelecting}
-          >
-            <CheckSquare className="h-3.5 w-3.5" />
-            {isSelecting ? 'Exit Select' : 'Select'}
-          </Button>
-          <Button onClick={handleNewNote} className="bg-purple-600 hover:bg-purple-700 text-white">
-            <Plus className="h-4 w-4 mr-1" /> New Note
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-6 p-6 lg:p-8">
+      <PageHeader
+        title="Notes"
+        description="Your personal notes. Link them to clients, turn them into tasks, stay organised."
+        actions={
+          <>
+            <Button variant={isSelecting ? 'default' : 'outline'} onClick={handleToggleSelecting}>
+              <CheckSquare className="h-4 w-4" aria-hidden="true" />
+              {isSelecting ? 'Exit select' : 'Select'}
+            </Button>
+            <Button onClick={handleNewNote}>
+              <Plus className="h-4 w-4" aria-hidden="true" /> New note
+            </Button>
+          </>
+        }
+      />
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

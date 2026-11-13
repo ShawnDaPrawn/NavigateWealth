@@ -32,6 +32,7 @@ import {
   EMPTY_ISSUE_FILTERS,
   filterIssues,
   hasActiveIssueFilters,
+  ISSUE_VIEWS,
   matchesIssueView,
   sortIssuesByUrgency,
   summarizeIssueEscalations,
@@ -40,6 +41,7 @@ import {
 } from './issueViews';
 import { AttentionBanner, IssueViewCards, ReportFreshness } from './components/IssueOverview';
 import { IssueDetailSheet } from './components/IssueDetailSheet';
+import { PageHeader, useRecordInUrl, useUrlState } from '../../layout/page';
 import { IssueTable } from './components/IssueTable';
 import { IssuesSkeleton } from './components/IssuesSkeleton';
 import type {
@@ -55,7 +57,8 @@ export function IssuesModule() {
   const [snapshot, setSnapshot] = useState<QualityIssueSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<IssueView>('unresolved');
+  // The view and the open issue are in the address (?view=overdue&issue=…).
+  const [view, setView] = useUrlState<IssueView>('view', 'unresolved', ISSUE_VIEWS);
   const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS);
   const [selectedFingerprint, setSelectedFingerprint] = useState<string | null>(null);
   const [isRunningAutomation, setIsRunningAutomation] = useState(false);
@@ -101,6 +104,22 @@ export function IssuesModule() {
     [issues, selectedFingerprint],
   );
   const filtersActive = hasActiveIssueFilters(filters);
+
+  useRecordInUrl('issue', selectedIssue ? selectedIssue.fingerprint : null, {
+    ready: !!snapshot,
+    openFromUrl: (fingerprint) => {
+      if (!snapshot) return 'waiting';
+      if (!issues.some((issue) => issue.fingerprint === fingerprint)) {
+        toast.error('Issue not found');
+        return 'missing';
+      }
+      setSelectedFingerprint(fingerprint);
+      return 'opened';
+    },
+    closeFromUrl: (previousId) => {
+      setSelectedFingerprint((current) => (current === previousId ? null : current));
+    },
+  });
 
   async function refreshPendingCounts() {
     await queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
@@ -153,30 +172,41 @@ export function IssuesModule() {
 
   const viewConfig = issueViewConfig[view];
 
+  // An open issue is a page of its own.
+  if (selectedIssue) {
+    return (
+      <div className="mx-auto max-w-[1200px] p-6 lg:p-8">
+        <IssueDetailSheet
+          issue={selectedIssue}
+          onClose={() => setSelectedFingerprint(null)}
+          onSave={handleSaveWorkflow}
+          onCreateTask={handleCreateTask}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/30 pb-10">
-      <div className="mx-auto max-w-[1800px] space-y-6 p-6">
-        <div className="flex flex-col justify-between gap-4 border-b border-gray-200/60 pb-4 md:flex-row md:items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Issue Manager</h1>
-            <p className="mt-1 text-lg text-muted-foreground">
-              Errors and failed checks across the platform, and who is fixing them
-            </p>
-            {snapshot ? <ReportFreshness snapshot={snapshot} /> : null}
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => void loadIssues()}
-            disabled={isLoading}
-            className="h-10 border-gray-200 px-4 shadow-sm hover:border-gray-300 hover:bg-white hover:text-gray-700"
-          >
-            <RefreshCw
-              className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')}
-              aria-hidden="true"
-            />
-            Refresh
-          </Button>
-        </div>
+      <div className="mx-auto max-w-[1800px] space-y-6 p-6 lg:p-8">
+        <PageHeader
+          title="Issue Manager"
+          description={
+            <>
+              Errors and failed checks across the platform, and who is fixing them.
+              {snapshot ? <ReportFreshness snapshot={snapshot} /> : null}
+            </>
+          }
+          actions={
+            <Button variant="outline" onClick={() => void loadIssues()} disabled={isLoading}>
+              <RefreshCw
+                className={cn('h-4 w-4', isLoading && 'animate-spin')}
+                aria-hidden="true"
+              />
+              Refresh
+            </Button>
+          }
+        />
 
         {error ? (
           <Alert variant="destructive" className="border-red-200 bg-red-50">
@@ -349,13 +379,6 @@ export function IssuesModule() {
           </>
         ) : null}
       </div>
-
-      <IssueDetailSheet
-        issue={selectedIssue}
-        onClose={() => setSelectedFingerprint(null)}
-        onSave={handleSaveWorkflow}
-        onCreateTask={handleCreateTask}
-      />
     </div>
   );
 }

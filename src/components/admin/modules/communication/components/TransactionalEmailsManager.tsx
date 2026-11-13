@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Settings, Mail, Edit, Loader2, Bell, Megaphone } from 'lucide-react';
+import { Settings, Mail, Edit, Loader2, Bell, Megaphone } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
 import { Badge } from '../../../../ui/badge';
@@ -9,12 +9,22 @@ import { GlobalFooterEditor } from './GlobalFooterEditor';
 import { communicationApi } from '../api';
 import { EmailTemplate } from '../types';
 import { toast } from 'sonner';
+import { useRecordInUrl } from '../../../layout/page';
+
+/** The address value for the global footer editor (?edit=footer). */
+const FOOTER_EDIT_ID = 'footer';
 
 interface TransactionalEmailsManagerProps {
-  onBack: () => void;
+  /**
+   * Called with true while an editor (a template or the global footer) is
+   * open as a page of its own, so the module can hide its header and tabs.
+   */
+  onEditorPageChange?: (open: boolean) => void;
 }
 
-export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManagerProps) {
+export function TransactionalEmailsManager({
+  onEditorPageChange,
+}: TransactionalEmailsManagerProps) {
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [isEditingFooter, setIsEditingFooter] = useState(false);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -23,6 +33,33 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
   useEffect(() => {
     loadTemplates();
   }, []);
+
+  // The open editor is in the address (?edit=<templateId> or ?edit=footer).
+  useRecordInUrl('edit', isEditingFooter ? FOOTER_EDIT_ID : editingTemplateId, {
+    ready: !loading,
+    openFromUrl: (id) => {
+      if (id === FOOTER_EDIT_ID) {
+        setIsEditingFooter(true);
+        return 'opened';
+      }
+      if (loading) return 'waiting';
+      if (!templates.some((t) => t.id === id)) {
+        toast.error('Email template not found');
+        return 'missing';
+      }
+      setEditingTemplateId(id);
+      return 'opened';
+    },
+    closeFromUrl: () => {
+      setIsEditingFooter(false);
+      setEditingTemplateId(null);
+    },
+  });
+
+  const editorOpen = isEditingFooter || !!editingTemplateId;
+  useEffect(() => {
+    onEditorPageChange?.(editorOpen);
+  }, [editorOpen, onEditorPageChange]);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -58,59 +95,40 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
   const systemTemplates = templates.filter((t) => t.id !== 'general_campaign');
 
   if (isEditingFooter) {
-    return (
-      <div className="p-6 max-w-[1600px] mx-auto">
-        <GlobalFooterEditor onBack={() => setIsEditingFooter(false)} />
-      </div>
-    );
+    return <GlobalFooterEditor onBack={() => setIsEditingFooter(false)} />;
   }
 
   if (editingTemplateId) {
     return (
-      <div className="p-6 max-w-[1600px] mx-auto">
-        <EmailTemplateEditor
-          templateId={editingTemplateId}
-          onBack={() => {
-            setEditingTemplateId(null);
-            loadTemplates(); // Reload to get updates
-          }}
-        />
-      </div>
+      <EmailTemplateEditor
+        templateId={editingTemplateId}
+        onBack={() => {
+          setEditingTemplateId(null);
+          loadTemplates(); // Reload to get updates
+        }}
+      />
     );
   }
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-8">
-      <div className="flex flex-col gap-2">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="-ml-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Communication
-          </Button>
+          <h2 className="text-lg font-semibold text-nw-ink">Email settings &amp; templates</h2>
+          <p className="text-sm text-nw-text-3">
+            System notifications and the base template every bulk email uses.
+          </p>
         </div>
-        <div className="flex items-center justify-between border-b pb-6 mt-2">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Email Settings & Templates</h2>
-            <p className="text-muted-foreground mt-1">
-              Manage system notifications and general communication templates
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => setIsEditingFooter(true)}>
-            <Settings className="h-4 w-4 mr-2" />
-            Global Footer Settings
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => setIsEditingFooter(true)}>
+          <Settings className="h-4 w-4" aria-hidden="true" />
+          Global footer settings
+        </Button>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-gray-50/50">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p className="text-muted-foreground">Loading settings...</p>
+          <p className="text-muted-foreground">Loading settings…</p>
         </div>
       ) : (
         <div className="space-y-10">
@@ -118,7 +136,7 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Megaphone className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold text-gray-900">General Communication</h3>
+              <h3 className="text-lg font-semibold text-gray-900">General communication</h3>
             </div>
             <div className="grid grid-cols-1">
               {generalTemplate && (
@@ -141,7 +159,7 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
                       onClick={() => setEditingTemplateId(generalTemplate.id)}
                     >
                       <Edit className="h-3.5 w-3.5 mr-2" />
-                      Manage Template
+                      Manage template
                     </Button>
                   </div>
                 </div>
@@ -153,7 +171,7 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Bell className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold text-gray-900">System Notifications</h3>
+              <h3 className="text-lg font-semibold text-gray-900">System notifications</h3>
             </div>
             <div className="grid grid-cols-1 gap-3">
               {systemTemplates.map((template) => (
@@ -207,7 +225,7 @@ export function TransactionalEmailsManager({ onBack }: TransactionalEmailsManage
                       className="text-muted-foreground hover:text-primary"
                     >
                       <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
+                      <span className="sr-only">Edit {template.name}</span>
                     </Button>
                   </div>
                 </div>

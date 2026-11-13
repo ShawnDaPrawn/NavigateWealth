@@ -40,10 +40,6 @@ import {
   Search,
   RefreshCw,
   Inbox,
-  TrendingUp,
-  Clock,
-  CheckCircle2,
-  Archive,
   Calendar,
   Mail,
   AlertCircle,
@@ -61,6 +57,10 @@ import { SubmissionInviteModal } from './components/SubmissionInviteModal';
 import { BOARD_COLUMNS, SUBMISSION_STATUS_CONFIG, SUBMISSION_TYPE_CONFIG } from './constants';
 import type { Submission, SubmissionStatus, SubmissionType, SubmissionsFilters } from './types';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
+import { Tabs } from '../../../ui/tabs';
+import { PageHeader, StatCard, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
+
+const SUBMISSION_TABS = ['board', 'archived'] as const;
 
 // ── Status config for columns — matches TaskColumn pattern ────────────────────
 
@@ -184,7 +184,9 @@ export function SubmissionsModule() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  // Board and Archived are tabs kept in the address (?tab=archived).
+  const [tab, setTab] = useUrlState('tab', 'board', SUBMISSION_TABS);
+  const showArchived = tab === 'archived';
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   const { submissions, isLoading, error, updateSubmission, deleteSubmission, refetch } =
@@ -331,15 +333,66 @@ export function SubmissionsModule() {
     );
   }
 
+  const activeCount = byStatus.new.length + byStatus.pending.length + byStatus.completed.length;
+
+  // Header, figures and tabs, shared by the board and the archive.
+  const pageChrome = (
+    <>
+      <PageHeader
+        title="Submissions"
+        description="Incoming quotes, consultations, contact enquiries, client sign-ups and more."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
+              <RefreshCw
+                className={cn('h-4 w-4', isLoading && 'animate-spin')}
+                aria-hidden="true"
+              />
+              Refresh
+            </Button>
+            <Button onClick={() => setShowInviteModal(true)}>
+              <Send className="h-4 w-4" aria-hidden="true" />
+              Invite
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Active" value={activeCount} meta="On the board" />
+        <StatCard
+          label="New"
+          value={byStatus.new.length}
+          meta="Needs attention"
+          tone={byStatus.new.length > 0 ? 'attention' : 'default'}
+        />
+        <StatCard label="Pending" value={byStatus.pending.length} meta="Being reviewed" />
+        <StatCard label="Completed" value={byStatus.completed.length} meta="Fully resolved" />
+      </div>
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as (typeof SUBMISSION_TABS)[number])}>
+        <NavTabsList aria-label="Submissions">
+          <NavTabsTrigger value="board">Board</NavTabsTrigger>
+          <NavTabsTrigger value="archived" count={byStatus.archived.length}>
+            Archived
+          </NavTabsTrigger>
+        </NavTabsList>
+      </Tabs>
+
+      {/* The header's Invite action works from the board and the archive. */}
+      <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
+    </>
+  );
+
   // ── Render: Archived View ──
 
   if (showArchived) {
     return (
       <div className="min-h-screen bg-gray-50/30 pb-10">
-        <div className="max-w-[1800px] mx-auto p-6 space-y-8">
+        <div className="mx-auto flex max-w-[1800px] flex-col gap-6 p-6 lg:p-8">
+          {pageChrome}
           <ArchivedSubmissionsView
             submissions={byStatus.archived}
-            onBack={() => setShowArchived(false)}
             onView={setSelectedSubmission}
             onStatusChange={handleStatusChange}
             onDelete={handleDeleteFromArchive}
@@ -390,99 +443,10 @@ export function SubmissionsModule() {
 
   // ── Render: Main Board ──
 
-  const activeCount = byStatus.new.length + byStatus.pending.length + byStatus.completed.length;
-
   return (
     <div className="min-h-screen bg-gray-50/30 pb-10">
-      <div className="max-w-[1800px] mx-auto p-6 space-y-8">
-        {/* Page Header — matches TaskManagementModule */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-gray-200/60">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Submissions Manager</h1>
-            <p className="text-muted-foreground mt-1 text-lg">
-              Manage incoming quotes, consultations, contact enquiries, client signups, and more
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              className="h-10 px-4 border-gray-200 hover:bg-white hover:text-gray-700 hover:border-gray-300 shadow-sm"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Refresh
-            </Button>
-            <Button
-              variant="outline"
-              className="h-10 px-4 border-gray-200 hover:bg-white hover:text-gray-700 hover:border-gray-300 shadow-sm"
-              onClick={() => setShowArchived(true)}
-            >
-              <Archive className="h-4 w-4 mr-2 text-gray-500" />
-              Archived
-              {byStatus.archived.length > 0 && (
-                <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full font-medium">
-                  {byStatus.archived.length}
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              className="h-10 px-4 border-gray-200 hover:bg-white hover:text-gray-700 hover:border-gray-300 shadow-sm"
-              onClick={() => setShowInviteModal(true)}
-            >
-              <Send className="h-4 w-4 mr-2 text-gray-500" />
-              Invite
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards — matches TaskManagementModule exactly */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Total Active</span>
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <TrendingUp className="h-4 w-4 text-purple-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{activeCount}</div>
-            <div className="text-xs text-muted-foreground mt-1">On the board</div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">New</span>
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{byStatus.new.length}</div>
-            <div className="text-xs text-blue-600 font-medium mt-1">Needs attention</div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Pending</span>
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <Clock className="h-4 w-4 text-amber-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{byStatus.pending.length}</div>
-            <div className="text-xs text-amber-600 font-medium mt-1">Being reviewed</div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Completed</span>
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{byStatus.completed.length}</div>
-            <div className="text-xs text-green-600 font-medium mt-1">Fully resolved</div>
-          </div>
-        </div>
+      <div className="mx-auto flex max-w-[1800px] flex-col gap-6 p-6 lg:p-8">
+        {pageChrome}
 
         {/* Filters Bar — matches TaskManagementModule structure */}
         <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-2 max-w-3xl">
@@ -636,9 +600,6 @@ export function SubmissionsModule() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Invite Modal */}
-        <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
       </div>
     </div>
   );

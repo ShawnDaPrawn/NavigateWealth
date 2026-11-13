@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { cn } from '../../../../ui/utils';
+import { StatCard, useUrlState } from '../../../layout/page';
 import { useHandoffs, useUpdateHandoffStatus } from '../hooks';
 import { HANDOFF_STATUS_CONFIG } from '../constants';
 import type { HandoffStatus, HandoffRequest } from '../types';
@@ -35,12 +36,18 @@ import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofi
 type FilterStatus = HandoffStatus | 'all';
 
 const STATUS_OPTIONS: HandoffStatus[] = ['new', 'contacted', 'converted', 'closed'];
+const STATUS_FILTER_IDS: FilterStatus[] = ['all', ...STATUS_OPTIONS];
 
 export function HandoffQueue() {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'ai-handoff-queue-search' });
   const { data: handoffs, isLoading } = useHandoffs();
   const updateStatus = useUpdateHandoffStatus();
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
+  // The status filter is in the address (?tab=leads&stage=new).
+  const [statusFilter, setStatusFilter] = useUrlState<FilterStatus>(
+    'stage',
+    'all',
+    STATUS_FILTER_IDS,
+  );
   const [searchTerm, setSearchTerm] = useState('');
 
   const filtered = useMemo(() => {
@@ -79,23 +86,25 @@ export function HandoffQueue() {
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
+      <p className="text-sm text-nw-text-3">Visitors who asked to speak to an adviser.</p>
+
+      {/* Summary cards — each filters the list */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {STATUS_OPTIONS.map((status) => {
           const cfg = HANDOFF_STATUS_CONFIG[status];
+          const active = statusFilter === status;
           return (
             <button
               key={status}
-              onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setStatusFilter(active ? 'all' : status)}
               className={cn(
-                'bg-white p-4 rounded-xl border shadow-sm text-center transition-all',
-                statusFilter === status
-                  ? 'border-purple-300 ring-1 ring-purple-200'
-                  : 'border-gray-100',
+                'rounded-xl text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+                active && 'ring-2 ring-nw-violet',
               )}
             >
-              <p className="text-2xl font-bold text-gray-900">{stats[status]}</p>
-              <p className="text-xs text-gray-500">{cfg.label}</p>
+              <StatCard label={cfg.label} value={stats[status]} />
             </button>
           );
         })}
@@ -107,7 +116,8 @@ export function HandoffQueue() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             {...searchInputGuard}
-            placeholder="Search by name, email, or topic..."
+            placeholder="Search by name, email, or topic…"
+            aria-label="Search leads"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"

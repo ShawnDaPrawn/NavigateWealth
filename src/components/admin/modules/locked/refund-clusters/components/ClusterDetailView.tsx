@@ -1,16 +1,20 @@
 /**
- * Detail view for an opened refund cluster.
- *
- * Uses the same pill-style tab row as the Locked page's main tab rows:
- * Entities (search + type filter + entity cards) and Cluster Details
+ * An opened refund cluster, as a page of its own: "‹ Back to clusters", the
+ * cluster's name as the heading, then its tabs — Overview (VAT summary),
+ * Entities (search + type filter + entity cards), Managers and Cluster details
  * (stored fields plus edit / archive / delete actions).
+ *
+ * The tab (?clusterTab=entities), the entity type filter (?entityType=company)
+ * and an entity being added or edited (?entity=new|<id>) are in the address.
+ * The entity form is long, so it is a page too.
  */
 
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import {
   Archive,
   ArchiveRestore,
-  ArrowLeft,
+  ChevronLeft,
   Building2,
   CalendarClock,
   FileText,
@@ -34,14 +38,16 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../../ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../../ui/tabs';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../../ui/select';
+  NavTabsList,
+  NavTabsTrigger,
+  PageHeader,
+  SegmentedList,
+  SegmentedTrigger,
+  useRecordInUrl,
+  useUrlState,
+} from '../../../../layout/page';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +60,10 @@ import {
 } from '../../../../../ui/alert-dialog';
 import { Skeleton } from '../../../../../ui/skeleton';
 import {
+  CLUSTER_TAB_PARAM,
+  ENTITY_PARAM,
   ENTITY_TYPE_LABELS,
+  ENTITY_TYPE_PARAM,
   MONTH_OPTIONS,
   VAT_PERIOD_OPTIONS,
   YEAR_END_DEPENDENT_CATEGORIES,
@@ -91,11 +100,10 @@ import type {
   VatPeriodCategory,
 } from '../types';
 import { ClusterFormDialog } from './ClusterFormDialog';
-import { EntityFormDialog } from './EntityFormDialog';
+import { EntityFormPage } from './EntityFormPage';
 import { EntityDocumentsDialog } from './EntityDocumentsDialog';
 import { EntityTransactionsDialog } from './EntityTransactionsDialog';
 import { ManagersTab } from './ManagersTab';
-import { SEGMENT_LIST, SEGMENT_TRIGGER } from './subTabs';
 
 interface ClusterDetailViewProps {
   clusterId: string;
@@ -103,6 +111,31 @@ interface ClusterDetailViewProps {
 }
 
 type TypeFilter = 'all' | RefundEntityType;
+const TYPE_FILTERS: Array<{ id: TypeFilter; label: string }> = [
+  { id: 'all', label: 'All entity types' },
+  { id: 'sole_proprietor', label: 'Sole proprietors' },
+  { id: 'company', label: 'Companies' },
+];
+const TYPE_FILTER_IDS = TYPE_FILTERS.map((f) => f.id);
+
+type ClusterTab = 'overview' | 'entities' | 'managers' | 'details';
+const CLUSTER_TABS: readonly ClusterTab[] = ['overview', 'entities', 'managers', 'details'];
+
+/** The entity form open on the page: a new entity, or the one being edited. */
+type OpenForm = { mode: 'new' } | { mode: 'edit'; entity: RefundEntity };
+
+function BackLink({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-sm text-nw-text-3 hover:text-nw-ink"
+    >
+      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+      {label}
+    </button>
+  );
+}
 
 export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps) {
   const { data, isLoading } = useRefundClusterDetail(clusterId);
@@ -113,10 +146,15 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
 
   const managerNames = useMemo(() => new Map(managers.map((m) => [m.id, m.name])), [managers]);
 
+  const [tab, setTab] = useUrlState<ClusterTab>(CLUSTER_TAB_PARAM, 'overview', CLUSTER_TABS);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingEntity, setEditingEntity] = useState<RefundEntity | null>(null);
+  const [typeFilter, setTypeFilter] = useUrlState<TypeFilter>(
+    ENTITY_TYPE_PARAM,
+    'all',
+    TYPE_FILTER_IDS,
+  );
+  const [openForm, setOpenForm] = useState<OpenForm | null>(null);
+  const editingEntity = openForm?.mode === 'edit' ? openForm.entity : null;
   const [documentsEntity, setDocumentsEntity] = useState<RefundEntity | null>(null);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const [transactionsEntity, setTransactionsEntity] = useState<RefundEntity | null>(null);
@@ -132,14 +170,39 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
     );
   }, [data?.entities, search, typeFilter]);
 
+  useRecordInUrl(
+    ENTITY_PARAM,
+    openForm ? (openForm.mode === 'new' ? 'new' : openForm.entity.id) : null,
+    {
+      ready: !isLoading,
+      openFromUrl: (id) => {
+        if (id === 'new') {
+          setOpenForm({ mode: 'new' });
+          return 'opened';
+        }
+        if (isLoading) return 'waiting';
+        const found = data?.entities.find((e) => e.id === id);
+        if (!found) {
+          toast.error('Entity not found');
+          return 'missing';
+        }
+        setOpenForm({ mode: 'edit', entity: found });
+        return 'opened';
+      },
+      closeFromUrl: () => setOpenForm(null),
+    },
+  );
+
+  const closeForm = () => setOpenForm(null);
+
   const handleSubmit = (payload: RefundEntityInput) => {
     if (editingEntity) {
       updateEntity.mutate(
         { clusterId, entityId: editingEntity.id, entity: payload },
-        { onSuccess: () => setFormOpen(false) },
+        { onSuccess: closeForm },
       );
     } else {
-      createEntity.mutate({ clusterId, entity: payload }, { onSuccess: () => setFormOpen(false) });
+      createEntity.mutate({ clusterId, entity: payload }, { onSuccess: closeForm });
     }
   };
 
@@ -156,9 +219,7 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
   if (!data?.cluster) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to clusters
-        </Button>
+        <BackLink label="Back to clusters" onClick={onBack} />
         <p className="text-sm text-muted-foreground">Cluster not found.</p>
       </div>
     );
@@ -166,39 +227,45 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
 
   const { cluster } = data;
 
+  // Adding or editing an entity is a page of its own.
+  if (openForm) {
+    return (
+      <EntityFormPage
+        clusterId={clusterId}
+        entity={editingEntity}
+        onClose={closeForm}
+        backLabel={`Back to ${cluster.name}`}
+        onSubmit={handleSubmit}
+        isSubmitting={createEntity.isPending || updateEntity.isPending}
+      />
+    );
+  }
+
+  const categoryLabel = VAT_PERIOD_OPTIONS.find((o) => o.value === cluster.vatPeriod)?.label;
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold">{cluster.name}</h2>
-          {cluster.archived && <Badge variant="outline">Archived</Badge>}
-        </div>
-        {cluster.description && (
-          <p className="text-sm text-muted-foreground">{cluster.description}</p>
-        )}
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <BackLink label="Back to clusters" onClick={onBack} />
+        <PageHeader
+          title={cluster.name}
+          description={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              {categoryLabel ? `Refund cluster · ${categoryLabel}` : 'Refund cluster'}
+              {cluster.archived && <Badge variant="outline">Archived</Badge>}
+            </span>
+          }
+        />
       </div>
 
-      {/* Segmented control — a compact, distinct look from the Accounts section
-          nav (underline) and the top-level pill tabs, so it reads clearly as the
-          switcher for sections *within this cluster*. Overview (the VAT summary)
-          is the landing tab. */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <div className="w-full overflow-x-auto">
-          <TabsList className={SEGMENT_LIST}>
-            <TabsTrigger value="overview" className={SEGMENT_TRIGGER}>
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="entities" className={SEGMENT_TRIGGER}>
-              Entities
-            </TabsTrigger>
-            <TabsTrigger value="managers" className={SEGMENT_TRIGGER}>
-              Managers
-            </TabsTrigger>
-            <TabsTrigger value="details" className={SEGMENT_TRIGGER}>
-              Cluster Details
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      {/* Overview (the VAT summary) is the landing tab. */}
+      <Tabs value={tab} onValueChange={(value) => setTab(value as ClusterTab)} className="gap-6">
+        <NavTabsList aria-label="Cluster">
+          <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+          <NavTabsTrigger value="entities">Entities</NavTabsTrigger>
+          <NavTabsTrigger value="managers">Managers</NavTabsTrigger>
+          <NavTabsTrigger value="details">Cluster details</NavTabsTrigger>
+        </NavTabsList>
 
         <TabsContent value="overview">
           <ClusterVatOverview
@@ -219,33 +286,24 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
                 className="pl-9"
               />
             </div>
-            <Select
-              value={typeFilter}
-              onValueChange={(value) => setTypeFilter(value as TypeFilter)}
-            >
-              <SelectTrigger className="w-[200px]" aria-label="Filter by entity type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All entity types</SelectItem>
-                <SelectItem value="sole_proprietor">Sole Proprietors</SelectItem>
-                <SelectItem value="company">Companies</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={() => {
-                setEditingEntity(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" /> Add Entity
+            <Tabs value={typeFilter} onValueChange={(value) => setTypeFilter(value as TypeFilter)}>
+              <SegmentedList aria-label="Entity type">
+                {TYPE_FILTERS.map((f) => (
+                  <SegmentedTrigger key={f.id} value={f.id}>
+                    {f.label}
+                  </SegmentedTrigger>
+                ))}
+              </SegmentedList>
+            </Tabs>
+            <Button onClick={() => setOpenForm({ mode: 'new' })}>
+              <Plus className="h-4 w-4 mr-1" /> Add entity
             </Button>
           </div>
 
           {entities.length === 0 ? (
             <div className="border border-dashed rounded-lg p-10 text-center text-sm text-muted-foreground">
               {data.entities.length === 0
-                ? 'No entities in this cluster yet. Click "Add Entity" to get started.'
+                ? 'No entities in this cluster yet. Click "Add entity" to get started.'
                 : 'No entities match your search.'}
             </div>
           ) : (
@@ -256,10 +314,7 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
                   entity={entity}
                   cluster={cluster}
                   managerName={entity.managerId ? managerNames.get(entity.managerId) : undefined}
-                  onEdit={() => {
-                    setEditingEntity(entity);
-                    setFormOpen(true);
-                  }}
+                  onEdit={() => setOpenForm({ mode: 'edit', entity })}
                   onTransactions={() => {
                     setTransactionsEntity(entity);
                     setTransactionsOpen(true);
@@ -283,15 +338,6 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
           <ClusterDetailsTab cluster={cluster} entityCount={data.entities.length} onBack={onBack} />
         </TabsContent>
       </Tabs>
-
-      <EntityFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        clusterId={clusterId}
-        entity={editingEntity}
-        onSubmit={handleSubmit}
-        isSubmitting={createEntity.isPending || updateEntity.isPending}
-      />
 
       <EntityDocumentsDialog
         open={documentsOpen}
@@ -400,7 +446,7 @@ function ClusterVatOverview({
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No VAT category set — set one in Cluster Details to track periods.
+                  No VAT category set — set one in Cluster details to track periods.
                 </p>
               )}
             </div>
@@ -501,7 +547,7 @@ function ClusterDetailsTab({
       <Card>
         <CardContent className="p-6 space-y-6">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-base font-semibold">Cluster Details</h3>
+            <h3 className="text-base font-semibold">Cluster details</h3>
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4 mr-1" /> Edit
             </Button>

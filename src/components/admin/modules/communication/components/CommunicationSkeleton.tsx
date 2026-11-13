@@ -4,29 +4,31 @@ import { Skeleton } from '../../../../ui/skeleton';
  * CommunicationSkeleton
  *
  * Mirrors the CommunicationModule layout:
- * - Header (title + History button + Transactional Emails button)
- * - 3-step stepper (Select Recipients → Compose → Review & Send)
+ * - Page header (title + description)
+ * - Compose · History · Transactional emails tabs
+ * - 3-step stepper (Recipients → Message → Review & send)
  * - Step content area
  */
 
 export function CommunicationSkeleton() {
   return (
     <div
-      className="space-y-8 p-6 max-w-[1600px] mx-auto"
+      className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8"
       role="status"
       aria-label="Loading communication"
     >
       <span className="sr-only">Loading communication module, please wait…</span>
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-72" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-24 rounded-md" />
-          <Skeleton className="h-9 w-44 rounded-md" />
-        </div>
+      <div>
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-96 max-w-full" />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-nw-line pb-2">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-5 w-16" />
+        <Skeleton className="h-5 w-36" />
       </div>
 
       {/* Stepper */}

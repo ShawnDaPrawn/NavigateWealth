@@ -1,22 +1,15 @@
 /**
  * The review sheet for one issue. Reads top to bottom in the order you need
  * it: what it is, your response (status, owner, note), what happened, what to
- * do next, then the reference details. Save sits in a footer that never
- * scrolls away. Owns only the unsaved draft; saving and task creation are the
+ * do next, then the reference details. Save sits in a footer that stays
+ * in view at the bottom of the page. Owns only the unsaved draft; saving and task creation are the
  * module's handlers.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowUpRight, Loader2, Wrench } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, Loader2, Wrench } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../../../../ui/sheet';
 import { Textarea } from '../../../../ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '../../../../ui/toggle-group';
 import {
@@ -242,15 +235,17 @@ function IssueDetail({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <SheetHeader className="space-y-3 border-b border-gray-100 px-6 py-5 pr-12 text-left">
+    <div className="flex flex-col">
+      <div className="space-y-3 border-b border-gray-100 px-6 py-5 text-left">
         <div className="flex flex-wrap items-center gap-2">
           <PriorityBadge priority={issue.priority} />
           <WorkflowBadge status={issue.status} />
           <IssueSignalBadges issue={issue} />
         </div>
-        <SheetTitle className="text-xl wrap-anywhere">{labels.title}</SheetTitle>
-        <SheetDescription>
+        <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink wrap-anywhere">
+          {labels.title}
+        </h1>
+        <p className="text-sm text-nw-text-3">
           {[
             sourceLabels[issue.source],
             labels.area,
@@ -260,10 +255,10 @@ function IssueDetail({
           ]
             .filter(Boolean)
             .join(' · ')}
-        </SheetDescription>
-      </SheetHeader>
+        </p>
+      </div>
 
-      <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6">
+      <div className="space-y-8 px-6 py-6">
         <section className="space-y-4">
           <SectionHeading>Your response</SectionHeading>
           <div className="space-y-2">
@@ -348,7 +343,7 @@ function IssueDetail({
         <IssueReferenceDetails issue={issue} />
       </div>
 
-      <div className="flex flex-col-reverse gap-3 border-t border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-gray-100 bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         {issue.linkedTaskId ? (
           <Button variant="outline" asChild>
             <a href="/admin?module=tasks" title={issue.linkedTaskTitle}>
@@ -380,6 +375,10 @@ function IssueDetail({
   );
 }
 
+/**
+ * One issue as a full page in place of the list (design system: records are
+ * pages, never side panels). Renders nothing when no issue is open.
+ */
 export function IssueDetailSheet({
   issue,
   onClose,
@@ -391,18 +390,25 @@ export function IssueDetailSheet({
   onSave: (update: QualityIssueWorkflowUpdate) => Promise<void>;
   onCreateTask: (issue: QualityIssue) => Promise<void>;
 }) {
+  if (!issue) return null;
   return (
-    <Sheet open={!!issue} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-2xl">
-        {issue ? (
-          <IssueDetail
-            key={issue.fingerprint}
-            issue={issue}
-            onSave={onSave}
-            onCreateTask={onCreateTask}
-          />
-        ) : null}
-      </SheetContent>
-    </Sheet>
+    <div className="flex flex-col gap-4">
+      <button
+        type="button"
+        onClick={onClose}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        Back to issues
+      </button>
+      <div className="overflow-hidden rounded-xl border border-nw-line bg-white">
+        <IssueDetail
+          key={issue.fingerprint}
+          issue={issue}
+          onSave={onSave}
+          onCreateTask={onCreateTask}
+        />
+      </div>
+    </div>
   );
 }

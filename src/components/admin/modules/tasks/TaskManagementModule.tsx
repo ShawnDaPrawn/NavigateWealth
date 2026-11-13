@@ -6,16 +6,9 @@
 
 import { useEffect, useRef } from 'react';
 import { DragDropContext } from '@hello-pangea/dnd';
-import {
-  Search,
-  Filter,
-  Archive as ArchiveIcon,
-  Plus,
-  LayoutDashboard,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-} from 'lucide-react';
+import { Search, Filter, Plus, AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import { PageHeader, StatCard, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
 import { useTasks, useTaskStats, useTaskBoard } from './hooks';
 import { TaskColumn } from './components/TaskColumn';
 import { TaskFormModal } from './components/TaskFormModal';
@@ -24,6 +17,8 @@ import { TasksSkeleton } from './components/TasksSkeleton';
 import { STATUS_LABELS } from './constants';
 import { Button } from '../../../ui/button';
 import { useCurrentUserPermissions } from '../personnel';
+
+const TASK_TABS = ['board', 'archived'] as const;
 
 interface TaskManagementModuleProps {
   /** When provided, auto-opens the task detail modal for this task ID on mount */
@@ -45,7 +40,6 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
     isModalOpen,
     selectedTask,
     modalMode,
-    showArchived,
     setShowArchived,
     tasksByStatus,
     visibleColumns,
@@ -56,6 +50,12 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
     handleCloseModal,
     handleModeChange,
   } = useTaskBoard(tasks);
+
+  // Board and Archived are tabs kept in the address (?tab=archived).
+  const [tab, setTab] = useUrlState('tab', 'board', TASK_TABS);
+  useEffect(() => {
+    setShowArchived(tab === 'archived');
+  }, [tab, setShowArchived]);
 
   // ── Deep Link: auto-open task detail when initialTaskId is provided ──
   const deepLinkProcessed = useRef(false);
@@ -100,163 +100,104 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
     );
   }
 
-  if (showArchived) {
-    return (
-      <div className="min-h-screen bg-gray-50/30 pb-10">
-        <div className="max-w-[1800px] mx-auto p-6 space-y-8">
-          <ArchivedTasksView
-            tasks={tasks.filter((t) => t.status === 'archived')}
-            onBack={() => setShowArchived(false)}
-            onViewTask={handleViewTask}
-          />
-        </div>
-
-        {/* Task Form Modal - Rendered here to support viewing details from archive */}
-        <TaskFormModal
-          key={selectedTask?.id || 'new'}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          task={selectedTask}
-          mode={modalMode}
-          onModeChange={handleModeChange}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50/30 pb-10">
-      <div className="max-w-[1800px] mx-auto p-6 space-y-8">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-gray-200/60">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Task Management</h1>
-            <p className="text-muted-foreground mt-1 text-lg">
-              Track progress, manage workloads, and collaborate with your team
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              className="h-10 px-4 border-gray-200 hover:bg-white hover:text-gray-700 hover:border-gray-300 shadow-sm"
-              onClick={() => setShowArchived(true)}
-            >
-              <ArchiveIcon className="h-4 w-4 mr-2 text-gray-500" />
-              Archived
-              {stats?.archived ? (
-                <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full font-medium">
-                  {stats.archived}
-                </span>
-              ) : null}
-            </Button>
-            {canCreate && (
-              <Button
-                className="h-10 px-6 bg-purple-600 hover:bg-purple-700 shadow-sm transition-all hover:shadow-md"
-                onClick={handleCreateTask}
-                disabled={!canCreate}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Task
+      <div className="mx-auto flex max-w-[1800px] flex-col gap-6 p-6 lg:p-8">
+        <PageHeader
+          title="To-Do"
+          description="Track progress, manage workloads and collaborate with your team."
+          actions={
+            canCreate && (
+              <Button onClick={handleCreateTask}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New task
               </Button>
-            )}
-          </div>
+            )
+          }
+        />
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="All tasks" value={stats?.total || 0} meta="Active tasks on board" />
+          <StatCard
+            label="To do"
+            value={stats?.new || 0}
+            meta="Needs attention"
+            tone={(stats?.new || 0) > 0 ? 'attention' : 'default'}
+          />
+          <StatCard label="In progress" value={stats?.in_progress || 0} meta="Currently active" />
+          <StatCard label="Completed" value={stats?.completed || 0} meta="Finished tasks" />
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Total Tasks</span>
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <LayoutDashboard className="h-4 w-4 text-purple-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{stats?.total || 0}</div>
-            <div className="text-xs text-muted-foreground mt-1">Active tasks on board</div>
-          </div>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as (typeof TASK_TABS)[number])}
+          className="gap-5"
+        >
+          <NavTabsList aria-label="To-Do">
+            <NavTabsTrigger value="board">Board</NavTabsTrigger>
+            <NavTabsTrigger value="archived" count={stats?.archived || 0}>
+              Archived
+            </NavTabsTrigger>
+          </NavTabsList>
 
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">To Do</span>
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{stats?.new || 0}</div>
-            <div className="text-xs text-blue-600 font-medium mt-1">Needs attention</div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">In Progress</span>
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <Clock className="h-4 w-4 text-amber-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{stats?.in_progress || 0}</div>
-            <div className="text-xs text-amber-600 font-medium mt-1">Currently active</div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Completed</span>
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{stats?.completed || 0}</div>
-            <div className="text-xs text-green-600 font-medium mt-1">Finished tasks</div>
-          </div>
-        </div>
-
-        {/* Filters Bar */}
-        <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-2 max-w-3xl">
-          <div className="flex-1 relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search tasks by title, description, or tags..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-gray-400"
+          <TabsContent value="archived" className="mt-0">
+            <ArchivedTasksView
+              tasks={tasks.filter((t) => t.status === 'archived')}
+              onViewTask={handleViewTask}
             />
-          </div>
-          <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
-          <div className="w-full md:w-auto relative">
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                setFilters({ ...filters, status: e.target.value as typeof filters.status })
-              }
-              className="w-full md:w-[180px] pl-3 pr-8 py-2 text-sm bg-gray-50 hover:bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-0 cursor-pointer font-medium text-gray-700 appearance-none"
-            >
-              <option value="all">All Statuses</option>
-              <option value="new">{STATUS_LABELS.new}</option>
-              <option value="in_progress">{STATUS_LABELS.in_progress}</option>
-              <option value="completed">{STATUS_LABELS.completed}</option>
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
-          </div>
-        </div>
+          </TabsContent>
 
-        {/* Kanban Board */}
-        <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex gap-6 h-full overflow-x-auto pb-4 px-1">
-              {visibleColumns.map((status) => (
-                <TaskColumn
-                  key={status}
-                  status={status}
-                  tasks={tasksByStatus[status]}
-                  onEditTask={handleEditTask}
-                  onViewTask={handleViewTask}
-                  canEdit={canEditTask}
-                  canDelete={canDeleteTask}
+          <TabsContent value="board" className="mt-0 space-y-6">
+            {/* Filters Bar */}
+            <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-2 max-w-3xl">
+              <div className="flex-1 relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search tasks by title, description, or tags..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-gray-400"
                 />
-              ))}
+              </div>
+              <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
+              <div className="w-full md:w-auto relative">
+                <select
+                  value={filters.status}
+                  onChange={(e) =>
+                    setFilters({ ...filters, status: e.target.value as typeof filters.status })
+                  }
+                  className="w-full md:w-[180px] pl-3 pr-8 py-2 text-sm bg-gray-50 hover:bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-0 cursor-pointer font-medium text-gray-700 appearance-none"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="new">{STATUS_LABELS.new}</option>
+                  <option value="in_progress">{STATUS_LABELS.in_progress}</option>
+                  <option value="completed">{STATUS_LABELS.completed}</option>
+                </select>
+                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
+              </div>
             </div>
-          </DragDropContext>
-        </div>
+
+            {/* Kanban Board */}
+            <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="flex gap-6 h-full overflow-x-auto pb-4 px-1">
+                  {visibleColumns.map((status) => (
+                    <TaskColumn
+                      key={status}
+                      status={status}
+                      tasks={tasksByStatus[status]}
+                      onEditTask={handleEditTask}
+                      onViewTask={handleViewTask}
+                      canEdit={canEditTask}
+                      canDelete={canDeleteTask}
+                    />
+                  ))}
+                </div>
+              </DragDropContext>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Task Form Modal */}
         <TaskFormModal

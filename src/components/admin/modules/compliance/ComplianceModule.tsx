@@ -1,16 +1,46 @@
+import { Link } from 'react-router';
+import { Badge } from '../../../ui/badge';
+import { Button } from '../../../ui/button';
+import { PageHeader } from '../../layout/page';
+
 /**
  * Compliance module — cleared for a rebuild from scratch.
  *
  * The previous module (overview, CDD, practice registers and reports) was
- * removed in full. This shell keeps the admin route, sidebar entry and lazy
- * chunk wired so the new module can be built in place.
+ * removed in full. Until the new one is built the page says so and points to
+ * where compliance work lives today: each client's record (consents, FICA,
+ * documents) and Personnel (fit & proper status).
  */
 export function ComplianceModule() {
   return (
-    <div className="flex h-full w-full flex-col bg-slate-50/50">
-      <div className="shrink-0 border-b bg-white px-6 py-4 shadow-sm">
-        <h1 className="text-2xl font-semibold text-foreground">Compliance</h1>
-      </div>
+    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        title="Compliance"
+        description={
+          <span className="inline-flex items-center gap-2">
+            Practice-wide compliance.
+            <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-medium">
+              Soon
+            </Badge>
+          </span>
+        }
+      />
+
+      <section className="flex flex-col items-center gap-3 rounded-xl border border-nw-line bg-white px-6 py-14 text-center">
+        <h2 className="text-base font-semibold text-nw-ink">Compliance tools are coming soon</h2>
+        <p className="max-w-lg text-sm text-nw-text-3">
+          Until then, client consents, FICA and compliance documents are on each client’s record,
+          and staff fit &amp; proper status is in Personnel.
+        </p>
+        <div className="flex flex-wrap justify-center gap-2 pt-2">
+          <Button asChild variant="outline">
+            <Link to="/admin?module=clients">Open Client Management</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/admin?module=personnel">Open Personnel</Link>
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

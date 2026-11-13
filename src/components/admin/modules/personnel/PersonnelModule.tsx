@@ -1,13 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Skeleton } from '../../../ui/skeleton';
-import { Plus, Users, UserCheck, UserX, Clock, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Users, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { Personnel, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
 import type { AdminModule } from '../../layout/types';
+import { PageHeader, StatCard, useRecordInUrl } from '../../layout/page';
 
 // Components
 import { PersonnelTable } from './components/PersonnelTable';
@@ -32,37 +33,6 @@ import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 
 // Constants
 import { ROLE_LABELS, ROLE_COLORS } from './constants';
-
-// ============================================================================
-// STAT CARD (inline)
-// ============================================================================
-
-interface StatCardProps {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  subtitle?: string;
-}
-
-function StatCard({ label, value, icon: Icon, iconColor, iconBg }: StatCardProps) {
-  return (
-    <Card className="border border-gray-200/80 shadow-none hover:shadow-sm transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className={cn('flex items-center justify-center h-10 w-10 rounded-lg', iconBg)}>
-            <Icon className={cn('h-5 w-5', iconColor)} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-semibold text-gray-900 leading-none">{value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{label}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 // ============================================================================
 // SKELETON TABLE ROWS
@@ -127,18 +97,43 @@ export function PersonnelModule() {
     }
   }, [isSuperAdmin]);
 
+  // The staff member most recently asked for (row, search, address). The
+  // address sync must not close one opened in the same update.
+  const lastOpenedIdRef = useRef<string | null>(null);
+  const showPerson = useCallback((person: Personnel) => {
+    lastOpenedIdRef.current = person.id;
+    setSelectedPersonnel(person);
+    setActiveTab('profile');
+    setDrawerOpen(true);
+  }, []);
+
   // ── GlobalSearch deep-link: auto-open drawer for pending personnel selection ──
   useEffect(() => {
     if (pendingSelection?.type === 'personnel' && !isLoading && personnel.length > 0) {
       const target = personnel.find((p) => p.id === pendingSelection.id);
-      if (target) {
-        setSelectedPersonnel(target);
-        setActiveTab('profile');
-        setDrawerOpen(true);
-      }
+      if (target) showPerson(target);
       clearPendingSelection();
     }
-  }, [pendingSelection, isLoading, personnel, clearPendingSelection]);
+  }, [pendingSelection, isLoading, personnel, clearPendingSelection, showPerson]);
+
+  // An open staff member is a page with its own address (?person=<id>).
+  useRecordInUrl('person', drawerOpen && selectedPersonnel ? selectedPersonnel.id : null, {
+    ready: !isLoading && personnel.length > 0,
+    openFromUrl: (id) => {
+      if (isLoading || personnel.length === 0) return 'waiting';
+      const target = personnel.find((p) => p.id === id);
+      if (!target) {
+        toast.error('Staff member not found');
+        return 'missing';
+      }
+      showPerson(target);
+      return 'opened';
+    },
+    closeFromUrl: (previousId) => {
+      if (lastOpenedIdRef.current && lastOpenedIdRef.current !== previousId) return;
+      setDrawerOpen(false);
+    },
+  });
 
   const canInvite = canDo('personnel', 'create');
 
@@ -176,11 +171,7 @@ export function PersonnelModule() {
   const { mutate: updateSuperAdmin } = useUpdateSuperAdmin();
 
   // Handlers
-  const handleRowClick = (person: Personnel) => {
-    setSelectedPersonnel(person);
-    setActiveTab('profile');
-    setDrawerOpen(true);
-  };
+  const handleRowClick = (person: Personnel) => showPerson(person);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -246,57 +237,73 @@ export function PersonnelModule() {
     {} as Record<string, { label: string; color: string }>,
   );
 
-  return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-      {/* ── Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-purple-100">
-              <Users className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight leading-none">
-                Personnel Management
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage staff access, compliance, and commission structures
-              </p>
-            </div>
-          </div>
-        </div>
+  // Dialogs opened from the module itself; they render in list and page mode.
+  const dialogs = (
+    <InviteUserDialog
+      open={inviteDialogOpen}
+      onOpenChange={setInviteDialogOpen}
+      onInvite={handleInvite}
+      onCreateAccount={handleCreateAccount}
+    />
+  );
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Super admin toggle (only show for super admins) */}
-          {isSuperAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 text-purple-700 border-purple-200 hover:bg-purple-50"
-              onClick={() => setShowSuperAdmin(!showSuperAdmin)}
-            >
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Admin Profile</span>
-              {showSuperAdmin ? (
-                <ChevronUp className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronDown className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          )}
-
-          {canInvite && (
-            <Button
-              onClick={() => setInviteDialogOpen(true)}
-              size="sm"
-              className="gap-2 bg-purple-600 hover:bg-purple-700 shadow-sm"
-            >
-              <Plus className="h-4 w-4" />
-              Invite User
-            </Button>
-          )}
-        </div>
+  // A staff member is open: their page replaces the list.
+  if (drawerOpen && selectedPersonnel) {
+    return (
+      <div className="mx-auto max-w-[1200px] p-6 lg:p-8">
+        <PersonnelDrawer
+          key={selectedPersonnel.id}
+          open
+          onOpenChange={setDrawerOpen}
+          selectedPersonnel={selectedPersonnel}
+          activeTab={activeTab}
+          clients={clients}
+          clientsLoading={clientsLoading}
+          onTabChange={handleTabChange}
+          onUpload={handleFileUpload}
+          onUpdate={
+            handleUpdateProfile as unknown as (
+              id: string,
+              data: Partial<Personnel>,
+            ) => Promise<boolean>
+          }
+          onInviteCancelled={() => {
+            setDrawerOpen(false);
+            setSelectedPersonnel(null);
+          }}
+        />
+        {dialogs}
       </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        title="Personnel"
+        description="Staff access, compliance and commission structures."
+        actions={
+          <>
+            {isSuperAdmin && (
+              <Button variant="outline" onClick={() => setShowSuperAdmin(!showSuperAdmin)}>
+                <Shield className="h-4 w-4" aria-hidden="true" />
+                Admin profile
+                {showSuperAdmin ? (
+                  <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                )}
+              </Button>
+            )}
+            {canInvite && (
+              <Button onClick={() => setInviteDialogOpen(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Invite user
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* ── Super Admin Profile (Collapsible) ─────────────────── */}
       {isSuperAdmin && showSuperAdmin && (
@@ -309,55 +316,13 @@ export function PersonnelModule() {
         />
       )}
 
-      {/* ── Stat Cards ────────────────────────────────────────── */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="border border-gray-200/80 shadow-none">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="space-y-1.5">
-                    <Skeleton className="h-6 w-10" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Personnel"
-            value={stats.total}
-            icon={Users}
-            iconColor="text-purple-600"
-            iconBg="bg-purple-50"
-          />
-          <StatCard
-            label="Active"
-            value={stats.active}
-            icon={UserCheck}
-            iconColor="text-green-600"
-            iconBg="bg-green-50"
-          />
-          <StatCard
-            label="Suspended"
-            value={stats.suspended}
-            icon={UserX}
-            iconColor="text-red-600"
-            iconBg="bg-red-50"
-          />
-          <StatCard
-            label="Pending"
-            value={stats.pending}
-            icon={Clock}
-            iconColor="text-amber-600"
-            iconBg="bg-amber-50"
-          />
-        </div>
-      )}
+      {/* ── Figures ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Total personnel" value={isLoading ? '—' : stats.total} />
+        <StatCard label="Active" value={isLoading ? '—' : stats.active} />
+        <StatCard label="Suspended" value={isLoading ? '—' : stats.suspended} />
+        <StatCard label="Pending" value={isLoading ? '—' : stats.pending} />
+      </div>
 
       {/* ── Filters ───────────────────────────────────────────── */}
       <PersonnelFilters
@@ -396,7 +361,7 @@ export function PersonnelModule() {
                 onClick={() => setInviteDialogOpen(true)}
               >
                 <Plus className="h-4 w-4" />
-                Invite User
+                Invite user
               </Button>
             )}
             {personnel.length > 0 && (
@@ -410,7 +375,7 @@ export function PersonnelModule() {
                   setStatusFilter('all');
                 }}
               >
-                Clear Filters
+                Clear filters
               </Button>
             )}
           </CardContent>
@@ -423,34 +388,7 @@ export function PersonnelModule() {
         />
       )}
 
-      {/* Drawer */}
-      <PersonnelDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        selectedPersonnel={selectedPersonnel}
-        clients={clients}
-        clientsLoading={clientsLoading}
-        onTabChange={handleTabChange}
-        onUpload={handleFileUpload}
-        onUpdate={
-          handleUpdateProfile as unknown as (
-            id: string,
-            data: Partial<Personnel>,
-          ) => Promise<boolean>
-        }
-        onInviteCancelled={() => {
-          setDrawerOpen(false);
-          setSelectedPersonnel(null);
-        }}
-      />
-
-      {/* Invite Dialog */}
-      <InviteUserDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        onInvite={handleInvite}
-        onCreateAccount={handleCreateAccount}
-      />
+      {dialogs}
     </div>
   );
 }
