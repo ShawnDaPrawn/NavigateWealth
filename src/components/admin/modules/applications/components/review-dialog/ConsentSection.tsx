@@ -4,7 +4,7 @@ import { ReviewSection, SectionProps } from './shared';
 
 export function ConsentSection({ data }: Pick<SectionProps, 'data'>) {
   return (
-    <ReviewSection icon={Shield} title="Consent & Agreements">
+    <ReviewSection icon={Shield} title="Consent & agreements">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {[
           { label: 'Terms & Conditions', value: data?.termsAccepted },

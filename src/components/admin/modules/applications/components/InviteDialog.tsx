@@ -18,6 +18,7 @@ import { Label } from '../../../../ui/label';
 import { toast } from 'sonner';
 import { Send, Loader2, Mail, User, Phone } from 'lucide-react';
 import { applicationsApi } from '../api';
+import { FormErrorBanner } from '../../../layout/page';
 
 interface InviteDialogProps {
   open: boolean;
@@ -67,18 +68,26 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
     const newErrors: FormErrors = {};
 
     if (!form.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = 'Enter a first name';
     }
     if (!form.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = 'Enter a last name';
     }
     if (!form.email.trim()) {
-      newErrors.email = 'Email address is required';
+      newErrors.email = 'Enter an email address';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Enter a valid email address, like name@example.com';
     }
 
     setErrors(newErrors);
+    const first = newErrors.firstName
+      ? 'invite-first-name'
+      : newErrors.lastName
+        ? 'invite-last-name'
+        : newErrors.email
+          ? 'invite-email'
+          : null;
+    if (first) document.getElementById(first)?.focus();
     return Object.keys(newErrors).length === 0;
   }, [form]);
 
@@ -129,19 +138,18 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <div className="h-8 w-8 rounded-lg bg-[#6d28d9]/10 flex items-center justify-center">
-              <Send className="h-4 w-4 text-[#6d28d9]" />
-            </div>
-            Invite Applicant
-          </DialogTitle>
+          <DialogTitle className="text-lg">Invite applicant</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
-            Send an email invitation for a prospective client to create their Navigate Wealth
-            account and complete an application.
+            They get an email with a link to complete the application form. It appears under Invited
+            until they submit.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          <FormErrorBanner
+            count={Object.values(errors).filter(Boolean).length}
+            action="send the invitation"
+          />
           {/* First Name */}
           <div className="space-y-1.5">
             <Label
@@ -149,10 +157,11 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
               className="text-sm font-medium flex items-center gap-1.5"
             >
               <User className="h-3.5 w-3.5 text-gray-400" />
-              First Name <span className="text-red-500">*</span>
+              First name <span className="text-red-500">*</span>
             </Label>
             <Input
               id="invite-first-name"
+              aria-invalid={!!errors.firstName}
               placeholder="e.g. John"
               value={form.firstName}
               onChange={(e) => updateField('firstName', e.target.value)}
@@ -169,10 +178,11 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
               className="text-sm font-medium flex items-center gap-1.5"
             >
               <User className="h-3.5 w-3.5 text-gray-400" />
-              Last Name <span className="text-red-500">*</span>
+              Last name <span className="text-red-500">*</span>
             </Label>
             <Input
               id="invite-last-name"
+              aria-invalid={!!errors.lastName}
               placeholder="e.g. Smith"
               value={form.lastName}
               onChange={(e) => updateField('lastName', e.target.value)}
@@ -185,10 +195,11 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
           <div className="space-y-1.5">
             <Label htmlFor="invite-email" className="text-sm font-medium flex items-center gap-1.5">
               <Mail className="h-3.5 w-3.5 text-gray-400" />
-              Email Address <span className="text-red-500">*</span>
+              Email address <span className="text-red-500">*</span>
             </Label>
             <Input
               id="invite-email"
+              aria-invalid={!!errors.email}
               type="email"
               placeholder="e.g. john.smith@example.com"
               value={form.email}
@@ -202,7 +213,7 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
           <div className="space-y-1.5">
             <Label htmlFor="invite-phone" className="text-sm font-medium flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5 text-gray-400" />
-              Cellphone Number <span className="text-gray-400 text-xs font-normal">(optional)</span>
+              Cellphone <span className="text-gray-400 text-xs font-normal">(optional)</span>
             </Label>
             <Input
               id="invite-phone"
@@ -229,7 +240,7 @@ export function InviteDialog({ open, onOpenChange, onInviteSent }: InviteDialogP
           </Button>
           <Button onClick={handleSubmit} disabled={sending} className="gap-2">
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {sending ? 'Sending...' : 'Send Invitation'}
+            {sending ? 'Sending…' : 'Send invitation'}
           </Button>
         </DialogFooter>
       </DialogContent>

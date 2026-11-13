@@ -1,39 +1,96 @@
 /**
  * Applications Module — Admin Application Management
- * Refactored: Unified navigation via stats cards, cleaner header layout
+ *
+ * Underline tabs per status (kept in the address, ?status=), a table with a
+ * main action per row, and full pages for an application's review
+ * (?application=<id>), completing one on the applicant's behalf (?behalf=<id>)
+ * and previewing the client form (?preview=form). Invite, approve and reject
+ * are centred dialogs.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../ui/button';
+import { Tabs } from '../../../ui/tabs';
 import { toast } from 'sonner';
-import { AdminAuthNotice } from '../../AdminAuthNotice';
 import { useAuth } from '../../../auth/AuthContext';
 import { Eye, Send } from 'lucide-react';
 
 import { Application, TabStatus, ApplicationStats } from './types';
 import { applicationsApi } from './api';
-import { StatsCards } from './components/StatsCards';
+import { normalizeApplicationData } from './utils';
 import { ApplicationsTable } from './components/ApplicationsTable';
-import { ReviewDialog } from './components/ReviewDialog';
+import { ReviewPage } from './components/ReviewPage';
 import { ApproveDialog, DeclineDialog } from './components/ActionDialogs';
-import { ApplicationPreviewDialog } from './components/ApplicationPreviewDialog';
+import { ApplicationPreviewPage } from './components/ApplicationPreviewPage';
 import { InviteDialog } from './components/InviteDialog';
-import { AdminCompleteDialog } from './components/AdminCompleteDialog';
+import { CompleteOnBehalfPage } from './components/CompleteOnBehalfPage';
 import { useCurrentUserPermissions } from '../personnel';
 import { pendingCountsKeys } from '../../../../utils/queryKeys';
-import { PageHeader, useUrlState } from '../../layout/page';
+import {
+  ErrorState,
+  NavTabsList,
+  NavTabsTrigger,
+  NoAccess,
+  PageHeader,
+  useBreadcrumbTrail,
+  useRecordInUrl,
+  useUrlState,
+} from '../../layout/page';
+import { moduleSearchParams } from '../../layout/moduleSearchParams';
 
 const APPLICATION_STATUSES: readonly TabStatus[] = [
+  'incomplete',
   'pending',
+  'invited',
   'approved',
   'rejected',
-  'invited',
-  'incomplete',
+  'all',
 ];
+
+const TAB_LABEL: Record<TabStatus, string> = {
+  incomplete: 'Incomplete',
+  pending: 'Pending review',
+  invited: 'Invited',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  all: 'All',
+};
+
+function tabCount(stats: ApplicationStats | null, tab: TabStatus): number | undefined {
+  if (!stats) return undefined;
+  switch (tab) {
+    case 'incomplete':
+      return stats.incomplete ?? 0;
+    case 'pending':
+      return stats.submitted_for_review ?? 0;
+    case 'invited':
+      return stats.invited ?? 0;
+    case 'approved':
+      return stats.approved ?? 0;
+    case 'rejected':
+      return stats.declined ?? 0;
+    case 'all':
+      return stats.total ?? 0;
+  }
+}
+
+function applicantName(app: Application | null): string {
+  if (!app) return '';
+  const data = normalizeApplicationData(app.application_data);
+  return (
+    [data.firstName, data.lastName].filter(Boolean).join(' ') || app.user_name || 'the applicant'
+  );
+}
+
+/** The address names the form preview with this value (?preview=form). */
+const PREVIEW = 'form';
 
 export function ApplicationsModule() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [, setSearchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin');
   const { canDo } = useCurrentUserPermissions();
@@ -41,7 +98,6 @@ export function ApplicationsModule() {
   const canCreateApp = canDo('applications', 'create');
   const canApprove = canDo('applications', 'approve');
 
-  // State
   // The status being viewed is in the address (?status=approved).
   const [activeTab, setActiveTab] = useUrlState<TabStatus>(
     'status',
@@ -51,20 +107,23 @@ export function ApplicationsModule() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // Open pages
+  const [reviewApp, setReviewApp] = useState<Application | null>(null);
+  const [completeOnBehalfApp, setCompleteOnBehalfApp] = useState<Application | null>(null);
+
   // Dialog state
-  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [actionApp, setActionApp] = useState<Application | null>(null);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
-  const [completeOnBehalfApp, setCompleteOnBehalfApp] = useState<Application | null>(null);
 
   // Read through a ref, not a dependency: depending on `applications.length`
   // changed this callback's identity when the first response arrived, which
@@ -79,9 +138,11 @@ export function ApplicationsModule() {
 
       const data = await applicationsApi.getApplications(activeTab);
       setApplications(data);
+      setLoadError(null);
       hasApplicationsRef.current = data.length > 0;
     } catch (error) {
       console.error('Error loading applications:', error);
+      setLoadError(error instanceof Error ? error.message : 'Unknown error');
       toast.error('Failed to load applications');
     } finally {
       setLoading(false);
@@ -123,11 +184,60 @@ export function ApplicationsModule() {
     [setActiveTab],
   );
 
+  // ── Pages in the address ───────────────────────────────────────────────
+  // An application named in the address is fetched by id (its detail holds
+  // every field the review needs).
+  const [fetching, setFetching] = useState<string | null>(null);
+  const missing = useRef(new Set<string>());
+  const openByIdFromUrl = (
+    id: string,
+    current: Application | null,
+    open: (app: Application) => void,
+  ): 'opened' | 'waiting' | 'missing' => {
+    if (current?.id === id) return 'opened';
+    if (missing.current.has(id)) {
+      missing.current.delete(id);
+      toast.error('Application not found', {
+        description: 'It may have been removed. You are back on the list.',
+      });
+      return 'missing';
+    }
+    if (fetching !== id) {
+      setFetching(id);
+      applicationsApi
+        .getApplicationDetail(id)
+        .then((detail) => open(detail))
+        .catch(() => missing.current.add(id))
+        .finally(() => setFetching(null));
+    }
+    return 'waiting';
+  };
+
+  useRecordInUrl('application', reviewApp?.id ?? null, {
+    ready: isAdmin && fetching === null,
+    openFromUrl: (id) => (isAdmin ? openByIdFromUrl(id, reviewApp, setReviewApp) : 'waiting'),
+    closeFromUrl: () => setReviewApp(null),
+  });
+  useRecordInUrl('behalf', completeOnBehalfApp?.id ?? null, {
+    ready: isAdmin && fetching === null,
+    openFromUrl: (id) =>
+      isAdmin ? openByIdFromUrl(id, completeOnBehalfApp, setCompleteOnBehalfApp) : 'waiting',
+    closeFromUrl: () => setCompleteOnBehalfApp(null),
+  });
+  useRecordInUrl('preview', previewOpen ? PREVIEW : null, {
+    ready: true,
+    openFromUrl: (value) => {
+      if (value !== PREVIEW) return 'missing';
+      setPreviewOpen(true);
+      return 'opened';
+    },
+    closeFromUrl: () => setPreviewOpen(false),
+  });
+
   const handleReview = useCallback(async (application: Application) => {
     try {
       const detail = await applicationsApi.getApplicationDetail(application.id);
-      setSelectedApplication(detail);
-      setReviewDialogOpen(true);
+      setReviewApp(detail);
     } catch (_error) {
       toast.error('Failed to load application details');
     }
@@ -136,14 +246,14 @@ export function ApplicationsModule() {
   const handleApplicationUpdated = useCallback(
     async (updatedApp: Application) => {
       // Optimistic update first for immediate UI feedback
-      setSelectedApplication(updatedApp);
+      setReviewApp(updatedApp);
       loadApplications();
 
       // Refetch detail from server to confirm persistence and ensure
       // all fields (including arrays like externalProviders) are reflected
       try {
         const detail = await applicationsApi.getApplicationDetail(updatedApp.id);
-        setSelectedApplication(detail);
+        setReviewApp(detail);
       } catch (error) {
         console.error('Failed to refetch application detail after amendment:', error);
         // Keep optimistic update on failure — user still sees their changes
@@ -158,7 +268,7 @@ export function ApplicationsModule() {
         toast.error('You do not have permission to approve applications');
         return;
       }
-      setSelectedApplication(application);
+      setActionApp(application);
       setApproveDialogOpen(true);
     },
     [canApprove],
@@ -170,57 +280,71 @@ export function ApplicationsModule() {
         toast.error('You do not have permission to decline applications');
         return;
       }
-      setSelectedApplication(application);
+      setActionApp(application);
       setDeclineReason('');
       setDeclineDialogOpen(true);
     },
     [canApprove],
   );
 
+  const openClient = useCallback(
+    (userId: string) => {
+      const next = moduleSearchParams('clients');
+      next.set('clientId', userId);
+      setSearchParams(next);
+    },
+    [setSearchParams],
+  );
+
+  const afterDecision = useCallback(() => {
+    loadApplications();
+    loadStats();
+    queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
+  }, [loadApplications, loadStats, queryClient]);
+
   const confirmApprove = useCallback(async () => {
-    if (!selectedApplication?.id) return;
+    if (!actionApp?.id) return;
+    const approved = actionApp;
 
     try {
       setActionLoading(true);
-      await applicationsApi.approveApplication(selectedApplication.id);
-      toast.success('Application approved successfully');
+      await applicationsApi.approveApplication(approved.id);
+      toast.success('Application approved', {
+        action: approved.user_id
+          ? { label: 'Open client', onClick: () => openClient(approved.user_id) }
+          : undefined,
+      });
       setApproveDialogOpen(false);
-      setReviewDialogOpen(false);
-
-      loadApplications();
-      loadStats();
-      queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
+      setReviewApp((open) => (open?.id === approved.id ? null : open));
+      afterDecision();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve application');
+      toast.error("Couldn't approve the application. Try again.", {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setActionLoading(false);
     }
-  }, [selectedApplication, loadApplications, loadStats, queryClient]);
+  }, [actionApp, afterDecision, openClient]);
 
   const confirmDecline = useCallback(async () => {
-    if (!selectedApplication?.id) return;
+    if (!actionApp?.id) return;
+    const declined = actionApp;
 
-    if (!declineReason.trim()) {
-      toast.error('Please provide a reason for rejection');
-      return;
-    }
+    if (!declineReason.trim()) return; // the dialog says so inline
 
     try {
       setActionLoading(true);
-      await applicationsApi.declineApplication(selectedApplication.id, declineReason);
+      await applicationsApi.declineApplication(declined.id, declineReason);
       toast.success('Application rejected');
       setDeclineDialogOpen(false);
-      setReviewDialogOpen(false);
-
-      loadApplications();
-      loadStats();
-      queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
+      setReviewApp((open) => (open?.id === declined.id ? null : open));
+      afterDecision();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to reject application');
     } finally {
       setActionLoading(false);
     }
-  }, [selectedApplication, declineReason, loadApplications, loadStats, queryClient]);
+  }, [actionApp, declineReason, afterDecision]);
 
   const handleResendInvite = useCallback(async (application: Application) => {
     setResendingInviteId(application.id);
@@ -243,10 +367,116 @@ export function ApplicationsModule() {
     }
   }, []);
 
-  return (
-    <div className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8">
-      {!isAdmin && <AdminAuthNotice />}
+  // ── Breadcrumb: Work / Applications / Pending review (/ APP-number) ──────
+  const tabLabel = TAB_LABEL[activeTab];
+  const backToList = () => {
+    setReviewApp(null);
+    setCompleteOnBehalfApp(null);
+  };
+  useBreadcrumbTrail(
+    previewOpen
+      ? [{ label: 'Preview form' }]
+      : completeOnBehalfApp
+        ? [{ label: tabLabel, onClick: backToList }, { label: 'Complete on behalf' }]
+        : reviewApp
+          ? [
+              { label: tabLabel, onClick: backToList },
+              { label: reviewApp.application_number || applicantName(reviewApp) },
+            ]
+          : [{ label: tabLabel }],
+  );
 
+  const dialogs = (
+    <>
+      <ApproveDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        onConfirm={confirmApprove}
+        loading={actionLoading}
+        applicantName={applicantName(actionApp)}
+      />
+      <DeclineDialog
+        open={declineDialogOpen}
+        onOpenChange={setDeclineDialogOpen}
+        onConfirm={confirmDecline}
+        loading={actionLoading}
+        reason={declineReason}
+        setReason={setDeclineReason}
+        applicantName={applicantName(actionApp)}
+      />
+      <InviteDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onInviteSent={() => {
+          loadApplications();
+          loadStats();
+        }}
+      />
+    </>
+  );
+
+  if (!isAdmin) {
+    return (
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8">
+        <PageHeader
+          title="Applications"
+          description="Review, approve and manage client applications."
+        />
+        <NoAccess
+          what="Applications"
+          howToGetAccess={
+            isAuthenticated
+              ? 'Admin privileges are required. Log in with an admin account.'
+              : 'Log in as an administrator to review applications.'
+          }
+          action={<Button onClick={() => navigate('/login')}>Log in</Button>}
+        />
+      </div>
+    );
+  }
+
+  if (previewOpen) {
+    return <ApplicationPreviewPage onExit={() => setPreviewOpen(false)} />;
+  }
+
+  if (completeOnBehalfApp) {
+    return (
+      <CompleteOnBehalfPage
+        key={completeOnBehalfApp.id}
+        application={completeOnBehalfApp}
+        backLabel={tabLabel}
+        onClose={() => setCompleteOnBehalfApp(null)}
+        onComplete={afterDecision}
+        adminUserId={user?.id || ''}
+      />
+    );
+  }
+
+  if (reviewApp) {
+    return (
+      <>
+        <ReviewPage
+          key={reviewApp.id}
+          application={reviewApp}
+          backLabel={tabLabel}
+          onClose={() => setReviewApp(null)}
+          onApprove={handleApproveClick}
+          onDecline={handleDeclineClick}
+          onApplicationUpdated={handleApplicationUpdated}
+          onCompleteOnBehalf={(app) => {
+            setReviewApp(null);
+            setCompleteOnBehalfApp(app);
+          }}
+          onResendInvite={handleResendInvite}
+          canApprove={canApprove}
+        />
+        {dialogs}
+      </>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex max-w-[1600px] flex-col gap-5 p-6 lg:p-8">
       <PageHeader
         title="Applications"
         description="Review, approve and manage client applications."
@@ -256,7 +486,7 @@ export function ApplicationsModule() {
               <Eye className="h-4 w-4" aria-hidden="true" />
               Preview form
             </Button>
-            <Button onClick={() => setInviteDialogOpen(true)} disabled={!isAdmin || !canCreateApp}>
+            <Button onClick={() => setInviteDialogOpen(true)} disabled={!canCreateApp}>
               <Send className="h-4 w-4" aria-hidden="true" />
               Invite applicant
             </Button>
@@ -264,74 +494,46 @@ export function ApplicationsModule() {
         }
       />
 
-      {/* Stats Cards — serve as tab navigation */}
-      <StatsCards stats={stats} activeTab={activeTab} setActiveTab={handleTabChange} />
+      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as TabStatus)}>
+        <NavTabsList aria-label="Application status">
+          {APPLICATION_STATUSES.map((tab) => (
+            <NavTabsTrigger key={tab} value={tab} count={tabCount(stats, tab)}>
+              {TAB_LABEL[tab]}
+            </NavTabsTrigger>
+          ))}
+        </NavTabsList>
+      </Tabs>
 
-      {/* Applications Table */}
-      <ApplicationsTable
-        loading={loading}
-        refreshing={refreshing}
-        activeTab={activeTab}
-        applications={applications}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onRefresh={handleRefresh}
-        onReview={handleReview}
-        onApprove={handleApproveClick}
-        onDecline={handleDeclineClick}
-        onResendInvite={handleResendInvite}
-        onCompleteOnBehalf={setCompleteOnBehalfApp}
-        resendingInviteId={resendingInviteId}
-      />
+      {loadError && !loading && applications.length === 0 ? (
+        <ErrorState
+          title="Unable to load applications"
+          description="Something went wrong while loading applications. Nothing you entered was lost."
+          onRetry={() => void handleRefresh()}
+          details={loadError}
+        />
+      ) : (
+        <ApplicationsTable
+          loading={loading}
+          refreshing={refreshing}
+          activeTab={activeTab}
+          applications={applications}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onRefresh={handleRefresh}
+          onReview={handleReview}
+          onApprove={handleApproveClick}
+          onDecline={handleDeclineClick}
+          onResendInvite={handleResendInvite}
+          onCompleteOnBehalf={setCompleteOnBehalfApp}
+          onOpenClient={(app) => openClient(app.user_id)}
+          onInvite={() => setInviteDialogOpen(true)}
+          resendingInviteId={resendingInviteId}
+          canApprove={canApprove}
+          canInvite={canCreateApp}
+        />
+      )}
 
-      {/* Dialogs */}
-      <ReviewDialog
-        open={reviewDialogOpen}
-        onOpenChange={setReviewDialogOpen}
-        selectedApplication={selectedApplication}
-        onApprove={handleApproveClick}
-        onDecline={handleDeclineClick}
-        onApplicationUpdated={handleApplicationUpdated}
-      />
-
-      <ApproveDialog
-        open={approveDialogOpen}
-        onOpenChange={setApproveDialogOpen}
-        onConfirm={confirmApprove}
-        loading={actionLoading}
-      />
-
-      <DeclineDialog
-        open={declineDialogOpen}
-        onOpenChange={setDeclineDialogOpen}
-        onConfirm={confirmDecline}
-        loading={actionLoading}
-        reason={declineReason}
-        setReason={setDeclineReason}
-      />
-
-      <ApplicationPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} />
-
-      <InviteDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        onInviteSent={() => {
-          loadApplications();
-          loadStats();
-        }}
-      />
-
-      <AdminCompleteDialog
-        application={completeOnBehalfApp}
-        open={!!completeOnBehalfApp}
-        onClose={() => setCompleteOnBehalfApp(null)}
-        onComplete={() => {
-          loadApplications();
-          loadStats();
-          queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
-        }}
-        adminUserId={user?.id || ''}
-      />
+      {dialogs}
     </div>
   );
 }

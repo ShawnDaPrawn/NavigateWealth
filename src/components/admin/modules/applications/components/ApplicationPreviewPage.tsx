@@ -1,18 +1,13 @@
 /**
- * Application Preview Dialog
+ * Application preview page (Preview form): the client's 5-step form, with a
+ * banner that nothing typed is saved.
  *
  * Renders a read-only preview of the client-facing application form
  * so admins can see exactly what prospective clients experience.
  */
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../../../ui/dialog';
+import { BackLink } from '../../../layout/page/FilterControls';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Card } from '../../../../ui/card';
@@ -29,7 +24,6 @@ import {
   Check,
   ChevronRight,
   Eye,
-  Monitor,
   Users,
   Fingerprint,
   Heart,
@@ -128,9 +122,9 @@ function PreviewSectionHeader({
   );
 }
 
-interface ApplicationPreviewDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface ApplicationPreviewPageProps {
+  /** Exit preview: back to the list. */
+  onExit: () => void;
 }
 
 function PreviewStep1() {
@@ -764,7 +758,7 @@ function PreviewStep5() {
 
 const STEP_COMPONENTS = [PreviewStep1, PreviewStep2, PreviewStep3, PreviewStep4, PreviewStep5];
 
-export function ApplicationPreviewDialog({ open, onOpenChange }: ApplicationPreviewDialogProps) {
+export function ApplicationPreviewPage({ onExit }: ApplicationPreviewPageProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = PREVIEW_STEPS.length;
   const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
@@ -779,37 +773,24 @@ export function ApplicationPreviewDialog({ open, onOpenChange }: ApplicationPrev
     if (currentStep > 1) setCurrentStep((prev) => prev - 1);
   };
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) setCurrentStep(1);
-    onOpenChange(isOpen);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden flex flex-col p-0">
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white flex-shrink-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="h-9 w-9 rounded-lg bg-[#6d28d9] flex items-center justify-center">
-                <Monitor className="h-5 w-5 text-white" />
-              </div>
-              Client Application Preview
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              This is a read-only preview of the enhanced application form that prospective clients
-              complete when onboarding with Navigate Wealth.
-            </DialogDescription>
-          </DialogHeader>
-          <Badge
-            variant="outline"
-            className="mt-3 text-xs font-medium border-purple-200 text-purple-700 bg-purple-50"
-          >
-            <Eye className="h-3 w-3 mr-1.5" />
-            Preview Mode — No data is submitted
-          </Badge>
-        </div>
-
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+      <BackLink label="Back to applications" onClick={onExit} />
+      <div
+        role="status"
+        className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-nw-amber-100 px-4 py-3 text-sm text-nw-amber-700"
+      >
+        <Eye className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <p className="min-w-0 flex-1">
+          <span className="font-semibold">Preview</span> — this is what applicants see. Nothing you
+          type here is saved.
+        </p>
+        <Button size="sm" variant="outline" className="bg-white" onClick={onExit}>
+          Exit preview
+        </Button>
+      </div>
+      <h1 className="sr-only">Application form preview</h1>
+      <div className="overflow-hidden rounded-xl border border-nw-line">
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto">
           <div className="bg-gradient-to-br from-gray-50 via-white to-purple-50/30 min-h-full">
@@ -956,7 +937,7 @@ export function ApplicationPreviewDialog({ open, onOpenChange }: ApplicationPrev
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
