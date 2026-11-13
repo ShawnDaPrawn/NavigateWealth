@@ -47,7 +47,8 @@ import { GroupEditor } from './groups/GroupEditor';
 import { logger } from '../../../../../utils/logger';
 
 interface CustomGroupManagerProps {
-  onClose: () => void;
+  /** Shows a back button when the manager is opened from another screen. */
+  onClose?: () => void;
   onSelectGroup?: (group: ClientGroup) => void;
 }
 
@@ -276,12 +277,14 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
 
   return (
     <div className="space-y-6">
-      <div>
-        <Button variant="outline" onClick={onClose}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Selection
-        </Button>
-      </div>
+      {onClose && (
+        <div>
+          <Button variant="outline" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Selection
+          </Button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div>
