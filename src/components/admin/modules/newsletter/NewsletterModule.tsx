@@ -10,7 +10,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { ChevronRight, Eye, MailCheck, Upload, Users } from 'lucide-react';
+import { Eye, MailCheck, Upload, Users } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Skeleton } from '../../../ui/skeleton';
 import { cn } from '../../../ui/utils';
@@ -22,12 +22,13 @@ import { DeliveryHealthCard } from './components/DeliveryHealthCard';
 import { NewsletterDetail } from './components/NewsletterDetail';
 import { NewsletterEditor } from './components/NewsletterEditor';
 import { NewsletterList } from './components/NewsletterList';
-import { ErrorState, StatTile } from './components/shared';
+import { BackToList, ErrorState, StatTile } from './components/shared';
 import { useStudioCampaign, useStudioDashboard } from './hooks/useNewsletterStudio';
 import type { NewsletterCaps } from './types';
 import { formatNumber, formatRate, formatRelative, ratePercent } from './utils/format';
 import { schedulerHealth } from './utils/scheduler';
-import { PageHeader } from '../../layout/page';
+import { PageHeader, useBreadcrumbTrail } from '../../layout/page';
+import { CAMPAIGN_STATUS_FILTERS } from './constants';
 
 const CAMPAIGN_PARAM = 'campaign';
 
@@ -63,43 +64,54 @@ export function NewsletterModule() {
     [setSearchParams],
   );
 
+  // Top-bar breadcrumb after "Newsletters": the open record or upload page,
+  // otherwise the status tab (when it is not "All").
+  const statusId = searchParams.get('status');
+  const statusLabel = CAMPAIGN_STATUS_FILTERS.find(
+    (f) => f.id === statusId && f.id !== 'all',
+  )?.label;
+  useBreadcrumbTrail(
+    campaignParam === 'new'
+      ? [{ label: 'New newsletter' }]
+      : openId
+        ? [{ label: openQuery.data?.title ?? 'Newsletter' }]
+        : statusLabel
+          ? [{ label: statusLabel }]
+          : [],
+  );
+
   const goList = () => setCampaignParam(null);
   const goNew = () => setCampaignParam('new');
   const goOpen = (id: string) => setCampaignParam(id);
 
-  const focused = Boolean(campaignParam);
-
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 p-6">
-      {focused ? (
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1 text-sm text-muted-foreground"
-        >
-          <button type="button" onClick={goList} className="hover:text-foreground">
-            Newsletters
-          </button>
-          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          <span className="truncate font-medium text-foreground">
-            {campaignParam === 'new' ? 'New newsletter' : (openQuery.data?.title ?? 'Newsletter')}
-          </span>
-        </nav>
-      ) : (
-        <Header canCreate={caps.create} onNew={goNew} />
-      )}
-
       {campaignParam === 'new' ? (
-        <NewsletterEditor onCreated={goOpen} onCancel={goList} />
+        <>
+          <BackToList onClick={goList} />
+          <PageHeader
+            title="New newsletter"
+            description="Upload the finished PDF, give it a title and a short introduction, and choose who receives it."
+          />
+          <NewsletterEditor onCreated={goOpen} onCancel={goList} />
+        </>
       ) : openId ? (
         openQuery.data ? (
-          <NewsletterDetail campaign={openQuery.data} caps={caps} onDeleted={goList} />
+          <NewsletterDetail
+            campaign={openQuery.data}
+            caps={caps}
+            onDeleted={goList}
+            onBack={goList}
+          />
         ) : openQuery.isLoading ? (
           <div className="space-y-4" data-testid="newsletter-loading">
+            <BackToList onClick={goList} />
             <Skeleton className="h-14 w-full rounded-xl" />
             <Skeleton className="h-96 w-full rounded-2xl" />
           </div>
         ) : (
           <div className="space-y-4">
+            <BackToList onClick={goList} />
             <ErrorState
               title="This newsletter could not be opened"
               description={
@@ -110,15 +122,11 @@ export function NewsletterModule() {
               onRetry={() => openQuery.refetch()}
               retrying={openQuery.isFetching}
             />
-            <div className="flex justify-center">
-              <Button variant="outline" onClick={goList}>
-                Back to newsletters
-              </Button>
-            </div>
           </div>
         )
       ) : (
         <>
+          <Header canCreate={caps.create} onNew={goNew} />
           <Overview caps={caps} />
           <NewsletterList caps={caps} onOpen={goOpen} onNew={goNew} />
         </>

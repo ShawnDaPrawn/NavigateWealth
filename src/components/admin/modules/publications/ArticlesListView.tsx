@@ -12,14 +12,23 @@
  * @module publications/ArticlesListView
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../ui/dropdown-menu';
+import { ArticleReshareDialog } from './components/ArticleReshareDialog';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent } from '../../../ui/card';
 import {
   PlusCircle,
+  Mail,
+  MoreHorizontal,
   Filter,
-  Edit,
   Eye,
   Copy,
   Archive,
@@ -63,6 +72,7 @@ type SortField = 'updated_at' | 'created_at' | 'title' | 'view_count' | 'publish
 type SortDir = 'asc' | 'desc';
 
 export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListViewProps) {
+  const [resendArticle, setResendArticle] = useState<Article | null>(null);
   // ── Data ─────────────────────────────────────────────────────────────
   const { articles, isLoading, error, refetch } = useArticles();
   const { categories } = useCategories({ activeOnly: true });
@@ -617,48 +627,73 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                       </div>
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ActionButton
-                          icon={Edit}
-                          label="Edit"
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7"
                           onClick={() => onEditArticle(article)}
-                        />
-                        <ActionButton
-                          icon={Copy}
-                          label="Duplicate"
-                          onClick={() => handleDuplicate(article.id)}
-                          disabled={isBusy}
-                        />
-                        <ActionButton
-                          icon={Archive}
-                          label="Archive"
-                          onClick={() => {
-                            confirmDialog.open({
-                              title: 'Archive Article',
-                              description:
-                                article.status === 'published'
-                                  ? `Archive "${article.title}"? It is published and will be taken off the live site.`
-                                  : `Archive "${article.title}"?`,
-                              onConfirm: () =>
-                                archiveArticles({ ids: [article.id], mode: 'single' }),
-                            });
-                          }}
-                          disabled={isBusy}
-                        />
-                        <ActionButton
-                          icon={Trash2}
-                          label="Delete"
-                          variant="danger"
-                          onClick={() => {
-                            confirmDialog.open({
-                              title: 'Delete Article',
-                              description: `Permanently delete "${article.title}"? This cannot be undone.`,
-                              onConfirm: () =>
-                                deleteArticles({ ids: [article.id], mode: 'single' }),
-                            });
-                          }}
-                          disabled={isBusy}
-                        />
+                        >
+                          Edit
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              aria-label={`More actions for ${article.title}`}
+                              disabled={isBusy}
+                            >
+                              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {article.status === 'published' && (
+                              <DropdownMenuItem onSelect={() => setResendArticle(article)}>
+                                <Mail className="h-4 w-4" aria-hidden="true" />
+                                Resend by email…
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onSelect={() => handleDuplicate(article.id)}>
+                              <Copy className="h-4 w-4" aria-hidden="true" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            {article.status !== 'archived' && (
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  confirmDialog.open({
+                                    title: 'Archive article',
+                                    description:
+                                      article.status === 'published'
+                                        ? `Archive "${article.title}"? It is published and will be taken off the live site.`
+                                        : `Archive "${article.title}"?`,
+                                    onConfirm: () =>
+                                      archiveArticles({ ids: [article.id], mode: 'single' }),
+                                  });
+                                }}
+                              >
+                                <Archive className="h-4 w-4" aria-hidden="true" />
+                                Archive…
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-700"
+                              onSelect={() => {
+                                confirmDialog.open({
+                                  title: 'Delete article',
+                                  description: `Permanently delete "${article.title}"? This cannot be undone.`,
+                                  onConfirm: () =>
+                                    deleteArticles({ ids: [article.id], mode: 'single' }),
+                                });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              Delete…
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
@@ -683,6 +718,16 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
             />
           ))}
         </div>
+      )}
+
+      {resendArticle && (
+        <ArticleReshareDialog
+          article={resendArticle}
+          open={Boolean(resendArticle)}
+          onOpenChange={(open) => {
+            if (!open) setResendArticle(null);
+          }}
+        />
       )}
 
       {/* ── Confirm dialog ────────────────────────────────────────── */}
@@ -802,36 +847,6 @@ function SortableHeader({
         <ArrowUpDown className={cn('h-3 w-3', isActive ? 'text-purple-600' : 'text-gray-300')} />
       </button>
     </th>
-  );
-}
-
-function ActionButton({
-  icon: Icon,
-  label,
-  onClick,
-  disabled,
-  variant,
-}: {
-  icon: React.ElementType;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  variant?: 'danger';
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      className={cn(
-        'h-7 w-7 p-0',
-        variant === 'danger' && 'text-red-500 hover:text-red-700 hover:bg-red-50',
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </Button>
   );
 }
 

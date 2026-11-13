@@ -16,7 +16,15 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { PageHeader, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
+import {
+  PageHeader,
+  NavTabsList,
+  NavTabsTrigger,
+  useBreadcrumbTrail,
+  useRecordInUrl,
+  useUrlState,
+  type RecordOpenResult,
+} from '../../layout/page';
 import { Button } from '../../../ui/button';
 
 import { Loader2, PlusCircle, RefreshCw } from 'lucide-react';
@@ -53,6 +61,7 @@ const CareersManager = React.lazy(() =>
 
 // Hooks
 import { usePublicationsInit, useArticles, useCategories } from './hooks';
+import { SUB_PAGE_KEY } from './hooks/useSubPage';
 import { PublicationsAPI } from './api';
 import { useCurrentUserPermissions } from '../personnel';
 
@@ -60,6 +69,42 @@ import { useCurrentUserPermissions } from '../personnel';
 import type { Article, ArticleStatus, ContentTemplate } from './types';
 import type { GenerateArticleResult } from './types';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router';
+
+const TAB_LABEL: Record<string, string> = {
+  analytics: 'Analytics',
+  articles: 'Articles',
+  pipeline: 'Pipeline',
+  calendar: 'Calendar',
+  templates: 'Templates',
+  automation: 'Automation',
+  categories: 'Categories',
+  subscribers: 'Subscribers',
+  team: 'Team',
+  careers: 'Careers',
+  settings: 'Settings',
+};
+
+/** `?article=` names an article id, a new article, or the AI generator page. */
+const NEW_ARTICLE = 'new';
+const GENERATE_ARTICLE = 'generate';
+
+const SETTINGS_SECTION_LABEL: Record<string, string> = {
+  seo: 'SEO defaults',
+  press: 'Press page stats',
+  data: 'Data management',
+  maintenance: 'Maintenance',
+  system: 'System information',
+};
+
+/** Breadcrumb label for a form page inside a tab. */
+function SUB_PAGE_LABEL(page: string): string {
+  const isNew = page.endsWith('-new');
+  if (page.startsWith('template-')) return isNew ? 'New template' : 'Edit template';
+  if (page.startsWith('team-')) return isNew ? 'Add member' : 'Edit member';
+  if (page.startsWith('career-')) return isNew ? 'Add listing' : 'Edit listing';
+  return 'Details';
+}
 
 const PUBLICATION_TABS = [
   'analytics',
@@ -111,6 +156,93 @@ export function PublicationsModule() {
 
   const isLoading = initLoading;
 
+  // ── Open article / AI page in the address ───────────────────────────
+  const openId = showEditor
+    ? (selectedArticle?.id ?? NEW_ARTICLE)
+    : showAIGenerator
+      ? GENERATE_ARTICLE
+      : null;
+  const openFromUrl = useCallback(
+    (id: string): RecordOpenResult => {
+      if (id === NEW_ARTICLE) {
+        setSelectedArticle(null);
+        setShowAIGenerator(false);
+        setShowEditor(true);
+        return 'opened';
+      }
+      if (id === GENERATE_ARTICLE) {
+        setShowEditor(false);
+        setShowAIGenerator(true);
+        return 'opened';
+      }
+      if (articlesLoading) return 'waiting';
+      const match = articles.find((a) => a.id === id);
+      if (!match) {
+        toast.error('That article could not be found. It may have been deleted.');
+        return 'missing';
+      }
+      setSelectedArticle(match);
+      setShowAIGenerator(false);
+      setShowEditor(true);
+      return 'opened';
+    },
+    [articles, articlesLoading],
+  );
+  useRecordInUrl('article', openId, {
+    ready: !articlesLoading,
+    openFromUrl,
+    closeFromUrl: () => {
+      setShowEditor(false);
+      setShowAIGenerator(false);
+      setSelectedArticle(null);
+    },
+  });
+
+  // ── Top-bar breadcrumb after "Publications" (matches the boards) ─────
+  const [searchParamsForCrumbs, setSearchParams] = useSearchParams();
+  const editorPage = searchParamsForCrumbs.get('editorPage');
+  // A form page inside a tab (?page=template-new, team-<id>, career-new …).
+  const subPage = searchParamsForCrumbs.get(SUB_PAGE_KEY);
+  const subPageCrumb = subPage ? SUB_PAGE_LABEL(subPage) : null;
+  const settingsSection = searchParamsForCrumbs.get('section');
+  const closeSettingsSection = () =>
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        params.delete('section');
+        return params;
+      },
+      { replace: true },
+    );
+  const closeSubPage = () =>
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.delete(SUB_PAGE_KEY);
+      return params;
+    });
+  const editingTitle = selectedArticle?.title;
+  useBreadcrumbTrail(
+    showAIGenerator
+      ? [{ label: 'New article', onClick: () => handleBackFromAI() }, { label: 'Generate with AI' }]
+      : showEditor
+        ? [
+            { label: 'Articles', onClick: () => handleBackToListRef.current() },
+            { label: editingTitle || 'New article' },
+            ...(editorPage === 'history' && editingTitle ? [{ label: 'History' }] : []),
+          ]
+        : subPageCrumb
+          ? [
+              { label: TAB_LABEL[activeTab] ?? 'Analytics', onClick: closeSubPage },
+              { label: subPageCrumb },
+            ]
+          : activeTab === 'settings' && settingsSection && settingsSection !== 'general'
+            ? [
+                { label: 'Settings', onClick: closeSettingsSection },
+                { label: SETTINGS_SECTION_LABEL[settingsSection] ?? 'Settings' },
+              ]
+            : [{ label: TAB_LABEL[activeTab] ?? 'Analytics' }],
+  );
+
   // ── Article actions ──────────────────────────────────────────────────
 
   const handleCreateNew = useCallback(() => {
@@ -152,8 +284,10 @@ export function PublicationsModule() {
     setShowTemplatePicker(false);
   }, []);
 
-  const handleCancelAIGenerator = useCallback(() => {
+  /** "‹ New article" from the AI page: back to the template picker. */
+  const handleBackFromAI = useCallback(() => {
     setShowAIGenerator(false);
+    setShowTemplatePicker(true);
   }, []);
 
   const handleEditArticle = useCallback((article: Article) => {
@@ -161,19 +295,40 @@ export function PublicationsModule() {
     setShowEditor(true);
   }, []);
 
+  /** Leaves the editor: one address update drops the article and its tab/page. */
+  const clearEditorParams = useCallback(
+    () =>
+      setSearchParams(
+        (current) => {
+          const params = new URLSearchParams(current);
+          params.delete('article');
+          params.delete('editorTab');
+          params.delete('editorPage');
+          return params;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
+
   const handleBackToList = useCallback(() => {
     setShowEditor(false);
     setSelectedArticle(null);
+    clearEditorParams();
     refetchArticles();
     checkInitialization();
-  }, [refetchArticles, checkInitialization]);
+  }, [refetchArticles, checkInitialization, clearEditorParams]);
+
+  const handleBackToListRef = React.useRef(handleBackToList);
+  handleBackToListRef.current = handleBackToList;
 
   const handleArticleSaved = useCallback(() => {
     setShowEditor(false);
     setSelectedArticle(null);
+    clearEditorParams();
     refetchArticles();
     checkInitialization();
-  }, [refetchArticles, checkInitialization]);
+  }, [refetchArticles, checkInitialization, clearEditorParams]);
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([refetchArticles(), refetchCategories(), checkInitialization()]);
@@ -240,7 +395,7 @@ export function PublicationsModule() {
 
   if (showEditor) {
     return (
-      <div className="p-6">
+      <div className="p-6 lg:p-8">
         <ArticleEditor
           key={
             selectedArticle?.id ||
@@ -256,29 +411,46 @@ export function PublicationsModule() {
     );
   }
 
+  // ── Generate with AI (a page of its own) ─────────────────────────────
+
+  if (showAIGenerator) {
+    return (
+      <div className="p-6 lg:p-8">
+        <AIArticleGenerator
+          isOpen
+          onClose={handleBackFromAI}
+          onGenerated={handleAIGenerated}
+          categories={categories}
+        />
+      </div>
+    );
+  }
+
   // ── Main module shell ────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8">
-      <PageHeader
-        title="Publications"
-        description="Articles, content pipeline, subscribers and website content."
-        actions={
-          <>
-            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-              <RefreshCw
-                className={cn('h-4 w-4', isRefreshing && 'animate-spin')}
-                aria-hidden="true"
-              />
-              Refresh
-            </Button>
-            <Button onClick={handleCreateNew} disabled={!canCreate}>
-              <PlusCircle className="h-4 w-4" aria-hidden="true" />
-              New article
-            </Button>
-          </>
-        }
-      />
+      {!subPage && (
+        <PageHeader
+          title="Publications"
+          description="Articles, content pipeline, subscribers and website content."
+          actions={
+            <>
+              <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw
+                  className={cn('h-4 w-4', isRefreshing && 'animate-spin')}
+                  aria-hidden="true"
+                />
+                Refresh
+              </Button>
+              <Button onClick={handleCreateNew} disabled={!canCreate}>
+                <PlusCircle className="h-4 w-4" aria-hidden="true" />
+                New article
+              </Button>
+            </>
+          }
+        />
+      )}
 
       {/* Tabs */}
       <Tabs
@@ -286,7 +458,7 @@ export function PublicationsModule() {
         onValueChange={(v) => setActiveTab(v as (typeof PUBLICATION_TABS)[number])}
         className="gap-0"
       >
-        <div>
+        <div hidden={Boolean(subPage)}>
           <NavTabsList aria-label="Publications">
             <NavTabsTrigger value="analytics">Analytics</NavTabsTrigger>
             <NavTabsTrigger value="articles" count={stats.total || undefined}>
@@ -401,14 +573,6 @@ export function PublicationsModule() {
         onSelect={handleTemplateSelected}
         onSkip={handleSkipTemplate}
         onOpenAIGenerator={handleOpenAIGenerator}
-      />
-
-      {/* AI Article Generator Dialog */}
-      <AIArticleGenerator
-        isOpen={showAIGenerator}
-        onClose={handleCancelAIGenerator}
-        onGenerated={handleAIGenerated}
-        categories={categories}
       />
     </div>
   );

@@ -8,7 +8,8 @@
  * api is mocked so no real HTTP calls are made on mount.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { fireEvent, render, screen, waitFor, within } from '@/test/utils';
+import { validateLinkForm } from '../linktree/linktreeModel';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('@/utils/api', () => ({
@@ -43,18 +44,43 @@ describe('LinktreeTab', () => {
     expect(container).toBeTruthy();
   });
 
-  it('shows the "Link in Bio" section heading', async () => {
+  it('shows the public page address and the empty state', async () => {
     render(<LinktreeTab />);
     await waitFor(() => {
-      expect(screen.getByText('Link in Bio')).toBeTruthy();
+      expect(screen.getByText('Your public link page:')).toBeTruthy();
+      expect(screen.getByText('No links yet')).toBeTruthy();
     });
+  });
+
+  it('validates the add-link form inline before saving', async () => {
+    render(<LinktreeTab />);
+    await waitFor(() => expect(screen.getByText('No links yet')).toBeTruthy());
+    fireEvent.click(screen.getAllByRole('button', { name: /^add link$/i })[0]);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('URL *'), { target: { value: 'not a url' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: /^add link$/i }));
+    expect(await within(dialog).findByText('Add a title')).toBeTruthy();
+    expect(
+      within(dialog).getByText('Enter a full web address starting with https://'),
+    ).toBeTruthy();
   });
 
   it('shows the Add Link and Copy URL buttons', async () => {
     render(<LinktreeTab />);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /add link/i })).toBeTruthy();
+      expect(screen.getAllByRole('button', { name: /add link/i }).length).toBeGreaterThan(0);
       expect(screen.getByRole('button', { name: /copy url/i })).toBeTruthy();
     });
+  });
+});
+
+describe('validateLinkForm', () => {
+  it('needs a title and a full web address', () => {
+    expect(validateLinkForm('', '')).toEqual({
+      title: 'Add a title',
+      url: 'Enter a full web address starting with https://',
+    });
+    expect(validateLinkForm('Book', 'https://navigatewealth.co/book')).toEqual({});
+    expect(validateLinkForm('Mail', 'mailto:info@example.com')).toEqual({});
   });
 });

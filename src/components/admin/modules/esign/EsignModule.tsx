@@ -23,6 +23,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'react-router';
+import { useBreadcrumbTrail } from '../../layout/page';
 import { ArrowRight, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '../../../../utils/logger';
@@ -886,6 +887,41 @@ export function EsignModule() {
     expiryDays: wizardData.expiryDays,
   });
 
+  // Top-bar breadcrumb after "E-Signature" (matches the boards).
+  const MANAGE_CRUMB: Record<string, string> = {
+    notifications: 'Notifications',
+    webhooks: 'Webhooks',
+    packets: 'Packets',
+    recovery: 'Recovery bin',
+    audit: 'Audit log',
+    retention: 'Retention',
+    branding: 'Branding',
+  };
+  const TAB_CRUMB: Record<string, string> = {
+    envelopes: 'Envelopes',
+    templates: 'Templates',
+    metrics: 'Metrics',
+    manage: 'Manage',
+  };
+  const urlTab = searchParams.get('tab') ?? 'envelopes';
+  const tabCrumb = TAB_CRUMB[urlTab] ?? 'Envelopes';
+  useBreadcrumbTrail(
+    view === 'wizard-upload'
+      ? [{ label: wizardFlowLabel }, { label: 'Documents' }]
+      : view === 'wizard-recipients'
+        ? [{ label: wizardFlowLabel }, { label: 'Recipients' }]
+        : view === 'prepare'
+          ? [{ label: wizardFlowLabel }, { label: 'Fields & send' }]
+          : detailsDialogOpen && selectedEnvelope
+            ? [{ label: 'Envelopes', onClick: closeEnvelope }, { label: selectedEnvelope.title }]
+            : urlTab === 'manage'
+              ? [
+                  { label: 'Manage' },
+                  { label: MANAGE_CRUMB[searchParams.get('tool') ?? ''] ?? 'Notifications' },
+                ]
+              : [{ label: tabCrumb }],
+  );
+
   // ==================== RENDER ====================
 
   /** Audit-log rows can point at envelopes outside the loaded list. */
@@ -961,14 +997,15 @@ export function EsignModule() {
       ) : view === 'wizard-upload' ? (
         <EsignWizardShell
           step="upload"
-          title="Add Documents"
+          title="Add documents"
           description="Upload the PDFs you want signed, and name the envelope your recipients will see."
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
           onExit={requestExitWizard}
+          exitLabel={templateBuilder ? 'Exit' : 'Save draft & exit'}
           footerHint={uploadBlocker}
           primaryAction={{
-            label: 'Next: Add Recipients',
+            label: 'Next: Add recipients',
             onClick: handleUploadNext,
             disabled: !!uploadBlocker,
             icon: ArrowRight,
@@ -989,11 +1026,12 @@ export function EsignModule() {
       ) : view === 'wizard-recipients' ? (
         <EsignWizardShell
           step="recipients"
-          title="Add Recipients"
+          title="Add recipients"
           description="Who needs to sign these documents, and in what order?"
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
           onExit={requestExitWizard}
+          exitLabel={templateBuilder ? 'Exit' : 'Save draft & exit'}
           footerHint={noRecipients ? 'Add at least one recipient to continue.' : undefined}
           backAction={{
             label: 'Back',
@@ -1025,7 +1063,7 @@ export function EsignModule() {
               : undefined
           }
           primaryAction={{
-            label: 'Next: Prepare Fields',
+            label: 'Next: Prepare fields',
             onClick: handleRecipientsNext,
             disabled: noRecipients,
             busy: uploading,
@@ -1113,6 +1151,7 @@ export function EsignModule() {
                   onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
                   onOpenEnvelopeById={handleOpenEnvelopeById}
                   refreshTrigger={refreshTrigger}
+                  viewOnly={!canCreate && !canSend}
                 />
               </div>
             </>

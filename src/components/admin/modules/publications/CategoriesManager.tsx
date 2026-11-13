@@ -6,9 +6,10 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../ui/dialog';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
+import { Card, CardContent } from '../../../ui/card';
 import {
   PlusCircle,
   Edit,
@@ -280,24 +281,27 @@ export function CategoriesManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Article Categories</h2>
+          <h2 className="text-2xl font-bold">Article categories</h2>
           <p className="text-sm text-gray-500">Manage article categories and their display order</p>
         </div>
-        {!showForm && (
-          <Button onClick={handleCreateClick} className="flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" />
-            New Category
-          </Button>
-        )}
+        <Button onClick={handleCreateClick} className="flex items-center gap-2">
+          <PlusCircle className="h-4 w-4" />
+          New category
+        </Button>
       </div>
 
-      {/* Create/Edit Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingCategory ? 'Edit Category' : 'New Category'}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Create/Edit form — a centred dialog */}
+      <Dialog
+        open={showForm}
+        onOpenChange={(open) => {
+          if (!open && !isProcessing) handleCancelForm();
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? 'Edit category' : 'New category'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
             {formError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
@@ -362,19 +366,18 @@ export function CategoriesManager() {
               checked={isActive}
               onChange={setIsActive}
             />
-
-            <div className="flex items-center gap-2 pt-2">
-              <Button onClick={handleSaveForm} disabled={isProcessing}>
-                <Save className="h-4 w-4 mr-2" />
-                {isProcessing ? 'Saving...' : 'Save Category'}
-              </Button>
-              <Button variant="outline" onClick={handleCancelForm} disabled={isProcessing}>
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelForm} disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveForm} disabled={isProcessing}>
+              <Save className="h-4 w-4 mr-2" />
+              {isProcessing ? 'Saving…' : 'Save category'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Categories List with Drag & Drop */}
       <Card>

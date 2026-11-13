@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter, useSearchParams } from 'react-router';
 import type { CampaignListResult, NewsletterCampaign } from '../../types';
 
 const hooks = vi.hoisted(() => ({
@@ -20,6 +22,20 @@ vi.mock('../../hooks/useNewsletterStudio', () => ({
 }));
 
 import { NewsletterList } from '../NewsletterList';
+
+function Location() {
+  const [params] = useSearchParams();
+  return <output data-testid="location">{params.toString()}</output>;
+}
+
+function renderR(ui: ReactElement, path = '/admin?module=newsletter') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      {ui}
+      <Location />
+    </MemoryRouter>,
+  );
+}
 
 const campaign = (overrides: Partial<NewsletterCampaign>): NewsletterCampaign => ({
   id: 'c1',
@@ -83,7 +99,7 @@ describe('NewsletterList', () => {
   it('invites the first upload when there is nothing yet', () => {
     hooks.campaigns.data = result([]);
     const onNew = vi.fn();
-    render(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={onNew} />);
+    renderR(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={onNew} />);
     expect(screen.getByText('No newsletters yet')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /upload a newsletter/i }));
     expect(onNew).toHaveBeenCalled();
@@ -102,7 +118,7 @@ describe('NewsletterList', () => {
     });
     hooks.campaigns.data = result([routine, sent]);
     const onOpen = vi.fn();
-    render(<NewsletterList caps={caps} onOpen={onOpen} onNew={vi.fn()} />);
+    renderR(<NewsletterList caps={caps} onOpen={onOpen} onNew={vi.fn()} />);
 
     expect(screen.getByText('Waiting for your review')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'From the routine' }));
@@ -114,34 +130,51 @@ describe('NewsletterList', () => {
     expect(onOpen).toHaveBeenCalledWith('s1');
   });
 
-  it('filters by status chip', () => {
+  it('filters by status tab and keeps the tab in the address', () => {
     hooks.campaigns.data = result([
       campaign({ id: 'd1', title: 'Draft one' }),
       campaign({ id: 'f1', title: 'Sent one', status: 'finished' }),
     ]);
-    render(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
-    fireEvent.click(screen.getByRole('tab', { name: /^Sent/ }));
+    renderR(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /^Sent/ }));
     expect(screen.queryByText('Draft one')).toBeNull();
     expect(screen.getByText('Sent one')).toBeTruthy();
+    expect(screen.getByTestId('location').textContent).toContain('status=finished');
   });
 
-  it('confirms before deleting and only offers delete on deletable statuses', () => {
+  it('opens on the status tab named in the address, with counts on each tab', () => {
+    hooks.campaigns.data = result([
+      campaign({ id: 'd1', title: 'Draft one' }),
+      campaign({ id: 'f1', title: 'Sent one', status: 'finished' }),
+    ]);
+    renderR(
+      <NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />,
+      '/admin?module=newsletter&status=draft',
+    );
+    expect(screen.getByRole('tab', { name: /^Drafts\s*1/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByText('Draft one')).toBeTruthy();
+    expect(screen.queryByText('Sent one')).toBeNull();
+  });
+
+  it('confirms before deleting and only offers delete on deletable statuses', async () => {
     hooks.campaigns.data = result([
       campaign({ id: 'd1', title: 'Draft one' }),
       campaign({ id: 'q1', title: 'Sending one', status: 'sending', recipientCount: 10 }),
     ]);
-    render(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
+    renderR(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'Delete Sending one' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Delete Draft one' }));
     expect(screen.getByText(/Delete “Draft one”\?/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(hooks.remove.mutate).toHaveBeenCalledWith('d1');
+    await waitFor(() => expect(hooks.remove.mutate).toHaveBeenCalledWith('d1'));
   });
 
   it('shows an error state with retry', () => {
     hooks.campaigns.isError = true;
     hooks.campaigns.error = new Error('boom');
-    render(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
+    renderR(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
     expect(screen.getByText('The newsletters could not be loaded')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(hooks.campaigns.refetch).toHaveBeenCalled();

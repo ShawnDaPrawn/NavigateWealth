@@ -18,14 +18,6 @@ import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Skeleton } from '../../../../ui/skeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -38,13 +30,12 @@ import {
 import {
   Briefcase,
   Plus,
-  Pencil,
   Trash2,
   Loader2,
   Save,
   X,
+  ChevronLeft,
   Eye,
-  EyeOff,
   MapPin,
   Clock,
   Calendar,
@@ -52,6 +43,9 @@ import {
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';
+import { ErrorState, FormErrorBanner, PageHeader } from '../../../layout/page';
+import { Switch } from '../../../../ui/switch';
+import { useSubPage } from '../hooks/useSubPage';
 
 // ============================================================================
 // TYPES
@@ -154,7 +148,10 @@ export function CareersManager() {
   const [saving, setSaving] = useState(false);
 
   // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // The form is a page with its own address: ?page=career-new / career-<id>.
+  const [pageId, setPageId] = useSubPage('career');
+  const dialogOpen = pageId !== null;
+  const [submitted, setSubmitted] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM });
   const [requirementInput, setRequirementInput] = useState('');
@@ -211,10 +208,11 @@ export function CareersManager() {
     setForm({ ...EMPTY_FORM, sortOrder: listings.length + 1 });
     setRequirementInput('');
     setBenefitInput('');
-    setDialogOpen(true);
+    setSubmitted(false);
+    setPageId('new');
   };
 
-  const openEdit = (listing: JobListing) => {
+  const fillEdit = (listing: JobListing) => {
     setEditingId(listing.id);
     setForm({
       title: listing.title,
@@ -230,13 +228,26 @@ export function CareersManager() {
     });
     setRequirementInput('');
     setBenefitInput('');
-    setDialogOpen(true);
+    setSubmitted(false);
   };
+
+  const openEdit = (listing: Parameters<typeof fillEdit>[0]) => {
+    fillEdit(listing);
+    setPageId(listing.id);
+  };
+
+  // A reload or pasted link names a record: fill the form once the list is in.
+  useEffect(() => {
+    if (!pageId || pageId === 'new' || editingId === pageId) return;
+    const match = listings.find((x) => x.id === pageId);
+    if (match) fillEdit(match);
+  }, [pageId, listings, editingId]);
 
   // ── Save ────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.title.trim() || !form.category) {
-      toast.error('Title and category are required');
+    setSubmitted(true);
+    if (!form.title.trim() || !String(form.category).trim()) {
+      document.getElementById(!form.title.trim() ? 'jl-title' : 'jl-category')?.focus();
       return;
     }
     setSaving(true);
@@ -254,7 +265,7 @@ export function CareersManager() {
         });
         toast.success(`"${form.title}" listing created`);
       }
-      setDialogOpen(false);
+      setPageId(null);
       loadListings();
     } catch (err) {
       console.error('Save failed:', err);
@@ -302,215 +313,76 @@ export function CareersManager() {
     count: listings.filter((l) => l.category === c.value && l.active).length,
   }));
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Career Listings</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage job listings displayed on the public Careers page.
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate} className="bg-purple-600 hover:bg-purple-700">
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add Listing
-        </Button>
-      </div>
+  // ── Create / edit form — a page of its own ──────────────────────────
+  const nameError = submitted && !form.title.trim() ? 'Add a job title' : null;
+  const secondError = submitted && !String(form.category).trim() ? 'Choose a department' : null;
+  const formErrorCount = (nameError ? 1 : 0) + (secondError ? 1 : 0);
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Briefcase className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{listings.length}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <Eye className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeCount}</p>
-                <p className="text-[10px] text-muted-foreground">Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {categoryCounts.map((c) => (
-          <Card key={c.value}>
-            <CardContent className="pt-4 pb-4">
-              <div className="text-center">
-                <p className="text-xl font-bold">{c.count}</p>
-                <p className="text-[10px] text-muted-foreground">{c.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+  if (pageId !== null && pageId !== 'new' && !loading && !listings.some((x) => x.id === pageId)) {
+    return (
+      <ErrorState
+        title="Not found"
+        description="It may have been removed."
+        onRetry={() => setPageId(null)}
+        retryLabel="Back to careers"
+      />
+    );
+  }
 
-      {/* Listings */}
-      {loading ? (
-        <Card>
-          <CardContent className="pt-4 pb-4 space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-56" />
-                  <Skeleton className="h-3 w-36" />
-                </div>
-                <Skeleton className="h-8 w-20" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : listings.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Briefcase className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="font-medium text-sm">No job listings yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Add job listings to display on the public Careers page.
-            </p>
-            <Button
-              size="sm"
-              className="mt-4 bg-purple-600 hover:bg-purple-700"
-              onClick={openCreate}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Add First Listing
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <div className="divide-y">
-            {listings.map((listing) => {
-              const catCfg = getCategoryConfig(listing.category);
-              return (
-                <div
-                  key={listing.id}
-                  className={`flex items-center gap-4 p-4 transition-colors ${!listing.active ? 'opacity-50 bg-muted/20' : 'hover:bg-muted/10'}`}
-                >
-                  {/* Icon */}
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex-shrink-0 flex items-center justify-center">
-                    <Briefcase className="h-4 w-4 text-purple-600" />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm truncate">{listing.title}</p>
-                      <Badge className={`text-[10px] px-1.5 py-0 h-4 ${catCfg.color}`}>
-                        {catCfg.label}
-                      </Badge>
-                      {!listing.active && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] border-gray-300 text-gray-500"
-                        >
-                          Hidden
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {listing.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {listing.type}
-                      </span>
-                      {listing.closingDate && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" /> Closes {listing.closingDate}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Sort */}
-                  <span className="text-[10px] text-muted-foreground w-6 text-center">
-                    #{listing.sortOrder}
-                  </span>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleToggleActive(listing)}
-                      title={listing.active ? 'Hide from careers page' : 'Show on careers page'}
-                    >
-                      {listing.active ? (
-                        <Eye className="h-3.5 w-3.5 text-green-600" />
-                      ) : (
-                        <EyeOff className="h-3.5 w-3.5 text-gray-400" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={() => openEdit(listing)}
-                    >
-                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setDeleteTarget(listing)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="border-t px-4 py-2.5 text-xs text-muted-foreground bg-muted/20">
-            {listings.length} listing(s) — {activeCount} visible on the public Careers page
-          </div>
-        </Card>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* CREATE / EDIT DIALOG                                             */}
-      {/* ══════════════════════════════════════════════════════════════════ */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Job Listing' : 'Add Job Listing'}</DialogTitle>
-            <DialogDescription>
-              {editingId
-                ? 'Update this job listing.'
-                : 'Create a new job listing for the public Careers page.'}
-            </DialogDescription>
-          </DialogHeader>
-
+  if (dialogOpen) {
+    return (
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => setPageId(null)}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Careers
+        </button>
+        <PageHeader
+          title={editingId ? 'Edit job listing' : 'Add job listing'}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setPageId(null)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {editingId ? 'Save changes' : 'Create listing'}
+              </Button>
+            </>
+          }
+        />
+        <FormErrorBanner
+          count={formErrorCount}
+          action={editingId ? 'save the changes' : 'create listing'}
+        />
+        <div className="max-w-3xl rounded-xl border border-nw-line bg-white p-6">
           <div className="space-y-4 py-2">
             {/* Title */}
             <div className="space-y-1.5">
               <Label htmlFor="jl-title">
-                Job Title <span className="text-red-500">*</span>
+                Job title <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="jl-title"
+                aria-invalid={Boolean(nameError)}
+                aria-describedby={nameError ? 'jl-title-error' : undefined}
+                className={nameError ? 'border-red-500' : undefined}
                 value={form.title}
                 onChange={(e) => updateForm('title', e.target.value)}
                 placeholder="e.g. Senior Wealth Advisor"
               />
+              {nameError && (
+                <p id="jl-title-error" className="text-xs text-red-600">
+                  {nameError}
+                </p>
+              )}
             </div>
 
             {/* Category & Type */}
@@ -521,9 +393,11 @@ export function CareersManager() {
                 </Label>
                 <select
                   id="jl-category"
+                  aria-invalid={Boolean(secondError)}
+                  aria-describedby={secondError ? 'jl-category-error' : undefined}
                   value={form.category}
                   onChange={(e) => updateForm('category', e.target.value)}
-                  className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  className={`w-full h-9 px-3 rounded-md border bg-background text-sm ${secondError ? 'border-red-500' : 'border-input'}`}
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.value} value={c.value}>
@@ -531,6 +405,11 @@ export function CareersManager() {
                     </option>
                   ))}
                 </select>
+                {secondError && (
+                  <p id="jl-category-error" className="text-xs text-red-600">
+                    {secondError}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="jl-type">Employment Type</Label>
@@ -704,26 +583,194 @@ export function CareersManager() {
               </div>
             </div>
           </div>
+        </div>
+        {nameError || secondError ? (
+          <p className="sr-only" role="alert">
+            {[nameError, secondError].filter(Boolean).join('. ')}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold">Career Listings</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage job listings displayed on the public Careers page.
+          </p>
+        </div>
+        <Button size="sm" onClick={openCreate} className="bg-purple-600 hover:bg-purple-700">
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add Listing
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <Briefcase className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{listings.length}</p>
+                <p className="text-[10px] text-muted-foreground">Total</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg">
+                <Eye className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{activeCount}</p>
+                <p className="text-[10px] text-muted-foreground">Active</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {categoryCounts.map((c) => (
+          <Card key={c.value}>
+            <CardContent className="pt-4 pb-4">
+              <div className="text-center">
+                <p className="text-xl font-bold">{c.count}</p>
+                <p className="text-[10px] text-muted-foreground">{c.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Listings */}
+      {loading ? (
+        <Card>
+          <CardContent className="pt-4 pb-4 space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-56" />
+                  <Skeleton className="h-3 w-36" />
+                </div>
+                <Skeleton className="h-8 w-20" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : listings.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <Briefcase className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="font-medium text-sm">No job listings yet</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add job listings to display on the public Careers page.
+            </p>
             <Button
-              onClick={handleSave}
-              disabled={saving || !form.title.trim() || !form.category}
-              className="bg-purple-600 hover:bg-purple-700"
+              size="sm"
+              className="mt-4 bg-purple-600 hover:bg-purple-700"
+              onClick={openCreate}
             >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1.5" />
-              )}
-              {editingId ? 'Save Changes' : 'Create Listing'}
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Add First Listing
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <div className="divide-y">
+            {listings.map((listing) => {
+              const catCfg = getCategoryConfig(listing.category);
+              return (
+                <div
+                  key={listing.id}
+                  className={`flex items-center gap-4 p-4 transition-colors ${!listing.active ? 'opacity-50 bg-muted/20' : 'hover:bg-muted/10'}`}
+                >
+                  {/* Icon */}
+                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex-shrink-0 flex items-center justify-center">
+                    <Briefcase className="h-4 w-4 text-purple-600" />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm truncate">{listing.title}</p>
+                      <Badge className={`text-[10px] px-1.5 py-0 h-4 ${catCfg.color}`}>
+                        {catCfg.label}
+                      </Badge>
+                      {!listing.active && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-gray-300 text-gray-500"
+                        >
+                          Hidden
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {listing.location}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {listing.type}
+                      </span>
+                      {listing.closingDate && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Closes {listing.closingDate}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sort */}
+                  <span className="text-[10px] text-muted-foreground w-6 text-center">
+                    #{listing.sortOrder}
+                  </span>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    <Switch
+                      checked={listing.active}
+                      onCheckedChange={() => handleToggleActive(listing)}
+                      aria-label={`Show ${listing.title} on the careers page`}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={() => openEdit(listing)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-red-600 hover:text-red-700"
+                      onClick={() => setDeleteTarget(listing)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t px-4 py-2.5 text-xs text-muted-foreground bg-muted/20">
+            {listings.length} listing(s) — {activeCount} visible on the public Careers page
+          </div>
+        </Card>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/* CREATE / EDIT DIALOG                                             */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
 
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* DELETE CONFIRMATION                                              */}

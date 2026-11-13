@@ -85,6 +85,23 @@ describe('EsignDashboard', () => {
     expect(props.onBulkSend).toHaveBeenCalled();
   });
 
+  it('shows "View only" instead of actions for a role that can only look', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin?module=esign']}>
+        <EsignDashboard
+          onCreateNew={vi.fn()}
+          onViewEnvelope={vi.fn()}
+          onRefresh={vi.fn()}
+          onOpenEnvelopeById={vi.fn()}
+          manageAccess={allTools}
+          viewOnly
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('View only')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'New envelope' })).toBeNull();
+  });
+
   it('hides bulk send when the person cannot send', () => {
     renderDashboard();
     expect(screen.queryByRole('button', { name: 'Bulk send from template' })).toBeNull();

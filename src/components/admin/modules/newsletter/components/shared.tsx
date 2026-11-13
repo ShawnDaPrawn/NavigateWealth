@@ -4,7 +4,7 @@
  * Keeping them here keeps every studio view visually consistent.
  */
 import type { ComponentType, ReactNode } from 'react';
-import { AlertTriangle, type LucideProps, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, type LucideProps, RefreshCw } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { cn } from '../../../../ui/utils';
@@ -250,53 +250,6 @@ export function SectionHeader({
 
 // ── Filter chips ─────────────────────────────────────────────────────────────
 
-export function FilterChips<T extends string>({
-  options,
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  options: { id: T; label: string; count?: number }[];
-  value: T;
-  onChange: (id: T) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={ariaLabel}>
-      {options.map((option) => {
-        const active = option.id === value;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(option.id)}
-            className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
-              active
-                ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
-                : 'border-border bg-background text-muted-foreground hover:border-purple-300 hover:text-foreground',
-            )}
-          >
-            {option.label}
-            {typeof option.count === 'number' ? (
-              <span
-                className={cn(
-                  'rounded-full px-1.5 text-[11px] tabular-nums',
-                  active ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground',
-                )}
-              >
-                {option.count}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ── Notices ──────────────────────────────────────────────────────────────────
 
 const NOTICE_TONE: Record<'info' | 'warn' | 'error' | 'success' | 'progress', string> = {
@@ -359,5 +312,19 @@ export function DetailRow({
       <dt className="shrink-0 text-muted-foreground">{label}</dt>
       <dd className="min-w-0 text-right font-medium">{children}</dd>
     </div>
+  );
+}
+
+/** "‹ Back to newsletters" above a record or form page. */
+export function BackToList({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+    >
+      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+      Back to newsletters
+    </button>
   );
 }

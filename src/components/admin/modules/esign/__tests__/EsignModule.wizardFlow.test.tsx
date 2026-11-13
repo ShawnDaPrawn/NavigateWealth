@@ -317,7 +317,7 @@ const DRAFT_ENVELOPE = {
 async function openTemplate(testId: string) {
   render(<EsignModule />, { wrapper: MemoryRouter });
   fireEvent.click(screen.getByTestId(testId));
-  await waitFor(() => screen.getByText('Add Recipients'));
+  await waitFor(() => screen.getByText('Add recipients'));
   // RecipientsManager is React.lazy — the heading paints before the child.
   await waitFor(() => screen.getByTestId('recipients-manager'));
 }
@@ -358,7 +358,7 @@ describe('EsignModule wizard flow', () => {
     render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('use-tpl-no-docs'));
     await waitFor(() => screen.getByTestId('upload-step'));
-    expect(screen.queryByText('Add Recipients')).toBeNull();
+    expect(screen.queryByText('Add recipients')).toBeNull();
   });
 
   it('shows the express banner and button for a template with a complete field layout', async () => {
@@ -380,7 +380,7 @@ describe('EsignModule wizard flow', () => {
     expect(screen.getByText('Add at least one recipient to continue.')).toBeTruthy();
 
     fireEvent.click(next);
-    expect(screen.getByText('Add Recipients')).toBeTruthy();
+    expect(screen.getByText('Add recipients')).toBeTruthy();
     expect(spies.materialiseTemplateDraft).not.toHaveBeenCalled();
   });
 
@@ -458,6 +458,15 @@ describe('EsignModule wizard flow', () => {
     expect(toast.success).toHaveBeenCalledWith('Document sent for signature!');
   });
 
+  it('shows the three-step stepper and a "Save draft & exit" escape on every wizard step', async () => {
+    await openTemplate('use-tpl-ready');
+    const stepper = screen.getByTestId('esign-wizard-stepper');
+    expect(stepper.textContent).toContain('Documents');
+    expect(stepper.textContent).toContain('Recipients');
+    expect(stepper.textContent).toContain('Fields & send');
+    expect(screen.getByRole('button', { name: 'Save draft & exit' })).toBeTruthy();
+  });
+
   it('Exit offers to keep the work, and saving it materialises a resumable draft', async () => {
     await openTemplate('use-tpl-ready');
 
@@ -488,7 +497,7 @@ describe('EsignModule wizard flow', () => {
       expect(toast.error).toHaveBeenCalledWith('network died');
     });
     // Still on the recipients step, with everything intact.
-    expect(screen.getByText('Add Recipients')).toBeTruthy();
+    expect(screen.getByText('Add recipients')).toBeTruthy();
     expect(screen.queryByTestId('esign-dashboard')).toBeNull();
   });
 
@@ -496,7 +505,7 @@ describe('EsignModule wizard flow', () => {
     await openTemplate('use-tpl-ready');
     fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
     await waitFor(() => screen.getByTestId('esign-dashboard'));
-    expect(screen.queryByText('Add Recipients')).toBeNull();
+    expect(screen.queryByText('Add recipients')).toBeNull();
   });
 
   it('resume rebuilds signers from draft_signers and opens the studio on a fresh document URL', async () => {

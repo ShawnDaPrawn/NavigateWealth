@@ -18,20 +18,31 @@ import { useStudioRecipients } from '../../hooks/useNewsletterStudio';
 import type { NewsletterCampaign } from '../../types';
 import { formatDateTime, formatNumber, formatRelative } from '../../utils/format';
 import { DeliveryStatusBadge } from '../StatusBadge';
-import { EmptyState, FilterChips, SectionHeader } from '../shared';
+import { EmptyState, SectionHeader } from '../shared';
+import { Tabs } from '../../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../../layout/page';
 
 const PAGE_SIZE = 50;
 
+const RECIPIENT_STATUSES = [
+  'all',
+  'sent',
+  'pending',
+  'failed_retryable',
+  'failed_terminal',
+] as const;
+type RecipientStatus = (typeof RECIPIENT_STATUSES)[number];
+
 export function RecipientsPanel({ campaign }: { campaign: NewsletterCampaign }) {
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useUrlState('recipients', 'all', RECIPIENT_STATUSES);
   const query = useStudioRecipients(campaign.id, { page, status });
 
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / (query.data?.limit ?? PAGE_SIZE)));
 
   // Counts track the campaign record, which polls while delivery is live.
-  const chips = useMemo(
+  const chips = useMemo<{ id: RecipientStatus; label: string; count?: number }[]>(
     () => [
       { id: 'all', label: 'All', count: campaign.recipientCount },
       { id: 'sent', label: 'Delivered', count: campaign.sentCount },
@@ -52,15 +63,27 @@ export function RecipientsPanel({ campaign }: { campaign: NewsletterCampaign }) 
           title="Recipients"
           description="Delivery status for every address in the frozen audience"
         />
-        <FilterChips
-          ariaLabel="Filter recipients by delivery status"
-          options={chips}
+        <Tabs
           value={status}
-          onChange={(next) => {
-            setStatus(next);
+          onValueChange={(next) => {
+            setStatus(next as RecipientStatus);
             setPage(1);
           }}
-        />
+          className="pt-2"
+        >
+          <SegmentedList aria-label="Filter recipients by delivery status">
+            {chips.map((chip) => (
+              <SegmentedTrigger key={chip.id} value={chip.id}>
+                {chip.label}
+                {typeof chip.count === 'number' ? (
+                  <span className="ml-1.5 tabular-nums text-nw-text-3">
+                    {formatNumber(chip.count)}
+                  </span>
+                ) : null}
+              </SegmentedTrigger>
+            ))}
+          </SegmentedList>
+        </Tabs>
       </CardHeader>
       <CardContent className="p-0">
         {query.isLoading ? (

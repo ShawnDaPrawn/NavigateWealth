@@ -9,11 +9,11 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
-  Bot,
   CalendarClock,
   CheckCircle2,
   Eye,
   FlaskConical,
+  MoreHorizontal,
   Globe,
   Loader2,
   MailCheck,
@@ -36,6 +36,13 @@ import {
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
 import { Button } from '../../../../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
+import { Notice as SharedNotice, PageHeader, useConfirm } from '../../../layout/page';
 import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -68,7 +75,7 @@ import { PdfDropzone } from './PdfDropzone';
 import { CampaignStatusBadge } from './StatusBadge';
 import { ScheduleDialog, SendNowDialog, TestSendDialog } from './campaign-detail/CampaignDialogs';
 import { RecipientsPanel } from './campaign-detail/RecipientsPanel';
-import { DetailRow, Notice, SectionHeader, StatTile } from './shared';
+import { BackToList, DetailRow, Notice, SectionHeader, StatTile } from './shared';
 
 const EDITABLE: NewsletterCampaign['status'][] = ['draft', 'scheduled'];
 const IN_FLIGHT: NewsletterCampaign['status'][] = ['queued', 'sending'];
@@ -77,47 +84,95 @@ export function NewsletterDetail({
   campaign,
   caps,
   onDeleted,
+  onBack,
 }: {
   campaign: NewsletterCampaign;
   caps: NewsletterCaps;
   onDeleted: () => void;
+  /** Back to the list ("‹ Back to newsletters"). */
+  onBack?: () => void;
 }) {
   const editable = EDITABLE.includes(campaign.status);
   const inFlight = IN_FLIGHT.includes(campaign.status);
   const terminal = campaign.status === 'finished' || campaign.status === 'cancelled';
+  const remove = useDeleteCampaign();
+  const { confirm, confirmDialog } = useConfirm();
+  const canDelete = caps.delete && isCampaignDeletable(campaign);
+
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: `Delete “${campaign.title}”?`,
+      description:
+        'This removes the newsletter, its PDF and its delivery history. Emails already delivered are unaffected. This cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Keep it',
+      destructive: true,
+    });
+    if (!ok) return;
+    remove.mutate(campaign.id, { onSuccess: onDeleted });
+  };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="space-y-6">
-        {campaign.source === 'routine' && campaign.status === 'draft' ? (
-          <Notice tone="warn" icon={Bot} title="Handed over by the monthly routine">
-            Check the PDF, the title and the description, then send it or schedule it. Nothing goes
-            out until you do.
-          </Notice>
-        ) : null}
+    <div className="space-y-6">
+      {onBack ? <BackToList onClick={onBack} /> : null}
+      <PageHeader
+        title={campaign.title}
+        description={<CampaignStatusBadge status={campaign.status} />}
+        actions={
+          canDelete ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More actions">
+                  <MoreHorizontal className="h-4 w-4" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-700"
+                  disabled={remove.isPending}
+                  onSelect={() => void handleDelete()}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden /> Delete newsletter…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : undefined
+        }
+      />
+      {confirmDialog}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-6">
+          {campaign.source === 'routine' && campaign.status === 'draft' ? (
+            <SharedNotice kind="attention" title="Handed over by the monthly routine">
+              — check the PDF, the title and the description, then send it or schedule it. Nothing
+              goes out until you do.
+            </SharedNotice>
+          ) : null}
 
-        {campaign.status === 'paused' ? (
-          <Notice tone="error" icon={AlertTriangle} title="Delivery stopped">
-            <span className="break-words">
-              {campaign.lastError ?? 'The email provider rejected the sender.'}
-            </span>
-          </Notice>
-        ) : null}
+          {campaign.status === 'paused' ? (
+            <SharedNotice kind="error" title="Delivery stopped">
+              <span className="break-words">
+                — {campaign.lastError ?? 'the email provider rejected the sender.'}
+              </span>
+            </SharedNotice>
+          ) : null}
 
-        {editable ? (
-          <DraftEditor campaign={campaign} caps={caps} />
-        ) : (
-          <SentSummary campaign={campaign} />
-        )}
+          {inFlight || terminal || campaign.status === 'paused' ? (
+            <StatsCard campaign={campaign} />
+          ) : null}
 
-        {campaign.recipientCount > 0 ? <RecipientsPanel campaign={campaign} /> : null}
-      </div>
+          {editable ? (
+            <DraftEditor campaign={campaign} caps={caps} />
+          ) : (
+            <SentSummary campaign={campaign} />
+          )}
 
-      <div className="space-y-6">
-        <ActionsCard campaign={campaign} caps={caps} onDeleted={onDeleted} />
-        {inFlight || terminal || campaign.status === 'paused' ? (
-          <StatsCard campaign={campaign} />
-        ) : null}
+          {campaign.recipientCount > 0 ? <RecipientsPanel campaign={campaign} /> : null}
+        </div>
+
+        <div className="space-y-6">
+          <ActionsCard campaign={campaign} caps={caps} />
+        </div>
       </div>
     </div>
   );
@@ -293,19 +348,10 @@ function SentSummary({ campaign }: { campaign: NewsletterCampaign }) {
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
-function ActionsCard({
-  campaign,
-  caps,
-  onDeleted,
-}: {
-  campaign: NewsletterCampaign;
-  caps: NewsletterCaps;
-  onDeleted: () => void;
-}) {
+function ActionsCard({ campaign, caps }: { campaign: NewsletterCampaign; caps: NewsletterCaps }) {
   const [testOpen, setTestOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 
   const lists = useStudioLists();
@@ -315,7 +361,6 @@ function ActionsCard({
   const sendNow = useSendCampaignNow();
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
-  const remove = useDeleteCampaign();
   const publish = usePublishToWebsite();
   const unpublish = useUnpublishFromWebsite();
 
@@ -327,105 +372,159 @@ function ActionsCard({
   const schedulerLive = schedulerHealth(dashboard.data?.processor).level === 'live';
 
   return (
-    <Card className="gap-0">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
+    <>
+      <Card className="gap-0">
+        <CardHeader className="pb-3">
           <SectionHeader icon={Send} title="Send" />
-          <CampaignStatusBadge status={campaign.status} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {campaign.status === 'scheduled' ? (
-          <Notice tone="info" icon={CalendarClock} title="Scheduled">
-            Sends {formatDateTime(campaign.scheduledAt)}. Edit the details until then, or cancel.
-          </Notice>
-        ) : null}
-        {editable && !hasPdf ? (
-          <Notice tone="warn" icon={AlertTriangle} title="Upload the PDF first">
-            The newsletter cannot be tested, scheduled or sent until its PDF is uploaded.
-          </Notice>
-        ) : null}
-        {inFlight ? (
-          <div className="space-y-2">
-            <CampaignProgressLine campaign={campaign} />
-            <p className="text-xs text-muted-foreground">
-              Delivery runs in the background in small batches. Last progress{' '}
-              {formatRelative(campaign.lastProgressAt)}.
-            </p>
-          </div>
-        ) : null}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {campaign.status === 'scheduled' ? (
+            <Notice tone="info" icon={CalendarClock} title="Scheduled">
+              Sends {formatDateTime(campaign.scheduledAt)}. Edit the details until then, or cancel.
+            </Notice>
+          ) : null}
+          {editable && !hasPdf ? (
+            <Notice tone="warn" icon={AlertTriangle} title="Upload the PDF first">
+              The newsletter cannot be tested, scheduled or sent until its PDF is uploaded.
+            </Notice>
+          ) : null}
+          {inFlight ? (
+            <div className="space-y-2">
+              <CampaignProgressLine campaign={campaign} />
+              <p className="text-xs text-muted-foreground">
+                Delivery runs in the background in small batches. Last progress{' '}
+                {formatRelative(campaign.lastProgressAt)}.
+              </p>
+            </div>
+          ) : null}
 
-        {caps.send && editable ? (
-          <div className="grid gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setTestOpen(true)}
-              disabled={!hasPdf || sendTest.isPending}
-            >
-              <FlaskConical className="h-4 w-4" aria-hidden /> Send myself a test
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setScheduleOpen(true)}
-              disabled={!hasPdf || schedule.isPending}
-            >
-              <CalendarClock className="h-4 w-4" aria-hidden />
-              {campaign.status === 'scheduled' ? 'Change the time' : 'Schedule…'}
-            </Button>
-            <Button
-              onClick={() => setSendOpen(true)}
-              disabled={!hasPdf || !hasAudience || sendNow.isPending}
-            >
-              {sendNow.isPending ? (
+          {caps.send && editable ? (
+            <div className="grid gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setTestOpen(true)}
+                disabled={!hasPdf || sendTest.isPending}
+              >
+                <FlaskConical className="h-4 w-4" aria-hidden /> Send myself a test
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setScheduleOpen(true)}
+                disabled={!hasPdf || schedule.isPending}
+              >
+                <CalendarClock className="h-4 w-4" aria-hidden />
+                {campaign.status === 'scheduled' ? 'Change the time' : 'Schedule…'}
+              </Button>
+              <Button
+                onClick={() => setSendOpen(true)}
+                disabled={!hasPdf || !hasAudience || sendNow.isPending}
+              >
+                {sendNow.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Send className="h-4 w-4" aria-hidden />
+                )}
+                Send now
+              </Button>
+              {!hasAudience ? (
+                <p className="text-xs text-muted-foreground">
+                  No audience chosen, so there is nobody to email. You can still publish it on the
+                  website below.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {caps.send && campaign.status === 'paused' ? (
+            <Button onClick={() => resume.mutate(campaign.id)} disabled={resume.isPending}>
+              {resume.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
-                <Send className="h-4 w-4" aria-hidden />
+                <RotateCcw className="h-4 w-4" aria-hidden />
               )}
-              Send now
+              Retry delivery
             </Button>
-            {!hasAudience ? (
-              <p className="text-xs text-muted-foreground">
-                No audience chosen, so there is nobody to email. You can still publish it on the
-                website below.
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
 
-        {caps.send && campaign.status === 'paused' ? (
-          <Button onClick={() => resume.mutate(campaign.id)} disabled={resume.isPending}>
-            {resume.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <RotateCcw className="h-4 w-4" aria-hidden />
-            )}
-            Retry delivery
-          </Button>
-        ) : null}
+          {caps.send &&
+          (inFlight || campaign.status === 'scheduled' || campaign.status === 'paused') ? (
+            <Button
+              variant="outline"
+              className="w-full text-rose-700 hover:text-rose-800 dark:text-rose-300"
+              onClick={() => setCancelOpen(true)}
+              disabled={cancel.isPending}
+            >
+              <Square className="h-4 w-4" aria-hidden />
+              {inFlight ? 'Stop sending' : 'Cancel'}
+            </Button>
+          ) : null}
 
-        {caps.send &&
-        (inFlight || campaign.status === 'scheduled' || campaign.status === 'paused') ? (
-          <Button
-            variant="outline"
-            className="w-full text-rose-700 hover:text-rose-800 dark:text-rose-300"
-            onClick={() => setCancelOpen(true)}
-            disabled={cancel.isPending}
-          >
-            <Square className="h-4 w-4" aria-hidden />
-            {inFlight ? 'Stop sending' : 'Cancel'}
-          </Button>
-        ) : null}
+          {campaign.status === 'finished' ? (
+            <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
+              <CheckCircle2 className="h-4 w-4" aria-hidden /> Delivery finished{' '}
+              {formatRelative(campaign.completedAt)}.
+            </p>
+          ) : null}
+        </CardContent>
 
-        {campaign.status === 'finished' ? (
-          <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="h-4 w-4" aria-hidden /> Delivery finished{' '}
-            {formatRelative(campaign.completedAt)}.
-          </p>
-        ) : null}
+        <TestSendDialog
+          open={testOpen}
+          onOpenChange={setTestOpen}
+          pending={sendTest.isPending}
+          onSend={(emails) => sendTest.mutateAsync({ id: campaign.id, emails })}
+        />
+        <ScheduleDialog
+          open={scheduleOpen}
+          onOpenChange={setScheduleOpen}
+          schedulerLive={schedulerLive}
+          pending={schedule.isPending}
+          current={campaign.scheduledAt}
+          onSchedule={(iso) => schedule.mutateAsync({ id: campaign.id, scheduledAt: iso })}
+        />
+        <SendNowDialog
+          open={sendOpen}
+          onOpenChange={setSendOpen}
+          campaign={campaign}
+          lists={lists.data ?? []}
+          pending={sendNow.isPending}
+          onConfirm={() => {
+            sendNow.mutate(campaign.id);
+            setSendOpen(false);
+          }}
+        />
 
-        {caps.send ? (
-          <div className="space-y-2 border-t border-border/60 pt-3">
+        <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {inFlight ? 'Stop sending?' : 'Cancel this newsletter?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {inFlight
+                  ? 'Recipients already delivered keep their email; everyone else is skipped. This cannot be resumed.'
+                  : 'The newsletter will not be sent. You can delete it afterwards.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep going</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  cancel.mutate(campaign.id);
+                  setCancelOpen(false);
+                }}
+              >
+                {inFlight ? 'Stop sending' : 'Cancel newsletter'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Card>
+      {caps.send ? (
+        <Card className="gap-0">
+          <CardHeader className="pb-3">
             <SectionHeader icon={Globe} title="Website" />
+          </CardHeader>
+          <CardContent className="space-y-2">
             {live ? (
               <>
                 <p className="text-xs text-muted-foreground">
@@ -475,94 +574,10 @@ function ActionsCard({
                 </Button>
               </>
             )}
-          </div>
-        ) : null}
-
-        {caps.delete && isCampaignDeletable(campaign) ? (
-          <Button
-            variant="ghost"
-            className="w-full text-muted-foreground"
-            onClick={() => setDeleteOpen(true)}
-            disabled={remove.isPending}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden /> Delete newsletter
-          </Button>
-        ) : null}
-      </CardContent>
-
-      <TestSendDialog
-        open={testOpen}
-        onOpenChange={setTestOpen}
-        pending={sendTest.isPending}
-        onSend={(emails) => sendTest.mutateAsync({ id: campaign.id, emails })}
-      />
-      <ScheduleDialog
-        open={scheduleOpen}
-        onOpenChange={setScheduleOpen}
-        schedulerLive={schedulerLive}
-        pending={schedule.isPending}
-        current={campaign.scheduledAt}
-        onSchedule={(iso) => schedule.mutateAsync({ id: campaign.id, scheduledAt: iso })}
-      />
-      <SendNowDialog
-        open={sendOpen}
-        onOpenChange={setSendOpen}
-        campaign={campaign}
-        lists={lists.data ?? []}
-        pending={sendNow.isPending}
-        onConfirm={() => {
-          sendNow.mutate(campaign.id);
-          setSendOpen(false);
-        }}
-      />
-
-      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {inFlight ? 'Stop sending?' : 'Cancel this newsletter?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {inFlight
-                ? 'Recipients already delivered keep their email; everyone else is skipped. This cannot be resumed.'
-                : 'The newsletter will not be sent. You can delete it afterwards.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep going</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                cancel.mutate(campaign.id);
-                setCancelOpen(false);
-              }}
-            >
-              {inFlight ? 'Stop sending' : 'Cancel newsletter'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{campaign.title}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the newsletter, its PDF and its delivery history. Emails already
-              delivered are unaffected. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => remove.mutate(campaign.id, { onSuccess: onDeleted })}
-              disabled={remove.isPending}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+          </CardContent>
+        </Card>
+      ) : null}
+    </>
   );
 }
 
@@ -574,7 +589,7 @@ function StatsCard({ campaign }: { campaign: NewsletterCampaign }) {
   const failed = stats.data?.failedCount ?? campaign.failedCount;
   const read = stats.data?.readCount ?? campaign.readCount;
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatTile icon={MailCheck} label="Delivered" value={formatNumber(sent)} tone="emerald" />
       <StatTile
         icon={MailX}
