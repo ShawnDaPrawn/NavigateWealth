@@ -27,7 +27,8 @@ import { useStudioCampaign, useStudioDashboard } from './hooks/useNewsletterStud
 import type { NewsletterCaps } from './types';
 import { formatNumber, formatRate, formatRelative, ratePercent } from './utils/format';
 import { schedulerHealth } from './utils/scheduler';
-import { PageHeader } from '../../layout/page';
+import { PageHeader, useBreadcrumbTrail } from '../../layout/page';
+import { CAMPAIGN_STATUS_FILTERS } from './constants';
 
 const CAMPAIGN_PARAM = 'campaign';
 
@@ -61,6 +62,22 @@ export function NewsletterModule() {
       );
     },
     [setSearchParams],
+  );
+
+  // Top-bar breadcrumb after "Newsletters": the open record or upload page,
+  // otherwise the status tab (when it is not "All").
+  const statusId = searchParams.get('status');
+  const statusLabel = CAMPAIGN_STATUS_FILTERS.find(
+    (f) => f.id === statusId && f.id !== 'all',
+  )?.label;
+  useBreadcrumbTrail(
+    campaignParam === 'new'
+      ? [{ label: 'New newsletter' }]
+      : openId
+        ? [{ label: openQuery.data?.title ?? 'Newsletter' }]
+        : statusLabel
+          ? [{ label: statusLabel }]
+          : [],
   );
 
   const goList = () => setCampaignParam(null);

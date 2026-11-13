@@ -48,18 +48,31 @@ beforeEach(() => {
 });
 
 describe('NewsletterEditor', () => {
-  it('needs a title and a description, but not an audience', () => {
+  it('needs a title and a description, and says so on submit', () => {
     render(<NewsletterEditor onCreated={vi.fn()} onCancel={vi.fn()} />);
     const save = screen.getByRole('button', { name: /save draft/i }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
+    fireEvent.click(save);
+    expect(screen.getByText('Fix 2 fields to save the draft.')).toBeTruthy();
+    expect(screen.getByLabelText('Title').getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByLabelText('Title'));
+    expect(hooks.create.mutateAsync).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'T' } });
+    expect(screen.getByText('Fix 1 field to save the draft.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'D' } });
+    expect(screen.queryByText(/Fix \d field/)).toBeNull();
+    expect(save.disabled).toBe(false);
+  });
+
+  it('does not need an audience', async () => {
+    render(<NewsletterEditor onCreated={vi.fn()} onCancel={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'T' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'D' } });
-    expect(save.disabled).toBe(false);
-
     // Clearing the audience must NOT block the draft: a newsletter can go to
     // the website without being emailed to anyone.
     fireEvent.click(screen.getByRole('checkbox', { name: 'Newsletter Contacts' }));
-    expect(save.disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: /save draft/i }));
+    await waitFor(() => expect(hooks.create.mutateAsync).toHaveBeenCalled());
   });
 
   it('defaults the issue month to this month and offers the website switch', () => {

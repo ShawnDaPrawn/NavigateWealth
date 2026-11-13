@@ -23,7 +23,7 @@ import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
 import { Switch } from '../../../ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
-import { StatCard, useConfirm } from '../../layout/page';
+import { FormErrorBanner, StatCard, useConfirm } from '../../layout/page';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -117,7 +117,10 @@ export function LinktreeTab() {
   const handleSaveLink = useCallback(async () => {
     const errors = validateLinkForm(formTitle, formUrl);
     setFormErrors(errors);
-    if (errors.title || errors.url) return;
+    if (errors.title || errors.url) {
+      document.getElementById(errors.title ? 'link-title' : 'link-url')?.focus();
+      return;
+    }
     setSaving(true);
     try {
       if (editingLink) {
@@ -592,6 +595,10 @@ export function LinktreeTab() {
             )}
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <FormErrorBanner
+              count={(formErrors.title ? 1 : 0) + (formErrors.url ? 1 : 0)}
+              action={editingLink ? 'save the link' : 'add the link'}
+            />
             <div className="space-y-1.5">
               <Label htmlFor="link-title" className="text-sm font-medium">
                 Title *

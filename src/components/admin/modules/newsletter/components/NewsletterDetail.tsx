@@ -9,7 +9,6 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
-  Bot,
   CalendarClock,
   CheckCircle2,
   Eye,
@@ -43,7 +42,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import { PageHeader, useConfirm } from '../../../layout/page';
+import { Notice as SharedNotice, PageHeader, useConfirm } from '../../../layout/page';
 import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -144,18 +143,18 @@ export function NewsletterDetail({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
           {campaign.source === 'routine' && campaign.status === 'draft' ? (
-            <Notice tone="warn" icon={Bot} title="Handed over by the monthly routine">
-              Check the PDF, the title and the description, then send it or schedule it. Nothing
+            <SharedNotice kind="attention" title="Handed over by the monthly routine">
+              — check the PDF, the title and the description, then send it or schedule it. Nothing
               goes out until you do.
-            </Notice>
+            </SharedNotice>
           ) : null}
 
           {campaign.status === 'paused' ? (
-            <Notice tone="error" icon={AlertTriangle} title="Delivery stopped">
+            <SharedNotice kind="error" title="Delivery stopped">
               <span className="break-words">
-                {campaign.lastError ?? 'The email provider rejected the sender.'}
+                — {campaign.lastError ?? 'the email provider rejected the sender.'}
               </span>
-            </Notice>
+            </SharedNotice>
           ) : null}
 
           {inFlight || terminal || campaign.status === 'paused' ? (

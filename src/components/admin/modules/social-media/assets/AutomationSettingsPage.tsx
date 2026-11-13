@@ -22,6 +22,7 @@ import { Textarea } from '../../../../ui/textarea';
 import { Skeleton } from '../../../../ui/skeleton';
 import {
   ErrorState,
+  Notice,
   PageHeader,
   SegmentedList,
   SegmentedTrigger,
@@ -149,9 +150,9 @@ export function AutomationSettingsPage({ onBack }: { onBack: () => void }) {
           </SegmentedList>
 
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <Notice kind="error" title="Fix this to save:">
               {error}
-            </p>
+            </Notice>
           )}
 
           <div className="rounded-xl border border-nw-line bg-white p-5">

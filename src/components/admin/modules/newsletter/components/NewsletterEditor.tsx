@@ -24,6 +24,7 @@ import { currentIssueMonth } from '../utils/issueMonth';
 import { AudiencePicker } from './AudiencePicker';
 import { PdfDropzone } from './PdfDropzone';
 import { SectionHeader } from './shared';
+import { FormErrorBanner } from '../../../layout/page';
 
 export function NewsletterEditor({
   onCreated,
@@ -52,9 +53,20 @@ export function NewsletterEditor({
     description.trim().length > 0 && description.trim().length <= DESCRIPTION_MAX_LENGTH;
   // No audience requirement: a newsletter may be published on the website
   // without being emailed to anyone. The send actions enforce their own rule.
-  const canSave = titleOk && descriptionOk && !pending;
+  const canSave = !pending;
+  const [submitted, setSubmitted] = useState(false);
+  const titleError = submitted && !titleOk ? 'Add a title — it is also the email subject.' : null;
+  const descriptionError =
+    submitted && !descriptionOk ? 'Add a short description of what is inside this issue.' : null;
+  const errorCount = (titleError ? 1 : 0) + (descriptionError ? 1 : 0);
 
   const save = async () => {
+    setSubmitted(true);
+    if (!titleOk || !descriptionOk) {
+      // Design system: focus the first field that needs fixing.
+      document.getElementById(!titleOk ? 'nl-title' : 'nl-description')?.focus();
+      return;
+    }
     setUploadError(null);
     let id = createdId;
     if (!id) {
@@ -81,6 +93,7 @@ export function NewsletterEditor({
 
   return (
     <div className="space-y-6">
+      <FormErrorBanner count={errorCount} action="save the draft" />
       <Card className="gap-0">
         <CardHeader className="pb-4">
           <SectionHeader icon={Upload} title="Newsletter PDF" />
@@ -127,7 +140,15 @@ export function NewsletterEditor({
               maxLength={TITLE_MAX_LENGTH}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="September 2026 newsletter"
+              aria-invalid={Boolean(titleError)}
+              aria-describedby={titleError ? 'nl-title-error' : undefined}
+              className={titleError ? 'border-red-500 focus-visible:ring-red-500/40' : undefined}
             />
+            {titleError ? (
+              <p id="nl-title-error" className="text-xs text-red-600">
+                {titleError}
+              </p>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               Also the email subject line. {title.length}/{TITLE_MAX_LENGTH}
             </p>
@@ -142,7 +163,17 @@ export function NewsletterEditor({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Two or three sentences on what is inside this issue."
               rows={4}
+              aria-invalid={Boolean(descriptionError)}
+              aria-describedby={descriptionError ? 'nl-description-error' : undefined}
+              className={
+                descriptionError ? 'border-red-500 focus-visible:ring-red-500/40' : undefined
+              }
             />
+            {descriptionError ? (
+              <p id="nl-description-error" className="text-xs text-red-600">
+                {descriptionError}
+              </p>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               Shown in the email above the “Read the newsletter” button. {description.length}/
               {DESCRIPTION_MAX_LENGTH}

@@ -8,6 +8,8 @@
  * them). Hooks + heavy children are mocked so this stays fast and deterministic.
  */
 import { MemoryRouter } from 'react-router';
+import type { ReactNode } from 'react';
+import { BreadcrumbContext, type Crumb } from '../../../layout/page';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test/utils';
 
@@ -138,7 +140,33 @@ beforeAll(() => {
 // directly without a Suspense boundary.
 import { EsignModule } from '../EsignModule';
 
+const crumbs = { trail: [] as Crumb[] };
+function WithCrumbs({ children }: { children: ReactNode }) {
+  return (
+    <BreadcrumbContext.Provider
+      value={{
+        trail: [],
+        setTrail: (trail) => {
+          crumbs.trail = trail;
+        },
+      }}
+    >
+      <MemoryRouter initialEntries={['/admin?tab=templates']}>{children}</MemoryRouter>
+    </BreadcrumbContext.Provider>
+  );
+}
+
 describe('EsignModule', () => {
+  it('names the tab, then the wizard step, in the top-bar breadcrumb', async () => {
+    render(<EsignModule />, { wrapper: WithCrumbs });
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['Templates']);
+    fireEvent.click(screen.getByRole('button', { name: /start new envelope/i }));
+    await waitFor(() => screen.getByTestId('start-blank'));
+    fireEvent.click(screen.getByTestId('start-blank'));
+    await waitFor(() => screen.getByTestId('upload-step'));
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['Send for signature', 'Documents']);
+  });
+
   it('renders the dashboard view on mount', () => {
     render(<EsignModule />, { wrapper: MemoryRouter });
     expect(screen.getByTestId('esign-dashboard')).toBeTruthy();

@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useSearchParams } from 'react-router';
 import type { NewsletterCampaign } from '../types';
+import { BreadcrumbContext, type Crumb } from '../../../layout/page';
 
 const hooks = vi.hoisted(() => ({
   campaign: {
@@ -60,12 +61,22 @@ function Location() {
   return <output data-testid="location">{params.toString()}</output>;
 }
 
+const crumbs = { trail: [] as Crumb[] };
+const breadcrumb = {
+  trail: [] as Crumb[],
+  setTrail: (trail: Crumb[]) => {
+    crumbs.trail = trail;
+  },
+};
+
 function renderAt(search: string) {
   return render(
-    <MemoryRouter initialEntries={[`/admin${search}`]}>
-      <NewsletterModule />
-      <Location />
-    </MemoryRouter>,
+    <BreadcrumbContext.Provider value={breadcrumb}>
+      <MemoryRouter initialEntries={[`/admin${search}`]}>
+        <NewsletterModule />
+        <Location />
+      </MemoryRouter>
+    </BreadcrumbContext.Provider>,
   );
 }
 
@@ -165,6 +176,18 @@ describe('NewsletterModule', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'detail-back' }));
     expect(screen.getByTestId('location').textContent).not.toContain('campaign=');
+  });
+
+  it('names the status tab, the upload page or the open newsletter in the breadcrumb', () => {
+    const first = renderAt('?module=newsletter&status=sending');
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['Sending']);
+    first.unmount();
+    const second = renderAt('?module=newsletter&campaign=new');
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['New newsletter']);
+    second.unmount();
+    hooks.campaign.data = campaign();
+    renderAt('?module=newsletter&campaign=c-1');
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['September issue']);
   });
 
   it('shows the upload form as a page with its own header and a way back', () => {

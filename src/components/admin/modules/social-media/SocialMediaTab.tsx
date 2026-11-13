@@ -31,6 +31,7 @@ import {
   SegmentedList,
   SegmentedTrigger,
   StatCard,
+  useBreadcrumbTrail,
   useUrlState,
 } from '../../layout/page';
 import { AutomationSettingsPage } from './assets/AutomationSettingsPage';
@@ -90,6 +91,16 @@ const AI_VIEW_LABEL: Record<AiView, string> = {
 
 const PAGES = ['', 'automation'] as const;
 
+const TAB_LABEL: Record<SocialTab, string> = {
+  assets: 'Assets',
+  weekly: 'Weekly pipeline',
+  calendar: 'Calendar',
+  composer: 'Compose',
+  'ai-generator': 'AI generator',
+  channels: 'Channels',
+  linktree: 'Link in bio',
+};
+
 /** Tabs that show the four KPI tiles above their content (per the boards). */
 const TABS_WITH_TILES: readonly SocialTab[] = ['assets', 'weekly', 'calendar'];
 
@@ -98,6 +109,32 @@ export function SocialMediaTab() {
   const [aiSubTab, setAiSubTab] = useUrlState<AiView>('ai', 'text', AI_VIEWS);
   const [, setSearchParams] = useSearchParams();
   const [page, setPage] = useUrlState<(typeof PAGES)[number]>('page', '', PAGES);
+  const backToWeekly = useCallback(
+    () =>
+      // One update: two setters in a row would each start from the same
+      // address and the second would undo the first.
+      setSearchParams(
+        (current) => {
+          const params = new URLSearchParams(current);
+          params.delete('page');
+          params.delete('section');
+          params.set('tab', 'weekly');
+          return params;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
+
+  // Top-bar breadcrumb after "Social & Marketing" (matches the boards).
+  useBreadcrumbTrail(
+    page === 'automation'
+      ? [{ label: 'Weekly pipeline', onClick: backToWeekly }, { label: 'Settings & playbooks' }]
+      : activeTab === 'ai-generator'
+        ? [{ label: 'AI generator' }, { label: AI_VIEW_LABEL[aiSubTab] }]
+        : [{ label: TAB_LABEL[activeTab] }],
+  );
+
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
@@ -258,24 +295,7 @@ export function SocialMediaTab() {
   );
 
   if (page === 'automation') {
-    return (
-      <AutomationSettingsPage
-        onBack={() =>
-          // One update: two setters in a row would each start from the same
-          // address and the second would undo the first.
-          setSearchParams(
-            (current) => {
-              const params = new URLSearchParams(current);
-              params.delete('page');
-              params.delete('section');
-              params.set('tab', 'weekly');
-              return params;
-            },
-            { replace: true },
-          )
-        }
-      />
-    );
+    return <AutomationSettingsPage onBack={backToWeekly} />;
   }
 
   const tiles = (

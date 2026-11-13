@@ -31,9 +31,15 @@ import { isCampaignDeletable } from '../utils/campaign';
 import { formatDateTime, formatNumber, formatRate, formatRelative } from '../utils/format';
 import { CampaignProgressLine } from './CampaignProgressLine';
 import { CampaignStatusBadge } from './StatusBadge';
-import { EmptyState, ErrorState, Notice } from './shared';
+import { EmptyState, ErrorState } from './shared';
 import { Tabs } from '../../../../ui/tabs';
-import { NavTabsList, NavTabsTrigger, useConfirm, useUrlState } from '../../../layout/page';
+import {
+  NavTabsList,
+  NavTabsTrigger,
+  Notice as SharedNotice,
+  useConfirm,
+  useUrlState,
+} from '../../../layout/page';
 
 const STATUS_IDS = CAMPAIGN_STATUS_FILTERS.map((option) => option.id);
 
@@ -99,26 +105,23 @@ export function NewsletterList({
   return (
     <div className="space-y-4">
       {awaitingReview.length > 0 && filter === 'all' && !debouncedSearch ? (
-        <Notice tone="warn" icon={Bot} title="Waiting for your review">
-          <ul className="mt-1 space-y-1.5">
-            {awaitingReview.map((campaign) => (
-              <li key={campaign.id}>
-                <button
-                  type="button"
-                  onClick={() => onOpen(campaign.id)}
-                  className="group inline-flex items-center gap-1.5 text-left font-medium underline-offset-2 hover:underline"
-                >
-                  {campaign.title}
-                  <ChevronRight className="h-3.5 w-3.5 opacity-60" aria-hidden />
-                </button>
-                <span className="ml-1 text-xs opacity-80">
-                  handed over {formatRelative(campaign.createdAt)}
-                  {campaign.pdf ? '' : ' · no PDF attached'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Notice>
+        <SharedNotice kind="attention" title="Waiting for your review">
+          — the monthly routine handed over{' '}
+          {awaitingReview.length === 1 ? 'a draft' : `${awaitingReview.length} drafts`}:{' '}
+          {awaitingReview.map((campaign, index) => (
+            <span key={campaign.id}>
+              {index > 0 ? ', ' : null}
+              <button
+                type="button"
+                onClick={() => onOpen(campaign.id)}
+                className="font-semibold underline underline-offset-2 hover:no-underline"
+              >
+                {campaign.title}
+              </button>
+              {campaign.pdf ? null : <span className="text-xs"> (no PDF attached)</span>}
+            </span>
+          ))}
+        </SharedNotice>
       ) : null}
 
       <Tabs value={filter} onValueChange={setFilter}>

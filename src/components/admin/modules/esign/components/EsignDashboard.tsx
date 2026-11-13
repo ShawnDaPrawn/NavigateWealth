@@ -74,6 +74,8 @@ const MANAGE_LABELS: Record<ManageTool, string> = {
 };
 
 interface EsignDashboardProps {
+  /** The role can see envelopes but not create or send: header shows "View only". */
+  viewOnly?: boolean;
   onCreateNew: () => void;
   onViewEnvelope: (envelope: EsignEnvelope) => void;
   onResumePrepare?: (envelope: EsignEnvelope) => void;
@@ -109,6 +111,7 @@ export function EsignDashboard({
   onRefresh,
   onOpenEnvelopeById,
   refreshTrigger,
+  viewOnly = false,
 }: EsignDashboardProps) {
   const { envelopes } = useEnvelopes({ autoLoad: true, refreshTrigger });
   const [tab, setTab] = useUrlState<EsignTab>('tab', 'envelopes', ESIGN_TABS);
@@ -169,6 +172,7 @@ export function EsignDashboard({
       <PageHeader
         title="E-Signature"
         description="Signature envelopes, templates and signer workflows."
+        viewOnly={viewOnly}
         actions={
           <>
             {onBulkSend && (
