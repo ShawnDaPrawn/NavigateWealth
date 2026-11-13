@@ -717,9 +717,17 @@ export function EsignModule() {
           closeEnvelope();
         }
       })
-      .catch((err) => {
-        logger.warn('Failed to open envelope from the address', err);
-        if (!cancelled) closeEnvelope();
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // The API answers an unknown or deleted id with a 404 (APIError).
+        const status = (err as { statusCode?: number } | null)?.statusCode;
+        if (status === 404) {
+          toast.error('Envelope not found');
+        } else {
+          logger.warn('Failed to open envelope from the address', { error: String(err) });
+          toast.error('Could not open this envelope. Please try again.');
+        }
+        closeEnvelope();
       });
     return () => {
       cancelled = true;
@@ -1036,70 +1044,79 @@ export function EsignModule() {
         </EsignWizardShell>
       ) : (
         <div className="flex-1 overflow-auto p-6">
-          {view === 'dashboard' && detailsDialogOpen && selectedEnvelope ? (
-            <Suspense fallback={<StepFallback />}>
-              <EnvelopeInspector
-                envelope={selectedEnvelope}
-                open
-                onOpenChange={(open) => {
-                  if (!open) closeEnvelope();
-                }}
-                onDownloadDocument={handleDownloadDocument}
-                onResumePrepare={canCreate ? handleResumePrepare : undefined}
-                resumingEnvelopeId={resumingEnvelopeId}
-                onVoidEnvelope={
-                  canSend
-                    ? async (id, reason) => {
-                        await voidEnvelope(id, reason);
-                        closeEnvelope();
-                        setRefreshTrigger((prev) => prev + 1);
-                        toast.success('Voided successfully');
-                      }
-                    : undefined
-                }
-                onDeleteEnvelope={
-                  canDelete
-                    ? async (id) => {
-                        await deleteEnvelope(id);
-                        closeEnvelope();
-                        setRefreshTrigger((prev) => prev + 1);
-                        // P6.8 — soft delete: signal to the user that this is
-                        // recoverable, so they feel safe discarding without
-                        // reaching for "Are you sure?" guardrails.
-                        toast.success('Envelope moved to Recovery Bin (restorable for 90 days).');
-                      }
-                    : undefined
-                }
-              />
-            </Suspense>
-          ) : view === 'dashboard' ? (
-            <EsignDashboard
-              onCreateNew={handleStartNew}
-              onViewEnvelope={handleViewEnvelope}
-              onResumePrepare={handleResumePrepare}
-              resumingEnvelopeId={resumingEnvelopeId}
-              onUseTemplate={(template) => {
-                if (!canCreate) return;
-                resetWizardState();
-                handleSelectTemplate(template);
-              }}
-              onStartTemplateBuilder={handleStartTemplateBuilder}
-              onConfigureTemplate={handleConfigureTemplate}
-              onBulkSend={canSend ? () => setBulkSendOpen(true) : undefined}
-              manageAccess={{
-                notifications: true,
-                webhooks: canSend,
-                packets: canSend,
-                recovery: canDelete,
-                audit: true,
-                retention: canDelete,
-                branding: canCreate,
-              }}
-              onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
-              onOpenEnvelopeById={handleOpenEnvelopeById}
-              refreshTrigger={refreshTrigger}
-            />
-          ) : null}
+          {view === 'dashboard' && (
+            <>
+              {detailsDialogOpen && selectedEnvelope && (
+                <Suspense fallback={<StepFallback />}>
+                  <EnvelopeInspector
+                    envelope={selectedEnvelope}
+                    open
+                    onOpenChange={(open) => {
+                      if (!open) closeEnvelope();
+                    }}
+                    onDownloadDocument={handleDownloadDocument}
+                    onResumePrepare={canCreate ? handleResumePrepare : undefined}
+                    resumingEnvelopeId={resumingEnvelopeId}
+                    onVoidEnvelope={
+                      canSend
+                        ? async (id, reason) => {
+                            await voidEnvelope(id, reason);
+                            closeEnvelope();
+                            setRefreshTrigger((prev) => prev + 1);
+                            toast.success('Voided successfully');
+                          }
+                        : undefined
+                    }
+                    onDeleteEnvelope={
+                      canDelete
+                        ? async (id) => {
+                            await deleteEnvelope(id);
+                            closeEnvelope();
+                            setRefreshTrigger((prev) => prev + 1);
+                            // P6.8 — soft delete: signal to the user that this is
+                            // recoverable, so they feel safe discarding without
+                            // reaching for "Are you sure?" guardrails.
+                            toast.success(
+                              'Envelope moved to Recovery Bin (restorable for 90 days).',
+                            );
+                          }
+                        : undefined
+                    }
+                  />
+                </Suspense>
+              )}
+              {/* Stays mounted under the envelope page so the list keeps its
+                  search, filters and selection when you come back. */}
+              <div hidden={detailsDialogOpen && !!selectedEnvelope}>
+                <EsignDashboard
+                  onCreateNew={handleStartNew}
+                  onViewEnvelope={handleViewEnvelope}
+                  onResumePrepare={handleResumePrepare}
+                  resumingEnvelopeId={resumingEnvelopeId}
+                  onUseTemplate={(template) => {
+                    if (!canCreate) return;
+                    resetWizardState();
+                    handleSelectTemplate(template);
+                  }}
+                  onStartTemplateBuilder={handleStartTemplateBuilder}
+                  onConfigureTemplate={handleConfigureTemplate}
+                  onBulkSend={canSend ? () => setBulkSendOpen(true) : undefined}
+                  manageAccess={{
+                    notifications: true,
+                    webhooks: canSend,
+                    packets: canSend,
+                    recovery: canDelete,
+                    audit: true,
+                    retention: canDelete,
+                    branding: canCreate,
+                  }}
+                  onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
+                  onOpenEnvelopeById={handleOpenEnvelopeById}
+                  refreshTrigger={refreshTrigger}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

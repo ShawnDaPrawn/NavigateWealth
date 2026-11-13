@@ -670,11 +670,14 @@ describe('EsignModule wizard flow', () => {
     });
     await waitFor(() => screen.getByTestId('inspector'));
     expect(spies.getEnvelope).toHaveBeenCalledWith('env-7');
-    expect(screen.queryByTestId('esign-dashboard')).toBeNull();
+    // The list stays mounted (keeping its filters) but hidden.
+    expect(screen.getByTestId('esign-dashboard').closest('[hidden]')).not.toBeNull();
   });
 
-  it('goes back to the list when the envelope in the address does not exist', async () => {
-    spies.getEnvelope.mockResolvedValueOnce(null);
+  it('says the envelope was not found when the API answers 404, and shows the list', async () => {
+    spies.getEnvelope.mockRejectedValueOnce(
+      Object.assign(new Error('Not found'), { statusCode: 404 }),
+    );
     render(<EsignModule />, {
       wrapper: ({ children }) => (
         <MemoryRouter initialEntries={['/admin?module=esign&envelope=missing']}>
@@ -682,8 +685,23 @@ describe('EsignModule wizard flow', () => {
         </MemoryRouter>
       ),
     });
-    await waitFor(() => expect(spies.getEnvelope).toHaveBeenCalledWith('missing'));
-    expect(screen.getByTestId('esign-dashboard')).toBeDefined();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Envelope not found'));
+    expect(screen.getByTestId('esign-dashboard').closest('[hidden]')).toBeNull();
+    expect(screen.queryByTestId('inspector')).toBeNull();
+  });
+
+  it('says it could not open the envelope on other errors', async () => {
+    spies.getEnvelope.mockRejectedValueOnce(Object.assign(new Error('boom'), { statusCode: 500 }));
+    render(<EsignModule />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={['/admin?module=esign&envelope=env-x']}>
+          {children}
+        </MemoryRouter>
+      ),
+    });
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Could not open this envelope. Please try again.'),
+    );
     expect(screen.queryByTestId('inspector')).toBeNull();
   });
 
