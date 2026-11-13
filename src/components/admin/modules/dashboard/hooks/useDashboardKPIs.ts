@@ -11,6 +11,8 @@ export interface UseDashboardKPIsReturn {
 export interface UseDashboardKPIsOptions {
   stats: DashboardStats | null;
   metrics: DashboardMetrics | null;
+  /** Open and completed task totals (the Tasks figure's second line). */
+  taskTotals?: { open: number; completed: number } | null;
   loading?: boolean;
   /** Granular loading states per data source — allows per-card skeleton rendering */
   loadingStates?: {
@@ -26,7 +28,7 @@ export interface UseDashboardKPIsOptions {
  * effect where the 4th card appears only after metrics load.
  */
 export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboardKPIsReturn {
-  const { stats, metrics, loading = false, loadingStates } = options;
+  const { stats, metrics, taskTotals = null, loading = false, loadingStates } = options;
 
   const kpis = useMemo<DashboardKPI[]>(() => {
     const statsLoading = loadingStates?.stats ?? (!stats && loading);
@@ -35,20 +37,20 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
     // KPI 1: Total Clients
     const totalClientsKpi: DashboardKPI = stats
       ? {
-          title: 'Total Clients',
+          title: 'Total clients',
           value: stats.total_clients || 0,
           change: 0,
           icon: Users,
           format: 'number',
-          subtitle: 'Active clients in system',
+          subtitle: 'active clients in system',
         }
       : {
-          title: 'Total Clients',
+          title: 'Total clients',
           value: 0,
           change: 0,
           icon: Users,
           format: 'number',
-          subtitle: 'Active clients in system',
+          subtitle: 'active clients in system',
           loading: statsLoading,
         };
 
@@ -59,41 +61,45 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
 
     const newApplicationsKpi: DashboardKPI = stats
       ? {
-          title: 'New Applications',
+          title: 'New applications',
           value: newThisMonth,
           change: appsGrowth,
           icon: FileText,
           format: 'number',
-          subtitle: 'Applications this month',
+          subtitle: 'this month',
           trend: appsGrowth > 0 ? 'up' : appsGrowth < 0 ? 'down' : 'neutral',
         }
       : {
-          title: 'New Applications',
+          title: 'New applications',
           value: 0,
           change: 0,
           icon: FileText,
           format: 'number',
-          subtitle: 'Applications this month',
+          subtitle: 'this month',
           loading: statsLoading,
         };
 
-    // KPI 3: Pending Tasks
+    // KPI 3: Tasks — open, with completed as the second line (this used to
+    // be a separate System Activity tile).
+    const completedLine = taskTotals ? `open · ${taskTotals.completed} completed` : 'open';
     const pendingTasksKpi: DashboardKPI = stats
       ? {
-          title: 'Pending Tasks',
+          title: 'Tasks',
           value: stats.pending_tasks || 0,
           change: 0,
           icon: CheckSquare,
           format: 'number',
-          subtitle: 'Tasks requiring attention',
+          subtitle: completedLine,
+          hideChange: true,
         }
       : {
-          title: 'Pending Tasks',
+          title: 'Tasks',
           value: 0,
           change: 0,
           icon: CheckSquare,
           format: 'number',
-          subtitle: 'Tasks requiring attention',
+          subtitle: completedLine,
+          hideChange: true,
           loading: statsLoading,
         };
 
@@ -105,7 +111,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
 
     const activePoliciesKpi: DashboardKPI = metrics
       ? {
-          title: 'Active Policies',
+          title: 'Active policies',
           value: activePolicies,
           change: policiesGrowth,
           icon: TrendingUp,
@@ -114,7 +120,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           trend: policiesGrowth > 0 ? 'up' : policiesGrowth < 0 ? 'down' : 'neutral',
         }
       : {
-          title: 'Active Policies',
+          title: 'Active policies',
           value: 0,
           change: 0,
           icon: TrendingUp,
@@ -124,7 +130,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
         };
 
     return [totalClientsKpi, newApplicationsKpi, pendingTasksKpi, activePoliciesKpi];
-  }, [stats, metrics, loading, loadingStates]);
+  }, [stats, metrics, taskTotals, loading, loadingStates]);
 
   return {
     kpis,

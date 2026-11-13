@@ -6,6 +6,7 @@ import { CheckSquare, ArrowRight, Plus, Clock, AlertTriangle, CheckCircle } from
 import { useDashboardData } from '../hooks';
 import { getPriorityLabel, getPriorityVariant, isTaskOverdue } from '../utils';
 import type { TasksWidgetProps } from '../types';
+import { CardError } from './CardError';
 
 export function TasksWidget({
   onNewTask,
@@ -17,7 +18,7 @@ export function TasksWidget({
   // `loading` kept the list skeletonised until stats and metrics had landed
   // too, so the fastest data on the page was displayed at the speed of the
   // slowest.
-  const { tasks, loadingStates } = useDashboardData();
+  const { tasks, loadingStates, errors, refetchTasks } = useDashboardData();
   const loading = loadingStates.tasks;
 
   const handleViewAll = () => {
@@ -34,16 +35,16 @@ export function TasksWidget({
         <div>
           <CardTitle className="text-lg font-semibold flex items-center">
             <CheckSquare className="h-5 w-5 mr-2 text-primary" />
-            Due Today
+            Due today
           </CardTitle>
-          <CardDescription>Tasks requiring immediate attention</CardDescription>
+          <CardDescription>Tasks requiring attention today</CardDescription>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={onNewTask}>
-            <Plus className="h-4 w-4 mr-1" /> New
+          <Button variant="outline" size="sm" onClick={onNewTask ?? handleViewAll}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> New task
           </Button>
           <Button variant="ghost" size="sm" onClick={handleViewAll}>
-            View All <ArrowRight className="ml-2 h-4 w-4" />
+            View all <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </CardHeader>
@@ -69,11 +70,13 @@ export function TasksWidget({
               </div>
             ))}
           </div>
+        ) : errors.tasks ? (
+          <CardError title="Couldn't load tasks due today" onRetry={refetchTasks} />
         ) : displayTasks.length === 0 ? (
           <div className="h-40 flex flex-col items-center justify-center text-center text-muted-foreground bg-gray-50 rounded-lg border border-dashed">
             <CheckCircle className="h-8 w-8 mb-2 opacity-50" />
             <p>No tasks due today</p>
-            <Button variant="link" onClick={onNewTask} className="mt-2">
+            <Button variant="link" onClick={onNewTask ?? handleViewAll} className="mt-2">
               Create a task
             </Button>
           </div>
@@ -85,10 +88,9 @@ export function TasksWidget({
               return (
                 <div
                   key={task.id}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer ${
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card ${
                     overdue ? 'border-red-200 bg-red-50/30' : ''
                   }`}
-                  onClick={() => onViewTask?.(task.id)}
                 >
                   <div className="flex items-start space-x-3 mb-2 sm:mb-0">
                     <div
@@ -124,6 +126,15 @@ export function TasksWidget({
                       <Clock className="h-3 w-3 mr-1" />
                       {overdue ? 'Overdue' : 'Today'}
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => onViewTask?.(task.id)}
+                      aria-label={`Open ${task.title}`}
+                    >
+                      Open
+                    </Button>
                   </div>
                 </div>
               );

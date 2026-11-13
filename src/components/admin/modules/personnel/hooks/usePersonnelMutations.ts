@@ -289,6 +289,54 @@ export function useCancelPersonnelInvite() {
   });
 }
 
+/** Suspend a staff member's sign-in (with a reason). */
+export function useSuspendPersonnelAccess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) =>
+      personnelApi.suspendAccess(id, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.detail(variables.id) });
+      toast.success('Access suspended');
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not suspend access: ${error.message}`);
+    },
+  });
+}
+
+/** Restore a suspended staff member's sign-in. */
+export function useRestorePersonnelAccess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => personnelApi.restoreAccess(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.detail(id) });
+      toast.success('Access restored');
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not restore access: ${error.message}`);
+    },
+  });
+}
+
+/** Email a staff member a single-use password reset link. */
+export function useSendPersonnelPasswordReset() {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; email: string }) => personnelApi.sendPasswordReset(id),
+    onSuccess: (_data, variables) => {
+      toast.success(`Reset link sent to ${variables.email}`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not send the reset link: ${error.message}`);
+    },
+  });
+}
+
 /**
  * Hook to update super admin profile
  *

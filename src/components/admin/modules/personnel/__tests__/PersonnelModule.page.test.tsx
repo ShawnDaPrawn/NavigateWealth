@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { act } from 'react';
 import type { Personnel } from '../types';
+import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 const personnel = [
   {
@@ -47,8 +48,17 @@ vi.mock('../hooks', () => {
     useUpdateSuperAdmin: mutation,
   };
 });
+const me = vi.hoisted(() => ({
+  isSuperAdmin: false,
+  permissions: undefined as undefined | { personnelId: string },
+}));
 vi.mock('../hooks/usePermissions', () => ({
-  useCurrentUserPermissions: () => ({ canDo: () => true, isSuperAdmin: false }),
+  useCurrentUserPermissions: () => ({
+    canDo: () => true,
+    isSuperAdmin: me.isSuperAdmin,
+    permissions: me.permissions,
+    isLoading: false,
+  }),
 }));
 
 const nav = vi.hoisted(() => ({
@@ -81,8 +91,11 @@ vi.mock('../components/InviteUserDialog', () => ({
   InviteUserDialog: (props: { open: boolean }) =>
     props.open ? <div role="dialog">invite dialog</div> : null,
 }));
-vi.mock('../components/SuperAdminProfileCard', () => ({ SuperAdminProfileCard: () => null }));
+vi.mock('../components/SuperAdminProfileCard', () => ({
+  SuperAdminProfileCard: () => <section>admin profile card</section>,
+}));
 vi.mock('../components/drawer/TabProfile', () => ({
+  PROFILE_FORM_ID: 'personnel-profile-form',
   TabProfile: (props: { selectedPersonnel: Personnel }) => (
     <div>profile of {props.selectedPersonnel.firstName}</div>
   ),
@@ -98,6 +111,8 @@ import { PersonnelModule } from '../PersonnelModule';
 
 afterEach(() => {
   cleanup();
+  me.isSuperAdmin = false;
+  me.permissions = undefined;
   toastError.mockClear();
   clientsQuery.mockClear();
 });
@@ -122,7 +137,9 @@ describe('Personnel page', () => {
   it('shows the header, figures and staff list', () => {
     renderAt();
     expect(screen.getByRole('heading', { level: 1, name: 'Personnel' })).toBeDefined();
-    expect(screen.getByText('Staff access, compliance and commission structures.')).toBeDefined();
+    expect(
+      screen.getByText('Manage staff access, compliance and commission structures.'),
+    ).toBeDefined();
     expect(screen.getByText('Total personnel')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Naledi Khumalo' })).toBeDefined();
 
@@ -184,6 +201,104 @@ describe('Personnel page', () => {
     expect(screen.getByText('profile of Ruan')).toBeDefined();
     await waitFor(() =>
       expect(screen.getByTestId('search').textContent).toBe('?module=personnel&person=p-ruan'),
+    );
+  });
+
+  it('keeps the open tab in the address and opens a pasted link on that tab', async () => {
+    renderAt('/admin?module=personnel&person=p-naledi');
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Naledi Khumalo' }));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Client book' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe(
+        '?module=personnel&person=p-naledi&personTab=clients',
+      ),
+    );
+    cleanup();
+
+    renderAt('/admin?module=personnel&person=p-naledi&personTab=clients');
+    await waitFor(() => screen.getByText('client book'));
+    // Back to the list drops the tab with the staff member.
+    fireEvent.click(screen.getByRole('button', { name: 'Back to personnel' }));
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('?module=personnel'));
+  });
+
+  it('shows Save in the page header on the Profile tab', async () => {
+    renderAt('/admin?module=personnel&person=p-naledi');
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Naledi Khumalo' }));
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect(save.getAttribute('form')).toBe('personnel-profile-form');
+    // Nothing changed yet.
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('filters the list from the stat tiles, and the active tile clears it again', async () => {
+    renderAt();
+    const tile = screen.getByText('Suspended', { selector: 'p' }).closest('button')!;
+    fireEvent.click(tile);
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Naledi Khumalo' })).toBeNull(),
+    );
+    expect(screen.getByRole('button', { name: 'Ruan Steyn' })).toBeDefined();
+    expect(screen.getByTestId('search').textContent).toBe('?module=personnel&status=suspended');
+    expect(tile.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(tile);
+    await waitFor(() => screen.getByRole('button', { name: 'Naledi Khumalo' }));
+    expect(screen.getByTestId('search').textContent).toBe('?module=personnel');
+  });
+
+  it('filters by status with the segmented control and reads it from the address', async () => {
+    renderAt('/admin?module=personnel&status=active');
+    expect(screen.getByRole('button', { name: 'Naledi Khumalo' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Ruan Steyn' })).toBeNull();
+    const status = screen.getByRole('tablist', { name: 'Status' });
+    expect(status).toBeDefined();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'All' }));
+    await waitFor(() => screen.getByRole('button', { name: 'Ruan Steyn' }));
+    expect(screen.getByTestId('search').textContent).toBe('?module=personnel');
+  });
+
+  it('shows the admin profile for ?profile=me and keeps the header toggle in the address', async () => {
+    me.isSuperAdmin = true;
+    me.permissions = { personnelId: 'p-owner' };
+    renderAt('/admin?module=personnel&profile=me');
+    expect(screen.getByText('admin profile card')).toBeDefined();
+    const toggle = screen.getByRole('button', { name: /Admin profile/ });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.queryByText('admin profile card')).toBeNull());
+    expect(screen.getByTestId('search').textContent).toBe('?module=personnel');
+
+    fireEvent.click(screen.getByRole('button', { name: /Admin profile/ }));
+    await waitFor(() => screen.getByText('admin profile card'));
+    expect(screen.getByTestId('search').textContent).toBe('?module=personnel&profile=me');
+  });
+
+  it('opens your own staff page for ?profile=me when you are not the super admin', async () => {
+    me.permissions = { personnelId: 'p-naledi' };
+    renderAt('/admin?module=personnel&profile=me');
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Naledi Khumalo' }));
+    expect(screen.queryByText('admin profile card')).toBeNull();
+    expect(screen.getByTestId('search').textContent).toBe('?module=personnel&person=p-naledi');
+  });
+
+  it('sets the top-bar breadcrumb to the staff member and tab', async () => {
+    const setTrail = vi.fn();
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter
+          initialEntries={['/admin?module=personnel&person=p-naledi&personTab=clients']}
+        >
+          <PersonnelModule />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() =>
+      expect(setTrail).toHaveBeenLastCalledWith([
+        expect.objectContaining({ label: 'Naledi Khumalo' }),
+        { label: 'Client book' },
+      ]),
     );
   });
 });

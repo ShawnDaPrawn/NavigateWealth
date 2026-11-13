@@ -12,6 +12,8 @@ export interface DashboardKPI {
   format?: 'number' | 'currency' | 'percentage';
   subtitle?: string;
   trend?: 'up' | 'down' | 'neutral';
+  /** No percentage change for this figure (e.g. Tasks: open · completed). */
+  hideChange?: boolean;
   /** When true, the card renders its own skeleton state regardless of grid-level loading */
   loading?: boolean;
 }
@@ -90,6 +92,7 @@ export interface KPICardProps {
   format?: 'number' | 'currency' | 'percentage';
   subtitle?: string;
   onClick?: () => void;
+  hideChange?: boolean;
   loading?: boolean;
 }
 
@@ -215,6 +218,8 @@ export interface AuditSummary {
 export interface AuditLogWidgetProps {
   onModuleChange?: (module: string) => void;
   maxEntries?: number;
+  /** Opens the audit trail page. */
+  onViewAll?: () => void;
 }
 
 // ── Dashboard Header & Modal Triggers ────────────────────────────────────────
@@ -222,6 +227,8 @@ export interface AuditLogWidgetProps {
 export interface DashboardHeaderProps {
   /** Display name used in the greeting (falls back to a plain greeting) */
   userName?: string;
+  /** Opens the audit trail page. */
+  onOpenAuditTrail: () => void;
 }
 
 export interface SystemHealthDialogProps {

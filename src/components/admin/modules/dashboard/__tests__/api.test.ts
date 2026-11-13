@@ -171,10 +171,9 @@ describe('tasksApi.getDueToday', () => {
     expect(tasks).toEqual([]);
   });
 
-  it('returns empty array on failure', async () => {
+  it('throws on failure so the Due today card can offer Try again', async () => {
     mockApiGet.mockRejectedValue(new Error('Network fail'));
-    const tasks = await tasksApi.getDueToday();
-    expect(tasks).toEqual([]);
+    await expect(tasksApi.getDueToday()).rejects.toThrow('Network fail');
   });
 });
 
