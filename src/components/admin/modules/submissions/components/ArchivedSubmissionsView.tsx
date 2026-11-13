@@ -64,7 +64,8 @@ import { SUBMISSION_TYPE_CONFIG, SOURCE_CHANNEL_LABELS } from '../constants';
 
 interface ArchivedSubmissionsViewProps {
   submissions: Submission[];
-  onBack: () => void;
+  /** Shows a back button and heading when the view replaces the board. */
+  onBack?: () => void;
   onView: (submission: Submission) => void;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
   onDelete: (id: string) => void;
@@ -160,24 +161,29 @@ export function ArchivedSubmissionsView({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-10 w-10 rounded-xl hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-              Archived Submissions
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              View and restore previously archived submissions
-            </p>
+        {onBack ? (
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-10 w-10 rounded-xl hover:bg-gray-100"
+              aria-label="Back to board"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                Archived Submissions
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                View and restore previously archived submissions
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <span />
+        )}
 
         <div className="text-sm text-gray-500 font-medium">
           {filteredSubmissions.length} archived submission

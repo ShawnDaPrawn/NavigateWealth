@@ -8,9 +8,10 @@
  */
 
 import React, { Suspense } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import { PageHeader, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
 import { AskAIInterface } from './components/AskAIInterface';
-import { Brain, FileText, Loader2, Settings2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../../auth/AuthContext';
 
 // Heavy sub-component — lazy-loaded (only shown on tab switch)
@@ -35,40 +36,32 @@ function TabFallback() {
 // Module Entry Point (only public export — no external barrel consumers)
 // ============================================================================
 
+const ADVICE_ENGINE_TABS = ['ask-vasco', 'draft-roa', 'roa-contracts'] as const;
+
 export function AdviceEngineModule() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'super-admin';
+  const allowedTabs = isSuperAdmin ? ADVICE_ENGINE_TABS : ADVICE_ENGINE_TABS.slice(0, 2);
+  const [tab, setTab] = useUrlState('tab', 'ask-vasco', allowedTabs);
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Advice Engine</h1>
-          <p className="text-muted-foreground">
-            AI-powered advisory tools for client consultation and compliant record keeping
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 p-6 lg:p-8">
+      <PageHeader
+        title="Advice Engine"
+        description="AI-powered advisory tools for client consultation and compliant record keeping."
+      />
 
       {/* Main Interface */}
-      <Tabs defaultValue="ask-vasco" className="space-y-6">
-        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <TabsTrigger value="ask-vasco" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            Ask Vasco
-          </TabsTrigger>
-          <TabsTrigger value="draft-roa" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Draft RoA
-          </TabsTrigger>
-          {isSuperAdmin && (
-            <TabsTrigger value="roa-contracts" className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4" />
-              RoA Contracts
-            </TabsTrigger>
-          )}
-        </TabsList>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as (typeof ADVICE_ENGINE_TABS)[number])}
+        className="gap-5"
+      >
+        <NavTabsList aria-label="Advice Engine">
+          <NavTabsTrigger value="ask-vasco">Ask Vasco</NavTabsTrigger>
+          <NavTabsTrigger value="draft-roa">Draft RoA</NavTabsTrigger>
+          {isSuperAdmin && <NavTabsTrigger value="roa-contracts">RoA Contracts</NavTabsTrigger>}
+        </NavTabsList>
 
         {/* Ask Vasco Tab */}
         <TabsContent value="ask-vasco">
