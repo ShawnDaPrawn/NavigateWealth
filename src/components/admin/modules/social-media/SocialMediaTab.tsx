@@ -6,9 +6,13 @@
  * - Weekly pipeline — the post candidates the weekly routines generated
  * - Calendar — Buffer's queue
  * - Compose — a manual post into Buffer (assets and AI content flow in here)
- * - AI Generator — text, image, bundle, repurpose, templates, history, analytics
+ * - AI generator — text, image, bundle, repurpose, templates, history, analytics
+ *   (a segmented control, kept in the address as ?ai=)
  * - Channels — the Buffer connections
+ * - Link in bio — the public link page
  *
+ * One row of level-1 tabs, kept in the address (?tab=). Automation settings &
+ * playbooks open as a page of their own (?tab=weekly&page=automation).
  * The stat cards read real numbers: this week's assets, Buffer's queue, and
  * Buffer's aggregated metrics.
  *
@@ -16,22 +20,21 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  BarChart3,
-  Calendar,
-  Clock,
-  Image as ImageIcon,
-  Layers,
-  Newspaper,
-  Palette,
-  PlusCircle,
-  Send,
-  Sparkles,
-  TrendingUp,
-} from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
-import { Card, CardContent } from '../../../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import {
+  NavTabsList,
+  NavTabsTrigger,
+  PageHeader,
+  SegmentedList,
+  SegmentedTrigger,
+  StatCard,
+  useUrlState,
+} from '../../layout/page';
+import { AutomationSettingsPage } from './assets/AutomationSettingsPage';
+import { LinktreeTab } from './LinktreeTab';
 import { ChannelAssetsTab } from './channel-assets/ChannelAssetsTab';
 import { WeeklyPipelineTab } from './assets/WeeklyPipelineTab';
 import { postingWeekKey } from './assets/assetsModel';
@@ -54,44 +57,47 @@ import { defaultPostRange, useSocialPosts } from './hooks/useSocialPosts';
 import { useSocialProfiles } from './hooks/useSocialProfiles';
 import type { ChannelAsset, ComposeRequest, MediaFile, SocialAIPlatform } from './types';
 
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  hint?: string;
-  icon: typeof Calendar;
-  tone: 'blue' | 'green' | 'orange' | 'purple';
-}
+const SOCIAL_TABS = [
+  'assets',
+  'weekly',
+  'calendar',
+  'composer',
+  'ai-generator',
+  'channels',
+  'linktree',
+] as const;
+type SocialTab = (typeof SOCIAL_TABS)[number];
 
-const TONES: Record<StatCardProps['tone'], string> = {
-  blue: 'bg-blue-50 text-blue-600',
-  green: 'bg-green-50 text-green-600',
-  orange: 'bg-orange-50 text-orange-600',
-  purple: 'bg-purple-50 text-purple-600',
+const AI_VIEWS = [
+  'text',
+  'image',
+  'bundle',
+  'repurpose',
+  'templates',
+  'history',
+  'ai-analytics',
+] as const;
+type AiView = (typeof AI_VIEWS)[number];
+const AI_VIEW_LABEL: Record<AiView, string> = {
+  text: 'Post text',
+  image: 'Branded image',
+  bundle: 'Bundle',
+  repurpose: 'Repurpose',
+  templates: 'Templates',
+  history: 'History',
+  'ai-analytics': 'Analytics',
 };
 
-/** §8.3 stat card: white card, tinted icon container, big number, muted label. */
-function StatCard({ label, value, hint, icon: Icon, tone }: StatCardProps) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold">{value}</p>
-            {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
-          </div>
-          <div className={`flex items-center justify-center h-10 w-10 rounded-lg ${TONES[tone]}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+const PAGES = ['', 'automation'] as const;
+
+/** Tabs that show the four KPI tiles above their content (per the boards). */
+const TABS_WITH_TILES: readonly SocialTab[] = ['assets', 'weekly', 'calendar'];
 
 export function SocialMediaTab() {
-  const [activeTab, setActiveTab] = useState('assets');
-  const [aiSubTab, setAiSubTab] = useState('text');
+  const [activeTab, setActiveTab] = useUrlState<SocialTab>('tab', 'assets', SOCIAL_TABS);
+  const [aiSubTab, setAiSubTab] = useUrlState<AiView>('ai', 'text', AI_VIEWS);
+  const [, setSearchParams] = useSearchParams();
+  const [page, setPage] = useUrlState<(typeof PAGES)[number]>('page', '', PAGES);
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
@@ -177,7 +183,7 @@ export function SocialMediaTab() {
       }
       return result;
     },
-    [createPost, clearComposerInitials, markAssetsUsed],
+    [createPost, clearComposerInitials, markAssetsUsed, setActiveTab],
   );
 
   const handleCreatePostFromAsset = useCallback(
@@ -197,7 +203,7 @@ export function SocialMediaTab() {
 
       setActiveTab('composer');
     },
-    [profiles],
+    [profiles, setActiveTab],
   );
 
   const handleUseTextContent = useCallback(
@@ -206,22 +212,25 @@ export function SocialMediaTab() {
       setComposerInitialHashtags(hashtags);
       setActiveTab('composer');
     },
-    [],
+    [setActiveTab],
   );
 
-  const handleUseImage = useCallback((signedUrl: string, storagePath: string, platform: string) => {
-    setComposerInitialMedia([
-      {
-        id: `ai_img_${storagePath}`,
-        url: signedUrl,
-        storagePath,
-        type: 'image',
-        filename: `navigate-wealth-${platform}-ai.png`,
-        size: 0,
-      },
-    ]);
-    setActiveTab('composer');
-  }, []);
+  const handleUseImage = useCallback(
+    (signedUrl: string, storagePath: string, platform: string) => {
+      setComposerInitialMedia([
+        {
+          id: `ai_img_${storagePath}`,
+          url: signedUrl,
+          storagePath,
+          type: 'image',
+          filename: `navigate-wealth-${platform}-ai.png`,
+          size: 0,
+        },
+      ]);
+      setActiveTab('composer');
+    },
+    [setActiveTab],
+  );
 
   const handleUseBoth = useCallback(
     (
@@ -245,85 +254,103 @@ export function SocialMediaTab() {
       ]);
       setActiveTab('composer');
     },
-    [],
+    [setActiveTab],
+  );
+
+  if (page === 'automation') {
+    return (
+      <AutomationSettingsPage
+        onBack={() =>
+          // One update: two setters in a row would each start from the same
+          // address and the second would undo the first.
+          setSearchParams(
+            (current) => {
+              const params = new URLSearchParams(current);
+              params.delete('page');
+              params.delete('section');
+              params.set('tab', 'weekly');
+              return params;
+            },
+            { replace: true },
+          )
+        }
+      />
+    );
+  }
+
+  const tiles = (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatCard
+        label="Assets this week"
+        value={assetsThisWeek}
+        meta={
+          postingBatch
+            ? `${postingBatch.scheduled_count} scheduled · ${postingWeek}`
+            : `No batch yet for ${postingWeek}`
+        }
+      />
+      <StatCard
+        label="Queued in Buffer"
+        value={scheduledPosts.length}
+        meta={
+          nextScheduled
+            ? `Next ${nextScheduled.toLocaleString('en-ZA', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+            : 'Nothing queued'
+        }
+      />
+      <StatCard
+        label="Published (30 days)"
+        value={published30d ?? '—'}
+        meta={analytics.error ? 'Buffer metrics unavailable' : 'From Buffer analytics'}
+      />
+      <StatCard
+        label="Engagement (30 days)"
+        value={engagement ?? '—'}
+        meta="Reactions, comments and shares"
+      />
+    </div>
   );
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Assets this week"
-          value={assetsThisWeek}
-          hint={
-            postingBatch
-              ? `${postingBatch.scheduled_count} scheduled · ${postingWeek}`
-              : `No batch yet for ${postingWeek}`
-          }
-          icon={Layers}
-          tone="blue"
-        />
-        <StatCard
-          label="Queued in Buffer"
-          value={scheduledPosts.length}
-          hint={
-            nextScheduled
-              ? `Next ${nextScheduled.toLocaleString('en-ZA', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`
-              : 'Nothing queued'
-          }
-          icon={Calendar}
-          tone="orange"
-        />
-        <StatCard
-          label="Published (30 days)"
-          value={published30d ?? '—'}
-          hint={analytics.error ? 'Buffer metrics unavailable' : 'From Buffer analytics'}
-          icon={Send}
-          tone="green"
-        />
-        <StatCard
-          label="Engagement (30 days)"
-          value={engagement ?? '—'}
-          hint="Reactions, comments and shares"
-          icon={TrendingUp}
-          tone="purple"
-        />
-      </div>
+      <PageHeader
+        title="Social & Marketing"
+        description="Social posts through Buffer, AI content and your link-in-bio page."
+        actions={
+          <Button
+            onClick={() => {
+              clearComposerInitials();
+              setActiveTab('composer');
+            }}
+          >
+            <PlusCircle className="h-4 w-4" aria-hidden="true" />
+            Compose post
+          </Button>
+        }
+      />
 
-      <div className="flex justify-end">
-        <Button
-          onClick={() => {
-            clearComposerInitials();
-            setActiveTab('composer');
-          }}
-          className="flex items-center gap-2"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Compose
-        </Button>
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SocialTab)} className="gap-5">
+        <NavTabsList aria-label="Social & Marketing">
+          <NavTabsTrigger value="assets">Assets</NavTabsTrigger>
+          <NavTabsTrigger value="weekly">Weekly pipeline</NavTabsTrigger>
+          <NavTabsTrigger value="calendar">Calendar</NavTabsTrigger>
+          <NavTabsTrigger value="composer">Compose</NavTabsTrigger>
+          <NavTabsTrigger value="ai-generator">AI generator</NavTabsTrigger>
+          <NavTabsTrigger value="channels">Channels</NavTabsTrigger>
+          <NavTabsTrigger value="linktree">Link in bio</NavTabsTrigger>
+        </NavTabsList>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="assets">Assets</TabsTrigger>
-          <TabsTrigger value="weekly">Weekly pipeline</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="composer">Compose</TabsTrigger>
-          <TabsTrigger value="ai-generator" className="flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" />
-            AI Generator
-          </TabsTrigger>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-        </TabsList>
+        {TABS_WITH_TILES.includes(activeTab) && tiles}
 
-        <TabsContent value="assets" className="mt-6">
+        <TabsContent value="assets" className="mt-0">
           <ChannelAssetsTab onCreatePost={handleCreatePostFromAsset} />
         </TabsContent>
 
-        <TabsContent value="weekly" className="mt-6">
-          <WeeklyPipelineTab />
+        <TabsContent value="weekly" className="mt-0">
+          <WeeklyPipelineTab onOpenSettings={() => setPage('automation')} />
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-0">
           <PostCalendar
             posts={posts}
             profiles={profiles}
@@ -339,7 +366,7 @@ export function SocialMediaTab() {
           />
         </TabsContent>
 
-        <TabsContent value="composer" className="mt-6">
+        <TabsContent value="composer" className="mt-0">
           <div className="max-w-4xl">
             <PostComposer
               profiles={profiles}
@@ -354,39 +381,20 @@ export function SocialMediaTab() {
           </div>
         </TabsContent>
 
-        <TabsContent value="ai-generator" className="mt-6">
+        <TabsContent value="ai-generator" className="mt-0">
           <div className="max-w-5xl">
-            <Tabs value={aiSubTab} onValueChange={setAiSubTab} className="w-full">
-              <TabsList className="mb-4 flex flex-wrap h-auto">
-                <TabsTrigger value="text" className="flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Post Text
-                </TabsTrigger>
-                <TabsTrigger value="image" className="flex items-center gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5" />
-                  Branded Image
-                </TabsTrigger>
-                <TabsTrigger value="bundle" className="flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5" />
-                  Bundle
-                </TabsTrigger>
-                <TabsTrigger value="repurpose" className="flex items-center gap-1.5">
-                  <Newspaper className="h-3.5 w-3.5" />
-                  Repurpose
-                </TabsTrigger>
-                <TabsTrigger value="templates" className="flex items-center gap-1.5">
-                  <Palette className="h-3.5 w-3.5" />
-                  Templates
-                </TabsTrigger>
-                <TabsTrigger value="history" className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  History
-                </TabsTrigger>
-                <TabsTrigger value="ai-analytics" className="flex items-center gap-1.5">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Analytics
-                </TabsTrigger>
-              </TabsList>
+            <Tabs
+              value={aiSubTab}
+              onValueChange={(v) => setAiSubTab(v as AiView)}
+              className="w-full"
+            >
+              <SegmentedList aria-label="AI generator views" className="mb-4">
+                {AI_VIEWS.map((view) => (
+                  <SegmentedTrigger key={view} value={view}>
+                    {AI_VIEW_LABEL[view]}
+                  </SegmentedTrigger>
+                ))}
+              </SegmentedList>
 
               <TabsContent value="text">
                 <AIContentGenerator onUseContent={handleUseTextContent} />
@@ -417,8 +425,12 @@ export function SocialMediaTab() {
           </div>
         </TabsContent>
 
-        <TabsContent value="channels" className="mt-6">
+        <TabsContent value="channels" className="mt-0">
           <ChannelsPanel />
+        </TabsContent>
+
+        <TabsContent value="linktree" className="mt-0">
+          <LinktreeTab />
         </TabsContent>
       </Tabs>
     </div>

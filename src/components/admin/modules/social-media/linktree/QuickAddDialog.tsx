@@ -59,7 +59,7 @@ export function QuickAddDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5" style={{ color: BRAND.gold }} />
-            Quick Add Links
+            Quick add
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground -mt-2">

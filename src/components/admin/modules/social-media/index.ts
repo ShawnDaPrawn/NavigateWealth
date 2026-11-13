@@ -14,7 +14,6 @@ export { SocialMediaModule } from './shell';
 
 // Sub-Components (used by intra-module consumers)
 export { SocialMediaTab } from './SocialMediaTab';
-export { PublicationsTab } from './PublicationsTab';
 export { LinktreeTab } from './LinktreeTab';
 export { PostComposer } from './PostComposer';
 export { PostCalendar } from './PostCalendar';

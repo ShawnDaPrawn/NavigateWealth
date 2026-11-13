@@ -23,23 +23,20 @@ import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
 import { Switch } from '../../../ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
+import { StatCard, useConfirm } from '../../layout/page';
 import { toast } from 'sonner';
 import {
-  Link as LinkIcon,
   Plus,
   Pencil,
   Trash2,
   Eye,
   Copy,
   Check,
-  Globe,
-  Instagram,
   Loader2,
   ArrowUp,
   ArrowDown,
   Settings,
   Inbox,
-  MousePointer,
   Zap,
 } from 'lucide-react';
 import { normalizeNavigateWealthUrl } from '../../../../utils/siteOrigin';
@@ -52,6 +49,7 @@ import {
   type LinktreeLink,
   type LinktreeSettings,
   type QuickAddTemplate,
+  validateLinkForm,
 } from './linktree/linktreeModel';
 import { QuickAddDialog } from './linktree/QuickAddDialog';
 import { LinktreeSettingsDialog } from './linktree/LinktreeSettingsDialog';
@@ -66,7 +64,6 @@ export function LinktreeTab() {
   const [editDialog, setEditDialog] = useState(false);
   const [editingLink, setEditingLink] = useState<LinktreeLink | null>(null);
   const [settingsDialog, setSettingsDialog] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddCategory, setQuickAddCategory] = useState<string>('all');
@@ -75,6 +72,8 @@ export function LinktreeTab() {
   // Form state
   const [formTitle, setFormTitle] = useState('');
   const [formUrl, setFormUrl] = useState('');
+  const [formErrors, setFormErrors] = useState<{ title?: string; url?: string }>({});
+  const { confirm, confirmDialog } = useConfirm();
   const [formDescription, setFormDescription] = useState('');
   const [formEnabled, setFormEnabled] = useState(true);
 
@@ -116,10 +115,9 @@ export function LinktreeTab() {
   // --------------------------------------------------------------------------
 
   const handleSaveLink = useCallback(async () => {
-    if (!formTitle.trim() || !formUrl.trim()) {
-      toast.error('Title and URL are required');
-      return;
-    }
+    const errors = validateLinkForm(formTitle, formUrl);
+    setFormErrors(errors);
+    if (errors.title || errors.url) return;
     setSaving(true);
     try {
       if (editingLink) {
@@ -186,7 +184,6 @@ export function LinktreeTab() {
     async (id: string) => {
       try {
         await fetchJson(`${BASE}/links/${id}`, { method: 'DELETE' });
-        setDeleteConfirmId(null);
         toast.success('Link deleted');
         await fetchData();
       } catch {
@@ -267,6 +264,7 @@ export function LinktreeTab() {
     setFormUrl(link?.url || '');
     setFormDescription(link?.description || '');
     setFormEnabled(link?.enabled ?? true);
+    setFormErrors({});
     setEditDialog(true);
   };
 
@@ -336,29 +334,20 @@ export function LinktreeTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center justify-center h-10 w-10 rounded-lg"
-            style={{ backgroundColor: BRAND.navyLight }}
+      {/* Public page + actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
+          <span className="text-nw-text-3">Your public link page:</span>
+          <a
+            href={publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate font-medium text-nw-ink hover:underline"
           >
-            <LinkIcon className="h-5 w-5" style={{ color: BRAND.navy }} />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold" style={{ color: BRAND.navy }}>
-              Link in Bio
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Manage your company links page for social media profiles
-            </p>
-          </div>
+            {publicUrl}
+          </a>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openSettings} className="gap-1.5">
-            <Settings className="h-3.5 w-3.5" />
-            Settings
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-1.5">
             {copied ? (
               <Check className="h-3.5 w-3.5 text-green-600" />
@@ -376,6 +365,10 @@ export function LinktreeTab() {
             <Eye className="h-3.5 w-3.5" />
             Preview
           </Button>
+          <Button variant="outline" size="sm" onClick={openSettings} className="gap-1.5">
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -383,104 +376,22 @@ export function LinktreeTab() {
             className="gap-1.5"
           >
             <Zap className="h-3.5 w-3.5" style={{ color: BRAND.gold }} />
-            Quick Add
+            Quick add
           </Button>
-          <Button
-            size="sm"
-            onClick={() => openEdit()}
-            className="gap-1.5 text-white"
-            style={{ backgroundColor: BRAND.navy }}
-          >
+          <Button size="sm" onClick={() => openEdit()} className="gap-1.5">
             <Plus className="h-3.5 w-3.5" />
-            Add Link
+            Add link
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-gray-50">
-                <LinkIcon className="h-4 w-4 text-gray-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{links.length}</p>
-                <p className="text-xs text-muted-foreground">Total Links</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-green-50">
-                <Globe className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{links.filter((l) => l.enabled).length}</p>
-                <p className="text-xs text-muted-foreground">Active Links</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className="flex items-center justify-center h-9 w-9 rounded-lg"
-                style={{ backgroundColor: BRAND.goldLight }}
-              >
-                <MousePointer className="h-4 w-4" style={{ color: BRAND.gold }} />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{totalClicks}</p>
-                <p className="text-xs text-muted-foreground">Total Clicks</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-purple-50">
-                <Instagram className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{socialProfileCount}</p>
-                <p className="text-xs text-muted-foreground">Social Profiles</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Total links" value={links.length} />
+        <StatCard label="Active links" value={links.filter((l) => l.enabled).length} />
+        <StatCard label="Total clicks" value={totalClicks} />
+        <StatCard label="Social profiles" value={socialProfileCount} />
       </div>
-
-      {/* Public URL banner */}
-      <Card className="border" style={{ borderColor: BRAND.navy + '20' }}>
-        <CardContent className="py-3 px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <Instagram className="h-4 w-4 text-pink-500" />
-            <span className="text-muted-foreground">Your public link page:</span>
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium hover:underline"
-              style={{ color: BRAND.navy }}
-            >
-              {publicUrl}
-            </a>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleCopyUrl} className="h-7 px-2">
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-green-600" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Social Profiles Preview (if configured) */}
       {socialProfileCount > 0 && (
@@ -530,23 +441,19 @@ export function LinktreeTab() {
               <Inbox className="h-5 w-5" style={{ color: BRAND.navy }} />
             </div>
             <h3 className="text-base font-semibold mb-1" style={{ color: BRAND.navy }}>
-              No Links Yet
+              No links yet
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs mb-4">
-              Add your company website, booking page, social profiles, and any other relevant links.
+              Add your website, booking page, social profiles and any other links.
             </p>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => setQuickAddOpen(true)} className="gap-1.5">
                 <Zap className="h-4 w-4" style={{ color: BRAND.gold }} />
-                Quick Add Templates
+                Quick add
               </Button>
-              <Button
-                onClick={() => openEdit()}
-                className="text-white"
-                style={{ backgroundColor: BRAND.navy }}
-              >
+              <Button onClick={() => openEdit()}>
                 <Plus className="h-4 w-4 mr-1.5" />
-                Add Custom Link
+                Add link
               </Button>
             </div>
           </CardContent>
@@ -563,6 +470,8 @@ export function LinktreeTab() {
                   {/* Reorder */}
                   <div className="flex flex-col gap-0.5">
                     <button
+                      type="button"
+                      aria-label={`Move ${link.title} up`}
                       onClick={() => handleMove(index, 'up')}
                       disabled={index === 0}
                       className="p-0.5 rounded hover:bg-gray-100 disabled:opacity-30 text-gray-400"
@@ -570,6 +479,8 @@ export function LinktreeTab() {
                       <ArrowUp className="h-3 w-3" />
                     </button>
                     <button
+                      type="button"
+                      aria-label={`Move ${link.title} down`}
                       onClick={() => handleMove(index, 'down')}
                       disabled={index === sortedLinks.length - 1}
                       className="p-0.5 rounded hover:bg-gray-100 disabled:opacity-30 text-gray-400"
@@ -606,6 +517,7 @@ export function LinktreeTab() {
 
                   {/* Toggle */}
                   <Switch
+                    aria-label={`Show ${link.title} on the public page`}
                     checked={link.enabled}
                     onCheckedChange={() => handleToggleEnabled(link)}
                   />
@@ -613,17 +525,27 @@ export function LinktreeTab() {
                   {/* Actions */}
                   <div className="flex items-center gap-1">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => openEdit(link)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-gray-700"
+                      className="h-7"
                     >
-                      <Pencil className="h-3 w-3" />
+                      <Pencil className="h-3 w-3" aria-hidden="true" />
+                      Edit
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDeleteConfirmId(link.id)}
+                      aria-label={`Delete ${link.title}`}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Delete link',
+                          description: `Are you sure you want to delete “${link.title}”? This cannot be undone.`,
+                          confirmLabel: 'Delete',
+                          destructive: true,
+                        });
+                        if (ok) void handleDelete(link.id);
+                      }}
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -655,26 +577,58 @@ export function LinktreeTab() {
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingLink ? 'Edit Link' : 'Add Link'}</DialogTitle>
+            <DialogTitle>{editingLink ? 'Edit link' : 'Add link'}</DialogTitle>
+            {!editingLink && (
+              <button
+                type="button"
+                className="w-fit text-left text-sm text-nw-violet-600 hover:underline"
+                onClick={() => {
+                  setEditDialog(false);
+                  setQuickAddOpen(true);
+                }}
+              >
+                Or start from a Quick add template
+              </button>
+            )}
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Title *</Label>
+              <Label htmlFor="link-title" className="text-sm font-medium">
+                Title *
+              </Label>
               <Input
-                placeholder="e.g., Book a Consultation"
+                id="link-title"
+                placeholder="e.g., Book a consultation"
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 maxLength={100}
+                aria-invalid={Boolean(formErrors.title)}
+                aria-describedby={formErrors.title ? 'link-title-error' : undefined}
               />
+              {formErrors.title && (
+                <p id="link-title-error" className="text-xs text-red-600">
+                  {formErrors.title}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">URL *</Label>
+              <Label htmlFor="link-url" className="text-sm font-medium">
+                URL *
+              </Label>
               <Input
+                id="link-url"
                 placeholder="https://www.navigatewealth.co/contact"
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
                 maxLength={500}
+                aria-invalid={Boolean(formErrors.url)}
+                aria-describedby={formErrors.url ? 'link-url-error' : undefined}
               />
+              {formErrors.url && (
+                <p id="link-url-error" className="text-xs text-red-600">
+                  {formErrors.url}
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">Description (optional)</Label>
@@ -687,22 +641,19 @@ export function LinktreeTab() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label className="text-sm">Visible on public page</Label>
-              <Switch checked={formEnabled} onCheckedChange={setFormEnabled} />
+              <Label htmlFor="link-visible" className="text-sm">
+                Visible on public page
+              </Label>
+              <Switch id="link-visible" checked={formEnabled} onCheckedChange={setFormEnabled} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSaveLink}
-              disabled={saving || !formTitle.trim() || !formUrl.trim()}
-              className="text-white"
-              style={{ backgroundColor: BRAND.navy }}
-            >
+            <Button onClick={handleSaveLink} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-              {editingLink ? 'Save Changes' : 'Add Link'}
+              {editingLink ? 'Save changes' : 'Add link'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -726,30 +677,7 @@ export function LinktreeTab() {
         onSave={handleSaveSettings}
       />
 
-      {/* ================================================================== */}
-      {/* Delete Confirmation                                                 */}
-      {/* ================================================================== */}
-      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Link</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this link? This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {confirmDialog}
     </div>
   );
 }
