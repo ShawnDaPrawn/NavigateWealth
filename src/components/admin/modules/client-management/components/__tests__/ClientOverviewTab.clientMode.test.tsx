@@ -74,7 +74,7 @@ describe('ClientOverviewTab client mode', () => {
     renderOverview('adviser');
 
     await waitFor(() => {
-      expect(screen.getByText('Financial Reviews')).toBeTruthy();
+      expect(screen.getByText('Financial reviews')).toBeTruthy();
     });
   });
 });
@@ -116,7 +116,7 @@ describe('ClientOverviewTab dashboard structure', () => {
     renderOverview('adviser');
 
     await waitFor(() => {
-      expect(screen.getAllByText('Financial Reviews').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Financial reviews').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText(/welcome back/i).length).toBe(0);
   });
@@ -134,7 +134,7 @@ describe('ClientOverviewTab dashboard structure', () => {
     renderOverview('adviser');
 
     await waitFor(() => {
-      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Portfolio summary').length).toBeGreaterThan(0);
     });
     // The client-mode label must not leak into adviser mode.
     expect(screen.queryAllByText('My Policies').length).toBe(0);

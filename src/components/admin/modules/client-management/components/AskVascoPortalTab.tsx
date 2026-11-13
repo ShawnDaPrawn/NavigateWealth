@@ -200,9 +200,10 @@ function InlineChatCard({
             variant="ghost"
             size="sm"
             className="h-9 w-9 p-0 text-gray-500 hover:bg-purple-50 hover:text-[#6d28d9]"
-            title="Expand"
+            title="Full screen"
+            aria-label="Full screen"
           >
-            <Maximize2 className="h-4 w-4" />
+            <Maximize2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -536,11 +537,50 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Ask Vasco</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Review, continue, clear, or remove chats from this client&apos;s shared portal
-            workspace.
+            The client&apos;s own Vasco conversations from their portal. You can read them and reply
+            as Vasco.
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-4 lg:grid-cols-[240px_1fr]">
+          <nav aria-label="Chats" className="min-w-0">
+            <p className="mb-2 text-xs font-medium text-nw-text-3">Chats · {sessions.length}</p>
+            {sessions.length === 0 ? (
+              <p className="text-sm text-nw-text-3">No saved chats yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {sessions.map((session) => {
+                  const active = session.id === activeSessionId;
+                  return (
+                    <li key={session.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSessionId(session.id)}
+                        aria-current={active ? 'true' : undefined}
+                        disabled={isStreaming}
+                        className={`w-full rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                          active ? 'bg-nw-violet-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <span
+                          className={`block truncate text-sm ${active ? 'font-medium text-nw-violet-600' : 'text-nw-ink'}`}
+                        >
+                          {session.title || 'Untitled chat'}
+                        </span>
+                        <span className="text-xs text-nw-text-3">
+                          {new Date(session.updatedAt || session.createdAt).toLocaleDateString(
+                            'en-ZA',
+                            { day: 'numeric', month: 'short' },
+                          )}{' '}
+                          · {session.messageCount}{' '}
+                          {session.messageCount === 1 ? 'message' : 'messages'}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </nav>
           <InlineChatCard
             clientLabel={clientLabel}
             activeSession={activeSession}

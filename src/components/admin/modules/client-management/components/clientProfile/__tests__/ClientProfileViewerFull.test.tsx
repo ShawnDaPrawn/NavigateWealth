@@ -9,7 +9,7 @@
  * mocked to prevent real HTTP calls during policy-assets fetch.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { fireEvent, render, screen, waitFor, within } from '@/test/utils';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { UnsavedChangesRegistryProvider } from '@/components/shared/unsaved-changes/UnsavedChangesRegistry';
 
@@ -101,19 +101,22 @@ import { ClientProfileViewerFull } from '../ClientProfileViewerFull';
 
 const minimalClient = { id: 'c-1', name: 'Test Client' };
 
-function renderClientProfileViewer() {
-  const router = createMemoryRouter([
-    {
-      path: '/',
-      element: (
-        <UnsavedChangesRegistryProvider>
-          <ClientProfileViewerFull clientData={minimalClient as never} />
-        </UnsavedChangesRegistryProvider>
-      ),
-    },
-  ]);
+function renderClientProfileViewer(url = '/') {
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/',
+        element: (
+          <UnsavedChangesRegistryProvider>
+            <ClientProfileViewerFull clientData={minimalClient as never} />
+          </UnsavedChangesRegistryProvider>
+        ),
+      },
+    ],
+    { initialEntries: [url] },
+  );
 
-  return render(<RouterProvider router={router} />);
+  return { router, ...render(<RouterProvider router={router} />) };
 }
 
 beforeEach(() => {
@@ -129,10 +132,26 @@ describe('ClientProfileViewerFull', () => {
 
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalled();
-      expect(screen.getByText('Personal Info')).toBeTruthy();
-      expect(screen.getByText('Contact Details')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Personal info' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Contact details' })).toBeTruthy();
     });
 
     expect(container).toBeTruthy();
+  }, 30000);
+
+  it('shows the section card in view mode, with Edit swapping in the form', async () => {
+    renderClientProfileViewer();
+    const card = await screen.findByRole('region', { name: 'Personal info' });
+    expect(within(card).getByText('First name')).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Personal info' })).toBeNull();
+  }, 30000);
+
+  it('keeps the open section in the address', async () => {
+    const { router } = renderClientProfileViewer('/?psec=contact');
+    expect(await screen.findByRole('region', { name: 'Contact details' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Address' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?psec=address'));
   }, 30000);
 });

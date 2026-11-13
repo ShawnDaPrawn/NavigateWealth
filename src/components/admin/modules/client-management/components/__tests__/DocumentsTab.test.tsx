@@ -24,7 +24,21 @@
  *     events), so filtering is exercised via the plain search input instead.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router';
+import type { ReactElement } from 'react';
+
+function Location() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+function render(ui: ReactElement, url = '/') {
+  return rtlRender(
+    <MemoryRouter initialEntries={[url]}>
+      {ui}
+      <Location />
+    </MemoryRouter>,
+  );
+}
 
 vi.mock('react-quill-new', () => ({
   default: () => <textarea data-testid="react-quill-stub" />,
@@ -94,10 +108,11 @@ beforeEach(() => {
 });
 
 describe('DocumentsTab', () => {
-  it('renders the Document Management view and fetches documents for the client', async () => {
+  it('renders the Documents & links view and fetches documents for the client', async () => {
     render(<DocumentsTab selectedClient={selectedClient} />);
 
-    expect(screen.getByText('Document Management')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Documents & links/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add document or link' })).toBeTruthy();
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith(expect.stringContaining('/documents/client-1'));
@@ -163,12 +178,23 @@ describe('DocumentsTab', () => {
     await waitFor(() => expect(api.get).toHaveBeenCalled());
 
     const before = vi.mocked(api.get).mock.calls.length;
-    // The timeline card has its own "Refresh timeline" button; this must be
-    // the document list's.
-    fireEvent.click(screen.getByRole('button', { name: /^refresh$/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh documents' }));
 
     await waitFor(() => {
       expect(vi.mocked(api.get).mock.calls.length).toBeGreaterThan(before);
     });
+  });
+
+  it('shows the activity timeline as a second view kept in the address', async () => {
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Activity timeline' }));
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('?dview=timeline'));
+    expect(screen.queryByRole('button', { name: 'Add document or link' })).toBeNull();
+  });
+
+  it('only offers Email documents to client once something has been uploaded', async () => {
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    const email = screen.getByRole('button', { name: 'Email documents to client' });
+    expect((email as HTMLButtonElement).disabled).toBe(true);
   });
 });

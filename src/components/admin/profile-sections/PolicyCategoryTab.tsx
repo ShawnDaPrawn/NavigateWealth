@@ -420,8 +420,28 @@ export function PolicyCategoryTab({
           </div>
         }
       >
-        {/* Show Will Management View for Estate Planning */}
-        {categorySubtabId === 'estate-planning' && willChatInterfaceOpen ? (
+        {/* Add / edit policy is a page in place of the category */}
+        {isFormOpen ? (
+          <PolicyFormDialog
+            isOpen
+            onClose={() => {
+              setIsFormOpen(false);
+              setEditingPolicy(null);
+            }}
+            categorySubtabId={categorySubtabId}
+            categoryName={categoryName}
+            clientId={clientId}
+            editingPolicy={
+              editingPolicy as unknown as React.ComponentProps<
+                typeof PolicyFormDialog
+              >['editingPolicy']
+            }
+            onSave={() => {
+              loadPolicies();
+            }}
+          />
+        ) : /* Show Will Management View for Estate Planning */
+        categorySubtabId === 'estate-planning' && willChatInterfaceOpen ? (
           <WillChatInterface
             clientId={clientId}
             clientName={clientDisplayName || categoryName}
@@ -502,13 +522,13 @@ export function PolicyCategoryTab({
                 {categorySubtabId === 'estate-planning' && (
                   <Button variant="outline" size="sm" onClick={() => setShowWillManagement(true)}>
                     <FileBarChart className="h-4 w-4 mr-2" />
-                    Will Management
+                    Will management
                   </Button>
                 )}
                 {hasFNA && (
                   <Button variant="outline" size="sm" onClick={() => setShowFNAManagement(true)}>
                     <FileBarChart className="h-4 w-4 mr-2" />
-                    FNA
+                    All FNAs
                   </Button>
                 )}
                 <Button
@@ -524,18 +544,18 @@ export function PolicyCategoryTab({
                   {showArchived ? (
                     <div className="contents">
                       <EyeOff className="h-4 w-4 mr-2" />
-                      Hide History
+                      Hide history
                     </div>
                   ) : (
                     <div className="contents">
                       <History className="h-4 w-4 mr-2" />
-                      Show History
+                      History
                     </div>
                   )}
                 </Button>
                 <Button size="sm" onClick={handleAddPolicy}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Policy
+                  Add policy
                 </Button>
               </div>
             </div>
@@ -553,13 +573,14 @@ export function PolicyCategoryTab({
               <Card>
                 <CardContent className="py-12 text-center">
                   <Icon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Policies Added</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No policies added</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Start by adding your first {categoryName.toLowerCase()} policy
+                    Add the client&apos;s {categoryName.toLowerCase()} policies to track cover,
+                    values and premiums.
                   </p>
                   <Button onClick={handleAddPolicy}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Policy
+                    Add policy
                   </Button>
                 </CardContent>
               </Card>
@@ -570,7 +591,7 @@ export function PolicyCategoryTab({
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      {showArchived ? 'Archived Policies' : 'Active Policies'} ({policies.length})
+                      {showArchived ? 'Archived policies' : 'Active policies'} ({policies.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>{renderPolicyTables()}</CardContent>
@@ -646,24 +667,6 @@ export function PolicyCategoryTab({
           </Suspense>
         </DialogContent>
       </Dialog>
-
-      {/* Policy Form Dialog */}
-      <PolicyFormDialog
-        isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          setEditingPolicy(null);
-        }}
-        categorySubtabId={categorySubtabId}
-        categoryName={categoryName}
-        clientId={clientId}
-        editingPolicy={
-          editingPolicy as unknown as React.ComponentProps<typeof PolicyFormDialog>['editingPolicy']
-        }
-        onSave={() => {
-          loadPolicies();
-        }}
-      />
 
       {/* Archive Policy Dialog */}
       <ArchivePolicyDialog

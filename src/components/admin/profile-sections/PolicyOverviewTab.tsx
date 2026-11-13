@@ -99,6 +99,8 @@ interface PolicyOverviewTabProps {
   onViewDetails?: (categoryId: string) => void;
   /** 'full' (default) renders standalone with header; 'embedded' omits header and tightens spacing for use inside another panel */
   variant?: 'full' | 'embedded';
+  /** Show the cross-policy comparison under the header (off when it has its own view). */
+  showComparison?: boolean;
 }
 
 export function PolicyOverviewTab({
@@ -107,6 +109,7 @@ export function PolicyOverviewTab({
   onRunFNA,
   onAddPolicy,
   variant = 'full',
+  showComparison = true,
 }: PolicyOverviewTabProps) {
   const isEmbedded = variant === 'embedded';
 
@@ -121,19 +124,19 @@ export function PolicyOverviewTab({
       {!isEmbedded && (
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Financial Portfolio Overview</h2>
-            <p className="text-gray-600">
-              Comprehensive summary of all policies based on your product structure.
+            <h2 className="text-lg font-semibold text-nw-ink">Financial portfolio overview</h2>
+            <p className="text-sm text-nw-text-3">
+              Summary of all policies based on your product structure.
             </p>
           </div>
           <Button onClick={handlePrintOverview} variant="outline">
-            Download Report
+            Download report
           </Button>
         </div>
       )}
 
       {/* Cross-Policy Comparison */}
-      {!isEmbedded && <PolicyComparisonPanel clientId={clientId} />}
+      {!isEmbedded && showComparison && <PolicyComparisonPanel clientId={clientId} />}
 
       {SECTIONS.map((section, index) => (
         <OverviewSection

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useUrlState } from '../../../layout/page';
+import { useClientSubCrumbs } from './crumbsContext';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Shield,
@@ -42,14 +44,31 @@ const SUB_TABS: {
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
   { id: 'overview', label: 'Overview', icon: Shield },
-  { id: 'identity-verification', label: 'Identity Verification', icon: UserCheck },
+  { id: 'identity-verification', label: 'Identity verification', icon: UserCheck },
   { id: 'cdd', label: 'CDD', icon: FileCheck },
-  { id: 'financial-intelligence', label: 'Financial Intelligence', icon: Landmark },
-  { id: 'corporate-governance', label: 'Corporate & Governance', icon: Building2 },
-  { id: 'screening-sanctions', label: 'Screening & Sanctions', icon: Search },
+  { id: 'financial-intelligence', label: 'Financial intelligence', icon: Landmark },
+  { id: 'corporate-governance', label: 'Corporate & governance', icon: Building2 },
+  { id: 'screening-sanctions', label: 'Screening & sanctions', icon: Search },
   { id: 'address-reports', label: 'Address', icon: MapPin },
-  { id: 'risk-assessment', label: 'Risk Assessment', icon: ClipboardList },
+  { id: 'risk-assessment', label: 'Risk assessment', icon: ClipboardList },
   { id: 'activity-log', label: 'Reports', icon: History },
+];
+const COMPLIANCE_SECTIONS = SUB_TABS.map((t) => t.id);
+/** Rail groups (design: CM 12 — Overview, then Checks, then Outcome). */
+const RAIL_GROUPS: { title?: string; ids: ComplianceSubTab[] }[] = [
+  { ids: ['overview'] },
+  {
+    title: 'Checks',
+    ids: [
+      'identity-verification',
+      'cdd',
+      'financial-intelligence',
+      'corporate-governance',
+      'screening-sanctions',
+      'address-reports',
+    ],
+  },
+  { title: 'Outcome', ids: ['risk-assessment', 'activity-log'] },
 ];
 
 const isValidIdNumber = (val: unknown): val is string =>
@@ -72,7 +91,14 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
   const [kvProfilePassport, setKvProfilePassport] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  const [activeSubTab, setActiveSubTab] = useState<ComplianceSubTab>('overview');
+  // The open section is in the address (?ksec=).
+  const [activeSubTab, setActiveSubTab] = useUrlState<ComplianceSubTab>(
+    'ksec',
+    'overview',
+    COMPLIANCE_SECTIONS,
+  );
+  const sectionLabel = SUB_TABS.find((t) => t.id === activeSubTab)?.label ?? '';
+  useClientSubCrumbs(sectionLabel ? [{ label: sectionLabel }] : []);
 
   useEffect(() => {
     const loadProfileForCompliance = async () => {
@@ -218,149 +244,155 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
   // ─── Registered State (Sub-tab Navigation) ────────────────────────────
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Compliance Workspace</h3>
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            Linked to Beeswax ID:{' '}
-            <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
-              {honeycombId}
-            </span>
-          </p>
-        </div>
+    <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <nav aria-label="Compliance sections" className="lg:sticky lg:top-4 lg:self-start">
+        {RAIL_GROUPS.map((group, gi) => (
+          <div key={gi}>
+            {group.title && (
+              <p className="mb-1 mt-4 hidden px-3 text-xs font-medium text-nw-text-3 lg:block">
+                {group.title}
+              </p>
+            )}
+            <ul className="flex gap-1 overflow-x-auto lg:flex-col">
+              {group.ids.map((id) => {
+                const tab = SUB_TABS.find((t) => t.id === id)!;
+                const Icon = tab.icon;
+                const active = activeSubTab === id;
+                return (
+                  <li key={id}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubTab(id)}
+                      aria-current={active ? 'page' : undefined}
+                      className={`flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                        active
+                          ? 'bg-nw-violet-50 font-medium text-nw-violet-600'
+                          : 'text-nw-text-2 hover:bg-gray-50 hover:text-nw-ink'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {tab.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+        <p className="mt-4 hidden px-3 text-xs text-nw-text-3 lg:block">
+          Beeswax ID{' '}
+          <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">{honeycombId}</span>
+        </p>
+      </nav>
+
+      <div className="min-w-0 space-y-4">
+        {/* ──── Sub-tab Content ──── */}
+
+        {activeSubTab === 'overview' && (
+          <OverviewContent
+            selectedClient={selectedClient}
+            honeycombId={honeycombId}
+            resolvedIdNumber={resolvedIdNumber}
+            resolvedPassport={resolvedPassport}
+            hasIdentification={hasIdentification}
+            activities={activities}
+            isLoadingActivity={isLoadingActivity}
+            onNavigate={setActiveSubTab}
+          />
+        )}
+
+        {activeSubTab === 'identity-verification' && (
+          <IdentityVerificationPanel
+            clientId={selectedClient.id}
+            firstName={selectedClient.firstName}
+            lastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            hasIdentification={hasIdentification}
+            onCheckComplete={fetchActivityLog}
+          />
+        )}
+
+        {activeSubTab === 'cdd' && (
+          <CDDPanel
+            clientId={selectedClient.id}
+            firstName={selectedClient.firstName}
+            lastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            hasIdentification={hasIdentification}
+            onCheckComplete={fetchActivityLog}
+          />
+        )}
+
+        {activeSubTab === 'financial-intelligence' && (
+          <FinancialIntelligencePanel
+            clientId={selectedClient.id}
+            firstName={selectedClient.firstName}
+            lastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            hasIdentification={hasIdentification}
+            onCheckComplete={fetchActivityLog}
+          />
+        )}
+
+        {activeSubTab === 'screening-sanctions' && (
+          <SanctionsScreeningPanel
+            clientId={selectedClient.id}
+            firstName={selectedClient.firstName}
+            lastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            onCheckComplete={fetchActivityLog}
+          />
+        )}
+
+        {activeSubTab === 'corporate-governance' && (
+          <CorporateGovernancePanel
+            clientId={selectedClient.id}
+            firstName={selectedClient.firstName}
+            lastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            hasIdentification={hasIdentification}
+            onCheckComplete={fetchActivityLog}
+          />
+        )}
+
+        {activeSubTab === 'address-reports' && (
+          <AddressReportsPanel
+            clientId={selectedClient.id}
+            firstName={selectedClient.firstName}
+            lastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            hasIdentification={hasIdentification}
+            onCheckComplete={fetchActivityLog}
+          />
+        )}
+
+        {activeSubTab === 'risk-assessment' && (
+          <RiskAssessmentPanel
+            clientId={selectedClient.id}
+            clientFirstName={selectedClient.firstName}
+            clientLastName={selectedClient.lastName}
+            idNumber={resolvedIdNumber}
+            passport={resolvedPassport}
+            hasIdentification={hasIdentification}
+          />
+        )}
+
+        {activeSubTab === 'activity-log' && (
+          <ActivityLogContent
+            activities={activities}
+            isLoading={isLoadingActivity}
+            onRefresh={fetchActivityLog}
+            clientId={selectedClient.id}
+            clientName={`${selectedClient.firstName} ${selectedClient.lastName}`}
+          />
+        )}
       </div>
-
-      {/* SUBTABS - Level 2: Secondary Navigation */}
-      <div className="pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {SUB_TABS.map((subtab) => {
-            const Icon = subtab.icon;
-            return (
-              <button
-                key={subtab.id}
-                onClick={() => setActiveSubTab(subtab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                  activeSubTab === subtab.id
-                    ? 'bg-white text-[#6d28d9] border-2 border-[#6d28d9] shadow-sm'
-                    : 'bg-transparent text-gray-600 hover:bg-gray-100 border border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{subtab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ──── Sub-tab Content ──── */}
-
-      {activeSubTab === 'overview' && (
-        <OverviewContent
-          selectedClient={selectedClient}
-          honeycombId={honeycombId}
-          resolvedIdNumber={resolvedIdNumber}
-          resolvedPassport={resolvedPassport}
-          hasIdentification={hasIdentification}
-          activities={activities}
-          isLoadingActivity={isLoadingActivity}
-          onNavigate={setActiveSubTab}
-        />
-      )}
-
-      {activeSubTab === 'identity-verification' && (
-        <IdentityVerificationPanel
-          clientId={selectedClient.id}
-          firstName={selectedClient.firstName}
-          lastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          hasIdentification={hasIdentification}
-          onCheckComplete={fetchActivityLog}
-        />
-      )}
-
-      {activeSubTab === 'cdd' && (
-        <CDDPanel
-          clientId={selectedClient.id}
-          firstName={selectedClient.firstName}
-          lastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          hasIdentification={hasIdentification}
-          onCheckComplete={fetchActivityLog}
-        />
-      )}
-
-      {activeSubTab === 'financial-intelligence' && (
-        <FinancialIntelligencePanel
-          clientId={selectedClient.id}
-          firstName={selectedClient.firstName}
-          lastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          hasIdentification={hasIdentification}
-          onCheckComplete={fetchActivityLog}
-        />
-      )}
-
-      {activeSubTab === 'screening-sanctions' && (
-        <SanctionsScreeningPanel
-          clientId={selectedClient.id}
-          firstName={selectedClient.firstName}
-          lastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          onCheckComplete={fetchActivityLog}
-        />
-      )}
-
-      {activeSubTab === 'corporate-governance' && (
-        <CorporateGovernancePanel
-          clientId={selectedClient.id}
-          firstName={selectedClient.firstName}
-          lastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          hasIdentification={hasIdentification}
-          onCheckComplete={fetchActivityLog}
-        />
-      )}
-
-      {activeSubTab === 'address-reports' && (
-        <AddressReportsPanel
-          clientId={selectedClient.id}
-          firstName={selectedClient.firstName}
-          lastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          hasIdentification={hasIdentification}
-          onCheckComplete={fetchActivityLog}
-        />
-      )}
-
-      {activeSubTab === 'risk-assessment' && (
-        <RiskAssessmentPanel
-          clientId={selectedClient.id}
-          clientFirstName={selectedClient.firstName}
-          clientLastName={selectedClient.lastName}
-          idNumber={resolvedIdNumber}
-          passport={resolvedPassport}
-          hasIdentification={hasIdentification}
-        />
-      )}
-
-      {activeSubTab === 'activity-log' && (
-        <ActivityLogContent
-          activities={activities}
-          isLoading={isLoadingActivity}
-          onRefresh={fetchActivityLog}
-          clientId={selectedClient.id}
-          clientName={`${selectedClient.firstName} ${selectedClient.lastName}`}
-        />
-      )}
     </div>
   );
 }

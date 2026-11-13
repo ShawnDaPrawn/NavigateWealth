@@ -294,7 +294,7 @@ export function ClientFieldRepository({ open, onOpenChange }: ClientFieldReposit
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Client Profile Field Repository</DialogTitle>
+          <DialogTitle>Client profile field repository</DialogTitle>
           <DialogDescription>
             Reference for identifier fields used in the Personal Client Profile (Key-Value Store).
             Use these paths when mapping data across the application.
@@ -317,7 +317,7 @@ export function ClientFieldRepository({ open, onOpenChange }: ClientFieldReposit
               <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur-sm">
                 <TableRow>
                   <TableHead>Field ID</TableHead>
-                  <TableHead>KV Path</TableHead>
+                  <TableHead>Path</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
