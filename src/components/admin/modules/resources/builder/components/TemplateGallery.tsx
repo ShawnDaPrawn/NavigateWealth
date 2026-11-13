@@ -11,9 +11,10 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
+import { PageHeader } from '../../../../layout/page';
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
-import { Search, FileText, ArrowRight, Layers, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { STARTER_TEMPLATES, type StarterTemplate } from '../constants';
 
 interface TemplateGalleryProps {
@@ -73,25 +74,25 @@ export function TemplateGallery({ onSelectTemplate, onCancel, mode }: TemplateGa
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Layers className="h-5 w-5 text-purple-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {mode === 'letter' ? 'Choose a Letter Template' : 'Choose a Template'}
-            </h2>
-            <p className="text-xs text-gray-500">
-              Start from a pre-built template or create from scratch
-            </p>
-          </div>
-        </div>
-        <Button variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
+    <div className="flex flex-col bg-gray-50">
+      {/* Header: a page of its own with a back link */}
+      <div className="flex flex-col gap-4 px-6 pt-6">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Forms &amp; documents
+        </button>
+        <PageHeader
+          title={mode === 'letter' ? 'Compose letter' : 'Build new form'}
+          description={
+            mode === 'letter'
+              ? 'Choose a letter template, then edit it in the builder.'
+              : 'Choose a template, then edit it in the builder. Start from a pre-built template or from scratch.'
+          }
+        />
       </div>
 
       {/* Content */}
@@ -252,8 +253,8 @@ export function TemplateGallery({ onSelectTemplate, onCancel, mode }: TemplateGa
             className="bg-purple-700 hover:bg-purple-800"
           >
             {selectedTemplate?.id === 'blank' || selectedTemplate?.id === 'blank_letter'
-              ? 'Start from Scratch'
-              : 'Use Template'}
+              ? 'Start from scratch'
+              : 'Use template'}
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>

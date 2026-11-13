@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Textarea } from '../../../../ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../ui/collapsible';
 import {
@@ -461,16 +462,10 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
             onValueChange={(value) => setEditorTab(value as 'editor' | 'source')}
             className="space-y-4"
           >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="editor" className="gap-2">
-                <BookOpenText className="h-4 w-4" />
-                Visual editor
-              </TabsTrigger>
-              <TabsTrigger value="source" className="gap-2">
-                <FileText className="h-4 w-4" />
-                HTML/source
-              </TabsTrigger>
-            </TabsList>
+            <SegmentedList aria-label="Editor mode">
+              <SegmentedTrigger value="editor">Visual editor</SegmentedTrigger>
+              <SegmentedTrigger value="source">HTML / source</SegmentedTrigger>
+            </SegmentedList>
 
             <TabsContent value="editor">
               <Card>
