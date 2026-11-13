@@ -217,7 +217,8 @@ export function PersonnelModule() {
     },
   });
 
-  // Top-bar breadcrumb: Personnel / <name> / <tab>, or Personnel / Admin profile.
+  // Top-bar breadcrumb: Personnel / <name> / <tab>, or Personnel / Admin profile (/ Edit).
+  const [editingAdminProfile, setEditingAdminProfile] = useState(false);
   const openPerson = drawerOpen ? selectedPersonnel : null;
   useBreadcrumbTrail(
     openPerson
@@ -229,7 +230,9 @@ export function PersonnelModule() {
           { label: PERSON_TAB_LABELS[activeTab] },
         ]
       : showSuperAdmin
-        ? [{ label: 'Admin profile' }]
+        ? editingAdminProfile
+          ? [{ label: 'Admin profile' }, { label: 'Edit' }]
+          : [{ label: 'Admin profile' }]
         : [],
   );
 
@@ -433,6 +436,7 @@ export function PersonnelModule() {
           profile={superAdminProfile ?? null}
           loading={superAdminLoading}
           onUpdate={handleUpdateSuperAdmin}
+          onEditingChange={setEditingAdminProfile}
         />
       )}
 

@@ -28,11 +28,22 @@ interface SuperAdminProfileCardProps {
   loading: boolean;
   /** Resolves true when the changes were saved. */
   onUpdate: (updates: Partial<SuperAdminProfile>) => Promise<boolean>;
+  /** Told when the edit dialog opens or closes (the page breadcrumb shows "Edit"). */
+  onEditingChange?: (editing: boolean) => void;
 }
 
 /** The super admin's own profile, shown under the Personnel header; Edit opens a dialog. */
-export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdminProfileCardProps) {
-  const [editOpen, setEditOpen] = useState(false);
+export function SuperAdminProfileCard({
+  profile,
+  loading,
+  onUpdate,
+  onEditingChange,
+}: SuperAdminProfileCardProps) {
+  const [editOpen, setEditOpenState] = useState(false);
+  const setEditOpen = (open: boolean) => {
+    setEditOpenState(open);
+    onEditingChange?.(open);
+  };
   const [values, setValues] = useState<AdminProfileValues>({
     firstName: '',
     lastName: '',
