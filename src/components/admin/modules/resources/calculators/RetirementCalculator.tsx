@@ -39,6 +39,7 @@ import { api } from '../../../../../utils/api';
 import { navigateWealthPdfDocumentTitle } from '../../../../../utils/pdfPrintTitle';
 import { RetirementReportTemplate } from './RetirementReportTemplate';
 import { formatCurrencyWhole as formatCurrency } from '../../../../../utils/currencyFormatter';
+import { useConfirm } from '../../../layout/page';
 
 interface RetirementCalculatorProps {
   onBack: () => void;
@@ -62,6 +63,7 @@ const DEFAULT_INPUTS: RetirementInputs = {
 };
 
 export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [inputs, setInputs] = useState<RetirementInputs>(DEFAULT_INPUTS);
   const [results, setResults] = useState<RetirementResults | null>(null);
   const [clients, setClients] = useState<any[]>([]);
@@ -138,7 +140,12 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   };
 
   const deleteScenario = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this scenario?')) return;
+    const ok = await askConfirm({
+      title: 'Delete this scenario?',
+      confirmLabel: 'Delete scenario',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/resources/calculators/retirement/scenarios/${selectedClientId}/${id}`);
       toast.success('Scenario deleted');
@@ -928,6 +935,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
           )}
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }

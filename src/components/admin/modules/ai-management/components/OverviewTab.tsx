@@ -23,10 +23,6 @@ import {
 import {
   Power,
   PowerOff,
-  Users,
-  ThumbsUp,
-  PhoneForwarded,
-  BookOpen,
   Bot,
   ArrowRight,
   AlertTriangle,
@@ -35,6 +31,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { Switch } from '../../../../ui/switch';
+import { StatCard } from '../../../layout/page';
 import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
 import {
@@ -54,11 +51,11 @@ interface OverviewTabProps {
 }
 
 // ── Stat tile ──────────────────────────────────────────────────────────────
+// The shared StatCard; a figure that leads somewhere is a button to that tab.
 function StatTile({
   label,
   value,
   detail,
-  icon: Icon,
   tone = 'neutral',
   onClick,
   actionLabel,
@@ -66,34 +63,28 @@ function StatTile({
   label: string;
   value: React.ReactNode;
   detail: React.ReactNode;
-  icon: React.ElementType;
   tone?: 'neutral' | 'good' | 'warn';
   onClick?: () => void;
   actionLabel?: string;
 }) {
-  const toneClasses = {
-    neutral: 'bg-gray-100 text-gray-600',
-    good: 'bg-green-50 text-green-600',
-    warn: 'bg-amber-50 text-amber-600',
-  }[tone];
-
-  const body = (
+  const meta = (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-500">{label}</span>
-        <div className={cn('p-2 rounded-lg', toneClasses)}>
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-      <p className="text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
-      <p className="text-xs text-gray-500 mt-1 min-h-[1rem]">{detail}</p>
+      {detail}
       {onClick && actionLabel && (
-        <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-purple-700">
+        <span className="mt-2 flex items-center gap-1 font-medium text-nw-violet-600">
           {actionLabel}
-          <ArrowRight className="h-3 w-3" />
+          <ArrowRight className="h-3 w-3" aria-hidden="true" />
         </span>
       )}
     </>
+  );
+  const card = (
+    <StatCard
+      label={label}
+      value={value}
+      meta={meta}
+      tone={tone === 'warn' ? 'attention' : 'default'}
+    />
   );
 
   if (onClick) {
@@ -101,13 +92,13 @@ function StatTile({
       <button
         type="button"
         onClick={onClick}
-        className="text-left bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all w-full"
+        className="w-full rounded-xl text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
       >
-        {body}
+        {card}
       </button>
     );
   }
-  return <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">{body}</div>;
+  return card;
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -188,13 +179,11 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
           label="Conversations, last 7 days"
           value={analyticsLoading ? '…' : (analytics?.totalSessions ?? 0)}
           detail={analyticsLoading ? '' : plural(analytics?.totalMessages ?? 0, 'message')}
-          icon={Users}
         />
         <StatTile
           label="Answers rated helpful"
           value={analyticsLoading ? '…' : helpfulPct === null ? '—' : `${helpfulPct}%`}
           detail={ratings === 0 ? 'No ratings yet' : `from ${plural(ratings, 'rating')}`}
-          icon={ThumbsUp}
           tone={helpfulPct !== null && helpfulPct >= 70 ? 'good' : 'neutral'}
           onClick={() => onNavigate('feedback')}
           actionLabel="Read feedback"
@@ -207,7 +196,6 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
               ? 'Visitors who asked to speak to an adviser'
               : 'Nobody is waiting right now'
           }
-          icon={PhoneForwarded}
           tone={newLeads && newLeads.length > 0 ? 'warn' : 'neutral'}
           onClick={() => onNavigate('leads')}
           actionLabel="Open leads"
@@ -232,7 +220,6 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
               </span>
             )
           }
-          icon={BookOpen}
           tone={knowledgeNeedsAttention ? 'warn' : 'neutral'}
           onClick={() => onNavigate('knowledge')}
           actionLabel="Manage knowledge"

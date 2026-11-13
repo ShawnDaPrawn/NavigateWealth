@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '../../../../../ui/button';
+import { SoonBadge } from '../../../../layout/page';
 import { Input } from '../../../../../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Label } from '../../../../../ui/label';
@@ -224,12 +225,13 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
       </Card>
 
       <div className="flex gap-2 pt-4">
-        <Button type="button" variant="destructive" className="w-full">
+        {/* Neither action has a working endpoint yet, so both stay off. */}
+        <Button type="button" variant="destructive" className="w-full" disabled>
           <Lock className="h-4 w-4 mr-2" />
-          Suspend User Access
+          Suspend user access <SoonBadge />
         </Button>
-        <Button type="button" variant="outline" className="w-full">
-          Reset Password
+        <Button type="button" variant="outline" className="w-full" disabled>
+          Reset password <SoonBadge />
         </Button>
       </div>
 

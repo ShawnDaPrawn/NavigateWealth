@@ -24,11 +24,20 @@ interface Step3Props {
   updateDraft: (updates: Partial<CommunicationDraft>) => void;
   onBack: () => void;
   onReset: () => void;
+  /** Opens the History tab after a send (and starts a new message). */
+  onViewHistory?: () => void;
   /** Whether the current user has 'send' capability. Defaults to true for backwards compat. */
   canSend?: boolean;
 }
 
-export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = true }: Step3Props) {
+export function Step3Review({
+  draft,
+  updateDraft,
+  onBack,
+  onReset,
+  onViewHistory,
+  canSend = true,
+}: Step3Props) {
   const [isSending, setIsSending] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -105,9 +114,14 @@ export function Step3Review({ draft, updateDraft, onBack, onReset, canSend = tru
               : `Your campaign has been scheduled for ${draft.scheduling.startDate?.toLocaleDateString()}.`}
           </p>
         </div>
-        <Button onClick={onReset} variant="outline">
-          Back to Campaigns
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {onViewHistory && (
+            <Button onClick={onViewHistory} variant="outline">
+              View in History
+            </Button>
+          )}
+          <Button onClick={onReset}>Start a new message</Button>
+        </div>
       </div>
     );
   }

@@ -471,3 +471,10 @@ export const KB_DEFAULT_CATEGORIES = [
   'Compliance',
   'General',
 ] as const;
+
+// ============================================================================
+// ADDRESS BAR
+// ============================================================================
+
+/** The address parameter naming the knowledge entry being edited ('new' when creating). */
+export const KB_ENTRY_PARAM = 'entry';

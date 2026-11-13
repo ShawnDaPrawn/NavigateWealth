@@ -1,4 +1,5 @@
 import { Button } from '../../../../../ui/button';
+import { SoonBadge } from '../../../../layout/page';
 import { Avatar, AvatarFallback } from '../../../../../ui/avatar';
 import { Badge } from '../../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
@@ -15,9 +16,9 @@ export function TabClientBook({ clients, loading }: TabClientBookProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">Assigned Client Book</CardTitle>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled>
           <Briefcase className="h-4 w-4 mr-2" />
-          Bulk Reassign
+          Bulk reassign <SoonBadge />
         </Button>
       </CardHeader>
       <CardContent>

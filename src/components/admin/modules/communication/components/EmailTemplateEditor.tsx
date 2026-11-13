@@ -7,7 +7,7 @@ import { Label } from '../../../../ui/label';
 import { Switch } from '../../../../ui/switch';
 import { Card, CardContent } from '../../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
-import { Loader2, ArrowLeft, Save, RefreshCw, Eye, ZoomIn, ZoomOut } from 'lucide-react';
+import { Loader2, ChevronLeft, Save, RefreshCw, Eye, ZoomIn, ZoomOut } from 'lucide-react';
 import { communicationApi } from '../api';
 import { EmailTemplate, EmailFooterSettings } from '../types';
 import { toast } from 'sonner';
@@ -198,25 +198,40 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
     );
   }
 
-  if (!template) return <div>Template not found</div>;
+  if (!template) {
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Back to transactional emails
+        </button>
+        <p>Template not found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <div>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={onBack}
-            className="-ml-2 text-muted-foreground hover:text-foreground"
+            className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Templates
-          </Button>
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            Back to transactional emails
+          </button>
         </div>
         <div className="flex items-end justify-between border-b pb-6 mt-2">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">{template.name}</h2>
+            <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
+              {template.name}
+            </h1>
             <p className="text-muted-foreground mt-1">
               Customize the content and settings for this email
             </p>
@@ -238,7 +253,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Save Changes
+              Save changes
             </Button>
           </div>
         </div>

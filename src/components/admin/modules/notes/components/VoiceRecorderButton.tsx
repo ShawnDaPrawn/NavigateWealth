@@ -32,6 +32,7 @@ import { Button } from '../../../../ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { Mic, Square, Loader2, Check, X, AlertCircle, Upload, FileAudio } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ============================================================================
 // TYPES
@@ -131,7 +132,7 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
         transcriber.resetTranscription();
         // We'll show a manual error via the transcriber
         setUploadedFileName(null);
-        alert(`File is too large (${formatFileSize(file.size)}). Maximum size is 25MB.`);
+        toast.error(`File is too large (${formatFileSize(file.size)}). The maximum is 25 MB.`);
         return;
       }
 

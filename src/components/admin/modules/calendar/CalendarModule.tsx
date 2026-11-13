@@ -29,8 +29,11 @@ import {
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
 import { useCurrentUserPermissions } from '../personnel';
+import { PageHeader } from '../../layout/page';
+import { useConfirm } from '../../layout/page';
 
 export function CalendarModule() {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [filters, setFilters] = useState<Partial<CalendarFilters>>({
     search: '',
     dateRange: { start: null, end: null },
@@ -225,7 +228,12 @@ export function CalendarModule() {
       toast.info('Birthday reminders are auto-generated from client profiles');
       return false;
     }
-    if (!confirm('Are you sure you want to delete this event?')) return false;
+    const ok = await askConfirm({
+      title: 'Delete this event?',
+      confirmLabel: 'Delete event',
+      destructive: true,
+    });
+    if (!ok) return false;
 
     try {
       await deleteEventMutation.mutateAsync(id);
@@ -291,31 +299,25 @@ export function CalendarModule() {
 
   return (
     <div className="min-h-screen bg-gray-50/30">
-      <div className="max-w-[1600px] mx-auto p-6 space-y-6">
+      <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
         {/* Simplified Header with Search */}
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Calendar</h1>
-              <p className="text-muted-foreground mt-1 text-lg">
-                Your schedule for events and meetings
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
+          <PageHeader
+            title="Calendar & Reminders"
+            description="Your schedule for events and meetings."
+            actions={
               <Button
-                className="h-10 px-4 bg-purple-600 hover:bg-purple-700 shadow-sm transition-all hover:shadow-md"
                 onClick={() => {
                   setSelectedEvent(null);
                   setShowEventModal(true);
                 }}
                 disabled={!canCreateEvent}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Event
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add event
               </Button>
-            </div>
-          </div>
+            }
+          />
 
           <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-2">
             <div className="flex-1 relative w-full">
@@ -467,6 +469,7 @@ export function CalendarModule() {
         filters={filters}
         onApplyFilters={setFilters}
       />
+      {confirmDialog}
     </div>
   );
 }

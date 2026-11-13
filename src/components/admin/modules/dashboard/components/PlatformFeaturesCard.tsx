@@ -32,6 +32,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../../utils/api';
 import { vascoKeys } from '../../../../../utils/queryKeys';
 import { toast } from 'sonner';
+import { useConfirm } from '../../../layout/page';
 
 interface VascoConfig {
   enabled: boolean;
@@ -62,6 +63,7 @@ interface IndexResult {
 }
 
 export function PlatformFeaturesCard() {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const queryClient = useQueryClient();
   const [showIndexDetails, setShowIndexDetails] = useState(false);
 
@@ -302,14 +304,15 @@ export function PlatformFeaturesCard() {
                 size="sm"
                 variant="ghost"
                 className="text-xs h-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      'Clear the entire article index? Vasco will no longer reference articles until re-indexed.',
-                    )
-                  ) {
-                    clearIndexMutation.mutate();
-                  }
+                onClick={async () => {
+                  const ok = await askConfirm({
+                    title: 'Clear the entire article index?',
+                    description:
+                      'Vasco will no longer reference articles until they are re-indexed.',
+                    confirmLabel: 'Clear index',
+                    destructive: true,
+                  });
+                  if (ok) clearIndexMutation.mutate();
                 }}
                 disabled={clearIndexMutation.isPending}
               >
@@ -369,6 +372,7 @@ export function PlatformFeaturesCard() {
           )}
         </div>
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 }

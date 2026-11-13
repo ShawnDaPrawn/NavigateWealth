@@ -13,6 +13,7 @@ import { ClipboardList, Server } from 'lucide-react';
 import { AuditLogViewer } from './AuditLogViewer';
 import { SystemHealthDialog } from './SystemHealthDialog';
 import type { DashboardHeaderProps } from '../types';
+import { PageHeader } from '../../../layout/page';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -33,41 +34,26 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
   });
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="text-sm text-muted-foreground">{today}</p>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 mt-1">
-          {getGreeting()}
-          {userName ? `, ${userName}` : ''}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Here&apos;s what&apos;s happening across your practice.
-        </p>
-      </div>
-
-      <div className="flex items-center gap-2 shrink-0">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setAuditOpen(true)}
-          className="gap-1.5 text-xs"
-        >
-          <ClipboardList className="h-3.5 w-3.5" />
-          Audit Trail
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setHealthOpen(true)}
-          className="gap-1.5 text-xs"
-        >
-          <Server className="h-3.5 w-3.5" />
-          System Health
-        </Button>
-      </div>
+    <>
+      <PageHeader
+        title={`${getGreeting()}${userName ? `, ${userName}` : ''}`}
+        description={`${today} · Here's what's happening across your practice.`}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setAuditOpen(true)}>
+              <ClipboardList className="h-4 w-4" aria-hidden="true" />
+              Audit trail
+            </Button>
+            <Button variant="outline" onClick={() => setHealthOpen(true)}>
+              <Server className="h-4 w-4" aria-hidden="true" />
+              System health
+            </Button>
+          </>
+        }
+      />
 
       <AuditLogViewer open={auditOpen} onOpenChange={setAuditOpen} />
       <SystemHealthDialog open={healthOpen} onOpenChange={setHealthOpen} />
-    </div>
+    </>
   );
 }

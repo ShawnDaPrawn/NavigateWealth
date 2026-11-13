@@ -10,7 +10,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { ChevronRight, Eye, MailCheck, Newspaper, Upload, Users } from 'lucide-react';
+import { ChevronRight, Eye, MailCheck, Upload, Users } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Skeleton } from '../../../ui/skeleton';
 import { cn } from '../../../ui/utils';
@@ -27,6 +27,7 @@ import { useStudioCampaign, useStudioDashboard } from './hooks/useNewsletterStud
 import type { NewsletterCaps } from './types';
 import { formatNumber, formatRate, formatRelative, ratePercent } from './utils/format';
 import { schedulerHealth } from './utils/scheduler';
+import { PageHeader } from '../../layout/page';
 
 const CAMPAIGN_PARAM = 'campaign';
 
@@ -143,43 +144,35 @@ function Header({ canCreate, onNew }: { canCreate: boolean; onNew: () => void })
         : 'bg-amber-500';
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="flex items-start gap-3">
-        <span className="rounded-xl bg-purple-50 p-2.5 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300">
-          <Newspaper className="h-6 w-6" aria-hidden />
-        </span>
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Newsletters</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">
-            Upload the finished PDF, choose an audience and send. Delivery runs in the background
-            and honours every unsubscribe.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {data ? (
-          <span
-            className={cn(
-              'inline-flex h-8 items-center gap-2 rounded-full px-3 text-xs font-medium ring-1 ring-inset',
-              pillTone,
-            )}
-            title={
-              health.level === 'live' && data.processor?.lastCronRunAt
-                ? `${health.detail} Last check-in ${formatRelative(data.processor.lastCronRunAt)}.`
-                : health.detail
-            }
-          >
-            <span className={cn('h-2 w-2 rounded-full', dotTone)} aria-hidden />
-            {health.label}
-          </span>
-        ) : null}
-        {canCreate ? (
-          <Button onClick={onNew}>
-            <Upload className="h-4 w-4" aria-hidden /> Upload newsletter
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    <PageHeader
+      title="Newsletters"
+      description="Upload the finished PDF, choose an audience and send. Delivery runs in the background and honours every unsubscribe."
+      actions={
+        <>
+          {data ? (
+            <span
+              className={cn(
+                'inline-flex h-8 items-center gap-2 rounded-full px-3 text-xs font-medium ring-1 ring-inset',
+                pillTone,
+              )}
+              title={
+                health.level === 'live' && data.processor?.lastCronRunAt
+                  ? `${health.detail} Last check-in ${formatRelative(data.processor.lastCronRunAt)}.`
+                  : health.detail
+              }
+            >
+              <span className={cn('h-2 w-2 rounded-full', dotTone)} aria-hidden />
+              {health.label}
+            </span>
+          ) : null}
+          {canCreate ? (
+            <Button onClick={onNew}>
+              <Upload className="h-4 w-4" aria-hidden /> Upload newsletter
+            </Button>
+          ) : null}
+        </>
+      }
+    />
   );
 }
 

@@ -159,3 +159,9 @@ export function documentTypesFor(entityType: RefundEntityType): DocumentTypeOpti
 export function documentTypeLabel(entityType: RefundEntityType, value: string): string {
   return documentTypesFor(entityType).find((opt) => opt.value === value)?.label ?? value;
 }
+
+/** Address parameters for the Accounts section (see AccountsPanel). */
+export const CLUSTER_PARAM = 'cluster';
+export const CLUSTER_TAB_PARAM = 'clusterTab';
+export const ENTITY_TYPE_PARAM = 'entityType';
+export const ENTITY_PARAM = 'entity';

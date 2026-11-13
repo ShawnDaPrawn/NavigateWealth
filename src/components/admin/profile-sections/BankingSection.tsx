@@ -18,6 +18,7 @@ import {
 import { CreditCard, Plus, Edit2, Trash2, X, Check, Upload, FileText } from 'lucide-react';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
+import { toast } from 'sonner';
 
 interface BankAccount {
   id: string;
@@ -408,7 +409,7 @@ export function BankingSection({
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   if (file.size > 10 * 1024 * 1024) {
-                                    alert('File size must be less than 10MB');
+                                    toast.error('The file must be smaller than 10 MB.');
                                     return;
                                   }
                                   handleProofOfBankUpload(account.id, file);

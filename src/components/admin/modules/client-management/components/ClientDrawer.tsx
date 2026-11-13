@@ -1,14 +1,7 @@
 import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
-import { AlertTriangle, Loader2, UserX } from 'lucide-react';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '../../../../ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
-import { Badge } from '../../../../ui/badge';
+import { AlertTriangle, ChevronLeft, Loader2, UserX } from 'lucide-react';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { NavTabsList, NavTabsTrigger } from '../../../layout/page';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { communicationApi } from '../../communication';
@@ -123,22 +116,10 @@ type DrawerTab =
   | 'notes';
 
 /**
- * Inner component for the client drawer workspace.
- *
- * WORKAROUND: Radix nested-dialog focus-scope conflict
- * The ClientDrawer is a Radix Sheet (Dialog under the hood).  Several child
- * components (WillDraftingWizard, FNA wizards, PDF viewer, etc.) open their
- * own Radix Dialogs inside this Sheet.  When the Sheet runs with `modal={true}`,
- * its FocusScope continuously reclaims focus from the inner Dialog's inputs,
- * making text fields uneditable.
- *
- * Setting `modal={false}` permanently disables the Sheet's focus trap.
- * This is acceptable for a 1400px admin workspace drawer — users are never
- * "trapped" inside it anyway, and the inner Dialogs provide their own modal
- * focus trapping when they need it.
- *
- * The Sheet's visual overlay and close-on-X behaviour are unaffected because
- * SheetOverlay always renders and onOpenChange remains wired.
+ * The client record, shown as a full page in place of the client list
+ * (design system: records are pages, never side panels). It used to be a
+ * Radix Sheet; inner dialogs (will wizard, FNA wizards, PDF viewer) now trap
+ * focus on their own with no outer focus scope to fight.
  */
 function ClientDrawerInner({
   client: listClient,
@@ -204,31 +185,33 @@ function ClientDrawerInner({
   const workspaceClient = readyClient ?? (open ? null : closingClient);
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
-      <SheetContent
-        // Fill everything right of the admin sidebar on desktop. A fixed pixel
-        // width left the page behind visible when the browser was zoomed out.
-        className="w-full overflow-y-auto transition-[width] duration-300 sm:max-w-none lg:w-[calc(100vw-var(--sidebar-width,18rem))]"
+    <div className="flex flex-col gap-4">
+      <button
+        type="button"
+        onClick={() => handleOpenChange(false)}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
       >
-        {workspaceClient ? (
-          <ClientWorkspace
-            client={workspaceClient}
-            open={open}
-            canEdit={canEdit}
-            fnaFocus={fnaFocus}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            sanctionsScreeningRunning={sanctionsScreeningRunning}
-            onRunSanctionsScreening={handleSanctionsScreening}
-          />
-        ) : (
-          <ClientDrawerPending
-            state={fresh.status === 'ready' ? { status: 'loading' } : fresh}
-            onClose={() => onOpenChange(false)}
-          />
-        )}
-      </SheetContent>
-    </Sheet>
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        Personal clients
+      </button>
+      {workspaceClient ? (
+        <ClientWorkspace
+          client={workspaceClient}
+          open={open}
+          canEdit={canEdit}
+          fnaFocus={fnaFocus}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          sanctionsScreeningRunning={sanctionsScreeningRunning}
+          onRunSanctionsScreening={handleSanctionsScreening}
+        />
+      ) : (
+        <ClientDrawerPending
+          state={fresh.status === 'ready' ? { status: 'loading' } : fresh}
+          onClose={() => onOpenChange(false)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -243,16 +226,16 @@ function ClientDrawerPending({
   if (state.status === 'missing') {
     return (
       <>
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-nw-ink">
             <UserX className="h-5 w-5 text-muted-foreground" aria-hidden />
             Client not available
-          </SheetTitle>
-          <SheetDescription>
+          </h1>
+          <p className="text-sm text-nw-text-3">
             This client is no longer listed in Client Management. They may have been removed or
             their application declined.
-          </SheetDescription>
-        </SheetHeader>
+          </p>
+        </div>
         <div className="mt-6">
           <Button variant="outline" onClick={onClose}>
             Close
@@ -265,15 +248,15 @@ function ClientDrawerPending({
   if (state.status === 'error') {
     return (
       <>
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+        <div className="flex flex-col gap-1">
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-nw-ink">
             <AlertTriangle className="h-5 w-5 text-amber-600" aria-hidden />
             Could not load this client
-          </SheetTitle>
-          <SheetDescription>
+          </h1>
+          <p className="text-sm text-nw-text-3">
             The latest details could not be loaded. Nothing is shown rather than an older copy.
-          </SheetDescription>
-        </SheetHeader>
+          </p>
+        </div>
         <div className="mt-6 flex gap-2">
           <Button onClick={state.retry}>Try again</Button>
           <Button variant="outline" onClick={onClose}>
@@ -286,13 +269,13 @@ function ClientDrawerPending({
 
   return (
     <>
-      <SheetHeader>
-        <SheetTitle className="flex items-center gap-2">
+      <div className="flex flex-col gap-1">
+        <h1 className="flex items-center gap-2 text-xl font-semibold text-nw-ink">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden />
           Opening client profile
-        </SheetTitle>
-        <SheetDescription>Loading the latest details from the server.</SheetDescription>
-      </SheetHeader>
+        </h1>
+        <p className="text-sm text-nw-text-3">Loading the latest details from the server.</p>
+      </div>
       <div className="mt-6 space-y-3" aria-hidden>
         <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
         <div className="h-40 w-full animate-pulse rounded-lg bg-muted/70" />
@@ -411,8 +394,8 @@ function ClientWorkspace({
 
   return (
     <>
-      <SheetHeader>
-        <SheetTitle className="flex items-center justify-between">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <ClientAvatar
               clientId={client.id}
@@ -422,47 +405,36 @@ function ClientWorkspace({
               editable={canEdit}
             />
             <div>
-              <div>
+              <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
                 {client.firstName} {client.lastName}
-              </div>
-              <div className="text-sm text-muted-foreground font-normal">
+              </h1>
+              <div className="text-sm text-nw-text-3 font-normal">
                 {client.preferredName !== client.firstName && `"${client.preferredName}" • `}
                 Client ID: {client.id}
               </div>
             </div>
           </div>
-        </SheetTitle>
-        <SheetDescription>Complete client profile and management tools</SheetDescription>
-      </SheetHeader>
+        </div>
+      </div>
 
       {/* MAIN TABS - Level 1: Primary Navigation
             Uses ShadCN Tabs component with rounded, filled style
             See: /components/admin/TAB_DESIGN_STANDARDS.md */}
-      <Tabs value={activeTab} onValueChange={onTabChange} className="mt-6">
-        <TabsList className="grid w-full grid-cols-10">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="personal">Personal Details</TabsTrigger>
-          <TabsTrigger value="policies">Policy Details</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="askVasco">Ask Vasco</TabsTrigger>
-          <TabsTrigger value="esign">E-Sign</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-          <TabsTrigger value="communication">
-            <span className="inline-flex items-center gap-1.5">
-              Communication
-              {communicationCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="h-5 min-w-[20px] px-1.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-700 border-0 leading-none"
-                >
-                  {communicationCount}
-                </Badge>
-              )}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={onTabChange} className="mt-6 gap-5">
+        <NavTabsList aria-label="Client record">
+          <NavTabsTrigger value="overview">Overview</NavTabsTrigger>
+          <NavTabsTrigger value="personal">Personal details</NavTabsTrigger>
+          <NavTabsTrigger value="policies">Policy details</NavTabsTrigger>
+          <NavTabsTrigger value="security">Security</NavTabsTrigger>
+          <NavTabsTrigger value="documents">Documents</NavTabsTrigger>
+          <NavTabsTrigger value="askVasco">Ask Vasco</NavTabsTrigger>
+          <NavTabsTrigger value="esign">E-Sign</NavTabsTrigger>
+          <NavTabsTrigger value="compliance">Compliance</NavTabsTrigger>
+          <NavTabsTrigger value="communication" count={communicationCount || undefined}>
+            Communication
+          </NavTabsTrigger>
+          <NavTabsTrigger value="notes">Notes</NavTabsTrigger>
+        </NavTabsList>
 
         {/* 0. Overview — Client-side dashboard view */}
         <TabsContent value="overview" className="space-y-4">

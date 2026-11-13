@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { RefreshCw, Copy, Trash2, RotateCw, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { esignApi } from '../api';
 import { logger } from '../../../../../utils/logger';
+import { useConfirm } from '../../../layout/page';
 
 interface WebhooksDialogProps {
   open: boolean;
@@ -72,6 +73,7 @@ type Delivery = {
 };
 
 export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksDialogProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [tab, setTab] = useState<'endpoints' | 'recent' | 'dlq'>('endpoints');
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
@@ -150,7 +152,12 @@ export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksD
   };
 
   const handleRotate = async (sub: Subscription) => {
-    if (!confirm('Rotate the signing secret? Existing consumers will need the new value.')) return;
+    const ok = await askConfirm({
+      title: 'Rotate the signing secret?',
+      description: 'Existing consumers will need the new value.',
+      confirmLabel: 'Rotate secret',
+    });
+    if (!ok) return;
     try {
       await esignApi.rotateWebhookSecret(sub.id);
       setExpandedSecret(sub.id);
@@ -163,7 +170,13 @@ export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksD
   };
 
   const handleDelete = async (sub: Subscription) => {
-    if (!confirm(`Delete webhook for ${sub.url}?`)) return;
+    const ok = await askConfirm({
+      title: 'Delete this webhook?',
+      description: sub.url,
+      confirmLabel: 'Delete webhook',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await esignApi.deleteWebhookSubscription(sub.id);
       await refresh();
@@ -458,6 +471,7 @@ export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksD
           </Button>
         </SurfaceFooter>
       )}
+      {confirmDialog}
     </Surface>
   );
 }

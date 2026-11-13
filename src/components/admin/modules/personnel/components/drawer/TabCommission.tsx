@@ -61,7 +61,7 @@ export function TabCommission({ selectedPersonnel }: TabCommissionProps) {
             <Badge variant="outline" className="font-mono">
               REF-{selectedPersonnel.lastName?.toUpperCase() || '001'}
             </Badge>
-            <Button size="sm" variant="ghost">
+            <Button size="sm" variant="ghost" disabled aria-label="Add a reference (coming soon)">
               <Plus className="h-3 w-3" />
             </Button>
           </div>

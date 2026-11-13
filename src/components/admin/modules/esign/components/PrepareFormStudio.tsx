@@ -37,6 +37,7 @@ import { ShortcutsDialog } from './studio/ShortcutsDialog';
 import { RecipientsSheet } from './studio/RecipientsSheet';
 import { StudioPreviewDialog } from './studio/StudioPreviewDialog';
 import type { SettingsDraft } from './studio/settingsDraft';
+import { useConfirm } from '../../../layout/page';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -79,6 +80,7 @@ export function PrepareFormStudio({
   sending = false,
   documentUrl,
 }: PrepareFormStudioProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   // Core field state
   const [fields, setFields] = useState<EsignField[]>(envelope.fields || []);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -209,6 +211,7 @@ export function PrepareFormStudio({
     envelopePrimaryDocumentId: envelope.document_id,
     fields,
     setFields,
+    confirm: askConfirm,
   });
 
   // ── Hook: Autodetect candidate management ──
@@ -478,14 +481,18 @@ export function PrepareFormStudio({
     if (hasUnsavedChanges) {
       const saved = await persistFields({ silent: true });
       if (!saved) {
-        const discard = window.confirm(
-          'Your latest changes could not be saved. Leave anyway and discard them?',
-        );
+        const discard = await askConfirm({
+          title: 'Leave without saving?',
+          description: 'Your latest changes could not be saved. Leaving will discard them.',
+          confirmLabel: 'Discard and leave',
+          cancelLabel: 'Stay',
+          destructive: true,
+        });
         if (!discard) return;
       }
     }
     onBack?.();
-  }, [hasUnsavedChanges, persistFields, onBack]);
+  }, [hasUnsavedChanges, persistFields, onBack, askConfirm]);
 
   // ==================== SETTINGS POPOVER ====================
 
@@ -960,6 +967,7 @@ export function PrepareFormStudio({
         showPreview={showPreview}
         signers={signers}
       />
+      {confirmDialog}
     </div>
   );
 }

@@ -47,9 +47,9 @@ beforeEach(() => {
 });
 
 describe('RefundClustersPanel', () => {
-  it('renders the heading and the Create New Cluster button', () => {
+  it('renders the heading and the Create new cluster button', () => {
     render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
-    expect(screen.getByText('Refund Clusters')).toBeDefined();
+    expect(screen.getByText('Refund clusters')).toBeDefined();
     expect(screen.getByRole('button', { name: /create new cluster/i })).toBeDefined();
   });
 
@@ -77,7 +77,7 @@ describe('RefundClustersPanel', () => {
   it('opens the create dialog and submits name + description', () => {
     render(<RefundClustersPanel onOpenCluster={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /create new cluster/i }));
-    expect(screen.getByRole('heading', { name: 'Create New Cluster' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Create new cluster' })).toBeDefined();
 
     fireEvent.change(screen.getByLabelText('Cluster Name'), { target: { value: 'New Cluster' } });
     fireEvent.change(screen.getByLabelText('Cluster Description'), {

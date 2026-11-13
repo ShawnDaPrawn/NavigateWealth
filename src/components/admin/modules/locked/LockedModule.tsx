@@ -8,18 +8,24 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Lock, ShieldX, Unlock } from 'lucide-react';
+import { Lock, ShieldX } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import { NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
 import { useCurrentUserPermissions } from '../personnel';
 import { LockedSkeleton } from './components/LockedSkeleton';
 import { ComingSoonBadge } from './components/ComingSoonBadge';
 import { AccountsPanel } from './refund-clusters/AccountsPanel';
+import { CLUSTER_PARAM } from './refund-clusters/constants';
 import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { IssuingCardsPanel } from './issuing/IssuingCardsPanel';
 import { getLockoutRemaining, verifyAccessCode } from './access';
+
+type LockedTab = 'banking' | 'accounts';
+const LOCKED_TABS: readonly LockedTab[] = ['banking', 'accounts'];
 
 export function LockedModule() {
   const { isSuperAdmin, isLoading } = useCurrentUserPermissions();
@@ -31,39 +37,65 @@ export function LockedModule() {
     return <LockedSkeleton />;
   }
   if (!isSuperAdmin) {
-    return <AccessDenied />;
+    return (
+      <LockedPage description="Private workspace.">
+        <AccessDenied />
+      </LockedPage>
+    );
   }
 
   if (!unlocked) {
-    return <AccessGate onUnlocked={() => setUnlocked(true)} />;
+    return (
+      <LockedPage description="Private workspace.">
+        <AccessGate onUnlocked={() => setUnlocked(true)} />
+      </LockedPage>
+    );
   }
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Unlock className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Locked</h1>
-          <p className="text-sm text-muted-foreground">
-            Private workspace — access re-locks when you leave this tab.
-          </p>
-        </div>
-      </div>
+  return <LockedWorkspace />;
+}
 
-      {/* Top-level tabs: Banking · Accounts · Trading */}
-      <Tabs defaultValue="banking" className="space-y-4">
-        <div className="w-full overflow-x-auto pb-2">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="banking">Banking</TabsTrigger>
-            <TabsTrigger value="accounts">Accounts</TabsTrigger>
-            <TabsTrigger value="trading" disabled>
+/** The page frame: the module's header above one piece of content. */
+function LockedPage({ description, children }: { description: string; children: React.ReactNode }) {
+  return (
+    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+      <PageHeader title="Locked" description={description} />
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The unlocked workspace. The tab (?tab=accounts), the Accounts section
+ * (?section=refund-clusters) and an open cluster (?cluster=<id>) are in the
+ * address; the access code is not, so a reload still asks for it first.
+ */
+function LockedWorkspace() {
+  const [tab, setTab] = useUrlState<LockedTab>('tab', 'banking', LOCKED_TABS);
+  const [searchParams] = useSearchParams();
+  // An open cluster is a page of its own: the module header and tabs step aside.
+  const clusterOpen = tab === 'accounts' && searchParams.has(CLUSTER_PARAM);
+
+  return (
+    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+      {!clusterOpen && (
+        <PageHeader
+          title="Locked"
+          description="Private workspace — access re-locks when you leave this tab."
+        />
+      )}
+
+      <Tabs value={tab} onValueChange={(value) => setTab(value as LockedTab)} className="gap-6">
+        {!clusterOpen && (
+          <NavTabsList aria-label="Locked sections">
+            <NavTabsTrigger value="banking">Banking</NavTabsTrigger>
+            <NavTabsTrigger value="accounts">Accounts</NavTabsTrigger>
+            <NavTabsTrigger value="trading" disabled className="disabled:opacity-50">
               Trading
               <ComingSoonBadge />
-            </TabsTrigger>
-          </TabsList>
-        </div>
+            </NavTabsTrigger>
+          </NavTabsList>
+        )}
 
         <TabsContent value="banking">
           <div className="space-y-8">
@@ -82,13 +114,13 @@ export function LockedModule() {
 
 function AccessDenied() {
   return (
-    <div className="min-h-[70vh] flex items-center justify-center p-6">
+    <div className="flex min-h-[50vh] items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
             <ShieldX className="h-6 w-6 text-destructive" />
           </div>
-          <CardTitle>Access Denied</CardTitle>
+          <CardTitle>Access denied</CardTitle>
           <CardDescription>You do not have permission to view this page.</CardDescription>
         </CardHeader>
       </Card>
@@ -145,13 +177,13 @@ function AccessGate({ onUnlocked }: { onUnlocked: () => void }) {
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center p-6">
+    <div className="flex min-h-[50vh] items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
             <Lock className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle>Restricted Area</CardTitle>
+          <CardTitle>Restricted area</CardTitle>
           <CardDescription>Enter the access code to continue.</CardDescription>
         </CardHeader>
         <CardContent>

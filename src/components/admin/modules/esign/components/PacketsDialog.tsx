@@ -54,6 +54,7 @@ import { toast } from 'sonner';
 import { esignApi } from '../api';
 import type { EsignTemplateRecord, PacketRecord, PacketRunRecord, PacketStep } from '../types';
 import { logger } from '../../../../../utils/logger';
+import { useConfirm } from '../../../layout/page';
 
 interface PacketsDialogProps {
   open: boolean;
@@ -69,6 +70,7 @@ export function PacketsDialog({
   inline = false,
   onCompleted,
 }: PacketsDialogProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [tab, setTab] = useState<'library' | 'author' | 'runs'>('library');
 
   // shared data
@@ -177,7 +179,13 @@ export function PacketsDialog({
   };
 
   const handleDeletePacket = async (id: string) => {
-    if (!confirm('Delete this packet? Active runs will keep going.')) return;
+    const ok = await askConfirm({
+      title: 'Delete this packet?',
+      description: 'Active runs will keep going.',
+      confirmLabel: 'Delete packet',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await esignApi.deletePacket(id);
       toast.success('Packet deleted.');
@@ -637,12 +645,14 @@ export function PacketsDialog({
                           variant="ghost"
                           size="sm"
                           onClick={async () => {
-                            if (
-                              !confirm(
-                                'Cancel this packet run? In-flight envelopes are unaffected.',
-                              )
-                            )
-                              return;
+                            const ok = await askConfirm({
+                              title: 'Cancel this packet run?',
+                              description: 'Envelopes already sent are unaffected.',
+                              confirmLabel: 'Cancel run',
+                              cancelLabel: 'Keep running',
+                              destructive: true,
+                            });
+                            if (!ok) return;
                             try {
                               await esignApi.cancelPacketRun(run.id);
                               toast.success('Run cancelled.');
@@ -672,6 +682,7 @@ export function PacketsDialog({
           </Button>
         </SurfaceFooter>
       )}
+      {confirmDialog}
     </Surface>
   );
 }
