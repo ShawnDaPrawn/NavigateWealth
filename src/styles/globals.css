@@ -51,6 +51,31 @@ body.schedule-consultation-modal-open footer.bg-black {
   --sidebar-badge: #f59e0b;
   --sidebar-badge-foreground: #111827;
 
+  /* Navigate Wealth admin design system (design-system/README, "Building it").
+     Used by the admin shell; the public site keeps its own tokens above. */
+  --nw-violet: #6d28d9;
+  --nw-violet-hover: #7c3edd;
+  --nw-violet-600: #5b21b6;
+  --nw-violet-100: #ede9fe;
+  --nw-violet-50: #f5f3ff;
+  --nw-ink: #111827;
+  --nw-text-2: #4b5563;
+  --nw-text-3: #6b7280;
+  --nw-surface: #ffffff;
+  --nw-bg: #f6f7f9;
+  --nw-line: #e5e7eb;
+  --nw-line-2: #f1f2f4;
+  --nw-amber-700: #92400e;
+  --nw-amber-100: #fef3c7;
+  --nw-amber-dot: #f59e0b;
+  --nw-nav-bg: #fbfbfc;
+  --nw-nav-line: #e9eaee;
+  --nw-nav-hover: #f0f1f4;
+  --nw-nav-active: #f1ecff;
+  --nw-nav-icon: #9ca3af;
+  --nw-nav-text: #374151;
+  --nw-count: #eef0f3;
+
   /* Theme-specific section backgrounds */
   --section-black: #000000;
   --section-white: #ffffff;
@@ -140,6 +165,29 @@ body.schedule-consultation-modal-open footer.bg-black {
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-badge: var(--sidebar-badge);
   --color-sidebar-badge-foreground: var(--sidebar-badge-foreground);
+
+  --color-nw-violet: var(--nw-violet);
+  --color-nw-violet-hover: var(--nw-violet-hover);
+  --color-nw-violet-600: var(--nw-violet-600);
+  --color-nw-violet-100: var(--nw-violet-100);
+  --color-nw-violet-50: var(--nw-violet-50);
+  --color-nw-ink: var(--nw-ink);
+  --color-nw-text-2: var(--nw-text-2);
+  --color-nw-text-3: var(--nw-text-3);
+  --color-nw-surface: var(--nw-surface);
+  --color-nw-bg: var(--nw-bg);
+  --color-nw-line: var(--nw-line);
+  --color-nw-line-2: var(--nw-line-2);
+  --color-nw-amber-700: var(--nw-amber-700);
+  --color-nw-amber-100: var(--nw-amber-100);
+  --color-nw-amber-dot: var(--nw-amber-dot);
+  --color-nw-nav-bg: var(--nw-nav-bg);
+  --color-nw-nav-line: var(--nw-nav-line);
+  --color-nw-nav-hover: var(--nw-nav-hover);
+  --color-nw-nav-active: var(--nw-nav-active);
+  --color-nw-nav-icon: var(--nw-nav-icon);
+  --color-nw-nav-text: var(--nw-nav-text);
+  --color-nw-count: var(--nw-count);
 
   --color-section-black: var(--section-black);
   --color-section-white: var(--section-white);

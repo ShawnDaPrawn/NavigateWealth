@@ -47,37 +47,57 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   locked: { label: 'Locked', icon: Lock },
 };
 
+/**
+ * Every admin module, grouped as the sidebar shows them (design system,
+ * "Shell and navigation"). The permission screens in Personnel use the same
+ * groups, so every module must appear exactly once.
+ */
 export const moduleGroups: ModuleGroup[] = [
   {
     label: 'Overview',
     modules: ['dashboard'],
   },
   {
-    label: 'Operations',
-    modules: ['applications', 'submissions', 'tasks', 'notes', 'calendar'],
+    label: 'Work',
+    modules: ['tasks', 'applications', 'submissions', 'calendar', 'notes'],
   },
   {
-    label: 'Manage',
-    modules: [
-      'clients',
-      'esign',
-      'personnel',
-      'advice-engine',
-      'product-management',
-      'resources',
-      'publications',
-      'ai-management',
-    ],
+    label: 'Clients',
+    modules: ['clients', 'communication', 'esign'],
   },
   {
-    label: 'Risk & Compliance',
-    modules: ['compliance', 'reporting', 'issues'],
+    label: 'Advice',
+    modules: ['advice-engine', 'product-management', 'resources'],
   },
   {
-    label: 'Growth',
-    modules: ['communication', 'newsletter', 'marketing', 'locked'],
+    label: 'Marketing',
+    modules: ['publications', 'newsletter', 'marketing'],
+  },
+  {
+    label: 'Practice',
+    modules: ['personnel', 'compliance', 'reporting', 'issues', 'ai-management', 'locked'],
   },
 ];
+
+/** Shown above the groups, without a group heading. */
+export const sidebarHomeModules: AdminModule[] = ['dashboard'];
+
+/** Shown in the sidebar footer, above the account menu, instead of in their group. */
+export const sidebarFooterModules: AdminModule[] = ['locked'];
+
+/** The groups the sidebar lists under collapsible headings, minus home and footer items. */
+export const sidebarGroups: ModuleGroup[] = moduleGroups
+  .map((group) => ({
+    label: group.label,
+    modules: group.modules.filter(
+      (m) => !sidebarHomeModules.includes(m) && !sidebarFooterModules.includes(m),
+    ),
+  }))
+  .filter((group) => group.modules.length > 0);
+
+/** The sidebar group a module sits in, for the breadcrumb. Home and footer items have none. */
+export const sidebarGroupOf = (module: AdminModule): string | null =>
+  sidebarGroups.find((group) => group.modules.includes(module))?.label ?? null;
 
 // Modules that display numeric sidebar counters.
 export const operationsModules: AdminModule[] = [
@@ -99,3 +119,10 @@ export const formatSidebarBadgeCount = (count: number): string =>
 /** Human-readable pending summary used by tooltips and accessible labels. */
 export const formatPendingSummary = (count: number): string =>
   count <= 0 ? 'nothing pending' : `${count.toLocaleString()} pending`;
+
+/** "super_admin" → "Super admin". */
+export function formatRole(role: string | undefined): string {
+  if (!role) return 'Administrator';
+  const words = role.replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}

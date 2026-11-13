@@ -3,7 +3,7 @@ import navigateWealthLogo from 'figma:asset/def9c4d4fdd055d486a64e8df869988fd6a2
 import wealthFooterLogo from 'figma:asset/8dc2892f50ecc4c5f692fd5ad52639699e2e4656.png';
 
 interface LogoProps {
-  variant?: 'default' | 'light' | 'admin-white';
+  variant?: 'default' | 'light' | 'admin-white' | 'admin';
   className?: string;
 }
 
@@ -16,6 +16,9 @@ export function Logo({ variant = 'default', className = '' }: LogoProps) {
     logoSrc = wealthFooterLogo;
     altText = 'Wealth';
     height = '29.75px';
+  } else if (variant === 'admin') {
+    // The site logo, sized to fit the admin sidebar beside its collapse button.
+    height = '21px';
   } else if (variant === 'admin-white') {
     logoSrc = '/brand-assets/navigate-wealth-admin-logo-transparent.png';
     altText = 'Navigate Wealth';

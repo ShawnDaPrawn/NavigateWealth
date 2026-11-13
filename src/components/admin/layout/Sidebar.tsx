@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Settings, LogOut, ArrowLeftRight, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
+import {
+  Settings,
+  LogOut,
+  ArrowLeftRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
+  ChevronDown,
+  ChevronsUpDown,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { cn } from '../../ui/utils';
 import { Logo } from '../../layout/Logo';
@@ -19,9 +25,12 @@ import {
   alwaysShowCounterModules,
   formatSidebarBadgeCount,
   formatPendingSummary,
+  formatRole,
   moduleConfig,
-  moduleGroups,
   operationsModules,
+  sidebarFooterModules,
+  sidebarGroups,
+  sidebarHomeModules,
 } from './config';
 import { useAuth } from '../../auth/AuthContext';
 import { useCurrentUserPermissions } from '../modules/personnel/shell';
@@ -31,6 +40,7 @@ import { toast } from 'sonner';
 import { InstallAppMenuItem } from './InstallAppMenuItem';
 import { InstallHelpDialog } from './InstallHelpDialog';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
+import { readClosedGroups, writeClosedGroups } from './sidebarState';
 
 interface SidebarProps {
   activeModule: AdminModule;
@@ -41,6 +51,15 @@ interface SidebarProps {
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
 }
+
+type SidebarUser = {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  user_metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+} | null;
 
 export function Sidebar({
   activeModule,
@@ -56,7 +75,6 @@ export function Sidebar({
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const { installApp, isInstalling, showInstallOption } = usePWAInstall();
 
-  // Check if current user is super admin
   const isSuperAdmin = user?.role === 'super_admin';
 
   const handleLogout = async () => {
@@ -75,46 +93,36 @@ export function Sidebar({
     navigate('/dashboard');
   };
 
+  const shared = {
+    activeModule,
+    onModuleChange,
+    pendingCounts,
+    setCollapsed,
+    setMobileOpen,
+    user: user as unknown as SidebarUser,
+    onLogout: handleLogout,
+    onSwitchToPersonal: handleSwitchToPersonal,
+    onInstallApp: installApp,
+    installOptionVisible: showInstallOption,
+    isInstallingApp: isInstalling,
+    onShowInstallHelp: () => setShowInstallHelp(true),
+    isSuperAdmin,
+  };
+
   return (
     <div className="contents">
-      {/* Desktop Sidebar */}
+      {/* Desktop sidebar: 248px, or a 64px rail when collapsed */}
       <aside
         className={cn(
-          'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 transition-all duration-300',
-          collapsed ? 'w-16' : 'w-72',
+          'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 transition-[width] duration-200',
+          collapsed ? 'w-16' : 'w-62',
         )}
         aria-label="Admin navigation"
       >
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto sidebar-scrollbar bg-sidebar border-r border-sidebar-border">
-          <SidebarContent
-            activeModule={activeModule}
-            onModuleChange={onModuleChange}
-            pendingCounts={pendingCounts}
-            collapsed={collapsed}
-            setCollapsed={setCollapsed}
-            mobileOpen={mobileOpen}
-            setMobileOpen={setMobileOpen}
-            user={
-              user as unknown as {
-                [key: string]: unknown;
-                id?: string;
-                email?: string;
-                user_metadata?: Record<string, unknown>;
-              } | null
-            }
-            onLogout={handleLogout}
-            onSwitchToPersonal={handleSwitchToPersonal}
-            onInstallApp={installApp}
-            installOptionVisible={showInstallOption}
-            isInstallingApp={isInstalling}
-            onShowInstallHelp={() => setShowInstallHelp(true)}
-            isSuperAdmin={isSuperAdmin}
-            isMobile={false}
-          />
-        </div>
+        <SidebarContent {...shared} rail={collapsed} isMobile={false} />
       </aside>
 
-      {/* Mobile Sidebar */}
+      {/* Phone and tablet: the same sidebar as a drawer */}
       {mobileOpen && (
         <div
           className="relative z-50 lg:hidden"
@@ -123,61 +131,28 @@ export function Sidebar({
           aria-label="Navigation menu"
         >
           <div
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/40"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <div className="fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-sidebar-border">
-            <SidebarContent
-              activeModule={activeModule}
-              onModuleChange={onModuleChange}
-              pendingCounts={pendingCounts}
-              collapsed={collapsed}
-              setCollapsed={setCollapsed}
-              mobileOpen={mobileOpen}
-              setMobileOpen={setMobileOpen}
-              user={
-                user as unknown as {
-                  [key: string]: unknown;
-                  id?: string;
-                  email?: string;
-                  user_metadata?: Record<string, unknown>;
-                } | null
-              }
-              onLogout={handleLogout}
-              onSwitchToPersonal={handleSwitchToPersonal}
-              onInstallApp={installApp}
-              installOptionVisible={showInstallOption}
-              isInstallingApp={isInstalling}
-              onShowInstallHelp={() => setShowInstallHelp(true)}
-              isSuperAdmin={isSuperAdmin}
-              isMobile={true}
-            />
+          <div className="fixed inset-y-0 left-0 z-50 flex w-[min(18rem,85vw)] flex-col">
+            <SidebarContent {...shared} rail={false} isMobile />
           </div>
         </div>
       )}
 
-      {/* PWA Install Help Dialog */}
       <InstallHelpDialog open={showInstallHelp} onOpenChange={setShowInstallHelp} />
     </div>
   );
 }
 
-// Extracted SidebarContent component to prevent re-renders
 interface SidebarContentProps {
   activeModule: AdminModule;
   onModuleChange: (module: AdminModule) => void;
   pendingCounts: PendingCounts;
-  collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
-  user: {
-    id?: string;
-    email?: string;
-    user_metadata?: Record<string, unknown>;
-    [key: string]: unknown;
-  } | null;
+  user: SidebarUser;
   onLogout: () => void;
   onSwitchToPersonal: () => void;
   onInstallApp: () => Promise<'accepted' | 'dismissed' | null>;
@@ -185,6 +160,8 @@ interface SidebarContentProps {
   isInstallingApp: boolean;
   onShowInstallHelp: () => void;
   isSuperAdmin: boolean;
+  /** Collapsed desktop rail: icons only. */
+  rail: boolean;
   isMobile: boolean;
 }
 
@@ -192,7 +169,6 @@ function SidebarContent({
   activeModule,
   onModuleChange,
   pendingCounts,
-  collapsed,
   setCollapsed,
   setMobileOpen,
   user,
@@ -203,280 +179,306 @@ function SidebarContent({
   isInstallingApp,
   onShowInstallHelp,
   isSuperAdmin,
+  rail,
   isMobile,
 }: SidebarContentProps) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [closedGroups, setClosedGroups] = useState<string[]>(readClosedGroups);
   const { can } = useCurrentUserPermissions();
 
-  const shouldShowBadge = (module: AdminModule): boolean => {
-    const count = pendingCounts[module]?.count || 0;
+  const countOf = (module: AdminModule) => pendingCounts[module]?.count || 0;
+  const showsCount = (module: AdminModule): boolean =>
+    operationsModules.includes(module) &&
+    (countOf(module) > 0 || alwaysShowCounterModules.includes(module));
+
+  const toggleGroup = (label: string) => {
+    const next = closedGroups.includes(label)
+      ? closedGroups.filter((g) => g !== label)
+      : [...closedGroups, label];
+    setClosedGroups(next);
+    writeClosedGroups(next);
+  };
+
+  const userName = (user?.name as string) || 'Admin User';
+  const userRole = formatRole(user?.role as string | undefined);
+
+  const renderItem = (module: AdminModule) => {
+    const config = moduleConfig[module];
+    const Icon = config.icon;
+    const isActive = activeModule === module;
+    const count = countOf(module);
+    const counted = showsCount(module);
+    const waiting = counted && count > 0;
+
+    const item = (
+      <button
+        key={module}
+        type="button"
+        onClick={() => {
+          onModuleChange(module);
+          setMobileOpen(false);
+        }}
+        // Navigation intent: start the module's chunk downloading while the
+        // pointer is still on the item. Idempotent and fire-and-forget.
+        onMouseEnter={() => preloadAdminModule(module)}
+        onFocus={() => preloadAdminModule(module)}
+        onTouchStart={() => preloadAdminModule(module)}
+        aria-current={isActive ? 'page' : undefined}
+        aria-label={
+          rail
+            ? counted
+              ? `${config.label}, ${formatPendingSummary(count)}`
+              : config.label
+            : undefined
+        }
+        className={cn(
+          'group/item relative flex items-center rounded-lg text-[13.5px] outline-none transition-colors',
+          'focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+          rail ? 'h-10 w-11 justify-center' : 'h-[34px] w-full gap-2.5 px-2.5 text-left',
+          isActive
+            ? 'bg-nw-nav-active font-semibold text-nw-violet-600'
+            : 'text-nw-nav-text hover:bg-nw-nav-hover hover:text-nw-ink',
+        )}
+      >
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            'size-[18px] shrink-0',
+            isActive ? 'text-nw-violet' : 'text-nw-nav-icon group-hover/item:text-nw-text-3',
+          )}
+        />
+        {!rail && <span className="min-w-0 flex-1 truncate">{config.label}</span>}
+        {!rail && counted && (
+          <span
+            className={cn(
+              'inline-flex h-5 min-w-[22px] items-center justify-center rounded-full px-[7px] text-[11.5px] font-semibold tabular-nums',
+              isActive
+                ? 'bg-white text-nw-violet-600'
+                : waiting
+                  ? 'bg-nw-amber-100 text-nw-amber-700'
+                  : 'bg-nw-count text-nw-text-2',
+            )}
+          >
+            {count.toLocaleString()}
+          </span>
+        )}
+        {rail && waiting && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-nw-amber-100 px-1 text-[10px] font-semibold leading-none tabular-nums text-nw-amber-700 ring-2 ring-nw-nav-bg"
+          >
+            {formatSidebarBadgeCount(count)}
+          </span>
+        )}
+      </button>
+    );
+
+    if (!rail) return item;
     return (
-      operationsModules.includes(module) && (count > 0 || alwaysShowCounterModules.includes(module))
+      <Tooltip key={module}>
+        <TooltipTrigger asChild>{item}</TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8}>
+          <div className="flex flex-col">
+            <p className="font-medium">{config.label}</p>
+            {counted && (
+              <p className="mt-0.5 text-xs text-primary-foreground/85">
+                {formatPendingSummary(count)}
+              </p>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 
+  const home = sidebarHomeModules.filter((m) => can(m));
+  const footer = sidebarFooterModules.filter((m) => can(m));
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Logo/Header */}
+    <TooltipProvider>
       <div
         className={cn(
-          'flex h-16 items-center px-4 border-b border-sidebar-border transition-all duration-200',
-          collapsed && !isMobile && 'px-2 justify-center',
+          'flex h-full flex-col border-r border-nw-nav-line bg-nw-nav-bg text-sm text-nw-ink',
+          rail ? 'items-center px-2 pt-3.5 pb-3' : 'px-3 pt-3.5 pb-3',
         )}
       >
-        {collapsed && !isMobile ? (
-          <div
-            className="w-9 h-9 rounded-full border border-sidebar-foreground/25 flex items-center justify-center select-none"
-            aria-hidden="true"
-          >
-            <span className="text-sidebar-foreground font-bold text-sm">N</span>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <Logo variant="admin-white" />
-            </div>
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 ml-auto hidden lg:flex text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={() => setCollapsed(!collapsed)}
-                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                title="Collapse sidebar"
-              >
-                <PanelLeftClose className="h-4 w-4" />
-              </Button>
-            )}
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={() => setMobileOpen(false)}
-                aria-label="Close navigation menu"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Expand control - only in the collapsed desktop rail */}
-      {collapsed && !isMobile && (
-        <div className="flex justify-center px-2 pt-3">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-10 rounded-lg border border-dashed border-sidebar-foreground/30 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:border-sidebar-foreground/50"
-                  onClick={() => setCollapsed(false)}
-                  aria-label="Expand sidebar"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                Expand sidebar
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto sidebar-scrollbar py-4" aria-label="Admin modules">
-        {moduleGroups.map((section, sectionIdx) => {
-          // Filter modules by permission — only show modules the user can access
-          const visibleModules = section.modules.filter((m) => can(m));
-          if (visibleModules.length === 0) return null;
-
-          return (
-            <div key={sectionIdx} className={cn('mb-6', collapsed && !isMobile && 'mb-3')}>
-              {/* Collapsed rail: a divider keeps the section grouping visible without a title */}
-              {collapsed && !isMobile && sectionIdx > 0 && (
-                <div
-                  className="mx-4 mb-3 border-t border-sidebar-foreground/15"
-                  aria-hidden="true"
-                />
-              )}
-              {/* Section title - only show when not collapsed */}
-              {(!collapsed || isMobile) && (
-                <div className="px-4 mb-2">
-                  <h3 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">
-                    {section.label}
-                  </h3>
-                </div>
-              )}
-
-              {/* Menu Items */}
-              <div className="space-y-1 px-2">
-                {visibleModules.map((module, itemIdx) => {
-                  const config = moduleConfig[module];
-                  const Icon = config.icon;
-                  const isActive = activeModule === module;
-
-                  const pendingData = pendingCounts[module] || { count: 0 };
-                  const showBadge = shouldShowBadge(module);
-
-                  const buttonContent = (
-                    <Button
-                      key={itemIdx}
-                      onClick={() => {
-                        onModuleChange(module);
-                        setMobileOpen(false);
-                      }}
-                      // Navigation intent: start the module's chunk downloading
-                      // while the pointer is still on the item, so the click
-                      // lands on a chunk that has already arrived rather than
-                      // starting the download. Idempotent and fire-and-forget.
-                      onMouseEnter={() => preloadAdminModule(module)}
-                      onFocus={() => preloadAdminModule(module)}
-                      // Touch has no hover, but there is still a beat between
-                      // finger-down and the click firing.
-                      onTouchStart={() => preloadAdminModule(module)}
-                      variant="ghost"
-                      aria-current={isActive ? 'page' : undefined}
-                      aria-label={
-                        collapsed && !isMobile
-                          ? showBadge
-                            ? `${config.label}, ${formatPendingSummary(pendingData.count)}`
-                            : config.label
-                          : undefined
-                      }
-                      className={cn(
-                        'relative overflow-visible transition-all duration-200',
-                        collapsed && !isMobile
-                          ? 'w-10 h-10 p-0 justify-center rounded-lg'
-                          : 'w-full justify-start gap-3',
-                        isActive
-                          ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                      )}
-                    >
-                      {/* size-* (not h-/w-) so the Button's default svg sizing rule does not override it */}
-                      <Icon
-                        className={cn('shrink-0', collapsed && !isMobile ? 'size-5' : 'size-4')}
-                      />
-                      {(!collapsed || isMobile) && <span>{config.label}</span>}
-                      {showBadge && (!collapsed || isMobile) && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-auto h-5 min-w-5 px-1.5 py-0 text-xs tabular-nums bg-sidebar-badge text-sidebar-badge-foreground border-transparent hover:bg-sidebar-badge"
-                        >
-                          {pendingData.count.toLocaleString()}
-                        </Badge>
-                      )}
-                      {showBadge && collapsed && !isMobile && (
-                        <span
-                          aria-hidden="true"
-                          className="pointer-events-none absolute -top-2.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-badge px-1 text-[10px] font-semibold leading-none tabular-nums text-sidebar-badge-foreground ring-2 ring-sidebar"
-                        >
-                          {formatSidebarBadgeCount(pendingData.count)}
-                        </span>
-                      )}
-                    </Button>
-                  );
-
-                  // Wrap in Tooltip when collapsed
-                  if (collapsed && !isMobile) {
-                    return (
-                      <TooltipProvider key={itemIdx}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
-                          <TooltipContent side="right" sideOffset={8}>
-                            <div className="flex flex-col">
-                              <p className="font-medium">{config.label}</p>
-                              {showBadge && (
-                                <p className="mt-0.5 text-xs text-primary-foreground/85">
-                                  {formatPendingSummary(pendingData.count)}
-                                </p>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    );
-                  }
-
-                  return buttonContent;
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </nav>
-
-      {/* User section */}
-      <div className={cn('p-4 border-t border-sidebar-border', collapsed && !isMobile && 'px-2')}>
-        <DropdownMenu open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                'transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                collapsed && !isMobile
-                  ? 'w-10 h-10 px-0 justify-center'
-                  : 'w-full justify-start gap-3 h-12',
-              )}
-            >
-              <Avatar className="h-8 w-8 shrink-0 border border-sidebar-border">
-                <AvatarImage src="/api/placeholder/32/32" alt="" />
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
-                  {(user?.name as string)?.[0] || 'A'}
-                </AvatarFallback>
-              </Avatar>
-              {(!collapsed || isMobile) && (
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-medium">{(user?.name as string) || 'Admin User'}</p>
-                  <p className="text-xs text-sidebar-foreground/70">
-                    {(user?.role as string) || 'Administrator'}
-                  </p>
-                </div>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
-            <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <InstallAppMenuItem
-              isInstalling={isInstallingApp}
-              isVisible={installOptionVisible}
-              onInstallApp={onInstallApp}
-              onShowInstallHelp={onShowInstallHelp}
+        {/* Brand */}
+        <div
+          className={cn(
+            'flex shrink-0 items-center',
+            rail ? 'flex-col gap-3 pb-3' : 'gap-2.5 px-2 pb-3.5',
+          )}
+        >
+          {rail ? (
+            <img
+              src="/brand-assets/navigate-wealth-icon-only-brand.svg"
+              alt="Navigate Wealth"
+              className="h-7 w-7"
             />
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            {isSuperAdmin && (
+          ) : (
+            <Logo variant="admin" className="min-w-0 flex-1" />
+          )}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={() => setCollapsed(!rail)}
+              aria-label={rail ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={rail ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="inline-flex size-8 items-center justify-center rounded-lg text-nw-text-3 hover:bg-nw-nav-hover hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+            >
+              {rail ? (
+                <PanelLeftOpen className="size-4" aria-hidden="true" />
+              ) : (
+                <PanelLeftClose className="size-4" aria-hidden="true" />
+              )}
+            </button>
+          )}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation menu"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-nw-text-3 hover:bg-nw-nav-hover hover:text-nw-ink"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        {/* Modules */}
+        <nav
+          className={cn(
+            'sidebar-scrollbar -mx-1 flex min-h-0 flex-1 flex-col overflow-y-auto px-1',
+            rail && 'items-center',
+          )}
+          aria-label="Admin modules"
+        >
+          {home.length > 0 && (
+            <div className={cn('mb-1.5 flex flex-col gap-px', rail && 'items-center')}>
+              {home.map(renderItem)}
+            </div>
+          )}
+
+          {sidebarGroups.map((group) => {
+            const visible = group.modules.filter((m) => can(m));
+            if (visible.length === 0) return null;
+            const open = rail || !closedGroups.includes(group.label);
+            const waitingInGroup = visible.some((m) => showsCount(m) && countOf(m) > 0);
+            const listId = `nav-group-${group.label.toLowerCase()}`;
+
+            if (rail) {
+              return (
+                <div key={group.label} className="flex flex-col items-center gap-px">
+                  <div className="my-2 h-px w-6 bg-nw-line" aria-hidden="true" />
+                  {visible.map(renderItem)}
+                </div>
+              );
+            }
+
+            return (
+              <div key={group.label} className="mt-2.5 flex flex-col gap-px">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={open}
+                  aria-controls={listId}
+                  className="flex h-7 w-full items-center gap-1.5 rounded-md px-2.5 text-left text-xs font-semibold text-nw-text-3 outline-none hover:bg-gray-100 hover:text-nw-ink focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+                >
+                  <span className="flex-1">{group.label}</span>
+                  {!open && waitingInGroup && (
+                    <span
+                      className="size-[7px] rounded-full bg-nw-amber-dot"
+                      aria-label="Items waiting"
+                      role="img"
+                    />
+                  )}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn('size-3.5 transition-transform', !open && '-rotate-90')}
+                  />
+                </button>
+                {open && (
+                  <div id={listId} className="flex flex-col gap-px">
+                    {visible.map(renderItem)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Footer: Locked and the account menu */}
+        <div
+          className={cn(
+            'mt-2.5 flex shrink-0 flex-col gap-0.5 border-t border-nw-line pt-2.5',
+            rail && 'w-full items-center',
+          )}
+        >
+          {footer.map(renderItem)}
+          <DropdownMenu open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={rail ? `${userName}, account menu` : undefined}
+                className={cn(
+                  'flex items-center rounded-lg text-left outline-none hover:bg-nw-nav-hover focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+                  rail ? 'size-11 justify-center' : 'w-full gap-2.5 px-2 pt-2 pb-1.5',
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full bg-nw-violet-100 text-xs font-semibold text-nw-violet-600"
+                >
+                  {userName[0]?.toUpperCase() || 'A'}
+                </span>
+                {!rail && (
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold">{userName}</span>
+                    <span className="block truncate text-xs text-nw-text-3">{userRole}</span>
+                  </span>
+                )}
+                {!rail && <ChevronsUpDown className="size-4 text-nw-text-3" aria-hidden="true" />}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="w-56" sideOffset={8}>
+              <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <InstallAppMenuItem
+                isInstalling={isInstallingApp}
+                isVisible={installOptionVisible}
+                onInstallApp={onInstallApp}
+                onShowInstallHelp={onShowInstallHelp}
+              />
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              {isSuperAdmin && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    onSwitchToPersonal();
+                  }}
+                >
+                  <ArrowLeftRight className="mr-2 h-4 w-4" />
+                  Switch to Personal View
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
                   setUserDropdownOpen(false);
-                  onSwitchToPersonal();
+                  onLogout();
                 }}
-                className="text-blue-600 focus:text-blue-600 focus:bg-blue-50"
+                className="text-red-600 focus:text-red-600 focus:bg-red-50"
               >
-                <ArrowLeftRight className="mr-2 h-4 w-4" />
-                Switch to Personal View
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => {
-                setUserDropdownOpen(false);
-                onLogout();
-              }}
-              className="text-red-600 focus:text-red-600 focus:bg-red-50"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
