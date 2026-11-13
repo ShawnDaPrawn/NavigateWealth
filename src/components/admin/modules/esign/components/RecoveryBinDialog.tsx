@@ -29,6 +29,7 @@ import { ScrollArea } from '../../../../ui/scroll-area';
 import { Loader2, RefreshCw, RotateCcw, Trash2, Inbox } from 'lucide-react';
 import { esignApi } from '../api';
 import { logger } from '../../../../../utils/logger';
+import { useConfirm } from '../../../layout/page';
 
 interface RecoveryBinDialogProps {
   open: boolean;
@@ -65,6 +66,7 @@ export function RecoveryBinDialog({
   inline = false,
   onChanged,
 }: RecoveryBinDialogProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [items, setItems] = useState<BinEnvelope[]>([]);
@@ -103,9 +105,13 @@ export function RecoveryBinDialog({
   };
 
   const handlePurge = async (id: string) => {
-    // Purge is destructive and immediate; surface an inline confirm via
-    // toast.promise so the UX stays in-dialog without another modal.
-    const confirmed = window.confirm('Permanently delete this envelope? This cannot be undone.');
+    // Purge is destructive and immediate, so it is confirmed first.
+    const confirmed = await askConfirm({
+      title: 'Permanently delete this envelope?',
+      description: 'This cannot be undone.',
+      confirmLabel: 'Delete permanently',
+      destructive: true,
+    });
     if (!confirmed) return;
     setBusyId(id);
     try {
@@ -238,6 +244,7 @@ export function RecoveryBinDialog({
           </Button>
         </SurfaceFooter>
       )}
+      {confirmDialog}
     </Surface>
   );
 }

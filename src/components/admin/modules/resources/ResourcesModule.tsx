@@ -7,7 +7,7 @@ import React, { useState, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../ui/tabs';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import {
@@ -27,12 +27,9 @@ import {
 } from '../../../ui/dropdown-menu';
 import { Alert, AlertDescription, AlertTitle } from '../../../ui/alert';
 import {
-  FileText,
-  Settings,
   PenTool,
   Printer,
   AlertTriangle,
-  Database,
   Scale,
   Loader2,
   MoreHorizontal,
@@ -40,7 +37,6 @@ import {
   ChevronRight,
   X,
   Mail,
-  Palette,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,6 +52,7 @@ import { useCurrentUserPermissions } from '../personnel';
 // Phase 1 — Form status config
 import { FormsFilterBar } from './components/FormsFilterBar';
 import { FormsList } from './components/FormsList';
+import { PageHeader, NavTabsList, NavTabsTrigger } from '../../layout/page';
 
 // ---------------------------------------------------------------------------
 // Heavy sub-components — lazy-loaded to reduce initial chunk size.
@@ -475,44 +472,21 @@ export function ResourcesModule() {
         </PdfTemplateViewer>
       </Suspense>
 
-      {/* Page Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Resource Center</h1>
-          <p className="text-muted-foreground text-lg">
-            Manage forms, pre-fill with client data, and access tools
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Resources"
+        description="Forms, pre-filling with client data, and practice tools."
+      />
 
       {/* Main Tabs */}
-      <Tabs value={resourcesTab} onValueChange={handleResourcesTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6 h-12">
-          <TabsTrigger value="forms" className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4" />
-            Forms & Documents
-          </TabsTrigger>
-          <TabsTrigger value="legal-docs" className="flex items-center gap-2 text-base">
-            <Scale className="h-4 w-4" />
-            Legal Documents
-          </TabsTrigger>
-          <TabsTrigger value="tools" className="flex items-center gap-2 text-base">
-            <Settings className="h-4 w-4" />
-            Tools
-          </TabsTrigger>
-          <TabsTrigger value="calculators" className="flex items-center gap-2 text-base">
-            <PenTool className="h-4 w-4" />
-            Calculators
-          </TabsTrigger>
-          <TabsTrigger value="keys" className="flex items-center gap-2 text-base">
-            <Database className="h-4 w-4" />
-            Key Manager
-          </TabsTrigger>
-          <TabsTrigger value="brand" className="flex items-center gap-2 text-base">
-            <Palette className="h-4 w-4" />
-            Corporate Identity
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={resourcesTab} onValueChange={handleResourcesTabChange} className="gap-5">
+        <NavTabsList aria-label="Resources">
+          <NavTabsTrigger value="forms">Forms & documents</NavTabsTrigger>
+          <NavTabsTrigger value="legal-docs">Legal documents</NavTabsTrigger>
+          <NavTabsTrigger value="tools">Tools</NavTabsTrigger>
+          <NavTabsTrigger value="calculators">Calculators</NavTabsTrigger>
+          <NavTabsTrigger value="keys">Key manager</NavTabsTrigger>
+          <NavTabsTrigger value="brand">Corporate identity</NavTabsTrigger>
+        </NavTabsList>
 
         {/* ============================================================ */}
         {/* FORMS TAB */}

@@ -56,7 +56,7 @@ export function ReportRunsList({ runs, reports }: ReportRunsListProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          Recent Report Runs
+          Recent report runs
         </CardTitle>
       </CardHeader>
       <CardContent>

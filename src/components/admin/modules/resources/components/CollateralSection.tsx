@@ -35,8 +35,10 @@ import { toast } from 'sonner';
 import { brandApi, COLLATERAL_CATEGORIES } from './brand-api';
 import type { CollateralItem } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
+import { useConfirm } from '../../../layout/page';
 
 export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [items, setItems] = useState<CollateralItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -97,6 +99,13 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const handleDelete = async (id: string) => {
+    const ok = await askConfirm({
+      title: 'Delete this file?',
+      description: 'It is removed from the brand library for everyone.',
+      confirmLabel: 'Delete file',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const updated = await brandApi.deleteCollateral(id);
       setItems(updated);
@@ -335,6 +344,7 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

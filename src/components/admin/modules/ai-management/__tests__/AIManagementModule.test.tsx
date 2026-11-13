@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router';
 
 vi.mock('../components/OverviewTab', () => ({
   OverviewTab: ({ onNavigate }: { onNavigate: (t: string) => void }) => (
@@ -15,12 +16,40 @@ vi.mock('../components/KnowledgeBase', () => ({ KnowledgeBase: () => <p>knowledg
 vi.mock('../components/PromptStudio', () => ({ PromptStudio: () => <p>prompts-content</p> }));
 vi.mock('../components/FeedbackReview', () => ({ FeedbackReview: () => <p>feedback-content</p> }));
 vi.mock('../components/HandoffQueue', () => ({ HandoffQueue: () => <p>leads-content</p> }));
+vi.mock('../hooks', () => ({
+  useHandoffs: () => ({ data: [{ id: 'h1' }, { id: 'h2' }] }),
+}));
 
 import { AIManagementModule } from '../AIManagementModule';
 
+function Search() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+
+function renderModule(entry = '/admin?module=ai-management') {
+  return render(
+    <MemoryRouter initialEntries={[entry]}>
+      <AIManagementModule />
+      <Search />
+    </MemoryRouter>,
+  );
+}
+
+/** Radix tabs switch on mouse down. */
+function pickTab(name: string) {
+  const tab = screen.getByRole('tab', { name: new RegExp(`^${name}`) });
+  fireEvent.mouseDown(tab);
+  fireEvent.click(tab);
+}
+
 describe('AIManagementModule', () => {
+  it('renders the AI Management heading', () => {
+    renderModule();
+    expect(screen.getByRole('heading', { level: 1, name: 'AI Management' })).toBeDefined();
+  });
+
   it('opens on Overview and exposes exactly five tabs', () => {
-    render(<AIManagementModule />);
+    renderModule();
     expect(screen.getByText('overview-content')).toBeDefined();
     expect(screen.getAllByRole('tab')).toHaveLength(5);
     expect(screen.getByRole('tab', { name: 'Overview' }).getAttribute('aria-selected')).toBe(
@@ -28,30 +57,46 @@ describe('AIManagementModule', () => {
     );
   });
 
-  it('shows the active tab description under the tab bar', () => {
-    render(<AIManagementModule />);
-    expect(screen.getByText(/Switch Vasco on or off and see how it is being used/)).toBeDefined();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Knowledge' }));
-    expect(screen.getByText('knowledge-content')).toBeDefined();
-    expect(screen.getByText(/What Vasco can draw on when it answers/)).toBeDefined();
+  it('shows how many leads are waiting on the Leads tab', () => {
+    renderModule();
+    expect(screen.getByRole('tab', { name: /^Leads/ }).textContent).toBe('Leads2');
   });
 
-  it('switches content for every tab', () => {
-    render(<AIManagementModule />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Prompts' }));
+  it('switches content for every tab and writes the tab to the address', () => {
+    renderModule();
+    pickTab('Knowledge');
+    expect(screen.getByText('knowledge-content')).toBeDefined();
+    expect(screen.getByTestId('search').textContent).toContain('tab=knowledge');
+    pickTab('Prompts');
     expect(screen.getByText('prompts-content')).toBeDefined();
-    fireEvent.click(screen.getByRole('tab', { name: 'Feedback' }));
+    pickTab('Feedback');
     expect(screen.getByText('feedback-content')).toBeDefined();
-    fireEvent.click(screen.getByRole('tab', { name: 'Leads' }));
+    expect(screen.getByTestId('search').textContent).toContain('tab=feedback');
+    pickTab('Leads');
     expect(screen.getByText('leads-content')).toBeDefined();
     expect(screen.queryByText('overview-content')).toBeNull();
+    // The module parameter is kept.
+    expect(screen.getByTestId('search').textContent).toContain('module=ai-management');
+  });
+
+  it('opens the tab named in the address', () => {
+    renderModule('/admin?module=ai-management&tab=prompts');
+    expect(screen.getByText('prompts-content')).toBeDefined();
+    expect(screen.getByRole('tab', { name: 'Prompts' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('lets the Overview tab navigate to another tab', () => {
-    render(<AIManagementModule />);
+    renderModule();
     fireEvent.click(screen.getByText('go-to-leads'));
     expect(screen.getByText('leads-content')).toBeDefined();
-    expect(screen.getByRole('tab', { name: 'Leads' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: /^Leads/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('search').textContent).toContain('tab=leads');
+  });
+
+  it('steps the header and tabs aside while a knowledge entry page is open', () => {
+    renderModule('/admin?module=ai-management&tab=knowledge&entry=new');
+    expect(screen.getByText('knowledge-content')).toBeDefined();
+    expect(screen.queryByRole('heading', { level: 1, name: 'AI Management' })).toBeNull();
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
   });
 });

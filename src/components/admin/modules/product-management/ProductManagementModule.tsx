@@ -1,18 +1,11 @@
-import React, { useState, useEffect, Suspense } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import {
-  Database,
-  LayoutTemplate,
-  Building2,
-  Key,
-  ShieldAlert,
-  Sparkles,
-  Loader2,
-} from 'lucide-react';
+import React, { Suspense } from 'react';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import { ShieldAlert, Loader2 } from 'lucide-react';
 import { ProviderManagementTab } from './ProviderManagementTab';
 import { ProductManagementTab } from './ProductManagementTab';
 import { IntegrationsTab } from './IntegrationsTab';
 import { UniversalKeyManager } from '../resources';
+import { PageHeader, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
 import { useCurrentUserPermissions } from '../personnel';
 import { ProductManagementSkeleton } from './components/ProductManagementSkeleton';
 
@@ -21,19 +14,14 @@ const DocumentMappingTab = React.lazy(() =>
   import('./components/DocumentMappingTab').then((m) => ({ default: m.DocumentMappingTab })),
 );
 
+const PRODUCT_TABS = ['providers', 'products', 'keys', 'integrations', 'document-ai'] as const;
+
 export function ProductManagementModule() {
   const { can, isLoading } = useCurrentUserPermissions();
-  const [activeTab, setActiveTab] = useState('providers');
+  // The open tab is in the address (?tab=keys).
+  const [activeTab, setActiveTab] = useUrlState('tab', 'providers', PRODUCT_TABS);
 
   const canAccess = can('product-management');
-
-  // Determine initial active tab
-  useEffect(() => {
-    if (isLoading) return;
-    if (canAccess && !activeTab) {
-      setActiveTab('providers');
-    }
-  }, [canAccess, isLoading, activeTab]);
 
   if (isLoading) {
     return <ProductManagementSkeleton />;
@@ -52,44 +40,25 @@ export function ProductManagementModule() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Product Configuration</h1>
-        <p className="text-lg text-gray-500 max-w-3xl">
-          Manage your financial product providers, define product data structures, and configure
-          external data integrations.
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        title="Product Management"
+        description="Product providers, product data structures and external data integrations."
+      />
 
       {/* Main Navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="providers">
-            <Building2 className="w-4 h-4 mr-2" />
-            Provider Management
-          </TabsTrigger>
-
-          <TabsTrigger value="products">
-            <LayoutTemplate className="w-4 h-4 mr-2" />
-            Product Structure
-          </TabsTrigger>
-
-          <TabsTrigger value="keys">
-            <Key className="w-4 h-4 mr-2" />
-            Key Manager
-          </TabsTrigger>
-
-          <TabsTrigger value="integrations">
-            <Database className="w-4 h-4 mr-2" />
-            Integrations
-          </TabsTrigger>
-
-          <TabsTrigger value="document-ai">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Document AI
-          </TabsTrigger>
-        </TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as (typeof PRODUCT_TABS)[number])}
+        className="gap-5"
+      >
+        <NavTabsList aria-label="Product Management">
+          <NavTabsTrigger value="providers">Providers</NavTabsTrigger>
+          <NavTabsTrigger value="products">Product structure</NavTabsTrigger>
+          <NavTabsTrigger value="keys">Key manager</NavTabsTrigger>
+          <NavTabsTrigger value="integrations">Integrations</NavTabsTrigger>
+          <NavTabsTrigger value="document-ai">Document AI</NavTabsTrigger>
+        </NavTabsList>
 
         <TabsContent value="providers" className="m-0 focus-visible:outline-none">
           <ProviderManagementTab />

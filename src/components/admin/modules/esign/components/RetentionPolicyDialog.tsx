@@ -22,6 +22,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { esignApi } from '../api';
 import { toast } from 'sonner';
 import { logger } from '../../../../../utils/logger';
+import { useConfirm } from '../../../layout/page';
 
 interface Props {
   open: boolean;
@@ -43,6 +44,7 @@ function fromInput(s: string): number | null {
 }
 
 export function RetentionPolicyDialog({ open, onOpenChange, inline = false }: Props) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState('');
@@ -105,7 +107,12 @@ export function RetentionPolicyDialog({ open, onOpenChange, inline = false }: Pr
   };
 
   const handleReset = async () => {
-    if (!confirm('Revert to default (no purging)?')) return;
+    const ok = await askConfirm({
+      title: 'Revert to the default policy?',
+      description: 'Envelopes will no longer be purged automatically.',
+      confirmLabel: 'Revert',
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       await esignApi.deleteRetentionPolicy();
@@ -222,6 +229,7 @@ export function RetentionPolicyDialog({ open, onOpenChange, inline = false }: Pr
           </div>
         </div>
       )}
+      {confirmDialog}
     </Surface>
   );
 }

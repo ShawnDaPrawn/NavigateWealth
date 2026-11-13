@@ -51,6 +51,7 @@ function makeProps(over: Partial<Props> = {}): Props {
     envelopePrimaryDocumentId: undefined,
     fields: [],
     setFields: vi.fn(),
+    confirm: vi.fn().mockResolvedValue(true),
     ...over,
   };
 }
@@ -257,8 +258,6 @@ describe('useDocumentManagement', () => {
 
     await waitFor(() => expect(result.current.docsLoading).toBe(false));
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
     await act(async () => {
       await result.current.handleRemoveDocument('doc-1');
     });
@@ -271,7 +270,6 @@ describe('useDocumentManagement', () => {
     const docs = [makeDoc('doc-1'), makeDoc('doc-2')];
     mockListEnvelopeDocuments.mockResolvedValue({ documents: docs });
     mockRemoveEnvelopeDocument.mockResolvedValue({ documents: [makeDoc('doc-1')] });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const setFields = vi.fn();
     const fields = [f('f1', 'doc-2'), f('f2', 'doc-1')];
@@ -294,10 +292,10 @@ describe('useDocumentManagement', () => {
   it('does nothing when user cancels confirm dialog', async () => {
     const docs = [makeDoc('doc-1'), makeDoc('doc-2')];
     mockListEnvelopeDocuments.mockResolvedValue({ documents: docs });
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirm = vi.fn().mockResolvedValue(false);
 
     const { result } = renderHook((p: Props) => useDocumentManagement(p), {
-      initialProps: makeProps(),
+      initialProps: makeProps({ confirm }),
     });
 
     await waitFor(() => expect(result.current.docsLoading).toBe(false));
@@ -306,6 +304,9 @@ describe('useDocumentManagement', () => {
       await result.current.handleRemoveDocument('doc-2');
     });
 
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Remove this document from the envelope?' }),
+    );
     expect(mockRemoveEnvelopeDocument).not.toHaveBeenCalled();
   });
 
@@ -313,7 +314,6 @@ describe('useDocumentManagement', () => {
     const docs = [makeDoc('doc-1'), makeDoc('doc-2')];
     mockListEnvelopeDocuments.mockResolvedValue({ documents: docs });
     mockRemoveEnvelopeDocument.mockRejectedValue(new Error('Remove failed'));
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const { result } = renderHook((p: Props) => useDocumentManagement(p), {
       initialProps: makeProps(),

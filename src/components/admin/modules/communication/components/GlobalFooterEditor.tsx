@@ -4,7 +4,7 @@ import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
-import { Loader2, ArrowLeft, Save, Globe, Mail, Phone, Building } from 'lucide-react';
+import { Loader2, ChevronLeft, Save, Globe, Mail, Phone, Building } from 'lucide-react';
 import { communicationApi } from '../api';
 import { EmailFooterSettings } from '../types';
 import { toast } from 'sonner';
@@ -85,19 +85,20 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <div>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={onBack}
-            className="-ml-2 text-muted-foreground hover:text-foreground"
+            className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Templates
-          </Button>
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            Back to transactional emails
+          </button>
         </div>
         <div className="flex items-end justify-between border-b pb-6 mt-2">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Global Email Footer</h2>
+            <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
+              Global email footer
+            </h1>
             <p className="text-muted-foreground mt-1">
               Manage the footer information displayed on all outgoing emails
             </p>
@@ -108,7 +109,7 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Save Changes
+            Save changes
           </Button>
         </div>
       </div>

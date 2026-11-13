@@ -25,6 +25,7 @@ import { Plus, Edit, Trash2, Settings, UserCheck, Check } from 'lucide-react';
 import { communicationApi } from '../../communication';
 import { ClientGroup } from '../../communication';
 import { toast } from 'sonner';
+import { useConfirm } from '../../../layout/page';
 
 interface UserGroupManagerProps {
   open: boolean;
@@ -32,6 +33,7 @@ interface UserGroupManagerProps {
 }
 
 export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [groups, setGroups] = useState<ClientGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<{
@@ -110,7 +112,13 @@ export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) 
   };
 
   const handleDeleteClick = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this group?')) return;
+    const ok = await askConfirm({
+      title: 'Delete this group?',
+      description: 'Clients stay on file; only the group is removed.',
+      confirmLabel: 'Delete group',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await communicationApi.deleteGroup(id);
@@ -318,6 +326,7 @@ export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) 
           </Button>
         </DialogFooter>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

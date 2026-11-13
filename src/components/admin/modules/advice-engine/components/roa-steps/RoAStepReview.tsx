@@ -104,6 +104,9 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
     document.body.removeChild(link);
   };
 
+  const errorText = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
   const generateDocuments = async (format: 'docx' | 'pdf' | 'both') => {
     setIsGenerating(true);
     try {
@@ -115,22 +118,33 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
         }
       });
       onUpdate(result.draft);
+      toast.success(formats.length > 1 ? 'Documents generated' : 'Document generated');
+    } catch (error) {
+      console.error('Failed to generate RoA documents:', error);
+      toast.error(errorText(error, 'Could not generate the documents. Please try again.'));
     } finally {
       setIsGenerating(false);
     }
   };
 
   const downloadDocument = async (document: RoAGeneratedDocument) => {
-    const storedDocument = document.downloadBase64
-      ? document
-      : await roaApi.downloadGeneratedDocument(document.id);
+    try {
+      const storedDocument = document.downloadBase64
+        ? document
+        : await roaApi.downloadGeneratedDocument(document.id);
 
-    if (storedDocument.downloadBase64) {
-      downloadBase64(
-        storedDocument.downloadBase64,
-        storedDocument.contentType,
-        storedDocument.fileName,
-      );
+      if (storedDocument.downloadBase64) {
+        downloadBase64(
+          storedDocument.downloadBase64,
+          storedDocument.contentType,
+          storedDocument.fileName,
+        );
+      } else {
+        toast.error('This document is no longer available to download.');
+      }
+    } catch (error) {
+      console.error('Failed to download RoA document:', error);
+      toast.error(errorText(error, 'Could not download the document. Please try again.'));
     }
   };
 
@@ -142,7 +156,13 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
       if (validationResult.validation?.valid) {
         const compileResult = await roaApi.compileDraft(draft.id);
         onUpdate(compileResult.draft);
+        toast.success('RoA validated and compiled');
+      } else {
+        toast.error('The RoA has items to fix before it can be compiled.');
       }
+    } catch (error) {
+      console.error('Failed to validate or compile RoA:', error);
+      toast.error(errorText(error, 'Could not validate the RoA. Please try again.'));
     } finally {
       setIsGenerating(false);
     }
@@ -158,6 +178,10 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
         }
       });
       onUpdate(finalised.draft);
+      toast.success('RoA finalised');
+    } catch (error) {
+      console.error('Failed to finalise RoA:', error);
+      toast.error(errorText(error, 'Could not finalise the RoA. Please try again.'));
     } finally {
       setIsGenerating(false);
     }

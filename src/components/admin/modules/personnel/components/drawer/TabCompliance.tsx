@@ -74,6 +74,8 @@ export function TabCompliance({ selectedPersonnel, onUpload }: TabComplianceProp
                     size="icon"
                     className="h-6 w-6"
                     aria-label={`Open document ${doc.name}`}
+                    disabled={!doc.url}
+                    onClick={() => window.open(doc.url, '_blank', 'noopener,noreferrer')}
                   >
                     <ExternalLink className="h-3 w-3" />
                   </Button>

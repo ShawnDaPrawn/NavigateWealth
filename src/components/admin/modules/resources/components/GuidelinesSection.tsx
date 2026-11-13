@@ -26,8 +26,10 @@ import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { BrandGuidelines } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
+import { useConfirm } from '../../../layout/page';
 
 export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [guidelines, setGuidelines] = useState<BrandGuidelines | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +84,12 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const handleDeleteRule = async (id: string) => {
+    const ok = await askConfirm({
+      title: 'Remove this rule?',
+      confirmLabel: 'Remove rule',
+      destructive: true,
+    });
+    if (!ok) return;
     const rules = (guidelines?.rules || []).filter((r) => r.id !== id);
     try {
       await brandApi.saveGuidelineRules(rules);
@@ -394,6 +402,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

@@ -11,7 +11,7 @@ vi.mock('../../hooks', () => ({
   }),
 }));
 
-import { KBEntryModal } from '../KBEntryModal';
+import { KBEntryPage } from '../KBEntryPage';
 
 const existing: KBEntry = {
   id: 'kb-1',
@@ -28,18 +28,22 @@ const existing: KBEntry = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-describe('KBEntryModal', () => {
+describe('KBEntryPage', () => {
+  it('is a page: a back link, the title as the heading, Cancel and Save in the header', () => {
+    const onClose = vi.fn();
+    render(<KBEntryPage onClose={onClose} entry={null} onSubmit={vi.fn()} isSubmitting={false} />);
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'New knowledge base entry' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to knowledge' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it('defaults a new entry to Live, Normal importance and "Save and make live"', async () => {
     const onSubmit = vi.fn();
-    render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={null}
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
-    );
+    render(<KBEntryPage onClose={vi.fn()} entry={null} onSubmit={onSubmit} isSubmitting={false} />);
 
     expect(screen.getByRole('radio', { name: /^Live/ }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByRole('radio', { name: /^Normal/ }).getAttribute('aria-checked')).toBe(
@@ -66,15 +70,7 @@ describe('KBEntryModal', () => {
 
   it('validates the title and content in plain words instead of submitting', async () => {
     const onSubmit = vi.fn();
-    render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={null}
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
-    );
+    render(<KBEntryPage onClose={vi.fn()} entry={null} onSubmit={onSubmit} isSubmitting={false} />);
 
     fireEvent.click(screen.getByRole('button', { name: /save and make live/i }));
 
@@ -84,30 +80,14 @@ describe('KBEntryModal', () => {
   });
 
   it('switching to Draft changes the button to "Save as draft"', () => {
-    render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={null}
-        onSubmit={vi.fn()}
-        isSubmitting={false}
-      />,
-    );
+    render(<KBEntryPage onClose={vi.fn()} entry={null} onSubmit={vi.fn()} isSubmitting={false} />);
     fireEvent.click(screen.getByRole('radio', { name: /^Draft/ }));
     expect(screen.getByRole('button', { name: /save as draft/i })).toBeDefined();
   });
 
   it('maps importance to the stored priority', async () => {
     const onSubmit = vi.fn();
-    render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={null}
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
-    );
+    render(<KBEntryPage onClose={vi.fn()} entry={null} onSubmit={onSubmit} isSubmitting={false} />);
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Fees' } });
     fireEvent.change(screen.getByLabelText('Content'), { target: { value: 'Our fee is 1%.' } });
@@ -121,13 +101,7 @@ describe('KBEntryModal', () => {
   it('loads an existing entry, including importance and assistant scope, and opens More options', async () => {
     const onSubmit = vi.fn();
     render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={existing}
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+      <KBEntryPage onClose={vi.fn()} entry={existing} onSubmit={onSubmit} isSubmitting={false} />,
     );
 
     await waitFor(() =>
@@ -155,13 +129,7 @@ describe('KBEntryModal', () => {
 
   it('deselecting the last assistant falls back to all assistants', async () => {
     render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={existing}
-        onSubmit={vi.fn()}
-        isSubmitting={false}
-      />,
+      <KBEntryPage onClose={vi.fn()} entry={existing} onSubmit={vi.fn()} isSubmitting={false} />,
     );
     await waitFor(() => screen.getByRole('button', { name: 'Vasco (Portal)' }));
 
@@ -174,15 +142,7 @@ describe('KBEntryModal', () => {
   it('shows a Q&A form with its own validation when the format is Q&A', async () => {
     const qa: KBEntry = { ...existing, type: 'qa', question: '', answer: '', content: '' };
     const onSubmit = vi.fn();
-    render(
-      <KBEntryModal
-        open
-        onOpenChange={vi.fn()}
-        entry={qa}
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
-    );
+    render(<KBEntryPage onClose={vi.fn()} entry={qa} onSubmit={onSubmit} isSubmitting={false} />);
 
     await waitFor(() => screen.getByLabelText('Question'));
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
