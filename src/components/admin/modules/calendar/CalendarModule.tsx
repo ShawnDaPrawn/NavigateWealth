@@ -30,8 +30,10 @@ import {
 } from '../../../ui/dropdown-menu';
 import { useCurrentUserPermissions } from '../personnel';
 import { PageHeader } from '../../layout/page';
+import { useConfirm } from '../../layout/page';
 
 export function CalendarModule() {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [filters, setFilters] = useState<Partial<CalendarFilters>>({
     search: '',
     dateRange: { start: null, end: null },
@@ -226,7 +228,12 @@ export function CalendarModule() {
       toast.info('Birthday reminders are auto-generated from client profiles');
       return false;
     }
-    if (!confirm('Are you sure you want to delete this event?')) return false;
+    const ok = await askConfirm({
+      title: 'Delete this event?',
+      confirmLabel: 'Delete event',
+      destructive: true,
+    });
+    if (!ok) return false;
 
     try {
       await deleteEventMutation.mutateAsync(id);
@@ -462,6 +469,7 @@ export function CalendarModule() {
         filters={filters}
         onApplyFilters={setFilters}
       />
+      {confirmDialog}
     </div>
   );
 }

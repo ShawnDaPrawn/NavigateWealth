@@ -36,6 +36,7 @@ import {
 import { DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { logger } from '../../../../../utils/logger';
+import { useAuth } from '../../../../auth/AuthContext';
 import { type Attachment, type TaskComment } from './taskFormModalModel';
 import { TaskChecklistSection } from './TaskChecklistSection';
 import { TaskAttachmentsSection } from './TaskAttachmentsSection';
@@ -54,6 +55,9 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const { user } = useAuth();
+  // Comments are signed with the name of the person writing them.
+  const commentAuthor = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Admin';
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -183,7 +187,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
     if (!targetId) return;
 
     try {
-      const commentData = { text: newComment, userName: 'Super Admin' };
+      const commentData = { text: newComment.trim(), userName: commentAuthor };
       const data = await api.post<{ comment?: TaskComment }>(`/task-comments/${targetId}`, {
         comment: commentData,
       });
@@ -192,7 +196,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
         setNewComment('');
       }
     } catch (e) {
-      console.error('Error adding comment:', e);
+      logger.error('Error adding comment', e);
+      toast.error('Could not add the comment. Please try again.');
     }
   };
 
@@ -204,7 +209,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
       await api.delete(`/task-comments/${targetId}/${commentId}`);
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (e) {
-      console.error('Error deleting comment:', e);
+      logger.error('Error deleting comment', e);
+      toast.error('Could not delete the comment. Please try again.');
     }
   };
 
@@ -212,7 +218,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
     try {
       await api.post(`/task-checklists/${taskId}`, { checklist: items });
     } catch (e) {
-      console.error('Error saving checklist:', e);
+      logger.error('Error saving checklist', e);
+      toast.error('Could not save the checklist. Please try again.');
     }
   };
 
@@ -291,8 +298,8 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
         setAttachments((prev) => [...prev, data.attachment!]);
       }
     } catch (e) {
-      console.error(e);
-      alert('Error uploading file');
+      logger.error('Error uploading attachment', e);
+      toast.error(`Could not upload ${file.name}. Please try again.`);
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -317,8 +324,10 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
     try {
       await api.delete(`/todo/attachments/${targetId}/${attachmentToDelete}`);
       setAttachments((prev) => prev.filter((a) => a.id !== attachmentToDelete));
+      toast.success('Attachment removed');
     } catch (e) {
-      console.error(e);
+      logger.error('Error deleting attachment', e);
+      toast.error('Could not remove the attachment. Please try again.');
     } finally {
       setAttachmentToDelete(null);
     }
@@ -385,23 +394,29 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
       tags,
     };
 
-    if (task) {
-      // Existing task — always update, regardless of whether mode is 'edit' or 'view'
-      // WORKAROUND: Previously checked `mode === 'edit' && task` but when the user
-      // opened a task in 'view' mode, made changes, and submitted, the condition
-      // failed and fell through to createTask, producing a duplicate card.
-      // Proper fix: check task existence (not mode) to decide create vs update.
-      await updateTask.mutateAsync({
-        id: task.id,
-        ...taskData,
-      });
-    } else {
-      // No existing task — create a new one
-      // Use the tempId as the actual ID for the new task to link attachments
-      await createTask.mutateAsync({
-        id: tempId || undefined,
-        ...taskData,
-      } as CreateTaskInput);
+    try {
+      if (task) {
+        // Existing task — always update, regardless of whether mode is 'edit' or 'view'
+        // WORKAROUND: Previously checked `mode === 'edit' && task` but when the user
+        // opened a task in 'view' mode, made changes, and submitted, the condition
+        // failed and fell through to createTask, producing a duplicate card.
+        // Proper fix: check task existence (not mode) to decide create vs update.
+        await updateTask.mutateAsync({
+          id: task.id,
+          ...taskData,
+        });
+      } else {
+        // No existing task — create a new one
+        // Use the tempId as the actual ID for the new task to link attachments
+        await createTask.mutateAsync({
+          id: tempId || undefined,
+          ...taskData,
+        } as CreateTaskInput);
+      }
+    } catch {
+      // The mutation hooks show the error toast; keep the form open so
+      // nothing typed is lost.
+      return;
     }
 
     onClose();

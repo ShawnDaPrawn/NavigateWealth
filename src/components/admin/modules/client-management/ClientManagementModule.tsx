@@ -11,6 +11,7 @@ import {
   NavTabsTrigger,
   useUrlState,
   useRecordInUrl,
+  SoonBadge,
 } from '../../layout/page';
 import {
   Plus,
@@ -528,7 +529,9 @@ export function ClientManagementModule() {
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
                 Employee benefits and corporate scheme management is currently under development.
               </p>
-              <Button variant="outline">Request Early Access</Button>
+              <Button variant="outline" disabled>
+                Request early access <SoonBadge />
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -541,7 +544,9 @@ export function ClientManagementModule() {
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
                 Intermediary and adviser management portal is currently under development.
               </p>
-              <Button variant="outline">Notify Me When Available</Button>
+              <Button variant="outline" disabled>
+                Notify me when available <SoonBadge />
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

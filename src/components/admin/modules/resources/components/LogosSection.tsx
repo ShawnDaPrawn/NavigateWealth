@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { brandApi, LOGO_THEME_GROUPS, LOGO_VARIANTS } from './brand-api';
 import type { LogoEntry, LogoAssetFormat } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
+import { useConfirm } from '../../../layout/page';
 
 const LOGO_UPLOAD_FIELDS: Array<{
   format: LogoAssetFormat;
@@ -72,6 +73,7 @@ const TRANSPARENT_PREVIEW_STYLE: React.CSSProperties = {
 };
 
 export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const createEmptyUploadFiles = (): Partial<Record<LogoAssetFormat, File | null>> => ({
     png: null,
     jpeg: null,
@@ -157,6 +159,13 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const handleDelete = async (variant: string) => {
+    const ok = await askConfirm({
+      title: 'Delete this logo?',
+      description: 'It is removed from the brand library for everyone.',
+      confirmLabel: 'Delete logo',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const updated = await brandApi.deleteLogo(variant);
       setLogos(updated);
@@ -584,6 +593,7 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
           )}
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

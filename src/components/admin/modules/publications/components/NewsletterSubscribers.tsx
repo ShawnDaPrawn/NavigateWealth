@@ -68,6 +68,7 @@ import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofi
 // ============================================================================
 
 import { SubscriberDialogs } from './SubscriberDialogs';
+import { isValidSubscriberEmail } from './subscriberEmail';
 import { SubscriberBulkImportDialog } from './SubscriberBulkImportDialog';
 
 export function NewsletterSubscribers() {
@@ -117,13 +118,23 @@ export function NewsletterSubscribers() {
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
+  // The mutation hooks show the success and error toasts. A failed call
+  // leaves its dialog open so nothing typed is lost.
   const handleAddSingle = async () => {
-    if (!addEmail.trim()) return;
-    await addMutation.mutateAsync({
-      email: addEmail.trim(),
-      firstName: addFirstName.trim(),
-      surname: addSurname.trim(),
-    });
+    if (addMutation.isPending) return;
+    if (!isValidSubscriberEmail(addEmail)) {
+      toast.error('Enter a valid email address, like name@example.com.');
+      return;
+    }
+    try {
+      await addMutation.mutateAsync({
+        email: addEmail.trim(),
+        firstName: addFirstName.trim(),
+        surname: addSurname.trim(),
+      });
+    } catch {
+      return;
+    }
     setAddOpen(false);
     setAddEmail('');
     setAddFirstName('');
@@ -145,7 +156,12 @@ export function NewsletterSubscribers() {
 
   const handleBulkUpload = async () => {
     if (bulkParsed.length === 0) return;
-    const result = await bulkMutation.mutateAsync(bulkParsed);
+    let result;
+    try {
+      result = await bulkMutation.mutateAsync(bulkParsed);
+    } catch {
+      return;
+    }
     setBulkResult({ added: result.added, skipped: result.skipped, errors: result.errors || [] });
   };
 
@@ -158,13 +174,21 @@ export function NewsletterSubscribers() {
 
   const handleRemove = async () => {
     if (!removeTarget) return;
-    await removeMutation.mutateAsync(removeTarget);
+    try {
+      await removeMutation.mutateAsync(removeTarget);
+    } catch {
+      return;
+    }
     setRemoveTarget(null);
   };
 
   const handleResubscribe = async () => {
     if (!resubscribeTarget) return;
-    await resubscribeMutation.mutateAsync(resubscribeTarget);
+    try {
+      await resubscribeMutation.mutateAsync(resubscribeTarget);
+    } catch {
+      return;
+    }
     setResubscribeTarget(null);
   };
 
@@ -176,13 +200,21 @@ export function NewsletterSubscribers() {
   };
 
   const handleUpdateSubscriber = async () => {
-    if (!editTarget) return;
-    await updateMutation.mutateAsync({
-      currentEmail: editTarget.email,
-      email: editEmail.trim(),
-      firstName: editFirstName.trim(),
-      surname: editSurname.trim(),
-    });
+    if (!editTarget || updateMutation.isPending) return;
+    if (!isValidSubscriberEmail(editEmail)) {
+      toast.error('Enter a valid email address, like name@example.com.');
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({
+        currentEmail: editTarget.email,
+        email: editEmail.trim(),
+        firstName: editFirstName.trim(),
+        surname: editSurname.trim(),
+      });
+    } catch {
+      return;
+    }
     setEditTarget(null);
   };
 

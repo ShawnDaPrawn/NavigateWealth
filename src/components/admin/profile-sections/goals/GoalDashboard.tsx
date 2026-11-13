@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../utils/api';
 import { invalidateClientGoals } from '../../../../shared/api/clientPolicies';
 import { GoalFormDialog } from './GoalFormDialog';
+import { useConfirm } from '../../layout/page';
 
 interface GoalDashboardProps {
   clientId: string;
@@ -23,6 +24,7 @@ export function GoalDashboard({
   schemas = {},
   mainSchema = [],
 }: GoalDashboardProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const queryClient = useQueryClient();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,12 @@ export function GoalDashboard({
   };
 
   const handleDeleteGoal = async (goalId: string) => {
-    if (!confirm('Are you sure you want to delete this goal?')) return;
+    const ok = await askConfirm({
+      title: 'Delete this goal?',
+      confirmLabel: 'Delete goal',
+      destructive: true,
+    });
+    if (!ok) return;
 
     const updatedGoals = goals.filter((g) => g.id !== goalId);
     setGoals(updatedGoals);
@@ -145,6 +152,7 @@ export function GoalDashboard({
         schemas={schemas}
         mainSchema={mainSchema}
       />
+      {confirmDialog}
     </div>
   );
 }

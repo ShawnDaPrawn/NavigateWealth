@@ -317,8 +317,10 @@ export function SigningModeSelector({
       await esignApi.updateSigningMode(envelopeId, newMode);
       setMode(newMode);
       onModeChange?.(newMode);
+      toast.success('Signing order updated');
     } catch (err) {
       console.error('Failed to update signing mode:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update the signing order');
     } finally {
       setSaving(false);
     }

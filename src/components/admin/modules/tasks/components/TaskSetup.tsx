@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { AlertCircle, Copy, Check, ExternalLink } from 'lucide-react';
 import { projectId } from '../../../../../utils/supabase/info';
+import { toast } from 'sonner';
 
 // ============================================================================
 // SQL MIGRATION
@@ -146,7 +147,7 @@ export function TaskSetup() {
         setTimeout(() => setCopied(false), 2000);
       } catch (fallbackErr) {
         console.error('Failed to copy:', fallbackErr);
-        alert('Copy failed. Please manually select and copy the SQL code.');
+        toast.error('Copy failed. Select the SQL code and copy it manually.');
       }
     }
   };

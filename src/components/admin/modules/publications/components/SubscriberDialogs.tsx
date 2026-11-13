@@ -25,6 +25,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import type { Subscriber } from '../types';
+import { isValidSubscriberEmail } from './subscriberEmail';
 import {
   useAddSubscriber,
   useRemoveSubscriber,
@@ -151,7 +152,7 @@ export function SubscriberDialogs({
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleAddSingle}
-              disabled={!addEmail.trim().includes('@') || addMutation.isPending}
+              disabled={!isValidSubscriberEmail(addEmail) || addMutation.isPending}
             >
               {addMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
@@ -218,7 +219,7 @@ export function SubscriberDialogs({
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={handleUpdateSubscriber}
-              disabled={!editEmail.trim().includes('@') || updateMutation.isPending}
+              disabled={!isValidSubscriberEmail(editEmail) || updateMutation.isPending}
             >
               {updateMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />

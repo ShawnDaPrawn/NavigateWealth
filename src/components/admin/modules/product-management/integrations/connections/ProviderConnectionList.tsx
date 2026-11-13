@@ -27,6 +27,7 @@ import {
   connectionDetailLine,
   describeConnection,
 } from './connectionPresentation';
+import { useConfirm } from '../../../../layout/page';
 
 interface ProviderConnectionListProps {
   providers: IntegrationProvider[];
@@ -53,6 +54,7 @@ export function ProviderConnectionList({
   onConnect,
   onDelete,
 }: ProviderConnectionListProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const connectionByProvider = new Map(connections.map((entry) => [entry.providerId, entry]));
 
   // A provider with no automation-eligible category has no connection row on
@@ -154,11 +156,15 @@ export function ProviderConnectionList({
                   size="icon"
                   aria-label={`Delete provider ${provider.name}`}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 h-6 w-6 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm(`Are you sure you want to delete ${provider.name}?`)) {
-                      onDelete(provider.id);
-                    }
+                    const ok = await askConfirm({
+                      title: `Delete ${provider.name}?`,
+                      description: 'This removes the provider and its connection settings.',
+                      confirmLabel: 'Delete provider',
+                      destructive: true,
+                    });
+                    if (ok) onDelete(provider.id);
                   }}
                 >
                   <Trash2 className="w-3 h-3" />
@@ -168,6 +174,7 @@ export function ProviderConnectionList({
           );
         })}
       </div>
+      {confirmDialog}
     </Card>
   );
 }

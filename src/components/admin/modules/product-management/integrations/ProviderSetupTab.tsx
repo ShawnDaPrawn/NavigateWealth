@@ -37,6 +37,7 @@ import {
 import { SetupStepIndicator } from './SetupStepIndicator';
 import { ProviderCredentialsSection } from './ProviderCredentialsSection';
 import { ProviderAdvancedSheet } from './ProviderAdvancedSheet';
+import { useConfirm } from '../../../layout/page';
 
 interface ProviderSetupTabProps {
   provider: IntegrationProvider;
@@ -86,6 +87,7 @@ export function ProviderSetupTab({
   updateFieldRequired,
   buildProviderFallbackFields,
 }: ProviderSetupTabProps) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [credentialUsername, setCredentialUsername] = useState('');
   const [credentialPassword, setCredentialPassword] = useState('');
   const [isEditingCredentials, setIsEditingCredentials] = useState(false);
@@ -639,14 +641,14 @@ export function ProviderSetupTab({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Reset only the ${selectedScopeLabel} portal flow? Provider credentials and other product flows will be kept.`,
-                    )
-                  ) {
-                    onResetFlow();
-                  }
+                onClick={async () => {
+                  const ok = await askConfirm({
+                    title: `Reset the ${selectedScopeLabel} portal flow?`,
+                    description: 'Provider credentials and other product flows will be kept.',
+                    confirmLabel: 'Reset flow',
+                    destructive: true,
+                  });
+                  if (ok) onResetFlow();
                 }}
                 disabled={isResettingFlow || isSavingFlow}
               >
@@ -703,6 +705,7 @@ export function ProviderSetupTab({
           </p>
         )}
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 }

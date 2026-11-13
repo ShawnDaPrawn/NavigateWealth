@@ -25,8 +25,10 @@ import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { TypographyConfig } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
+import { useConfirm } from '../../../layout/page';
 
 export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [config, setConfig] = useState<TypographyConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -108,6 +110,12 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
 
   const handleDeleteFont = async (id: string) => {
     if (!config) return;
+    const ok = await askConfirm({
+      title: 'Remove this font?',
+      confirmLabel: 'Remove font',
+      destructive: true,
+    });
+    if (!ok) return;
     const updated: TypographyConfig = {
       ...config,
       fonts: config.fonts.filter((f) => f.id !== id),
@@ -327,6 +335,7 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   getModuleRuntimeStatus,
   moduleContractToRuntimeModule,
 } from '../roaModuleRuntime';
+import { useConfirm } from '../../../layout/page';
 
 export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
@@ -44,6 +45,7 @@ const STEPS = [
 ];
 
 export function DraftRoAInterface() {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [currentStep, setCurrentStep] = useState(0);
   const [roaDraft, setRoaDraft] = useState<RoADraft | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -199,9 +201,13 @@ export function DraftRoAInterface() {
     const label = draft.clientData
       ? `${draft.clientData.firstName} ${draft.clientData.lastName}`.trim()
       : draft.clientSnapshot?.displayName || draft.id;
-    const ok = window.confirm(
-      `Discard this RoA draft${label ? ` for ${label}` : ''}? Uploaded evidence and generated drafts for this draft will be removed from the file index.`,
-    );
+    const ok = await askConfirm({
+      title: `Discard this RoA draft${label ? ` for ${label}` : ''}?`,
+      description:
+        'Uploaded evidence and generated drafts for this draft will be removed from the file index.',
+      confirmLabel: 'Discard draft',
+      destructive: true,
+    });
     if (!ok) return;
 
     setDiscardingDraftId(draft.id);
@@ -411,6 +417,7 @@ export function DraftRoAInterface() {
           </CardContent>
         </Card>
       )}
+      {confirmDialog}
     </div>
   );
 }

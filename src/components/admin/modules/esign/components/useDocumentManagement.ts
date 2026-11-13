@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { EsignField } from '../types';
 import { esignApi, type EnvelopeDocumentRef } from '../api';
+import type { ConfirmOptions } from '../../../layout/page';
 
 export function useDocumentManagement(params: {
   envelopeId: string;
@@ -27,6 +28,8 @@ export function useDocumentManagement(params: {
   fields: EsignField[];
   /** Called when a document removal also drops fields belonging to that doc. */
   setFields: React.Dispatch<React.SetStateAction<EsignField[]>>;
+  /** Asks the user to confirm a removal (the studio's centred dialog). */
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
 }) {
   const {
     envelopeId,
@@ -38,6 +41,7 @@ export function useDocumentManagement(params: {
     envelopePrimaryDocumentId,
     fields,
     setFields,
+    confirm,
   } = params;
 
   const [envelopeDocuments, setEnvelopeDocuments] = useState<EnvelopeDocumentRef[]>([]);
@@ -155,9 +159,12 @@ export function useDocumentManagement(params: {
         toast.error('An envelope must have at least one document');
         return;
       }
-      const confirmed = window.confirm(
-        'Remove this document from the envelope? Any fields placed on it will also be removed.',
-      );
+      const confirmed = await confirm({
+        title: 'Remove this document from the envelope?',
+        description: 'Any fields placed on it will also be removed.',
+        confirmLabel: 'Remove document',
+        destructive: true,
+      });
       if (!confirmed) return;
       try {
         const { documents } = await esignApi.removeEnvelopeDocument(envelopeId, documentId);
@@ -184,6 +191,7 @@ export function useDocumentManagement(params: {
       activeDocumentId,
       initialDocumentId,
       setFields,
+      confirm,
     ],
   );
 

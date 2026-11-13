@@ -24,8 +24,10 @@ import { brandApi } from './brand-api';
 import type { ColourSwatch, ColourPalette } from './brand-api';
 import { hexToRgb, getContrastRatio } from './corporateIdentityUtils';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
+import { useConfirm } from '../../../layout/page';
 
 export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
+  const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [palette, setPalette] = useState<ColourPalette | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -86,6 +88,12 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
 
   const handleDeleteSwatch = async (id: string) => {
     if (!palette) return;
+    const ok = await askConfirm({
+      title: 'Remove this colour?',
+      confirmLabel: 'Remove colour',
+      destructive: true,
+    });
+    if (!ok) return;
     const updated: ColourPalette = {
       ...palette,
       swatches: palette.swatches.filter((s) => s.id !== id),
@@ -314,6 +322,7 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }
