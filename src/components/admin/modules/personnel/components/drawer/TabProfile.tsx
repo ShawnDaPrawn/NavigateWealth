@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '../../../../../ui/button';
-import { useConfirm } from '../../../../layout/page';
+import { Notice, useConfirm } from '../../../../layout/page';
 import { Input } from '../../../../../ui/input';
 import { Textarea } from '../../../../../ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import { Lock, LockOpen, KeyRound, MailWarning, RefreshCw, XCircle, Loader2 } from 'lucide-react';
+import { Lock, LockOpen, KeyRound, RefreshCw, XCircle, Loader2 } from 'lucide-react';
 import { Personnel } from '../../types';
 import { updateProfileSchema } from '../../schema';
 import {
@@ -172,57 +172,48 @@ export function TabProfile({
     <form id={PROFILE_FORM_ID} onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {/* ── Pending invite ───────────────────────────────────────── */}
       {isPending && (
-        <Card className="border-amber-200 bg-amber-50/50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-                <MailWarning className="h-4.5 w-4.5 text-amber-600" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-semibold text-amber-900">
-                  Invitation pending
-                  {selectedPersonnel.invitedAt && ` — sent ${sentAgo(selectedPersonnel.invitedAt)}`}
-                  .
-                </h4>
-                <p className="mt-0.5 text-xs text-amber-700">
-                  This user has been invited but hasn't set up their account yet.
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 border-amber-300 bg-white text-xs text-amber-800 hover:bg-amber-50"
-                    disabled={isResending || isCancelling}
-                    onClick={() => resendInvite(selectedPersonnel.id)}
-                  >
-                    {isResending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-                    )}
-                    {isResending ? 'Sending…' : 'Resend invitation'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 border-red-200 bg-white text-xs text-red-700 hover:bg-red-50"
-                    disabled={isResending || isCancelling}
-                    onClick={() => void handleCancelInvite()}
-                  >
-                    {isCancelling ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                    )}
-                    {isCancelling ? 'Cancelling…' : 'Cancel invitation'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Notice
+          kind="attention"
+          title={`Invitation pending${
+            selectedPersonnel.invitedAt ? ` — sent ${sentAgo(selectedPersonnel.invitedAt)}` : ''
+          }.`}
+          action={
+            <span className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 bg-white text-xs"
+                disabled={isResending || isCancelling}
+                onClick={() => resendInvite(selectedPersonnel.id)}
+              >
+                {isResending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {isResending ? 'Sending…' : 'Resend invitation'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 border-red-200 bg-white text-xs text-red-700 hover:bg-red-50"
+                disabled={isResending || isCancelling}
+                onClick={() => void handleCancelInvite()}
+              >
+                {isCancelling ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {isCancelling ? 'Cancelling…' : 'Cancel invitation'}
+              </Button>
+            </span>
+          }
+        >
+          They haven&apos;t set up their account yet.
+        </Notice>
       )}
 
       <Card>

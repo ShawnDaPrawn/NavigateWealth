@@ -16,6 +16,7 @@ import {
 } from '../../../../ui/dialog';
 import { Shield, Edit2, Mail, Phone, Loader2 } from 'lucide-react';
 import { SuperAdminProfile } from '../types';
+import { FormErrorBanner } from '../../../layout/page';
 import {
   validateAdminProfile,
   type AdminProfileErrors,
@@ -116,6 +117,7 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
         placeholder={placeholder}
         aria-invalid={errors[key] ? true : undefined}
         aria-describedby={errors[key] ? `sa-${key}-error` : undefined}
+        className={errors[key] ? 'border-red-400 focus-visible:ring-red-400' : undefined}
       />
       {errors[key] && (
         <p id={`sa-${key}-error`} className="text-xs text-red-600">
@@ -190,6 +192,10 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
               void handleSave();
             }}
           >
+            <FormErrorBanner
+              count={Object.values(errors).filter(Boolean).length}
+              action="save the profile"
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               {field('firstName', 'First name', 'First name')}
               {field('lastName', 'Last name', 'Last name')}

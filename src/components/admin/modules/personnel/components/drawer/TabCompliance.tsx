@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '../../../../../ui/select';
 import { Shield, Upload, FileText, ExternalLink } from 'lucide-react';
-import { SoonBadge } from '../../../../layout/page';
+import { FormErrorBanner, SoonBadge } from '../../../../layout/page';
 import { Personnel } from '../../types';
 
 interface TabComplianceProps {
@@ -163,7 +163,10 @@ export function UploadComplianceDocumentDialog({
     if (!file) found.file = 'Choose a file';
     else if (!ACCEPTED_TYPES.includes(file.type)) found.file = 'Choose a PDF, JPG or PNG file';
     setErrors(found);
-    if (found.name || found.file || !file) return;
+    if (found.name || found.file || !file) {
+      document.getElementById(found.name ? 'compliance-doc-name' : 'compliance-doc-file')?.focus();
+      return;
+    }
     onUpload({ type, name: name.trim(), file });
   };
 
@@ -182,6 +185,10 @@ export function UploadComplianceDocumentDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          <FormErrorBanner
+            count={Object.values(errors).filter(Boolean).length}
+            action="upload the document"
+          />
           <div className="space-y-2">
             <Label htmlFor="compliance-doc-type">Document type</Label>
             <Select value={type} onValueChange={setType}>
