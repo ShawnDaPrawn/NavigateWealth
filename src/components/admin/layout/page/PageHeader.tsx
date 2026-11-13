@@ -7,10 +7,15 @@ interface PageHeaderProps {
   description?: ReactNode;
   /** One primary button, at most two secondary ones, then a ⋯ menu. */
   actions?: ReactNode;
+  /**
+   * The person can see but not change this page: shows a "View only" pill
+   * in place of the actions (design system: View only).
+   */
+  viewOnly?: boolean;
 }
 
 /** The heading every admin page starts with (design system: PageHeader). */
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, viewOnly }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
@@ -19,7 +24,14 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
         </h1>
         {description && <div className="mt-1 text-sm text-nw-text-3">{description}</div>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>}
+      {viewOnly ? (
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-nw-bg px-2.5 py-0.5 text-xs font-medium text-nw-text-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-nw-text-3" aria-hidden="true" />
+          View only
+        </span>
+      ) : (
+        actions && <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
+      )}
     </div>
   );
 }
