@@ -8,3 +8,6 @@ export { useConfirm, type ConfirmOptions } from './useConfirm';
 export { ErrorState } from './ErrorState';
 export { NoAccess } from './NoAccess';
 export { ModuleSkeleton } from './ModuleSkeleton';
+export { useBreadcrumbTrail } from './useBreadcrumbTrail';
+export { BreadcrumbContext, type Crumb } from './breadcrumbContext';
+export { Notice, FormErrorBanner } from './Notice';

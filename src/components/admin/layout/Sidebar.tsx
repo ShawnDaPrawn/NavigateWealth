@@ -90,7 +90,7 @@ export function Sidebar({
   };
 
   const handleSwitchToPersonal = () => {
-    toast.success('Switching to personal client view...');
+    toast.success('Switching to client view…');
     navigate('/dashboard');
   };
 
@@ -107,6 +107,10 @@ export function Sidebar({
     installOptionVisible: showInstallOption,
     isInstallingApp: isInstalling,
     onShowInstallHelp: () => setShowInstallHelp(true),
+    // Account settings is the signed-in admin's own profile in Personnel.
+    onOpenAccountSettings: () => {
+      navigate('/admin?module=personnel&profile=me');
+    },
     isSuperAdmin,
   };
 
@@ -156,6 +160,7 @@ interface SidebarContentProps {
   user: SidebarUser;
   onLogout: () => void;
   onSwitchToPersonal: () => void;
+  onOpenAccountSettings: () => void;
   onInstallApp: () => Promise<'accepted' | 'dismissed' | null>;
   installOptionVisible: boolean;
   isInstallingApp: boolean;
@@ -175,6 +180,7 @@ function SidebarContent({
   user,
   onLogout,
   onSwitchToPersonal,
+  onOpenAccountSettings,
   onInstallApp,
   installOptionVisible,
   isInstallingApp,
@@ -235,7 +241,13 @@ function SidebarContent({
         className={cn(
           'group/item relative flex items-center rounded-lg text-[13.5px] outline-none transition-colors',
           'focus-visible:ring-2 focus-visible:ring-nw-violet/60',
-          rail ? 'h-10 w-11 justify-center' : 'h-[34px] w-full gap-2.5 px-2.5 text-left',
+          rail
+            ? 'h-10 w-11 justify-center'
+            : cn(
+                'w-full gap-2.5 px-2.5 text-left',
+                // Phone and tablet drawer: 44px touch targets (design system).
+                isMobile ? 'h-11' : 'h-[34px]',
+              ),
           isActive
             ? 'bg-nw-nav-active font-semibold text-nw-violet-600'
             : 'text-nw-nav-text hover:bg-nw-nav-hover hover:text-nw-ink',
@@ -447,17 +459,25 @@ function SidebarContent({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="w-56" sideOffset={8}>
-              <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
+              <DropdownMenuLabel className="font-normal">
+                <span className="block truncate text-[13px] font-semibold text-nw-ink">
+                  {userName}
+                </span>
+                <span className="block truncate text-xs text-nw-text-3">
+                  {userRole}
+                  {user?.email ? ` · ${user.email}` : ''}
+                </span>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <InstallAppMenuItem
-                isInstalling={isInstallingApp}
-                isVisible={installOptionVisible}
-                onInstallApp={onInstallApp}
-                onShowInstallHelp={onShowInstallHelp}
-              />
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setUserDropdownOpen(false);
+                  setMobileOpen(false);
+                  onOpenAccountSettings();
+                }}
+              >
                 <Settings className="mr-2 h-4 w-4" />
-                Settings
+                Account settings
               </DropdownMenuItem>
               {isSuperAdmin && (
                 <DropdownMenuItem
@@ -467,9 +487,15 @@ function SidebarContent({
                   }}
                 >
                   <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  Switch to Personal View
+                  Switch to client view
                 </DropdownMenuItem>
               )}
+              <InstallAppMenuItem
+                isInstalling={isInstallingApp}
+                isVisible={installOptionVisible}
+                onInstallApp={onInstallApp}
+                onShowInstallHelp={onShowInstallHelp}
+              />
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
@@ -479,7 +505,7 @@ function SidebarContent({
                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

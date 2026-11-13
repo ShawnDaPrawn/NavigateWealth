@@ -5,6 +5,7 @@ import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
 import { ModuleFrame } from '../admin/layout/ModuleFrame';
+import { useCurrentUserPermissions } from '../admin/modules/personnel/shell';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
 
@@ -98,6 +99,7 @@ const LockedModule = React.lazy(() =>
 export function AdminDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
+  const { can } = useCurrentUserPermissions();
 
   // ── Deep Link Support ──────────────────────────────────────────────────
   // URL params like ?module=resources&resourcesTab=tools allow drawer links
@@ -153,7 +155,11 @@ export function AdminDashboardPage() {
     switch (activeModule) {
       case 'dashboard':
         return (
-          <ModuleFrame module="dashboard">
+          <ModuleFrame
+            module="dashboard"
+            allowed={can('dashboard')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <DashboardModule
               onModuleChange={handleModuleChange}
               onViewTask={handleViewTaskFromDashboard}
@@ -162,127 +168,211 @@ export function AdminDashboardPage() {
         );
       case 'clients':
         return (
-          <ModuleFrame module="clients">
+          <ModuleFrame
+            module="clients"
+            allowed={can('clients')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <ClientManagementModule />
           </ModuleFrame>
         );
       case 'esign':
         return (
-          <ModuleFrame module="esign">
+          <ModuleFrame
+            module="esign"
+            allowed={can('esign')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <EsignModule />
           </ModuleFrame>
         );
       case 'personnel':
         return (
-          <ModuleFrame module="personnel">
+          <ModuleFrame
+            module="personnel"
+            allowed={can('personnel')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <PersonnelModule />
           </ModuleFrame>
         );
       case 'advice-engine':
         return (
-          <ModuleFrame module="advice-engine">
+          <ModuleFrame
+            module="advice-engine"
+            allowed={can('advice-engine')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <AdviceEngineModule />
           </ModuleFrame>
         );
       case 'product-management':
         return (
-          <ModuleFrame module="product-management">
+          <ModuleFrame
+            module="product-management"
+            allowed={can('product-management')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <ProductManagementModule />
           </ModuleFrame>
         );
       case 'resources':
         return (
-          <ModuleFrame module="resources">
+          <ModuleFrame
+            module="resources"
+            allowed={can('resources')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <ResourcesModule />
           </ModuleFrame>
         );
       case 'publications':
         return (
-          <ModuleFrame module="publications">
+          <ModuleFrame
+            module="publications"
+            allowed={can('publications')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <PublicationsModule />
           </ModuleFrame>
         );
       case 'compliance':
         return (
-          <ModuleFrame module="compliance">
+          <ModuleFrame
+            module="compliance"
+            allowed={can('compliance')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <ComplianceModule />
           </ModuleFrame>
         );
       case 'tasks':
         return (
-          <ModuleFrame module="tasks">
+          <ModuleFrame
+            module="tasks"
+            allowed={can('tasks')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <TaskManagementModule />
           </ModuleFrame>
         );
       case 'notes':
         return (
-          <ModuleFrame module="notes">
+          <ModuleFrame
+            module="notes"
+            allowed={can('notes')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <NotesModule />
           </ModuleFrame>
         );
       case 'applications':
         return (
-          <ModuleFrame module="applications">
+          <ModuleFrame
+            module="applications"
+            allowed={can('applications')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <ApplicationsModule />
           </ModuleFrame>
         );
       case 'submissions':
         return (
-          <ModuleFrame module="submissions">
+          <ModuleFrame
+            module="submissions"
+            allowed={can('submissions')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <SubmissionsModule />
           </ModuleFrame>
         );
       case 'communication':
         return (
-          <ModuleFrame module="communication">
+          <ModuleFrame
+            module="communication"
+            allowed={can('communication')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <CommunicationModule />
           </ModuleFrame>
         );
       case 'newsletter':
         return (
-          <ModuleFrame module="newsletter">
+          <ModuleFrame
+            module="newsletter"
+            allowed={can('newsletter')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <NewsletterModule />
           </ModuleFrame>
         );
       case 'marketing':
         return (
-          <ModuleFrame module="marketing">
+          <ModuleFrame
+            module="marketing"
+            allowed={can('marketing')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <SocialMediaModule />
           </ModuleFrame>
         );
       case 'reporting':
         return (
-          <ModuleFrame module="reporting">
+          <ModuleFrame
+            module="reporting"
+            allowed={can('reporting')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <ReportingModule />
           </ModuleFrame>
         );
       case 'issues':
         return (
-          <ModuleFrame module="issues">
+          <ModuleFrame
+            module="issues"
+            allowed={can('issues')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <IssuesModule />
           </ModuleFrame>
         );
       case 'calendar':
         return (
-          <ModuleFrame module="calendar">
+          <ModuleFrame
+            module="calendar"
+            allowed={can('calendar')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <CalendarModule />
           </ModuleFrame>
         );
       case 'locked':
         return (
-          <ModuleFrame module="locked">
+          <ModuleFrame
+            module="locked"
+            allowed={can('locked')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <LockedModule />
           </ModuleFrame>
         );
       case 'ai-management':
         return (
-          <ModuleFrame module="ai-management">
+          <ModuleFrame
+            module="ai-management"
+            allowed={can('ai-management')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <AIManagementModule />
           </ModuleFrame>
         );
       default:
         return (
-          <ModuleFrame module="dashboard">
+          <ModuleFrame
+            module="dashboard"
+            allowed={can('dashboard')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
             <DashboardModule />
           </ModuleFrame>
         );
