@@ -19,16 +19,6 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
@@ -41,7 +31,11 @@ import { isCampaignDeletable } from '../utils/campaign';
 import { formatDateTime, formatNumber, formatRate, formatRelative } from '../utils/format';
 import { CampaignProgressLine } from './CampaignProgressLine';
 import { CampaignStatusBadge } from './StatusBadge';
-import { EmptyState, ErrorState, FilterChips, Notice } from './shared';
+import { EmptyState, ErrorState, Notice } from './shared';
+import { Tabs } from '../../../../ui/tabs';
+import { NavTabsList, NavTabsTrigger, useConfirm, useUrlState } from '../../../layout/page';
+
+const STATUS_IDS = CAMPAIGN_STATUS_FILTERS.map((option) => option.id);
 
 export function NewsletterList({
   caps,
@@ -52,10 +46,22 @@ export function NewsletterList({
   onOpen: (campaignId: string) => void;
   onNew: () => void;
 }) {
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useUrlState('status', 'all', STATUS_IDS);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [pendingDelete, setPendingDelete] = useState<NewsletterCampaign | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
+
+  const askDelete = async (campaign: NewsletterCampaign) => {
+    const ok = await confirm({
+      title: `Delete “${campaign.title}”?`,
+      description:
+        'This removes the newsletter, its PDF and its delivery history. Emails already delivered are unaffected. This cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Keep it',
+      destructive: true,
+    });
+    if (ok) remove.mutate(campaign.id);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -115,14 +121,18 @@ export function NewsletterList({
         </Notice>
       ) : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <FilterChips
-          ariaLabel="Filter newsletters by status"
-          options={chipOptions}
-          value={filter}
-          onChange={setFilter}
-        />
-        <div className="relative w-full min-w-56 lg:w-72">
+      <Tabs value={filter} onValueChange={setFilter}>
+        <NavTabsList aria-label="Filter newsletters by status">
+          {chipOptions.map((option) => (
+            <NavTabsTrigger key={option.id} value={option.id} count={option.count}>
+              {option.label}
+            </NavTabsTrigger>
+          ))}
+        </NavTabsList>
+      </Tabs>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full min-w-56 sm:w-72">
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -278,7 +288,7 @@ export function NewsletterList({
                           aria-label={`Delete ${campaign.title}`}
                           onClick={(event) => {
                             event.stopPropagation();
-                            setPendingDelete(campaign);
+                            void askDelete(campaign);
                           }}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden />
@@ -310,32 +320,7 @@ export function NewsletterList({
         </Card>
       )}
 
-      <AlertDialog
-        open={Boolean(pendingDelete)}
-        onOpenChange={(open) => !open && setPendingDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{pendingDelete?.title}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the newsletter, its PDF and its delivery history. Emails already
-              delivered are unaffected. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingDelete) remove.mutate(pendingDelete.id);
-                setPendingDelete(null);
-              }}
-              disabled={remove.isPending}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {confirmDialog}
     </div>
   );
 }

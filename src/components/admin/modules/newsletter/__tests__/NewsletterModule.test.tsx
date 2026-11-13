@@ -39,9 +39,14 @@ vi.mock('../components/NewsletterEditor', () => ({
   ),
 }));
 vi.mock('../components/NewsletterDetail', () => ({
-  NewsletterDetail: (props: unknown) => {
+  NewsletterDetail: (props: { onBack?: () => void; campaign: { title: string } }) => {
     hooks.detailProps.push(props);
-    return <div data-testid="newsletter-detail" />;
+    return (
+      <div data-testid="newsletter-detail">
+        <h1>{props.campaign.title}</h1>
+        <button onClick={props.onBack}>detail-back</button>
+      </div>
+    );
   },
 }));
 vi.mock('../components/DeliveryHealthCard', () => ({
@@ -158,8 +163,17 @@ describe('NewsletterModule', () => {
     expect(hooks.detailProps[0]).toMatchObject({ campaign: { id: 'c-1', source: 'routine' } });
     expect(screen.getByText('September issue')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Newsletters' }));
+    fireEvent.click(screen.getByRole('button', { name: 'detail-back' }));
     expect(screen.getByTestId('location').textContent).not.toContain('campaign=');
+  });
+
+  it('shows the upload form as a page with its own header and a way back', () => {
+    renderAt('?module=newsletter&campaign=new');
+    expect(screen.getByRole('heading', { level: 1, name: 'New newsletter' })).toBeTruthy();
+    expect(screen.queryByTestId('newsletter-list')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /back to newsletters/i }));
+    expect(screen.getByTestId('location').textContent).not.toContain('campaign=');
+    expect(screen.getByTestId('newsletter-list')).toBeTruthy();
   });
 
   it('shows a loading placeholder while a deep-link resolves its newsletter', () => {
