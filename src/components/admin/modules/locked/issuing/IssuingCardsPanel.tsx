@@ -10,33 +10,26 @@ import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Skeleton } from '../../../../ui/skeleton';
-import { CreateCardholderDialog } from './components/CreateCardholderDialog';
 import { CreateCardDialog } from './components/CreateCardDialog';
 import { CardSecretsDialog } from './components/CardSecretsDialog';
-import {
-  useCardholders,
-  useCards,
-  useCardSecrets,
-  useCreateCardholder,
-  useCreateVirtualCard,
-} from './hooks/useIssuing';
+import { useCardholders, useCards, useCardSecrets, useCreateVirtualCard } from './hooks/useIssuing';
 import { statusLabel } from './constants';
-import type { CardholderInput, CardInput, IssuingCard } from './types';
+import type { CardInput, IssuingCard } from './types';
 
-export function IssuingCardsPanel() {
+interface IssuingCardsPanelProps {
+  /** Opens the New cardholder page (it replaces the Banking tab). */
+  onNewCardholder: () => void;
+}
+
+export function IssuingCardsPanel({ onNewCardholder }: IssuingCardsPanelProps) {
   const cardholdersQuery = useCardholders();
   const cardsQuery = useCards();
-  const createCardholder = useCreateCardholder();
   const createCard = useCreateVirtualCard();
   const cardSecrets = useCardSecrets();
 
-  const [cardholderOpen, setCardholderOpen] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
   const [secretsCard, setSecretsCard] = useState<IssuingCard | null>(null);
 
-  const handleCreateCardholder = (input: CardholderInput) => {
-    createCardholder.mutate(input, { onSuccess: () => setCardholderOpen(false) });
-  };
   const handleCreateCard = (input: CardInput) => {
     createCard.mutate(input, { onSuccess: () => setCardOpen(false) });
   };
@@ -58,7 +51,7 @@ export function IssuingCardsPanel() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setCardholderOpen(true)}>
+          <Button variant="outline" onClick={onNewCardholder}>
             <UserPlus className="h-4 w-4 mr-1" /> New cardholder
           </Button>
           <Button
@@ -123,12 +116,6 @@ export function IssuingCardsPanel() {
         </div>
       )}
 
-      <CreateCardholderDialog
-        open={cardholderOpen}
-        onOpenChange={setCardholderOpen}
-        onSubmit={handleCreateCardholder}
-        isSubmitting={createCardholder.isPending}
-      />
       <CreateCardDialog
         open={cardOpen}
         onOpenChange={setCardOpen}

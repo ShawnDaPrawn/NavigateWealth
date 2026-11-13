@@ -8,21 +8,33 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Lock, ShieldX } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
+import {
+  NavTabsList,
+  NavTabsTrigger,
+  NoAccess,
+  PageHeader,
+  SoonBadge,
+  useUrlState,
+} from '../../layout/page';
 import { useCurrentUserPermissions } from '../personnel';
 import { LockedSkeleton } from './components/LockedSkeleton';
-import { ComingSoonBadge } from './components/ComingSoonBadge';
+import { Breadcrumb } from './breadcrumb';
 import { AccountsPanel } from './refund-clusters/AccountsPanel';
 import { CLUSTER_PARAM } from './refund-clusters/constants';
 import { TreasuryManagerPanel } from './treasury/TreasuryManagerPanel';
 import { IssuingCardsPanel } from './issuing/IssuingCardsPanel';
+import { CreateCardholderPage } from './issuing/components/CreateCardholderPage';
+import { useCreateCardholder } from './issuing/hooks/useIssuing';
 import { getLockoutRemaining, verifyAccessCode } from './access';
+
+/** ?cardholder=new opens the New cardholder page on the Banking tab. */
+const CARDHOLDER_PARAM = 'cardholder';
 
 type LockedTab = 'banking' | 'accounts';
 const LOCKED_TABS: readonly LockedTab[] = ['banking', 'accounts'];
@@ -72,9 +84,40 @@ function LockedPage({ description, children }: { description: string; children: 
  */
 function LockedWorkspace() {
   const [tab, setTab] = useUrlState<LockedTab>('tab', 'banking', LOCKED_TABS);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   // An open cluster is a page of its own: the module header and tabs step aside.
   const clusterOpen = tab === 'accounts' && searchParams.has(CLUSTER_PARAM);
+  const cardholderOpen = tab === 'banking' && searchParams.get(CARDHOLDER_PARAM) === 'new';
+  const createCardholder = useCreateCardholder();
+
+  const setCardholderPage = (open: boolean) =>
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      if (open) params.set(CARDHOLDER_PARAM, 'new');
+      else params.delete(CARDHOLDER_PARAM);
+      return params;
+    });
+
+  // New cardholder is a page of its own in place of the workspace.
+  if (cardholderOpen) {
+    return (
+      <div className="mx-auto w-full max-w-[1800px] p-6 lg:p-8">
+        <Breadcrumb
+          trail={[
+            { label: 'Banking', onClick: () => setCardholderPage(false) },
+            { label: 'New cardholder' },
+          ]}
+        />
+        <CreateCardholderPage
+          onClose={() => setCardholderPage(false)}
+          isSubmitting={createCardholder.isPending}
+          onSubmit={(input) =>
+            createCardholder.mutate(input, { onSuccess: () => setCardholderPage(false) })
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
@@ -91,16 +134,16 @@ function LockedWorkspace() {
             <NavTabsTrigger value="banking">Banking</NavTabsTrigger>
             <NavTabsTrigger value="accounts">Accounts</NavTabsTrigger>
             <NavTabsTrigger value="trading" disabled className="disabled:opacity-50">
-              Trading
-              <ComingSoonBadge />
+              Trading <SoonBadge />
             </NavTabsTrigger>
           </NavTabsList>
         )}
 
         <TabsContent value="banking">
+          <Breadcrumb trail={[{ label: 'Banking' }]} />
           <div className="space-y-8">
             <TreasuryManagerPanel />
-            <IssuingCardsPanel />
+            <IssuingCardsPanel onNewCardholder={() => setCardholderPage(true)} />
           </div>
         </TabsContent>
 
@@ -114,17 +157,13 @@ function LockedWorkspace() {
 
 function AccessDenied() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
-            <ShieldX className="h-6 w-6 text-destructive" />
-          </div>
-          <CardTitle>Access denied</CardTitle>
-          <CardDescription>You do not have permission to view this page.</CardDescription>
-        </CardHeader>
-      </Card>
-    </div>
+    <>
+      <Breadcrumb trail={[{ label: 'No access' }]} />
+      <NoAccess
+        what="Locked"
+        howToGetAccess="This private workspace is for the super admin only."
+      />
+    </>
   );
 }
 
@@ -178,6 +217,7 @@ function AccessGate({ onUnlocked }: { onUnlocked: () => void }) {
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
+      <Breadcrumb trail={[{ label: 'Restricted area' }]} />
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
