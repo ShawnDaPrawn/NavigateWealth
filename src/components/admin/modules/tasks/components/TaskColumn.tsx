@@ -10,7 +10,7 @@
 
 import { Droppable } from '@hello-pangea/dnd';
 import type { Task, TaskStatus } from '../types';
-import { STATUS_LABELS } from '../constants';
+import { STATUS_DISPLAY_LABELS } from '../constants';
 import { TaskCard } from './TaskCard';
 
 // ============================================================================
@@ -38,21 +38,21 @@ const STATUS_CONFIG = {
     border: 'border-blue-100',
     text: 'text-blue-700',
     badge: 'bg-blue-100 text-blue-700',
-    label: STATUS_LABELS.new,
+    label: STATUS_DISPLAY_LABELS.new,
   },
   in_progress: {
     bg: 'bg-amber-50',
     border: 'border-amber-100',
     text: 'text-amber-700',
     badge: 'bg-amber-100 text-amber-700',
-    label: STATUS_LABELS.in_progress,
+    label: STATUS_DISPLAY_LABELS.in_progress,
   },
   completed: {
     bg: 'bg-green-50',
     border: 'border-green-100',
     text: 'text-green-700',
     badge: 'bg-green-100 text-green-700',
-    label: STATUS_LABELS.completed,
+    label: STATUS_DISPLAY_LABELS.completed,
   },
   archived: {
     bg: 'bg-gray-50',

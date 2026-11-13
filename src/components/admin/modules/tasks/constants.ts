@@ -66,6 +66,14 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
   archived: 'Archived',
 };
 
+/** Status names as people read them on the board and the task page. */
+export const STATUS_DISPLAY_LABELS: Record<TaskStatus, string> = {
+  new: 'To do',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  archived: 'Archived',
+};
+
 /** Status color mappings */
 export const STATUS_COLORS: Record<TaskStatus, string> = {
   new: 'bg-blue-100 text-blue-700 border-blue-200',

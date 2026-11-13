@@ -110,17 +110,17 @@ export function AdminDashboardPage() {
   }, [moduleFromUrl]);
 
   // ── Task Deep Link ──────────────────────────────────────────────────────
-  // When a task is clicked in the dashboard's Due Today widget, we store
-  // the task ID and switch to the tasks module. The TaskManagementModule
-  // reads this ID and auto-opens the task detail modal.
-  const [deepLinkTaskId, setDeepLinkTaskId] = useState<string | null>(null);
+  // A task clicked in the dashboard's Due Today widget opens To-Do with the
+  // task in the address (?module=tasks&task=<id>); the module opens its page.
+  const handleViewTaskFromDashboard = useCallback(
+    (taskId: string) => {
+      const next = moduleSearchParams('tasks');
+      next.set('task', taskId);
+      setSearchParams(next);
+    },
+    [setSearchParams],
+  );
 
-  const handleViewTaskFromDashboard = useCallback((taskId: string) => {
-    setDeepLinkTaskId(taskId);
-    setActiveModule('tasks');
-  }, []);
-
-  // Clear deep-link when navigating away from tasks
   const handleModuleChange = useCallback(
     (module: string) => {
       const applyModuleChange = () => {
@@ -128,9 +128,6 @@ export function AdminDashboardPage() {
         // were opened in (see moduleSearchParams).
         setSearchParams(moduleSearchParams(module), { replace: true });
 
-        if (module !== 'tasks') {
-          setDeepLinkTaskId(null);
-        }
         setActiveModule(module as AdminModule);
       };
 
@@ -214,7 +211,7 @@ export function AdminDashboardPage() {
       case 'tasks':
         return (
           <ModuleFrame module="tasks">
-            <TaskManagementModule initialTaskId={deepLinkTaskId} />
+            <TaskManagementModule />
           </ModuleFrame>
         );
       case 'notes':
