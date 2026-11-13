@@ -148,6 +148,28 @@ describe('recoverInterruptedPublishBlasts', () => {
     );
   });
 
+  it('queues only the recipients inside the window when an article has mixed ages', async () => {
+    publishArticle();
+    // Seeded relative to the sweep minute (T0): far too old, in the window,
+    // and still young enough to be a live blast.
+    vi.setSystemTime(new Date(T0.getTime() - INTERRUPTED_BLAST_MAX_AGE_MS - minutes(60)));
+    await seedPending(['too-old@example.com']);
+    vi.setSystemTime(new Date(T0.getTime() - minutes(20)));
+    await seedPending(['stranded@example.com']);
+    vi.setSystemTime(new Date(T0.getTime() - minutes(2)));
+    await seedPending(['in-flight@example.com']);
+
+    vi.setSystemTime(T0);
+    const result = await recoverInterruptedPublishBlasts(T0);
+
+    expect(result.errors).toEqual([]);
+    expect(result.recovered).toHaveLength(1);
+    expect(result.recovered[0].recipientCount).toBe(1);
+
+    const job = await getActiveArticleNotificationJob(ARTICLE.id, 'publish', 'retry_undelivered');
+    expect(job?.items.map((item) => item.email)).toEqual(['stranded@example.com']);
+  });
+
   it('ignores recipients that were already delivered', async () => {
     publishArticle();
     await seedPending(['a@example.com']);

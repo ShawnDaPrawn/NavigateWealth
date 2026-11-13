@@ -335,7 +335,14 @@ export async function recoverInterruptedPublishBlasts(
         excerpt: '',
       });
 
-      const job = await retryUndeliveredArticleNotifications(article, { source: 'publish' });
+      // Queue exactly the records that passed the age window. The public
+      // retry helper re-reads every undelivered record for the article, which
+      // would also pick up ones younger than the safety interval or older than
+      // the recovery window (a republish to a wider audience leaves both).
+      const job = await queueArticleNotificationJob(article, stranded, {
+        kind: 'retry_undelivered',
+        source: 'publish',
+      });
       log.warn('Recovered interrupted publish blast', {
         articleId,
         jobId: job.id,
