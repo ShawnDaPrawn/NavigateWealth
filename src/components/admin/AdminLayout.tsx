@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePendingCounts } from './hooks/usePendingCounts';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu, ChevronRight, Search, X } from 'lucide-react';
 import { cn } from '../ui/utils';
 
 import { Sidebar } from './layout/Sidebar';
@@ -21,6 +21,9 @@ const SIDEBAR_RAIL = '4rem';
 export function AdminLayout({ activeModule, onModuleChange, children }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Below lg the top bar has no room for the search field: a search button
+  // opens it in a row under the bar (design: PH-* boards).
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const pendingCounts = usePendingCounts();
 
@@ -73,7 +76,10 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
                   <ChevronRight className="size-3.5 text-gray-300" aria-hidden="true" />
                 </li>
               )}
-              <li className="truncate font-medium text-nw-ink" aria-current="page">
+              <li
+                className="truncate font-medium text-nw-ink max-sm:text-base max-sm:font-semibold"
+                aria-current="page"
+              >
                 {moduleLabel}
               </li>
             </ol>
@@ -82,7 +88,25 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
           <div className="hidden w-full max-w-sm lg:block">
             <GlobalSearch />
           </div>
+          <button
+            type="button"
+            className="inline-flex size-9 items-center justify-center rounded-lg text-nw-text-2 hover:bg-nw-nav-hover hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 lg:hidden"
+            onClick={() => setMobileSearchOpen((open) => !open)}
+            aria-label={mobileSearchOpen ? 'Close search' : 'Search clients and staff'}
+            aria-expanded={mobileSearchOpen}
+          >
+            {mobileSearchOpen ? (
+              <X className="size-5" aria-hidden="true" />
+            ) : (
+              <Search className="size-5" aria-hidden="true" />
+            )}
+          </button>
         </header>
+        {mobileSearchOpen && (
+          <div className="border-b border-nw-line bg-white px-4 py-2 lg:hidden">
+            <GlobalSearch />
+          </div>
+        )}
 
         <main id="main-content" className="flex-1 overflow-auto">
           <div

@@ -19,7 +19,8 @@ export function PageHeader({ title, description, actions, viewOnly }: PageHeader
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
+        {/* On a phone the top bar already shows the title (PH-* boards). */}
+        <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink max-sm:sr-only">
           {title}
         </h1>
         {description && <div className="mt-1 text-sm text-nw-text-3">{description}</div>}
@@ -30,7 +31,11 @@ export function PageHeader({ title, description, actions, viewOnly }: PageHeader
           View only
         </span>
       ) : (
-        actions && <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
+        actions && (
+          <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:[&>*:first-child]:flex-1 sm:justify-end">
+            {actions}
+          </div>
+        )
       )}
     </div>
   );
