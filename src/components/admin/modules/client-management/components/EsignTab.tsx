@@ -23,13 +23,6 @@ import { useState, useMemo, Suspense } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../../../ui/table';
 import { Plus, AlertCircle, Search, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -61,7 +54,6 @@ import {
 import type { EsignEnvelope, EsignField, SignerFormData } from './esignTabModel';
 
 import {
-  STAT_CONFIG,
   STATUS_FILTER_MAP,
   STATUS_FILTER_OPTIONS,
   type EsignTabProps,
@@ -144,16 +136,6 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     }),
     [selectedClient.id, selectedClient.firstName, selectedClient.lastName, selectedClient.email],
   );
-
-  // ==================== DERIVED STATS ====================
-
-  const stats = {
-    total: envelopes.length,
-    pending: envelopes.filter((e) => ['sent', 'viewed', 'partially_signed'].includes(e.status))
-      .length,
-    completed: envelopes.filter((e) => e.status === 'completed').length,
-    rejected: envelopes.filter((e) => ['rejected', 'declined'].includes(e.status)).length,
-  };
 
   const filteredEnvelopes = useMemo(() => {
     let result = envelopes;
@@ -672,52 +654,34 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   return (
     <div className="space-y-6">
       {/* Header with Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold leading-none">E-Signature Documents</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            All e-sign documents associated with this client
+          <h2 className="text-[15px] font-semibold text-nw-ink">E-signature documents</h2>
+          <p className="mt-0.5 text-sm text-nw-text-3">
+            Envelopes sent to {selectedClient.firstName || 'this client'}. New envelope starts one
+            with them already added as a signer.
           </p>
         </div>
-        <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleStartNew}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          New Document
+        <Button size="sm" onClick={handleStartNew}>
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          New envelope
         </Button>
       </div>
 
-      {/* Statistics Cards (SS8.3 stat card standards) */}
-      <div className="grid grid-cols-4 gap-4">
-        {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
-          const cfg = STAT_CONFIG[key];
-          const Icon = cfg.icon;
-          return (
-            <Card key={key}>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${cfg.bgColor}`}>
-                    <Icon className={`h-4 w-4 ${cfg.iconColor}`} />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold leading-none">{stats[key]}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{cfg.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Search & Filter Bar */}
+      {/* Search & status filter */}
       {envelopes.length > 0 && (
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full max-w-xs">
+            <Search
+              className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
-              placeholder="Search documents..."
+              placeholder="Search documents"
+              aria-label="Search envelopes"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9"
+              className="h-9 pl-9"
             />
             {searchQuery && (
               <button
@@ -725,31 +689,45 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 aria-label="Clear search"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
           </div>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-            <SelectTrigger className="w-[160px] h-9">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_FILTER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div role="group" aria-label="Status" className="flex flex-wrap gap-1.5">
+            {STATUS_FILTER_OPTIONS.map((opt) => {
+              const on = statusFilter === opt.value;
+              const statuses = STATUS_FILTER_MAP[opt.value];
+              const count = statuses
+                ? envelopes.filter((e) => statuses.includes(e.status)).length
+                : undefined;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setStatusFilter(opt.value)}
+                  className={`inline-flex h-8 items-center gap-1 rounded-full border px-3 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                    on
+                      ? 'border-violet-300 bg-nw-violet-50 font-medium text-nw-violet-600'
+                      : 'border-gray-300 bg-white text-nw-text-2 hover:text-nw-ink'
+                  }`}
+                >
+                  {opt.value === 'all' ? 'All statuses' : opt.label}
+                  {count !== undefined && (
+                    <span className="tabular-nums text-nw-text-3">{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <span className="ml-auto text-sm text-nw-text-3">
+            {filteredEnvelopes.length} {filteredEnvelopes.length === 1 ? 'envelope' : 'envelopes'}
+            {isFiltered && ` of ${envelopes.length}`}
+          </span>
           {isFiltered && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {filteredEnvelopes.length} of {envelopes.length}
-              </span>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearFilters}>
-                Clear
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearFilters}>
+              Clear
+            </Button>
           )}
         </div>
       )}
@@ -766,7 +744,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
               Try adjusting your search or status filter
             </p>
             <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-              Clear Filters
+              Clear filters
             </Button>
           </CardContent>
         </Card>

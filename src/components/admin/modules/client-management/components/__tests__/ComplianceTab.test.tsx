@@ -18,7 +18,8 @@
  *     side-effect breaks this, add stubs then.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, renderWithQueryClient } from '@/test/utils';
+import { fireEvent, screen, waitFor, renderWithQueryClient } from '@/test/utils';
+import { MemoryRouter, useLocation } from 'react-router';
 import type { Client } from '@/components/admin/modules/client-management/types';
 
 // ── Hoist mock factories before any imports execute ──────────────────────────
@@ -60,14 +61,21 @@ const selectedClient: Client = {
   suspended: false,
 };
 
-function renderCompliance() {
+function Location() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+
+function renderCompliance(url = '/') {
   return renderWithQueryClient(
-    <ComplianceTab
-      selectedClient={selectedClient}
-      sanctionsScreeningRunning={false}
-      onRunSanctionsScreening={vi.fn()}
-      lastSanctionsCheck=""
-    />,
+    <MemoryRouter initialEntries={[url]}>
+      <ComplianceTab
+        selectedClient={selectedClient}
+        sanctionsScreeningRunning={false}
+        onRunSanctionsScreening={vi.fn()}
+        lastSanctionsCheck=""
+      />
+      <Location />
+    </MemoryRouter>,
   );
 }
 
@@ -84,15 +92,15 @@ describe('ComplianceTab — unregistered state', () => {
     renderCompliance();
 
     await waitFor(() => {
-      expect(screen.getByText('Registration Required')).toBeTruthy();
+      expect(screen.getByText('Registration required')).toBeTruthy();
     });
   });
 
-  it('renders the "Register Client on Beeswax" CTA button', async () => {
+  it('renders the Register client button', async () => {
     renderCompliance();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Register Client on Beeswax/i })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /^Register client$/i })).toBeTruthy();
     });
   });
 
@@ -136,5 +144,16 @@ describe('ComplianceTab — registered state', () => {
       const buttons = screen.getAllByRole('button', { name: /identity verification/i });
       expect(buttons.length).toBeGreaterThan(0);
     });
+  });
+
+  it('shows the sections as a rail, the open one kept in the address', async () => {
+    renderCompliance();
+    const rail = await screen.findByRole('navigation', { name: 'Compliance sections' });
+    expect(rail.textContent).toContain('Checks');
+    expect(rail.textContent).toContain('Outcome');
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe('?ksec=activity-log'),
+    );
   });
 });

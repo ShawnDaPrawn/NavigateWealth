@@ -11,6 +11,13 @@
  */
 
 import { useState, useCallback } from 'react';
+import { Button } from '../../../../ui/button';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
+import { useClientSubCrumbs } from './crumbsContext';
+
+const COMMUNICATION_VIEWS = ['compose', 'history'] as const;
+type CommunicationView = (typeof COMMUNICATION_VIEWS)[number];
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Client } from '../types';
@@ -46,7 +53,9 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
     isOpen: false,
     id: null,
   });
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  // Compose | History, in the address (?cview=).
+  const [view, setView] = useUrlState<CommunicationView>('cview', 'compose', COMMUNICATION_VIEWS);
+  useClientSubCrumbs([{ label: view === 'history' ? 'History' : 'Compose' }]);
 
   // Feedback state
   const [error, setError] = useState<string | null>(null);
@@ -322,32 +331,89 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
         </Alert>
       )}
 
-      {/* Compose */}
-      <ComposeForm
-        key={composeKey}
-        clientFirstName={client.firstName}
-        clientLastName={client.lastName}
-        clientId={client.id}
-        clientEmail={client.email}
-        clientIdNumber={
-          client.idNumber ||
-          client.profile?.personalInformation?.idNumber ||
-          (client as { personalInformation?: { idNumber?: string } }).personalInformation?.idNumber
-        }
-        onSend={handleSend}
-        isSending={sendMutation.isPending}
-        onViewHistory={() => setHistoryDialogOpen(true)}
-      />
+      <Tabs value={view} onValueChange={(v) => setView(v as CommunicationView)} className="gap-4">
+        <SegmentedList aria-label="Communication view">
+          <SegmentedTrigger value="compose">Compose</SegmentedTrigger>
+          <SegmentedTrigger value="history">History · {communications.length}</SegmentedTrigger>
+        </SegmentedList>
 
-      {/* History */}
-      <HistoryDialog
-        open={historyDialogOpen}
-        onOpenChange={setHistoryDialogOpen}
-        communications={communications}
-        isLoading={isLoading}
-        onViewDetail={setViewingCommunication}
-        onDelete={handleDeleteRequest}
-      />
+        <TabsContent value="compose" className="mt-0">
+          <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
+            <ComposeForm
+              key={composeKey}
+              clientFirstName={client.firstName}
+              clientLastName={client.lastName}
+              clientId={client.id}
+              clientEmail={client.email}
+              clientIdNumber={
+                client.idNumber ||
+                client.profile?.personalInformation?.idNumber ||
+                (client as { personalInformation?: { idNumber?: string } }).personalInformation
+                  ?.idNumber
+              }
+              onSend={handleSend}
+              isSending={sendMutation.isPending}
+              onViewHistory={() => setView('history')}
+            />
+            <aside
+              aria-label="Recent messages"
+              className="h-fit rounded-xl border border-nw-line bg-white"
+            >
+              <div className="flex items-center justify-between border-b border-nw-line-2 px-4 py-3">
+                <h3 className="text-sm font-semibold text-nw-ink">Recent</h3>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0"
+                  onClick={() => setView('history')}
+                >
+                  Open history
+                </Button>
+              </div>
+              {isLoading ? (
+                <p className="px-4 py-4 text-sm text-nw-text-3">Loading…</p>
+              ) : communications.length === 0 ? (
+                <p className="px-4 py-4 text-sm text-nw-text-3">Nothing sent yet.</p>
+              ) : (
+                <ul className="divide-y divide-nw-line-2">
+                  {communications.slice(0, 5).map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        onClick={() => setViewingCommunication(c)}
+                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+                      >
+                        <span className="block truncate text-sm font-medium text-nw-ink">
+                          {c.subject || '(no subject)'}
+                        </span>
+                        <span className="text-xs text-nw-text-3">
+                          {new Date(c.created_at).toLocaleDateString('en-ZA', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </aside>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0">
+          <HistoryDialog
+            inline
+            open
+            onOpenChange={() => setView('compose')}
+            communications={communications}
+            isLoading={isLoading}
+            onViewDetail={setViewingCommunication}
+            onDelete={handleDeleteRequest}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Detail */}
       <CommunicationDetailDialog

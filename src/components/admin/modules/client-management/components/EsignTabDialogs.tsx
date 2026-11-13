@@ -50,7 +50,7 @@ export function EsignTabDialogs({
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Envelope</DialogTitle>
+            <DialogTitle>Delete envelope</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &ldquo;{envelopeToDelete?.title}&rdquo;? This action
               cannot be undone.
@@ -72,14 +72,14 @@ export function EsignTabDialogs({
       <Dialog open={recallDialogOpen} onOpenChange={setRecallDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Recall Envelope</DialogTitle>
+            <DialogTitle>Recall envelope?</DialogTitle>
             <DialogDescription>
               Recalling &ldquo;{envelopeToRecall?.title}&rdquo; will void it and notify all signers.
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label htmlFor="recallReason">Reason for Recall</Label>
+            <Label htmlFor="recallReason">Reason for recall</Label>
             <Textarea
               id="recallReason"
               value={recallReason}
