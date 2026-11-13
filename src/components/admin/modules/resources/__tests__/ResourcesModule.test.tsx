@@ -2,7 +2,7 @@
  * ResourcesModule — Render / Characterization Test (Phase 4)
  * ===========================================================
  *
- * Locks the mount contract and the "Resource Center" heading for this
+ * Locks the mount contract and the "Resources" page heading (the sidebar label) for this
  * 1,149-line Phase 6 decomposition target.
  *
  * useResources and useCurrentUserPermissions are mocked to avoid React Query
@@ -65,11 +65,11 @@ beforeEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ResourcesModule', () => {
-  it('renders without throwing and shows the Resource Center heading', async () => {
+  it('renders without throwing and shows the Resources heading', async () => {
     renderWithQueryClient(<ResourcesModule />);
 
     await waitFor(() => {
-      expect(screen.getByText('Resource Center')).toBeTruthy();
+      expect(screen.getByRole('heading', { level: 1, name: 'Resources' })).toBeTruthy();
     });
   });
 });

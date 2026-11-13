@@ -15,25 +15,11 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import { PageHeader, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
 import { Button } from '../../../ui/button';
-import { Badge } from '../../../ui/badge';
-import {
-  FileText,
-  FolderTree,
-  Settings,
-  Loader2,
-  BarChart3,
-  PlusCircle,
-  Layers,
-  RefreshCw,
-  CalendarDays,
-  Sparkles,
-  Zap,
-  Users,
-  Contact,
-  Briefcase,
-} from 'lucide-react';
+
+import { Loader2, PlusCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 
 // Existing module components
@@ -75,8 +61,23 @@ import type { Article, ArticleStatus, ContentTemplate } from './types';
 import type { GenerateArticleResult } from './types';
 import { toast } from 'sonner';
 
+const PUBLICATION_TABS = [
+  'analytics',
+  'articles',
+  'pipeline',
+  'calendar',
+  'templates',
+  'automation',
+  'categories',
+  'subscribers',
+  'team',
+  'careers',
+  'settings',
+] as const;
+
 export function PublicationsModule() {
-  const [activeTab, setActiveTab] = useState('analytics');
+  // The open tab is in the address (?tab=pipeline).
+  const [activeTab, setActiveTab] = useUrlState('tab', 'analytics', PUBLICATION_TABS);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -258,100 +259,51 @@ export function PublicationsModule() {
   // ── Main module shell ────────────────────────────────────────────────
 
   return (
-    <div className="space-y-0">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4 border-b bg-white sticky top-0 z-20">
-        <div className="flex items-center justify-between">
-          <ModuleHeader
-            title="Publications"
-            subtitle="Manage articles, content pipeline, and analytics"
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              className="gap-1.5"
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-              <span className="hidden sm:inline">Refresh</span>
+    <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <PageHeader
+        title="Publications"
+        description="Articles, content pipeline, subscribers and website content."
+        actions={
+          <>
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw
+                className={cn('h-4 w-4', isRefreshing && 'animate-spin')}
+                aria-hidden="true"
+              />
+              Refresh
             </Button>
-            <Button
-              onClick={handleCreateNew}
-              size="sm"
-              className="gap-1.5 bg-purple-600 hover:bg-purple-700"
-              disabled={!canCreate}
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              New Article
+            <Button onClick={handleCreateNew} disabled={!canCreate}>
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              New article
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6 pt-4">
-        <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
-          <TabsList className="bg-gray-100/80 p-1 w-max min-w-full">
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="articles" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as (typeof PUBLICATION_TABS)[number])}
+        className="gap-0"
+      >
+        <div>
+          <NavTabsList aria-label="Publications">
+            <NavTabsTrigger value="analytics">Analytics</NavTabsTrigger>
+            <NavTabsTrigger value="articles" count={stats.total || undefined}>
               Articles
-              {stats.total > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
-                  {stats.total}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="pipeline" className="flex items-center gap-2">
-              <Layers className="h-4 w-4" />
+            </NavTabsTrigger>
+            <NavTabsTrigger value="pipeline" count={stats.drafts || undefined}>
               Pipeline
-              {stats.drafts > 0 && (
-                <Badge
-                  variant="outline"
-                  className="ml-1 text-[10px] px-1.5 py-0 h-4 border-orange-300 text-orange-600"
-                >
-                  {stats.drafts}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              Calendar
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Templates
-            </TabsTrigger>
-            <TabsTrigger value="automation" className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Automation
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <FolderTree className="h-4 w-4" />
-              Categories
-            </TabsTrigger>
-            <TabsTrigger value="subscribers" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Subscribers
-            </TabsTrigger>
-            <TabsTrigger value="team" className="flex items-center gap-2">
-              <Contact className="h-4 w-4" />
-              Team
-            </TabsTrigger>
-            <TabsTrigger value="careers" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              Careers
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+            </NavTabsTrigger>
+            <NavTabsTrigger value="calendar">Calendar</NavTabsTrigger>
+            <NavTabsTrigger value="templates">Templates</NavTabsTrigger>
+            <NavTabsTrigger value="automation">Automation</NavTabsTrigger>
+            <NavTabsTrigger value="categories">Categories</NavTabsTrigger>
+            <NavTabsTrigger value="subscribers">Subscribers</NavTabsTrigger>
+            <NavTabsTrigger value="team">Team</NavTabsTrigger>
+            <NavTabsTrigger value="careers">Careers</NavTabsTrigger>
+            <NavTabsTrigger value="settings">Settings</NavTabsTrigger>
+          </NavTabsList>
         </div>
 
         {/* Analytics Tab */}
