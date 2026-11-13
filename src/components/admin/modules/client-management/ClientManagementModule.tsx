@@ -47,6 +47,7 @@ import {
 } from './utils';
 import { ACCOUNT_STATUS_CONFIG, CONFIG } from './constants';
 import { FilterStatCard, FilterChipMenu } from './components/ListFilters';
+import { Crumbs } from './components/Crumbs';
 import { useCurrentUserPermissions } from '../personnel';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
@@ -79,6 +80,12 @@ const IntakeWizardHandoff = React.lazy(() =>
 );
 
 const CLIENT_TABS = ['personal', 'groups', 'corporate', 'adviser'] as const;
+const TAB_LABELS: Record<(typeof CLIENT_TABS)[number], string> = {
+  personal: 'Personal clients',
+  groups: 'Groups',
+  corporate: 'Corporate clients',
+  adviser: 'Adviser clients',
+};
 const ACCOUNT_FILTERS = ['all', 'active', 'suspended', 'closed'] as const;
 type AccountFilter = (typeof ACCOUNT_FILTERS)[number];
 const ACCOUNT_LABELS: Record<AccountFilter, string> = {
@@ -459,6 +466,12 @@ export function ClientManagementModule() {
     };
     return (
       <div className="flex flex-col gap-4 p-6 lg:p-8">
+        <Crumbs
+          trail={[
+            { label: 'Personal clients', onClick: () => setMissingClientId(null) },
+            { label: 'Client not found' },
+          ]}
+        />
         <button
           type="button"
           onClick={() => setMissingClientId(null)}
@@ -496,6 +509,12 @@ export function ClientManagementModule() {
   if (addView && canCreate) {
     return (
       <div className="p-6 lg:p-8">
+        <Crumbs
+          trail={[
+            { label: 'Personal clients', onClick: () => setAddView('') },
+            { label: addView === 'bulk' ? 'Bulk import' : 'Add client' },
+          ]}
+        />
         <Suspense fallback={<LazyFallback />}>
           <AddClientPage
             view={addView}
@@ -510,6 +529,7 @@ export function ClientManagementModule() {
 
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <Crumbs trail={[{ label: TAB_LABELS[clientType] }]} />
       <PageHeader
         title="Client Management"
         description="Client profiles, policies and compliance documentation."

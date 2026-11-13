@@ -38,7 +38,7 @@ export function ClientProfilePersonalCard({ state, actions }: ClientProfilePerso
             <User className="h-5 w-5 text-[#6d28d9]" />
           </div>
           <div>
-            <CardTitle>Personal Information</CardTitle>
+            <CardTitle>Personal info</CardTitle>
             <CardDescription>Basic personal details</CardDescription>
           </div>
         </div>

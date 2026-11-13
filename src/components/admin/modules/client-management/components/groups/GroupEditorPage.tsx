@@ -32,6 +32,7 @@ import {
   type GroupEditorView,
 } from './groupModel';
 import { useGroupEditorOptions } from './useClientGroups';
+import { Crumbs } from '../Crumbs';
 
 interface GroupEditorPageProps {
   /** The group being edited, or null for a new group. */
@@ -171,6 +172,12 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
 
   return (
     <div className="flex flex-col gap-6">
+      <Crumbs
+        trail={[
+          { label: 'Groups', onClick: onClose },
+          { label: group ? group.name : 'Create group' },
+        ]}
+      />
       <button
         type="button"
         onClick={onClose}

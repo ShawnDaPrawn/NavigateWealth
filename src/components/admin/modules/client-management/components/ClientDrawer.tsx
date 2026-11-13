@@ -21,6 +21,9 @@ import { invalidateClientPolicies } from '../../../../../shared/api/clientPolici
 import { deriveAccountStatus } from '../utils';
 import { CLIENT_PAGE_PARAMS, CLIENT_TABS, type ClientTab } from './clientPageParams';
 import type { OverviewActions } from './ClientOverviewTab';
+import { Crumbs } from './Crumbs';
+import { ClientSubCrumbContext } from './crumbsContext';
+import type { Crumb } from '../../../layout/page';
 import { Client } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { communicationApi } from '../../communication';
@@ -210,8 +213,22 @@ function ClientDrawerInner({
   }, [open]);
   const workspaceClient = readyClient ?? (open ? null : closingClient);
 
+  // Top-bar breadcrumb: Client Management / <name> / <tab> / <section>.
+  const [subSteps, setSubSteps] = useState<Crumb[]>([]);
+  const trail: Crumb[] = workspaceClient
+    ? [
+        {
+          label: `${workspaceClient.firstName} ${workspaceClient.lastName}`.trim(),
+          onClick: () => handleTabChange('overview'),
+        },
+        { label: TAB_LABELS[activeTab] },
+        ...subSteps,
+      ]
+    : [{ label: 'Personal clients', onClick: () => handleOpenChange(false) }];
+
   return (
     <div className="flex flex-col gap-4">
+      <Crumbs trail={trail} />
       <button
         type="button"
         onClick={() => handleOpenChange(false)}
@@ -221,16 +238,18 @@ function ClientDrawerInner({
         Personal clients
       </button>
       {workspaceClient ? (
-        <ClientWorkspace
-          client={workspaceClient}
-          open={open}
-          canEdit={canEdit}
-          fnaFocus={fnaFocus}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          sanctionsScreeningRunning={sanctionsScreeningRunning}
-          onRunSanctionsScreening={handleSanctionsScreening}
-        />
+        <ClientSubCrumbContext.Provider value={setSubSteps}>
+          <ClientWorkspace
+            client={workspaceClient}
+            open={open}
+            canEdit={canEdit}
+            fnaFocus={fnaFocus}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            sanctionsScreeningRunning={sanctionsScreeningRunning}
+            onRunSanctionsScreening={handleSanctionsScreening}
+          />
+        </ClientSubCrumbContext.Provider>
       ) : (
         <ClientDrawerPending
           state={fresh.status === 'ready' ? { status: 'loading' } : fresh}
@@ -608,7 +627,7 @@ function ClientWorkspace({
         </TabsContent>
 
         {/* 1. Personal Details Section */}
-        <TabsContent value="personal" className="space-y-4 h-[calc(100vh-300px)]">
+        <TabsContent value="personal" className="space-y-4">
           <Suspense fallback={<TabPanelFallback />}>
             <ClientProfileViewerFull clientData={client} />
           </Suspense>
@@ -683,6 +702,19 @@ function ClientWorkspace({
     </>
   );
 }
+
+const TAB_LABELS: Record<ClientTab, string> = {
+  overview: 'Overview',
+  personal: 'Personal details',
+  policies: 'Policy details',
+  security: 'Security',
+  documents: 'Documents',
+  vasco: 'Ask Vasco',
+  esign: 'E-Sign',
+  compliance: 'Compliance',
+  communication: 'Communication',
+  notes: 'Notes',
+};
 
 const ACCOUNT_LABEL = { active: 'Active', suspended: 'Suspended', closed: 'Closed' } as const;
 
