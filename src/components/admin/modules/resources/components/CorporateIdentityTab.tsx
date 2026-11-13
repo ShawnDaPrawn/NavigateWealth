@@ -13,7 +13,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, StatCard, useUrlState } from '../../../layout/page';
+import {
+  SegmentedList,
+  SegmentedTrigger,
+  StatCard,
+  useBreadcrumbTrail,
+  useUrlState,
+} from '../../../layout/page';
 import { Image, Palette, FolderOpen, Clock, Loader2 } from 'lucide-react';
 import { brandApi } from './brand-api';
 import type { BrandSummary } from './brand-api';
@@ -76,6 +82,10 @@ type BrandSection = (typeof BRAND_SECTIONS)[number];
 export function CorporateIdentityTab() {
   // The open section is in the address (?brandSection=colours).
   const [section, setSection] = useUrlState<BrandSection>('brandSection', 'logos', BRAND_SECTIONS);
+  useBreadcrumbTrail([
+    { label: 'Corporate identity' },
+    { label: section.charAt(0).toUpperCase() + section.slice(1) },
+  ]);
   const [summary, setSummary] = useState<BrandSummary | null>(null);
   const [loading, setLoading] = useState(true);
 

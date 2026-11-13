@@ -14,6 +14,8 @@ import { useProductSchema } from './hooks/useProductSchema';
 import { SchemaEditor } from './components/SchemaEditor';
 import { SchemaLivePreview } from './components/SchemaLivePreview';
 
+import { useBreadcrumbTrail } from '../../layout/page';
+
 export function ProductManagementTab() {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategoryId | ''>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -30,6 +32,11 @@ export function ProductManagementTab() {
   };
 
   const selectedCategoryName = PRODUCT_CATEGORIES.find((c) => c.id === selectedCategory)?.name;
+  useBreadcrumbTrail(
+    selectedCategoryName
+      ? [{ label: 'Product structure' }, { label: selectedCategoryName }]
+      : [{ label: 'Product structure' }],
+  );
 
   return (
     <div className="space-y-8">

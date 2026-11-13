@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Search, Sparkles } from 'lucide-react';
-import { ErrorState, StatCard } from '../../../layout/page';
+import { ErrorState, StatCard, useBreadcrumbTrail } from '../../../layout/page';
 import { BackLink } from '../components/BackLink';
 import { toast } from 'sonner';
 import { resourcesApi } from '../api';
@@ -68,6 +68,15 @@ export default function LegalDocumentsManager() {
     queryFn: () => resourcesApi.getLegalDocuments(),
     staleTime: 5 * 60 * 1000,
   });
+
+  const openTitle = selectedSlug
+    ? (listQuery.data?.find((doc) => doc.slug === selectedSlug)?.title ?? 'Legal document')
+    : null;
+  useBreadcrumbTrail(
+    openTitle
+      ? [{ label: 'Legal documents', onClick: () => setSelectedSlug(null) }, { label: openTitle }]
+      : [{ label: 'Legal documents' }],
+  );
 
   const detailQuery = useQuery({
     queryKey: selectedSlug

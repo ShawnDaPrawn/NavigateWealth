@@ -13,6 +13,7 @@ vi.mock('../ZipEncryptTool', () => ({ ZipEncryptTool: () => <div>Zip body</div> 
 vi.mock('../PdfDecryptTool', () => ({ PdfDecryptTool: () => <div>Decrypt body</div> }));
 
 import { ToolsTab } from '../ToolsTab';
+import { BreadcrumbContext } from '@/components/admin/layout/page/breadcrumbContext';
 
 function LocationProbe() {
   const location = useLocation();
@@ -54,5 +55,19 @@ describe('ToolsTab', () => {
   it('lands on the tool named in a pasted link', async () => {
     renderTab('/?tool=decrypt');
     expect(await screen.findByText('Decrypt body')).toBeTruthy();
+  });
+
+  it('sets the top-bar breadcrumb to Tools › <tool>', async () => {
+    const setTrail = vi.fn();
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter initialEntries={['/?tool=mapping']}>
+          <ToolsTab />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    await screen.findByText('Mapping studio body');
+    const last = setTrail.mock.calls.at(-1)?.[0] as Array<{ label: string }>;
+    expect(last.map((c) => c.label)).toEqual(['Tools', 'Form Mapping Studio']);
   });
 });

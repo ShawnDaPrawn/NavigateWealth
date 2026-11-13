@@ -5,7 +5,7 @@
 import React, { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
-import { PageHeader, useUrlState } from '../../../layout/page';
+import { PageHeader, useBreadcrumbTrail, useUrlState } from '../../../layout/page';
 import { BackLink } from '../components/BackLink';
 
 const FormTemplateTool = React.lazy(() =>
@@ -62,6 +62,11 @@ interface ToolsTabProps {
 export function ToolsTab({ formTemplatesClientId }: ToolsTabProps) {
   const [toolId, setToolId] = useUrlState<ToolId>('tool', 'none', TOOL_IDS);
   const tool = TOOLS.find((t) => t.id === toolId);
+  useBreadcrumbTrail(
+    tool
+      ? [{ label: 'Tools', onClick: () => setToolId('none') }, { label: tool.title }]
+      : [{ label: 'Tools' }],
+  );
 
   if (tool) {
     return (

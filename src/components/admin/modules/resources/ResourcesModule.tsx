@@ -53,6 +53,7 @@ import { FormsFilterBar } from './components/FormsFilterBar';
 import { FormsList } from './components/FormsList';
 import { PageHeader, NavTabsList, NavTabsTrigger, ErrorState, useConfirm } from '../../layout/page';
 import { BackLink } from './components/BackLink';
+import { BreadcrumbTrail } from './components/BreadcrumbTrail';
 
 // ---------------------------------------------------------------------------
 // Heavy sub-components — lazy-loaded to reduce initial chunk size.
@@ -405,6 +406,12 @@ export function ResourcesModule() {
   if (builderNotFound) {
     return (
       <div className="space-y-4 p-6">
+        <BreadcrumbTrail
+          trail={[
+            { label: 'Forms & documents', onClick: () => setBuildParam(null) },
+            { label: 'Not found' },
+          ]}
+        />
         <BackLink label="Back to Resources" onClick={() => setBuildParam(null)} />
         <ErrorState
           title="Form template not found"
@@ -417,6 +424,16 @@ export function ResourcesModule() {
   if (isBuilderMode) {
     return (
       <Suspense fallback={<LazyFallback />}>
+        <BreadcrumbTrail
+          trail={[
+            { label: 'Forms & documents', onClick: () => setBuildParam(null) },
+            {
+              label:
+                formToEdit?.name ??
+                (builderMode === 'letter' ? 'Compose letter' : 'Build new form'),
+            },
+          ]}
+        />
         <FormBuilder
           key={buildParam ?? 'builder'}
           initialData={(formToEdit ?? undefined) as unknown as Record<string, unknown> | undefined}
@@ -525,6 +542,7 @@ export function ResourcesModule() {
         {/* FORMS TAB */}
         {/* ============================================================ */}
         <TabsContent value="forms" className="space-y-6">
+          <BreadcrumbTrail trail={[{ label: 'Forms & documents' }]} />
           {/* Header Row: title + primary actions */}
           <div className="flex items-center justify-between">
             <div>

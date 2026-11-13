@@ -10,12 +10,14 @@ import {
   type ProductCategoryId,
 } from './types';
 import { useProviders } from './hooks/useProviders';
+import { useBreadcrumbTrail } from '../../layout/page';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
 import { ProviderDeleteDialog } from './components/ProviderDeleteDialog';
 
 export function ProviderManagementTab() {
   const { providers, isLoading, addProvider, updateProvider, deleteProvider } = useProviders();
+  useBreadcrumbTrail([{ label: 'Providers' }]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);

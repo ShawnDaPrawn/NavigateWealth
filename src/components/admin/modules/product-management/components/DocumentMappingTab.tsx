@@ -47,7 +47,12 @@ import { useProviders } from '../hooks/useProviders';
 import { ExtractionQualityDashboard } from './ExtractionQualityDashboard';
 import { RenewalAlertScanner } from './RenewalAlertScanner';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
+import {
+  SegmentedList,
+  SegmentedTrigger,
+  useBreadcrumbTrail,
+  useUrlState,
+} from '../../../layout/page';
 
 const DOC_AI_VIEWS = ['extraction', 'renewals'] as const;
 type DocAiView = (typeof DOC_AI_VIEWS)[number];
@@ -69,6 +74,14 @@ import { BulkReextractDialog } from './BulkReextractDialog';
 export function DocumentMappingTab() {
   // Extraction or Renewal alerts, in the address (?docai=renewals).
   const [docAiView, setDocAiView] = useUrlState<DocAiView>('docai', 'extraction', DOC_AI_VIEWS);
+  useBreadcrumbTrail(
+    docAiView === 'renewals'
+      ? [
+          { label: 'Document AI', onClick: () => setDocAiView('extraction') },
+          { label: 'Renewal alerts' },
+        ]
+      : [{ label: 'Document AI' }],
+  );
   const { providers, isLoading: providersLoading } = useProviders();
   const [terminologies, setTerminologies] = useState<TerminologyMap[]>([]);
   const [isLoading, setIsLoading] = useState(true);

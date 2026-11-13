@@ -7,7 +7,12 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, useUrlState } from '../../layout/page';
+import {
+  SegmentedList,
+  SegmentedTrigger,
+  useBreadcrumbTrail,
+  useUrlState,
+} from '../../layout/page';
 import { Info, Workflow, Target } from 'lucide-react';
 import type { ProductKeyCategory } from '@/shared/types/product-keys';
 import { KeyAPI, KeyList, CategoryFilter, SearchFilters, CATEGORY_ICONS } from './key-manager';
@@ -20,10 +25,18 @@ const KEY_VIEWS = [
   'key-usage',
 ] as const;
 type KeyView = (typeof KEY_VIEWS)[number];
+const KEY_VIEW_LABELS: Record<KeyView, string> = {
+  'client-keys': 'Client keys',
+  'product-keys': 'Product keys',
+  'calculated-keys': 'Calculated keys',
+  'fna-recommendations': 'FNA recommendations',
+  'key-usage': 'Key usage',
+};
 
 export function UniversalKeyManager() {
   // The key type is part of where you are, so it lives in the address (?keys=key-usage).
   const [keyView, setKeyView] = useUrlState<KeyView>('keys', 'client-keys', KEY_VIEWS);
+  useBreadcrumbTrail([{ label: 'Key manager' }, { label: KEY_VIEW_LABELS[keyView] }]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductKeyCategory | 'all'>('all');
   const [selectedDataType, setSelectedDataType] = useState<string>('all');

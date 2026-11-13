@@ -14,10 +14,14 @@ import { productManagementApi } from './api';
 import { ProviderConnectionList } from './integrations/connections/ProviderConnectionList';
 import { GuidedSignInDialog } from './integrations/connections/GuidedSignInDialog';
 import { IntegrationHeader } from './integrations/IntegrationHeader';
-import { INTEGRATION_SECTIONS, type IntegrationSection } from './integrations/integrationSections';
+import {
+  INTEGRATION_SECTIONS,
+  INTEGRATION_SECTION_LABELS,
+  type IntegrationSection,
+} from './integrations/integrationSections';
 import { describeConnection } from './integrations/connections/connectionPresentation';
 import { useSearchParams } from 'react-router';
-import { useUrlState } from '../../layout/page';
+import { useBreadcrumbTrail, useUrlState } from '../../layout/page';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
 import { ProviderSetupTab } from './integrations/ProviderSetupTab';
@@ -129,6 +133,25 @@ export function IntegrationsTab() {
   };
 
   const selectedProvider = providers.find((p) => p.id === selectedProviderId);
+
+  const openProviderName = openProviderId
+    ? (providers.find((p) => p.id === openProviderId)?.name ?? 'Integration')
+    : null;
+  useBreadcrumbTrail(
+    !openProviderName
+      ? [{ label: 'Integrations' }]
+      : advancedOpen
+        ? [
+            { label: 'Integrations', onClick: () => closeIntegration() },
+            { label: openProviderName, onClick: () => setAdvancedOpen(false) },
+            { label: 'Advanced & diagnostics' },
+          ]
+        : [
+            { label: 'Integrations', onClick: () => closeIntegration() },
+            { label: openProviderName },
+            { label: INTEGRATION_SECTION_LABELS[activeTab] },
+          ],
+  );
 
   // Reset UI when provider changes
   useEffect(() => {
