@@ -1,44 +1,29 @@
-import React, { Suspense, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
+import { ModuleFrame } from '../admin/layout/ModuleFrame';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
 
 // ============================================================================
 // SHELL ENTRIES, NOT BARRELS
-// Skeletons and the three self-lazy modules come from each module's
+// The three self-lazy modules come from each module's
 // `shell.ts`, never from its `index.ts` barrel. This page also
 // `import()`s those barrels below, and Rollup cannot split out a module that is
 // imported both statically and dynamically: one static barrel import here puts
 // the whole module in this page's chunk, and every admin visit downloads it.
 // `admin-shell-static-graph.test.ts` fails if a barrel import comes back.
-// Each skeleton mirrors the full card/tab/table structure of its module so the
-// page layout is stable from the first paint, before the JS chunk loads.
+// While a module's chunk loads, ModuleFrame shows the one shared skeleton
+// (header with the module's name, grey tabs, figures and rows), and the one
+// shared error state if it fails.
 // ============================================================================
 
-import { PublicationsSkeleton } from '../admin/modules/publications/shell';
-import { TasksSkeleton } from '../admin/modules/tasks/shell';
-import { ClientManagementSkeleton } from '../admin/modules/client-management/shell';
-import { NewsletterSkeleton } from '../admin/modules/newsletter/shell';
-import { SocialMediaModule, SocialMediaSkeleton } from '../admin/modules/social-media/shell';
-import { IssuesModule, IssuesSkeleton } from '../admin/modules/issues/shell';
-import { EsignModule, EsignSkeleton } from '../admin/modules/esign/shell';
-import { DashboardSkeleton } from '../admin/modules/dashboard/shell';
-import { ApplicationsSkeleton } from '../admin/modules/applications/shell';
-import { PersonnelSkeleton } from '../admin/modules/personnel/shell';
-import { AdviceEngineSkeleton } from '../admin/modules/advice-engine/shell';
-import { ProductManagementSkeleton } from '../admin/modules/product-management/shell';
-import { ResourcesSkeleton } from '../admin/modules/resources/shell';
-import { ComplianceSkeleton } from '../admin/modules/compliance/shell';
-import { CommunicationSkeleton } from '../admin/modules/communication/shell';
-import { ReportingSkeleton } from '../admin/modules/reporting/shell';
-import { CalendarSkeleton } from '../admin/modules/calendar/shell';
-import { SubmissionsSkeleton } from '../admin/modules/submissions/shell';
-import { NotesSkeleton } from '../admin/modules/notes/shell';
-import { AIManagementSkeleton } from '../admin/modules/ai-management/shell';
+import { SocialMediaModule } from '../admin/modules/social-media/shell';
+import { IssuesModule } from '../admin/modules/issues/shell';
+import { EsignModule } from '../admin/modules/esign/shell';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS
@@ -171,182 +156,138 @@ export function AdminDashboardPage() {
     switch (activeModule) {
       case 'dashboard':
         return (
-          <Suspense fallback={<DashboardSkeleton />}>
-            <ErrorBoundary fallbackTitle="Dashboard Module Error">
-              <DashboardModule
-                onModuleChange={handleModuleChange}
-                onViewTask={handleViewTaskFromDashboard}
-              />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="dashboard">
+            <DashboardModule
+              onModuleChange={handleModuleChange}
+              onViewTask={handleViewTaskFromDashboard}
+            />
+          </ModuleFrame>
         );
       case 'clients':
         return (
-          <Suspense fallback={<ClientManagementSkeleton />}>
-            <ErrorBoundary fallbackTitle="Client Management Error">
-              <ClientManagementModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="clients">
+            <ClientManagementModule />
+          </ModuleFrame>
         );
       case 'esign':
         return (
-          <Suspense fallback={<EsignSkeleton />}>
-            <ErrorBoundary fallbackTitle="E-Signature Module Error">
-              <EsignModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="esign">
+            <EsignModule />
+          </ModuleFrame>
         );
       case 'personnel':
         return (
-          <Suspense fallback={<PersonnelSkeleton />}>
-            <ErrorBoundary fallbackTitle="Personnel Module Error">
-              <PersonnelModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="personnel">
+            <PersonnelModule />
+          </ModuleFrame>
         );
       case 'advice-engine':
         return (
-          <Suspense fallback={<AdviceEngineSkeleton />}>
-            <ErrorBoundary fallbackTitle="Advice Engine Error">
-              <AdviceEngineModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="advice-engine">
+            <AdviceEngineModule />
+          </ModuleFrame>
         );
       case 'product-management':
         return (
-          <Suspense fallback={<ProductManagementSkeleton />}>
-            <ErrorBoundary fallbackTitle="Product Management Error">
-              <ProductManagementModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="product-management">
+            <ProductManagementModule />
+          </ModuleFrame>
         );
       case 'resources':
         return (
-          <Suspense fallback={<ResourcesSkeleton />}>
-            <ErrorBoundary fallbackTitle="Resources Module Error">
-              <ResourcesModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="resources">
+            <ResourcesModule />
+          </ModuleFrame>
         );
       case 'publications':
         return (
-          <Suspense fallback={<PublicationsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Publications Module Error">
-              <PublicationsModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="publications">
+            <PublicationsModule />
+          </ModuleFrame>
         );
       case 'compliance':
         return (
-          <Suspense fallback={<ComplianceSkeleton />}>
-            <ErrorBoundary fallbackTitle="Compliance Module Error">
-              <ComplianceModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="compliance">
+            <ComplianceModule />
+          </ModuleFrame>
         );
       case 'tasks':
         return (
-          <Suspense fallback={<TasksSkeleton />}>
-            <ErrorBoundary fallbackTitle="Task Management Error">
-              <TaskManagementModule initialTaskId={deepLinkTaskId} />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="tasks">
+            <TaskManagementModule initialTaskId={deepLinkTaskId} />
+          </ModuleFrame>
         );
       case 'notes':
         return (
-          <Suspense fallback={<NotesSkeleton />}>
-            <ErrorBoundary fallbackTitle="Notes Module Error">
-              <NotesModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="notes">
+            <NotesModule />
+          </ModuleFrame>
         );
       case 'applications':
         return (
-          <Suspense fallback={<ApplicationsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Applications Module Error">
-              <ApplicationsModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="applications">
+            <ApplicationsModule />
+          </ModuleFrame>
         );
       case 'submissions':
         return (
-          <Suspense fallback={<SubmissionsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Submissions Manager Error">
-              <SubmissionsModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="submissions">
+            <SubmissionsModule />
+          </ModuleFrame>
         );
       case 'communication':
         return (
-          <Suspense fallback={<CommunicationSkeleton />}>
-            <ErrorBoundary fallbackTitle="Communication Module Error">
-              <CommunicationModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="communication">
+            <CommunicationModule />
+          </ModuleFrame>
         );
       case 'newsletter':
         return (
-          <Suspense fallback={<NewsletterSkeleton />}>
-            <ErrorBoundary fallbackTitle="Newsletters Error">
-              <NewsletterModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="newsletter">
+            <NewsletterModule />
+          </ModuleFrame>
         );
       case 'marketing':
         return (
-          <Suspense fallback={<SocialMediaSkeleton />}>
-            <ErrorBoundary fallbackTitle="Social Media Module Error">
-              <SocialMediaModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="marketing">
+            <SocialMediaModule />
+          </ModuleFrame>
         );
       case 'reporting':
         return (
-          <Suspense fallback={<ReportingSkeleton />}>
-            <ErrorBoundary fallbackTitle="Reporting Module Error">
-              <ReportingModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="reporting">
+            <ReportingModule />
+          </ModuleFrame>
         );
       case 'issues':
         return (
-          <Suspense fallback={<IssuesSkeleton />}>
-            <ErrorBoundary fallbackTitle="Issue Manager Error">
-              <IssuesModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="issues">
+            <IssuesModule />
+          </ModuleFrame>
         );
       case 'calendar':
         return (
-          <Suspense fallback={<CalendarSkeleton />}>
-            <ErrorBoundary fallbackTitle="Calendar Module Error">
-              <CalendarModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="calendar">
+            <CalendarModule />
+          </ModuleFrame>
         );
       case 'locked':
         return (
-          <Suspense fallback={<div className="p-6" />}>
-            <ErrorBoundary fallbackTitle="Locked Module Error">
-              <LockedModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="locked">
+            <LockedModule />
+          </ModuleFrame>
         );
       case 'ai-management':
         return (
-          <Suspense fallback={<AIManagementSkeleton />}>
-            <ErrorBoundary fallbackTitle="AI Management Module Error">
-              <AIManagementModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="ai-management">
+            <AIManagementModule />
+          </ModuleFrame>
         );
       default:
         return (
-          <Suspense fallback={<DashboardSkeleton />}>
-            <ErrorBoundary fallbackTitle="Dashboard Module Error">
-              <DashboardModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame module="dashboard">
+            <DashboardModule />
+          </ModuleFrame>
         );
     }
   };
