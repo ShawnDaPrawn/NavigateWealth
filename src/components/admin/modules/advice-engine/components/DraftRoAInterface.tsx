@@ -20,7 +20,7 @@ import {
   getModuleRuntimeStatus,
   moduleContractToRuntimeModule,
 } from '../roaModuleRuntime';
-import { useConfirm } from '../../../layout/page';
+import { useBreadcrumbTrail, useConfirm } from '../../../layout/page';
 
 export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
@@ -47,6 +47,17 @@ const STEPS = [
 export function DraftRoAInterface() {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [currentStep, setCurrentStep] = useState(0);
+  // The top-bar trail follows the wizard: "Draft RoA / Client", "/ Modules"…
+  // (Advice Engine sets "Draft RoA" when the tab opens; this component is only
+  // mounted on that tab, so it owns the trail from here.)
+  useBreadcrumbTrail(
+    currentStep === 0
+      ? [{ label: 'Draft RoA' }]
+      : [
+          { label: 'Draft RoA', onClick: () => setCurrentStep(0) },
+          { label: STEPS[currentStep].title },
+        ],
+  );
   const [roaDraft, setRoaDraft] = useState<RoADraft | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [discardingDraftId, setDiscardingDraftId] = useState<string | null>(null);
