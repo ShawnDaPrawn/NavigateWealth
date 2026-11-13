@@ -77,13 +77,14 @@ export function GlobalSearch() {
   return (
     <div className="contents">
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground bg-muted/50 hover:bg-muted/80 rounded-md border border-transparent hover:border-border transition-colors w-full max-w-sm"
-        aria-label="Search accounts (Cmd+K)"
+        className="hidden h-9 w-full items-center gap-2 rounded-lg border border-nw-line bg-nw-bg px-3 text-[13px] text-nw-text-3 transition-colors hover:border-gray-300 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 lg:flex"
+        aria-label="Search clients and staff (Cmd+K)"
       >
-        <Search className="h-4 w-4" />
-        <span className="text-muted-foreground">Search accounts...</span>
-        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 ml-auto">
+        <Search className="h-4 w-4" aria-hidden="true" />
+        <span>Search clients and staff…</span>
+        <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border border-nw-line bg-white px-1.5 font-mono text-[10px] font-medium text-nw-text-3">
           <span className="text-xs">{'\u2318'}</span>K
         </kbd>
       </button>

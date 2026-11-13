@@ -6,6 +6,10 @@ import {
   alwaysShowCounterModules,
   formatSidebarBadgeCount,
   formatPendingSummary,
+  sidebarGroups,
+  sidebarGroupOf,
+  sidebarHomeModules,
+  sidebarFooterModules,
 } from '../config';
 
 describe('admin/layout/config', () => {
@@ -77,5 +81,38 @@ describe('formatPendingSummary', () => {
 
   it('uses the exact count for large numbers instead of the capped badge value', () => {
     expect(formatPendingSummary(1234)).toBe((1234).toLocaleString() + ' pending');
+  });
+});
+
+describe('sidebar grouping', () => {
+  it('lists every module exactly once across the groups', () => {
+    const listed = moduleGroups.flatMap((group) => group.modules);
+    expect(new Set(listed).size).toBe(listed.length);
+    expect([...listed].sort()).toEqual(Object.keys(moduleConfig).sort());
+  });
+
+  it('follows the design system groups', () => {
+    expect(sidebarGroups.map((group) => group.label)).toEqual([
+      'Work',
+      'Clients',
+      'Advice',
+      'Marketing',
+      'Practice',
+    ]);
+  });
+
+  it('keeps home and footer modules out of the collapsible groups', () => {
+    const grouped = sidebarGroups.flatMap((group) => group.modules);
+    expect(grouped).not.toContain('dashboard');
+    expect(grouped).not.toContain('locked');
+    expect(sidebarHomeModules).toEqual(['dashboard']);
+    expect(sidebarFooterModules).toEqual(['locked']);
+  });
+
+  it('names the group a module sits in, for the breadcrumb', () => {
+    expect(sidebarGroupOf('esign')).toBe('Clients');
+    expect(sidebarGroupOf('tasks')).toBe('Work');
+    expect(sidebarGroupOf('dashboard')).toBeNull();
+    expect(sidebarGroupOf('locked')).toBeNull();
   });
 });
