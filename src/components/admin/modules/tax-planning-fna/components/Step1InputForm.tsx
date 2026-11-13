@@ -9,7 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { TaxPlanningInputs } from '../types';
 import { ArrowRight, Info, User, Wallet, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
@@ -113,16 +114,10 @@ export function Step1InputForm({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Client Profile
-          </TabsTrigger>
-          <TabsTrigger value="financial">
-            <Wallet className="h-4 w-4 mr-2" />
-            Financial Data
-          </TabsTrigger>
-        </TabsList>
+        <SegmentedList aria-label="Information sections">
+          <SegmentedTrigger value="profile">Client profile</SegmentedTrigger>
+          <SegmentedTrigger value="financial">Financial data</SegmentedTrigger>
+        </SegmentedList>
 
         <TabsContent value="profile" className="space-y-6 mt-6">
           <Card>

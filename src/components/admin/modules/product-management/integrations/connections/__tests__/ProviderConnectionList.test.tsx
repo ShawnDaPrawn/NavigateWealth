@@ -38,7 +38,6 @@ function makeProps(over: Partial<Parameters<typeof ProviderConnectionList>[0]> =
   return {
     providers,
     connections: [connection()],
-    selectedProviderId: 'p1',
     onSelect: vi.fn(),
     onConnect: vi.fn(),
     ...over,
@@ -149,11 +148,11 @@ describe('ProviderConnectionList — providers with no portal', () => {
     expect(screen.getByText(/no portal to connect to/i)).toBeDefined();
   });
 
-  it('selecting a row still works, so the rest of the module is reachable', () => {
+  it('Open goes to the provider integration page, so the rest of the module is reachable', () => {
     const props = makeProps();
     render(<ProviderConnectionList {...props} />);
 
-    fireEvent.click(screen.getByText('Discovery Health'));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Discovery Health integration' }));
     expect(props.onSelect).toHaveBeenCalledWith('p2');
   });
 });

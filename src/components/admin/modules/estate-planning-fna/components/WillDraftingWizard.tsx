@@ -17,18 +17,10 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import { Notice } from '../../../layout/page';
+import { WillWizardPage } from './WillWizardPage';
 import { Button } from '../../../../ui/button';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Loader2,
-  Heart,
-  CheckCircle2,
-  AlertCircle,
-  Scroll,
-  Check,
-} from 'lucide-react';
+import { Loader2, CheckCircle2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
 import { logger } from '../../../../../utils/logger';
@@ -596,193 +588,121 @@ export function WillDraftingWizard({
   // Main Render
   // ═══════════════════════════════════════════════════════
 
-  const HeaderIcon = isLivingWill ? Heart : Scroll;
+  const willTitle = `${existingWillId ? 'Resume' : 'Draft'} ${
+    isLivingWill ? 'Living Will' : 'Last Will & Testament'
+  }`;
 
   return (
-    <Dialog
+    <WillWizardPage
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose();
-      }}
+      title={willTitle}
+      description={[clientName, existingWillId ? 'draft' : 'new draft'].filter(Boolean).join(' · ')}
+      onClose={onClose}
+      currentStepLabel={steps[currentStepIndex]?.label}
+      headerActions={
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || isLoadingProfile || isLoadingDraft}
+        >
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          Save &amp; exit
+        </Button>
+      }
     >
-      <DialogContent
-        hideCloseButton
-        className="!max-w-5xl w-[95vw] max-h-[90vh] !p-0 !gap-0 overflow-hidden"
-        style={{ display: 'flex', flexDirection: 'column' }}
-      >
-        {/* ── Header ───────────────────────────────────────── */}
-        <div className="shrink-0 border-b border-gray-100">
-          {/* Accent bar */}
-          <div
-            className={`h-1 w-full ${isLivingWill ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-[#6d28d9] to-[#7c3aed]'}`}
-          />
-          <DialogHeader className="px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
-                  isLivingWill ? 'bg-blue-50' : 'bg-purple-50'
+      {/* ── Progress ─────────────────────────────────────── */}
+      <ol aria-label="Will steps" className="flex flex-wrap items-center gap-2">
+        {steps.map((step, index) => {
+          const isActive = step.id === currentStep;
+          const isCompleted = index < currentStepIndex;
+          return (
+            <li key={step.id} className="flex items-center gap-2">
+              <span
+                aria-current={isActive ? 'step' : undefined}
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                  isCompleted
+                    ? 'bg-nw-violet text-white'
+                    : isActive
+                      ? 'border-2 border-nw-violet text-nw-violet'
+                      : 'bg-gray-100 text-nw-text-3'
                 }`}
               >
-                <HeaderIcon
-                  className={`h-5 w-5 ${isLivingWill ? 'text-blue-600' : 'text-[#6d28d9]'}`}
-                />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold text-gray-900">
-                  {existingWillId ? 'Resume' : 'Draft'}{' '}
-                  {isLivingWill ? 'Living Will' : 'Last Will & Testament'}
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">{clientName}</p>
-              </div>
-            </div>
-          </DialogHeader>
-        </div>
+                {isCompleted ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index + 1}
+              </span>
+              <span
+                className={`text-sm ${isActive ? 'font-semibold text-nw-ink' : 'text-nw-text-2'}`}
+              >
+                {step.label}
+              </span>
+              {index < steps.length - 1 && (
+                <span aria-hidden="true" className="mx-1 h-px w-4 bg-nw-line" />
+              )}
+            </li>
+          );
+        })}
+      </ol>
 
-        {/* ── Progress Stepper ────────────────────────────── */}
-        <div className="shrink-0 px-6 py-4 bg-gray-50/60 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => {
-              const isActive = step.id === currentStep;
-              const isCompleted = index < currentStepIndex;
-              const isLast = index === steps.length - 1;
-              const StepIcon = step.icon;
+      {/* ── Validation Errors ────────────────────────────── */}
+      {validationErrors.length > 0 && (
+        <Notice
+          kind="error"
+          title={`Fix ${validationErrors.length} ${
+            validationErrors.length === 1 ? 'field' : 'fields'
+          } to continue.`}
+        >
+          {validationErrors.join(' ')}
+        </Notice>
+      )}
 
-              return (
-                <div className="contents" key={step.id}>
-                  <div className="flex flex-col items-center relative" style={{ minWidth: 0 }}>
-                    {/* Step circle */}
-                    <div
-                      className={`relative h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200 ${
-                        isActive
-                          ? `ring-4 ${isLivingWill ? 'bg-blue-600 ring-blue-100' : 'bg-[#6d28d9] ring-purple-100'} text-white`
-                          : isCompleted
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white border-2 border-gray-200 text-gray-400'
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <StepIcon className="h-4 w-4" />
-                      )}
-                    </div>
-                    {/* Step label */}
-                    <span
-                      className={`text-[10px] mt-1.5 text-center leading-tight font-medium whitespace-nowrap ${
-                        isActive
-                          ? isLivingWill
-                            ? 'text-blue-700'
-                            : 'text-[#6d28d9]'
-                          : isCompleted
-                            ? 'text-green-700'
-                            : 'text-gray-400'
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                  {/* Connector line */}
-                  {!isLast && (
-                    <div className="flex-1 mx-1 h-0.5 rounded-full relative mt-[-14px]">
-                      <div className="absolute inset-0 bg-gray-200 rounded-full" />
-                      <div
-                        className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${
-                          isCompleted ? 'bg-green-500 w-full' : 'bg-transparent w-0'
-                        }`}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {/* ── Step Content ─────────────────────────────────── */}
+      <div className="rounded-xl border border-nw-line bg-white p-6">
+        {isLoadingProfile || isLoadingDraft ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="mb-4 h-10 w-10 animate-spin text-[#6d28d9]" aria-hidden="true" />
+            <p className="text-sm font-medium text-gray-700">
+              {isLoadingDraft ? 'Loading existing draft...' : 'Loading client profile...'}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">This may take a moment</p>
           </div>
-        </div>
-
-        {/* ── Validation Errors ────────────────────────────── */}
-        {validationErrors.length > 0 && (
-          <div className="shrink-0 mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <div className="flex items-start gap-2.5">
-              <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
-              <div className="space-y-0.5">
-                {validationErrors.map((err, idx) => (
-                  <p key={idx} className="text-sm text-red-700">
-                    {err}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
+        ) : (
+          renderStepContent()
         )}
+      </div>
 
-        {/* ── Step Content ─────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">
-          {isLoadingProfile || isLoadingDraft ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2
-                className={`h-10 w-10 animate-spin mb-4 ${isLivingWill ? 'text-blue-600' : 'text-[#6d28d9]'}`}
-              />
-              <p className="text-sm font-medium text-gray-700">
-                {isLoadingDraft ? 'Loading existing draft...' : 'Loading client profile...'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">This may take a moment</p>
-            </div>
-          ) : (
-            renderStepContent()
+      {/* ── Footer ───────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          {currentStepIndex > 0 && (
+            <Button variant="outline" onClick={handleBack}>
+              Back
+            </Button>
           )}
         </div>
-
-        {/* ── Footer ───────────────────────────────────────── */}
-        <div className="shrink-0 border-t border-gray-100 px-6 py-4 bg-gray-50/40">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={onClose} className="text-sm">
-                Cancel
-              </Button>
-              {currentStepIndex > 0 && (
-                <Button variant="outline" onClick={handleBack} className="text-sm gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              {/* Step counter */}
-              <span className="text-xs text-muted-foreground hidden sm:inline-block">
-                Step {currentStepIndex + 1} of {steps.length}
-              </span>
-
-              {currentStepIndex < steps.length - 1 ? (
-                <Button
-                  onClick={handleNext}
-                  className={`text-sm gap-2 ${isLivingWill ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+        <div className="flex items-center gap-4">
+          <span className="hidden text-xs text-muted-foreground sm:inline-block">
+            Step {currentStepIndex + 1} of {steps.length}
+          </span>
+          {currentStepIndex < steps.length - 1 ? (
+            <Button onClick={handleNext}>Next</Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Saving...
+                </>
               ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className={`text-sm gap-2 ${isLivingWill ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-                >
-                  {isSubmitting ? (
-                    <div className="contents">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </div>
-                  ) : (
-                    <div className="contents">
-                      <CheckCircle2 className="h-4 w-4" />
-                      {existingWillId ? 'Update Draft' : 'Save Draft'}
-                    </div>
-                  )}
-                </Button>
+                <>
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  {existingWillId ? 'Update draft' : 'Save draft'}
+                </>
               )}
-            </div>
-          </div>
+            </Button>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </WillWizardPage>
   );
 }

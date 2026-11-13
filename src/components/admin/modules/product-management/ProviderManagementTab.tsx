@@ -10,12 +10,14 @@ import {
   type ProductCategoryId,
 } from './types';
 import { useProviders } from './hooks/useProviders';
+import { useBreadcrumbTrail } from '../../layout/page';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
 import { ProviderDeleteDialog } from './components/ProviderDeleteDialog';
 
 export function ProviderManagementTab() {
   const { providers, isLoading, addProvider, updateProvider, deleteProvider } = useProviders();
+  useBreadcrumbTrail([{ label: 'Providers' }]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,18 +90,26 @@ export function ProviderManagementTab() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search providers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <span className="text-sm font-medium text-nw-text-2 tabular-nums">
+            {isLoading
+              ? 'Providers'
+              : `${providers.length} ${providers.length === 1 ? 'provider' : 'providers'}`}
+          </span>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search providers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+              aria-label="Search providers"
+            />
+          </div>
         </div>
-        <Button onClick={() => handleOpenModal()} className="bg-purple-600 hover:bg-purple-700">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Provider
+        <Button onClick={() => handleOpenModal()}>
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Add provider
         </Button>
       </div>
 
@@ -107,7 +117,8 @@ export function ProviderManagementTab() {
         providers={filteredProviders}
         isLoading={isLoading}
         onEdit={handleOpenModal}
-        onDelete={handleDeleteClick}
+        isFiltered={searchQuery.trim().length > 0}
+        onAdd={() => handleOpenModal()}
       />
 
       <ProviderFormDialog
@@ -125,6 +136,15 @@ export function ProviderManagementTab() {
         }
         onSave={handleSave}
         isSaving={isSaving}
+        onDelete={
+          editingProvider
+            ? () => {
+                const provider = editingProvider;
+                handleCloseModal();
+                handleDeleteClick(provider);
+              }
+            : undefined
+        }
       />
 
       <ProviderDeleteDialog

@@ -44,10 +44,10 @@ describe('RetirementCalculator', () => {
     });
   });
 
-  it('shows the Back to Tools button', async () => {
+  it('shows the Back to Calculators link', async () => {
     render(<RetirementCalculator onBack={noop} />);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /back to tools/i })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /back to calculators/i })).toBeTruthy();
     });
   });
 

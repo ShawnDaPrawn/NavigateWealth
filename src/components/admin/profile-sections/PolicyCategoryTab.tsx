@@ -411,6 +411,14 @@ export function PolicyCategoryTab({
       refreshingPolicyId,
     });
 
+  // FNA wizards, the FNA report and the will wizards are pages of their own:
+  // while one is open it takes the place of the category's content.
+  const fnaPageOpen =
+    (hasFNA && !!fnaConfig && fnaManagement.wizardOpen) ||
+    (hasFNA && !!fnaConfig && !!selectedHistoricalFnaId && viewFNADialogOpen) ||
+    (categorySubtabId === 'estate-planning' &&
+      (willDraftingWizardOpen || livingWillDraftingWizardOpen));
+
   return (
     <div className="space-y-4">
       <Suspense
@@ -440,8 +448,8 @@ export function PolicyCategoryTab({
               loadPolicies();
             }}
           />
-        ) : /* Show Will Management View for Estate Planning */
-        categorySubtabId === 'estate-planning' && willChatInterfaceOpen ? (
+        ) : fnaPageOpen ? null /* Show Will Management View for Estate Planning */ : categorySubtabId ===
+            'estate-planning' && willChatInterfaceOpen ? (
           <WillChatInterface
             clientId={clientId}
             clientName={clientDisplayName || categoryName}
@@ -790,6 +798,12 @@ export function PolicyCategoryTab({
           ResultsView={fnaConfig.ResultsView}
           loadFn={(fnaId) => fnaConfig.getById(fnaId, clientId)}
           deleteFn={(fnaId) => fnaConfig.deleteFNA(fnaId, clientId)}
+          unpublishFn={(fnaId) => fnaConfig.unpublishFNA(fnaId, clientId)}
+          onUnpublished={() => {
+            setRefreshFNAManagementTrigger((prev) => prev + 1);
+            fnaManagement.loadFNA();
+          }}
+          backLabel={fnaListTitle}
           onDeleted={() => {
             // Refresh the FNA management view
             setRefreshFNAManagementTrigger((prev) => prev + 1);
@@ -810,7 +824,7 @@ export function PolicyCategoryTab({
               setResumeDraftWillId(undefined);
             }}
             clientId={clientId}
-            clientName={categoryName}
+            clientName={clientDisplayName || categoryName}
             willType="last_will"
             existingWillId={resumeDraftWillType === 'last_will' ? resumeDraftWillId : undefined}
             onComplete={() => {
@@ -832,7 +846,7 @@ export function PolicyCategoryTab({
               setResumeDraftWillId(undefined);
             }}
             clientId={clientId}
-            clientName={categoryName}
+            clientName={clientDisplayName || categoryName}
             willType="living_will"
             existingWillId={resumeDraftWillType === 'living_will' ? resumeDraftWillId : undefined}
             onComplete={() => {

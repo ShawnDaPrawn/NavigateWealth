@@ -2,15 +2,16 @@
  * DocumentMappingTab — Render / Characterization Test (Phase 4)
  * ==============================================================
  *
- * Locks the "Document AI Configuration" card title and the always-visible
- * provider header for this 1,120-line Phase 6 decomposition target.
+ * Locks the "Terminology mappings" card title, and the Extraction / Renewal
+ * alerts views (the renewal scanner is its own view, kept in the address).
  *
  * useProviders is mocked to avoid React Query context requirements.
  * global.fetch is mocked so fetchTerminologies resolves quickly and exits
  * the loading gate (isLoading starts as true until fetch completes).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { fireEvent, render, screen, waitFor } from '@/test/utils';
+import { MemoryRouter, useLocation } from 'react-router';
 
 vi.mock('@/components/admin/modules/product-management/hooks/useProviders', () => ({
   useProviders: () => ({ providers: [], isLoading: false }),
@@ -24,7 +25,7 @@ vi.mock(
 );
 
 vi.mock('@/components/admin/modules/product-management/components/RenewalAlertScanner', () => ({
-  RenewalAlertScanner: () => null,
+  RenewalAlertScanner: () => <div>Renewal scanner stub</div>,
 }));
 
 vi.mock('@/utils/supabase/client', () => ({
@@ -52,12 +53,44 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.search}</div>;
+}
+
+function renderTab(initial = '/') {
+  return render(
+    <MemoryRouter initialEntries={[initial]}>
+      <DocumentMappingTab />
+      <LocationProbe />
+    </MemoryRouter>,
+  );
+}
+
 describe('DocumentMappingTab', () => {
-  it('shows the "Document AI Configuration" card title after loading', async () => {
-    render(<DocumentMappingTab />);
+  it('shows the "Terminology mappings" card title after loading', async () => {
+    renderTab();
 
     await waitFor(() => {
-      expect(screen.getByText('Document AI Configuration')).toBeTruthy();
+      expect(screen.getByText('Terminology mappings')).toBeTruthy();
     });
+    expect(screen.queryByText('Renewal scanner stub')).toBeNull();
+  });
+
+  it('opens Renewal alerts as its own view, kept in the address', async () => {
+    renderTab();
+    await waitFor(() => expect(screen.getByText('Terminology mappings')).toBeTruthy());
+
+    const trigger = screen.getByRole('tab', { name: 'Renewal alerts' });
+    fireEvent.mouseDown(trigger);
+    fireEvent.click(trigger);
+
+    await waitFor(() => expect(screen.getByText('Renewal scanner stub')).toBeTruthy());
+    expect(screen.getByTestId('location').textContent).toContain('docai=renewals');
+  });
+
+  it('lands on Renewal alerts from a pasted link', async () => {
+    renderTab('/?docai=renewals');
+    await waitFor(() => expect(screen.getByText('Renewal scanner stub')).toBeTruthy());
   });
 });

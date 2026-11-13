@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '../../../../ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
-import { ArrowLeft, Save, Loader2, Undo2, Redo2, Eye, PenTool } from 'lucide-react';
+import { Save, Loader2, Undo2, Redo2, Eye, PenTool, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import type { LetterMeta } from '../templates/LetterheadPdfLayout';
 
@@ -533,14 +533,24 @@ const FormBuilderWorkspace = ({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex flex-col h-screen bg-gray-50 fixed inset-0 z-50">
+      <div className="flex h-[calc(100vh-60px)] min-h-[640px] flex-col bg-gray-50">
         {/* HEADER */}
         <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Resources
-            </Button>
+            <div className="flex flex-col">
+              <nav aria-label="Breadcrumb" className="text-xs text-nw-text-3">
+                Resources / {isLetterMode ? 'Letters' : 'Forms & documents'} /{' '}
+                {isLetterMode ? 'Letter builder' : 'Form builder'}
+              </nav>
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                Back to Resources
+              </button>
+            </div>
             <div className="h-6 w-px bg-gray-200"></div>
             <Input
               className="h-8 w-64 border-transparent hover:border-gray-200 focus:border-purple-500 font-bold text-lg text-gray-800 px-2 -ml-2"

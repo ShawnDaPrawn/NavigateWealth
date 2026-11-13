@@ -12,13 +12,23 @@
  * migration summary across all of them.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
-import { ScrollArea } from '../../../../ui/scroll-area';
+import { Card, CardContent, CardHeader } from '../../../../ui/card';
+import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
-import { FileStack, Sparkles } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
+import { Search, Sparkles } from 'lucide-react';
+import { ErrorState, StatCard, useBreadcrumbTrail } from '../../../layout/page';
+import { BackLink } from '../components/BackLink';
 import { toast } from 'sonner';
 import { resourcesApi } from '../api';
 import { LEGAL_SECTION_LABELS } from '../legal-constants';
@@ -31,9 +41,27 @@ import { resourceKeys } from '../hooks/queryKeys';
 import { DetailShell } from './DetailShell';
 import { MigrationBadge, RenderModeBadge, StatusBadge } from './LegalDocumentBadges';
 
+/** Address key for the open legal document (?legalDoc=<slug>). */
+const LEGAL_DOC_PARAM = 'legalDoc';
+
 export default function LegalDocumentsManager() {
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedSlug = searchParams.get(LEGAL_DOC_PARAM);
+  const [search, setSearch] = useState('');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const queryClient = useQueryClient();
+
+  const setSelectedSlug = (slug: string | null) => {
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      if (slug) params.set(LEGAL_DOC_PARAM, slug);
+      else {
+        params.delete(LEGAL_DOC_PARAM);
+        params.delete('legalView');
+      }
+      return params;
+    });
+  };
 
   const listQuery = useQuery({
     queryKey: resourceKeys.legalDocuments(),
@@ -41,11 +69,14 @@ export default function LegalDocumentsManager() {
     staleTime: 5 * 60 * 1000,
   });
 
-  useEffect(() => {
-    if (!selectedSlug && listQuery.data && listQuery.data.length > 0) {
-      setSelectedSlug(listQuery.data[0].slug);
-    }
-  }, [selectedSlug, listQuery.data]);
+  const openTitle = selectedSlug
+    ? (listQuery.data?.find((doc) => doc.slug === selectedSlug)?.title ?? 'Legal document')
+    : null;
+  useBreadcrumbTrail(
+    openTitle
+      ? [{ label: 'Legal documents', onClick: () => setSelectedSlug(null) }, { label: openTitle }]
+      : [{ label: 'Legal documents' }],
+  );
 
   const detailQuery = useQuery({
     queryKey: selectedSlug
@@ -57,14 +88,26 @@ export default function LegalDocumentsManager() {
   });
 
   const groupedDocuments = useMemo(() => {
-    const docs = listQuery.data || [];
+    const term = search.trim().toLowerCase();
+    const docs = (listQuery.data || []).filter(
+      (doc) =>
+        (groupFilter === 'all' || doc.section === groupFilter) &&
+        (!term ||
+          doc.title.toLowerCase().includes(term) ||
+          (doc.description || '').toLowerCase().includes(term)),
+    );
     return docs.reduce<Record<string, LegalDocumentDefinitionResponse[]>>((acc, doc) => {
       const key = doc.section;
       acc[key] = acc[key] || [];
       acc[key].push(doc);
       return acc;
     }, {});
-  }, [listQuery.data]);
+  }, [listQuery.data, search, groupFilter]);
+
+  const sections = useMemo(
+    () => [...new Set((listQuery.data || []).map((doc) => doc.section))],
+    [listQuery.data],
+  );
 
   const migrationSummary = useMemo(() => {
     const docs = listQuery.data || [];
@@ -123,133 +166,155 @@ export default function LegalDocumentsManager() {
     },
   });
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <Card className="h-fit">
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl">Legal Documents</CardTitle>
-              <CardDescription>
-                Migration workspace for moving legacy legal documents into the versioned
-                legal-document system.
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => void migratePriorityMutation.mutateAsync()}
-              disabled={
-                migratePriorityMutation.isPending || migrationSummary.priorityOutstanding === 0
-              }
-            >
-              <Sparkles className="mr-2 h-4 w-4" />
-              {migratePriorityMutation.isPending ? 'Preparing…' : 'Priority Drafts'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground">
-            <div>
-              Versioned:{' '}
-              <span className="font-medium text-gray-900">{migrationSummary.migrated}</span>
-            </div>
-            <div>
-              Draft ready:{' '}
-              <span className="font-medium text-gray-900">{migrationSummary.draftReady}</span>
-            </div>
-            <div>
-              Legacy only:{' '}
-              <span className="font-medium text-gray-900">{migrationSummary.legacyOnly}</span>
-            </div>
-            <div>
-              Priority remaining:{' '}
-              <span className="font-medium text-gray-900">
-                {migrationSummary.priorityOutstanding} / {migrationSummary.priorityTotal}
-              </span>
-            </div>
-          </div>
-          {listQuery.isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <Skeleton key={index} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : (
-            <ScrollArea className="h-[760px] pr-3">
-              <div className="space-y-6">
-                {Object.entries(groupedDocuments).map(([section, docs]) => (
-                  <div key={section} className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {LEGAL_SECTION_LABELS[section as keyof typeof LEGAL_SECTION_LABELS]}
-                    </div>
-                    <div className="space-y-2">
-                      {docs.map((doc) => {
-                        const isActive = selectedSlug === doc.slug;
-                        return (
-                          <Button
-                            key={doc.slug}
-                            type="button"
-                            variant={isActive ? 'default' : 'outline'}
-                            className="h-auto w-full justify-start px-3 py-3 text-left"
-                            onClick={() => setSelectedSlug(doc.slug)}
-                          >
-                            <div className="min-w-0">
-                              <div className="truncate font-medium">{doc.title}</div>
-                              <div className="mt-1 flex flex-wrap items-center gap-2">
-                                <StatusBadge value={doc.status} />
-                                <RenderModeBadge value={doc.renderMode} />
-                                <MigrationBadge
-                                  state={
-                                    doc.renderMode === 'versioned_document'
-                                      ? 'migrated'
-                                      : doc.currentDraftVersionId
-                                        ? 'draft-ready'
-                                        : 'legacy-only'
-                                  }
-                                />
-                              </div>
-                            </div>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+  const sectionLabel = (section: string) =>
+    LEGAL_SECTION_LABELS[section as keyof typeof LEGAL_SECTION_LABELS] || section;
 
-      {detailQuery.isLoading ? (
-        <Card>
-          <CardHeader className="space-y-3">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-96" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-36 w-full" />
-            <Skeleton className="h-36 w-full" />
-          </CardContent>
-        </Card>
-      ) : detailQuery.data ? (
-        <DetailShell detail={detailQuery.data} />
+  // --- A legal document is a page of its own ---
+  if (selectedSlug) {
+    return (
+      <div className="flex flex-col gap-4">
+        <BackLink label="Legal documents" onClick={() => setSelectedSlug(null)} />
+        {detailQuery.isLoading ? (
+          <Card>
+            <CardHeader className="space-y-3">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-36 w-full" />
+            </CardContent>
+          </Card>
+        ) : detailQuery.data ? (
+          <DetailShell
+            detail={detailQuery.data}
+            sectionLabel={sectionLabel(detailQuery.data.definition.section)}
+          />
+        ) : (
+          <ErrorState
+            title="Legal document not found"
+            description="It may have been removed, or the link is out of date. Go back to the list of legal documents."
+            onRetry={() => void detailQuery.refetch()}
+          />
+        )}
+      </div>
+    );
+  }
+
+  const groups = Object.entries(groupedDocuments);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Versioned" value={migrationSummary.migrated} />
+        <StatCard label="Draft ready" value={migrationSummary.draftReady} />
+        <StatCard label="Legacy only" value={migrationSummary.legacyOnly} />
+        <StatCard
+          label="Priority remaining"
+          value={`${migrationSummary.priorityOutstanding} / ${migrationSummary.priorityTotal}`}
+          tone={migrationSummary.priorityOutstanding > 0 ? 'attention' : 'default'}
+        />
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:w-72">
+          <Search
+            className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search legal documents"
+            aria-label="Search legal documents"
+            className="pl-8"
+          />
+        </div>
+        <Select value={groupFilter} onValueChange={setGroupFilter}>
+          <SelectTrigger className="w-full sm:w-[240px]" aria-label="Group">
+            <SelectValue placeholder="Group" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All groups</SelectItem>
+            {sections.map((section) => (
+              <SelectItem key={section} value={section}>
+                {sectionLabel(section)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex-1" />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void migratePriorityMutation.mutateAsync()}
+          disabled={migratePriorityMutation.isPending || migrationSummary.priorityOutstanding === 0}
+        >
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          {migratePriorityMutation.isPending ? 'Preparing…' : 'Priority drafts'}
+        </Button>
+      </div>
+
+      {listQuery.isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : listQuery.isError ? (
+        <ErrorState
+          title="Legal documents could not be loaded"
+          onRetry={() => void listQuery.refetch()}
+        />
+      ) : groups.length === 0 ? (
+        <div className="rounded-xl border border-nw-line bg-white px-6 py-12 text-center text-sm text-nw-text-3">
+          No legal documents match your search.
+        </div>
       ) : (
-        <Card className="min-h-[640px]">
-          <CardContent className="flex h-full items-center justify-center py-16 text-center text-muted-foreground">
-            <div>
-              <FileStack className="mx-auto mb-4 h-10 w-10 opacity-50" />
-              <p className="text-lg font-medium">Select a legal document</p>
-              <p className="mt-2 text-sm">
-                The draft workspace will open here with version metadata, rich editing, and live
-                preview.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-5">
+          {groups.map(([section, docs]) => (
+            <section
+              key={section}
+              className="overflow-hidden rounded-xl border border-nw-line bg-white"
+            >
+              <h2 className="border-b border-nw-line px-5 py-3 text-sm font-semibold text-nw-ink">
+                {sectionLabel(section)}
+              </h2>
+              <ul className="divide-y divide-nw-line">
+                {docs.map((doc) => (
+                  <li key={doc.slug} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-nw-ink">{doc.title}</p>
+                      <p className="text-xs text-nw-text-3">{sectionLabel(doc.section)}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge value={doc.status} />
+                      <RenderModeBadge value={doc.renderMode} />
+                      <MigrationBadge
+                        state={
+                          doc.renderMode === 'versioned_document'
+                            ? 'migrated'
+                            : doc.currentDraftVersionId
+                              ? 'draft-ready'
+                              : 'legacy-only'
+                        }
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedSlug(doc.slug)}
+                      aria-label={`Open ${doc.title}`}
+                    >
+                      Open
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );

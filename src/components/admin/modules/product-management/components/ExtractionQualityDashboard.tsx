@@ -169,7 +169,7 @@ export function ExtractionQualityDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-purple-600" />
-          <h3 className="text-sm font-semibold text-gray-800">Extraction Quality</h3>
+          <h3 className="text-sm font-semibold text-gray-800">Extraction quality</h3>
         </div>
         <Button variant="ghost" size="sm" onClick={fetchStats} className="text-xs h-7">
           <RefreshCw className="h-3 w-3 mr-1" /> Refresh
@@ -243,7 +243,9 @@ export function ExtractionQualityDashboard() {
         <Card className="bg-white border border-gray-200 shadow-none overflow-hidden">
           <CardContent className="p-0">
             <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-600 uppercase">Provider Breakdown</h4>
+              <h4 className="text-xs font-semibold text-gray-600 uppercase">
+                Confidence by provider
+              </h4>
             </div>
             <div className="divide-y divide-gray-100">
               {providerStats.map((ps) => (
