@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { CalendarEvent, CalendarView } from '../types';
 import { CalendarHeader } from './views/CalendarHeader';
 import { MonthView } from './views/MonthView';
@@ -9,63 +9,96 @@ interface EventsCalendarProps {
   isLoading: boolean;
   currentDate: Date;
   onDateChange: (date: Date) => void;
+  /** Month · Week · Day · Agenda, kept in the address by the module. */
+  view: CalendarView;
+  onViewChange: (view: CalendarView) => void;
+  /** Search and filter chips, shown under the date controls. */
+  toolbar?: ReactNode;
 
-  // Event callbacks
-  onEdit: (event: CalendarEvent) => void;
-  onDelete: (id: string) => void;
-  onUpdateStatus: (id: string, status: 'completed' | 'cancelled') => void;
+  /** Opens an event's page. */
   onView: (event: CalendarEvent) => void;
+  onOpenTask?: (taskId: string) => void;
+  onOpenClient?: (clientId: string) => void;
   onNewEvent: () => void;
+  canCreate?: boolean;
 }
+
+const KEY = [
+  { label: 'Event', dot: 'bg-blue-500' },
+  { label: 'Task due', dot: 'bg-rose-500' },
+  { label: 'Birthday', dot: 'bg-pink-500' },
+  { label: 'Policy renewal', dot: 'bg-amber-500' },
+];
 
 export function EventsCalendar({
   events,
   isLoading,
   currentDate,
   onDateChange,
-  onEdit,
+  view,
+  onViewChange,
+  toolbar,
   onView,
+  onOpenTask,
+  onOpenClient,
   onNewEvent,
+  canCreate = true,
 }: EventsCalendarProps) {
-  const [view, setView] = useState<CalendarView>('month');
-
   return (
-    <div className="flex flex-col h-full gap-4">
-      {/* Enhanced Calendar Controls */}
+    <div className="flex h-full flex-col gap-4">
       <CalendarHeader
         view={view}
         currentDate={currentDate}
         onDateChange={onDateChange}
-        onViewChange={setView}
+        onViewChange={onViewChange}
         onToday={() => onDateChange(new Date())}
       />
 
-      {/* Main View Area */}
-      <div className="flex-1 min-h-0 relative">
+      {toolbar}
+
+      {view === 'month' && (
+        <ul
+          className="flex flex-wrap items-center gap-4 text-xs text-nw-text-2"
+          aria-label="Colour key"
+        >
+          {KEY.map((k) => (
+            <li key={k.label} className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${k.dot}`} aria-hidden="true" />
+              {k.label}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="relative min-h-0 flex-1">
         {isLoading && (
-          <div className="absolute inset-0 z-50 bg-white/50 flex items-center justify-center">
+          <div
+            role="status"
+            aria-label="Loading events"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
+          >
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
           </div>
         )}
 
-        {/* Render views */}
-        {view === 'month' && (
+        {view === 'month' ? (
           <MonthView
             events={events}
             currentDate={currentDate}
             onDateChange={onDateChange}
-            onViewChange={setView}
+            onViewChange={onViewChange}
             onViewEvent={onView}
           />
-        )}
-
-        {(view === 'agenda' || view === 'day' || view === 'week') && (
+        ) : (
           <AgendaView
             events={events}
             currentDate={currentDate}
-            onViewChange={setView}
-            onEdit={onEdit}
+            range={view}
+            onOpen={onView}
+            onOpenTask={onOpenTask}
+            onOpenClient={onOpenClient}
             onNewEvent={onNewEvent}
+            canCreate={canCreate}
           />
         )}
       </div>

@@ -1,0 +1,124 @@
+/**
+ * Calendar: "Calendar" header, Month · Week · Day · Agenda in the address,
+ * filter chips beside search, and an event as a page (?event=<id>, ?event=new).
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router';
+import type { CalendarEvent } from '../types';
+
+const today = new Date();
+const at = (h: number) => {
+  const d = new Date(today);
+  d.setHours(h, 0, 0, 0);
+  return d.toISOString();
+};
+const review = {
+  id: 'ev-1',
+  title: 'Annual review',
+  event_type: 'review',
+  start_at: at(10),
+  end_at: at(11),
+  location_type: 'video',
+  status: 'scheduled',
+  description: 'Bring the statements',
+  recurrence_rule: null,
+} as unknown as CalendarEvent;
+
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: (m: string) => toastError(m), info: vi.fn() },
+}));
+vi.mock('../hooks', () => {
+  const mutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
+  return {
+    useEvents: () => ({ data: [review], isLoading: false, error: null, refetch: vi.fn() }),
+    useCreateEvent: mutation,
+    useUpdateEvent: mutation,
+    useDeleteEvent: mutation,
+    useClientBirthdays: () => ({ data: [] }),
+  };
+});
+vi.mock('../hooks/usePolicyRenewals', () => ({ usePolicyRenewals: () => ({ data: [] }) }));
+vi.mock('../../tasks', () => ({ useTasks: () => ({ data: [] }) }));
+vi.mock('../../personnel', () => ({
+  useCurrentUserPermissions: () => ({ canDo: () => true }),
+}));
+vi.mock('@/hooks/useClients', () => ({
+  useClients: () => ({ data: [{ id: 'c1', full_name: 'Lindiwe Dube', email: 'l@x.co' }] }),
+}));
+vi.mock('../components/EventPage', () => ({
+  EventPage: (props: { event?: CalendarEvent | null; onClose: () => void }) => (
+    <div>
+      <h1>{props.event ? props.event.title : 'New event'}</h1>
+      <button onClick={props.onClose}>Back to calendar</button>
+    </div>
+  ),
+}));
+
+import { CalendarModule } from '../CalendarModule';
+
+function Location() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+function renderAt(url = '/admin?module=calendar') {
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <CalendarModule />
+      <Location />
+    </MemoryRouter>,
+  );
+}
+
+afterEach(() => {
+  cleanup();
+  toastError.mockClear();
+});
+
+describe('Calendar page', () => {
+  it('is called Calendar, with the view switch and filter chips beside search', () => {
+    renderAt();
+    expect(screen.getByRole('heading', { level: 1, name: 'Calendar' })).toBeDefined();
+    for (const v of ['Month', 'Week', 'Day', 'Agenda']) {
+      expect(screen.getByRole('tab', { name: v })).toBeDefined();
+    }
+    expect(screen.getByLabelText('Search events')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Filter by event type' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Filter by status' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Filter by client' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /^Filters/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Previous month' })).toBeDefined();
+    expect(screen.getByRole('list', { name: 'Colour key' })).toBeDefined();
+  });
+
+  it('keeps the view in the address and lists the day', async () => {
+    renderAt();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Day' }), { button: 0 });
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe('?module=calendar&view=day'),
+    );
+    expect(screen.getByText('Annual review')).toBeDefined();
+    expect(screen.getByText('1 item')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Annual review' }));
+    expect(screen.getByTestId('search').textContent).toBe('?module=calendar&view=day&event=ev-1');
+  });
+
+  it('opens Add event as a page at ?event=new and goes back', async () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Add event' }));
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'New event' }));
+    expect(screen.getByTestId('search').textContent).toBe('?module=calendar&event=new');
+    fireEvent.click(screen.getByRole('button', { name: 'Back to calendar' }));
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Calendar' }));
+  });
+
+  it('opens the event named in the address and drops an unknown one', async () => {
+    renderAt('/admin?module=calendar&event=ev-1');
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Annual review' }));
+    cleanup();
+    renderAt('/admin?module=calendar&event=nope');
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Event not found'));
+    expect(screen.getByTestId('search').textContent).toBe('?module=calendar');
+  });
+});

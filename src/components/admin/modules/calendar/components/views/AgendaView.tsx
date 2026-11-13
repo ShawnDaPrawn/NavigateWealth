@@ -1,26 +1,13 @@
 import { useState } from 'react';
 import { Button } from '../../../../../ui/button';
-import { Badge } from '../../../../../ui/badge';
-import {
-  ArrowLeft,
-  Calendar as CalendarIcon,
-  Clock,
-  Edit,
-  ChevronUp,
-  ChevronDown,
-  Users,
-  Video,
-  MapPin,
-  Link as LinkIcon,
-  Eye,
-  RefreshCw,
-  Cake,
-  CheckSquare,
-} from 'lucide-react';
-import { format, isToday, startOfDay, addDays, eachDayOfInterval } from 'date-fns';
-import type { CalendarEvent, CalendarView } from '../../types';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS } from '../../constants';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react';
+import { addDays, eachDayOfInterval, format, isToday, startOfDay, startOfWeek } from 'date-fns';
+import type { CalendarEvent } from '../../types';
+import { EVENT_TYPE_COLORS, EVENT_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../../constants';
 import { useCalendarEvents } from '../../hooks/useCalendarEvents';
+
+/** The list views: one week, one day, or the next two weeks. */
+export type ListRange = 'week' | 'day' | 'agenda';
 
 // Helper to check if an event is system-generated
 function isSystemEvent(event: CalendarEvent): boolean {
@@ -31,292 +18,224 @@ function isSystemEvent(event: CalendarEvent): boolean {
   );
 }
 
-// Get the appropriate icon for system event types
-function getSystemEventIcon(event: CalendarEvent) {
-  if (event.id.startsWith('renewal-')) return <RefreshCw className="h-3.5 w-3.5" />;
-  if (event.id.startsWith('birthday-')) return <Cake className="h-3.5 w-3.5" />;
-  if (event.id.startsWith('task-')) return <CheckSquare className="h-3.5 w-3.5" />;
-  return null;
+function metaLine(event: CalendarEvent): string {
+  if (event.id.startsWith('task-')) return 'Task due · To-Do';
+  const parts = [EVENT_TYPE_LABELS[event.event_type] || 'Event'];
+  if (!isSystemEvent(event) && event.location_type) {
+    parts.push(LOCATION_TYPE_LABELS[event.location_type] ?? event.location_type);
+  }
+  if (event.client?.full_name) parts.push(event.client.full_name);
+  return parts.join(' · ');
 }
 
 interface AgendaViewProps {
   events: CalendarEvent[];
   currentDate: Date;
-  onViewChange: (view: CalendarView) => void;
-  onEdit: (event: CalendarEvent) => void;
+  range: ListRange;
+  /** Details: the event's page. */
+  onOpen: (event: CalendarEvent) => void;
+  onOpenTask?: (taskId: string) => void;
+  onOpenClient?: (clientId: string) => void;
   onNewEvent: () => void;
+  canCreate?: boolean;
 }
 
 export function AgendaView({
   events,
   currentDate,
-  onViewChange,
-  onEdit,
+  range,
+  onOpen,
+  onOpenTask,
+  onOpenClient,
   onNewEvent,
+  canCreate = true,
 }: AgendaViewProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-
-  // Use cached lookup for better performance
   const { getEventsOnDate } = useCalendarEvents(events);
 
   const toggleExpand = (id: string) => {
     setExpandedItems((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Agenda shows next 14 days or selected day if it has items
-  const start = startOfDay(currentDate);
-  const end = addDays(start, 14); // Next 2 weeks
-
-  // Get all dates in range and find those with events
+  const start =
+    range === 'week' ? startOfWeek(currentDate, { weekStartsOn: 1 }) : startOfDay(currentDate);
+  const end = range === 'week' ? addDays(start, 6) : range === 'day' ? start : addDays(start, 14);
   const dates = eachDayOfInterval({ start, end });
-  const sortedDates: string[] = [];
-  const grouped: Record<string, CalendarEvent[]> = {};
 
-  dates.forEach((date) => {
-    const dayEvents = getEventsOnDate(date);
-    if (dayEvents.length > 0) {
-      const dateKey = format(date, 'yyyy-MM-dd');
-      sortedDates.push(dateKey);
-      grouped[dateKey] = dayEvents;
-    }
-  });
+  const days = dates
+    .map((date) => ({ date, items: getEventsOnDate(date) }))
+    .filter((d) => d.items.length > 0);
+
+  const renderItem = (event: CalendarEvent) => {
+    const key = `event-${event.id}`;
+    const isExpanded = expandedItems[key];
+    const system = isSystemEvent(event);
+    const isTask = event.id.startsWith('task-');
+    const allDay = system;
+    const clientId = system && !isTask ? event.client_id : null;
+    const action = isTask ? (
+      onOpenTask ? (
+        <Button size="sm" variant="ghost" onClick={() => onOpenTask(event.id.slice(5))}>
+          Open task
+        </Button>
+      ) : null
+    ) : clientId && onOpenClient ? (
+      <Button size="sm" variant="ghost" onClick={() => onOpenClient(clientId)}>
+        Open client
+      </Button>
+    ) : (
+      <Button size="sm" variant="ghost" onClick={() => onOpen(event)}>
+        Details
+      </Button>
+    );
+
+    return (
+      <li key={key} className="rounded-lg border border-nw-line bg-white">
+        <div className="flex items-start gap-3 px-4 py-3">
+          <span
+            className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${EVENT_TYPE_COLORS[event.event_type]?.split(' ')[0] ?? 'bg-blue-100'}`}
+            aria-hidden="true"
+          />
+          <span className="w-24 shrink-0 text-xs font-medium tabular-nums text-nw-text-2 pt-0.5">
+            {allDay
+              ? 'All day'
+              : `${format(new Date(event.start_at), 'HH:mm')}–${format(new Date(event.end_at), 'HH:mm')}`}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p
+              className={`text-sm font-medium text-nw-ink ${event.status === 'completed' ? 'text-nw-text-3 line-through' : ''}`}
+            >
+              {isTask ? event.title.replace(/^Task: /, '') : event.title}
+            </p>
+            <p className="mt-0.5 text-xs text-nw-text-3">{metaLine(event)}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            {action}
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-nw-text-3"
+              aria-label={isExpanded ? 'Hide details' : 'Show details'}
+              aria-expanded={!!isExpanded}
+              onClick={() => toggleExpand(key)}
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              )}
+            </Button>
+          </div>
+        </div>
+        {isExpanded && (
+          <div className="grid grid-cols-1 gap-3 border-t border-nw-line-2 px-4 py-3 text-sm md:grid-cols-2">
+            <div className="col-span-full">
+              <span className="mb-1 block text-xs font-medium text-nw-text-3">Description</span>
+              <p className="whitespace-pre-wrap text-nw-text-2">
+                {event.description || <span className="text-nw-text-3">No description</span>}
+              </p>
+            </div>
+            {!system && event.location && (
+              <div>
+                <span className="mb-1 block text-xs font-medium text-nw-text-3">Location</span>
+                <p className="text-nw-text-2">{event.location}</p>
+              </div>
+            )}
+            {event.video_link && (
+              <div>
+                <span className="mb-1 block text-xs font-medium text-nw-text-3">Meeting link</span>
+                <a
+                  href={event.video_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex max-w-xs items-center gap-1 truncate text-nw-violet-600 underline"
+                >
+                  <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {event.video_link}
+                </a>
+              </div>
+            )}
+            {system && (
+              <div className="col-span-full">
+                <span className="mb-1 block text-xs font-medium text-nw-text-3">Source</span>
+                <p className="text-xs text-nw-text-3">
+                  {event.event_type === 'renewal'
+                    ? 'Auto-generated from policy inception dates'
+                    : event.event_type === 'birthday'
+                      ? 'Auto-generated from client date of birth'
+                      : 'Linked from To-Do'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  };
+
+  if (days.length === 0) {
+    const title =
+      range === 'agenda'
+        ? 'No upcoming events'
+        : range === 'week'
+          ? 'Nothing scheduled this week'
+          : 'Nothing scheduled on this day';
+    const text =
+      range === 'agenda'
+        ? `There are no events scheduled for the next 14 days from ${format(currentDate, 'd MMM')}.`
+        : range === 'week'
+          ? `No events, tasks, birthdays or renewals from ${format(start, 'd MMM')} to ${format(end, 'd MMM')}.`
+          : `No events, tasks, birthdays or renewals on ${format(start, 'EEEE, d MMMM')}.`;
+    return (
+      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-nw-line bg-white px-6 py-16 text-center">
+        <CalendarIcon className="mb-3 h-8 w-8 text-gray-300" aria-hidden="true" />
+        <h3 className="text-base font-semibold text-nw-ink">{title}</h3>
+        <p className="mt-1 mb-4 max-w-sm text-sm text-nw-text-3">{text}</p>
+        {canCreate && (
+          <Button size="sm" onClick={onNewEvent}>
+            Schedule event
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (range === 'day') {
+    const items = days[0].items;
+    return (
+      <div className="h-full space-y-3 overflow-y-auto">
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-base font-semibold text-nw-ink">
+            {format(start, 'EEEE, d MMMM yyyy')}
+          </h3>
+          <span className="text-sm text-nw-text-3">
+            {items.length} {items.length === 1 ? 'item' : 'items'}
+          </span>
+        </div>
+        <ul className="space-y-2">{items.map(renderItem)}</ul>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 p-4 h-full overflow-y-auto">
-      <div className="flex flex-col gap-1 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onViewChange('month')}
-          className="self-start gap-1 pl-0 text-gray-500 hover:text-purple-600 hover:bg-transparent"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Month
-        </Button>
-        <div className="flex items-center gap-2 mt-1">
-          <div className="h-6 w-1 bg-purple-600 rounded-full" />
-          <h3 className="font-bold text-xl text-gray-900">Schedule details</h3>
-        </div>
-      </div>
-
-      {sortedDates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg border border-dashed text-center">
-          <div className="bg-gray-50 p-4 rounded-full mb-4">
-            <CalendarIcon className="h-8 w-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900">No upcoming events</h3>
-          <p className="text-muted-foreground mt-1 mb-4 max-w-sm">
-            There are no events scheduled for the next 14 days from {format(currentDate, 'MMM d')}.
-          </p>
-          <Button onClick={onNewEvent}>Schedule Event</Button>
-        </div>
-      ) : (
-        sortedDates.map((dateKey) => {
-          const date = new Date(dateKey);
-          const dayItems = grouped[dateKey];
-          const isTodayDate = isToday(date);
-
-          return (
-            <div key={dateKey} className="flex gap-4">
-              {/* Date Column */}
-              <div className="flex flex-col items-center min-w-[60px] pt-1">
-                <span
-                  className={`text-sm font-bold uppercase ${isTodayDate ? 'text-purple-600' : 'text-gray-500'}`}
-                >
-                  {format(date, 'EEE')}
-                </span>
-                <div
-                  className={`h-8 w-8 flex items-center justify-center rounded-full text-lg font-bold mt-1 ${
-                    isTodayDate
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-white text-gray-900 border border-gray-100'
-                  }`}
-                >
-                  {format(date, 'd')}
-                </div>
-              </div>
-
-              {/* Items List */}
-              <div className="flex-1 space-y-3 pb-6 border-l border-gray-100 pl-6 relative">
-                {/* Timeline dot */}
-                <div
-                  className={`absolute left-[-5px] top-2 h-2.5 w-2.5 rounded-full border-2 border-white ${isTodayDate ? 'bg-purple-600' : 'bg-gray-300'}`}
-                />
-
-                {dayItems.map((event) => {
-                  const isCompleted = event.status === 'completed';
-                  const isExpanded = expandedItems[`event-${event.id}`];
-                  const isSystem = isSystemEvent(event);
-
-                  return (
-                    <div
-                      key={`event-${event.id}`}
-                      className="group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:border-purple-200 overflow-hidden"
-                    >
-                      <div
-                        className={`absolute left-0 top-0 bottom-0 w-1 ${EVENT_TYPE_COLORS[event.event_type]?.split(' ')[0].replace('bg-', 'bg-') || 'bg-blue-500'}`}
-                      />
-
-                      <div className="p-4 pl-5">
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                              <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5 bg-gray-50 px-2 py-0.5 rounded-md">
-                                <Clock className="h-3 w-3" />
-                                {format(new Date(event.start_at), 'HH:mm')} -{' '}
-                                {format(new Date(event.end_at), 'HH:mm')}
-                              </span>
-                              <Badge
-                                variant="secondary"
-                                className={`text-[10px] h-5 px-1.5 font-normal ${
-                                  isSystem ? EVENT_TYPE_COLORS[event.event_type] : ''
-                                }`}
-                              >
-                                {isSystem && getSystemEventIcon(event)}
-                                {isSystem && (
-                                  <span className="ml-1">
-                                    {EVENT_TYPE_LABELS[event.event_type]}
-                                  </span>
-                                )}
-                                {!isSystem && EVENT_TYPE_LABELS[event.event_type]}
-                              </Badge>
-                            </div>
-                            <h4
-                              className={`font-semibold text-gray-900 text-base ${isCompleted ? 'line-through text-gray-500' : ''}`}
-                            >
-                              {event.title}
-                            </h4>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-1">
-                            {isSystem ? (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                                onClick={() => onEdit(event)}
-                                title="View details"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                                onClick={() => onEdit(event)}
-                                title="Edit event"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                              onClick={() => toggleExpand(`event-${event.id}`)}
-                            >
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Expanded Details */}
-                        {isExpanded && (
-                          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm animate-in fade-in slide-in-from-top-2">
-                            <div className="col-span-full">
-                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                                Description
-                              </span>
-                              <p className="text-gray-600 whitespace-pre-wrap">
-                                {event.description || (
-                                  <span className="text-gray-400 italic">
-                                    No description provided
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-
-                            {event.client && (
-                              <div>
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                                  Client
-                                </span>
-                                <div className="flex items-center gap-2 text-gray-700">
-                                  <Users className="h-4 w-4 text-gray-400" />
-                                  {event.client.full_name}
-                                </div>
-                              </div>
-                            )}
-
-                            {!isSystem && (event.location || event.location_type) && (
-                              <div>
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                                  Location
-                                </span>
-                                <div className="flex items-center gap-2 text-gray-700">
-                                  {event.location_type === 'video' ? (
-                                    <Video className="h-4 w-4 text-gray-400" />
-                                  ) : (
-                                    <MapPin className="h-4 w-4 text-gray-400" />
-                                  )}
-                                  {event.location || event.location_type}
-                                </div>
-                              </div>
-                            )}
-
-                            {event.video_link && (
-                              <div>
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                                  {event.location_type === 'video'
-                                    ? 'Meeting Link'
-                                    : 'Related Link'}
-                                </span>
-                                <div className="flex items-center gap-2 text-purple-600 hover:text-purple-800">
-                                  <LinkIcon className="h-4 w-4 text-gray-400" />
-                                  <a
-                                    href={event.video_link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="underline truncate max-w-[200px] md:max-w-xs block"
-                                  >
-                                    {event.video_link}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* System event source indicator */}
-                            {isSystem && (
-                              <div className="col-span-full">
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                                  Source
-                                </span>
-                                <p className="text-xs text-gray-500 italic">
-                                  {event.event_type === 'renewal'
-                                    ? 'Auto-generated from policy inception dates'
-                                    : event.event_type === 'birthday'
-                                      ? 'Auto-generated from client date of birth'
-                                      : 'Linked from Tasks module'}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+    <div className="h-full space-y-5 overflow-y-auto">
+      {days.map(({ date, items }) => {
+        const today = isToday(date);
+        return (
+          <section key={format(date, 'yyyy-MM-dd')} className="flex gap-4">
+            <div className="w-14 shrink-0 pt-2 text-center">
+              <p
+                className={`text-xs font-semibold ${today ? 'text-nw-violet-600' : 'text-nw-text-3'}`}
+              >
+                {format(date, 'EEE')}
+              </p>
+              <p className="text-sm font-semibold text-nw-ink">{format(date, 'd MMM')}</p>
+              {today && <p className="text-[11px] font-medium text-nw-violet-600">Today</p>}
             </div>
-          );
-        })
-      )}
+            <ul className="min-w-0 flex-1 space-y-2">{items.map(renderItem)}</ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 /**
- * EventFormModal — render and submit tests
- * ========================================
+ * EventPage — render and submit tests
+ * ==================================
  *
- * Locks the dialog titles, the submit button, and the payload the form hands
+ * Locks the page titles, the submit button, and the payload the form hands
  * to `onSubmit`: date + start time + duration must turn into ISO `start_at` /
  * `end_at`, and a selected client must land in both `client_id` and the
  * `attendees` map (the backend derives the `client` relation from it).
@@ -45,8 +45,7 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-import { toast } from 'sonner';
-import { EventFormModal } from '../EventFormModal';
+import { EventPage } from '../EventPage';
 import type { CalendarEvent } from '../../types';
 
 const noop = vi.fn();
@@ -76,29 +75,53 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('EventFormModal', () => {
-  it('shows "New Event" dialog title when open with no event', () => {
-    render(<EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} />);
+describe('EventPage', () => {
+  it('shows a new event as a page with "New event"', () => {
+    render(<EventPage initialMode="edit" onClose={noop} onSubmit={noopSubmit} />);
 
-    expect(screen.getByText('New Event')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'New event' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Back to calendar' })).toBeTruthy();
   });
 
-  it('shows "Edit Event" title when open with an existing event', () => {
+  it('opens an existing event in view, then Edit shows the form', () => {
     render(
-      <EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} event={existingEvent} />,
+      <EventPage onClose={noop} onSubmit={noopSubmit} event={existingEvent} onDelete={noop} />,
     );
 
-    expect(screen.getByText('Edit Event')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'My Meeting' })).toBeTruthy();
+    expect(screen.queryByLabelText('Event title')).toBeNull();
+    expect(screen.getByText('Bring the statements')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect((screen.getByLabelText('Event title') as HTMLInputElement).value).toBe('My Meeting');
+    expect(screen.getByText('Edit event')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByLabelText('Event title')).toBeNull();
+  });
+
+  it('stays in view without edit rights', () => {
+    render(
+      <EventPage onClose={noop} onSubmit={noopSubmit} event={existingEvent} canEdit={false} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  });
+
+  it('shows "Edit event" when opened straight into the form', () => {
+    render(
+      <EventPage initialMode="edit" onClose={noop} onSubmit={noopSubmit} event={existingEvent} />,
+    );
+
+    expect(screen.getByText('Edit event')).toBeTruthy();
   });
 
   it('shows a Create Event submit button when open with no event', () => {
-    render(<EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} />);
+    render(<EventPage initialMode="edit" onClose={noop} onSubmit={noopSubmit} />);
 
     expect(screen.getByRole('button', { name: /create event/i })).toBeTruthy();
   });
 
   it('offers date, start time and duration instead of raw datetime inputs', () => {
-    render(<EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} />);
+    render(<EventPage initialMode="edit" onClose={noop} onSubmit={noopSubmit} />);
 
     expect(screen.getByRole('button', { name: 'Date' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Start time' })).toBeTruthy();
@@ -109,17 +132,18 @@ describe('EventFormModal', () => {
 
   it('refuses to submit without a title', () => {
     const onSubmit = vi.fn();
-    render(<EventFormModal open={true} onClose={noop} onSubmit={onSubmit} />);
+    render(<EventPage initialMode="edit" onClose={noop} onSubmit={onSubmit} />);
 
     fireEvent.submit(screen.getByRole('button', { name: /create event/i }).closest('form')!);
 
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith('Give the event a title');
+    expect(screen.getByText('Give the event a title')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toContain('Fix 1 field to create the event');
   });
 
   it('submits start and end computed from date, time and duration', () => {
     const onSubmit = vi.fn();
-    render(<EventFormModal open={true} onClose={noop} onSubmit={onSubmit} />);
+    render(<EventPage initialMode="edit" onClose={noop} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByLabelText('Event title'), { target: { value: 'Planning' } });
     fireEvent.click(screen.getByRole('radio', { name: /phone/i }));
@@ -145,8 +169,8 @@ describe('EventFormModal', () => {
   it('loads an existing event, keeps its odd start time and duration, and maps virtual to video', () => {
     const onSubmit = vi.fn();
     render(
-      <EventFormModal
-        open={true}
+      <EventPage
+        initialMode="edit"
         onClose={noop}
         onSubmit={onSubmit}
         event={existingEvent}
@@ -164,7 +188,7 @@ describe('EventFormModal', () => {
     expect(screen.getByText('Shawn Francisco')).toBeTruthy();
     expect((screen.getByLabelText('Repeat interval') as HTMLInputElement).value).toBe('2');
     expect((screen.getByLabelText('Repeat until') as HTMLInputElement).value).toBe('2026-12-01');
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'More event actions' })).toBeTruthy();
 
     fireEvent.submit(screen.getByRole('button', { name: /save changes/i }).closest('form')!);
 
@@ -190,7 +214,9 @@ describe('EventFormModal', () => {
 
   it('removes a client from the chips', () => {
     const onSubmit = vi.fn();
-    render(<EventFormModal open={true} onClose={noop} onSubmit={onSubmit} event={existingEvent} />);
+    render(
+      <EventPage initialMode="edit" onClose={noop} onSubmit={onSubmit} event={existingEvent} />,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove Shawn Francisco' }));
     fireEvent.submit(screen.getByRole('button', { name: /save changes/i }).closest('form')!);
@@ -202,7 +228,7 @@ describe('EventFormModal', () => {
 
   it('rejects a meeting link that is not an http(s) URL', () => {
     const onSubmit = vi.fn();
-    render(<EventFormModal open={true} onClose={noop} onSubmit={onSubmit} />);
+    render(<EventPage initialMode="edit" onClose={noop} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByLabelText('Event title'), { target: { value: 'Call' } });
     fireEvent.click(screen.getByRole('radio', { name: /video call/i }));
@@ -212,9 +238,7 @@ describe('EventFormModal', () => {
     fireEvent.submit(screen.getByRole('button', { name: /create event/i }).closest('form')!);
 
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith(
-      'The meeting link must start with http:// or https://',
-    );
+    expect(screen.getByText('The meeting link must start with http:// or https://')).toBeTruthy();
   });
 
   it('shows a clash hint for an overlapping event but still allows saving', () => {
@@ -227,8 +251,8 @@ describe('EventFormModal', () => {
       end_at: new Date(2026, 8, 7, 12, 0).toISOString(),
     } as CalendarEvent;
     render(
-      <EventFormModal
-        open={true}
+      <EventPage
+        initialMode="edit"
         onClose={noop}
         onSubmit={onSubmit}
         event={existingEvent}
@@ -249,11 +273,11 @@ describe('EventFormModal', () => {
       title: 'Shawn Francisco turns 40',
       recurrence_rule: null,
     } as CalendarEvent;
-    render(<EventFormModal open={true} onClose={noop} onSubmit={noopSubmit} event={birthday} />);
+    render(<EventPage onClose={noop} onSubmit={noopSubmit} event={birthday} />);
 
     expect(screen.getByText('Shawn Francisco turns 40')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /save changes/i })).toBeNull();
-    // The dialog chrome has its own sr-only "Close"; the footer adds a visible one.
-    expect(screen.getAllByRole('button', { name: 'Close' }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+    expect(screen.getByText(/come from the client date of birth/)).toBeTruthy();
   });
 });

@@ -1,11 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
-import { Plus, Download, Filter, X, Search, FileText } from 'lucide-react';
+import { Plus, Download, X, Search, FileText } from 'lucide-react';
 import { EventsCalendar } from './components/EventsCalendar';
-import { EventFormModal } from './components/EventFormModal';
-import { FiltersDrawer } from './components/FiltersDrawer';
+import { EventPage } from './components/EventPage';
 import { CalendarPDFExportModal } from './components/CalendarPDFExportModal';
+import { useClients } from '../../../../hooks/useClients';
+import { EVENT_TYPE_LABELS } from './constants';
+import type { CalendarView, EventStatus, EventType } from './types';
+import { moduleSearchParams } from '../../layout/moduleSearchParams';
+import { ClearFiltersButton, FilterChip } from '../../layout/page/FilterControls';
 import {
   useEvents,
   useCreateEvent,
@@ -29,8 +34,36 @@ import {
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
 import { useCurrentUserPermissions } from '../personnel';
-import { PageHeader } from '../../layout/page';
-import { useConfirm } from '../../layout/page';
+import {
+  ErrorState,
+  PageHeader,
+  useBreadcrumbTrail,
+  useConfirm,
+  useRecordInUrl,
+  useUrlState,
+} from '../../layout/page';
+
+const CALENDAR_VIEWS = ['month', 'week', 'day', 'agenda'] as const;
+/** The address names a new event with this id. */
+const NEW_EVENT = 'new';
+const FILTER_TYPES: EventType[] = [
+  'meeting',
+  'call',
+  'review',
+  'consultation',
+  'webinar',
+  'internal',
+  'deadline',
+  'other',
+  'birthday',
+  'renewal',
+];
+const FILTER_STATUSES: { value: EventStatus; label: string }[] = [
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'rescheduled', label: 'Rescheduled' },
+];
 
 export function CalendarModule() {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
@@ -42,11 +75,15 @@ export function CalendarModule() {
     clientId: null,
   });
 
-  const [showFilters, setShowFilters] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  // Month · Week · Day · Agenda lives in the address (?view=week).
+  const [view, setView] = useUrlState<CalendarView>('view', 'month', CALENDAR_VIEWS);
+  const [, setSearchParams] = useSearchParams();
+  const { data: clientList = [] } = useClients();
   const [showPDFModal, setShowPDFModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [searchDebounce, setSearchDebounce] = useState<number | null>(null);
+  const [searchText, setSearchText] = useState('');
 
   // Lifted state for date navigation
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -58,7 +95,12 @@ export function CalendarModule() {
   const canDeleteEvent = canDo('calendar', 'delete');
 
   // Fetch data
-  const { data: events = [], isLoading: isLoadingEvents } = useEvents(filters);
+  const {
+    data: events = [],
+    isLoading: isLoadingEvents,
+    error: eventsError,
+    refetch: refetchEvents,
+  } = useEvents(filters);
   const { data: birthdayEvents = [] } = useClientBirthdays(currentDate);
   const { data: policyRenewals = [] } = usePolicyRenewals(currentDate);
   const { data: tasks = [] } = useTasks();
@@ -166,7 +208,11 @@ export function CalendarModule() {
   }, [events, birthdayEvents, policyRenewals, tasks, filters]);
 
   // Mutations
-  const createEventMutation = useCreateEvent();
+  const openEventPage = useCallback((event: CalendarEvent | null) => {
+    setSelectedEvent(event);
+    setShowEventModal(true);
+  }, []);
+  const createEventMutation = useCreateEvent({ onView: (created) => openEventPage(created) });
   const updateEventMutation = useUpdateEvent();
   const deleteEventMutation = useDeleteEvent();
 
@@ -176,6 +222,7 @@ export function CalendarModule() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    setSearchText(value);
 
     // Debounce search
     if (searchDebounce) {
@@ -193,8 +240,7 @@ export function CalendarModule() {
   const handleCreateEvent = async (data: CreateEventInput) => {
     try {
       await createEventMutation.mutateAsync(data);
-      setShowEventModal(false);
-      setSelectedEvent(null);
+      closeEventPage();
     } catch (error) {
       console.error('Failed to create event:', error);
     }
@@ -208,8 +254,7 @@ export function CalendarModule() {
         id: selectedEvent.id,
         ...data,
       });
-      setShowEventModal(false);
-      setSelectedEvent(null);
+      closeEventPage();
     } catch (error) {
       console.error('Failed to update event:', error);
     }
@@ -217,7 +262,7 @@ export function CalendarModule() {
 
   const handleDeleteEvent = async (id: string) => {
     if (id.startsWith('task-')) {
-      toast.info('Please delete tasks in the Tasks module');
+      toast.info('Please delete tasks in To-Do');
       return false;
     }
     if (id.startsWith('renewal-')) {
@@ -229,8 +274,9 @@ export function CalendarModule() {
       return false;
     }
     const ok = await askConfirm({
-      title: 'Delete this event?',
-      confirmLabel: 'Delete event',
+      title: 'Delete event',
+      description: 'Delete this event from the calendar? This action cannot be undone.',
+      confirmLabel: 'Delete',
       destructive: true,
     });
     if (!ok) return false;
@@ -287,187 +333,267 @@ export function CalendarModule() {
     }
   };
 
-  // Count active filters
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filters.eventTypes && filters.eventTypes.length > 0) count++;
-    if (filters.eventStatuses && filters.eventStatuses.length > 0) count++;
-    if (filters.clientId) count++;
-    if (filters.dateRange?.start || filters.dateRange?.end) count++;
-    return count;
-  }, [filters]);
+  // ── Open in another module ──
+  const openTask = useCallback(
+    (taskId: string) => {
+      const next = moduleSearchParams('tasks');
+      next.set('task', taskId);
+      setSearchParams(next);
+    },
+    [setSearchParams],
+  );
+  const openClient = useCallback(
+    (clientId: string) => {
+      const next = moduleSearchParams('clients');
+      next.set('clientId', clientId);
+      setSearchParams(next);
+    },
+    [setSearchParams],
+  );
+
+  const closeEventPage = useCallback(() => {
+    setShowEventModal(false);
+    setSelectedEvent(null);
+  }, []);
+
+  // ── The open event lives in the address (?event=<id>, ?event=new) ──
+  const openEventId = showEventModal ? (selectedEvent ? selectedEvent.id : NEW_EVENT) : null;
+  useRecordInUrl('event', openEventId, {
+    ready: !isLoadingEvents,
+    openFromUrl: (id) => {
+      if (id === NEW_EVENT) {
+        if (!canCreateEvent) return 'missing';
+        openEventPage(null);
+        return 'opened';
+      }
+      const found = allEvents.find((e) => e.id === id);
+      if (found) {
+        openEventPage(found);
+        return 'opened';
+      }
+      if (isLoadingEvents) return 'waiting';
+      toast.error('Event not found', {
+        description: 'It may have been deleted, or it falls outside the dates loaded.',
+      });
+      return 'missing';
+    },
+    closeFromUrl: () => closeEventPage(),
+  });
+
+  // Top-bar breadcrumb: Work / Calendar / November 2026 (/ the open event).
+  const weekStart = new Date(currentDate);
+  weekStart.setDate(currentDate.getDate() - ((currentDate.getDay() + 6) % 7));
+  const periodLabel =
+    view === 'month'
+      ? format(currentDate, 'MMMM yyyy')
+      : view === 'week'
+        ? `Week of ${format(weekStart, 'd MMM')}`
+        : view === 'day'
+          ? format(currentDate, 'EEE d MMM')
+          : 'Agenda';
+  useBreadcrumbTrail(
+    showEventModal
+      ? [{ label: selectedEvent ? selectedEvent.title.replace(/^Task: /, '') : 'New event' }]
+      : [{ label: periodLabel }],
+  );
+
+  // Filter chips (single choice each; the old Filters dialog allowed lists,
+  // which the chips still honour when a saved state carries several).
+  const typeValue = (filters.eventTypes?.length === 1 ? filters.eventTypes[0] : 'all') as
+    EventType | 'all';
+  const statusValue = (filters.eventStatuses?.length === 1 ? filters.eventStatuses[0] : 'all') as
+    EventStatus | 'all';
+  const clientValue = filters.clientId ?? 'all';
+  const filtersActive =
+    typeValue !== 'all' || statusValue !== 'all' || clientValue !== 'all' || !!filters.search;
+  const clientOptions = useMemo(
+    () =>
+      (Array.isArray(clientList) ? clientList : [])
+        .filter((c) => c.id && c.full_name)
+        .map((c) => ({ value: c.id, label: c.full_name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [clientList],
+  );
+  const clearFilters = () => {
+    setFilters((prev) => ({
+      ...prev,
+      search: '',
+      eventTypes: [],
+      eventStatuses: [],
+      clientId: null,
+    }));
+    setSearchText('');
+  };
+
+  if (showEventModal) {
+    const current = selectedEvent
+      ? (allEvents.find((e) => e.id === selectedEvent.id) ?? selectedEvent)
+      : null;
+    return (
+      <>
+        <EventPage
+          key={current?.id ?? NEW_EVENT}
+          onClose={closeEventPage}
+          onSubmit={current ? handleUpdateEvent : handleCreateEvent}
+          onDelete={
+            canDeleteEvent
+              ? async (id) => {
+                  const success = await handleDeleteEvent(id);
+                  if (success) closeEventPage();
+                }
+              : undefined
+          }
+          event={current}
+          events={events}
+          isSubmitting={createEventMutation.isPending || updateEventMutation.isPending}
+          canEdit={canEditEvent}
+          onOpenTask={openTask}
+          onOpenClient={openClient}
+          onUpdateStatus={handleUpdateEventStatus}
+        />
+        {confirmDialog}
+      </>
+    );
+  }
+
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full sm:w-72">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+          aria-hidden="true"
+        />
+        <Input
+          aria-label="Search events"
+          placeholder="Search events…"
+          value={searchText}
+          onChange={handleSearchChange}
+          className="h-9 bg-white pl-9"
+        />
+        {searchText && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => {
+              setSearchText('');
+              setFilters((prev) => ({ ...prev, search: '' }));
+            }}
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      <FilterChip
+        label="Event type"
+        value={typeValue}
+        allValue="all"
+        allLabel="All types"
+        onChange={(v) =>
+          setFilters((prev) => ({ ...prev, eventTypes: v === 'all' ? [] : [v as EventType] }))
+        }
+        options={FILTER_TYPES.map((t) => ({ value: t, label: EVENT_TYPE_LABELS[t] }))}
+      />
+      <FilterChip
+        label="Status"
+        value={statusValue}
+        allValue="all"
+        allLabel="Any status"
+        onChange={(v) =>
+          setFilters((prev) => ({
+            ...prev,
+            eventStatuses: v === 'all' ? [] : [v as EventStatus],
+          }))
+        }
+        options={FILTER_STATUSES}
+      />
+      <FilterChip
+        label="Client"
+        value={clientValue}
+        allValue="all"
+        allLabel="All clients"
+        onChange={(v) => setFilters((prev) => ({ ...prev, clientId: v === 'all' ? null : v }))}
+        options={clientOptions}
+      />
+      {filtersActive && <ClearFiltersButton onClick={clearFilters} />}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50/30">
-      <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
-        {/* Simplified Header with Search */}
-        <div className="flex flex-col gap-6">
-          <PageHeader
-            title="Calendar & Reminders"
-            description="Your schedule for events and meetings."
-            actions={
-              <Button
-                onClick={() => {
-                  setSelectedEvent(null);
-                  setShowEventModal(true);
-                }}
-                disabled={!canCreateEvent}
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Add event
-              </Button>
-            }
-          />
-
-          <div className="bg-white p-2 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-2">
-            <div className="flex-1 relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <Input
-                placeholder="Search events..."
-                defaultValue={filters.search}
-                onChange={handleSearchChange}
-                className="pl-10 h-12 border-0 bg-transparent focus-visible:ring-0 text-lg placeholder:text-gray-400"
-              />
-              {filters.search && (
-                <button
-                  onClick={() => {
-                    setFilters((prev) => ({ ...prev, search: '' }));
-                    const input = document.querySelector(
-                      'input[placeholder="Search events..."]',
-                    ) as HTMLInputElement;
-                    if (input) input.value = '';
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-gray-100"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
-
-            <div className="flex gap-2 w-full md:w-auto px-2">
-              <Button
-                variant="ghost"
-                onClick={() => setShowFilters(true)}
-                className={`flex-1 md:flex-none h-10 px-4 ${
-                  activeFiltersCount > 0
-                    ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-                {activeFiltersCount > 0 && (
-                  <span className="ml-2 bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </Button>
+      <div className="mx-auto max-w-[1600px] space-y-5 p-6 lg:p-8">
+        <PageHeader
+          title="Calendar"
+          description="Your schedule: events, reminders, task due dates, client birthdays and policy renewals."
+          actions={
+            <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex-1 md:flex-none h-10 px-4 text-gray-600 hover:bg-gray-50"
-                    disabled={events.length === 0 || !canExport}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
+                  <Button variant="outline" disabled={!canExport}>
+                    <Download className="h-4 w-4" aria-hidden="true" />
                     Export
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+                  <DropdownMenuLabel>Export</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleExportCSV}>
-                    <Download className="mr-2 h-4 w-4" />
+                  <DropdownMenuItem onSelect={handleExportCSV} disabled={allEvents.length === 0}>
+                    <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                     Export as CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowPDFModal(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
+                  <DropdownMenuItem onSelect={() => setShowPDFModal(true)}>
+                    <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
                     Export as PDF
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          </div>
-        </div>
+              {canCreateEvent && (
+                <Button onClick={() => openEventPage(null)}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add event
+                </Button>
+              )}
+            </>
+          }
+        />
 
-        {/* Unified Calendar View */}
-        <div className="h-[calc(100vh-250px)] min-h-[600px] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <EventsCalendar
-            events={allEvents}
-            isLoading={isLoadingEvents}
-            currentDate={currentDate}
-            onDateChange={setCurrentDate}
-            onEdit={(event) => {
-              // Prevent editing tasks in event modal — redirect to Tasks module
-              if (event.id.startsWith('task-')) {
-                toast.info('Please manage tasks in the Tasks module');
-                return;
-              }
-              if (!canEditEvent) {
-                toast.error('You do not have permission to edit events');
-                return;
-              }
-              // System events (renewals, birthdays) open in read-only mode
-              // Regular events open in edit mode
-              setSelectedEvent(event);
-              setShowEventModal(true);
-            }}
-            onDelete={(canDeleteEvent ? handleDeleteEvent : undefined) as (id: string) => void}
-            onUpdateStatus={handleUpdateEventStatus}
-            onView={(event) => {
-              if (event.id.startsWith('task-')) {
-                toast.info('Please manage tasks in the Tasks module');
-                return;
-              }
-              // All non-task events open in the modal (system events render read-only)
-              setSelectedEvent(event);
-              setShowEventModal(true);
-            }}
-            onNewEvent={() => {
-              setSelectedEvent(null);
-              setShowEventModal(true);
-            }}
+        {eventsError ? (
+          <ErrorState
+            title="Unable to load your calendar"
+            description="Something went wrong while loading events. Nothing you entered was lost."
+            onRetry={() => void refetchEvents()}
+            details={eventsError instanceof Error ? eventsError.message : undefined}
           />
-        </div>
-      </div>
-
-      {/* Modals */}
-      <EventFormModal
-        open={showEventModal}
-        onClose={() => {
-          setShowEventModal(false);
-          setSelectedEvent(null);
-        }}
-        onSubmit={selectedEvent ? handleUpdateEvent : handleCreateEvent}
-        onDelete={
-          canDeleteEvent
-            ? async (id) => {
-                const success = await handleDeleteEvent(id);
-                if (success) {
-                  setShowEventModal(false);
-                  setSelectedEvent(null);
+        ) : (
+          <div className="h-[calc(100vh-220px)] min-h-[640px]">
+            <EventsCalendar
+              events={allEvents}
+              isLoading={isLoadingEvents}
+              currentDate={currentDate}
+              onDateChange={setCurrentDate}
+              view={view}
+              onViewChange={setView}
+              toolbar={toolbar}
+              onView={(event) => {
+                if (event.id.startsWith('task-')) {
+                  openTask(event.id.slice('task-'.length));
+                  return;
                 }
-              }
-            : undefined
-        }
-        event={selectedEvent}
-        events={events}
-        isSubmitting={createEventMutation.isPending || updateEventMutation.isPending}
-      />
+                openEventPage(event);
+              }}
+              onOpenTask={openTask}
+              onOpenClient={openClient}
+              onNewEvent={() => openEventPage(null)}
+              canCreate={canCreateEvent}
+            />
+          </div>
+        )}
+      </div>
 
       <CalendarPDFExportModal
         open={showPDFModal}
         onClose={() => setShowPDFModal(false)}
         events={allEvents}
-      />
-
-      <FiltersDrawer
-        open={showFilters}
-        onClose={() => setShowFilters(false)}
-        filters={filters}
-        onApplyFilters={setFilters}
       />
       {confirmDialog}
     </div>

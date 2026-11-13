@@ -1,8 +1,10 @@
 /**
- * EventFormModal
+ * EventPage
  *
- * One dialog for creating and editing calendar events, plus a read-only view
- * for system-generated ones (birthdays, policy renewals, tasks).
+ * A calendar event as a page of its own (design system: records and long
+ * forms are pages). An existing event opens in view; Edit turns the same page
+ * into the form. A new event opens straight in the form. System-generated
+ * entries (birthdays, policy renewals, tasks) are view only.
  *
  * The form is deliberately short: title, type, when, where, clients, repeat,
  * notes. "When" is a date + start time + duration instead of two raw
@@ -15,7 +17,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format, isBefore } from 'date-fns';
 import {
   AlertTriangle,
-  Cake,
   Calendar as CalendarIcon,
   Check,
   ChevronsUpDown,
@@ -23,21 +24,19 @@ import {
   Info,
   MapPin,
   Phone,
-  RefreshCw,
   Users,
   Video,
   X,
 } from 'lucide-react';
-import { toast } from 'sonner';
-
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
+import { FormErrorBanner } from '../../../layout/page';
+import { BackLink } from '../../../layout/page/FilterControls';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { NumberInputField } from '../../../../ui/number-input';
@@ -231,67 +230,107 @@ function Hint({
 }
 
 // ============================================================================
-// READ-ONLY VIEW FOR SYSTEM EVENTS
+// VIEW (the page before Edit; the only view for system entries)
 // ============================================================================
 
-function SystemEventView({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
-  const isRenewal = event.event_type === 'renewal';
-  const isBirthday = event.event_type === 'birthday';
-  const Icon = isRenewal ? RefreshCw : isBirthday ? Cake : CalendarIcon;
-  const iconStyle = isRenewal
-    ? 'bg-amber-100 text-amber-600'
-    : isBirthday
-      ? 'bg-pink-100 text-pink-600'
-      : 'bg-blue-100 text-blue-600';
-  const note = isRenewal
-    ? 'Policy renewal reminders come from policy inception dates. Update the policy in the client profile to change this date.'
-    : isBirthday
-      ? 'Birthday reminders come from the client date of birth. Update the client profile to change this date.'
-      : 'Task events are managed in the Tasks module.';
+function systemNote(event: CalendarEvent): string {
+  if (event.event_type === 'renewal')
+    return 'Policy renewal reminders come from policy inception dates. Update the policy in the client profile to change this date.';
+  if (event.event_type === 'birthday')
+    return 'Birthday reminders come from the client date of birth. Update the client profile to change this date.';
+  return 'Task due dates are managed in To-Do.';
+}
 
+const LOCATION_LABEL: Record<string, string> = {
+  video: 'Video call',
+  virtual: 'Video call',
+  in_person: 'In person',
+  phone: 'Phone',
+  other: 'Other',
+};
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="contents">
-      <DialogHeader className="px-6 pt-6 pb-4 text-left">
-        <DialogTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900">
-          <span className={cn('rounded-lg p-2', iconStyle)}>
-            <Icon className="h-5 w-5" />
-          </span>
-          {EVENT_TYPE_LABELS[event.event_type] || 'Event'}
-        </DialogTitle>
-        <DialogDescription>
-          This event is generated automatically and cannot be edited.
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="space-y-4 px-6 pb-6">
-        <Badge className={cn(EVENT_TYPE_COLORS[event.event_type], 'border-0 font-medium')}>
-          {EVENT_TYPE_LABELS[event.event_type]}
-        </Badge>
-        <p className="text-base font-semibold text-gray-900">{event.title}</p>
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-800">
-          <p className="font-medium">{format(new Date(event.start_at), 'EEEE, d MMMM yyyy')}</p>
-          <p className="text-gray-600">
-            {format(new Date(event.start_at), 'HH:mm')} – {format(new Date(event.end_at), 'HH:mm')}
-          </p>
-        </div>
-        {event.client && (
-          <p className="flex items-center gap-2 text-sm text-gray-700">
-            <Users className="h-4 w-4 text-gray-400" />
-            {event.client.full_name}
-          </p>
-        )}
-        {event.description && (
-          <p className="whitespace-pre-wrap text-sm text-gray-700">{event.description}</p>
-        )}
-        <Hint tone="info">{note}</Hint>
-      </div>
-
-      <DialogFooter className="border-t border-gray-100 px-6 py-4">
-        <Button variant="outline" onClick={onClose}>
-          Close
-        </Button>
-      </DialogFooter>
+    <div className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[160px_1fr] sm:gap-4">
+      <dt className="text-xs font-medium text-nw-text-3 sm:pt-0.5">{label}</dt>
+      <dd className="text-sm text-nw-ink">{children}</dd>
     </div>
+  );
+}
+
+function EventDetails({ event }: { event: CalendarEvent }) {
+  const system = isSystemEvent(event);
+  const start = new Date(event.start_at);
+  const end = new Date(event.end_at);
+  const recurrence = parseRecurrenceRule(event.recurrence_rule);
+  const attendees =
+    event.attendees && !Array.isArray(event.attendees)
+      ? Object.values(event.attendees as Record<string, { name?: string }>)
+          .map((a) => a?.name)
+          .filter(Boolean)
+      : [];
+  return (
+    <dl className="divide-y divide-nw-line-2 rounded-xl border border-nw-line bg-white">
+      <DetailRow label="Type">
+        <Badge className={cn(EVENT_TYPE_COLORS[event.event_type], 'border-0 font-medium')}>
+          {EVENT_TYPE_LABELS[event.event_type] || 'Event'}
+        </Badge>
+      </DetailRow>
+      <DetailRow label="When">
+        {format(start, 'EEEE, d MMMM yyyy')}
+        {!system && (
+          <span className="text-nw-text-2">
+            {' '}
+            · {format(start, 'HH:mm')}–{format(end, 'HH:mm')}
+          </span>
+        )}
+      </DetailRow>
+      {!system && (
+        <DetailRow label="Where">
+          {LOCATION_LABEL[event.location_type] ?? event.location_type}
+          {event.location ? ` · ${event.location}` : ''}
+          {event.video_link && (
+            <>
+              {' · '}
+              <a
+                href={event.video_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-nw-violet-600 underline"
+              >
+                Join meeting
+              </a>
+            </>
+          )}
+        </DetailRow>
+      )}
+      {!system && (
+        <DetailRow label="Repeats">
+          {recurrence.frequency === 'none'
+            ? 'Does not repeat'
+            : `${REPEAT_OPTIONS.find((o) => o.value === recurrence.frequency)?.label ?? recurrence.frequency}${
+                recurrence.interval > 1 ? `, every ${recurrence.interval}` : ''
+              }${recurrence.endDate ? ` until ${recurrence.endDate}` : ''}`}
+        </DetailRow>
+      )}
+      {(event.client || attendees.length > 0) && (
+        <DetailRow label="Clients">
+          {attendees.length > 0 ? attendees.join(', ') : event.client?.full_name}
+        </DetailRow>
+      )}
+      {!system && (
+        <DetailRow label="Status">
+          <span className="capitalize">{event.status}</span>
+        </DetailRow>
+      )}
+      <DetailRow label="Notes">
+        {event.description ? (
+          <span className="whitespace-pre-wrap">{event.description}</span>
+        ) : (
+          <span className="text-nw-text-3">No notes</span>
+        )}
+      </DetailRow>
+    </dl>
   );
 }
 
@@ -299,14 +338,31 @@ function SystemEventView({ event, onClose }: { event: CalendarEvent; onClose: ()
 // FORM
 // ============================================================================
 
-interface EventFormModalProps {
-  open: boolean;
+interface EventPageProps {
+  /** Leaves the page, back to the calendar. */
   onClose: () => void;
   onSubmit: (data: CreateEventInput) => void;
   onDelete?: (id: string) => void;
+  /** null / undefined for a new event. */
   event?: CalendarEvent | null;
   events?: CalendarEvent[];
   isSubmitting?: boolean;
+  /** An existing event opens in 'view' unless told otherwise. */
+  initialMode?: 'view' | 'edit';
+  /** Without edit rights the page stays in view. */
+  canEdit?: boolean;
+  /** A task's due date: open the task in To-Do. */
+  onOpenTask?: (taskId: string) => void;
+  /** A birthday or renewal: open the client. */
+  onOpenClient?: (clientId: string) => void;
+  /** Mark a scheduled event completed or cancelled (under ⋯). */
+  onUpdateStatus?: (id: string, status: 'completed' | 'cancelled') => void;
+}
+
+interface FormErrors {
+  title?: string;
+  videoLink?: string;
+  repeat?: string;
 }
 
 interface FormState {
@@ -364,15 +420,25 @@ function formFromEvent(event: CalendarEvent, knownClientIds: Set<string>): FormS
   };
 }
 
-export function EventFormModal({
-  open,
+export function EventPage({
   onClose,
   onSubmit,
   onDelete,
   event,
   events = [],
   isSubmitting = false,
-}: EventFormModalProps) {
+  initialMode,
+  canEdit = true,
+  onOpenTask,
+  onOpenClient,
+  onUpdateStatus,
+}: EventPageProps) {
+  const open = true;
+  const system = isSystemEvent(event);
+  const [mode, setMode] = useState<'view' | 'edit'>(
+    !event ? 'edit' : system || !canEdit ? 'view' : (initialMode ?? 'view'),
+  );
+  const [errors, setErrors] = useState<FormErrors>({});
   const clientSearchInputGuard = useSearchInputAutofillGuard({
     id: 'calendar-event-client-search',
   });
@@ -393,8 +459,9 @@ export function EventFormModal({
     } else {
       setForm(emptyForm());
     }
+    setErrors({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event, open]);
+  }, [event?.id, open, mode]);
 
   // Derived timing
   const startAt = useMemo(() => combineDateAndTime(form.date, form.time), [form.date, form.time]);
@@ -431,16 +498,16 @@ export function EventFormModal({
     e.preventDefault();
 
     const title = form.title.trim();
-    if (!title) {
-      toast.error('Give the event a title');
-      return;
-    }
+    const next: FormErrors = {};
+    if (!title) next.title = 'Give the event a title';
     if (form.locationType === 'video' && form.videoLink && !isValidMeetingLink(form.videoLink)) {
-      toast.error('The meeting link must start with http:// or https://');
-      return;
+      next.videoLink = 'The meeting link must start with http:// or https://';
     }
-    if (repeatError) {
-      toast.error(repeatError);
+    if (repeatError) next.repeat = repeatError;
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      const first = next.title ? 'event-title' : next.videoLink ? 'event-link' : 'event-repeat';
+      document.getElementById(first)?.focus();
       return;
     }
 
@@ -473,41 +540,141 @@ export function EventFormModal({
       ? null
       : FREQUENCY_UNIT[form.recurrence.frequency][form.recurrence.interval === 1 ? 0 : 1];
 
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[560px]">
-        {event && isSystemEvent(event) ? (
-          <SystemEventView event={event} onClose={onClose} />
-        ) : (
-          <form onSubmit={handleSubmit} className="flex max-h-[88vh] flex-col">
-            <DialogHeader className="px-6 pt-6 pb-2 text-left">
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                {isEditing ? 'Edit Event' : 'New Event'}
-              </DialogTitle>
-              <DialogDescription>
-                {isEditing
-                  ? 'Change the details below and save.'
-                  : 'Pick a time, add who it is with, and you are done.'}
-              </DialogDescription>
-            </DialogHeader>
+  const errorCount = Object.values(errors).filter(Boolean).length;
+  const taskId = event?.id.startsWith('task-') ? event.id.slice('task-'.length) : null;
+  const clientId = event && system ? event.client_id : null;
+  const subtitle = !event
+    ? 'New event'
+    : mode === 'edit'
+      ? 'Edit event'
+      : `${EVENT_TYPE_LABELS[event.event_type] || 'Event'} · ${format(new Date(event.start_at), 'EEE, d MMM yyyy')}${
+          system
+            ? ''
+            : ` · ${format(new Date(event.start_at), 'HH:mm')}–${format(new Date(event.end_at), 'HH:mm')}`
+        }`;
+  const cancelEdit = () => {
+    if (event) setMode('view');
+    else onClose();
+  };
+  const canMark = !!event && !system && !!onUpdateStatus && canEdit && event.status === 'scheduled';
+  const deleteMenu =
+    event && !system && (onDelete || canMark) ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" aria-label="More event actions">
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {canMark && (
+            <>
+              <DropdownMenuItem onSelect={() => onUpdateStatus!(event.id, 'completed')}>
+                Mark as completed
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onUpdateStatus!(event.id, 'cancelled')}>
+                Mark as cancelled
+              </DropdownMenuItem>
+            </>
+          )}
+          {onDelete && (
+            <DropdownMenuItem
+              onSelect={() => onDelete(event.id)}
+              className="text-red-600 focus:bg-red-50 focus:text-red-700"
+            >
+              Delete…
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null;
 
-            <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+  return (
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+      <BackLink label="Back to calendar" onClick={onClose} />
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-[26px] leading-tight font-semibold tracking-tight break-words text-nw-ink">
+              {event ? event.title : form.title.trim() || 'New event'}
+            </h1>
+            <p className="mt-1 text-sm text-nw-text-3">{subtitle}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {mode === 'view' ? (
+              <>
+                {taskId && onOpenTask && (
+                  <Button type="button" variant="outline" onClick={() => onOpenTask(taskId)}>
+                    Open task
+                  </Button>
+                )}
+                {clientId && onOpenClient && (
+                  <Button type="button" variant="outline" onClick={() => onOpenClient(clientId)}>
+                    Open client
+                  </Button>
+                )}
+                {deleteMenu}
+                {!system && canEdit && (
+                  <Button type="button" onClick={() => setMode('edit')}>
+                    Edit
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={cancelEdit}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                {deleteMenu}
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving…' : isEditing ? 'Save changes' : 'Create event'}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {mode === 'view' && event ? (
+          <div className="flex max-w-[880px] flex-col gap-3">
+            {system && <Hint tone="info">{systemNote(event)}</Hint>}
+            <EventDetails event={event} />
+          </div>
+        ) : (
+          <div className="flex max-w-[880px] flex-col gap-4 rounded-xl border border-nw-line bg-white p-6">
+            <FormErrorBanner
+              count={errorCount}
+              action={isEditing ? 'save the event' : 'create the event'}
+            />
+            <div className="space-y-6">
               {/* Title */}
-              <Input
-                id="event-title"
-                aria-label="Event title"
-                value={form.title}
-                onChange={(e) => patch({ title: e.target.value })}
-                placeholder="Add a title"
-                autoFocus
-                required
-                className="h-12 border-gray-200 text-base font-medium placeholder:font-normal"
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="event-title" className="text-sm font-medium text-gray-800">
+                  Title <span className="text-red-600">*</span>
+                </Label>
+                <Input
+                  id="event-title"
+                  aria-label="Event title"
+                  value={form.title}
+                  onChange={(e) => {
+                    patch({ title: e.target.value });
+                    if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
+                  }}
+                  placeholder="Add a title"
+                  autoFocus={!event}
+                  aria-invalid={!!errors.title}
+                  aria-describedby={errors.title ? 'event-title-error' : undefined}
+                  className="h-11 border-gray-200 text-base font-medium placeholder:font-normal"
+                />
+                {errors.title && (
+                  <p id="event-title-error" className="text-xs text-red-600">
+                    {errors.title}
+                  </p>
+                )}
+              </div>
 
               {/* Type */}
               <Field label="Type">
@@ -632,15 +799,24 @@ export function EventFormModal({
                   />
                 )}
                 {form.locationType === 'video' && (
-                  <Input
-                    aria-label="Meeting link"
-                    type="url"
-                    inputMode="url"
-                    value={form.videoLink}
-                    onChange={(e) => patch({ videoLink: e.target.value })}
-                    placeholder="Paste the meeting link (optional)"
-                    className="h-10 border-gray-200"
-                  />
+                  <>
+                    <Input
+                      id="event-link"
+                      aria-label="Meeting link"
+                      type="url"
+                      inputMode="url"
+                      value={form.videoLink}
+                      onChange={(e) => {
+                        patch({ videoLink: e.target.value });
+                        if (errors.videoLink)
+                          setErrors((prev) => ({ ...prev, videoLink: undefined }));
+                      }}
+                      placeholder="Paste the meeting link (optional)"
+                      aria-invalid={!!errors.videoLink}
+                      className="h-10 border-gray-200"
+                    />
+                    {errors.videoLink && <Hint tone="error">{errors.videoLink}</Hint>}
+                  </>
                 )}
               </Field>
 
@@ -737,7 +913,11 @@ export function EventFormModal({
                       patch({ recurrence: { ...form.recurrence, frequency } })
                     }
                   >
-                    <SelectTrigger aria-label="Repeat" className="h-10 w-full sm:w-[150px]">
+                    <SelectTrigger
+                      id="event-repeat"
+                      aria-label="Repeat"
+                      className="h-10 w-full sm:w-[150px]"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -800,37 +980,9 @@ export function EventFormModal({
                 />
               </Field>
             </div>
-
-            <DialogFooter className="flex-row items-center justify-between border-t border-gray-100 bg-gray-50/60 px-6 py-4 sm:justify-between">
-              {event && onDelete ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onDelete(event.id)}
-                  disabled={isSubmitting}
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                >
-                  Delete
-                </Button>
-              ) : (
-                <span />
-              )}
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-purple-600 text-white hover:bg-purple-700"
-                >
-                  {isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Event'}
-                </Button>
-              </div>
-            </DialogFooter>
-          </form>
+          </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </form>
+    </div>
   );
 }

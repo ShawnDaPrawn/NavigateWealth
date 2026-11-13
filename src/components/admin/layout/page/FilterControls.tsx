@@ -66,7 +66,7 @@ export function FilterChip<T extends string>({
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-44">
+      <DropdownMenuContent align="start" className="max-h-80 min-w-44 overflow-y-auto">
         {[{ value: allValue, label: allLabel } as FilterChipOption<T>, ...options].map((option) => (
           <DropdownMenuItem
             key={option.value}
