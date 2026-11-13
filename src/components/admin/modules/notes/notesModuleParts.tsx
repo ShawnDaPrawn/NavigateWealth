@@ -76,55 +76,51 @@ export function NoteGrid({
   );
 }
 
-export function StatCard({
-  icon: Icon,
-  label,
-  value,
-  iconBg,
-  iconColor,
+export function EmptyState({
+  isSearch,
+  isArchived = false,
+  onNewNote,
+  onClearFilters,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: number;
-  iconBg: string;
-  iconColor: string;
+  isSearch: boolean;
+  isArchived?: boolean;
+  onNewNote: () => void;
+  onClearFilters?: () => void;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconBg}`}>
-        <Icon className={`h-5 w-5 ${iconColor}`} />
-      </div>
-      <div>
-        <p className="text-xl font-bold text-gray-900">{value}</p>
-        <p className="text-xs text-gray-500">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-export function EmptyState({ isSearch, onNewNote }: { isSearch: boolean; onNewNote: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-        <StickyNote className="h-8 w-8 text-gray-400" />
+    <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white px-6 py-14 text-center">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+        <StickyNote className="h-6 w-6 text-gray-400" aria-hidden="true" />
       </div>
       {isSearch ? (
-        <div className="contents">
-          <h3 className="text-lg font-semibold text-gray-900">No notes found</h3>
-          <p className="text-sm text-gray-500 mt-1 max-w-sm">
+        <>
+          <h3 className="text-base font-semibold text-nw-ink">No notes found</h3>
+          <p className="mt-1 max-w-sm text-sm text-nw-text-3">
             Try adjusting your search terms or filters.
           </p>
-        </div>
+          {onClearFilters && (
+            <Button variant="outline" size="sm" className="mt-4" onClick={onClearFilters}>
+              Clear filters
+            </Button>
+          )}
+        </>
+      ) : isArchived ? (
+        <>
+          <h3 className="text-base font-semibold text-nw-ink">No archived notes</h3>
+          <p className="mt-1 max-w-sm text-sm text-nw-text-3">
+            Notes you archive are kept here, out of the way.
+          </p>
+        </>
       ) : (
-        <div className="contents">
-          <h3 className="text-lg font-semibold text-gray-900">No notes yet</h3>
-          <p className="text-sm text-gray-500 mt-1 max-w-sm">
+        <>
+          <h3 className="text-base font-semibold text-nw-ink">No notes yet</h3>
+          <p className="mt-1 max-w-sm text-sm text-nw-text-3">
             Create your first note to start capturing ideas, meeting notes, and client information.
           </p>
-          <Button onClick={onNewNote} className="mt-4 bg-purple-600 hover:bg-purple-700 text-white">
-            <Plus className="h-4 w-4 mr-1" /> Create First Note
+          <Button onClick={onNewNote} size="sm" className="mt-4">
+            <Plus className="h-4 w-4" aria-hidden="true" /> Create first note
           </Button>
-        </div>
+        </>
       )}
     </div>
   );
