@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { RouterProvider } from 'react-router';
+import { RouterProvider, useLocation } from 'react-router';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../components/auth/AuthContext';
 import { AdminDataPrefetch } from '../components/providers/AdminDataPrefetch';
@@ -76,6 +76,31 @@ const queryClient = new QueryClient({
   }),
 });
 
+/**
+ * The admin uses the design system's toasts (bottom-right; success dark,
+ * past tense; errors white with a red border). The rest of the site keeps
+ * its existing toasts.
+ */
+function AreaToaster() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/admin')) {
+    return (
+      <Toaster
+        position="bottom-right"
+        duration={5000}
+        toastOptions={{
+          classNames: {
+            success: '!border-nw-ink !bg-nw-ink !text-white [&_[data-description]]:!text-white/75',
+            error: '!border-red-500 !bg-white !text-nw-ink',
+            actionButton: '!bg-transparent !font-semibold !text-nw-violet-600',
+          },
+        }}
+      />
+    );
+  }
+  return <Toaster position="top-right" richColors />;
+}
+
 function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
 
@@ -91,7 +116,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           covers a page whose chunk is loading or failed to load. Signed-in
           only: everything behind a sign-in is server-backed. */}
       <OfflineScreen enabled={isAuthenticated} />
-      <Toaster position="top-right" richColors />
+      <AreaToaster />
     </>
   );
 }
