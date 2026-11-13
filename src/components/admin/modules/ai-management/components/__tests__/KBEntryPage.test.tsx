@@ -74,7 +74,8 @@ describe('KBEntryPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /save and make live/i }));
 
-    await waitFor(() => expect(screen.getByText('Give the entry a title')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Add a title')).toBeDefined());
+    expect(screen.getByText(/^Fix \d fields? to save the entry\.$/)).toBeDefined();
     expect(screen.getByText('Add the content Vasco should know')).toBeDefined();
     expect(onSubmit).not.toHaveBeenCalled();
   });
