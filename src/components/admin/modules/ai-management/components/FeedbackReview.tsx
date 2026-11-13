@@ -6,20 +6,32 @@
  */
 
 import { useState, useMemo } from 'react';
-import { ThumbsUp, ThumbsDown, Search, Loader2, Clock, Filter, Inbox } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Search, Loader2, Clock, Inbox } from 'lucide-react';
 import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
-import { Button } from '../../../../ui/button';
+import { Tabs } from '../../../../ui/tabs';
 import { cn } from '../../../../ui/utils';
+import { SegmentedList, SegmentedTrigger, StatCard, useUrlState } from '../../../layout/page';
 import { useFeedback } from '../hooks';
 import { FEEDBACK_RATING_CONFIG } from '../constants';
 import type { FeedbackRating, FeedbackEntry } from '../types';
 
 type FilterRating = FeedbackRating | 'all';
+const RATING_FILTERS: Array<{ id: FilterRating; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'positive', label: 'Positive' },
+  { id: 'negative', label: 'Negative' },
+];
+const RATING_FILTER_IDS = RATING_FILTERS.map((f) => f.id);
 
 export function FeedbackReview() {
   const { data: feedback, isLoading } = useFeedback();
-  const [ratingFilter, setRatingFilter] = useState<FilterRating>('all');
+  // The rating filter is in the address (?tab=feedback&rating=negative).
+  const [ratingFilter, setRatingFilter] = useUrlState<FilterRating>(
+    'rating',
+    'all',
+    RATING_FILTER_IDS,
+  );
   const [searchTerm, setSearchTerm] = useState('');
 
   const filtered = useMemo(() => {
@@ -58,18 +70,9 @@ export function FeedbackReview() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
-          <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-          <p className="text-xs text-gray-500">Total Feedback</p>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
-          <p className="text-2xl font-bold text-green-600">{stats.positive}</p>
-          <p className="text-xs text-gray-500">Positive</p>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
-          <p className="text-2xl font-bold text-red-600">{stats.negative}</p>
-          <p className="text-xs text-gray-500">Negative</p>
-        </div>
+        <StatCard label="Total feedback" value={stats.total} />
+        <StatCard label="Positive" value={stats.positive} />
+        <StatCard label="Negative" value={stats.negative} />
       </div>
 
       {/* Filters */}
@@ -77,31 +80,27 @@ export function FeedbackReview() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search feedback content..."
+            placeholder="Search feedback content…"
+            aria-label="Search feedback"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
           />
         </div>
-        <div className="flex gap-1.5">
-          {(['all', 'positive', 'negative'] as FilterRating[]).map((rating) => (
-            <Button
-              key={rating}
-              variant={ratingFilter === rating ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setRatingFilter(rating)}
-              className={cn(
-                'gap-1.5 capitalize',
-                ratingFilter === rating && 'bg-purple-600 hover:bg-purple-700',
-              )}
-            >
-              {rating === 'positive' && <ThumbsUp className="h-3.5 w-3.5" />}
-              {rating === 'negative' && <ThumbsDown className="h-3.5 w-3.5" />}
-              {rating === 'all' && <Filter className="h-3.5 w-3.5" />}
-              {rating}
-            </Button>
-          ))}
-        </div>
+        <Tabs
+          value={ratingFilter}
+          onValueChange={(value) => setRatingFilter(value as FilterRating)}
+        >
+          <SegmentedList aria-label="Filter by rating">
+            {RATING_FILTERS.map((f) => (
+              <SegmentedTrigger key={f.id} value={f.id} className="gap-1.5">
+                {f.id === 'positive' && <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />}
+                {f.id === 'negative' && <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                {f.label}
+              </SegmentedTrigger>
+            ))}
+          </SegmentedList>
+        </Tabs>
       </div>
 
       {/* Feedback List */}

@@ -59,11 +59,11 @@ export function RefundClustersPanel({
     <div className="space-y-4">
       <SubPanelHeader
         icon={<Layers />}
-        title="Refund Clusters"
+        title="Refund clusters"
         subtitle="Group entities and capture their tax, banking and identity details."
         actions={
           <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Create New Cluster
+            <Plus className="h-4 w-4 mr-1" /> Create new cluster
           </Button>
         }
       />
@@ -94,7 +94,7 @@ export function RefundClustersPanel({
           {showArchived
             ? 'No archived clusters.'
             : clusters.length === 0
-              ? 'No refund clusters yet. Click "Create New Cluster" to add the first one.'
+              ? 'No refund clusters yet. Click "Create new cluster" to add the first one.'
               : 'No clusters match your search.'}
         </div>
       ) : (

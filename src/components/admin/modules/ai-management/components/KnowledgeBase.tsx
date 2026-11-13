@@ -9,6 +9,8 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router';
+import { toast } from 'sonner';
 import {
   Search,
   Plus,
@@ -57,7 +59,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
+import { Tabs } from '../../../../ui/tabs';
 import { cn } from '../../../../ui/utils';
+import { SegmentedList, SegmentedTrigger, useRecordInUrl, useUrlState } from '../../../layout/page';
 import {
   useKBEntries,
   useCreateKBEntry,
@@ -72,9 +76,10 @@ import {
   KB_DEFAULT_CATEGORIES,
   KB_IMPORTANCE_OPTIONS,
   importanceFromPriority,
+  KB_ENTRY_PARAM,
 } from '../constants';
 import { formatDate } from '../format';
-import { KBEntryModal } from './KBEntryModal';
+import { KBEntryPage } from './KBEntryPage';
 import { KnowledgeSourcesPanel } from './KnowledgeSourcesPanel';
 import type {
   KBEntry,
@@ -103,6 +108,11 @@ const STATUS_FILTERS: Array<{ id: StatusFilter; label: string }> = [
   { id: 'draft', label: 'Draft' },
   { id: 'archived', label: 'Archived' },
 ];
+const STATUS_FILTER_IDS = STATUS_FILTERS.map((f) => f.id);
+const TYPE_FILTER_IDS = ['all', ...Object.keys(KB_ENTRY_TYPE_CONFIG)] as Array<KBEntryType | 'all'>;
+
+/** The entry form open on the page: a new entry, or the entry being edited. */
+type OpenForm = { mode: 'new' } | { mode: 'edit'; entry: KBEntry };
 
 export function KnowledgeBase() {
   const { data: entries, isLoading } = useKBEntries();
@@ -112,17 +122,37 @@ export function KnowledgeBase() {
   const updateEntry = useUpdateKBEntry();
   const deleteEntry = useDeleteKBEntry();
 
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<KBEntry | null>(null);
+  // The entry form is a page with its own address (?entry=new or ?entry=<id>)
+  const [openForm, setOpenForm] = useState<OpenForm | null>(null);
+  const editingEntry = openForm?.mode === 'edit' ? openForm.entry : null;
   const [deleteConfirm, setDeleteConfirm] = useState<KBEntry | null>(null);
   const [previewEntry, setPreviewEntry] = useState<KBEntry | null>(null);
 
-  // Filters
+  // Filters — status, format and category are in the address; search is not
+  const [, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [typeFilter, setTypeFilter] = useState<KBEntryType | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useUrlState<StatusFilter>(
+    'status',
+    'all',
+    STATUS_FILTER_IDS,
+  );
+  const [typeFilter, setTypeFilter] = useUrlState<KBEntryType | 'all'>(
+    'format',
+    'all',
+    TYPE_FILTER_IDS,
+  );
+
+  const categories = useMemo(() => {
+    const set = new Set<string>(KB_DEFAULT_CATEGORIES as unknown as string[]);
+    entries?.forEach((e) => e.category && set.add(e.category));
+    return Array.from(set).sort();
+  }, [entries]);
+  const categoryFilterIds = useMemo(() => ['all', ...categories], [categories]);
+  const [categoryFilter, setCategoryFilter] = useUrlState<string>(
+    'category',
+    'all',
+    categoryFilterIds,
+  );
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = { all: 0, active: 0, draft: 0, archived: 0 };
@@ -156,12 +186,6 @@ export function KnowledgeBase() {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [entries, search, statusFilter, typeFilter, categoryFilter]);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>(KB_DEFAULT_CATEGORIES as unknown as string[]);
-    entries?.forEach((e) => e.category && set.add(e.category));
-    return Array.from(set).sort();
-  }, [entries]);
-
   const isFiltered =
     search.trim() !== '' ||
     statusFilter !== 'all' ||
@@ -170,33 +194,60 @@ export function KnowledgeBase() {
 
   const clearFilters = () => {
     setSearch('');
-    setStatusFilter('all');
-    setTypeFilter('all');
-    setCategoryFilter('all');
+    // One address change: separate setters in one tick would overwrite each other.
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        params.delete('status');
+        params.delete('format');
+        params.delete('category');
+        return params;
+      },
+      { replace: true },
+    );
   };
 
-  const handleCreate = useCallback(() => {
-    setEditingEntry(null);
-    setModalOpen(true);
-  }, []);
+  const handleCreate = useCallback(() => setOpenForm({ mode: 'new' }), []);
 
-  const handleEdit = useCallback((entry: KBEntry) => {
-    setEditingEntry(entry);
-    setModalOpen(true);
-  }, []);
+  const handleEdit = useCallback((entry: KBEntry) => setOpenForm({ mode: 'edit', entry }), []);
 
-  const handleModalSubmit = useCallback(
+  const closeForm = useCallback(() => setOpenForm(null), []);
+
+  useRecordInUrl(
+    KB_ENTRY_PARAM,
+    openForm ? (openForm.mode === 'new' ? 'new' : openForm.entry.id) : null,
+    {
+      ready: !isLoading,
+      openFromUrl: (id) => {
+        if (id === 'new') {
+          setOpenForm({ mode: 'new' });
+          return 'opened';
+        }
+        if (!entries) return 'waiting';
+        const entry = entries.find((e) => e.id === id);
+        if (!entry) {
+          toast.error('Entry not found');
+          return 'missing';
+        }
+        setOpenForm({ mode: 'edit', entry });
+        return 'opened';
+      },
+      closeFromUrl: () => setOpenForm(null),
+    },
+  );
+
+  const handleFormSubmit = useCallback(
     (data: CreateKBEntryInput | UpdateKBEntryInput) => {
       if (editingEntry) {
         updateEntry.mutate(
           { id: editingEntry.id, input: data as UpdateKBEntryInput },
-          { onSuccess: () => setModalOpen(false) },
+          { onSuccess: closeForm },
         );
       } else {
-        createEntry.mutate(data as CreateKBEntryInput, { onSuccess: () => setModalOpen(false) });
+        createEntry.mutate(data as CreateKBEntryInput, { onSuccess: closeForm });
       }
     },
-    [editingEntry, updateEntry, createEntry],
+    [editingEntry, updateEntry, createEntry, closeForm],
   );
 
   const handleStatusChange = useCallback(
@@ -211,6 +262,18 @@ export function KnowledgeBase() {
       deleteEntry.mutate(deleteConfirm.id, { onSuccess: () => setDeleteConfirm(null) });
     }
   }, [deleteConfirm, deleteEntry]);
+
+  // An open entry form is the page.
+  if (openForm) {
+    return (
+      <KBEntryPage
+        entry={editingEntry}
+        onClose={closeForm}
+        onSubmit={handleFormSubmit}
+        isSubmitting={createEntry.isPending || updateEntry.isPending}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -245,7 +308,7 @@ export function KnowledgeBase() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search entries..."
+              placeholder="Search entries…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -253,29 +316,19 @@ export function KnowledgeBase() {
             />
           </div>
 
-          <div
-            className="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50 self-start"
-            role="group"
-            aria-label="Filter by status"
+          <Tabs
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
           >
-            {STATUS_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setStatusFilter(f.id)}
-                aria-pressed={statusFilter === f.id}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
-                  statusFilter === f.id
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900',
-                )}
-              >
-                {f.label}
-                <span className="ml-1 text-gray-400 tabular-nums">{counts[f.id]}</span>
-              </button>
-            ))}
-          </div>
+            <SegmentedList aria-label="Filter by status">
+              {STATUS_FILTERS.map((f) => (
+                <SegmentedTrigger key={f.id} value={f.id}>
+                  {f.label}
+                  <span className="ml-1 text-gray-400 tabular-nums">{counts[f.id]}</span>
+                </SegmentedTrigger>
+              ))}
+            </SegmentedList>
+          </Tabs>
 
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as KBEntryType | 'all')}>
             <SelectTrigger className="w-full lg:w-[150px]" aria-label="Filter by format">
@@ -366,15 +419,6 @@ export function KnowledgeBase() {
           </div>
         )}
       </section>
-
-      {/* Create/Edit Modal */}
-      <KBEntryModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        entry={editingEntry}
-        onSubmit={handleModalSubmit}
-        isSubmitting={createEntry.isPending || updateEntry.isPending}
-      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>

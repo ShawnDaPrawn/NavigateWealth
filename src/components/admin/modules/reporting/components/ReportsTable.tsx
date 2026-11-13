@@ -26,7 +26,6 @@ import {
   Settings,
   FileSpreadsheet,
   BarChart3,
-  Plus,
   Users,
   ClipboardList,
   ShieldCheck,
@@ -116,18 +115,23 @@ export function ReportsTable({
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="relative w-full max-w-md">
-        <Search
-          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          placeholder="Search reports..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-          aria-label="Search reports"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            placeholder="Search reports…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            aria-label="Search reports"
+          />
+        </div>
+        <span className="ml-auto text-sm text-nw-text-3">
+          {reports.length} {reports.length === 1 ? 'report' : 'reports'}
+        </span>
       </div>
 
       {/* Table */}
@@ -136,13 +140,13 @@ export function ReportsTable({
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead style={{ width: '350px' }} scope="col">
-                Report Name
+                Report
               </TableHead>
               <TableHead style={{ width: '120px' }} scope="col">
                 Category
               </TableHead>
               <TableHead style={{ width: '150px' }} scope="col">
-                Last Run
+                Last run
               </TableHead>
               <TableHead style={{ width: '120px' }} scope="col">
                 Format
@@ -160,16 +164,8 @@ export function ReportsTable({
                     <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-4" />
                     <h3 className="text-lg font-medium mb-2">No reports found</h3>
                     <p className="text-muted-foreground mb-4">
-                      {searchQuery
-                        ? 'Try adjusting your search query.'
-                        : 'Create your first report to get started with analytics.'}
+                      {searchQuery ? 'Try another search.' : 'There are no reports to run.'}
                     </p>
-                    {!searchQuery && (
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Report
-                      </Button>
-                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -239,7 +235,7 @@ export function ReportsTable({
                           ) : (
                             <Play className="h-4 w-4 mr-2" />
                           )}
-                          {isRunning ? 'Running' : 'Run'}
+                          {isRunning ? 'Running…' : 'Run'}
                         </Button>
                         <Button
                           size="sm"

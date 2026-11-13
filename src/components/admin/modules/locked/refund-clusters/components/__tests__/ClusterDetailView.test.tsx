@@ -2,11 +2,16 @@
  * Render-contract tests for the tabbed cluster detail view.
  *
  * The data hooks are mocked; tests cover the pill tab row (Entities /
- * Cluster Details), the default Entities tab content, and the Details tab.
+ * Cluster details), the default Overview tab content, the Details tab, and the
+ * address (tab, entity type filter, entity form page).
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router';
+
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastError, success: vi.fn() } }));
 
 const mockUseRefundClusterDetail = vi.fn();
 
@@ -39,11 +44,28 @@ vi.mock('../../hooks/useRefundClusters', () => ({
 
 import { ClusterDetailView } from '../ClusterDetailView';
 
+function Search() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+
+function renderView(
+  { clusterId = 'c1', onBack = vi.fn() }: { clusterId?: string; onBack?: () => void } = {},
+  url = '/admin?module=locked&tab=accounts&cluster=c1',
+) {
+  return render(
+    <MemoryRouter initialEntries={[url]}>
+      <ClusterDetailView clusterId={clusterId} onBack={onBack} />
+      <Search />
+    </MemoryRouter>,
+  );
+}
+
 const cluster = {
   id: 'c1',
   name: 'Q3 VAT Refunds',
   description: 'Third quarter refunds',
   vatPeriod: 'A' as const,
+  vatYearEndMonth: 2,
   archived: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-02T00:00:00.000Z',
@@ -95,15 +117,65 @@ beforeEach(() => {
 });
 
 describe('ClusterDetailView', () => {
-  it('renders the segmented tab row with Overview, Entities and Cluster Details triggers', () => {
-    render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
+  it('is a page: back link, the cluster name as the heading, and the cluster tabs', () => {
+    const onBack = vi.fn();
+    renderView({ onBack });
+    expect(screen.getByRole('heading', { level: 1, name: 'Q3 VAT Refunds' })).toBeDefined();
+    expect(screen.getByText(/Refund cluster · Category A/)).toBeDefined();
     expect(screen.getByRole('tab', { name: 'Overview' })).toBeDefined();
     expect(screen.getByRole('tab', { name: 'Entities' })).toBeDefined();
-    expect(screen.getByRole('tab', { name: 'Cluster Details' })).toBeDefined();
+    expect(screen.getByRole('tab', { name: 'Managers' })).toBeDefined();
+    expect(screen.getByRole('tab', { name: 'Cluster details' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to clusters' }));
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it('writes the cluster tab and the entity type filter to the address', () => {
+    renderView();
+    const entitiesTab = screen.getByRole('tab', { name: 'Entities' });
+    fireEvent.mouseDown(entitiesTab);
+    fireEvent.click(entitiesTab);
+    expect(screen.getByTestId('search').textContent).toContain('clusterTab=entities');
+
+    const companies = screen.getByRole('tab', { name: 'Companies' });
+    fireEvent.mouseDown(companies);
+    fireEvent.click(companies);
+    expect(screen.getByTestId('search').textContent).toContain('entityType=company');
+    expect(screen.queryByText('Thabo Nkosi')).toBeNull();
+  });
+
+  it('opens the tab named in the address', () => {
+    renderView({}, '/admin?module=locked&tab=accounts&cluster=c1&clusterTab=details');
+    expect(screen.getByRole('tab', { name: 'Cluster details' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('adds an entity on a page of its own, with its own address', () => {
+    renderView({}, '/admin?module=locked&tab=accounts&cluster=c1&clusterTab=entities');
+    fireEvent.click(screen.getByRole('button', { name: /add entity/i }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Add entity' })).toBeDefined();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByTestId('search').textContent).toContain('entity=new');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Q3 VAT Refunds' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Q3 VAT Refunds' })).toBeDefined();
+    expect(screen.getByTestId('search').textContent).not.toContain('entity=');
+  });
+
+  it('opens the entity named in the address for editing', () => {
+    renderView({}, '/admin?module=locked&tab=accounts&cluster=c1&clusterTab=entities&entity=e1');
+    expect(screen.getByRole('heading', { level: 1, name: 'Edit sole proprietor' })).toBeDefined();
+  });
+
+  it('says so when the address names an entity that does not exist', () => {
+    renderView({}, '/admin?module=locked&tab=accounts&cluster=c1&entity=gone');
+    expect(toastError).toHaveBeenCalledWith('Entity not found');
+    expect(screen.getByRole('heading', { level: 1, name: 'Q3 VAT Refunds' })).toBeDefined();
   });
 
   it('shows the entity list on the Entities tab', () => {
-    render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
+    renderView();
     const entitiesTab = screen.getByRole('tab', { name: 'Entities' });
     fireEvent.mouseDown(entitiesTab);
     fireEvent.click(entitiesTab);
@@ -113,40 +185,37 @@ describe('ClusterDetailView', () => {
   });
 
   it('renders the current-period VAT overview on the default Overview tab', () => {
-    render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
+    renderView();
     expect(screen.getByText('Current submission period')).toBeDefined();
     expect(screen.getByText('VAT Output')).toBeDefined();
     expect(screen.getByText('VAT Input')).toBeDefined();
     expect(screen.getByText(/return due by/i)).toBeDefined();
   });
 
-  it('switches to the Cluster Details tab showing fields and actions', () => {
-    render(<ClusterDetailView clusterId="c1" onBack={vi.fn()} />);
-    const detailsTab = screen.getByRole('tab', { name: 'Cluster Details' });
+  it('switches to the Cluster details tab showing fields and actions', () => {
+    renderView();
+    const detailsTab = screen.getByRole('tab', { name: 'Cluster details' });
     fireEvent.mouseDown(detailsTab);
     fireEvent.click(detailsTab);
 
     expect(screen.getByText('Last Updated')).toBeDefined();
-    expect(screen.getAllByText('Third quarter refunds').length).toBeGreaterThan(1);
+    expect(screen.getByText('Third quarter refunds')).toBeDefined();
     expect(screen.getByRole('button', { name: /^edit$/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /archive/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /delete cluster/i })).toBeDefined();
   });
 
   it('calls onBack from the not-found back button', () => {
-    // The happy-path back action now lives in the breadcrumb (rendered by
-    // RefundClustersPanel); the detail view keeps a back button only on its
-    // not-found state.
     mockUseRefundClusterDetail.mockReturnValue({ data: undefined, isLoading: false });
     const onBack = vi.fn();
-    render(<ClusterDetailView clusterId="missing" onBack={onBack} />);
+    renderView({ clusterId: 'missing', onBack });
     fireEvent.click(screen.getByRole('button', { name: /back to clusters/i }));
     expect(onBack).toHaveBeenCalled();
   });
 
   it('shows the not-found state when the cluster is missing', () => {
     mockUseRefundClusterDetail.mockReturnValue({ data: undefined, isLoading: false });
-    render(<ClusterDetailView clusterId="missing" onBack={vi.fn()} />);
+    renderView({ clusterId: 'missing' });
     expect(screen.getByText('Cluster not found.')).toBeDefined();
   });
 });

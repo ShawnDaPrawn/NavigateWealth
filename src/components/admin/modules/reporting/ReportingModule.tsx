@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Plus } from 'lucide-react';
 import { Badge } from '../../../ui/badge';
+import { PageHeader } from '../../layout/page';
 import { toast } from 'sonner';
 
 // Import types
@@ -171,25 +172,24 @@ export function ReportingModule() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">Reporting</h1>
-            <Badge variant="secondary" className="text-xs">
-              {reports.length} reports
-            </Badge>
-          </div>
-          <p className="text-muted-foreground">
-            Generate insights and export data with custom reports
-          </p>
-        </div>
-        <Button disabled={!canCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Report
-        </Button>
-      </div>
+    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        title="Reporting"
+        description="Generate insights and export data with custom reports."
+        actions={
+          // "New report" is not switched on yet: it stays visible but off, and
+          // only for people allowed to create reports.
+          canCreate ? (
+            <Button disabled>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New report
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                Soon
+              </Badge>
+            </Button>
+          ) : null
+        }
+      />
 
       {/* Recent Report Runs */}
       <ReportRunsList runs={reportRuns} reports={reports} />

@@ -103,7 +103,7 @@ export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialog
         <div className="space-y-5">
           {/* Export Format */}
           <div>
-            <Label>Export Format</Label>
+            <Label>Export format</Label>
             <Select defaultValue="xlsx" disabled>
               <SelectTrigger>
                 <SelectValue />
@@ -122,7 +122,7 @@ export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialog
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                Date Range (optional)
+                Date range (optional)
               </Label>
               {hasDateFilter && (
                 <Button
@@ -192,7 +192,7 @@ export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialog
           </Button>
           <Button onClick={handleRun}>
             <Play className="mr-2 h-4 w-4" />
-            Run Report
+            Run report
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -88,7 +88,7 @@ export function ClusterFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{cluster ? 'Edit Refund Cluster' : 'Create New Cluster'}</DialogTitle>
+          <DialogTitle>{cluster ? 'Edit refund cluster' : 'Create new cluster'}</DialogTitle>
           <DialogDescription>
             {cluster
               ? 'Update the cluster name, description and VAT category.'

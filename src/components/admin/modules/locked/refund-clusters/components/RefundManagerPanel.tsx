@@ -8,9 +8,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Layers, Wallet } from 'lucide-react';
+import { CalendarClock, Layers } from 'lucide-react';
 import { Badge } from '../../../../../ui/badge';
-import { Card, CardContent } from '../../../../../ui/card';
 import { Skeleton } from '../../../../../ui/skeleton';
 import {
   Select,
@@ -34,6 +33,7 @@ import {
   useRefundClusters,
 } from '../hooks/useRefundClusters';
 import { SubPanelHeader } from './SubPanelHeader';
+import { StatCard } from '../../../../layout/page';
 import {
   currentVatPeriod,
   dueDateBucket,
@@ -178,7 +178,7 @@ export function RefundManagerPanel() {
     <div className="space-y-4">
       <SubPanelHeader
         icon={<Layers />}
-        title="VAT Overview"
+        title="VAT overview"
         subtitle="Current-period VAT position for every active refund cluster."
         actions={
           <>
@@ -200,39 +200,30 @@ export function RefundManagerPanel() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <SummaryCard
-          icon={<Wallet className="h-4 w-4" />}
+        <StatCard
           label={netStatus === 'refundable' ? 'Net refund due' : 'Net VAT payable'}
-          value={formatZar(Math.abs(netTotal))}
-          valueClassName={NET_TEXT[netStatus]}
-          hint={netStatus === 'nil' ? 'No VAT this period' : netLabel(netStatus)}
+          value={<span className={NET_TEXT[netStatus]}>{formatZar(Math.abs(netTotal))}</span>}
+          meta={netStatus === 'nil' ? 'No VAT this period' : netLabel(netStatus)}
         />
-        <SummaryCard
-          icon={<Layers className="h-4 w-4" />}
+        <StatCard
           label="Clusters shown"
-          value={`${filteredRows.length}`}
-          hint={`of ${activeClusters.length} active`}
+          value={filteredRows.length}
+          meta={`of ${activeClusters.length} active`}
         />
-        <SummaryCard
-          icon={<AlertTriangle className="h-4 w-4" />}
+        <StatCard
           label="Overdue"
-          value={`${overdueCount}`}
-          valueClassName={overdueCount > 0 ? 'text-red-700' : undefined}
-          hint="returns past due"
+          value={overdueCount}
+          meta="returns past due"
+          tone={overdueCount > 0 ? 'attention' : 'default'}
         />
-        <SummaryCard
-          icon={<CalendarClock className="h-4 w-4" />}
-          label="Due this month"
-          value={`${dueThisMonthCount}`}
-          hint="returns to file"
-        />
+        <StatCard label="Due this month" value={dueThisMonthCount} meta="returns to file" />
       </div>
 
       {loading ? (
         <Skeleton className="h-48 w-full" />
       ) : activeClusters.length === 0 ? (
         <div className="border border-dashed rounded-lg p-10 text-center text-sm text-muted-foreground">
-          No active refund clusters yet. Create one in the Refund Clusters tab.
+          No active refund clusters yet. Create one under Refund clusters.
         </div>
       ) : (
         <div className="rounded-lg border overflow-x-auto">
@@ -307,35 +298,6 @@ export function RefundManagerPanel() {
         </div>
       )}
     </div>
-  );
-}
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-  hint,
-  valueClassName,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: string;
-  valueClassName?: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          {icon}
-          <span className="text-xs uppercase tracking-wide">{label}</span>
-        </div>
-        <p className={`mt-1 text-2xl font-semibold leading-tight ${valueClassName ?? ''}`}>
-          {value}
-        </p>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
-      </CardContent>
-    </Card>
   );
 }
 
