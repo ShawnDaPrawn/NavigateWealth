@@ -961,14 +961,15 @@ export function EsignModule() {
       ) : view === 'wizard-upload' ? (
         <EsignWizardShell
           step="upload"
-          title="Add Documents"
+          title="Add documents"
           description="Upload the PDFs you want signed, and name the envelope your recipients will see."
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
           onExit={requestExitWizard}
+          exitLabel={templateBuilder ? 'Exit' : 'Save draft & exit'}
           footerHint={uploadBlocker}
           primaryAction={{
-            label: 'Next: Add Recipients',
+            label: 'Next: Add recipients',
             onClick: handleUploadNext,
             disabled: !!uploadBlocker,
             icon: ArrowRight,
@@ -989,11 +990,12 @@ export function EsignModule() {
       ) : view === 'wizard-recipients' ? (
         <EsignWizardShell
           step="recipients"
-          title="Add Recipients"
+          title="Add recipients"
           description="Who needs to sign these documents, and in what order?"
           flowLabel={wizardFlowLabel}
           contextLabel={wizardContextLabel}
           onExit={requestExitWizard}
+          exitLabel={templateBuilder ? 'Exit' : 'Save draft & exit'}
           footerHint={noRecipients ? 'Add at least one recipient to continue.' : undefined}
           backAction={{
             label: 'Back',
@@ -1025,7 +1027,7 @@ export function EsignModule() {
               : undefined
           }
           primaryAction={{
-            label: 'Next: Prepare Fields',
+            label: 'Next: Prepare fields',
             onClick: handleRecipientsNext,
             disabled: noRecipients,
             busy: uploading,
