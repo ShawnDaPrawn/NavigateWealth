@@ -11,6 +11,7 @@
  * Heavy children are stubbed; the stubs echo the props the module wires into
  * them so the tests assert the wiring, not the children.
  */
+import { MemoryRouter } from 'react-router';
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test/utils';
 import { toast } from 'sonner';
@@ -314,7 +315,7 @@ const DRAFT_ENVELOPE = {
 };
 
 async function openTemplate(testId: string) {
-  render(<EsignModule />);
+  render(<EsignModule />, { wrapper: MemoryRouter });
   fireEvent.click(screen.getByTestId(testId));
   await waitFor(() => screen.getByText('Add Recipients'));
   // RecipientsManager is React.lazy — the heading paints before the child.
@@ -354,7 +355,7 @@ describe('EsignModule wizard flow', () => {
   });
 
   it('template without saved documents goes to the upload step instead', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('use-tpl-no-docs'));
     await waitFor(() => screen.getByTestId('upload-step'));
     expect(screen.queryByText('Add Recipients')).toBeNull();
@@ -519,7 +520,7 @@ describe('EsignModule wizard flow', () => {
     });
     spies.getDocumentUrl.mockResolvedValue({ url: 'https://x/fresh.pdf' });
 
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('resume-draft'));
     await waitFor(() => screen.getByTestId('prepare-step'));
 
@@ -580,7 +581,7 @@ describe('EsignModule wizard flow', () => {
     });
     spies.getDocumentUrl.mockResolvedValue({ url: 'https://x/fresh.pdf' });
 
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('resume-draft'));
     await waitFor(() => screen.getByTestId('prepare-step'));
 
@@ -619,7 +620,7 @@ describe('EsignModule wizard flow', () => {
     });
     spies.getDocumentUrl.mockResolvedValue({ url: 'https://x/fresh.pdf' });
 
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('resume-draft'));
     await waitFor(() => screen.getByTestId('prepare-step'));
 
@@ -642,7 +643,7 @@ describe('EsignModule wizard flow', () => {
   });
 
   it('bulk send opens its dialog; Manage tools are on the page, not in dialogs', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('open-bulk-send'));
     await waitFor(() => screen.getByTestId('bulk-send-dialog'));
     expect(JSON.parse(screen.getByTestId('manage-access').textContent ?? '{}')).toEqual({
@@ -658,8 +659,36 @@ describe('EsignModule wizard flow', () => {
     expect(screen.queryByTestId('recovery-bin-dialog')).toBeNull();
   });
 
+  it('opens the envelope named in the address as a page, with Back to envelopes', async () => {
+    spies.getEnvelope.mockResolvedValueOnce({ id: 'env-7', title: 'Mandate', status: 'sent' });
+    render(<EsignModule />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={['/admin?module=esign&envelope=env-7']}>
+          {children}
+        </MemoryRouter>
+      ),
+    });
+    await waitFor(() => screen.getByTestId('inspector'));
+    expect(spies.getEnvelope).toHaveBeenCalledWith('env-7');
+    expect(screen.queryByTestId('esign-dashboard')).toBeNull();
+  });
+
+  it('goes back to the list when the envelope in the address does not exist', async () => {
+    spies.getEnvelope.mockResolvedValueOnce(null);
+    render(<EsignModule />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={['/admin?module=esign&envelope=missing']}>
+          {children}
+        </MemoryRouter>
+      ),
+    });
+    await waitFor(() => expect(spies.getEnvelope).toHaveBeenCalledWith('missing'));
+    expect(screen.getByTestId('esign-dashboard')).toBeDefined();
+    expect(screen.queryByTestId('inspector')).toBeNull();
+  });
+
   it('opens an envelope found only by id (audit log rows)', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('open-env-by-id'));
     await waitFor(() => expect(spies.getEnvelope).toHaveBeenCalledWith('env-9'));
   });

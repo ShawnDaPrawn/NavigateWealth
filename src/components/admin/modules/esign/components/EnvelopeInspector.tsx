@@ -4,11 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../../../../ui/sheet';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
-import { ScrollArea } from '../../../../ui/scroll-area';
 import {
   Download,
   Send,
@@ -38,6 +36,7 @@ import {
   Loader2,
   RefreshCw,
   FileDown,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -373,581 +372,589 @@ export function EnvelopeInspector({
 
   return (
     <div className="contents">
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-xl md:max-w-2xl p-0 flex flex-col bg-background sm:border-l border-border shadow-xl">
-          {/* Status Indicator Strip */}
-          <div
-            className={cn(
-              'h-1 w-full shrink-0',
-              isCompleted
-                ? 'bg-green-500'
-                : envelope.status === 'voided'
-                  ? 'bg-red-500'
-                  : isDraft
-                    ? 'bg-gray-300'
-                    : 'bg-blue-500',
-            )}
-          />
+      {open && (
+        <div className="flex flex-col gap-4">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="inline-flex w-fit items-center gap-1 text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 rounded"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            Back to envelopes
+          </button>
+          <div className="flex flex-col overflow-hidden rounded-xl border border-nw-line bg-white">
+            {/* Status Indicator Strip */}
+            <div
+              className={cn(
+                'h-1 w-full shrink-0',
+                isCompleted
+                  ? 'bg-green-500'
+                  : envelope.status === 'voided'
+                    ? 'bg-red-500'
+                    : isDraft
+                      ? 'bg-gray-300'
+                      : 'bg-blue-500',
+              )}
+            />
 
-          {/* Header */}
-          <div className="px-6 pt-5 pb-4 border-b shrink-0">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopyId}
-                    className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                    title="Click to copy ID"
+            {/* Header */}
+            <div className="px-6 pt-5 pb-4 border-b shrink-0">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCopyId}
+                      className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      title="Click to copy ID"
+                    >
+                      <span className="truncate max-w-[180px]">{envelope.id}</span>
+                      <Copy className="h-3 w-3 shrink-0" />
+                    </button>
+                  </div>
+                  <h1
+                    className="text-[26px] font-semibold leading-tight tracking-tight text-nw-ink truncate pr-4"
+                    title={envelope.title}
                   >
-                    <span className="truncate max-w-[180px]">{envelope.id}</span>
-                    <Copy className="h-3 w-3 shrink-0" />
-                  </button>
-                </div>
-                <SheetTitle
-                  className="text-lg font-semibold leading-tight truncate pr-4"
-                  title={envelope.title}
-                >
-                  {envelope.title}
-                </SheetTitle>
-                <SheetDescription className="sr-only">
-                  Envelope details for {envelope.title}
-                </SheetDescription>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <StatusBadge status={envelope.status} type="envelope" showIcon size="sm" />
-                  {envelope.expires_at && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Expires {formatShortDateTime(envelope.expires_at)}
-                    </span>
-                  )}
-                  {sortedSigners.length > 0 && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {sortedSigners.filter((s) => s.status === 'signed').length}/
-                      {sortedSigners.length} signed
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                {isDraft && onResumePrepare && (
-                  <Button
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                    onClick={() => onResumePrepare(envelope)}
-                    disabled={resumingEnvelopeId === envelope.id}
-                  >
-                    {resumingEnvelopeId === envelope.id ? (
-                      <div className="contents">
-                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                        Loading...
-                      </div>
-                    ) : (
-                      <div className="contents">
-                        <PenTool className="h-4 w-4 mr-1.5" />
-                        Continue Editing
-                      </div>
+                    {envelope.title}
+                  </h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusBadge status={envelope.status} type="envelope" showIcon size="sm" />
+                    {envelope.expires_at && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Expires {formatShortDateTime(envelope.expires_at)}
+                      </span>
                     )}
-                  </Button>
-                )}
-                {isCompleted && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onDownloadDocument?.(envelope.id)}
-                  >
-                    <Download className="h-4 w-4 mr-1.5" />
-                    Download
-                  </Button>
-                )}
+                    {sortedSigners.length > 0 && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {sortedSigners.filter((s) => s.status === 'signed').length}/
+                        {sortedSigners.length} signed
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {isDraft && onResumePrepare && (
+                    <Button
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => onResumePrepare(envelope)}
+                      disabled={resumingEnvelopeId === envelope.id}
+                    >
+                      {resumingEnvelopeId === envelope.id ? (
+                        <div className="contents">
+                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                          Loading...
+                        </div>
+                      ) : (
+                        <div className="contents">
+                          <PenTool className="h-4 w-4 mr-1.5" />
+                          Continue Editing
+                        </div>
+                      )}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    {isDraft && onDeleteEnvelope && (
-                      <DropdownMenuItem
-                        onClick={() => setDiscardDialogOpen(true)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Discard Draft
-                      </DropdownMenuItem>
-                    )}
-                    {isActive && (
-                      <div className="contents">
-                        <DropdownMenuItem onClick={handleResend}>
-                          <Send className="mr-2 h-4 w-4" /> Send Reminder
+                  )}
+                  {isCompleted && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDownloadDocument?.(envelope.id)}
+                    >
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Download
+                    </Button>
+                  )}
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      {isDraft && onDeleteEnvelope && (
+                        <DropdownMenuItem
+                          onClick={() => setDiscardDialogOpen(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Discard Draft
                         </DropdownMenuItem>
-                        {onDeleteEnvelope && !envelope.signedCount && (
-                          <DropdownMenuItem
-                            onClick={() => setDiscardDialogOpen(true)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Discard Envelope
+                      )}
+                      {isActive && (
+                        <div className="contents">
+                          <DropdownMenuItem onClick={handleResend}>
+                            <Send className="mr-2 h-4 w-4" /> Send Reminder
                           </DropdownMenuItem>
-                        )}
-                        {onVoidEnvelope && (
-                          <div className="contents">
-                            <DropdownMenuSeparator />
+                          {onDeleteEnvelope && !envelope.signedCount && (
                             <DropdownMenuItem
-                              onClick={() => setVoidDialogOpen(true)}
+                              onClick={() => setDiscardDialogOpen(true)}
                               className="text-destructive focus:text-destructive"
                             >
-                              <Ban className="mr-2 h-4 w-4" /> Void Envelope
+                              <Trash2 className="mr-2 h-4 w-4" /> Discard Envelope
                             </DropdownMenuItem>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {isCompleted && (
-                      <div className="contents">
-                        <DropdownMenuItem onClick={() => onDownloadDocument?.(envelope.id)}>
-                          <Download className="mr-2 h-4 w-4" /> Download Signed PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={async () => {
-                            try {
-                              await esignApi.downloadEvidencePack(envelope.id, envelope.title);
-                            } catch (err) {
-                              const message =
-                                err instanceof Error
-                                  ? err.message
-                                  : 'Failed to export evidence pack';
-                              toast.error(message);
-                            }
-                          }}
-                        >
-                          <FileDown className="mr-2 h-4 w-4" /> Download Evidence Pack (.zip)
-                        </DropdownMenuItem>
-                      </div>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                          )}
+                          {onVoidEnvelope && (
+                            <div className="contents">
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setVoidDialogOpen(true)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Ban className="mr-2 h-4 w-4" /> Void Envelope
+                              </DropdownMenuItem>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {isCompleted && (
+                        <div className="contents">
+                          <DropdownMenuItem onClick={() => onDownloadDocument?.(envelope.id)}>
+                            <Download className="mr-2 h-4 w-4" /> Download Signed PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                await esignApi.downloadEvidencePack(envelope.id, envelope.title);
+                              } catch (err) {
+                                const message =
+                                  err instanceof Error
+                                    ? err.message
+                                    : 'Failed to export evidence pack';
+                                toast.error(message);
+                              }
+                            }}
+                          >
+                            <FileDown className="mr-2 h-4 w-4" /> Download Evidence Pack (.zip)
+                          </DropdownMenuItem>
+                        </div>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Tab Bar */}
-          <div className="px-6 border-b shrink-0">
-            <div className="flex gap-0">
-              {[
-                { key: 'routing' as const, label: 'Recipients', icon: Users },
-                { key: 'details' as const, label: 'Details', icon: FileText },
-                { key: 'audit' as const, label: 'Activity', icon: History },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-                    activeTab === tab.key
-                      ? 'border-primary text-foreground'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted',
-                  )}
-                >
-                  <tab.icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </button>
-              ))}
+            {/* Tab Bar */}
+            <div className="px-6 border-b shrink-0">
+              <div className="flex gap-0">
+                {[
+                  { key: 'routing' as const, label: 'Recipients', icon: Users },
+                  { key: 'details' as const, label: 'Details', icon: FileText },
+                  { key: 'audit' as const, label: 'Activity', icon: History },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                      activeTab === tab.key
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted',
+                    )}
+                  >
+                    <tab.icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Content Area */}
-          <ScrollArea className="flex-1 p-6">
-            <div className="max-w-3xl mx-auto space-y-6">
-              {/* ============ RECIPIENTS TAB ============ */}
-              {activeTab === 'routing' && (
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">Signing Order</h3>
-                      {(() => {
-                        const mode: SigningMode = envelopeData.signing_mode || 'sequential';
-                        return (
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] font-normal ${
-                              mode === 'sequential'
-                                ? 'border-purple-200 bg-purple-50 text-purple-700'
-                                : 'border-blue-200 bg-blue-50 text-blue-700'
-                            }`}
-                          >
-                            {mode === 'sequential' ? 'Sequential' : 'Parallel'}
-                          </Badge>
-                        );
-                      })()}
-                    </div>
-                    <Badge variant="secondary" className="text-[10px] font-normal">
-                      {sortedSigners.length} Recipient{sortedSigners.length !== 1 ? 's' : ''}
-                    </Badge>
-                  </div>
-
-                  {sortedSigners.length === 0 ? (
-                    <div className="text-center py-10 text-muted-foreground">
-                      <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">No recipients added yet</p>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      {/* Vertical connector line */}
-                      {sortedSigners.length > 1 && (
-                        <div className="absolute left-5 top-8 bottom-8 w-px bg-border" />
-                      )}
-
-                      <div className="space-y-4">
-                        {sortedSigners.map((signer, index) => {
-                          const isSigned = signer.status === 'signed';
-                          const isCurrent = ['sent', 'viewed', 'otp_verified'].includes(
-                            signer.status,
-                          );
-                          const isPending = signer.status === 'pending';
-                          const isDeclined =
-                            signer.status === 'declined' || signer.status === 'rejected';
-                          const isEnvelopeVoided = envelope.status === 'voided';
-
+            {/* Content Area */}
+            <div className="p-6">
+              <div className="max-w-3xl mx-auto space-y-6">
+                {/* ============ RECIPIENTS TAB ============ */}
+                {activeTab === 'routing' && (
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-foreground">Signing Order</h3>
+                        {(() => {
+                          const mode: SigningMode = envelopeData.signing_mode || 'sequential';
                           return (
-                            <div key={signer.id} className="relative flex gap-4">
-                              {/* Step indicator */}
-                              <div
-                                className={cn(
-                                  'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-background transition-all',
-                                  isSigned
-                                    ? 'border-green-500 text-green-500'
-                                    : isDeclined
-                                      ? 'border-red-500 text-red-500'
-                                      : isCurrent
-                                        ? 'border-blue-500 text-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]'
-                                        : isEnvelopeVoided
-                                          ? 'border-gray-300 text-gray-400'
-                                          : 'border-muted text-muted-foreground',
-                                )}
-                              >
-                                {isSigned ? (
-                                  <CheckCircle2 className="h-5 w-5" />
-                                ) : isDeclined ? (
-                                  <XCircle className="h-5 w-5" />
-                                ) : isCurrent ? (
-                                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
-                                ) : (
-                                  <span className="text-xs font-semibold">{index + 1}</span>
-                                )}
-                              </div>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-normal ${
+                                mode === 'sequential'
+                                  ? 'border-purple-200 bg-purple-50 text-purple-700'
+                                  : 'border-blue-200 bg-blue-50 text-blue-700'
+                              }`}
+                            >
+                              {mode === 'sequential' ? 'Sequential' : 'Parallel'}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] font-normal">
+                        {sortedSigners.length} Recipient{sortedSigners.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
 
-                              {/* Signer card */}
-                              <div
-                                className={cn(
-                                  'flex-1 rounded-lg border p-4 transition-all',
-                                  isCurrent
-                                    ? 'border-blue-200 bg-blue-50/50 shadow-sm'
-                                    : isSigned
-                                      ? 'border-green-100 bg-green-50/30'
+                    {sortedSigners.length === 0 ? (
+                      <div className="text-center py-10 text-muted-foreground">
+                        <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                        <p className="text-sm">No recipients added yet</p>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        {/* Vertical connector line */}
+                        {sortedSigners.length > 1 && (
+                          <div className="absolute left-5 top-8 bottom-8 w-px bg-border" />
+                        )}
+
+                        <div className="space-y-4">
+                          {sortedSigners.map((signer, index) => {
+                            const isSigned = signer.status === 'signed';
+                            const isCurrent = ['sent', 'viewed', 'otp_verified'].includes(
+                              signer.status,
+                            );
+                            const isPending = signer.status === 'pending';
+                            const isDeclined =
+                              signer.status === 'declined' || signer.status === 'rejected';
+                            const isEnvelopeVoided = envelope.status === 'voided';
+
+                            return (
+                              <div key={signer.id} className="relative flex gap-4">
+                                {/* Step indicator */}
+                                <div
+                                  className={cn(
+                                    'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-background transition-all',
+                                    isSigned
+                                      ? 'border-green-500 text-green-500'
                                       : isDeclined
-                                        ? 'border-red-100 bg-red-50/30'
-                                        : isPending
-                                          ? 'border-dashed opacity-60'
-                                          : '',
-                                )}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <h4 className="font-medium text-sm">{signer.name}</h4>
-                                      {signer.role && (
-                                        <Badge
-                                          variant="secondary"
-                                          className="text-[10px] h-5 px-1.5 font-normal"
-                                        >
-                                          {signer.role}
-                                        </Badge>
-                                      )}
-                                      {signer.otp_required && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[10px] h-5 px-1.5 gap-0.5 border-amber-200 text-amber-700 bg-amber-50"
-                                        >
-                                          <Shield className="h-3 w-3" /> OTP
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                      <Mail className="h-3 w-3 shrink-0" />
-                                      <span className="truncate">{signer.email}</span>
-                                    </p>
-                                  </div>
-                                  <StatusBadge status={signer.status} type="signer" size="sm" />
+                                        ? 'border-red-500 text-red-500'
+                                        : isCurrent
+                                          ? 'border-blue-500 text-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]'
+                                          : isEnvelopeVoided
+                                            ? 'border-gray-300 text-gray-400'
+                                            : 'border-muted text-muted-foreground',
+                                  )}
+                                >
+                                  {isSigned ? (
+                                    <CheckCircle2 className="h-5 w-5" />
+                                  ) : isDeclined ? (
+                                    <XCircle className="h-5 w-5" />
+                                  ) : isCurrent ? (
+                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />
+                                  ) : (
+                                    <span className="text-xs font-semibold">{index + 1}</span>
+                                  )}
                                 </div>
 
-                                {/* Timestamp / actions */}
-                                {(isSigned || isCurrent) && (
-                                  <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs">
-                                    <span className="text-muted-foreground">
-                                      {isSigned && signer.signed_at
-                                        ? `Signed ${formatShortDateTime(signer.signed_at)}`
-                                        : isCurrent
-                                          ? 'Awaiting signature'
-                                          : ''}
-                                    </span>
-                                    {isCurrent && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 -mr-2"
-                                        onClick={handleResend}
-                                      >
-                                        <Send className="h-3 w-3 mr-1" /> Remind
-                                      </Button>
-                                    )}
+                                {/* Signer card */}
+                                <div
+                                  className={cn(
+                                    'flex-1 rounded-lg border p-4 transition-all',
+                                    isCurrent
+                                      ? 'border-blue-200 bg-blue-50/50 shadow-sm'
+                                      : isSigned
+                                        ? 'border-green-100 bg-green-50/30'
+                                        : isDeclined
+                                          ? 'border-red-100 bg-red-50/30'
+                                          : isPending
+                                            ? 'border-dashed opacity-60'
+                                            : '',
+                                  )}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="font-medium text-sm">{signer.name}</h4>
+                                        {signer.role && (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-[10px] h-5 px-1.5 font-normal"
+                                          >
+                                            {signer.role}
+                                          </Badge>
+                                        )}
+                                        {signer.otp_required && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[10px] h-5 px-1.5 gap-0.5 border-amber-200 text-amber-700 bg-amber-50"
+                                          >
+                                            <Shield className="h-3 w-3" /> OTP
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                        <Mail className="h-3 w-3 shrink-0" />
+                                        <span className="truncate">{signer.email}</span>
+                                      </p>
+                                    </div>
+                                    <StatusBadge status={signer.status} type="signer" size="sm" />
                                   </div>
-                                )}
-                                {isDeclined && (
-                                  <div className="mt-3 pt-3 border-t text-xs text-red-600">
-                                    Declined
-                                    {signer.rejection_reason
-                                      ? `: "${signer.rejection_reason}"`
-                                      : ''}
-                                  </div>
-                                )}
+
+                                  {/* Timestamp / actions */}
+                                  {(isSigned || isCurrent) && (
+                                    <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs">
+                                      <span className="text-muted-foreground">
+                                        {isSigned && signer.signed_at
+                                          ? `Signed ${formatShortDateTime(signer.signed_at)}`
+                                          : isCurrent
+                                            ? 'Awaiting signature'
+                                            : ''}
+                                      </span>
+                                      {isCurrent && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 -mr-2"
+                                          onClick={handleResend}
+                                        >
+                                          <Send className="h-3 w-3 mr-1" /> Remind
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                  {isDeclined && (
+                                    <div className="mt-3 pt-3 border-t text-xs text-red-600">
+                                      Declined
+                                      {signer.rejection_reason
+                                        ? `: "${signer.rejection_reason}"`
+                                        : ''}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
-              {/* ============ DETAILS TAB ============ */}
-              {activeTab === 'details' && (
-                <div className="space-y-5">
-                  {/* Document */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        Document
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/20">
-                        <div className="h-10 w-8 bg-red-50 border border-red-100 rounded flex items-center justify-center shrink-0">
-                          <span className="text-[7px] font-bold text-red-600 uppercase">PDF</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {envelopeData.document?.filename || 'Document.pdf'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {envelopeData.document?.page_count
-                              ? `${envelopeData.document.page_count} pages`
-                              : 'PDF Document'}
-                          </p>
-                        </div>
-                        {isCompleted && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onDownloadDocument?.(envelope.id)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      {isCompleted && (
-                        <div className="mt-3 flex items-center gap-2 p-2.5 bg-green-50 border border-green-100 rounded-lg">
-                          <FileCheck className="h-4 w-4 text-green-600 shrink-0" />
-                          <p className="text-xs text-green-700 font-medium">
-                            Signed document package available for download
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Message */}
-                  {envelope.message && (
+                {/* ============ DETAILS TAB ============ */}
+                {activeTab === 'details' && (
+                  <div className="space-y-5">
+                    {/* Document */}
                     <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          Email Message
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          Document
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="bg-muted/20 p-3 rounded-lg text-sm italic text-muted-foreground border">
-                          "{envelope.message}"
+                        <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/20">
+                          <div className="h-10 w-8 bg-red-50 border border-red-100 rounded flex items-center justify-center shrink-0">
+                            <span className="text-[7px] font-bold text-red-600 uppercase">PDF</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {envelopeData.document?.filename || 'Document.pdf'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {envelopeData.document?.page_count
+                                ? `${envelopeData.document.page_count} pages`
+                                : 'PDF Document'}
+                            </p>
+                          </div>
+                          {isCompleted && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onDownloadDocument?.(envelope.id)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
+
+                        {isCompleted && (
+                          <div className="mt-3 flex items-center gap-2 p-2.5 bg-green-50 border border-green-100 rounded-lg">
+                            <FileCheck className="h-4 w-4 text-green-600 shrink-0" />
+                            <p className="text-xs text-green-700 font-medium">
+                              Signed document package available for download
+                            </p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
-                  )}
 
-                  {/* Metadata */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: 'Created', value: formatShortDateTime(envelope.created_at) },
-                      { label: 'Last Updated', value: formatShortDateTime(envelope.updated_at) },
-                      {
-                        label: 'Expires',
-                        value: envelope.expires_at
-                          ? formatShortDateTime(envelope.expires_at)
-                          : 'Never',
-                      },
-                      {
-                        label: 'Completed',
-                        value: envelope.completed_at
-                          ? formatShortDateTime(envelope.completed_at)
-                          : isCompleted
-                            ? 'Yes'
-                            : '—',
-                      },
-                    ].map((item) => (
-                      <div key={item.label} className="p-3 border rounded-lg bg-muted/10">
-                        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1">
-                          {item.label}
-                        </p>
-                        <p className="text-sm font-medium">{item.value}</p>
+                    {/* Message */}
+                    {envelope.message && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            Email Message
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="bg-muted/20 p-3 rounded-lg text-sm italic text-muted-foreground border">
+                            "{envelope.message}"
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Metadata */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Created', value: formatShortDateTime(envelope.created_at) },
+                        { label: 'Last Updated', value: formatShortDateTime(envelope.updated_at) },
+                        {
+                          label: 'Expires',
+                          value: envelope.expires_at
+                            ? formatShortDateTime(envelope.expires_at)
+                            : 'Never',
+                        },
+                        {
+                          label: 'Completed',
+                          value: envelope.completed_at
+                            ? formatShortDateTime(envelope.completed_at)
+                            : isCompleted
+                              ? 'Yes'
+                              : '—',
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className="p-3 border rounded-lg bg-muted/10">
+                          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-1">
+                            {item.label}
+                          </p>
+                          <p className="text-sm font-medium">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Per-Envelope Reminder Settings */}
+                    {!isCompleted && envelope.status !== 'voided' && (
+                      <ReminderConfigPanel
+                        envelopeId={envelope.id}
+                        envelopeStatus={envelope.status}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* ============ ACTIVITY / AUDIT TAB ============ */}
+                {activeTab === 'audit' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-foreground">Activity Log</h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await esignApi.downloadAuditTrailCsv(envelope.id);
+                            } catch (_err) {
+                              toast.error('Failed to export audit trail');
+                            }
+                          }}
+                          className="h-7 text-xs gap-1"
+                          title="Export audit trail as CSV"
+                        >
+                          <FileDown className="h-3 w-3" />
+                          Export CSV
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          {sortedAuditEvents.length} event
+                          {sortedAuditEvents.length !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Per-Envelope Reminder Settings */}
-                  {!isCompleted && envelope.status !== 'voided' && (
-                    <ReminderConfigPanel
-                      envelopeId={envelope.id}
-                      envelopeStatus={envelope.status}
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* ============ ACTIVITY / AUDIT TAB ============ */}
-              {activeTab === 'audit' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">Activity Log</h3>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            await esignApi.downloadAuditTrailCsv(envelope.id);
-                          } catch (_err) {
-                            toast.error('Failed to export audit trail');
-                          }
-                        }}
-                        className="h-7 text-xs gap-1"
-                        title="Export audit trail as CSV"
-                      >
-                        <FileDown className="h-3 w-3" />
-                        Export CSV
-                      </Button>
-                      <span className="text-xs text-muted-foreground">
-                        {sortedAuditEvents.length} event{sortedAuditEvents.length !== 1 ? 's' : ''}
-                      </span>
                     </div>
-                  </div>
 
-                  {auditLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">Loading activity...</span>
-                    </div>
-                  ) : sortedAuditEvents.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <History className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm">No activity recorded</p>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      {/* Timeline connector */}
-                      <div className="absolute left-[15px] top-4 bottom-4 w-px bg-border" />
+                    {auditLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">Loading activity...</span>
+                      </div>
+                    ) : sortedAuditEvents.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <History className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">No activity recorded</p>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        {/* Timeline connector */}
+                        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-border" />
 
-                      <div className="space-y-0">
-                        {sortedAuditEvents.map((event, index) => {
-                          const display = getAuditDisplayInfo(event.action, event.metadata);
-                          const eventTime = event.at;
-                          const isFirst = index === 0;
+                        <div className="space-y-0">
+                          {sortedAuditEvents.map((event, index) => {
+                            const display = getAuditDisplayInfo(event.action, event.metadata);
+                            const eventTime = event.at;
+                            const isFirst = index === 0;
 
-                          return (
-                            <div
-                              key={event.id || index}
-                              className="relative flex gap-3 pb-5 last:pb-0"
-                            >
-                              {/* Timeline dot */}
+                            return (
                               <div
-                                className={cn(
-                                  'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background',
-                                  isFirst ? display.bgColor : 'border-muted bg-muted/30',
-                                )}
+                                key={event.id || index}
+                                className="relative flex gap-3 pb-5 last:pb-0"
                               >
-                                <span
+                                {/* Timeline dot */}
+                                <div
                                   className={cn(
-                                    'flex items-center justify-center',
-                                    isFirst ? display.color : 'text-muted-foreground',
+                                    'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background',
+                                    isFirst ? display.bgColor : 'border-muted bg-muted/30',
                                   )}
                                 >
-                                  {display.icon}
-                                </span>
-                              </div>
-
-                              {/* Event content */}
-                              <div className="flex-1 min-w-0 pt-0.5">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-foreground leading-tight">
-                                      {display.label}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                      {display.description}
-                                    </p>
-                                  </div>
-                                  <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap pt-0.5">
-                                    {getRelativeTime(eventTime)}
-                                  </span>
-                                </div>
-
-                                {/* Actor & metadata row */}
-                                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                  {event.email && (
-                                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                      <Mail className="h-3 w-3" />
-                                      {event.email}
-                                    </span>
-                                  )}
-                                  {event.ip && event.ip !== 'unknown' && (
-                                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                      <Globe className="h-3 w-3" />
-                                      {event.ip}
-                                    </span>
-                                  )}
                                   <span
-                                    className="text-[11px] text-muted-foreground"
-                                    title={formatAuditDateTime(eventTime)}
+                                    className={cn(
+                                      'flex items-center justify-center',
+                                      isFirst ? display.color : 'text-muted-foreground',
+                                    )}
                                   >
-                                    {formatAuditDateTime(eventTime)}
+                                    {display.icon}
                                   </span>
                                 </div>
+
+                                {/* Event content */}
+                                <div className="flex-1 min-w-0 pt-0.5">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-foreground leading-tight">
+                                        {display.label}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                        {display.description}
+                                      </p>
+                                    </div>
+                                    <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap pt-0.5">
+                                      {getRelativeTime(eventTime)}
+                                    </span>
+                                  </div>
+
+                                  {/* Actor & metadata row */}
+                                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                    {event.email && (
+                                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                        <Mail className="h-3 w-3" />
+                                        {event.email}
+                                      </span>
+                                    )}
+                                    {event.ip && event.ip !== 'unknown' && (
+                                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                        <Globe className="h-3 w-3" />
+                                        {event.ip}
+                                      </span>
+                                    )}
+                                    <span
+                                      className="text-[11px] text-muted-foreground"
+                                      title={formatAuditDateTime(eventTime)}
+                                    >
+                                      {formatAuditDateTime(eventTime)}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
+          </div>
+        </div>
+      )}
 
       <VoidEnvelopeDialog
         open={voidDialogOpen}
