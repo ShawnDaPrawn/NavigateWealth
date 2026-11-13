@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, RefreshCw, Search, SearchX } from 'lucide-react';
+import { CheckCircle2, RefreshCw, Search, SearchX } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '../../../ui/alert';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
@@ -29,7 +29,6 @@ import {
 import {
   countIssuesBy,
   countIssueViews,
-  EMPTY_ISSUE_FILTERS,
   filterIssues,
   hasActiveIssueFilters,
   ISSUE_VIEWS,
@@ -39,9 +38,16 @@ import {
   type IssueFilters,
   type IssueView,
 } from './issueViews';
-import { AttentionBanner, IssueViewCards, ReportFreshness } from './components/IssueOverview';
+import { AttentionBanner, IssueViewTabs, ReportFreshness } from './components/IssueOverview';
 import { IssueDetailSheet } from './components/IssueDetailSheet';
-import { PageHeader, useRecordInUrl, useUrlState } from '../../layout/page';
+import {
+  ErrorState,
+  Notice,
+  PageHeader,
+  useBreadcrumbTrail,
+  useRecordInUrl,
+  useUrlState,
+} from '../../layout/page';
 import { IssueTable } from './components/IssueTable';
 import { IssuesSkeleton } from './components/IssuesSkeleton';
 import type {
@@ -52,6 +58,9 @@ import type {
   QualityIssueWorkflowUpdate,
 } from './types';
 
+const SOURCE_FILTERS = ['all', ...QUALITY_ISSUE_SOURCES] as const;
+const PRIORITY_FILTERS = ['all', ...QUALITY_ISSUE_PRIORITIES] as const;
+
 export function IssuesModule() {
   const queryClient = useQueryClient();
   const [snapshot, setSnapshot] = useState<QualityIssueSnapshot | null>(null);
@@ -59,7 +68,37 @@ export function IssuesModule() {
   const [error, setError] = useState<string | null>(null);
   // The view and the open issue are in the address (?view=overdue&issue=…).
   const [view, setView] = useUrlState<IssueView>('view', 'unresolved', ISSUE_VIEWS);
-  const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS);
+  // Source and priority are in the address too; search stays on the page.
+  const [search, setSearch] = useState('');
+  const [sourceFilter, setSourceFilter] = useUrlState<'all' | QualityIssueSource>(
+    'source',
+    'all',
+    SOURCE_FILTERS,
+  );
+  const [priorityFilter, setPriorityFilter] = useUrlState<'all' | QualityIssuePriority>(
+    'priority',
+    'all',
+    PRIORITY_FILTERS,
+  );
+  const [, setSearchParams] = useSearchParams();
+  const filters: IssueFilters = useMemo(
+    () => ({ search, source: sourceFilter, priority: priorityFilter }),
+    [search, sourceFilter, priorityFilter],
+  );
+  // One address change for both URL filters (two setters in one event would
+  // each start from the same address).
+  const clearFilters = () => {
+    setSearch('');
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        params.delete('source');
+        params.delete('priority');
+        return params;
+      },
+      { replace: true },
+    );
+  };
   const [selectedFingerprint, setSelectedFingerprint] = useState<string | null>(null);
   const [isRunningAutomation, setIsRunningAutomation] = useState(false);
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'issues-module-search' });
@@ -104,6 +143,15 @@ export function IssuesModule() {
     [issues, selectedFingerprint],
   );
   const filtersActive = hasActiveIssueFilters(filters);
+
+  // Top-bar breadcrumb: Issue Manager / <view>.
+  const viewLabel = issueViewConfig[view].label;
+  useBreadcrumbTrail(
+    selectedIssue
+      ? // As on the board: the view stays the last step, and leads back to it.
+        [{ label: viewLabel, onClick: () => setSelectedFingerprint(null) }]
+      : [{ label: viewLabel }],
+  );
 
   useRecordInUrl('issue', selectedIssue ? selectedIssue.fingerprint : null, {
     ready: !!snapshot,
@@ -208,12 +256,17 @@ export function IssuesModule() {
           }
         />
 
-        {error ? (
-          <Alert variant="destructive" className="border-red-200 bg-red-50">
-            <AlertTriangle aria-hidden="true" />
-            <AlertTitle>Couldn&apos;t load issues</AlertTitle>
-            <AlertDescription>
-              <p className="text-sm">{error}</p>
+        {error && !snapshot ? (
+          <ErrorState
+            title="Couldn't load issues"
+            details={error}
+            onRetry={() => void loadIssues()}
+          />
+        ) : error ? (
+          <Notice
+            kind="error"
+            title="Couldn't refresh issues."
+            action={
               <Button
                 variant="outline"
                 size="sm"
@@ -222,13 +275,15 @@ export function IssuesModule() {
               >
                 Try again
               </Button>
-            </AlertDescription>
-          </Alert>
+            }
+          >
+            Showing the last list that loaded.
+          </Notice>
         ) : null}
 
         {snapshot ? (
           <>
-            <IssueViewCards counts={viewCounts} activeView={view} onSelect={setView} />
+            <IssueViewTabs counts={viewCounts} activeView={view} onSelect={setView} />
 
             <AttentionBanner
               summary={escalations}
@@ -260,20 +315,13 @@ export function IssuesModule() {
                       aria-label="Search issues"
                       placeholder="Search issues…"
                       value={filters.search}
-                      onChange={(event) =>
-                        setFilters((current) => ({ ...current, search: event.target.value }))
-                      }
+                      onChange={(event) => setSearch(event.target.value)}
                       className="pl-9"
                     />
                   </div>
                   <Select
                     value={filters.source}
-                    onValueChange={(value) =>
-                      setFilters((current) => ({
-                        ...current,
-                        source: value as 'all' | QualityIssueSource,
-                      }))
-                    }
+                    onValueChange={(value) => setSourceFilter(value as 'all' | QualityIssueSource)}
                   >
                     <SelectTrigger className="sm:w-44" aria-label="Filter by source">
                       <SelectValue>
@@ -295,10 +343,7 @@ export function IssuesModule() {
                   <Select
                     value={filters.priority}
                     onValueChange={(value) =>
-                      setFilters((current) => ({
-                        ...current,
-                        priority: value as 'all' | QualityIssuePriority,
-                      }))
+                      setPriorityFilter(value as 'all' | QualityIssuePriority)
                     }
                   >
                     <SelectTrigger className="sm:w-40" aria-label="Filter by priority">
@@ -324,7 +369,7 @@ export function IssuesModule() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setFilters(EMPTY_ISSUE_FILTERS)}
+                      onClick={clearFilters}
                       className="text-gray-600"
                     >
                       Clear filters
@@ -347,12 +392,7 @@ export function IssuesModule() {
                         Try a different search, or clear the filters to see every{' '}
                         {viewConfig.label.toLowerCase()} issue.
                       </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => setFilters(EMPTY_ISSUE_FILTERS)}
-                      >
+                      <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
                         Clear filters
                       </Button>
                     </>
