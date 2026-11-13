@@ -181,6 +181,83 @@ export async function deletePersonnel(id: string): Promise<void> {
 }
 
 // ============================================================================
+// ACCOUNT ACCESS (shared /security routes — they act on any signed-in user)
+// ============================================================================
+
+interface SecurityResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Suspend a staff member's sign-in.
+ *
+ * `POST /security/:userId/suspend` sets `security:{id}.suspended`, which the
+ * auth middleware checks on every request for every account (staff included),
+ * and records the reason and the acting admin. The personnel record's own
+ * status is then set to `suspended` so the staff list shows it.
+ */
+export async function suspendPersonnelAccess(id: string, reason: string): Promise<void> {
+  try {
+    const result = await api.post<SecurityResult>(`/security/${id}/suspend`, {
+      suspended: true,
+      reason: reason.trim() || undefined,
+    });
+    if (!result?.success) throw new Error(result?.error || 'Could not suspend access');
+    await api.put(`personnel/${id}`, { status: 'suspended' });
+  } catch (error) {
+    logger.error('[API] Failed to suspend personnel access', error, { id });
+    throw error;
+  }
+}
+
+/** Lift a suspension set by {@link suspendPersonnelAccess}. */
+export async function restorePersonnelAccess(id: string): Promise<void> {
+  try {
+    const result = await api.post<SecurityResult>(`/security/${id}/suspend`, {
+      suspended: false,
+    });
+    if (!result?.success) throw new Error(result?.error || 'Could not restore access');
+    await api.put(`personnel/${id}`, { status: 'active' });
+  } catch (error) {
+    logger.error('[API] Failed to restore personnel access', error, { id });
+    throw error;
+  }
+}
+
+/** A throwaway password nobody sees: the staff member chooses their own from the link. */
+export function makeThrowawayPassword(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  // One of each character class in case the project enforces them.
+  return `Aa1!${hex}`;
+}
+
+/**
+ * Send a staff member a password reset link.
+ *
+ * `POST /security/:userId/password` with `emailPassword: true` is the admin
+ * reset: it replaces the password with one nobody is told, signs the account
+ * out everywhere, and emails a single-use "Choose a new password" link (the
+ * message is written for the admin panel). The password sent here is random
+ * and never shown.
+ */
+export async function sendPersonnelPasswordReset(id: string): Promise<void> {
+  try {
+    const result = await api.post<SecurityResult>(`/security/${id}/password`, {
+      currentPassword: 'admin-override',
+      newPassword: makeThrowawayPassword(),
+      emailPassword: true,
+    });
+    if (!result?.success) throw new Error(result?.error || 'Could not send the reset link');
+  } catch (error) {
+    logger.error('[API] Failed to send personnel password reset', error, { id });
+    throw error;
+  }
+}
+
+// ============================================================================
 // PERSONNEL CLIENTS OPERATIONS
 // ============================================================================
 
@@ -450,6 +527,9 @@ export const personnelApi = {
   cancelInvite: cancelPersonnelInvite,
   update: updatePersonnel,
   delete: deletePersonnel,
+  suspendAccess: suspendPersonnelAccess,
+  restoreAccess: restorePersonnelAccess,
+  sendPasswordReset: sendPersonnelPasswordReset,
 
   // Personnel clients
   fetchClients: fetchPersonnelClients,

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { Skeleton } from '../../../ui/skeleton';
@@ -8,7 +9,7 @@ import { cn } from '../../../ui/utils';
 import { Personnel, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
 import type { AdminModule } from '../../layout/types';
-import { PageHeader, StatCard, useRecordInUrl } from '../../layout/page';
+import { PageHeader, StatCard, useRecordInUrl, useUrlState } from '../../layout/page';
 
 // Components
 import { PersonnelTable } from './components/PersonnelTable';
@@ -27,7 +28,7 @@ import {
   useUpdatePersonnel,
   useUpdateSuperAdmin,
 } from './hooks';
-import { usePersonnelFilters } from './hooks/usePersonnelFilters';
+import { usePersonnelFilters, type PersonnelStatusFilter } from './hooks/usePersonnelFilters';
 import { useCurrentUserPermissions } from './hooks/usePermissions';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 
@@ -74,6 +75,11 @@ function TableSkeleton() {
   );
 }
 
+/** The staff member page's tabs; the open one is in the address (?personTab=). */
+const PERSON_TABS = ['profile', 'permissions', 'compliance', 'commission', 'clients'] as const;
+const PROFILE_VIEWS = ['', 'me'] as const;
+type PersonTab = (typeof PERSON_TABS)[number];
+
 // ============================================================================
 // MAIN MODULE
 // ============================================================================
@@ -85,27 +91,88 @@ export function PersonnelModule() {
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
-  const [showSuperAdmin, setShowSuperAdmin] = useState(false);
-  const { canDo, isSuperAdmin } = useCurrentUserPermissions();
+  const [activeTab, setActiveTabInUrl] = useUrlState<PersonTab>(
+    'personTab',
+    'profile',
+    PERSON_TABS,
+  );
+  // Writing the same value again would still navigate; skip it.
+  const setActiveTab = useCallback(
+    (next: PersonTab) => {
+      if (next !== activeTab) setActiveTabInUrl(next);
+    },
+    [activeTab, setActiveTabInUrl],
+  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    canDo,
+    isSuperAdmin,
+    permissions: myPermissions,
+    isLoading: myPermissionsLoading,
+  } = useCurrentUserPermissions();
   const { pendingSelection, clearPendingSelection } = useAdminNavigation();
 
-  // Auto-expand super admin card when user is super admin
+  // "Admin profile" (the account menu's Account settings) is in the address:
+  // ?profile=me. The super admin sees their profile card above the list.
+  const [profileView, setProfileView] = useUrlState<'' | 'me'>('profile', '', PROFILE_VIEWS);
+  const showSuperAdmin = profileView === 'me' && isSuperAdmin;
+
+  // Anyone else asking for their own profile gets their own staff page.
   useEffect(() => {
-    if (isSuperAdmin) {
-      setShowSuperAdmin(true);
-    }
-  }, [isSuperAdmin]);
+    if (profileView !== 'me' || myPermissionsLoading || !myPermissions || isSuperAdmin) return;
+    if (isLoading) return;
+    const selfId = myPermissions.personnelId;
+    const self = selfId ? personnel.find((p) => p.id === selfId) : undefined;
+    if (!self) toast.error('Your staff profile was not found');
+    // One address change: drop ?profile and name the staff member.
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        params.delete('profile');
+        if (self) params.set('person', self.id);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [
+    profileView,
+    myPermissions,
+    myPermissionsLoading,
+    isSuperAdmin,
+    isLoading,
+    personnel,
+    setSearchParams,
+  ]);
 
   // The staff member most recently asked for (row, search, address). The
   // address sync must not close one opened in the same update.
   const lastOpenedIdRef = useRef<string | null>(null);
-  const showPerson = useCallback((person: Personnel) => {
-    lastOpenedIdRef.current = person.id;
-    setSelectedPersonnel(person);
-    setActiveTab('profile');
-    setDrawerOpen(true);
-  }, []);
+  const showPerson = useCallback(
+    (person: Personnel, { keepTab = false }: { keepTab?: boolean } = {}) => {
+      lastOpenedIdRef.current = person.id;
+      setSelectedPersonnel(person);
+      if (!keepTab) setActiveTab('profile');
+      setDrawerOpen(true);
+    },
+    [setActiveTab],
+  );
+
+  // Back to the list: the tab goes with the staff member, in one address
+  // change. The address then closes the page (closeFromUrl below); closing
+  // it here as well would let the record sync write the address again from
+  // the old one and bring the tab back.
+  const closePerson = useCallback(() => {
+    if (!searchParams.has('person')) {
+      setDrawerOpen(false);
+      return;
+    }
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.delete('person');
+      params.delete('personTab');
+      return params;
+    });
+  }, [searchParams, setSearchParams]);
 
   // ── GlobalSearch deep-link: auto-open drawer for pending personnel selection ──
   useEffect(() => {
@@ -126,7 +193,8 @@ export function PersonnelModule() {
         toast.error('Staff member not found');
         return 'missing';
       }
-      showPerson(target);
+      // A pasted link keeps its tab (?person=…&personTab=clients).
+      showPerson(target, { keepTab: true });
       return 'opened';
     },
     closeFromUrl: (previousId) => {
@@ -145,6 +213,7 @@ export function PersonnelModule() {
     setActiveCategory,
     statusFilter,
     setStatusFilter,
+    clearFilters,
     filteredPersonnel,
   } = usePersonnelFilters(personnel);
 
@@ -167,24 +236,52 @@ export function PersonnelModule() {
   // 5. Mutations
   const { mutate: inviteUser } = useInvitePersonnel();
   const { mutateAsync: createAccount } = useCreatePersonnelAccount();
-  const { mutate: updateUser } = useUpdatePersonnel();
-  const { mutate: updateSuperAdmin } = useUpdateSuperAdmin();
+  const { mutateAsync: updateUser } = useUpdatePersonnel();
+  const { mutateAsync: updateSuperAdmin } = useUpdateSuperAdmin();
 
   // Handlers
   const handleRowClick = (person: Personnel) => showPerson(person);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
+    if ((PERSON_TABS as readonly string[]).includes(value)) setActiveTab(value as PersonTab);
   };
 
-  const handleUpdateProfile = async (id: string, data: Partial<Personnel>) => {
-    updateUser(
-      { id, ...data },
-      {
-        onSuccess: () => {
-          setSelectedPersonnel((prev) => (prev ? { ...prev, ...data } : null));
-        },
-      },
+  // The mutation shows the success / error toast; this reports the outcome.
+  const handleUpdateProfile = async (id: string, data: Partial<Personnel>): Promise<boolean> => {
+    try {
+      await updateUser({ id, ...data });
+      setSelectedPersonnel((prev) => (prev ? { ...prev, ...data } : null));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUpdateSuperAdmin = async (updates: Partial<SuperAdminProfile>): Promise<boolean> => {
+    try {
+      await updateSuperAdmin(updates);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Stat tiles filter the list; the active one clears it again.
+  const statusTile = (status: PersonnelStatusFilter, label: string, value: number) => {
+    const active = statusFilter === status;
+    return (
+      <button
+        key={status}
+        type="button"
+        aria-pressed={active}
+        onClick={() => setStatusFilter(active && status !== 'all' ? 'all' : status)}
+        className={cn(
+          'rounded-xl text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+          active && status !== 'all' && 'ring-2 ring-nw-violet',
+        )}
+      >
+        <StatCard label={label} value={isLoading ? '—' : value} />
+      </button>
     );
   };
 
@@ -220,11 +317,6 @@ export function PersonnelModule() {
     }
   };
 
-  const handleFileUpload = async (type: string) => {
-    if (!selectedPersonnel) return;
-    toast.info(`File upload for ${type} is coming soon`);
-  };
-
   // Prepare roles object for backward compatibility
   const PERSONNEL_ROLES = Object.entries(ROLE_LABELS).reduce(
     (acc, [key, label]) => {
@@ -254,21 +346,17 @@ export function PersonnelModule() {
         <PersonnelDrawer
           key={selectedPersonnel.id}
           open
-          onOpenChange={setDrawerOpen}
+          onOpenChange={(open) => {
+            if (!open) closePerson();
+          }}
           selectedPersonnel={selectedPersonnel}
           activeTab={activeTab}
           clients={clients}
           clientsLoading={clientsLoading}
           onTabChange={handleTabChange}
-          onUpload={handleFileUpload}
-          onUpdate={
-            handleUpdateProfile as unknown as (
-              id: string,
-              data: Partial<Personnel>,
-            ) => Promise<boolean>
-          }
+          onUpdate={handleUpdateProfile}
           onInviteCancelled={() => {
-            setDrawerOpen(false);
+            closePerson();
             setSelectedPersonnel(null);
           }}
         />
@@ -281,11 +369,15 @@ export function PersonnelModule() {
     <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
       <PageHeader
         title="Personnel"
-        description="Staff access, compliance and commission structures."
+        description="Manage staff access, compliance and commission structures."
         actions={
           <>
             {isSuperAdmin && (
-              <Button variant="outline" onClick={() => setShowSuperAdmin(!showSuperAdmin)}>
+              <Button
+                variant="outline"
+                aria-pressed={showSuperAdmin}
+                onClick={() => setProfileView(showSuperAdmin ? '' : 'me')}
+              >
                 <Shield className="h-4 w-4" aria-hidden="true" />
                 Admin profile
                 {showSuperAdmin ? (
@@ -310,18 +402,16 @@ export function PersonnelModule() {
         <SuperAdminProfileCard
           profile={superAdminProfile ?? null}
           loading={superAdminLoading}
-          onUpdate={
-            updateSuperAdmin as unknown as (updates: Partial<SuperAdminProfile>) => Promise<boolean>
-          }
+          onUpdate={handleUpdateSuperAdmin}
         />
       )}
 
       {/* ── Figures ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Total personnel" value={isLoading ? '—' : stats.total} />
-        <StatCard label="Active" value={isLoading ? '—' : stats.active} />
-        <StatCard label="Suspended" value={isLoading ? '—' : stats.suspended} />
-        <StatCard label="Pending" value={isLoading ? '—' : stats.pending} />
+        {statusTile('all', 'Total personnel', stats.total)}
+        {statusTile('active', 'Active', stats.active)}
+        {statusTile('suspended', 'Suspended', stats.suspended)}
+        {statusTile('pending', 'Pending', stats.pending)}
       </div>
 
       {/* ── Filters ───────────────────────────────────────────── */}
@@ -332,6 +422,7 @@ export function PersonnelModule() {
         onCategoryChange={setActiveCategory}
         statusFilter={statusFilter}
         onStatusChange={setStatusFilter}
+        onClearFilters={clearFilters}
         roles={PERSONNEL_ROLES}
         totalCount={personnel.length}
         filteredCount={filteredPersonnel.length}
@@ -347,34 +438,21 @@ export function PersonnelModule() {
               <Users className="h-7 w-7 text-gray-400" />
             </div>
             <h3 className="text-base font-medium text-gray-900 mb-1">
-              {personnel.length === 0 ? 'No personnel yet' : 'No results found'}
+              {personnel.length === 0 ? 'No personnel yet' : 'No personnel match your filters'}
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm">
               {personnel.length === 0
                 ? 'Get started by inviting your first team member.'
-                : "Try adjusting your search or filters to find what you're looking for."}
+                : 'Change the search, status or role to see more people.'}
             </p>
             {personnel.length === 0 && canInvite && (
-              <Button
-                size="sm"
-                className="mt-4 gap-2 bg-purple-600 hover:bg-purple-700"
-                onClick={() => setInviteDialogOpen(true)}
-              >
+              <Button size="sm" className="mt-4 gap-2" onClick={() => setInviteDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Invite user
               </Button>
             )}
             {personnel.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => {
-                  setSearchTerm('');
-                  setActiveCategory('all');
-                  setStatusFilter('all');
-                }}
-              >
+              <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
                 Clear filters
               </Button>
             )}

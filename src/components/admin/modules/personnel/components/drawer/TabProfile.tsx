@@ -2,10 +2,19 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '../../../../../ui/button';
-import { SoonBadge } from '../../../../layout/page';
+import { useConfirm } from '../../../../layout/page';
 import { Input } from '../../../../../ui/input';
+import { Textarea } from '../../../../../ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Label } from '../../../../../ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../../ui/dialog';
 import {
   Select,
   SelectContent,
@@ -13,24 +22,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../../ui/alert-dialog';
-import { Lock, Save, MailWarning, RefreshCw, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Lock, LockOpen, KeyRound, MailWarning, RefreshCw, XCircle, Loader2 } from 'lucide-react';
 import { Personnel } from '../../types';
 import { updateProfileSchema } from '../../schema';
-import { useResendPersonnelInvite, useCancelPersonnelInvite } from '../../hooks';
+import {
+  useResendPersonnelInvite,
+  useCancelPersonnelInvite,
+  useSuspendPersonnelAccess,
+  useRestorePersonnelAccess,
+  useSendPersonnelPasswordReset,
+} from '../../hooks';
+import { useCurrentUserPermissions } from '../../hooks/usePermissions';
 import { z } from 'zod';
+import { sentAgo } from './sentAgo';
 
 type PersonnelRole = 'admin' | 'adviser' | 'paraplanner' | 'compliance';
 const VALID_ROLES: PersonnelRole[] = ['admin', 'adviser', 'paraplanner', 'compliance'];
+
+/** The profile form's id: the page header's Save submits it. */
+export const PROFILE_FORM_ID = 'personnel-profile-form';
 
 function toValidRole(role: string): PersonnelRole | undefined {
   return VALID_ROLES.includes(role as PersonnelRole) ? (role as PersonnelRole) : undefined;
@@ -38,16 +48,45 @@ function toValidRole(role: string): PersonnelRole | undefined {
 
 type ProfileFormValues = z.infer<typeof updateProfileSchema>;
 
-interface TabProfileProps {
-  selectedPersonnel: Personnel;
-  onUpdate: (id: string, data: Partial<Personnel>) => Promise<boolean>;
-  onInviteCancelled?: () => void;
+export interface ProfileFormState {
+  dirty: boolean;
+  saving: boolean;
 }
 
-export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: TabProfileProps) {
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+interface TabProfileProps {
+  selectedPersonnel: Personnel;
+  /** Resolves true when the changes were saved. */
+  onUpdate: (id: string, data: Partial<Personnel>) => Promise<boolean>;
+  onInviteCancelled?: () => void;
+  /** Lets the page header enable its Save button. */
+  onFormStateChange?: (state: ProfileFormState) => void;
+}
+
+export function TabProfile({
+  selectedPersonnel,
+  onUpdate,
+  onInviteCancelled,
+  onFormStateChange,
+}: TabProfileProps) {
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [resetOpen, setResetOpen] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
+  const { canDo, isSuperAdmin, permissions } = useCurrentUserPermissions();
   const { mutate: resendInvite, isPending: isResending } = useResendPersonnelInvite();
   const { mutate: cancelInvite, isPending: isCancelling } = useCancelPersonnelInvite();
+  const { mutate: suspendAccess, isPending: isSuspending } = useSuspendPersonnelAccess();
+  const { mutate: restoreAccess, isPending: isRestoring } = useRestorePersonnelAccess();
+  const { mutate: sendReset, isPending: isSendingReset } = useSendPersonnelPasswordReset();
+
+  const fullName = `${selectedPersonnel.firstName} ${selectedPersonnel.lastName}`.trim();
+  const isSelf = permissions?.personnelId === selectedPersonnel.id;
+  // Only a super admin may act on a super admin account (the server agrees).
+  const targetProtected = selectedPersonnel.role === 'super_admin' && !isSuperAdmin;
+  const isPending = selectedPersonnel.status === 'pending';
+  const isSuspended = selectedPersonnel.status === 'suspended';
+  const canSuspend = canDo('personnel', 'delete') && !isSelf && !targetProtected && !isPending;
+  const canReset = canDo('personnel', 'edit') && !targetProtected && !isPending && !isSuspended;
 
   const {
     register,
@@ -76,6 +115,10 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
     });
   }, [selectedPersonnel, reset]);
 
+  useEffect(() => {
+    onFormStateChange?.({ dirty: isDirty, saving: isSubmitting });
+  }, [isDirty, isSubmitting, onFormStateChange]);
+
   const onSubmit = async (data: ProfileFormValues) => {
     // Clean up 'none' managerId
     const payload = {
@@ -83,70 +126,97 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
       managerId: data.managerId === 'none' ? null : data.managerId,
     };
 
-    await onUpdate(selectedPersonnel.id, payload);
-    // Form remains populated with new values, isDirty becomes false
-    reset(data);
+    const saved = await onUpdate(selectedPersonnel.id, payload);
+    // Saved values become the new baseline; a failed save keeps the edits.
+    if (saved) reset(data);
+  };
+
+  const handleCancelInvite = async () => {
+    const ok = await confirm({
+      title: 'Cancel this invitation?',
+      description: `Cancel the invitation for ${fullName} (${selectedPersonnel.email})? This removes their account and any pre-configured permissions. This cannot be undone.`,
+      confirmLabel: 'Cancel invitation',
+      cancelLabel: 'Keep invitation',
+      destructive: true,
+    });
+    if (!ok) return;
+    cancelInvite(selectedPersonnel.id, { onSuccess: () => onInviteCancelled?.() });
+  };
+
+  const handleRestore = async () => {
+    const ok = await confirm({
+      title: 'Restore access?',
+      description: `${fullName} will be able to sign in again.`,
+      confirmLabel: 'Restore access',
+    });
+    if (!ok) return;
+    restoreAccess(selectedPersonnel.id);
+  };
+
+  const submitSuspend = () => {
+    suspendAccess(
+      { id: selectedPersonnel.id, reason: suspendReason },
+      {
+        onSuccess: () => {
+          setSuspendOpen(false);
+          setSuspendReason('');
+        },
+      },
+    );
   };
 
   const roleValue = watch('role');
   const managerValue = watch('managerId');
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
-      {/* ── Pending Invite Banner ───────────────────────────────── */}
-      {selectedPersonnel.status === 'pending' && (
+    <form id={PROFILE_FORM_ID} onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* ── Pending invite ───────────────────────────────────────── */}
+      {isPending && (
         <Card className="border-amber-200 bg-amber-50/50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-amber-100 shrink-0 mt-0.5">
-                <MailWarning className="h-4.5 w-4.5 text-amber-600" />
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                <MailWarning className="h-4.5 w-4.5 text-amber-600" aria-hidden="true" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-amber-900">Invitation Pending</h4>
-                <p className="text-xs text-amber-700 mt-0.5">
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-semibold text-amber-900">
+                  Invitation pending
+                  {selectedPersonnel.invitedAt && ` — sent ${sentAgo(selectedPersonnel.invitedAt)}`}
+                  .
+                </h4>
+                <p className="mt-0.5 text-xs text-amber-700">
                   This user has been invited but hasn't set up their account yet.
-                  {selectedPersonnel.invitedAt && (
-                    <span className="inline-flex items-center gap-1 ml-1">
-                      <Clock className="h-3 w-3 inline" />
-                      Sent{' '}
-                      {new Date(selectedPersonnel.invitedAt).toLocaleDateString('en-ZA', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  )}
                 </p>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="mt-3 flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 text-xs h-8 border-amber-300 bg-white hover:bg-amber-50 text-amber-800"
+                    className="h-8 gap-1.5 border-amber-300 bg-white text-xs text-amber-800 hover:bg-amber-50"
                     disabled={isResending || isCancelling}
                     onClick={() => resendInvite(selectedPersonnel.id)}
                   >
                     {isResending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                     ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                     )}
-                    {isResending ? 'Sending…' : 'Resend Invitation'}
+                    {isResending ? 'Sending…' : 'Resend invitation'}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 text-xs h-8 border-red-200 bg-white hover:bg-red-50 text-red-700"
+                    className="h-8 gap-1.5 border-red-200 bg-white text-xs text-red-700 hover:bg-red-50"
                     disabled={isResending || isCancelling}
-                    onClick={() => setCancelDialogOpen(true)}
+                    onClick={() => void handleCancelInvite()}
                   >
                     {isCancelling ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                     ) : (
-                      <XCircle className="h-3.5 w-3.5" />
+                      <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
                     )}
-                    {isCancelling ? 'Cancelling…' : 'Cancel Invitation'}
+                    {isCancelling ? 'Cancelling…' : 'Cancel invitation'}
                   </Button>
                 </div>
               </div>
@@ -156,26 +226,20 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
       )}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Access Control</CardTitle>
-          {isDirty && (
-            <Button size="sm" type="submit" disabled={isSubmitting}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
-            </Button>
-          )}
+        <CardHeader>
+          <CardTitle className="text-lg">Access control</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>System Role</Label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="personnel-role">System role</Label>
               <Select
                 value={roleValue}
                 onValueChange={(val) =>
                   setValue('role', val as PersonnelRole, { shouldDirty: true })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="personnel-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,20 +249,21 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
                   <SelectItem value="compliance">Compliance</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">Determines system permissions.</p>
+              <p className="text-xs text-muted-foreground">
+                Admin, Adviser, Paraplanner or Compliance. Determines system permissions.
+              </p>
             </div>
-            <div>
-              <Label>Reporting Manager</Label>
+            <div className="space-y-2">
+              <Label htmlFor="personnel-manager">Reporting manager</Label>
               <Select
                 value={managerValue || 'none'}
                 onValueChange={(val) => setValue('managerId', val, { shouldDirty: true })}
               >
-                <SelectTrigger>
+                <SelectTrigger id="personnel-manager">
                   <SelectValue placeholder="Select manager" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {/* Ideally populate with actual managers list */}
                 </SelectContent>
               </Select>
             </div>
@@ -208,76 +273,155 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Personal Details</CardTitle>
+          <CardTitle className="text-lg">Personal details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input {...register('phone')} placeholder="+27..." />
+              <Label htmlFor="personnel-phone">Phone</Label>
+              <Input id="personnel-phone" {...register('phone')} placeholder="+27..." />
             </div>
             <div className="space-y-2">
-              <Label>Job Title</Label>
-              <Input {...register('jobTitle')} placeholder="Senior Adviser" />
+              <Label htmlFor="personnel-job-title">Job title</Label>
+              <Input
+                id="personnel-job-title"
+                {...register('jobTitle')}
+                placeholder="Senior Adviser"
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-2 pt-4">
-        {/* Neither action has a working endpoint yet, so both stay off. */}
-        <Button type="button" variant="destructive" className="w-full" disabled>
-          <Lock className="h-4 w-4 mr-2" />
-          Suspend user access <SoonBadge />
-        </Button>
-        <Button type="button" variant="outline" className="w-full" disabled>
-          Reset password <SoonBadge />
-        </Button>
-      </div>
-
-      {/* ── Cancel Invitation Confirmation Dialog ──────────────── */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Invitation</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel the invitation for{' '}
-              <span className="font-medium text-gray-900">
-                {selectedPersonnel.firstName} {selectedPersonnel.lastName}
-              </span>{' '}
-              ({selectedPersonnel.email})? This will remove their account and any pre-configured
-              permissions. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>Keep Invitation</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
-              disabled={isCancelling}
-              onClick={(e) => {
-                e.preventDefault();
-                cancelInvite(selectedPersonnel.id, {
-                  onSuccess: () => {
-                    setCancelDialogOpen(false);
-                    if (onInviteCancelled) {
-                      onInviteCancelled();
-                    }
-                  },
-                });
-              }}
+      {(canSuspend || canReset) && (
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+          {canSuspend &&
+            (isSuspended ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="sm:flex-1"
+                disabled={isRestoring}
+                onClick={() => void handleRestore()}
+              >
+                <LockOpen className="h-4 w-4" aria-hidden="true" />
+                {isRestoring ? 'Restoring…' : 'Restore access'}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-red-200 text-red-700 hover:bg-red-50 sm:flex-1"
+                onClick={() => setSuspendOpen(true)}
+              >
+                <Lock className="h-4 w-4" aria-hidden="true" />
+                Suspend user access
+              </Button>
+            ))}
+          {canReset && (
+            <Button
+              type="button"
+              variant="outline"
+              className="sm:flex-1"
+              onClick={() => setResetOpen(true)}
             >
-              {isCancelling ? (
-                <div className="contents">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Cancelling…
-                </div>
-              ) : (
-                'Yes, Cancel Invitation'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <KeyRound className="h-4 w-4" aria-hidden="true" />
+              Reset password
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* ── Suspend ─────────────────────────────────────────────── */}
+      <Dialog
+        open={suspendOpen}
+        onOpenChange={(open) => {
+          if (!isSuspending) setSuspendOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Suspend user access</DialogTitle>
+            <DialogDescription>
+              {fullName} won't be able to sign in until access is restored. Their clients stay
+              assigned to them.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="suspend-reason">Reason</Label>
+            <Textarea
+              id="suspend-reason"
+              value={suspendReason}
+              maxLength={1000}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              placeholder="Why is access being suspended?"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSuspending}
+              onClick={() => setSuspendOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={isSuspending}
+              onClick={submitSuspend}
+            >
+              {isSuspending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isSuspending ? 'Suspending…' : 'Suspend access'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reset password ──────────────────────────────────────── */}
+      <Dialog
+        open={resetOpen}
+        onOpenChange={(open) => {
+          if (!isSendingReset) setResetOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              Send {fullName} a password reset link at {selectedPersonnel.email}? Their current
+              password stops working and they are signed out until they choose a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSendingReset}
+              onClick={() => setResetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isSendingReset}
+              onClick={() =>
+                sendReset(
+                  { id: selectedPersonnel.id, email: selectedPersonnel.email },
+                  { onSuccess: () => setResetOpen(false) },
+                )
+              }
+            >
+              {isSendingReset && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isSendingReset ? 'Sending…' : 'Send reset link'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {confirmDialog}
     </form>
   );
 }

@@ -18,6 +18,9 @@ import {
   fetchPermissionAudit,
   backfillAuthRoles,
   personnelApi,
+  suspendPersonnelAccess,
+  restorePersonnelAccess,
+  sendPersonnelPasswordReset,
 } from '../api';
 
 const mockApiGet = vi.fn();
@@ -479,5 +482,48 @@ describe('personnelApi object', () => {
     expect(typeof personnelApi.fetchPermissions).toBe('function');
     expect(typeof personnelApi.fetchMyPermissions).toBe('function');
     expect(typeof personnelApi.backfillAuthRoles).toBe('function');
+  });
+});
+
+describe('staff account access (shared /security routes)', () => {
+  beforeEach(() => {
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
+  });
+
+  it('suspends sign-in with the reason, then marks the staff record suspended', async () => {
+    mockApiPost.mockResolvedValue({ success: true });
+    mockApiPut.mockResolvedValue({ data: {} });
+    await suspendPersonnelAccess('per-001', '  Left the practice ');
+    expect(mockApiPost).toHaveBeenCalledWith('/security/per-001/suspend', {
+      suspended: true,
+      reason: 'Left the practice',
+    });
+    expect(mockApiPut).toHaveBeenCalledWith('personnel/per-001', { status: 'suspended' });
+  });
+
+  it('does not touch the staff record when the suspension is refused', async () => {
+    mockApiPost.mockResolvedValue({ success: false, error: 'Forbidden' });
+    await expect(suspendPersonnelAccess('per-001', '')).rejects.toThrow('Forbidden');
+    expect(mockApiPut).not.toHaveBeenCalled();
+  });
+
+  it('restores sign-in and marks the record active', async () => {
+    mockApiPost.mockResolvedValue({ success: true });
+    mockApiPut.mockResolvedValue({ data: {} });
+    await restorePersonnelAccess('per-001');
+    expect(mockApiPost).toHaveBeenCalledWith('/security/per-001/suspend', { suspended: false });
+    expect(mockApiPut).toHaveBeenCalledWith('personnel/per-001', { status: 'active' });
+  });
+
+  it('sends a reset link through the admin reset with a random password nobody sees', async () => {
+    mockApiPost.mockResolvedValue({ success: true });
+    await sendPersonnelPasswordReset('per-001');
+    const [url, body] = mockApiPost.mock.calls[0];
+    expect(url).toBe('/security/per-001/password');
+    expect(body.emailPassword).toBe(true);
+    expect(body.newPassword.length).toBeGreaterThanOrEqual(8);
+    await sendPersonnelPasswordReset('per-001');
+    expect(mockApiPost.mock.calls[1][1].newPassword).not.toBe(body.newPassword);
   });
 });
