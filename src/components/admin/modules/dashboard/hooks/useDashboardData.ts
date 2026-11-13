@@ -14,6 +14,13 @@ export interface UseDashboardDataReturn {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  /** Per-source failures, so each card can show its own error with Try again. */
+  errors: {
+    stats: boolean;
+    tasks: boolean;
+  };
+  refetchStats: () => void;
+  refetchTasks: () => void;
   loadingStates: {
     stats: boolean;
     metrics: boolean;
@@ -111,6 +118,9 @@ export function useDashboardData(): UseDashboardDataReturn {
     loading,
     error,
     refetch,
+    errors: { stats: !!statsError, tasks: !!tasksError },
+    refetchStats: () => void refetchStats(),
+    refetchTasks: () => void refetchTasks(),
     loadingStates: {
       stats: statsLoading,
       metrics: metricsLoading,

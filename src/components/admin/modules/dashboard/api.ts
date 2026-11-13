@@ -168,8 +168,10 @@ export const tasksApi = {
       );
       return response.data || [];
     } catch (error) {
+      // Rethrown so the Due today card can say so and offer Try again,
+      // rather than claiming there is nothing due.
       logger.error('Failed to fetch tasks due today', error);
-      return [];
+      throw error;
     }
   },
 
@@ -216,6 +218,21 @@ export const tasksApi = {
  * endpoints below, which is how one dashboard load came to hit the app's most
  * expensive route twice.
  */
+/** Task totals for the Tasks figure (open and completed). */
+export const taskStatsApi = {
+  async getStats(): Promise<{ open: number; completed: number }> {
+    const response = await api.get<{
+      new?: number;
+      in_progress?: number;
+      completed?: number;
+    }>(ENDPOINTS.TASK_STATS);
+    return {
+      open: (response.new ?? 0) + (response.in_progress ?? 0),
+      completed: response.completed ?? 0,
+    };
+  },
+};
+
 export const dashboardApi = {
   stats: dashboardStatsApi,
   metrics: dashboardMetricsApi,

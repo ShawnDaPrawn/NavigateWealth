@@ -15,6 +15,7 @@ import { useAuth } from '../../../../auth/AuthContext';
 import { useNotes } from '../../notes';
 import { NOTE_COLOR_CONFIG } from '../../notes';
 import type { Note } from '../../notes';
+import { CardError } from './CardError';
 
 interface RecentNotesWidgetProps {
   onModuleChange?: (module: string) => void;
@@ -24,7 +25,7 @@ interface RecentNotesWidgetProps {
 export function RecentNotesWidget({ onModuleChange, maxNotes = 5 }: RecentNotesWidgetProps) {
   const { user } = useAuth();
   const personnelId = user?.id || '';
-  const { data: allNotes = [], isLoading } = useNotes(personnelId);
+  const { data: allNotes = [], isLoading, isError, refetch } = useNotes(personnelId);
 
   // Show only active (non-archived) notes, sorted by updatedAt descending
   const recentNotes = allNotes.filter((n) => !n.isArchived).slice(0, maxNotes);
@@ -41,13 +42,16 @@ export function RecentNotesWidget({ onModuleChange, maxNotes = 5 }: RecentNotesW
         <div>
           <CardTitle className="text-lg font-semibold flex items-center">
             <StickyNote className="h-5 w-5 mr-2 text-purple-600" />
-            Recent Notes
+            Recent notes
           </CardTitle>
           <CardDescription>Your latest notes and memos</CardDescription>
         </div>
         <div className="flex space-x-2">
+          <Button variant="outline" size="sm" onClick={handleViewAll}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> New note
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleViewAll}>
-            View All <ArrowRight className="ml-2 h-4 w-4" />
+            View all <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </CardHeader>
@@ -68,6 +72,8 @@ export function RecentNotesWidget({ onModuleChange, maxNotes = 5 }: RecentNotesW
               </div>
             ))}
           </div>
+        ) : isError ? (
+          <CardError title="Couldn't load your notes" onRetry={() => void refetch()} />
         ) : recentNotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
@@ -75,11 +81,8 @@ export function RecentNotesWidget({ onModuleChange, maxNotes = 5 }: RecentNotesW
             </div>
             <p className="text-sm font-medium text-gray-900">No notes yet</p>
             <p className="text-xs text-gray-500 mt-0.5 max-w-[240px]">
-              Create your first note to capture ideas and meeting information.
+              Notes you create, or link to a client, show up here.
             </p>
-            <Button size="sm" variant="outline" className="mt-3" onClick={handleViewAll}>
-              <Plus className="h-4 w-4 mr-1" /> Create Note
-            </Button>
           </div>
         ) : (
           <div className="space-y-2">
