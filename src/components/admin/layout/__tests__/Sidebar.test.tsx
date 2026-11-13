@@ -74,7 +74,7 @@ describe('admin Sidebar', () => {
   });
 
   it('shows waiting counts, and an amber dot when their group is closed', () => {
-    renderSidebar({ pendingCounts: { tasks: { count: 4 } } });
+    renderSidebar({ pendingCounts: { submissions: { count: 4 } } });
     const nav = within(desktopNav());
     expect(nav.getByText('4')).toBeDefined();
 
@@ -84,6 +84,15 @@ describe('admin Sidebar', () => {
     expect(work.getAttribute('aria-expanded')).toBe('false');
     expect(nav.queryByRole('button', { name: 'To-Do' })).toBeNull();
     expect(nav.getByRole('img', { name: 'Items waiting' })).toBeDefined();
+  });
+
+  it('shows the To-Do count grey: it is a backlog, not a new arrival', () => {
+    renderSidebar({ pendingCounts: { tasks: { count: 4 } } });
+    const nav = within(desktopNav());
+    const badge = nav.getByText('4');
+    expect(badge.className).not.toContain('amber');
+    fireEvent.click(nav.getByRole('button', { name: 'Work' }));
+    expect(nav.queryByRole('img', { name: 'Items waiting' })).toBeNull();
   });
 
   it('remembers closed groups across renders', () => {

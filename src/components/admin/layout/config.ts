@@ -109,6 +109,10 @@ export const operationsModules: AdminModule[] = [
   'issues',
 ];
 
+// Modules whose counter is a backlog (open items), not new arrivals: shown
+// grey, never amber (design system: sidebar counts).
+export const backlogCounterModules: AdminModule[] = ['tasks'];
+
 // Modules whose counters are status indicators and should remain visible at zero.
 export const alwaysShowCounterModules: AdminModule[] = ['issues'];
 

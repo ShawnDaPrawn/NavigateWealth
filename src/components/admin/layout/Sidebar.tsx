@@ -23,6 +23,7 @@ import { Logo } from '../../layout/Logo';
 import { AdminModule, PendingCounts } from './types';
 import {
   alwaysShowCounterModules,
+  backlogCounterModules,
   formatSidebarBadgeCount,
   formatPendingSummary,
   formatRole,
@@ -208,7 +209,7 @@ function SidebarContent({
     const isActive = activeModule === module;
     const count = countOf(module);
     const counted = showsCount(module);
-    const waiting = counted && count > 0;
+    const waiting = counted && count > 0 && !backlogCounterModules.includes(module);
 
     const item = (
       <button
@@ -262,10 +263,13 @@ function SidebarContent({
             {count.toLocaleString()}
           </span>
         )}
-        {rail && waiting && (
+        {rail && counted && count > 0 && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-nw-amber-100 px-1 text-[10px] font-semibold leading-none tabular-nums text-nw-amber-700 ring-2 ring-nw-nav-bg"
+            className={cn(
+              'pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums ring-2 ring-nw-nav-bg',
+              waiting ? 'bg-nw-amber-100 text-nw-amber-700' : 'bg-nw-count text-nw-text-2',
+            )}
           >
             {formatSidebarBadgeCount(count)}
           </span>
@@ -363,7 +367,9 @@ function SidebarContent({
             const visible = group.modules.filter((m) => can(m));
             if (visible.length === 0) return null;
             const open = rail || !closedGroups.includes(group.label);
-            const waitingInGroup = visible.some((m) => showsCount(m) && countOf(m) > 0);
+            const waitingInGroup = visible.some(
+              (m) => showsCount(m) && countOf(m) > 0 && !backlogCounterModules.includes(m),
+            );
             const listId = `nav-group-${group.label.toLowerCase()}`;
 
             if (rail) {
