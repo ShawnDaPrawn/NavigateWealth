@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { FNAStepNavigation } from '../../fna';
 import { useFormPrefill } from '../../form-prefill';
 import type { EstatePlanningInputs, FamilyInformation, WillInformation } from '../types';
@@ -131,17 +132,11 @@ export function Step1InformationGathering({
         onValueChange={(tab) => setActiveTab(tab as EstateStep1Tab)}
         className="w-full"
       >
-        <TabsList className="w-full h-auto p-1">
-          <TabsTrigger value="family" className="text-sm px-6 py-2.5">
-            Family
-          </TabsTrigger>
-          <TabsTrigger value="will" className="text-sm px-6 py-2.5">
-            Will & Structures
-          </TabsTrigger>
-          <TabsTrigger value="records" className="text-sm px-6 py-2.5">
-            Estate Records
-          </TabsTrigger>
-        </TabsList>
+        <SegmentedList aria-label="Information sections">
+          <SegmentedTrigger value="family">Family</SegmentedTrigger>
+          <SegmentedTrigger value="will">Will &amp; structures</SegmentedTrigger>
+          <SegmentedTrigger value="records">Estate records</SegmentedTrigger>
+        </SegmentedList>
 
         <TabsContent value="family" className="mt-6">
           <Card>

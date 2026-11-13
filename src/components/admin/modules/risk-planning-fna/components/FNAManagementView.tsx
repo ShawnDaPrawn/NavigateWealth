@@ -2,14 +2,15 @@
  * FNA Management View — the FNA list on a policy category tab, used by every
  * FNA type (it lives here for historical reasons).
  *
- * Shows every FNA of one type for the client, newest first, with "Run New FNA"
+ * Shows every FNA of one type for the client, newest first, with "Run new FNA"
  * and "View". The rows come from the type's own API through the FNA registry
  * (`loadFNAs`), never from a hand-built URL. `highlightFnaId` marks the FNA
  * that was just published, which is where the wizard lands the adviser.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText, Eye, Download, Calendar, Loader2, ArrowLeft, Zap } from 'lucide-react';
+import { FileText, Eye, Calendar, Loader2, ChevronLeft, Zap } from 'lucide-react';
+import { StatCard } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
@@ -129,50 +130,33 @@ export function FNAManagementView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <button
+        type="button"
+        onClick={onClose}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        Back to policies
+      </button>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
-          </div>
-          <p className="text-sm text-muted-foreground ml-11">
-            View and manage Financial Needs Analyses for {clientName}
+          <h2 className="text-xl font-semibold tracking-tight text-nw-ink">{title}</h2>
+          <p className="mt-0.5 text-sm text-nw-text-3">
+            Every {fnaName} run for {clientName || 'this client'}.
           </p>
         </div>
-
-        <Button onClick={onCreateNew} size="lg">
-          <Zap className="mr-2 h-4 w-4" />
-          Run New FNA
+        <Button onClick={onCreateNew}>
+          <Zap className="h-4 w-4" aria-hidden="true" />
+          Run new FNA
         </Button>
       </div>
 
       {/* Summary Stats */}
       {!isLoading && fnas.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground">Total FNAs</div>
-              <div className="text-2xl font-bold">{fnas.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground">Published</div>
-              <div className="text-2xl font-bold text-[#6d28d9]">
-                {fnas.filter((f) => f.status === 'published').length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-muted-foreground">Drafts</div>
-              <div className="text-2xl font-bold text-gray-600">
-                {fnas.filter((f) => f.status === 'draft').length}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="Total FNAs" value={fnas.length} />
+          <StatCard label="Published" value={fnas.filter((f) => f.status === 'published').length} />
+          <StatCard label="Drafts" value={fnas.filter((f) => f.status === 'draft').length} />
         </div>
       )}
 
@@ -186,13 +170,13 @@ export function FNAManagementView({
           ) : fnas.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No FNAs Found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No FNAs yet</h3>
               <p className="text-sm text-gray-600 mb-6">
                 Get started by running your first {fnaName} for this client.
               </p>
               <Button onClick={onCreateNew}>
                 <Zap className="mr-2 h-4 w-4" />
-                Run New FNA
+                Run new FNA
               </Button>
             </div>
           ) : (
@@ -204,8 +188,10 @@ export function FNAManagementView({
                   <TableHead>Created</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead>Published</TableHead>
-                  <TableHead>Created By</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Created by</TableHead>
+                  <TableHead className="text-right">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -255,18 +241,6 @@ export function FNAManagementView({
                             <Eye className="h-4 w-4 mr-1.5" />
                             View
                           </Button>
-                          {fna.status === 'published' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // TODO: Implement PDF export for published FNA
-                                toast.info('PDF export coming soon');
-                              }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
