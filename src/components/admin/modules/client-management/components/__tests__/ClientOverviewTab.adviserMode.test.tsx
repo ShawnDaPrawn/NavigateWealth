@@ -24,6 +24,33 @@ vi.mock('@/shared/fna-intake/hooks/useFnaBatchStatus', () => ({
   })),
 }));
 
+// Primary reads succeed (empty): a failed read now shows the error state.
+vi.mock('@/shared/api/clientPolicies', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/clientPolicies')>();
+  return {
+    ...actual,
+    clientPoliciesQueryOptions: (clientId: string) => ({
+      queryKey: ['test-policies', clientId],
+      queryFn: async () => {
+        if (clientId === 'client-fails') throw new Error('400 Bad Request');
+        return [];
+      },
+    }),
+    policySchemasQueryOptions: () => ({ queryKey: ['test-schemas'], queryFn: async () => ({}) }),
+  };
+});
+vi.mock('@/components/admin/modules/client-management/api', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/components/admin/modules/client-management/api')>();
+  return {
+    ...actual,
+    getClientProfileQueryOptions: (clientId: string) => ({
+      queryKey: ['test-profile', clientId],
+      queryFn: async () => null,
+    }),
+  };
+});
+
 vi.mock('@/utils/auth/profileService', () => ({
   getClientProfileQueryOptions: (clientId: string) => ({
     queryKey: ['client-profile', clientId],
@@ -106,5 +133,16 @@ describe('ClientOverviewTab adviser mode', () => {
     });
     expect(screen.queryAllByText('My Policies').length).toBe(0);
     expect(screen.queryAllByText('My Net Worth').length).toBe(0);
+  });
+
+  it('shows an error, not zero figures, when the policies read fails', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ClientOverviewTab client={{ ...mockClient, id: 'client-fails' }} mode="adviser" />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Couldn't load the overview")).toBeTruthy();
+    expect(screen.queryByText('Portfolio summary')).toBeNull();
   });
 });

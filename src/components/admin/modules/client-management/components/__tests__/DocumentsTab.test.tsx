@@ -192,9 +192,33 @@ describe('DocumentsTab', () => {
     expect(screen.queryByRole('button', { name: 'Add document or link' })).toBeNull();
   });
 
-  it('only offers Email documents to client once something has been uploaded', async () => {
+  it('offers Email documents to client only when there are documents', async () => {
     render(<DocumentsTab selectedClient={selectedClient} />);
     const email = screen.getByRole('button', { name: 'Email documents to client' });
     expect((email as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it('lets the adviser choose which documents to email, and requires one', async () => {
+    mockDocuments([makeDoc(), makeDoc({ id: 'doc-2', title: 'ID Copy' })]);
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    await waitFor(() => expect(screen.getByText('ID Copy')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Email documents to client' }));
+    expect(await screen.findByText('Documents to attach')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+    expect(await screen.findByText('Choose at least one document to attach')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/ID Copy/));
+    expect(screen.queryByText('Choose at least one document to attach')).toBeNull();
+  });
+
+  it('shows an error, not "No documents yet", when the list fails to load', async () => {
+    vi.mocked(api.get).mockImplementation(async (endpoint: string) => {
+      if (endpoint.includes('client-document-summaries')) {
+        return { success: true, summaries: [], batches: [], canEdit: false, canGenerate: false };
+      }
+      throw new Error('400 Bad Request');
+    });
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    expect(await screen.findByText("Couldn't load documents", {}, { timeout: 8000 })).toBeTruthy();
+    expect(screen.queryByText(/No documents yet/i)).toBeNull();
+  }, 15000);
 });

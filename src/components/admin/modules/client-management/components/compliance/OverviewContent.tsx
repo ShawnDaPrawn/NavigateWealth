@@ -120,12 +120,12 @@ export function OverviewContent({
       {/* Client identification summary */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-md font-medium">Client Identification</CardTitle>
+          <CardTitle className="text-md font-medium">Client identification</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Honeycomb ID</span>
+              <span className="text-gray-500">Beeswax ID</span>
               <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded mt-1">
                 {honeycombId || '—'}
               </div>
@@ -156,7 +156,7 @@ export function OverviewContent({
               </div>
             </div>
             <div>
-              <span className="text-gray-500">Client Name</span>
+              <span className="text-gray-500">Client name</span>
               <div className="mt-1 font-medium text-sm">
                 {selectedClient.firstName} {selectedClient.lastName}
               </div>
@@ -171,10 +171,10 @@ export function OverviewContent({
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <History className="h-5 w-5 text-gray-500" />
-              Recent Activity
+              Recent activity
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => onNavigate('activity-log')}>
-              View All
+              View all
             </Button>
           </CardHeader>
           <CardContent>

@@ -3,18 +3,22 @@ import { cleanup, fireEvent, renderWithQueryClient, screen, waitFor } from '@/te
 import { MemoryRouter, useLocation } from 'react-router';
 import type { Client } from '../../types';
 
+const logs = vi.hoisted(() => ({ fail: false }));
 vi.mock('../../../communication', () => ({
   communicationApi: {
-    getClientLogs: vi.fn(async () => [
-      {
-        id: 'm1',
-        subject: 'Welcome to Navigate Wealth',
-        category: 'General',
-        created_at: '2026-04-14T11:02:00Z',
-        read: true,
-        sent_via_email: true,
-      },
-    ]),
+    getClientLogs: vi.fn(async () => {
+      if (logs.fail) throw new Error('400 Bad Request');
+      return [
+        {
+          id: 'm1',
+          subject: 'Welcome to Navigate Wealth',
+          category: 'General',
+          created_at: '2026-04-14T11:02:00Z',
+          read: true,
+          sent_via_email: true,
+        },
+      ];
+    }),
   },
 }));
 vi.mock('../communication/ComposeForm', () => ({
@@ -65,5 +69,17 @@ describe('Client communication tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View history' }));
     await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('?cview=history'));
     expect(await screen.findByText(/history inline/)).toBeTruthy();
+  });
+
+  it('shows an error in History, not an empty history, when messages fail to load', async () => {
+    logs.fail = true;
+    try {
+      renderTab('/?cview=history');
+      expect(
+        await screen.findByText("Couldn't load the communication history", {}, { timeout: 5000 }),
+      ).toBeTruthy();
+    } finally {
+      logs.fail = false;
+    }
   });
 });

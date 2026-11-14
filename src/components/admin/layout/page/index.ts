@@ -13,3 +13,10 @@ export { BreadcrumbContext, type Crumb } from './breadcrumbContext';
 export { Notice, FormErrorBanner } from './Notice';
 export { ClientSubCrumbContext, useClientSubCrumbs } from './subCrumbs';
 export { useAppendBreadcrumb } from './useAppendBreadcrumb';
+export {
+  PageTakeoverContext,
+  usePageTakeover,
+  usePageTakeoverActive,
+  type PageTakeoverValue,
+  type TakeoverLevel,
+} from './pageTakeover';

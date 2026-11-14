@@ -12,6 +12,30 @@ vi.mock('@/shared/fna-intake/hooks/useFnaBatchStatus', () => ({
   })),
 }));
 
+// Primary reads succeed (empty): a failed read now shows the error state.
+vi.mock('@/shared/api/clientPolicies', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/clientPolicies')>();
+  return {
+    ...actual,
+    clientPoliciesQueryOptions: (clientId: string) => ({
+      queryKey: ['test-policies', clientId],
+      queryFn: async () => [],
+    }),
+    policySchemasQueryOptions: () => ({ queryKey: ['test-schemas'], queryFn: async () => ({}) }),
+  };
+});
+vi.mock('@/components/admin/modules/client-management/api', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/components/admin/modules/client-management/api')>();
+  return {
+    ...actual,
+    getClientProfileQueryOptions: (clientId: string) => ({
+      queryKey: ['test-profile', clientId],
+      queryFn: async () => null,
+    }),
+  };
+});
+
 vi.mock('@/utils/auth/profileService', () => ({
   getClientProfileQueryOptions: (clientId: string) => ({
     queryKey: ['client-profile', clientId],

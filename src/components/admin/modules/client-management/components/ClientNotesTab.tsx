@@ -10,7 +10,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { Notice } from '../../../layout/page';
+import { ErrorState, Notice } from '../../../layout/page';
 import { useClientSubCrumbs } from '../../../layout/page';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../../auth/AuthContext';
@@ -48,7 +48,12 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
     .join(' ');
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: notes = [], isLoading } = useClientNotes(selectedClient.id);
+  const {
+    data: notes = [],
+    isLoading,
+    error: notesError,
+    refetch: refetchNotes,
+  } = useClientNotes(selectedClient.id);
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
@@ -161,6 +166,18 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
   );
 
   // ── Loading ───────────────────────────────────────────────────────────────
+  // A failed load is an error, never "No notes for this client".
+  if (notesError && !isLoading && notes.length === 0) {
+    return (
+      <ErrorState
+        title="Couldn't load notes"
+        description="This client's notes could not be loaded."
+        onRetry={() => void refetchNotes()}
+        details={notesError instanceof Error ? notesError.message : String(notesError)}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">

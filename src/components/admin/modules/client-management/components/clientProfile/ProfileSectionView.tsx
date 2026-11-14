@@ -7,7 +7,8 @@ import { Check, Copy, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../../../../ui/button';
 import { copyToClipboard } from '../../../../../../utils/clipboard';
-import type { RowGroup } from './profileSectionRows';
+import type { ReactNode } from 'react';
+import type { RowGroup, TableSpec } from './profileSectionRows';
 
 const NOT_PROVIDED = 'Not provided';
 
@@ -42,12 +43,17 @@ function CopyValue({ value }: { value: string }) {
 /** A section card in view mode: title, Edit, then label / value rows. */
 export function ProfileSectionView({
   title,
-  groups,
+  groups = [],
+  tables = [],
+  actions,
   onEdit,
   canEdit = true,
 }: {
   title: string;
-  groups: RowGroup[];
+  groups?: RowGroup[];
+  tables?: TableSpec[];
+  /** Extra header buttons before Edit (e.g. Add family member). */
+  actions?: ReactNode;
   onEdit: () => void;
   canEdit?: boolean;
 }) {
@@ -55,12 +61,15 @@ export function ProfileSectionView({
     <section aria-label={title} className="rounded-xl border border-nw-line bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-nw-line-2 px-5 py-3.5">
         <h2 className="text-[15px] font-semibold text-nw-ink">{title}</h2>
-        {canEdit && (
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-            Edit
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {actions}
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+              Edit
+            </Button>
+          )}
+        </div>
       </div>
       {groups.map((group, i) => (
         <div key={group.title ?? i} className="border-b border-nw-line-2 px-5 py-4 last:border-b-0">
@@ -84,6 +93,46 @@ export function ProfileSectionView({
               </div>
             ))}
           </dl>
+        </div>
+      ))}
+      {tables.map((table, i) => (
+        <div key={table.title ?? i} className="border-b border-nw-line-2 last:border-b-0">
+          {(table.title || table.description) && (
+            <div className="px-5 pt-4">
+              {table.title && (
+                <h3 className="text-[13px] font-semibold text-nw-text-2">{table.title}</h3>
+              )}
+              {table.description && <p className="text-sm text-nw-text-3">{table.description}</p>}
+            </div>
+          )}
+          {table.rows.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-nw-text-3">{table.emptyText}</p>
+          ) : (
+            <div className="overflow-x-auto px-5 py-3">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-nw-text-3">
+                    {table.columns.map((c) => (
+                      <th key={c} className="py-2 pr-4 font-medium">
+                        {c}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-nw-line-2">
+                  {table.rows.map((row, r) => (
+                    <tr key={r}>
+                      {row.map((cell, c) => (
+                        <td key={c} className="py-2 pr-4 text-nw-ink">
+                          {cell || <span className="text-nw-text-3">—</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ))}
     </section>

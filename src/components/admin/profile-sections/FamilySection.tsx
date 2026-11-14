@@ -69,7 +69,7 @@ export function FamilySection({
                 <Users className="h-5 w-5 text-[#6d28d9]" />
               </div>
               <div>
-                <CardTitle>Family Members</CardTitle>
+                <CardTitle>Family members</CardTitle>
                 <CardDescription>Client's family and dependents</CardDescription>
               </div>
             </div>

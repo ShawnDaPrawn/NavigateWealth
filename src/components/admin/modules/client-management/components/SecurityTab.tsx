@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Notice } from '../../../layout/page';
+import { ErrorState, Notice } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Switch } from '../../../../ui/switch';
 import { ActivityLogTable } from '../../../ActivityLogTable';
@@ -32,6 +32,8 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
   });
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  /** The status read failed: show an error, not a made-up "Active" account. */
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [unsuspendDialogOpen, setUnsuspendDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
@@ -65,9 +67,10 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
       if (data.success && data.status) {
         setSecurityStatus(data.status);
       }
+      setStatusError(null);
     } catch (error) {
       console.error('Failed to fetch security status:', error);
-      toast.error('Failed to load security status');
+      setStatusError(error instanceof Error ? error.message : String(error));
     } finally {
       setStatusLoading(false);
     }
@@ -358,6 +361,20 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
     const by = m.performedByRole ?? m.actorRole ?? m.by ?? m.performedBy ?? m.actor;
     return typeof by === 'string' && by ? by : '—';
   };
+
+  if (statusError) {
+    return (
+      <ErrorState
+        title="Couldn't load security"
+        description="This client's account status could not be loaded."
+        onRetry={() => {
+          void fetchSecurityStatus();
+          void fetchActivityLogs();
+        }}
+        details={statusError}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">

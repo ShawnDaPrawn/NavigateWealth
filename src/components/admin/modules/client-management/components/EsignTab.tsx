@@ -24,8 +24,10 @@ import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../../../ui/table';
-import { Plus, AlertCircle, Search, X, ArrowRight } from 'lucide-react';
+import { Plus, Search, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { DocumentSummaryTimeline } from './DocumentSummaryTimeline';
+import { ErrorState } from '../../../layout/page';
 import { logger } from '../../../../../utils/logger';
 
 // ==================== SHARED E-SIGN MODULE IMPORTS ====================
@@ -634,20 +636,12 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center space-y-3">
-            <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
-            <div>
-              <h3 className="font-semibold">Failed to load envelopes</h3>
-              <p className="text-sm text-muted-foreground mt-1">{error}</p>
-            </div>
-            <Button onClick={() => refetch()} variant="outline" size="sm">
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="Couldn't load e-signature documents"
+        description="The envelopes sent to this client could not be loaded."
+        onRetry={() => void refetch()}
+        details={String(error)}
+      />
     );
   }
 
@@ -758,8 +752,10 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
                   <TableHead>Status</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Signers</TableHead>
-                  <TableHead>Expiry</TableHead>
-                  <TableHead className="text-right pr-4">Actions</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead className="text-right pr-4">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -768,6 +764,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
                     key={envelope.id}
                     envelope={envelope}
                     resuming={resumingEnvelopeId === envelope.id}
+                    actionsLayout="menu"
                     onRowClick={() => handleEnvelopeClick(envelope)}
                     onView={() => handleViewEnvelope(envelope)}
                     onDownload={() => handleDownload(envelope)}
@@ -786,6 +783,13 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Signing summaries (design: CM 11 — summaries below the table) */}
+      <DocumentSummaryTimeline
+        clientId={selectedClient.id}
+        title="Signing summaries"
+        description="Document summaries for this client: what each batch of signed and uploaded documents was."
+      />
 
       {/* ==================== DIALOGS ==================== */}
 

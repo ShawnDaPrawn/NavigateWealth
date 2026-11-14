@@ -76,7 +76,7 @@ export function EmploymentSection({
               <Briefcase className="h-5 w-5 text-[#6d28d9]" />
             </div>
             <div>
-              <CardTitle>Employment Information</CardTitle>
+              <CardTitle>Employment information</CardTitle>
               <CardDescription>Client's work and income details</CardDescription>
             </div>
           </div>
@@ -108,7 +108,7 @@ export function EmploymentSection({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900">Client's Employers</h4>
+                    <h4 className="text-sm font-medium text-gray-900">Client's employers</h4>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {employers.length === 0
                         ? 'No employers added yet'
@@ -515,7 +515,7 @@ export function EmploymentSection({
               <div className="contents">
                 <Separator />
                 <div>
-                  <h4 className="text-sm text-gray-700 mb-3">Additional Income Sources</h4>
+                  <h4 className="text-sm text-gray-700 mb-3">Additional income sources</h4>
                   <p className="text-xs text-gray-500">
                     {(profileData.additionalIncomeSources as unknown[]).length} source(s) added
                   </p>

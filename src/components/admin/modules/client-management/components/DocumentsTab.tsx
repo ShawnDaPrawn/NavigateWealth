@@ -14,7 +14,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Mail, Plus, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
+import { ErrorState, SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
 import { useClientSubCrumbs } from '../../../layout/page';
 
 const DOCUMENTS_VIEWS = ['docs', 'timeline'] as const;
@@ -70,6 +70,10 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
+  /** The list failed to load: an error state, not "No documents yet". */
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // Documents chosen in "Email documents to client" (the latest upload is preselected).
+  const [emailDocIds, setEmailDocIds] = useState<string[]>([]);
   // Documents & links | Activity timeline, in the address (?dview=).
   const [view, setView] = useUrlState<DocumentsView>('dview', 'docs', DOCUMENTS_VIEWS);
   useClientSubCrumbs(view === 'timeline' ? [{ label: 'Activity timeline' }] : []);
@@ -97,6 +101,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         );
 
         setDocuments(sortedDocs);
+        setLoadError(null);
         return; // Success — exit retry loop
       } catch (error) {
         if (attempt < maxRetries) {
@@ -105,7 +110,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           continue;
         }
         console.error('Error fetching documents after retries:', error);
-        toast.error('Failed to load documents');
+        setLoadError(error instanceof Error ? error.message : String(error));
       } finally {
         setLoading(false);
       }
@@ -119,7 +124,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   }, [selectedClient?.id, fetchDocuments]);
 
   const handleSendEmail = async () => {
-    if (!selectedClient?.id || uploadedDocIds.length === 0) return;
+    if (!selectedClient?.id || emailDocIds.length === 0) return;
 
     // Get client details for email - Robust extraction
     // Check root email first, then profile email, then personal info email
@@ -144,7 +149,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     try {
       setSendingEmail(true);
       await api.post(`/documents/${selectedClient.id}/email`, {
-        documentIds: uploadedDocIds,
+        documentIds: emailDocIds,
         email: clientEmail,
         idNumber: clientIdNumber,
         customMessage: uploadEmailMessage,
@@ -155,6 +160,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       toast.success('Documents emailed to client successfully');
       setEmailComposeDialogOpen(false);
       setUploadedDocIds([]);
+      setEmailDocIds([]);
       setCcAdmin(false); // Reset CC preference
     } catch (error) {
       console.error('❌ Error sending email:', error);
@@ -335,6 +341,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   });
 
   const groupedItems = groupDocumentsByPack(filteredDocuments);
+  // Links cannot be attached to an email; only uploaded files can.
+  const attachableDocuments = documents.filter((d) => d.type !== 'link');
 
   if (!selectedClient) {
     return (
@@ -372,14 +380,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 size="sm"
                 onClick={() => {
                   setUploadEmailMessage('');
+                  setEmailDocIds(uploadedDocIds);
                   setEmailComposeDialogOpen(true);
                 }}
-                disabled={uploadedDocIds.length === 0}
-                title={
-                  uploadedDocIds.length === 0
-                    ? 'Upload documents first; the email attaches the latest upload.'
-                    : undefined
-                }
+                disabled={attachableDocuments.length === 0}
+                title={attachableDocuments.length === 0 ? 'No documents to email yet.' : undefined}
               >
                 <Mail className="h-4 w-4" aria-hidden="true" />
                 Email documents to client
@@ -393,41 +398,52 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         </div>
 
         <TabsContent value="docs" className="mt-0 space-y-4">
-          <DocumentFiltersBar
-            searchInputGuard={searchInputGuard}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            filterCategory={filterCategory}
-            setFilterCategory={setFilterCategory}
-            filterDateStart={filterDateStart}
-            setFilterDateStart={setFilterDateStart}
-            filterDateEnd={filterDateEnd}
-            setFilterDateEnd={setFilterDateEnd}
-          />
+          {loadError && !loading ? (
+            <ErrorState
+              title="Couldn't load documents"
+              description="This client's documents could not be loaded."
+              onRetry={() => void fetchDocuments()}
+              details={loadError}
+            />
+          ) : (
+            <>
+              <DocumentFiltersBar
+                searchInputGuard={searchInputGuard}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterCategory={filterCategory}
+                setFilterCategory={setFilterCategory}
+                filterDateStart={filterDateStart}
+                setFilterDateStart={setFilterDateStart}
+                filterDateEnd={filterDateEnd}
+                setFilterDateEnd={setFilterDateEnd}
+              />
 
-          <DocumentList
-            loading={loading}
-            documents={documents}
-            filteredDocuments={filteredDocuments}
-            groupedItems={groupedItems}
-            expandedPacks={expandedPacks}
-            onTogglePack={togglePack}
-            onDownload={handleDownload}
-            onDeleteDocument={(doc) => {
-              setDocumentToDelete(doc);
-              setDeleteDialogOpen(true);
-            }}
-            onDeletePack={(id, count) => {
-              setPackToDelete({ id, count });
-              setPackDeleteDialogOpen(true);
-            }}
-            onResendPack={(pack) => {
-              setPackToResend(pack);
-              setResendMessage('Please find attached the documents you requested.');
-              setResendDialogOpen(true);
-            }}
-            onUploadClick={() => setUploadDialogOpen(true)}
-          />
+              <DocumentList
+                loading={loading}
+                documents={documents}
+                filteredDocuments={filteredDocuments}
+                groupedItems={groupedItems}
+                expandedPacks={expandedPacks}
+                onTogglePack={togglePack}
+                onDownload={handleDownload}
+                onDeleteDocument={(doc) => {
+                  setDocumentToDelete(doc);
+                  setDeleteDialogOpen(true);
+                }}
+                onDeletePack={(id, count) => {
+                  setPackToDelete({ id, count });
+                  setPackDeleteDialogOpen(true);
+                }}
+                onResendPack={(pack) => {
+                  setPackToResend(pack);
+                  setResendMessage('Please find attached the documents you requested.');
+                  setResendDialogOpen(true);
+                }}
+                onUploadClick={() => setUploadDialogOpen(true)}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-0">
@@ -496,6 +512,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         }}
         onNotify={() => {
           setUploadSuccessDialogOpen(false);
+          setEmailDocIds(uploadedDocIds);
           setEmailComposeDialogOpen(true);
         }}
       />
@@ -510,6 +527,18 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         onCcAdminChange={setCcAdmin}
         sending={sendingEmail}
         onSend={handleSendEmail}
+        documents={attachableDocuments.map((d) => ({
+          id: d.id,
+          title: d.title,
+          meta: [
+            d.productCategory,
+            d.uploadDate && new Date(d.uploadDate).toLocaleDateString('en-ZA'),
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        }))}
+        selectedIds={emailDocIds}
+        onSelectedIdsChange={setEmailDocIds}
       />
     </div>
   );

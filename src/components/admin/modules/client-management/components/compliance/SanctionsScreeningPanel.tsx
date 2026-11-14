@@ -199,7 +199,7 @@ export function SanctionsScreeningPanel({
           {/* Search fields */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">First Name</Label>
+              <Label className="text-xs">First name</Label>
               <Input
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
@@ -217,7 +217,7 @@ export function SanctionsScreeningPanel({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Identity Number</Label>
+              <Label className="text-xs">Identity number</Label>
               <Input
                 value={searchIdNumber}
                 onChange={(e) => setSearchIdNumber(e.target.value)}
@@ -226,7 +226,7 @@ export function SanctionsScreeningPanel({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Sanctions List</Label>
+              <Label className="text-xs">Sanctions list</Label>
               <select
                 value={selectedSource}
                 onChange={(e) => setSelectedSource(e.target.value)}
@@ -251,7 +251,7 @@ export function SanctionsScreeningPanel({
             ) : (
               <Search className="mr-2 h-4 w-4" />
             )}
-            Search Sanctions Lists
+            Search Sanctions lists
           </Button>
 
           {/* Result summary */}
@@ -268,7 +268,7 @@ export function SanctionsScreeningPanel({
               {!result.success && (
                 <div className="flex items-center gap-2">
                   <XCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-red-800 font-medium">Search Failed</span>
+                  <span className="text-red-800 font-medium">Search failed</span>
                   <p className="text-red-700 text-xs mt-1">{result.error}</p>
                 </div>
               )}

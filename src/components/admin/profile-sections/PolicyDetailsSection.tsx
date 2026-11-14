@@ -22,7 +22,7 @@ import { Button } from '../../ui/button';
 import { PolicyOverviewTab } from './PolicyOverviewTab';
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
 import type { FNAListFocus } from '../modules/fna';
-import { useUrlState } from '../layout/page';
+import { useUrlState, usePageTakeoverActive } from '../layout/page';
 import { useClientSubCrumbs } from '../layout/page';
 import {
   clientPoliciesQueryOptions,
@@ -91,6 +91,8 @@ export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetails
     { id: 'estate-planning', label: 'Estate planning', icon: Landmark },
   ] as const;
 
+  // An FNA / will page or the policy form takes the rail's place.
+  const railHidden = usePageTakeoverActive() !== null;
   const policiesQuery = useQuery(clientPoliciesQueryOptions(clientId));
   const counts = useMemo(() => {
     const all = policiesQuery.data ?? [];
@@ -146,8 +148,12 @@ export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetails
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-      <nav aria-label="Policy categories" className="lg:sticky lg:top-4 lg:self-start">
+    <div className={railHidden ? '' : 'grid gap-6 lg:grid-cols-[220px_1fr]'}>
+      <nav
+        aria-label="Policy categories"
+        className="lg:sticky lg:top-4 lg:self-start"
+        hidden={railHidden}
+      >
         <ul className="flex gap-1 overflow-x-auto lg:flex-col">
           {railItem('overview', 'Portfolio overview', Target)}
         </ul>
@@ -155,7 +161,15 @@ export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetails
           Categories
         </p>
         <ul className="flex gap-1 overflow-x-auto lg:flex-col">
-          {policySubtabs.map((tab) => railItem(tab.id, tab.label, tab.icon, counts[tab.id] ?? 0))}
+          {policySubtabs.map((tab) =>
+            railItem(
+              tab.id,
+              tab.label,
+              tab.icon,
+              // No count while loading or when the read failed (not a false 0).
+              policiesQuery.isSuccess ? (counts[tab.id] ?? 0) : undefined,
+            ),
+          )}
         </ul>
         <p className="mb-1 mt-4 hidden px-3 text-xs font-medium text-nw-text-3 lg:block">
           Across all

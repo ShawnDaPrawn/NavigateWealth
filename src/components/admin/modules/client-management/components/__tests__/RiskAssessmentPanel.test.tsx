@@ -66,7 +66,7 @@ describe('RiskAssessmentPanel', () => {
     setupApi([template]);
     renderPanel();
     expect(await screen.findByText('AML Screening')).toBeTruthy();
-    expect(screen.getByText('Risk Assessments')).toBeTruthy();
+    expect(screen.getByText('Risk assessments')).toBeTruthy();
     expect(screen.getByRole('button', { name: /start/i })).toBeTruthy();
   });
 

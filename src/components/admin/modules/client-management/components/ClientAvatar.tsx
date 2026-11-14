@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +9,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../ui/dialog';
+import { Button } from '../../../../ui/button';
+import { useConfirm } from '../../../layout/page';
 import { clientApi } from '../api';
 import { clientKeys } from '../hooks/queryKeys';
 import { resizeAvatarImage } from '../resizeAvatarImage';
@@ -45,6 +55,20 @@ export function ClientAvatar({
 }: ClientAvatarProps) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { confirm, confirmDialog } = useConfirm();
+  // The photo dialog (design: CM Avatar): pick, preview, then Save photo.
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pending, setPending] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pending) {
+      setPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(pending);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [pending]);
 
   const { data: url } = useQuery({
     queryKey: clientKeys.avatar(clientId),
@@ -63,6 +87,8 @@ export function ClientAvatar({
     onSuccess: (newUrl) => {
       queryClient.setQueryData(clientKeys.avatar(clientId), newUrl);
       toast.success('Profile photo updated');
+      setDialogOpen(false);
+      setPending(null);
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Could not update the photo');
@@ -96,7 +122,22 @@ export function ClientAvatar({
       toast.error('That image is too large — please choose one under 20MB');
       return;
     }
-    upload.mutate(file);
+    setPending(file);
+  };
+
+  const openDialog = () => {
+    setPending(null);
+    setDialogOpen(true);
+  };
+
+  const handleRemove = async () => {
+    const ok = await confirm({
+      title: 'Remove profile photo?',
+      description: `${firstName} ${lastName}'s initials will show instead.`,
+      confirmLabel: 'Remove photo',
+      destructive: true,
+    });
+    if (ok) remove.mutate();
   };
 
   const avatar = (
@@ -109,6 +150,67 @@ export function ClientAvatar({
   if (!editable) return avatar;
 
   const openPicker = () => inputRef.current?.click();
+
+  const photoDialog = (
+    <Dialog
+      open={dialogOpen}
+      onOpenChange={(open) => {
+        if (upload.isPending) return;
+        setDialogOpen(open);
+        if (!open) setPending(null);
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{url ? 'Change profile photo' : 'Add profile photo'}</DialogTitle>
+          <DialogDescription>
+            A photo for {firstName} {lastName}&apos;s profile.
+          </DialogDescription>
+        </DialogHeader>
+        <button
+          type="button"
+          onClick={openPicker}
+          disabled={upload.isPending}
+          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-4 py-8 text-center hover:border-nw-violet hover:bg-nw-violet-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Selected photo preview"
+              className="h-24 w-24 rounded-full object-cover"
+            />
+          ) : (
+            <Camera className="h-8 w-8 text-nw-text-3" aria-hidden="true" />
+          )}
+          <span className="text-sm font-medium text-nw-ink">
+            {pending ? pending.name : 'Click to upload a photo'}
+          </span>
+          <span className="text-xs text-nw-text-3">
+            {pending ? 'Click to choose another' : 'JPG or PNG · resized to a square automatically'}
+          </span>
+        </button>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setDialogOpen(false);
+              setPending(null);
+            }}
+            disabled={upload.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => pending && upload.mutate(pending)}
+            disabled={!pending || upload.isPending}
+          >
+            {upload.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {upload.isPending ? 'Saving…' : 'Save photo'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   const triggerClass =
     'relative block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2';
@@ -145,12 +247,12 @@ export function ClientAvatar({
             {triggerBody}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={openPicker}>
+            <DropdownMenuItem onSelect={openDialog}>
               <Camera className="mr-2 h-4 w-4" />
               Change photo
             </DropdownMenuItem>
             <DropdownMenuItem
-              onSelect={() => remove.mutate()}
+              onSelect={() => void handleRemove()}
               className="text-red-600 focus:text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -159,11 +261,11 @@ export function ClientAvatar({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        // With no photo there is nothing to choose between: go straight to the picker.
+        // With no photo there is nothing to choose between: open the photo dialog.
         <button
           type="button"
           disabled={busy}
-          onClick={openPicker}
+          onClick={openDialog}
           className={triggerClass}
           aria-label="Add profile photo"
           title="Add profile photo"
@@ -171,6 +273,8 @@ export function ClientAvatar({
           {triggerBody}
         </button>
       )}
+      {photoDialog}
+      {confirmDialog}
     </div>
   );
 }

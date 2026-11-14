@@ -156,4 +156,21 @@ describe('ComplianceTab — registered state', () => {
       expect(screen.getByTestId('search').textContent).toBe('?ksec=activity-log'),
     );
   });
+
+  it('heads each section with its description and Export compliance dossier', async () => {
+    renderCompliance('/?ksec=identity-verification');
+    expect(await screen.findByRole('heading', { name: 'Identity verification' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export compliance dossier' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Client identification' })).toBeTruthy();
+  });
+
+  it('shows an error, not the registration gate, when the status check fails', async () => {
+    mockApiGet.mockImplementation((url: string) => {
+      if (url.includes('/status/')) return Promise.reject(new Error('400'));
+      return Promise.resolve({});
+    });
+    renderCompliance();
+    expect(await screen.findByText("Couldn't load compliance")).toBeTruthy();
+    expect(screen.queryByText('Registration required')).toBeNull();
+  });
 });

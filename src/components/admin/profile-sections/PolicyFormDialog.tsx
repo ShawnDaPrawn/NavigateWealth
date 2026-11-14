@@ -49,6 +49,8 @@ interface PolicyFormDialogProps {
     [key: string]: unknown;
   };
   onSave: () => void;
+  /** Open the assumptions tool when the form opens (the category's Assumptions button). */
+  openAssumptions?: boolean;
 }
 
 export function PolicyFormDialog({
@@ -59,6 +61,7 @@ export function PolicyFormDialog({
   clientId,
   editingPolicy,
   onSave,
+  openAssumptions = false,
 }: PolicyFormDialogProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'subcategory' | 'provider' | 'details'>('provider');
@@ -441,6 +444,7 @@ export function PolicyFormDialog({
       handleFieldChange,
       recalcMaturityValues,
       tableStructure,
+      openAssumptions,
     });
 
   if (!isOpen) return null;
