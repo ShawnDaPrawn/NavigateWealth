@@ -32,10 +32,11 @@ const ALL_MODULES: AdminModule[] = [
 ];
 
 /** A badge count; `failed` is set when its request failed (the count is then 0). */
-export interface PendingCount {
+// A type alias (not an interface) so it fits the sidebar's indexed PendingCounts.
+export type PendingCount = {
   count: number;
   failed?: boolean;
-}
+};
 
 /** Build a zeroed-out counts record — used as placeholder and fallback */
 function buildEmptyCounts(): Record<AdminModule, PendingCount> {
