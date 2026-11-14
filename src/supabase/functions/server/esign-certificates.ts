@@ -66,6 +66,22 @@ async function resolveSender(
   }
 }
 
+/** Names of staff members by user ID, from their personnel profiles. */
+async function resolveStaffNames(ids: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (ids.length === 0) return names;
+  try {
+    const profiles = await personnelProfiles.getMany(ids.slice(0, 50));
+    profiles.forEach((p, i) => {
+      const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '';
+      if (name) names.set(ids[i], name);
+    });
+  } catch (error) {
+    log.warn('Staff name lookup failed for certificate', { error: String(error) });
+  }
+  return names;
+}
+
 // ============================================================================
 // DATA FETCHING
 // ============================================================================
@@ -170,9 +186,24 @@ async function fetchEnvelopeData(
       ? await getConsentByVersion(envelope.consent_version as string)
       : null;
 
-    const [clientName, sender] = await Promise.all([
+    // Staff other than the sender can act on a firm-scoped envelope; their
+    // names are looked up so the audit trail credits the right person.
+    const otherStaffIds = [
+      ...new Set(
+        auditEvents
+          .filter(
+            (e: EsignAuditEvent) =>
+              e.actor_type === 'sender_user' &&
+              e.actor_id &&
+              e.actor_id !== envelope.created_by_user_id,
+          )
+          .map((e: EsignAuditEvent) => e.actor_id as string),
+      ),
+    ];
+    const [clientName, sender, staffNames] = await Promise.all([
       resolveClientName(envelope.client_id),
       resolveSender(envelope.created_by_user_id),
+      resolveStaffNames(otherStaffIds),
     ]);
 
     // Fallbacks keep the certificate truthful when a profile is missing: the
@@ -199,6 +230,7 @@ async function fetchEnvelopeData(
       client_name: clientName || linkedSigner?.name || undefined,
       sender_name: sender.name || 'Navigate Wealth',
       sender_email: sender.email || undefined,
+      sender_user_id: envelope.created_by_user_id,
       signing_mode: envelope.signing_mode,
       signing_reason_prompt: envelope.signing_reason_required
         ? envelope.signing_reason_prompt || 'Signed in capacity as disclosed by the signer'
@@ -216,6 +248,8 @@ async function fetchEnvelopeData(
         action: e.action,
         at: e.at,
         actor_type: e.actor_type,
+        actor_id: e.actor_id,
+        actor_name: e.actor_id ? staffNames.get(e.actor_id) : undefined,
         email: e.email,
         ip: e.ip,
         metadata: e.metadata,

@@ -6,7 +6,34 @@
  * Pure functions — `esign-certificate-pdf.ts` draws with them.
  */
 
+import { rgb } from 'npm:pdf-lib@1.17.1';
 import type { PDFFont, RGB } from 'npm:pdf-lib@1.17.1';
+
+const hex = (h: string): RGB =>
+  rgb(
+    parseInt(h.slice(1, 3), 16) / 255,
+    parseInt(h.slice(3, 5), 16) / 255,
+    parseInt(h.slice(5, 7), 16) / 255,
+  );
+
+/** Navigate Wealth design-system colours used on the certificate. */
+export const CERT_COLORS = {
+  violet: hex('#6d28d9'),
+  violet600: hex('#5b21b6'),
+  violet100: hex('#ede9fe'),
+  ink: hex('#111827'),
+  ink2: hex('#1f2937'),
+  ink3: hex('#374151'),
+  text2: hex('#4b5563'),
+  text3: hex('#6b7280'),
+  line: hex('#e5e7eb'),
+  line2: hex('#f1f2f4'),
+  subtle: hex('#fafafb'),
+  bg: hex('#f6f7f9'),
+  green: hex('#047857'),
+  green50: hex('#ecfdf5'),
+  white: rgb(1, 1, 1),
+};
 
 // ============================================================================
 // FORMATTING
@@ -390,4 +417,94 @@ export function legalParagraphs(o: {
       `IP addresses, device details and contact details in this certificate are processed only as evidence of this transaction, in line with the Protection of Personal Information Act 4 of 2013. Queries: ${o.contact}.`,
     ],
   ];
+}
+
+// ============================================================================
+// WHO DID IT, AND HOW A SIGNER WAS IDENTIFIED
+// ============================================================================
+
+interface ActorEvent {
+  actor_type?: string;
+  actor_id?: string;
+  actor_name?: string;
+  email?: string;
+}
+
+interface ActorSigner {
+  name: string;
+  order: number;
+  role: string;
+  kind?: string;
+}
+
+/**
+ * Who an audit event is credited to. The platform's own events are the
+ * platform's. Envelopes are firm-scoped, so a staff action is credited to
+ * whoever actually acted, and to the sender only when it was the sender.
+ */
+export function auditActor(
+  e: ActorEvent,
+  ctx: {
+    signerByEmail: Map<string, ActorSigner>;
+    senderName: string;
+    senderEmail?: string;
+    senderUserId?: string;
+  },
+): { who: string; role: string } {
+  if (e.actor_type === 'system') return { who: 'Navigate Wealth platform', role: 'System' };
+  const em = e.email?.toLowerCase();
+  if (e.actor_type === 'sender_user') {
+    const isSender =
+      e.actor_id && ctx.senderUserId
+        ? e.actor_id === ctx.senderUserId
+        : !em || em === ctx.senderEmail?.toLowerCase();
+    if (isSender) return { who: ctx.senderName, role: 'Sender' };
+    return { who: e.actor_name || e.email || 'Staff member', role: 'Navigate Wealth staff' };
+  }
+  const signer = em ? ctx.signerByEmail.get(em) : undefined;
+  if (signer) {
+    const kind = signer.kind === 'witness' ? 'Witness' : 'Signer';
+    return {
+      who: signer.name,
+      role: `${kind} ${signer.order}${signer.role ? ` · ${signer.role}` : ''}`,
+    };
+  }
+  if (em && em === ctx.senderEmail?.toLowerCase()) return { who: ctx.senderName, role: 'Sender' };
+  if (e.email) return { who: e.email, role: e.actor_type === 'signer' ? 'Signer' : 'User' };
+  return { who: 'Navigate Wealth platform', role: 'System' };
+}
+
+/** The identity and authentication rows on a signer card, as [label, value]. */
+export function signerIdentityRows(s: {
+  email: string;
+  phone?: string;
+  sms_invite?: boolean;
+  requires_otp: boolean;
+  otp_methods: string[];
+  otp_verified_at?: string;
+  kba?: { provider: string; status: string; reference?: string };
+  consent_version?: string;
+  consent_accepted_at?: string;
+  signing_reason?: string;
+}): [string, string][] {
+  const methods = (s.otp_methods.length ? s.otp_methods : ['email']).map(channelLabel);
+  const pin = s.requires_otp
+    ? `Sent by ${joinWords(methods)}${s.otp_verified_at ? ` · verified ${fmtTime(s.otp_verified_at)} SAST` : ''}`
+    : 'Not required for this signer';
+  const kba = s.kba
+    ? `${s.kba.provider} · ${s.kba.status}${s.kba.reference ? ` · ref ${s.kba.reference}` : ''}`
+    : 'Not required for this envelope';
+  const consent = s.consent_version
+    ? `Version ${s.consent_version}${s.consent_accepted_at ? ` · accepted ${fmtTime(s.consent_accepted_at)} SAST` : ''}`
+    : 'Not recorded';
+  const rows: [string, string][] = [['Email', s.email]];
+  if (s.phone) rows.push(['Mobile', maskPhone(s.phone)]);
+  rows.push(
+    ['Signing link', `Unique single-use link, sent by ${s.sms_invite ? 'email and SMS' : 'email'}`],
+    ['One-time PIN', pin],
+    ['Identity check', kba],
+    ['Consent', consent],
+  );
+  if (s.signing_reason) rows.push(['Signing capacity', s.signing_reason]);
+  return rows;
 }

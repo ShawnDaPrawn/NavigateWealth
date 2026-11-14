@@ -22,6 +22,7 @@ import { describe, it, expect } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { renderCertificatePdf } from '../esign-certificate-pdf.ts';
 import {
+  auditActor,
   describeAction,
   describeDevice,
   fmtDateTime,
@@ -124,6 +125,57 @@ describe('audit actions in plain English', () => {
   });
 });
 
+describe('who an audit event is credited to', () => {
+  const ctx = {
+    signerByEmail: new Map([
+      ['t@example.com', { name: 'Thandiwe Mokoena', order: 1, role: 'Client' }],
+    ]),
+    senderName: 'Shawn Francisco',
+    senderEmail: 'shawn@example.com',
+    senderUserId: 'user-1',
+  };
+
+  it('credits the sender with their own staff actions', () => {
+    expect(auditActor({ actor_type: 'sender_user', actor_id: 'user-1' }, ctx)).toEqual({
+      who: 'Shawn Francisco',
+      role: 'Sender',
+    });
+  });
+
+  it('credits another staff member with what they did, not the sender', () => {
+    // Envelopes are firm-scoped: a colleague exporting the evidence pack is
+    // not the sender, and the evidence must not say they were.
+    expect(
+      auditActor(
+        { actor_type: 'sender_user', actor_id: 'user-2', actor_name: 'Roberto Francisco' },
+        ctx,
+      ),
+    ).toEqual({ who: 'Roberto Francisco', role: 'Navigate Wealth staff' });
+    expect(
+      auditActor({ actor_type: 'sender_user', actor_id: 'user-2', email: 'r@example.com' }, ctx),
+    ).toEqual({ who: 'r@example.com', role: 'Navigate Wealth staff' });
+  });
+
+  it('falls back to the email when no user IDs are recorded', () => {
+    expect(auditActor({ actor_type: 'sender_user', email: 'SHAWN@example.com' }, ctx).role).toBe(
+      'Sender',
+    );
+    expect(auditActor({ actor_type: 'sender_user', email: 'other@example.com' }, ctx).role).toBe(
+      'Navigate Wealth staff',
+    );
+  });
+
+  it('credits signers and the platform', () => {
+    expect(auditActor({ actor_type: 'signer', email: 'T@example.com' }, ctx)).toEqual({
+      who: 'Thandiwe Mokoena',
+      role: 'Signer 1 · Client',
+    });
+    expect(auditActor({ actor_type: 'system', email: 't@example.com' }, ctx).who).toBe(
+      'Navigate Wealth platform',
+    );
+  });
+});
+
 describe('rendering', () => {
   it('produces an A4 PDF', async () => {
     const bytes = await renderCertificatePdf(data());
@@ -165,6 +217,20 @@ describe('rendering', () => {
       data({ consent: undefined, document: undefined, audit_events: [] }),
     );
     expect(bytes.byteLength).toBeGreaterThan(1000);
+  });
+
+  it('keeps every signer card on one page when a statement is very long', async () => {
+    // signing_reason has no length limit. A card taller than a page would be
+    // drawn through the footer and off the page; the long text is printed in
+    // full after the cards instead, flowing across pages.
+    const long = 'As trustee of the Mokoena Family Trust (IT 1234/2010), '.repeat(120);
+    const bytes = await renderCertificatePdf(
+      data({
+        signers: [signer({ signing_reason: long, user_agent: 'Mozilla/5.0 '.repeat(200) })],
+      }),
+    );
+    // Summary, the card, the overflow (several pages), then the audit trail.
+    expect(await pageCount(bytes)).toBeGreaterThanOrEqual(5);
   });
 
   it('paginates a long audit trail and many signers instead of clipping them', async () => {

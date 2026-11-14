@@ -2,35 +2,26 @@
  * E-Signature Certificate of Completion — PDF renderer
  * ====================================================
  *
- * Draws the certificate attached to every completed envelope. The layout is
- * the approved standard of 14 Nov 2026 (Design canvas "Navigate Wealth — E-Sign
- * Certificate of Completion"), built on the Navigate Wealth design system:
- *
- *   1. Certificate of completion — envelope details, document integrity and a
- *      summary table of signers.
- *   2. Signer evidence — one card per signer: signature, how they were
- *      identified, consent, a timeline from invitation to signature, and device.
- *   3. Audit trail — every recorded event in plain English, grouped by day,
- *      times to the second in SAST (UTC+02:00).
- *   4. The consent wording signers saw, word for word, the legal basis and how
- *      the records are kept.
- *
- * Every page carries the logo, the certificate ID, the firm's FSP details and
- * "Page N of M". Content flows across as many pages as it needs: tables repeat
- * their header row, and a signer card is never split across pages.
+ * Draws the certificate attached to every completed envelope, in the approved
+ * standard of 14 Nov 2026 (Design canvas "Navigate Wealth — E-Sign
+ * Certificate of Completion") on the Navigate Wealth design system: summary,
+ * signer evidence, audit trail, then consent and legal basis. Every page
+ * carries the logo, certificate ID, FSP details and "Page N of M"; content
+ * flows across pages, tables repeat their header, signer cards never split.
  *
  * Wording rule: the certificate only states what the records show. It never
  * claims more than an ordinary electronic signature (ECTA s13(2)–(3)), and it
  * says the digital seal is "applied" only when the audit trail records it.
  *
- * Pure rendering — no KV, storage or network. `esign-certificates.ts` gathers
- * the data and calls `renderCertificatePdf`.
+ * Pure rendering — `esign-certificates.ts` gathers the data.
  */
 
-import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument, StandardFonts } from 'npm:pdf-lib@1.17.1';
 import type { PDFFont, PDFImage, PDFPage, RGB } from 'npm:pdf-lib@1.17.1';
 import { CERTIFICATE_LOGO_PNG_BASE64, CERTIFICATE_LOGO_SIZE } from './esign-certificate-logo.ts';
 import {
+  CERT_COLORS,
+  auditActor,
   auditDetail,
   channelLabel,
   describeAction,
@@ -41,11 +32,10 @@ import {
   fmtDuration,
   fmtShort,
   fmtTime,
-  joinWords,
   makeSanitiser,
   legalParagraphs,
-  maskPhone,
   sast,
+  signerIdentityRows,
   wrapRuns,
 } from './esign-certificate-format.ts';
 import type { Run } from './esign-certificate-format.ts';
@@ -93,6 +83,10 @@ export interface CertificateAuditEvent {
   action: string;
   at: string;
   actor_type?: string;
+  /** User ID of the person who acted (sender_user events). */
+  actor_id?: string;
+  /** Resolved name of that person, when the data layer could find one. */
+  actor_name?: string;
   email?: string;
   ip?: string;
   metadata?: Record<string, unknown>;
@@ -111,6 +105,8 @@ export interface CertificateData {
   client_name?: string;
   sender_name: string;
   sender_email?: string;
+  /** User ID of the staff member who created the envelope. */
+  sender_user_id?: string;
   signing_mode?: 'sequential' | 'parallel';
   signing_reason_prompt?: string;
   document?: { filename?: string; page_count?: number; hash?: string };
@@ -132,30 +128,7 @@ const CONTACT = 'info@navigatewealth.co or 012 667 2505';
 // DESIGN TOKENS (Navigate Wealth design system, px × 0.75 = pt)
 // ============================================================================
 
-const hex = (h: string): RGB =>
-  rgb(
-    parseInt(h.slice(1, 3), 16) / 255,
-    parseInt(h.slice(3, 5), 16) / 255,
-    parseInt(h.slice(5, 7), 16) / 255,
-  );
-
-const C = {
-  violet: hex('#6d28d9'),
-  violet600: hex('#5b21b6'),
-  violet100: hex('#ede9fe'),
-  ink: hex('#111827'),
-  ink2: hex('#1f2937'),
-  ink3: hex('#374151'),
-  text2: hex('#4b5563'),
-  text3: hex('#6b7280'),
-  line: hex('#e5e7eb'),
-  line2: hex('#f1f2f4'),
-  subtle: hex('#fafafb'),
-  bg: hex('#f6f7f9'),
-  green: hex('#047857'),
-  green50: hex('#ecfdf5'),
-  white: rgb(1, 1, 1),
-};
+const C = CERT_COLORS;
 
 const PAGE_W = 595.28; // A4
 const PAGE_H = 841.89;
@@ -686,6 +659,13 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
   );
   y += 13.5 + 12;
 
+  // A field too long for its card (a signing-capacity statement of thousands
+  // of characters, an unusually long user agent) is printed in full after the
+  // cards, where it can flow across pages, so a card always fits on one page.
+  const MAX_ROW_LINES = 4;
+  const MAX_UA_LINES = 6;
+  const overflow: { heading: string; text: string; mono?: boolean }[] = [];
+
   for (let si = 0; si < signers.length; si += 1) {
     const s = signers[si];
     const PADX = 13.5;
@@ -698,29 +678,22 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     const LH = 13.5;
 
     // Identity and authentication rows
-    const linkVia = s.sms_invite ? 'email and SMS' : 'email';
-    const pinRow = s.requires_otp
-      ? `Sent by ${joinWords((s.otp_methods.length ? s.otp_methods : ['email']).map(channelLabel))}${s.otp_verified_at ? ` · verified ${fmtTime(s.otp_verified_at)} SAST` : ''}`
-      : 'Not required for this signer';
-    const kbaRow = s.kba
-      ? `${s.kba.provider} · ${s.kba.status}${s.kba.reference ? ` · ref ${s.kba.reference}` : ''}`
-      : 'Not required for this envelope';
-    const consentRow = s.consent_version
-      ? `Version ${s.consent_version}${s.consent_accepted_at ? ` · accepted ${fmtTime(s.consent_accepted_at)} SAST` : ''}`
-      : 'Not recorded';
-    const idRows: [string, string][] = [
-      ['Email', s.email],
-      ...(s.phone ? ([['Mobile', maskPhone(s.phone)]] as [string, string][]) : []),
-      ['Signing link', `Unique single-use link, sent by ${linkVia}`],
-      ['One-time PIN', pinRow],
-      ['Identity check', kbaRow],
-      ['Consent', consentRow],
-      ...(s.signing_reason ? ([['Signing capacity', s.signing_reason]] as [string, string][]) : []),
-    ];
-    const idBuilt = idRows.map(([l, v]) => ({
-      l,
-      lines: wrap(v, fonts.regular, 9.4, rightW - LABEL_W),
-    }));
+    const idRows = signerIdentityRows(s);
+    const idBuilt = idRows.map(([l, v]) => {
+      const lines = wrap(v, fonts.regular, 9.4, rightW - LABEL_W);
+      if (lines.length <= MAX_ROW_LINES) return { l, lines };
+      overflow.push({ heading: `Signer ${si + 1} · ${s.name} · ${l}`, text: v });
+      return {
+        l,
+        lines: wrap(
+          'Shown in full after the signer cards',
+          fonts.regular,
+          9.4,
+          rightW - LABEL_W,
+          C.text2,
+        ),
+      };
+    });
     const idH = idBuilt.reduce((a, r) => a + r.lines.length * LH + 1.5, 0);
 
     // Signature block
@@ -751,7 +724,15 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
 
     // Device
     const ua = s.user_agent;
-    const uaLines = ua ? wrap(ua, fonts.mono, 8.6, CW - PADX * 2) : [];
+    let uaLines = ua ? wrap(ua, fonts.mono, 8.6, CW - PADX * 2) : [];
+    if (uaLines.length > MAX_UA_LINES) {
+      overflow.push({
+        heading: `Signer ${si + 1} · ${s.name} · User agent`,
+        text: ua!,
+        mono: true,
+      });
+      uaLines = wrap('Shown in full after the signer cards', fonts.regular, 8.6, CW - PADX * 2);
+    }
     const devH = 7.5 * 2 + 12 + 13.5 + (ua ? 6 + 12 + uaLines.length * 12 : 0);
 
     const cardH = HEAD + bodyH + TL_H + devH;
@@ -896,19 +877,32 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       const uy = dTop + 7.5 + 12 + 13.5 + 6;
       text('User agent', MX + PADX, uy, 9, fonts.bold, C.text3);
       uaLines.forEach((ln, i) =>
-        text(
-          ln.map((r) => r.text).join(''),
-          MX + PADX,
-          uy + 12 + i * 12 + 1.5,
-          8.6,
-          fonts.mono,
-          C.ink3,
+        ln.forEach((r) =>
+          text(r.text, MX + PADX, uy + 12 + i * 12 + 1.5, 8.6, r.font, r.color ?? C.ink3),
         ),
       );
     }
 
     rounded(MX, top, CW, cardH, { border: C.line });
     y = top + cardH + 12;
+  }
+
+  if (overflow.length) {
+    ensure(11.25 + 9 + 30);
+    text('Signer evidence in full', MX, y, 11.25, fonts.bold, C.ink);
+    y += 11.25 + 9;
+    for (const o of overflow) {
+      const lines = wrap(o.text, o.mono ? fonts.mono : fonts.regular, 9.4, CW, C.ink2);
+      ensure(13.5 + 13.5);
+      text(o.heading, MX, y, 9.4, fonts.bold, C.ink);
+      y += 13.5 + 3;
+      for (const ln of lines) {
+        ensure(13.5);
+        drawLines([ln], MX, y, 9.4, 13.5);
+        y += 13.5;
+      }
+      y += 9;
+    }
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -934,25 +928,13 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     (a, b) => (new Date(a.at).getTime() || 0) - (new Date(b.at).getTime() || 0),
   );
 
-  const actorFor = (e: CertificateAuditEvent): { who: string; role: string } => {
-    if (e.actor_type === 'system') return { who: 'Navigate Wealth platform', role: 'System' };
-    // The sender can also be a signer; what they did as the sender is
-    // attributed to them as the sender.
-    if (e.actor_type === 'sender_user') return { who: data.sender_name, role: 'Sender' };
-    const em = e.email?.toLowerCase();
-    const signer = em ? nameByEmail.get(em) : undefined;
-    if (signer) {
-      const kind = signer.kind === 'witness' ? 'Witness' : 'Signer';
-      return {
-        who: signer.name,
-        role: `${kind} ${signer.order}${signer.role ? ` · ${signer.role}` : ''}`,
-      };
-    }
-    if (em && em === data.sender_email?.toLowerCase())
-      return { who: data.sender_name, role: 'Sender' };
-    if (e.email) return { who: e.email, role: e.actor_type === 'signer' ? 'Signer' : 'User' };
-    return { who: 'Navigate Wealth platform', role: 'System' };
-  };
+  const actorFor = (e: CertificateAuditEvent) =>
+    auditActor(e, {
+      signerByEmail: nameByEmail,
+      senderName: data.sender_name,
+      senderEmail: data.sender_email,
+      senderUserId: data.sender_user_id,
+    });
 
   const detailFor = (e: CertificateAuditEvent): string => {
     const em = e.email?.toLowerCase();

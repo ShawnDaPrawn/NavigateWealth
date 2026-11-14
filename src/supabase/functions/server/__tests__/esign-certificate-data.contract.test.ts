@@ -157,6 +157,27 @@ describe('names on the certificate', () => {
   });
 });
 
+describe('staff other than the sender', () => {
+  it('looks up the name of a colleague who acted on the envelope', async () => {
+    kvStore.set('personnel:profile:user-2', { firstName: 'Roberto', lastName: 'Francisco' });
+    esign.getAuditTrail.mockResolvedValue([
+      {
+        action: 'evidence_pack_exported',
+        at: '2026-11-12T10:00:00.000Z',
+        actor_type: 'sender_user',
+        actor_id: 'user-2',
+      },
+      { action: 'signed', at: '2026-11-12T08:11:42.000Z', email: 't.mokoena@example.com' },
+    ]);
+    await certs.generateCompletionCertificate(ENV);
+    expect(lastData().sender_user_id).toBe('user-1');
+    expect(lastData().audit_events[0]).toMatchObject({
+      actor_id: 'user-2',
+      actor_name: 'Roberto Francisco',
+    });
+  });
+});
+
 describe('what the certificate states', () => {
   it('prints the record ID, and the same ID and issue time when regenerated', async () => {
     const first = await certs.generateCompletionCertificate(ENV);
