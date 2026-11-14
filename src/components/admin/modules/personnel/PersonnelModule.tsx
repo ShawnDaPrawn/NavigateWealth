@@ -378,8 +378,11 @@ export function PersonnelModule() {
     />
   );
 
-  // A staff member is open: their page replaces the list.
+  // A staff member is open: their page replaces the list. Show the record as
+  // the list now has it, so a suspend or restore shows up at once.
   if (drawerOpen && selectedPersonnel) {
+    const livePersonnel =
+      personnel.find((person) => person.id === selectedPersonnel.id) ?? selectedPersonnel;
     return (
       <div className="mx-auto max-w-[1200px] p-6 lg:p-8">
         <PersonnelDrawer
@@ -388,7 +391,7 @@ export function PersonnelModule() {
           onOpenChange={(open) => {
             if (!open) closePerson();
           }}
-          selectedPersonnel={selectedPersonnel}
+          selectedPersonnel={livePersonnel}
           activeTab={activeTab}
           clients={clients}
           clientsLoading={clientsLoading}

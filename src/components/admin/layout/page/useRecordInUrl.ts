@@ -18,6 +18,15 @@ export type RecordOpenResult = 'opened' | 'waiting' | 'missing';
  * `openFromUrl` returns 'waiting' while the list is still loading; the hook
  * asks again when `ready` changes. 'missing' drops the parameter.
  */
+/**
+ * The address this tick's record writes have built so far. Two pages swapping
+ * (Review → Complete on behalf) each write their own key in the same effect
+ * pass; both writes would otherwise start from the same old address, so the
+ * second would put back the key the first had removed. Cleared once the tick
+ * is over.
+ */
+let inFlight: URLSearchParams | null = null;
+
 export function useRecordInUrl(
   key: string,
   openId: string | null,
@@ -48,9 +57,11 @@ export function useRecordInUrl(
   useEffect(() => {
     const setParam = (id: string | null) =>
       setSearchParams((current) => {
-        const params = new URLSearchParams(current);
+        const params = new URLSearchParams(inFlight ?? current);
         if (id) params.set(key, id);
         else params.delete(key);
+        if (!inFlight) queueMicrotask(() => (inFlight = null));
+        inFlight = params;
         return params;
       });
 
