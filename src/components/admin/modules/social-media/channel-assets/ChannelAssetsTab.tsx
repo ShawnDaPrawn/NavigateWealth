@@ -150,8 +150,8 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
 
       {assetsQuery.error && (
         <ErrorState
-          title="Could not load the assets"
-          description={assetsQuery.error instanceof Error ? assetsQuery.error.message : undefined}
+          title="Unable to load assets"
+          details={assetsQuery.error instanceof Error ? assetsQuery.error.message : undefined}
           onRetry={() => void assetsQuery.refetch()}
         />
       )}

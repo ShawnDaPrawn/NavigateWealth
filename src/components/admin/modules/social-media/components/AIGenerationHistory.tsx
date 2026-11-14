@@ -25,7 +25,6 @@ import {
   Image as ImageIcon,
   Download,
   ArrowRight,
-  Loader2,
   Inbox,
   Grid3X3,
   List,
@@ -39,6 +38,8 @@ import type {
   AIImageRecord,
 } from '../types';
 import { BRAND } from '../constants';
+import { Skeleton } from '../../../../ui/skeleton';
+import { ErrorState } from '../../../layout/page';
 
 // ============================================================================
 // Constants
@@ -103,7 +104,16 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imageView, setImageView] = useState<'grid' | 'list'>('grid');
 
-  const { history, historyLoading, imageHistory, imageHistoryLoading } = useSocialMediaAI();
+  const {
+    history,
+    historyLoading,
+    historyError,
+    refetchHistory,
+    imageHistory,
+    imageHistoryLoading,
+    imageHistoryError,
+    refetchImageHistory,
+  } = useSocialMediaAI();
 
   const handleCopyText = useCallback(async (post: GeneratedPlatformPost) => {
     const fullContent =
@@ -138,12 +148,30 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading history...</span>
-        </CardContent>
-      </Card>
+      <div
+        aria-busy="true"
+        aria-label="Loading history"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        data-testid="history-loading"
+      >
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-40 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const loadError = historyError ?? imageHistoryError;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load generation history"
+        onRetry={() => {
+          void refetchHistory();
+          void refetchImageHistory();
+        }}
+        details={loadError}
+      />
     );
   }
 
@@ -158,10 +186,9 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
           <div className="flex items-center justify-center h-14 w-14 rounded-full bg-gray-50 mb-4">
             <Inbox className="h-7 w-7 text-gray-400" />
           </div>
-          <h3 className="text-lg font-semibold mb-1">No Generation History</h3>
+          <h3 className="text-lg font-semibold mb-1">No generation history</h3>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Generated text and images will appear here. Switch to the Post Text or Branded Image
-            tabs to start generating.
+            Generated text and images appear here. Start from Post text or Branded image.
           </p>
         </CardContent>
       </Card>

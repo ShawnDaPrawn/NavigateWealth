@@ -23,7 +23,8 @@ import { Label } from '../../../ui/label';
 import { Textarea } from '../../../ui/textarea';
 import { Switch } from '../../../ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
-import { FormErrorBanner, StatCard, useConfirm } from '../../layout/page';
+import { ErrorState, FormErrorBanner, StatCard, useConfirm } from '../../layout/page';
+import { Skeleton } from '../../../ui/skeleton';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -89,9 +90,11 @@ export function LinktreeTab() {
   // Data fetching
   // --------------------------------------------------------------------------
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const [linksData, settingsData] = await Promise.all([
         fetchJson<LinktreeLink[]>(`${BASE}/links`),
         fetchJson<LinktreeSettings>(`${BASE}/settings`),
@@ -100,7 +103,7 @@ export function LinktreeTab() {
       setSettings(settingsData);
     } catch (err) {
       console.error('[LinktreeTab] Failed to load:', err);
-      toast.error('Failed to load Linktree data');
+      setLoadError(err instanceof Error ? err.message : 'Failed to load the link page');
     } finally {
       setLoading(false);
     }
@@ -322,12 +325,27 @@ export function LinktreeTab() {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading Linktree...</span>
-        </CardContent>
-      </Card>
+      <div aria-busy="true" aria-label="Loading link in bio" className="space-y-3">
+        <Skeleton className="h-9 w-full rounded-lg" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-14 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load your link page"
+        onRetry={() => void fetchData()}
+        details={loadError}
+      />
     );
   }
 

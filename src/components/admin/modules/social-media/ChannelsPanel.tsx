@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Skeleton } from '../../../ui/skeleton';
 import { LinkedInConnector } from './components/LinkedInConnector';
 import { PartnersPanel } from './partners/PartnersPanel';
+import { ErrorState } from '../../layout/page';
 import { SocialAnalyticsPanel } from './analytics/SocialAnalyticsPanel';
 import { useBufferStatus, useSocialProfiles } from './hooks/useSocialProfiles';
 import type { SocialPlatform, SocialProfile } from './types';
@@ -112,7 +113,7 @@ function ChannelCard({ profile }: { profile: SocialProfile }) {
 export function ChannelsPanel() {
   const analyticsRef = useRef<HTMLElement>(null);
   const status = useBufferStatus();
-  const { profiles, loading, error } = useSocialProfiles({
+  const { profiles, loading, error, fetchProfiles } = useSocialProfiles({
     fetchOnMount: status.data?.configured !== false,
   });
   const [personalOpen, setPersonalOpen] = useState(false);
@@ -167,7 +168,11 @@ export function ChannelsPanel() {
               ))}
             </div>
           ) : error ? (
-            <p className="text-sm text-destructive">{error}</p>
+            <ErrorState
+              title="Unable to load Buffer channels"
+              onRetry={() => void fetchProfiles()}
+              details={error}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {profiles.map((profile) => (

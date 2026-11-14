@@ -50,6 +50,7 @@ import type {
 } from '../types';
 import { BRAND } from '../constants';
 import { ErrorState } from '../../../layout/page';
+import { Skeleton } from '../../../../ui/skeleton';
 
 // ============================================================================
 // Constants
@@ -127,7 +128,14 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPlatformPost[]>([]);
 
   // Hook
-  const { generatePostText, isGenerating, isConfigured, statusLoading } = useSocialMediaAI();
+  const {
+    generatePostText,
+    isGenerating,
+    isConfigured,
+    statusLoading,
+    statusError,
+    refetchStatus,
+  } = useSocialMediaAI();
 
   // ============================================================================
   // Handlers
@@ -220,12 +228,24 @@ export function AIContentGenerator({ onUseContent }: AIContentGeneratorProps) {
 
   if (statusLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Checking AI service...</span>
-        </CardContent>
-      </Card>
+      <div
+        aria-busy="true"
+        aria-label="Checking the AI service"
+        className="grid gap-4 lg:grid-cols-2"
+      >
+        <Skeleton className="h-80 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (statusError) {
+    return (
+      <ErrorState
+        title="Unable to check the AI service"
+        onRetry={() => void refetchStatus()}
+        details={statusError}
+      />
     );
   }
 

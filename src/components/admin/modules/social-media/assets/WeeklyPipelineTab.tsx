@@ -44,6 +44,7 @@ import {
 } from './assetsModel';
 import { AssetCard } from './AssetCard';
 import { AutomationStrip } from './AutomationStrip';
+import { ErrorState } from '../../../layout/page';
 
 const CHANNEL_ICON: Record<SocialChannel, typeof Linkedin> = {
   linkedin: Linkedin,
@@ -106,12 +107,11 @@ export function WeeklyPipelineTab({ onOpenSettings }: WeeklyPipelineTabProps = {
           ))}
         </div>
       ) : batchesQuery.error ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Could not load the automation batches:{' '}
-            {batchesQuery.error instanceof Error ? batchesQuery.error.message : 'unknown error'}
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="Unable to load the weekly pipeline"
+          onRetry={() => void batchesQuery.refetch()}
+          details={batchesQuery.error instanceof Error ? batchesQuery.error.message : undefined}
+        />
       ) : batches.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-2">
@@ -199,6 +199,12 @@ export function WeeklyPipelineTab({ onOpenSettings }: WeeklyPipelineTabProps = {
                 <Skeleton key={c} className="h-64 w-full rounded-lg" />
               ))}
             </div>
+          ) : batchQuery.error ? (
+            <ErrorState
+              title="Unable to load this week’s assets"
+              onRetry={() => void batchQuery.refetch()}
+              details={batchQuery.error instanceof Error ? batchQuery.error.message : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
               {CHANNEL_ORDER.map((channel) => {

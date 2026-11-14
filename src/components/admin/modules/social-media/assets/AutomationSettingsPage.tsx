@@ -134,9 +134,7 @@ export function AutomationSettingsPage({ onBack }: { onBack: () => void }) {
       ) : settingsQuery.error ? (
         <ErrorState
           title="Could not load the automation settings"
-          description={
-            settingsQuery.error instanceof Error ? settingsQuery.error.message : undefined
-          }
+          details={settingsQuery.error instanceof Error ? settingsQuery.error.message : undefined}
           onRetry={() => void settingsQuery.refetch()}
         />
       ) : (

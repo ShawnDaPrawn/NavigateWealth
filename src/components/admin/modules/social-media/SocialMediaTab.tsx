@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { useSearchParams } from 'react-router';
+import { Skeleton } from '../../../ui/skeleton';
 import { Button } from '../../../ui/button';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import {
@@ -31,6 +32,7 @@ import {
   SegmentedList,
   SegmentedTrigger,
   StatCard,
+  ErrorState,
   useBreadcrumbTrail,
   useUrlState,
 } from '../../layout/page';
@@ -144,9 +146,24 @@ export function SocialMediaTab() {
   const [composerInitialMedia, setComposerInitialMedia] = useState<MediaFile[] | undefined>();
   const [composerInitialHashtags, setComposerInitialHashtags] = useState<string[] | undefined>();
 
-  const { profiles } = useSocialProfiles();
-  const { posts, range, setRange, createPost, isCreating, deletePost, getPostsByStatus } =
-    useSocialPosts();
+  const {
+    profiles,
+    loading: profilesLoading,
+    error: profilesError,
+    fetchProfiles,
+  } = useSocialProfiles();
+  const {
+    posts,
+    loading: postsLoading,
+    error: postsError,
+    refetch: refetchPosts,
+    range,
+    setRange,
+    createPost,
+    isCreating,
+    deletePost,
+    getPostsByStatus,
+  } = useSocialPosts();
   const { mutate: markAssetsUsed } = useMarkChannelAssetsUsed();
 
   // The query window follows the calendar: whatever month/week/day is on screen is
@@ -371,34 +388,64 @@ export function SocialMediaTab() {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-0">
-          <PostCalendar
-            posts={posts}
-            profiles={profiles}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            onPostDelete={deletePost}
-            onCreatePost={(date) => {
-              setSelectedDate(date);
-              setActiveTab('composer');
-            }}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
+          {postsError ? (
+            <ErrorState
+              title="Unable to load Buffer posts"
+              onRetry={() => void refetchPosts()}
+              details={postsError}
+            />
+          ) : postsLoading ? (
+            <div aria-busy="true" aria-label="Loading the calendar" className="space-y-3">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <Skeleton key={i} className="h-48 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <PostCalendar
+              posts={posts}
+              profiles={profiles}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              onPostDelete={deletePost}
+              onCreatePost={(date) => {
+                setSelectedDate(date);
+                setActiveTab('composer');
+              }}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="composer" className="mt-0">
-          <div className="max-w-4xl">
-            <PostComposer
-              profiles={profiles}
-              selectedProfiles={selectedProfiles}
-              onProfilesChange={setSelectedProfiles}
-              onSubmit={handleCompose}
-              isSubmitting={isCreating}
-              initialContent={composerInitialContent}
-              initialMedia={composerInitialMedia}
-              initialHashtags={composerInitialHashtags}
+          {profilesError ? (
+            <ErrorState
+              title="Unable to load Buffer channels"
+              onRetry={() => void fetchProfiles()}
+              details={profilesError}
             />
-          </div>
+          ) : profilesLoading ? (
+            <div aria-busy="true" aria-label="Loading channels" className="max-w-4xl space-y-3">
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-48 w-full rounded-xl" />
+            </div>
+          ) : (
+            <div className="max-w-4xl">
+              <PostComposer
+                profiles={profiles}
+                selectedProfiles={selectedProfiles}
+                onProfilesChange={setSelectedProfiles}
+                onSubmit={handleCompose}
+                isSubmitting={isCreating}
+                initialContent={composerInitialContent}
+                initialMedia={composerInitialMedia}
+                initialHashtags={composerInitialHashtags}
+              />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="ai-generator" className="mt-0">

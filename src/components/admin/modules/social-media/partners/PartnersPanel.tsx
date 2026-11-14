@@ -123,9 +123,7 @@ export function PartnersPanel({ onViewAnalytics }: { onViewAnalytics?: () => voi
         ) : partnersQuery.error ? (
           <ErrorState
             title="Could not load partners"
-            description={
-              partnersQuery.error instanceof Error ? partnersQuery.error.message : undefined
-            }
+            details={partnersQuery.error instanceof Error ? partnersQuery.error.message : undefined}
             onRetry={() => void partnersQuery.refetch()}
           />
         ) : partners.length === 0 ? (

@@ -99,7 +99,7 @@ export const SocialAnalyticsPanel = forwardRef<HTMLElement>(
         ) : query.error ? (
           <ErrorState
             title="Buffer metrics are unavailable"
-            description={query.error instanceof Error ? query.error.message : undefined}
+            details={query.error instanceof Error ? query.error.message : undefined}
             onRetry={() => void query.refetch()}
           />
         ) : summary ? (
