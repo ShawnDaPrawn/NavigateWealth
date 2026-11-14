@@ -23,8 +23,9 @@ vi.mock('@/components/admin/modules/communication/api', () => ({
   communicationApi: { getAllTemplates: vi.fn().mockResolvedValue([]), createTemplate: vi.fn() },
 }));
 
+const apiGet = vi.hoisted(() => vi.fn());
 vi.mock('@/utils/api', () => ({
-  api: { get: vi.fn().mockResolvedValue([]), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  api: { get: (url: string) => apiGet(url), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
 vi.mock('@hello-pangea/dnd', () => ({
@@ -49,8 +50,9 @@ vi.mock('@hello-pangea/dnd', () => ({
     ),
 }));
 
+const toastError = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
+  toast: { success: vi.fn(), error: (m: string) => toastError(m), info: vi.fn(), warning: vi.fn() },
 }));
 
 vi.mock('@/components/auth/AuthContext', () => ({
@@ -64,6 +66,7 @@ const noop = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  apiGet.mockResolvedValue({});
 });
 
 describe('TaskPage', () => {
@@ -116,5 +119,23 @@ describe('TaskPage', () => {
     );
     expect(screen.queryByRole('button', { name: 'Complete' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'More task actions' })).toBeNull();
+  });
+
+  it('says when the attachments, checklist or activity cannot load', async () => {
+    apiGet.mockRejectedValue(new Error('boom'));
+    const task = { id: 't-1', title: 'Test Task', status: 'new', priority: 'medium' };
+    render(<TaskPage onClose={noop} mode="view" task={task as never} />);
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't load the attachments"));
+    expect(toastError).toHaveBeenCalledWith("Couldn't load the checklist");
+    expect(toastError).toHaveBeenCalledWith("Couldn't load the activity");
+  });
+
+  it('shows skeleton rows while the sections load', () => {
+    apiGet.mockReturnValue(new Promise(() => {}));
+    const task = { id: 't-1', title: 'Test Task', status: 'new', priority: 'medium' };
+    render(<TaskPage onClose={noop} mode="view" task={task as never} />);
+    expect(screen.getByRole('status', { name: 'Loading attachments' })).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading checklist' })).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading comments' })).toBeTruthy();
   });
 });

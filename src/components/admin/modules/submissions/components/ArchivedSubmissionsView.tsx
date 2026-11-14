@@ -129,13 +129,28 @@ export function ArchivedSubmissionsView({
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white p-12 text-center">
           <h3 className="mb-1 text-base font-medium text-nw-ink">
-            {filtersActive ? 'No archived submissions found' : 'No archived submissions'}
+            {filtersActive
+              ? 'No archived submissions match your filters'
+              : 'No archived submissions'}
           </h3>
           <p className="max-w-sm text-sm text-nw-text-3">
             {filtersActive
-              ? 'Try a different search or clear the filters.'
+              ? 'Try a different search or type.'
               : 'Submissions you archive are kept here and can be restored at any time.'}
           </p>
+          {filtersActive && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setSearchTerm('');
+                setType('all');
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-nw-line bg-white">

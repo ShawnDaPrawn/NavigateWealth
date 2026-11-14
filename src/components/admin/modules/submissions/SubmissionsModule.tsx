@@ -198,7 +198,7 @@ export function SubmissionsModule() {
   // A link may name a submission outside the current list (another type, or
   // not loaded yet): fetch it by id; an unknown id is dropped with a message.
   const [fetchingId, setFetchingId] = useState<string | null>(null);
-  const missingIds = useRef(new Set<string>());
+  const missingIds = useRef(new Map<string, string>());
   useRecordInUrl('id', selectedSubmission?.id ?? null, {
     ready: !isLoading && fetchingId === null,
     openFromUrl: (id) => {
@@ -209,10 +209,15 @@ export function SubmissionsModule() {
       }
       if (isLoading) return 'waiting';
       if (missingIds.current.has(id)) {
+        const reason = missingIds.current.get(id);
         missingIds.current.delete(id);
-        toast.error('Submission not found', {
-          description: 'It may have been deleted. You are back on the board.',
-        });
+        if (reason) {
+          toast.error("Couldn't open the submission", { description: reason });
+        } else {
+          toast.error('Submission not found', {
+            description: 'It may have been deleted. You are back on the board.',
+          });
+        }
         return 'missing';
       }
       if (fetchingId !== id) {
@@ -221,11 +226,13 @@ export function SubmissionsModule() {
           .getById(id)
           .then((sub) => {
             if (sub) setSelectedSubmission(sub);
-            else missingIds.current.add(id);
+            else missingIds.current.set(id, '');
           })
           .catch((err) => {
             console.error('Failed to load deep-linked submission:', err);
-            missingIds.current.add(id);
+            // A 404 is "not found"; anything else is a failure to load.
+            const message = err instanceof Error ? err.message : String(err);
+            missingIds.current.set(id, /not found|404/i.test(message) ? '' : message);
           })
           .finally(() => setFetchingId(null));
       }
@@ -367,6 +374,19 @@ export function SubmissionsModule() {
     setStatusFilter(statusFilter === next && next !== 'all' ? 'all' : next);
   };
   const filtersActive = typeFilter !== 'all' || statusFilter !== 'all' || search.trim() !== '';
+  const clearAllFilters = () => {
+    setSearch('');
+    // One address change for both filters.
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('type');
+        next.delete('status');
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const isEmpty = !isLoading && !error && submissions.length === 0 && typeFilter === 'all';
 
   return (
@@ -515,25 +535,19 @@ export function SubmissionsModule() {
                     label: SUBMISSION_TYPE_CONFIG[t].label,
                   }))}
                 />
-                {filtersActive && (
-                  <ClearFiltersButton
-                    onClick={() => {
-                      setSearch('');
-                      // One address change for both filters.
-                      setSearchParams(
-                        (current) => {
-                          const next = new URLSearchParams(current);
-                          next.delete('type');
-                          next.delete('status');
-                          return next;
-                        },
-                        { replace: true },
-                      );
-                    }}
-                  />
-                )}
+                {filtersActive && <ClearFiltersButton onClick={clearAllFilters} />}
               </div>
             </div>
+
+            {filtersActive && visibleColumns.every((col) => byStatus[col.id].length === 0) && (
+              <div
+                role="status"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-4 py-3 text-sm text-nw-text-2"
+              >
+                <span className="flex-1">No submissions match your filters.</span>
+                <ClearFiltersButton onClick={clearAllFilters} />
+              </div>
+            )}
 
             <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
               <DragDropContext onDragEnd={handleDragEnd}>

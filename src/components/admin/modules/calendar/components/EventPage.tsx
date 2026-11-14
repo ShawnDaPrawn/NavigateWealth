@@ -442,7 +442,7 @@ export function EventPage({
   const clientSearchInputGuard = useSearchInputAutofillGuard({
     id: 'calendar-event-client-search',
   });
-  const { data: clients = [], isLoading: isLoadingClients } = useClients();
+  const { data: clients = [], isLoading: isLoadingClients, isError: clientsFailed } = useClients();
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [dateOpen, setDateOpen] = useState(false);
@@ -849,7 +849,11 @@ export function EventPage({
                       />
                       <CommandList>
                         <CommandEmpty>
-                          {isLoadingClients ? 'Loading clients…' : 'No client found.'}
+                          {isLoadingClients
+                            ? 'Loading clients…'
+                            : clientsFailed
+                              ? "Couldn't load clients. Close and reopen the list to try again."
+                              : 'No client found.'}
                         </CommandEmpty>
                         <CommandGroup className="max-h-56 overflow-auto">
                           {clients.map((client) => {

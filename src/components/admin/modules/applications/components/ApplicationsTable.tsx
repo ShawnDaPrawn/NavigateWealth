@@ -430,11 +430,24 @@ export function ApplicationsTable({
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
           <h3 className="text-base font-semibold text-nw-ink">
-            {filtersActive ? 'No matching applications' : empty.title}
+            {filtersActive ? 'No applications match your filters' : empty.title}
           </h3>
           <p className="max-w-sm text-sm text-nw-text-3">
             {filtersActive ? 'Try a different search or clear the filters.' : empty.description}
           </p>
+          {filtersActive && (
+            <Button
+              variant="outline"
+              className="mt-2"
+              onClick={() => {
+                setOrigin('all');
+                setSubmitted('all');
+                setSearchQuery('');
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
           {!filtersActive && empty.invite && onInvite && canInvite && (
             <Button className="mt-2" onClick={onInvite}>
               Invite applicant

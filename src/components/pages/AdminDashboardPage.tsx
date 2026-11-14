@@ -4,6 +4,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
+import { taskAddress } from '../admin/modules/tasks/taskLink';
 import { ModuleFrame } from '../admin/layout/ModuleFrame';
 import { useCurrentUserPermissions } from '../admin/modules/personnel/shell';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
@@ -116,9 +117,7 @@ export function AdminDashboardPage() {
   // task in the address (?module=tasks&task=<id>); the module opens its page.
   const handleViewTaskFromDashboard = useCallback(
     (taskId: string) => {
-      const next = moduleSearchParams('tasks');
-      next.set('task', taskId);
-      setSearchParams(next);
+      setSearchParams(taskAddress(taskId));
     },
     [setSearchParams],
   );

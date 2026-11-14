@@ -13,7 +13,7 @@ import { screen, waitFor, renderWithQueryClient, fireEvent } from '@/test/utils'
 import { MemoryRouter, useLocation } from 'react-router';
 import type { Note } from '../types';
 
-const notesData = vi.hoisted(() => ({ list: [] as unknown[] }));
+const notesData = vi.hoisted(() => ({ list: [] as unknown[], error: null as Error | null }));
 const toastError = vi.hoisted(() => vi.fn());
 
 const { mutStub } = vi.hoisted(() => ({
@@ -21,7 +21,12 @@ const { mutStub } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/components/admin/modules/notes/hooks', () => ({
-  useNotes: () => ({ data: notesData.list, isLoading: false, error: null, refetch: vi.fn() }),
+  useNotes: () => ({
+    data: notesData.list,
+    isLoading: false,
+    error: notesData.error,
+    refetch: vi.fn(),
+  }),
   useCreateNote: mutStub,
   useUpdateNote: mutStub,
   useDeleteNote: mutStub,
@@ -83,6 +88,7 @@ const makeNote = (over: Partial<Note>): Note =>
 beforeEach(() => {
   vi.clearAllMocks();
   notesData.list = [];
+  notesData.error = null;
 });
 
 function Location() {
@@ -181,5 +187,22 @@ describe('NotesModule', () => {
     expect(bar.textContent).toContain('0 selected');
     expect(screen.getByRole('button', { name: 'Exit select' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Delete…/ }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('keeps a linked note in the address while notes fail to load', () => {
+    notesData.error = new Error('boom');
+    renderAt('/admin?module=notes&note=a');
+    expect(screen.getByRole('heading', { name: 'Unable to load notes' })).toBeTruthy();
+    expect(toastError).not.toHaveBeenCalledWith('Note not found');
+    expect(screen.getByTestId('search').textContent).toBe('?module=notes&note=a');
+  });
+
+  it('says when no note matches the filters, with Clear filters', () => {
+    notesData.list = [makeNote({ id: 'a', title: 'Annual review prep' })];
+    renderAt();
+    fireEvent.change(screen.getByLabelText('Search notes'), { target: { value: 'zzz' } });
+    expect(screen.getByRole('heading', { name: 'No notes match your filters' })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+    expect(screen.getByText('Annual review prep')).toBeTruthy();
   });
 });

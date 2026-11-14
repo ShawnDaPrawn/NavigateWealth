@@ -246,4 +246,23 @@ describe('Applications page', () => {
     expect(downloadPdf.mock.calls[0][0]).toMatchObject({ id: '0191' });
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('PDF downloaded'));
   });
+
+  it('says when no application matches the filters, with Clear filters', async () => {
+    setup();
+    renderAt();
+    await screen.findByText('Nadia Hendricks');
+    fireEvent.change(screen.getByLabelText('Search applications'), { target: { value: 'zzz' } });
+    expect(
+      screen.getByRole('heading', { name: 'No applications match your filters' }),
+    ).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+    expect(screen.getByText('Nadia Hendricks')).toBeDefined();
+  });
+
+  it('tells a failed load of a linked application apart from a missing one', async () => {
+    setup();
+    api.getApplicationDetail.mockRejectedValue(new Error('Network down'));
+    renderAt('/admin?module=applications&application=0190');
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't open the application"));
+  });
 });

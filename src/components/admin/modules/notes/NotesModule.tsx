@@ -14,7 +14,7 @@
  * @module notes
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { useAuth } from '../../../auth/AuthContext';
 import type {
@@ -67,7 +67,7 @@ import {
   useRecordInUrl,
   useUrlState,
 } from '../../layout/page';
-import { moduleSearchParams } from '../../layout/moduleSearchParams';
+import { taskAddress } from '../tasks/taskLink';
 
 const NOTE_TABS = ['active', 'archived', 'all'] as const;
 const NOTE_LAYOUTS = ['grid', 'list'] as const;
@@ -89,9 +89,7 @@ export function NotesModule() {
   // "Open task" on the conversion toast goes to the task's page in To-Do.
   const openTask = useCallback(
     (taskId: string) => {
-      const next = moduleSearchParams('tasks');
-      next.set('task', taskId);
-      setSearchParams(next);
+      setSearchParams(taskAddress(taskId));
     },
     [setSearchParams],
   );
@@ -105,7 +103,15 @@ export function NotesModule() {
   // (backed by the single-request profile/all-users endpoint) rather than
   // paging /clients — that route re-scans the full client set on every page,
   // so paging it would trigger one full scan per page.
-  const { data: linkableClients } = useClients();
+  const { data: linkableClients, isError: clientsFailed } = useClients();
+  // The client picker is secondary data: say so once, the notes still work.
+  useEffect(() => {
+    if (clientsFailed) {
+      toast.error("Couldn't load clients for linking", {
+        description: 'You can still write notes; try linking a client again later.',
+      });
+    }
+  }, [clientsFailed]);
 
   const clientOptions = useMemo(() => {
     if (!Array.isArray(linkableClients)) return [];
@@ -523,14 +529,14 @@ export function NotesModule() {
   const lastOpened = useRef<string | null>(null);
   lastOpened.current = openNoteId;
   useRecordInUrl('note', openNoteId, {
-    ready: !isLoading,
+    ready: !isLoading && !error,
     openFromUrl: (id) => {
       if (id === NEW_NOTE) {
         setSelectedNote(null);
         setEditorOpen(true);
         return 'opened';
       }
-      if (isLoading) return 'waiting';
+      if (isLoading || error) return 'waiting';
       const note = notes.find((n) => n.id === id);
       if (!note) {
         toast.error('Note not found', {

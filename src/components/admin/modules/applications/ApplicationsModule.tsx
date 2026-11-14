@@ -160,6 +160,8 @@ export function ApplicationsModule() {
       setStats(data);
     } catch (error) {
       console.error('Error loading stats:', error);
+      // The counts are secondary: the list still works without them.
+      toast.error("Couldn't load the application counts");
     }
   }, []);
 
@@ -192,7 +194,7 @@ export function ApplicationsModule() {
   // An application named in the address is fetched by id (its detail holds
   // every field the review needs).
   const [fetching, setFetching] = useState<string | null>(null);
-  const missing = useRef(new Set<string>());
+  const missing = useRef(new Map<string, string>());
   const openByIdFromUrl = (
     id: string,
     current: Application | null,
@@ -200,10 +202,15 @@ export function ApplicationsModule() {
   ): 'opened' | 'waiting' | 'missing' => {
     if (current?.id === id) return 'opened';
     if (missing.current.has(id)) {
+      const reason = missing.current.get(id);
       missing.current.delete(id);
-      toast.error('Application not found', {
-        description: 'It may have been removed. You are back on the list.',
-      });
+      if (reason) {
+        toast.error("Couldn't open the application", { description: reason });
+      } else {
+        toast.error('Application not found', {
+          description: 'It may have been removed. You are back on the list.',
+        });
+      }
       return 'missing';
     }
     if (fetching !== id) {
@@ -211,7 +218,11 @@ export function ApplicationsModule() {
       applicationsApi
         .getApplicationDetail(id)
         .then((detail) => open(detail))
-        .catch(() => missing.current.add(id))
+        .catch((error: unknown) => {
+          // A 404 is "not found"; anything else is a failure to load.
+          const message = error instanceof Error ? error.message : String(error);
+          missing.current.set(id, /not found|404/i.test(message) ? '' : message);
+        })
         .finally(() => setFetching(null));
     }
     return 'waiting';

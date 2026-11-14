@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -10,6 +10,7 @@ import { useClients } from '../../../../hooks/useClients';
 import { EVENT_TYPE_LABELS } from './constants';
 import type { CalendarView, EventStatus, EventType } from './types';
 import { moduleSearchParams } from '../../layout/moduleSearchParams';
+import { taskAddress } from '../tasks/taskLink';
 import { ClearFiltersButton, FilterChip } from '../../layout/page/FilterControls';
 import {
   useEvents,
@@ -149,9 +150,20 @@ export function CalendarModule() {
     error: eventsError,
     refetch: refetchEvents,
   } = useEvents(filters);
-  const { data: birthdayEvents = [] } = useClientBirthdays(currentDate);
-  const { data: policyRenewals = [] } = usePolicyRenewals(currentDate);
-  const { data: tasks = [] } = useTasks();
+  const { data: birthdayEvents = [], isError: birthdaysFailed } = useClientBirthdays(currentDate);
+  const { data: policyRenewals = [], isError: renewalsFailed } = usePolicyRenewals(currentDate);
+  const { data: tasks = [], isError: tasksFailed } = useTasks();
+  // Birthdays, renewals and task due dates are secondary: the calendar still
+  // works without them, so a failure is a toast, not the error state.
+  useEffect(() => {
+    if (birthdaysFailed) toast.error("Couldn't load client birthdays");
+  }, [birthdaysFailed]);
+  useEffect(() => {
+    if (renewalsFailed) toast.error("Couldn't load policy renewals");
+  }, [renewalsFailed]);
+  useEffect(() => {
+    if (tasksFailed) toast.error("Couldn't load task due dates");
+  }, [tasksFailed]);
 
   // Combine and filter events
   const allEvents = useMemo(() => {
@@ -384,9 +396,7 @@ export function CalendarModule() {
   // ── Open in another module ──
   const openTask = useCallback(
     (taskId: string) => {
-      const next = moduleSearchParams('tasks');
-      next.set('task', taskId);
-      setSearchParams(next);
+      setSearchParams(taskAddress(taskId));
     },
     [setSearchParams],
   );
@@ -407,7 +417,7 @@ export function CalendarModule() {
   // ── The open event lives in the address (?event=<id>, ?event=new) ──
   const openEventId = showEventModal ? (selectedEvent ? selectedEvent.id : NEW_EVENT) : null;
   useRecordInUrl('event', openEventId, {
-    ready: !isLoadingEvents,
+    ready: !isLoadingEvents && !eventsError,
     openFromUrl: (id) => {
       if (id === NEW_EVENT) {
         if (!canCreateEvent) return 'missing';
@@ -419,7 +429,7 @@ export function CalendarModule() {
         openEventPage(found);
         return 'opened';
       }
-      if (isLoadingEvents) return 'waiting';
+      if (isLoadingEvents || eventsError) return 'waiting';
       toast.error('Event not found', {
         description: 'It may have been deleted, or it falls outside the dates loaded.',
       });
@@ -633,6 +643,8 @@ export function CalendarModule() {
               onOpenClient={openClient}
               onNewEvent={() => openEventPage(null)}
               canCreate={canCreateEvent}
+              filtersActive={filtersActive}
+              onClearFilters={clearFilters}
             />
           </div>
         )}

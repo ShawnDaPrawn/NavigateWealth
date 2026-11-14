@@ -29,10 +29,22 @@ const toastError = vi.hoisted(() => vi.fn());
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: (m: string) => toastError(m), info: vi.fn() },
 }));
+const ev = vi.hoisted(() => ({ loading: false, error: null as Error | null }));
 vi.mock('../hooks', () => {
   const mutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
   return {
-    useEvents: () => ({ data: [review], isLoading: false, error: null, refetch: vi.fn() }),
+    useEvents: (filters: { search?: string }) => ({
+      data:
+        ev.loading || ev.error
+          ? []
+          : [review].filter(
+              (e) =>
+                !filters?.search || e.title.toLowerCase().includes(filters.search.toLowerCase()),
+            ),
+      isLoading: ev.loading,
+      error: ev.error,
+      refetch: vi.fn(),
+    }),
     useCreateEvent: mutation,
     useUpdateEvent: mutation,
     useDeleteEvent: mutation,
@@ -73,6 +85,8 @@ function renderAt(url = '/admin?module=calendar') {
 afterEach(() => {
   cleanup();
   toastError.mockClear();
+  ev.loading = false;
+  ev.error = null;
 });
 
 describe('Calendar page', () => {
@@ -137,5 +151,29 @@ describe('Calendar page', () => {
     await waitFor(() =>
       expect(screen.getByTestId('search').textContent).toBe('?module=calendar&view=day'),
     );
+  });
+
+  it('shows a grid-shaped skeleton while events load', () => {
+    ev.loading = true;
+    renderAt();
+    expect(screen.getByRole('status', { name: 'Loading events' })).toBeDefined();
+  });
+
+  it('keeps a linked event in the address while events fail to load', () => {
+    ev.error = new Error('boom');
+    renderAt('/admin?module=calendar&event=ev-1');
+    expect(screen.getByRole('heading', { name: 'Unable to load your calendar' })).toBeDefined();
+    expect(toastError).not.toHaveBeenCalledWith('Event not found');
+    expect(screen.getByTestId('search').textContent).toBe('?module=calendar&event=ev-1');
+  });
+
+  it('says when no event matches the filters, with Clear filters', async () => {
+    renderAt('/admin?module=calendar&view=day');
+    fireEvent.change(screen.getByLabelText('Search events'), { target: { value: 'zzz' } });
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'No events match your filters' })).toBeDefined(),
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+    await waitFor(() => expect(screen.getByText('Annual review')).toBeDefined());
   });
 });

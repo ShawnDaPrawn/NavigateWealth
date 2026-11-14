@@ -94,9 +94,9 @@ export function EmptyState({
       </div>
       {isSearch ? (
         <>
-          <h3 className="text-base font-semibold text-nw-ink">No notes found</h3>
+          <h3 className="text-base font-semibold text-nw-ink">No notes match your filters</h3>
           <p className="mt-1 max-w-sm text-sm text-nw-text-3">
-            Try adjusting your search terms or filters.
+            Try a different search, or clear the filters.
           </p>
           {onClearFilters && (
             <Button variant="outline" size="sm" className="mt-4" onClick={onClearFilters}>

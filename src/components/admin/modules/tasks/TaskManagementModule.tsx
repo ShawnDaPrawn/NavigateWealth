@@ -85,9 +85,11 @@ export function TaskManagementModule() {
   // Dashboard's "Due today" links here with ?module=tasks&task=<id>.
   const openRecordId = isModalOpen ? (selectedTask ? selectedTask.id : NEW_TASK) : null;
   useRecordInUrl('task', openRecordId, {
-    ready: !isLoading,
+    // While the list fails to load the address keeps the task; it opens once
+    // Try again succeeds (the error state, not "Task not found", explains).
+    ready: !isLoading && !error,
     openFromUrl: (id) => {
-      if (isLoading) return 'waiting';
+      if (isLoading || error) return 'waiting';
       if (id === NEW_TASK) {
         if (!canCreate) return 'missing';
         handleCreateTask();
@@ -284,6 +286,22 @@ export function TaskManagementModule() {
                     )}
                   </div>
                 </div>
+
+                {filtersActive &&
+                  visibleColumns.every((status) => (tasksByStatus[status] ?? []).length === 0) && (
+                    <div
+                      role="status"
+                      className="flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-4 py-3 text-sm text-nw-text-2"
+                    >
+                      <span className="flex-1">No tasks match your filters.</span>
+                      <ClearFiltersButton
+                        onClick={() => {
+                          setStatusFilter('all');
+                          setFilters({ ...filters, search: '' });
+                        }}
+                      />
+                    </div>
+                  )}
 
                 <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
                   <DragDropContext onDragEnd={handleDragEnd}>

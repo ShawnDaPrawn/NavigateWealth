@@ -85,12 +85,12 @@ export function TaskPage({
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [_isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
 
   // Checklist state
   const [checklistItems, setChecklistItems] = useState<TaskChecklistItem[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
-  const [_isLoadingChecklist, setIsLoadingChecklist] = useState(false);
+  const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
 
   // Comments state
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -162,7 +162,10 @@ export function TaskPage({
       const data = await api.get<{ attachments?: Attachment[] }>(`/todo/attachments/${taskId}`);
       setAttachments(data.attachments || []);
     } catch (e) {
-      console.error(e);
+      logger.error('Error loading attachments', e);
+      toast.error("Couldn't load the attachments", {
+        description: 'Reopen the task to try again.',
+      });
     } finally {
       setIsLoadingAttachments(false);
     }
@@ -174,7 +177,8 @@ export function TaskPage({
       const data = await api.get<{ checklist?: TaskChecklistItem[] }>(`/task-checklists/${taskId}`);
       setChecklistItems(data.checklist || []);
     } catch (e) {
-      console.error(e);
+      logger.error('Error loading checklist', e);
+      toast.error("Couldn't load the checklist", { description: 'Reopen the task to try again.' });
     } finally {
       setIsLoadingChecklist(false);
     }
@@ -186,7 +190,8 @@ export function TaskPage({
       const data = await api.get<{ comments?: TaskComment[] }>(`/task-comments/${taskId}`);
       setComments(data.comments || []);
     } catch (e) {
-      console.error(e);
+      logger.error('Error loading comments', e);
+      toast.error("Couldn't load the activity", { description: 'Reopen the task to try again.' });
     } finally {
       setIsLoadingComments(false);
     }
@@ -718,6 +723,7 @@ export function TaskPage({
           handleToggleChecklistItem={handleToggleChecklistItem}
           handleDeleteChecklistItem={handleDeleteChecklistItem}
           handleDragEnd={handleDragEnd}
+          isLoading={isLoadingChecklist}
         />
 
         <TaskAttachmentsSection
@@ -725,6 +731,7 @@ export function TaskPage({
           isUploading={isUploading}
           handleFileUpload={handleFileUpload}
           handleDeleteAttachment={handleDeleteAttachment}
+          isLoading={isLoadingAttachments}
         />
 
         <TaskActivitySection

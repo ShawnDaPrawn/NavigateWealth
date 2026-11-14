@@ -38,6 +38,8 @@ interface AgendaViewProps {
   onOpenClient?: (clientId: string) => void;
   onNewEvent: () => void;
   canCreate?: boolean;
+  filtersActive?: boolean;
+  onClearFilters?: () => void;
 }
 
 export function AgendaView({
@@ -49,6 +51,8 @@ export function AgendaView({
   onOpenClient,
   onNewEvent,
   canCreate = true,
+  filtersActive = false,
+  onClearFilters,
 }: AgendaViewProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { getEventsOnDate } = useCalendarEvents(events);
@@ -172,6 +176,22 @@ export function AgendaView({
       </li>
     );
   };
+
+  if (days.length === 0 && filtersActive) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-nw-line bg-white px-6 py-16 text-center">
+        <h3 className="text-base font-semibold text-nw-ink">No events match your filters</h3>
+        <p className="mt-1 mb-4 max-w-sm text-sm text-nw-text-3">
+          Try a different search, type, status or client.
+        </p>
+        {onClearFilters && (
+          <Button size="sm" variant="outline" onClick={onClearFilters}>
+            Clear filters
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   if (days.length === 0) {
     const title =

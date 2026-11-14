@@ -142,13 +142,26 @@ export function ArchivedTasksView({
       {filteredTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white p-12 text-center">
           <h3 className="mb-1 text-base font-medium text-nw-ink">
-            {filtersActive ? 'No archived tasks found' : 'No archived tasks'}
+            {filtersActive ? 'No archived tasks match your filters' : 'No archived tasks'}
           </h3>
           <p className="max-w-sm text-sm text-nw-text-3">
             {filtersActive
-              ? 'Try a different search or clear the filters.'
+              ? 'Try a different search or priority.'
               : 'Tasks that you archive will appear here for safe keeping.'}
           </p>
+          {filtersActive && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setSearchTerm('');
+                setPriority('all');
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-nw-line bg-white">

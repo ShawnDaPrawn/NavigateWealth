@@ -15,6 +15,7 @@ import { BackLink } from '../../../layout/page/FilterControls';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Progress } from '../../../../ui/progress';
+import { Skeleton } from '../../../../ui/skeleton';
 import { ChevronLeft, ChevronRight, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ export function CompleteOnBehalfPage({
     totalSteps,
     data,
     isLoading,
+    isInitialLoad,
     validationErrors,
     progress,
     updateData,
@@ -179,7 +181,22 @@ export function CompleteOnBehalfPage({
             </div>
           </div>
         )}
-        {renderStep()}
+        {isInitialLoad ? (
+          <div role="status" aria-label="Loading the application" className="space-y-4">
+            <span className="sr-only">Loading the application…</span>
+            <Skeleton className="h-6 w-56" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-9 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          renderStep()
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -196,7 +213,7 @@ export function CompleteOnBehalfPage({
             Previous
           </Button>
           {currentStep < totalSteps ? (
-            <Button onClick={goToNextStep} disabled={isLoading}>
+            <Button onClick={goToNextStep} disabled={isLoading || isInitialLoad}>
               Next
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>

@@ -207,4 +207,30 @@ describe('To-Do page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(load.refetch).toHaveBeenCalled();
   });
+
+  it('keeps a linked task in the address while tasks fail to load', () => {
+    load.error = new Error('boom');
+    renderAt('/admin?module=tasks&task=t-new');
+    expect(screen.getByRole('heading', { name: 'Unable to load tasks' })).toBeDefined();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(screen.getByTestId('search').textContent).toBe('?module=tasks&task=t-new');
+  });
+
+  it('says when no task matches the filters, with Clear filters', () => {
+    renderAt();
+    fireEvent.change(screen.getByLabelText('Search tasks'), { target: { value: 'zzz' } });
+    expect(screen.getByText('No tasks match your filters.')).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[1]);
+    expect(screen.queryByText('No tasks match your filters.')).toBeNull();
+  });
+
+  it('says when no archived task matches, with Clear filters', () => {
+    renderAt('/admin?module=tasks&tab=archived');
+    fireEvent.change(screen.getByLabelText('Search archived tasks'), { target: { value: 'zzz' } });
+    expect(
+      screen.getByRole('heading', { name: 'No archived tasks match your filters' }),
+    ).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+    expect(screen.getByText('Renew PI cover')).toBeDefined();
+  });
 });

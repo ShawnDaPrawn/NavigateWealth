@@ -209,4 +209,33 @@ describe('Submissions page', () => {
     expect(screen.getByRole('heading', { name: 'Unable to load submissions' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeDefined();
   });
+
+  it('says when nothing on the board matches the filters, with Clear filters', () => {
+    data.list = subs;
+    renderAt();
+    fireEvent.change(screen.getByLabelText('Search submissions'), { target: { value: 'zzz' } });
+    expect(screen.getByText('No submissions match your filters.')).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
+    expect(screen.getByRole('button', { name: 'Sipho Ndlovu' })).toBeDefined();
+  });
+
+  it('tells a failed load of a linked submission apart from a missing one', async () => {
+    data.list = subs;
+    getById.mockRejectedValue(new Error('Network down'));
+    renderAt('/admin?module=submissions&id=s-x');
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't open the submission"));
+  });
+
+  it('says when no archived submission matches, with Clear filters', () => {
+    data.list = subs;
+    renderAt('/admin?module=submissions&tab=archived');
+    fireEvent.change(screen.getByLabelText('Search archived submissions'), {
+      target: { value: 'zzz' },
+    });
+    expect(
+      screen.getByRole('heading', { name: 'No archived submissions match your filters' }),
+    ).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+    expect(screen.getByText('Ruan Venter')).toBeDefined();
+  });
 });

@@ -6,12 +6,15 @@
 import React from 'react';
 import { File as FileIcon, Loader2, Paperclip, Plus } from 'lucide-react';
 import type { Attachment } from './taskFormModalModel';
+import { Skeleton } from '../../../../ui/skeleton';
 
 interface TaskAttachmentsSectionProps {
   attachments: Attachment[];
   isUploading: boolean;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDeleteAttachment: (attachmentId: string) => Promise<void>;
+  /** Attachments still loading: rows shaped like the list. */
+  isLoading?: boolean;
 }
 
 export function TaskAttachmentsSection({
@@ -19,6 +22,7 @@ export function TaskAttachmentsSection({
   isUploading,
   handleFileUpload,
   handleDeleteAttachment,
+  isLoading = false,
 }: TaskAttachmentsSectionProps) {
   return (
     <div className="space-y-3">
@@ -52,6 +56,13 @@ export function TaskAttachmentsSection({
       </div>
 
       <div className="pl-9 space-y-3">
+        {isLoading && (
+          <div role="status" aria-label="Loading attachments" className="space-y-3">
+            {[0, 1].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </div>
+        )}
         {attachments.map((att) => (
           <div
             key={att.id}
