@@ -378,7 +378,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
               <Eye className="h-4 w-4 mr-2" />
               Live Preview
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <Button
                 variant="ghost"
                 size="icon"

@@ -387,7 +387,7 @@ export function WillManagementView({
             Manage wills and testaments for {clientName}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             onClick={onAIWillBuilder ?? (() => setShowAIWillBuilder(true))}
             className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -444,7 +444,7 @@ export function WillManagementView({
               <p className="text-sm text-gray-600 mb-6">
                 Start by drafting a Last Will & Testament or Living Will for {clientName}
               </p>
-              <div className="flex gap-2 justify-center">
+              <div className="flex gap-2 justify-center flex-wrap">
                 <Button
                   onClick={onAIWillBuilder ?? (() => setShowAIWillBuilder(true))}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -664,7 +664,7 @@ export function WillManagementView({
 
       {/* Summary Cards */}
       {!isLoading && wills.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">

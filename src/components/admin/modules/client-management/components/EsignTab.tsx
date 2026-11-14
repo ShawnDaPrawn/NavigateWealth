@@ -686,7 +686,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       </div>
 
       {/* Statistics Cards (SS8.3 stat card standards) */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
           const cfg = STAT_CONFIG[key];
           const Icon = cfg.icon;

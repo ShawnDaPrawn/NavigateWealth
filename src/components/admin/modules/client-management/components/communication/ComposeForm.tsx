@@ -350,7 +350,7 @@ export function ComposeForm({
             </div>
 
             {attachments.length > 0 && (
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {attachments.map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}

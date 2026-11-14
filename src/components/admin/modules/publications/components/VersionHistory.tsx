@@ -169,7 +169,7 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
       {/* Panel */}
       <div className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0 flex-wrap gap-x-3 gap-y-2">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
               <History className="h-4 w-4 text-blue-600" />
@@ -181,7 +181,7 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -302,7 +302,7 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -326,7 +326,7 @@ export function VersionHistory({ articleId, isOpen, onClose, onRestore }: Versio
                           )}
 
                           {isRestoreConfirm && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <Button
                                 size="sm"
                                 onClick={() => handleRestore(version.id)}

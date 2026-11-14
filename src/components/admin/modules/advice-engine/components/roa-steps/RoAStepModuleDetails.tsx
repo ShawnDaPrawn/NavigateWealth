@@ -508,7 +508,7 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
           {currentModule.evidence && currentModule.evidence.requirements.length > 0 && (
             <div className="space-y-3">
               <h4 className="font-medium">Required Evidence</h4>
-              <div className="grid gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {currentModule.evidence.requirements.map((requirement) => {
                   const evidence = currentEvidence[requirement.id];
                   return (

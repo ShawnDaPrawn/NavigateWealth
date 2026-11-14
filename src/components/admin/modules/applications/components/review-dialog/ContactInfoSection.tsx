@@ -58,7 +58,7 @@ export function ContactInfoSection({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           <ViewField
             label="Email Address"
             value={data?.emailAddress}

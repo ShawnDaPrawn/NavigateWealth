@@ -35,7 +35,7 @@ export function INAResultsSummary({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Portfolio Health</p>
             <p className="text-lg font-semibold">

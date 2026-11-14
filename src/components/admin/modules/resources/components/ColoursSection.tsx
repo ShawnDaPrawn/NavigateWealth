@@ -148,7 +148,7 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
             <h4 className="text-sm font-medium capitalize text-muted-foreground">
               {group} Colours
             </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               {swatches.map((swatch) => {
                 const luminance = getContrastRatio(swatch.hex);
                 const textColor = luminance > 0.5 ? 'text-gray-900' : 'text-white';

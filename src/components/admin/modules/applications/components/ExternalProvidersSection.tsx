@@ -190,7 +190,7 @@ export function ExternalProvidersSection({
             <Label className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5 block">
               {category}
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               {filteredGroups[category].map((provider) => {
                 const isChecked = selectedProviders.includes(provider.id);
                 return (

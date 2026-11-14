@@ -231,7 +231,7 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
   return (
     <div className="space-y-6">
       {/* ── KPI Row ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1">
         <KPICard label="Total Articles" value={kpis.total} icon={FileText} accent="purple" />
         <KPICard
           label="Published"

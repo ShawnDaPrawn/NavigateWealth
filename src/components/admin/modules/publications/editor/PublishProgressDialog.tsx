@@ -192,7 +192,7 @@ export function PublishProgressDialog({
                 </label>
               </div>
 
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-3 justify-end flex-wrap">
                 <Button
                   variant="outline"
                   onClick={() => closePublishDialog(false)}
@@ -288,7 +288,7 @@ export function PublishProgressDialog({
                   )}
               </div>
 
-              <div className="flex gap-3 justify-end mt-6">
+              <div className="flex gap-3 justify-end mt-6 flex-wrap">
                 {publishInFlight ? (
                   <Button variant="outline" onClick={() => closePublishDialog(true)}>
                     Continue in Background

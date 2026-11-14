@@ -130,7 +130,7 @@ export function DashboardSkeleton() {
     <div className="space-y-6 p-6" role="status" aria-label="Loading dashboard">
       <span className="sr-only">Loading dashboard, please wait…</span>
       {/* KPI Grid — 4 columns */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         {[1, 2, 3, 4].map((i) => (
           <KPICardSkeleton key={i} />
         ))}

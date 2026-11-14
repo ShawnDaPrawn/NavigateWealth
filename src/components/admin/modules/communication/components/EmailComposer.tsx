@@ -360,7 +360,7 @@ export function EmailComposer({
       {/* Send Actions */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Button
               onClick={onSend}
               disabled={disabled || !selectedFrom || !subject.trim() || !bodyHtml.trim()}

@@ -363,7 +363,7 @@ export function ArticleEmailEngagementPanel() {
   return (
     <>
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1">
           <MetricCard
             label="Emails Sent"
             value={totals.sent.toLocaleString()}
@@ -411,7 +411,7 @@ export function ArticleEmailEngagementPanel() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1">
               <MetricCard
                 label="Heartbeat"
                 value={
@@ -501,7 +501,7 @@ export function ArticleEmailEngagementPanel() {
                   on-page engagement signals.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
@@ -696,7 +696,7 @@ export function ArticleEmailEngagementPanel() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
                   <DetailStat
                     label="Intended"
                     value={

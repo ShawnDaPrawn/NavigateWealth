@@ -110,7 +110,7 @@ export function SocialAnalytics() {
       </div>
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         {[
           {
             label: 'Total Impressions',

@@ -326,7 +326,7 @@ export function KBEntryPage({ onClose, entry, onSubmit, isSubmitting }: KBEntryP
         <fieldset className="space-y-1.5">
           <legend className="text-sm font-medium leading-none">Importance</legend>
           <div
-            className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1"
             role="radiogroup"
             aria-label="Importance"
           >

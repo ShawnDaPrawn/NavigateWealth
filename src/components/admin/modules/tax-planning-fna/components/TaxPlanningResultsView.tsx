@@ -99,7 +99,7 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
               No specific recommendations were included in this record.
             </p>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {acceptedRecs.map((rec) => (
                 <div key={rec.id} className="flex gap-4 p-4 border rounded-lg bg-white">
                   <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />

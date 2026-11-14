@@ -292,26 +292,26 @@ export function ApplicationsTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50/60 hover:bg-gray-50/60 border-b border-gray-200">
-              <TableHead className="w-[240px] font-semibold text-[11px] uppercase tracking-wider text-gray-500 pl-4 py-3">
+              <TableHead className="font-semibold sm:w-[240px] text-[11px] uppercase tracking-wider text-gray-500 pl-4 py-3">
                 Applicant
               </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
+              <TableHead className="hidden font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3 sm:table-cell">
                 Contact
               </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
+              <TableHead className="hidden font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3 sm:table-cell">
                 ID Number
               </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
+              <TableHead className="hidden font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3 sm:table-cell">
                 Status
               </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
+              <TableHead className="hidden font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3 sm:table-cell">
                 {activeTab === 'invited'
                   ? 'Invited'
                   : activeTab === 'incomplete'
                     ? 'Signed Up'
                     : 'Submitted'}
               </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
+              <TableHead className="hidden font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3 sm:table-cell">
                 Origin
               </TableHead>
               <TableHead className="text-right font-semibold text-[11px] uppercase tracking-wider text-gray-500 pr-4 py-3">
@@ -365,6 +365,16 @@ export function ApplicationsTable({
                           <p className="font-medium text-sm text-gray-900 truncate">
                             {getFullName(app)}
                           </p>
+                          {/* On a phone the other columns are hidden: their essentials sit here. */}
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
+                            <StatusBadge status={app.status} />
+                            <span className="text-[12px] text-gray-500">
+                              {formatDate(app.submitted_at || app.created_at)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 max-w-[calc(100vw-13rem)] truncate text-[12px] text-gray-500 sm:hidden">
+                            {data.emailAddress || app.user_email || '\u2014'}
+                          </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             {app.application_number && (
                               <span className="text-[11px] text-gray-400 flex items-center gap-0.5 font-mono">
@@ -409,7 +419,7 @@ export function ApplicationsTable({
                     </TableCell>
 
                     {/* Contact */}
-                    <TableCell className="py-3">
+                    <TableCell className="hidden py-3 sm:table-cell">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
                           <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" />
@@ -427,7 +437,7 @@ export function ApplicationsTable({
                     </TableCell>
 
                     {/* ID Number */}
-                    <TableCell className="py-3">
+                    <TableCell className="hidden py-3 sm:table-cell">
                       {data.idNumber ? (
                         <TooltipProvider>
                           <Tooltip>
@@ -450,12 +460,12 @@ export function ApplicationsTable({
                     </TableCell>
 
                     {/* Status */}
-                    <TableCell className="py-3">
+                    <TableCell className="hidden py-3 sm:table-cell">
                       <StatusBadge status={app.status} />
                     </TableCell>
 
                     {/* Date */}
-                    <TableCell className="py-3">
+                    <TableCell className="hidden py-3 sm:table-cell">
                       <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
                         <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                         <span>{formatDate(app.submitted_at || app.created_at)}</span>
@@ -463,7 +473,7 @@ export function ApplicationsTable({
                     </TableCell>
 
                     {/* Origin */}
-                    <TableCell className="py-3">
+                    <TableCell className="hidden py-3 sm:table-cell">
                       <Badge
                         variant="outline"
                         className={`text-[10px] font-medium border ${originBadge.className}`}
@@ -482,7 +492,7 @@ export function ApplicationsTable({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>

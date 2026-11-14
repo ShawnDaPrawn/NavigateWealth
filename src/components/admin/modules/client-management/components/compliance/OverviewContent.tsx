@@ -50,7 +50,7 @@ export function OverviewContent({
   return (
     <div className="space-y-4">
       {/* Quick stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard
           label="Total Checks"
           value={activities.length}

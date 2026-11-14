@@ -252,7 +252,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                                 ))}
                               </div>
                             )}
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -305,7 +305,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
           ) : (
             <div className="space-y-4">
               {/* View toggle */}
-              <div className="flex items-center justify-end gap-1">
+              <div className="flex items-center justify-end gap-1 flex-wrap">
                 <Button
                   variant={imageView === 'grid' ? 'secondary' : 'ghost'}
                   size="sm"
@@ -326,7 +326,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
 
               {imageView === 'grid' ? (
                 /* Grid View */
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
                   {imageHistory.map((record: AIImageRecord) => {
                     const image = record.result.images[0];
                     if (!image) return null;
@@ -346,7 +346,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                         {/* Overlay on hover */}
                         <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/40 transition-all flex items-end opacity-0 group-hover:opacity-100">
                           <div className="p-2 w-full flex items-center justify-between">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <Button
                                 variant="secondary"
                                 size="sm"
@@ -399,7 +399,7 @@ export function AIGenerationHistory({ onUseText, onUseImage }: AIGenerationHisto
                     return (
                       <Card key={record.id} className="border">
                         <CardContent className="p-3">
-                          <div className="flex gap-4">
+                          <div className="flex flex-wrap gap-4">
                             {/* Thumbnail */}
                             <div className="w-24 h-24 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0">
                               <img

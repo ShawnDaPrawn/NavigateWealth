@@ -502,7 +502,7 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2.5 pt-1">
+        <div className="flex justify-end gap-2.5 pt-1 flex-wrap">
           <Button variant="outline" onClick={handleClear} className="px-5">
             <RotateCcw className="mr-2 h-3.5 w-3.5" />
             Import More
@@ -523,9 +523,9 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
       {/* Steps */}
       <div className="space-y-3">
         {/* Step 1 */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-wrap items-center gap-x-4 gap-y-3">
           <StepIndicator number={1} active={!hasFile} complete={hasFile} />
-          <div className="flex-1 min-w-0">
+          <div className="min-w-[180px] flex-1">
             <p className="text-sm font-medium text-gray-900">Download the import template</p>
             <p className="text-xs text-gray-400 mt-0.5">
               Pre-formatted Excel file with all supported fields. Required:{' '}
@@ -547,9 +547,9 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
         </div>
 
         {/* Step 2 */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-wrap items-center gap-x-4 gap-y-3">
           <StepIndicator number={2} active={hasFile && !hasPreview} complete={hasPreview} />
-          <div className="flex-1 min-w-0">
+          <div className="min-w-[180px] flex-1">
             <p className="text-sm font-medium text-gray-900">Upload your completed file</p>
             {fileName ? (
               <div className="flex items-center gap-2 mt-1">
@@ -569,7 +569,7 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
               </p>
             )}
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 flex-wrap">
             <input
               ref={fileInputRef}
               type="file"
@@ -723,7 +723,7 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-2.5 px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+            <div className="flex justify-end gap-2.5 px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex-wrap">
               <Button variant="outline" onClick={onClose} disabled={isImporting} className="px-5">
                 Cancel
               </Button>

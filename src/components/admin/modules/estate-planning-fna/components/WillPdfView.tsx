@@ -496,7 +496,7 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[900px] max-h-[95vh] overflow-y-auto p-0">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
           <div>
             <DialogTitle className="text-base font-semibold">
               {willTypeLabel} {status ? `(${status})` : ''}

@@ -177,7 +177,7 @@ export function ExtractionQualityDashboard() {
       </div>
 
       {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard
           label="Total Extractions"
           value={overview.completedExtractions}

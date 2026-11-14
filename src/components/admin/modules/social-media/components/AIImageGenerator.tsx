@@ -301,7 +301,7 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
           {/* Platform Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Platform &amp; Dimensions</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {(
                 Object.entries(PLATFORM_CONFIG) as [
                   ImagePlatform,
@@ -358,7 +358,7 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
           {/* Visual Style */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Visual Style</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {STYLE_OPTIONS.map((opt) => {
                 const isSelected = style === opt.value;
                 return (

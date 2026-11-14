@@ -206,7 +206,7 @@ export function WelcomeBanner({
                 )}
 
                 {/* Financial snapshot stats — merged from former snapshot cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wider leading-none">
                       {isClientMode ? 'My Net Worth' : 'Net Worth'}

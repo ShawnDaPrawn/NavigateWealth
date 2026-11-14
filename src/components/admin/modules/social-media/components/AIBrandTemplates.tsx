@@ -744,7 +744,7 @@ export function AIBrandTemplates({ onUseContent }: AIBrandTemplatesProps) {
                         <p className="text-xs text-gray-600">{post.callToAction}</p>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"

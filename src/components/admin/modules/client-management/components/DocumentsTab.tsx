@@ -346,7 +346,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
             Upload documents and links for {selectedClient.firstName} {selectedClient.lastName}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={fetchDocuments} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

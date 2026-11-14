@@ -300,9 +300,9 @@ function GoalEditorCard({
   return (
     <Card className="border-primary">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
           <CardTitle className="text-base">Edit Goal {index + 1}</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button type="button" variant="outline" size="sm" onClick={onCollapse}>
               Done
             </Button>

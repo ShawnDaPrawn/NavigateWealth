@@ -185,7 +185,7 @@ export function Step3ManualAdjustment({
                 </CardDescription>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {hasOverride && (
                 <Button variant="ghost" size="sm" onClick={() => handleRemoveOverride(type)}>
                   <RotateCcw className="h-4 w-4 mr-1" />

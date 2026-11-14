@@ -706,7 +706,7 @@ function OverviewSection({
       }}
     >
       <CardHeader className="bg-gray-50/50 pb-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg bg-white shadow-sm border border-gray-100`}>
               <Icon className={`h-5 w-5 ${section.color}`} />
@@ -718,7 +718,7 @@ function OverviewSection({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={onAddPolicy}>
               <Plus className="h-3 w-3 mr-1" /> Add Policy
             </Button>

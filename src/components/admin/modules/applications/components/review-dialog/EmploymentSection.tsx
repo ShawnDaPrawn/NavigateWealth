@@ -90,7 +90,7 @@ export function EmploymentSection({
       ) : (
         <div className="contents">
           {hasEmploymentDetails ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               <ViewField
                 label="Employment Status"
                 value={

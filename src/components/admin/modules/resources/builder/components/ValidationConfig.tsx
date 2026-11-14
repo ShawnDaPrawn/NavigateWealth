@@ -80,7 +80,7 @@ export function ValidationConfig({ rules, onChange }: ValidationConfigProps) {
           <ShieldCheck className="h-3.5 w-3.5 text-purple-500" />
           <Label className="text-xs font-semibold text-gray-700">Validation Rules</Label>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <Button
             variant="ghost"
             size="sm"

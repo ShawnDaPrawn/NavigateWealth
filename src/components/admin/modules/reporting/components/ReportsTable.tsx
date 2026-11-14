@@ -139,19 +139,19 @@ export function ReportsTable({
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
-              <TableHead style={{ width: '350px' }} scope="col">
+              <TableHead scope="col" className="sm:w-[350px]">
                 Report
               </TableHead>
-              <TableHead style={{ width: '120px' }} scope="col">
+              <TableHead scope="col" className="hidden w-[120px] sm:table-cell">
                 Category
               </TableHead>
-              <TableHead style={{ width: '150px' }} scope="col">
+              <TableHead scope="col" className="hidden w-[150px] sm:table-cell">
                 Last run
               </TableHead>
-              <TableHead style={{ width: '120px' }} scope="col">
+              <TableHead scope="col" className="hidden w-[120px] sm:table-cell">
                 Format
               </TableHead>
-              <TableHead style={{ width: '150px' }} scope="col">
+              <TableHead scope="col" className="sm:w-[150px]">
                 Actions
               </TableHead>
             </TableRow>
@@ -186,22 +186,28 @@ export function ReportsTable({
                         </div>
                         <div className="min-w-0">
                           <div className="font-medium">{report.name}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-[280px]">
+                          <div className="max-w-[calc(100vw-15rem)] truncate text-sm text-muted-foreground sm:max-w-[280px]">
                             {report.description}
+                          </div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {cfg.label} · Last run{' '}
+                            {report.lastRunAt
+                              ? new Date(report.lastRunAt).toLocaleDateString()
+                              : 'never'}
                           </div>
                         </div>
                       </div>
                     </TableCell>
 
                     {/* Category Badge */}
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="secondary" className={`text-xs ${cfg.badgeClass}`}>
                         {cfg.label}
                       </Badge>
                     </TableCell>
 
                     {/* Last Run */}
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {report.lastRunAt ? (
                         <div className="text-sm">
                           <div>{new Date(report.lastRunAt).toLocaleDateString()}</div>
@@ -215,7 +221,7 @@ export function ReportsTable({
                     </TableCell>
 
                     {/* Format */}
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline" className="text-xs">
                         {ext}
                       </Badge>

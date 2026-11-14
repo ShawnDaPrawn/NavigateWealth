@@ -187,7 +187,7 @@ export function ContentSourceDialogs({
                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-white">
                               {feed.type.toUpperCase()}
                             </Badge>
-                            <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                            <span className="text-xs text-blue-500 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity font-medium">
                               Select
                             </span>
                           </div>

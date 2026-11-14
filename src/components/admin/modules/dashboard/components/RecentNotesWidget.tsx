@@ -117,7 +117,7 @@ function NoteRow({ note, onClick }: { note: Note; onClick: () => void }) {
           <p className="text-sm font-medium text-gray-900 truncate">{note.title}</p>
         </div>
         {snippet && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{snippet}</p>}
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex flex-wrap items-center gap-2 mt-1">
           {note.clientName && (
             <Badge
               variant="secondary"

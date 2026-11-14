@@ -86,7 +86,7 @@ export function ManagersTab({ clusterId }: { clusterId: string }) {
           {managers.map((manager) => (
             <Card key={manager.id}>
               <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <UserCog className="h-4 w-4 text-primary" />
@@ -98,7 +98,7 @@ export function ManagersTab({ clusterId }: { clusterId: string }) {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 flex-wrap">
                     <Button
                       size="icon"
                       variant="ghost"

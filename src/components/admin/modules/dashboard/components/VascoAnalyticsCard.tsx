@@ -331,7 +331,7 @@ export function VascoAnalyticsCard() {
                         <span>{h.email}</span>
                         {h.phone && <span>{h.phone}</span>}
                       </div>
-                      <div className="flex items-center gap-1 pt-1">
+                      <div className="flex items-center gap-1 pt-1 flex-wrap">
                         {h.status === 'new' && (
                           <Button
                             size="sm"

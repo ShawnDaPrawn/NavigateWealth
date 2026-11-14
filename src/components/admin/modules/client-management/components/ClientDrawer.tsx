@@ -257,7 +257,7 @@ function ClientDrawerPending({
             The latest details could not be loaded. Nothing is shown rather than an older copy.
           </p>
         </div>
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex gap-2 flex-wrap">
           <Button onClick={state.retry}>Try again</Button>
           <Button variant="outline" onClick={onClose}>
             Close

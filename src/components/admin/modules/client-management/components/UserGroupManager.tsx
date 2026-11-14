@@ -192,7 +192,7 @@ export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) 
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   onClick={handleSaveGroup}
                   className={
@@ -248,7 +248,7 @@ export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) 
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Button variant="ghost" size="sm" onClick={() => handleEditClick(group)}>
                           <Edit className="h-4 w-4" />
                         </Button>

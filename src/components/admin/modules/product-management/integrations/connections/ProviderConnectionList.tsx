@@ -155,7 +155,7 @@ export function ProviderConnectionList({
                   variant="ghost"
                   size="icon"
                   aria-label={`Delete provider ${provider.name}`}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 h-6 w-6 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  className="absolute top-2 right-2 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 h-6 w-6 text-gray-400 hover:text-red-600 hover:bg-red-50"
                   onClick={async (e) => {
                     e.stopPropagation();
                     const ok = await askConfirm({

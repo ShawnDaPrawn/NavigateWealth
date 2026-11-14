@@ -461,7 +461,7 @@ export function RecipientAddForm({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 pt-2 flex-wrap">
           <Button variant="outline" onClick={resetAddForm}>
             Cancel
           </Button>

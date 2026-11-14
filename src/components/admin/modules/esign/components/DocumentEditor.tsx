@@ -177,7 +177,7 @@ export function DocumentEditor({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {hasUnsavedChanges && (
               <Badge variant="secondary" className="text-orange-600">
                 Unsaved changes
@@ -255,7 +255,7 @@ export function DocumentEditor({
               </span>
             </div>
             {isValid ? (
-              <Badge variant="default" className="ml-auto bg-green-600">
+              <Badge variant="default" className="ml-auto bg-green-600 text-white">
                 Ready to send
               </Badge>
             ) : (

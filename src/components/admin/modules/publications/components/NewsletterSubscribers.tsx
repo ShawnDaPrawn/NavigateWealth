@@ -289,7 +289,7 @@ export function NewsletterSubscribers() {
 
       {/* Stat Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardContent className="pt-4 pb-4">
@@ -305,7 +305,7 @@ export function NewsletterSubscribers() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           {(
             [
               {
@@ -359,8 +359,8 @@ export function NewsletterSubscribers() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative w-full sm:max-w-xs sm:flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             {...searchInputGuard}
@@ -370,7 +370,7 @@ export function NewsletterSubscribers() {
             className="pl-9 h-9"
           />
         </div>
-        <div className="flex items-center border rounded-lg overflow-hidden">
+        <div className="flex w-fit max-w-full items-center overflow-x-auto rounded-lg border">
           {(['all', 'active', 'pending', 'unsubscribed'] as const).map((f) => (
             <button
               key={f}
@@ -453,7 +453,7 @@ export function NewsletterSubscribers() {
                 : 'Try adjusting your search or filter.'}
             </p>
             {subscribers.length === 0 && (
-              <div className="flex items-center justify-center gap-2 mt-4">
+              <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
                   <Upload className="h-3.5 w-3.5 mr-1.5" />
                   Bulk Import

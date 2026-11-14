@@ -487,7 +487,7 @@ export function PolicyCategoryTab({
                 </h3>
                 <p className="text-sm text-gray-600">{description}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {categorySubtabId === 'investments' && (
                   <Button
                     variant="outline"

@@ -266,7 +266,7 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                               <p className="text-sm font-medium">{variant.label}</p>
                               <p className="text-xs text-muted-foreground">{variant.description}</p>
                             </div>
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <div className="flex items-center gap-0.5 flex-shrink-0 flex-wrap">
                               {logo && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>

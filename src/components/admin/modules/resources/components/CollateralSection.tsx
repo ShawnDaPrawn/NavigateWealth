@@ -198,7 +198,7 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           {filtered.map((item) => (
             <Card key={item.id} className="overflow-hidden group">
               {/* Preview */}
@@ -213,7 +213,7 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
                   <FileText className="h-10 w-10 text-muted-foreground/30" />
                 )}
                 {/* Hover actions */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 flex-wrap">
                   {item.signedUrl && (
                     <div className="contents">
                       <Tooltip>

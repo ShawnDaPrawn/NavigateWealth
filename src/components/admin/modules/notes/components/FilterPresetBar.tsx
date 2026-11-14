@@ -365,7 +365,7 @@ export function FilterPresetBar({
               autoFocus
             />
             <div className="text-xs text-gray-400">Filters: {describeFilters(currentFilters)}</div>
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex justify-end gap-2 pt-1 flex-wrap">
               <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(false)}>
                 Cancel
               </Button>
