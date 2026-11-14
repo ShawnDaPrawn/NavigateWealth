@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+  REASSIGN_BATCH_SIZE,
+  reassignPersonnelClients,
   fetchPersonnel,
   fetchPersonnelById,
   invitePersonnel,
@@ -524,5 +526,36 @@ describe('staff account access (shared /security routes)', () => {
     expect(body.newPassword.length).toBeGreaterThanOrEqual(8);
     await sendPersonnelPasswordReset('per-001');
     expect(mockApiPost.mock.calls[1][1].newPassword).not.toBe(body.newPassword);
+  });
+});
+
+describe('reassignPersonnelClients', () => {
+  beforeEach(() => {
+    mockApiPost.mockReset();
+  });
+
+  it('sends a large book in batches the server accepts and merges the results', async () => {
+    const ids = Array.from({ length: 450 }, (_, i) => `c${i}`);
+    mockApiPost.mockImplementation((_url: string, body: { clientIds: string[] }) =>
+      Promise.resolve({ data: { reassigned: body.clientIds, skipped: [] } }),
+    );
+    const result = await reassignPersonnelClients('from', 'to', ids);
+    expect(mockApiPost).toHaveBeenCalledTimes(3);
+    for (const call of mockApiPost.mock.calls) {
+      expect((call[1] as { clientIds: string[] }).clientIds.length).toBeLessThanOrEqual(
+        REASSIGN_BATCH_SIZE,
+      );
+    }
+    expect(result.reassigned).toHaveLength(450);
+  });
+
+  it('says how many moved when a later batch fails', async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `c${i}`);
+    mockApiPost
+      .mockResolvedValueOnce({ data: { reassigned: ids.slice(0, 200), skipped: [] } })
+      .mockRejectedValueOnce(new Error('Server error'));
+    await expect(reassignPersonnelClients('from', 'to', ids)).rejects.toThrow(
+      'Moved 200 of 250 clients, then the rest failed: Server error',
+    );
   });
 });

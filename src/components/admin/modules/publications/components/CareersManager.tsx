@@ -240,7 +240,19 @@ export function CareersManager() {
 
   // A reload or pasted link names a record: fill the form once the list is in.
   useEffect(() => {
-    if (!pageId || pageId === 'new' || editingId === pageId) return;
+    if (!pageId || editingId === pageId) return;
+    if (pageId === 'new') {
+      // Back/Forward onto the new-record address: start a blank form, so it
+      // cannot save over the record that was open before.
+      if (editingId !== null) {
+        setEditingId(null);
+        setForm({ ...EMPTY_FORM, sortOrder: listings.length + 1 });
+        setRequirementInput('');
+        setBenefitInput('');
+        setSubmitted(false);
+      }
+      return;
+    }
     const match = listings.find((x) => x.id === pageId);
     if (match) fillEdit(match);
   }, [pageId, listings, editingId]);

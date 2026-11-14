@@ -204,7 +204,18 @@ export function TeamManager() {
 
   // A reload or pasted link names a record: fill the form once the list is in.
   useEffect(() => {
-    if (!pageId || pageId === 'new' || editingId === pageId) return;
+    if (!pageId || editingId === pageId) return;
+    if (pageId === 'new') {
+      // Back/Forward onto the new-record address: start a blank form, so it
+      // cannot save over the record that was open before.
+      if (editingId !== null) {
+        setEditingId(null);
+        setForm({ ...EMPTY_FORM, sortOrder: members.length + 1 });
+        setSpecialtyInput('');
+        setSubmitted(false);
+      }
+      return;
+    }
     const match = members.find((x) => x.id === pageId);
     if (match) fillEdit(match);
   }, [pageId, members, editingId]);

@@ -306,6 +306,9 @@ export interface ReassignClientsResult {
   skipped: Array<{ clientId: string; reason: 'not_found' | 'not_assigned' }>;
 }
 
+/** The server's per-request limit (MAX_REASSIGN_BATCH in the reassign service). */
+export const REASSIGN_BATCH_SIZE = 200;
+
 /**
  * Move clients from one staff member to another (super admin). Only clients
  * still assigned to `fromId` move; the rest come back as skipped.
@@ -315,16 +318,28 @@ export async function reassignPersonnelClients(
   toPersonnelId: string,
   clientIds: string[],
 ): Promise<ReassignClientsResult> {
-  try {
-    const response = await api.post<{ data: ReassignClientsResult }>(
-      `personnel/${fromId}/clients/reassign`,
-      { toPersonnelId, clientIds },
-    );
-    return response.data;
-  } catch (error) {
-    logger.error('[API] Failed to reassign clients', error, { fromId, toPersonnelId });
-    throw error;
+  // The server takes at most REASSIGN_BATCH_SIZE ids per request, so a large
+  // book moves in batches, one after another.
+  const merged: ReassignClientsResult = { reassigned: [], skipped: [] };
+  for (let i = 0; i < clientIds.length; i += REASSIGN_BATCH_SIZE) {
+    const batch = clientIds.slice(i, i + REASSIGN_BATCH_SIZE);
+    try {
+      const response = await api.post<{ data: ReassignClientsResult }>(
+        `personnel/${fromId}/clients/reassign`,
+        { toPersonnelId, clientIds: batch },
+      );
+      merged.reassigned.push(...response.data.reassigned);
+      merged.skipped.push(...response.data.skipped);
+    } catch (error) {
+      logger.error('[API] Failed to reassign clients', error, { fromId, toPersonnelId });
+      if (merged.reassigned.length === 0) throw error;
+      const reason = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(
+        `Moved ${merged.reassigned.length} of ${clientIds.length} clients, then the rest failed: ${reason}`,
+      );
+    }
   }
+  return merged;
 }
 
 /**

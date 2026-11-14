@@ -288,6 +288,15 @@ export function CalendarModule() {
     setFilters((prev) => ({ ...prev, search: value }));
   };
 
+  // Clearing must also cancel a pending debounce, or it would re-apply the
+  // old text a moment later while the box shows empty.
+  const cancelSearchDebounce = () => {
+    if (searchDebounce) {
+      clearTimeout(searchDebounce);
+      setSearchDebounce(null);
+    }
+  };
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchText(value);
@@ -499,6 +508,7 @@ export function CalendarModule() {
       eventStatuses: [],
       clientId: null,
     }));
+    cancelSearchDebounce();
     setSearchText('');
   };
 
@@ -552,6 +562,7 @@ export function CalendarModule() {
             type="button"
             aria-label="Clear search"
             onClick={() => {
+              cancelSearchDebounce();
               setSearchText('');
               setFilters((prev) => ({ ...prev, search: '' }));
             }}

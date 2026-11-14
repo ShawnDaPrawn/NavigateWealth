@@ -390,7 +390,10 @@ export function useReassignPersonnelClients() {
             : undefined,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      // A large book moves in batches, so some clients may have moved already.
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.fromId) });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.toId) });
       toast.error(`Could not reassign clients: ${error.message}`);
     },
   });

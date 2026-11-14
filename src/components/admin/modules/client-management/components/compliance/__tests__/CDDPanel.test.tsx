@@ -26,7 +26,9 @@ const props = {
   hasIdentification: true,
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('CDDPanel', () => {
   it('lists past CDD reports and runs a new one', async () => {
