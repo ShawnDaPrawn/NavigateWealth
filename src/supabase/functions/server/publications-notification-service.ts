@@ -15,6 +15,7 @@ import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import {
   isArticleEmailDeliveryTerminalStatus,
+  listArticleIdsFromEmailTrackingKeyScan,
   listUndeliveredArticleEmailTrackingRecords,
   type ArticleEmailTrackingSource,
 } from './publications-email-engagement-service.ts';
@@ -263,6 +264,106 @@ export async function sendArticlePublishedNotificationsBlastThenRetryQueue(
   }
 
   return { blast, retryJob, publishCampaign };
+}
+
+/**
+ * A publish blast that dies mid-way (the Edge worker answering 546, GitHub
+ * #476) leaves recipients as `pending` with no job, because the retry job is
+ * only queued AFTER the blast returns. Nothing else ever picks them up.
+ *
+ * This sweep finds articles whose publish deliveries have been undelivered for
+ * longer than any live blast can run, and that have no active job, and queues
+ * them on the normal retry processor. It runs from the notification cron.
+ *
+ * Bounds, so it cannot surprise an operator:
+ * - only records older than INTERRUPTED_BLAST_MIN_AGE_MS (a live blast is
+ *   done in seconds, so nothing in flight is touched);
+ * - only records newer than INTERRUPTED_BLAST_MAX_AGE_MS (a weeks-old
+ *   announcement is not mailed out automatically; an admin can still use the
+ *   manual "retry undelivered" action);
+ * - skips any article that already has an active publish or retry job;
+ * - runs once every INTERRUPTED_BLAST_SWEEP_EVERY_MINUTES UTC minutes.
+ */
+export const INTERRUPTED_BLAST_MIN_AGE_MS = 10 * 60_000;
+export const INTERRUPTED_BLAST_MAX_AGE_MS = 72 * 60 * 60_000;
+export const INTERRUPTED_BLAST_SWEEP_EVERY_MINUTES = 10;
+
+export interface InterruptedBlastRecoveryResult {
+  ran: boolean;
+  articlesChecked: number;
+  recovered: Array<{ articleId: string; jobId: string; recipientCount: number }>;
+  errors: string[];
+}
+
+export async function recoverInterruptedPublishBlasts(
+  now: Date = new Date(),
+): Promise<InterruptedBlastRecoveryResult> {
+  const result: InterruptedBlastRecoveryResult = {
+    ran: false,
+    articlesChecked: 0,
+    recovered: [],
+    errors: [],
+  };
+
+  if (now.getUTCMinutes() % INTERRUPTED_BLAST_SWEEP_EVERY_MINUTES !== 0) return result;
+  result.ran = true;
+
+  const articleIds = await listArticleIdsFromEmailTrackingKeyScan();
+
+  for (const articleId of articleIds) {
+    result.articlesChecked++;
+    try {
+      const undelivered = await listUndeliveredArticleEmailTrackingRecords(articleId, 'publish');
+      const stranded = undelivered.filter((record) => {
+        const age = now.getTime() - new Date(record.createdAt).getTime();
+        return age >= INTERRUPTED_BLAST_MIN_AGE_MS && age <= INTERRUPTED_BLAST_MAX_AGE_MS;
+      });
+      if (stranded.length === 0) continue;
+
+      const [activePublishJob, activeRetryJob] = await Promise.all([
+        getActiveArticleNotificationJob(articleId, 'publish', 'publish'),
+        getActiveArticleNotificationJob(articleId, 'publish', 'retry_undelivered'),
+      ]);
+      if (activePublishJob || activeRetryJob) continue;
+
+      const first = stranded[0];
+      // Throws when the article is no longer published; nothing is sent then.
+      const article = await resolvePublishedArticleForDelivery({
+        id: articleId,
+        title: first.articleTitle,
+        slug: first.articleSlug,
+        excerpt: '',
+      });
+
+      // Queue exactly the records that passed the age window. The public
+      // retry helper re-reads every undelivered record for the article, which
+      // would also pick up ones younger than the safety interval or older than
+      // the recovery window (a republish to a wider audience leaves both).
+      const job = await queueArticleNotificationJob(article, stranded, {
+        kind: 'retry_undelivered',
+        source: 'publish',
+      });
+      log.warn('Recovered interrupted publish blast', {
+        articleId,
+        jobId: job.id,
+        recipientCount: job.recipientCount,
+      });
+      result.recovered.push({
+        articleId,
+        jobId: job.id,
+        recipientCount: job.recipientCount,
+      });
+    } catch (error) {
+      const message = normalizeSendError(error);
+      result.errors.push(`${articleId}: ${message}`);
+      log.error('Interrupted publish blast recovery failed for article', {
+        articleId,
+        error: message,
+      });
+    }
+  }
+
+  return result;
 }
 
 export async function retryUndeliveredArticleNotifications(

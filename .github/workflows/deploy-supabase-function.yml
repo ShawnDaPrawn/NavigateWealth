@@ -108,13 +108,16 @@ jobs:
           fi
           export SUPABASE_ACCESS_TOKEN="$TOKEN"
           supabase --version
+          # --yes: Supabase CLI 3.1.0 (this job installs `latest`) asks to confirm
+          # a production deploy and, with no terminal, exits "Nothing was changed"
+          # instead of deploying. That failed run 302 (#493) on all three attempts.
           status=0
           for attempt in 1 2 3; do
             echo "Deploy attempt $attempt of 3"
             if [ "$attempt" -eq 3 ]; then
-              supabase --debug functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . && exit 0
+              supabase --debug functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . --yes && exit 0
             else
-              supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . && exit 0
+              supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . --yes && exit 0
             fi
             status=$?
             if [ "$attempt" -lt 3 ]; then

@@ -24,6 +24,7 @@ import {
   getArticleNotificationProcessorState,
   listArticleNotificationCampaigns,
   processArticleNotificationJobs,
+  recoverInterruptedPublishBlasts,
   repairPublishNotificationCampaignFromTracking,
   resumeArticleNotificationDelivery,
   sendArticlePublishedNotificationsBlastThenRetryQueue,
@@ -506,6 +507,20 @@ notificationsRoutes.post('/cron/process-notification-jobs', async (c) => {
       advancedJobs: result.advancedJobs,
       completedJobs: result.completedJobs,
     });
+
+    // A publish blast killed mid-way leaves recipients pending with no job
+    // (GitHub #476). Never let the recovery sweep fail the tick itself.
+    try {
+      const recovery = await recoverInterruptedPublishBlasts();
+      if (recovery.recovered.length > 0 || recovery.errors.length > 0) {
+        log.warn('CRON: Interrupted publish blast recovery', {
+          recovered: recovery.recovered,
+          errors: recovery.errors,
+        });
+      }
+    } catch (recoveryError) {
+      log.error('CRON: Interrupted publish blast recovery crashed', recoveryError);
+    }
 
     return c.json({
       success: true,
