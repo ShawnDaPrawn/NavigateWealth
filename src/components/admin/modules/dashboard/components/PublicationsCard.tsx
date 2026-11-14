@@ -163,7 +163,7 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
 
       <CardContent className="space-y-4">
         {/* ── Status Tiles ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tiles.map((tile) => (
             <div key={tile.label} className="rounded-lg bg-gray-50 p-3 text-center">
               <div className={`inline-flex p-1.5 rounded-md ${tile.iconBg} mb-2`}>

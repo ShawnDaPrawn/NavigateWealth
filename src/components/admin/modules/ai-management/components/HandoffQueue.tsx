@@ -99,7 +99,7 @@ export function HandoffQueue() {
       <p className="text-sm text-nw-text-3">Visitors who asked to speak to an adviser.</p>
 
       {/* Summary cards — each filters the list */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         {STATUS_OPTIONS.map((status) => {
           const cfg = HANDOFF_STATUS_CONFIG[status];
           const active = statusFilter === status;

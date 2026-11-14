@@ -94,7 +94,7 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
             Back to transactional emails
           </button>
         </div>
-        <div className="flex items-end justify-between border-b pb-6 mt-2">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between border-b pb-6 mt-2">
           <div>
             <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
               Global email footer
@@ -147,7 +147,7 @@ export function GlobalFooterEditor({ onBack }: GlobalFooterEditorProps) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Contact Email</Label>
                   <div className="relative">

@@ -558,14 +558,14 @@ export function ResourcesModule() {
         <TabsContent value="forms" className="space-y-6">
           <BreadcrumbTrail trail={[{ label: 'Forms & documents' }]} />
           {/* Header Row: title + primary actions */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-nw-ink">Form management & pre-filling</h2>
               <p className="mt-0.5 text-sm text-nw-text-3">
                 Build forms and letters, then pre-fill them with a client&apos;s details.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Primary actions */}
               {canCreate && (
                 <div className="contents">
@@ -625,7 +625,7 @@ export function ResourcesModule() {
           />
           {/* Selection action bar */}
           {isSelectMode && selectedFormIds.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
               <Badge className="bg-primary text-white">{selectedFormIds.size} selected</Badge>
               <Button size="sm" variant="outline" onClick={toggleSelectAll}>
                 {selectedFormIds.size === filteredForms.length ? 'Deselect all' : 'Select all'}

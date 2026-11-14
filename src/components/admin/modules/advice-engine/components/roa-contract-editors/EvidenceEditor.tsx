@@ -69,7 +69,7 @@ export function EvidenceEditor({
         {draft.evidence.requirements.map((item, index) => (
           <div
             key={`${item.id}-${index}`}
-            className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_160px_auto_auto]"
+            className="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_160px_auto_auto]"
           >
             <Input
               value={item.id}

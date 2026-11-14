@@ -550,7 +550,7 @@ export function FieldPalette({
                                 Page {field.page} • {field.required ? 'Required' : 'Optional'}
                               </p>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <Button
                                 variant="ghost"
                                 size="sm"

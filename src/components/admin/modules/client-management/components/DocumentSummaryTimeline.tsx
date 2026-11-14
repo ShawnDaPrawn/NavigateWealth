@@ -161,7 +161,7 @@ export function DocumentSummaryTimeline({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 flex-wrap gap-y-2">
         <div>
           <CardTitle className="flex items-center gap-2 text-lg">
             <History className="h-5 w-5" />
@@ -170,7 +170,7 @@ export function DocumentSummaryTimeline({
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh timeline

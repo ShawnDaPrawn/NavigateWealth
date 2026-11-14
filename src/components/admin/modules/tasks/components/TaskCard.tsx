@@ -280,7 +280,7 @@ export function TaskCard({
 
               {/* Quick Actions */}
               <div className="flex items-center justify-between pt-2 border-t border-gray-100 no-drag">
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap">
                   {task.status !== 'completed' && (
                     <Button
                       variant="ghost"

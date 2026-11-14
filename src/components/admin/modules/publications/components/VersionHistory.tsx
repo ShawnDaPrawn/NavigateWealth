@@ -290,7 +290,7 @@ export function VersionHistory({
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Button
                             variant="ghost"
                             size="sm"

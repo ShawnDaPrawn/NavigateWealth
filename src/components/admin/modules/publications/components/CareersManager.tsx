@@ -406,7 +406,7 @@ export function CareersManager() {
             </div>
 
             {/* Category & Type */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-category">
                   Category <span className="text-red-500">*</span>
@@ -449,7 +449,7 @@ export function CareersManager() {
             </div>
 
             {/* Location & Closing Date */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-location">Location</Label>
                 <Input
@@ -577,7 +577,7 @@ export function CareersManager() {
             </div>
 
             {/* Sort order & Active */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-sort">Display Order</Label>
                 <NumberInputField

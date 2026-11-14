@@ -80,7 +80,7 @@ export function PdfDropzone({
               {formatFileSize(stored.sizeBytes)} · uploaded {formatRelative(stored.uploadedAt)}
             </p>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {onPreview ? (
               <Button type="button" variant="outline" size="sm" onClick={onPreview}>
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Preview

@@ -17,7 +17,7 @@ interface PageHeaderProps {
 /** The heading every admin page starts with (design system: PageHeader). */
 export function PageHeader({ title, description, actions, viewOnly }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         {/* On a phone the top bar already shows the title (PH-* boards). */}
         <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink max-sm:sr-only">

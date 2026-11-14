@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -43,8 +42,8 @@ import {
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
+import { useIsMobile } from '../../../../ui/use-mobile';
 import { ErrorState, useRecordInUrl } from '../../../layout/page';
-import { Crumbs } from './Crumbs';
 import { toast } from 'sonner';
 
 const SENDER_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -82,43 +81,17 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   const [total, setTotal] = useState(0);
   const [senderOptions, setSenderOptions] = useState<CampaignHistorySenderOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
   const [error, setError] = useState<string | null>(null);
 
-  // Search, every filter and the page are in the address (?channel=email&page=2),
-  // so a reload, Back from a message or a pasted link lands on the same list.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const param = (key: string) => searchParams.get(key) ?? 'all';
-  const debouncedSearch = searchParams.get('q') ?? '';
-  const channelFilter = param('channel');
-  const recipientFilter = param('recipient');
-  const userFilter = param('sender');
-  const statusFilter = param('status');
-  const originFilter = param('source');
-  const currentPage = Math.max(1, Number(searchParams.get('page')) || 1);
-  const [searchTerm, setSearchTerm] = useState(debouncedSearch);
-
-  /** One address change for several filters ('all', '' and page 1 are left out). */
-  const updateFilters = useCallback(
-    (patch: Record<string, string | number | null>) =>
-      setSearchParams(
-        (current) => {
-          const params = new URLSearchParams(current);
-          for (const [key, value] of Object.entries(patch)) {
-            if (
-              value === null ||
-              value === 'all' ||
-              value === '' ||
-              (key === 'page' && value === 1)
-            )
-              params.delete(key);
-            else params.set(key, String(value));
-          }
-          return params;
-        },
-        { replace: true },
-      ),
-    [setSearchParams],
-  );
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [recipientFilter, setRecipientFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [originFilter, setOriginFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [refreshToken, setRefreshToken] = useState(0);
   const [detailLog, setDetailLog] = useState<ActivityLogEntry | null>(null);
 
@@ -127,12 +100,12 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      // The first run is the value read from the address: nothing to write.
-      if (searchDebounceReady.current) updateFilters({ q: searchTerm.trim(), page: null });
+      setDebouncedSearch(searchTerm.trim());
+      if (searchDebounceReady.current) setCurrentPage(1);
       else searchDebounceReady.current = true;
     }, 350);
     return () => window.clearTimeout(t);
-  }, [searchTerm, updateFilters]);
+  }, [searchTerm]);
 
   useEffect(() => {
     let cancelled = false;
@@ -330,31 +303,22 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   // never side panels). The list keeps its filters and page underneath.
   if (detailLog) {
     return (
-      <>
-        <Crumbs
-          trail={[
-            { label: 'History', onClick: () => setDetailLog(null) },
-            { label: detailLog.subject || 'Message' },
-          ]}
-        />
-        <HistoryMessagePage
-          log={detailLog}
-          onBack={() => setDetailLog(null)}
-          formatTimestamp={formatTimestamp}
-          statusBadge={getStatusBadge(detailLog.status)}
-          deliveryLine={formatDeliveryLine(detailLog)}
-          channelLabel={CHANNEL_LABEL[detailLog.channel] ?? detailLog.channel}
-        />
-      </>
+      <HistoryMessagePage
+        log={detailLog}
+        onBack={() => setDetailLog(null)}
+        formatTimestamp={formatTimestamp}
+        statusBadge={getStatusBadge(detailLog.status)}
+        deliveryLine={formatDeliveryLine(detailLog)}
+        channelLabel={CHANNEL_LABEL[detailLog.channel] ?? detailLog.channel}
+      />
     );
   }
 
   return (
     <Card className="w-full">
-      <Crumbs trail={[{ label: 'History' }]} />
       <CardContent className="space-y-4 pt-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex-1 min-w-[200px]">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="col-span-2 min-w-[200px] flex-1">
             <label htmlFor="comm-history-search" className="sr-only">
               Search communications
             </label>
@@ -376,7 +340,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={channelFilter}
             onValueChange={(v) => {
-              updateFilters({ channel: v, page: null });
+              setChannelFilter(v);
+              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by channel">
@@ -393,7 +358,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={statusFilter}
             onValueChange={(v) => {
-              updateFilters({ status: v, page: null });
+              setStatusFilter(v);
+              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="w-full sm:w-[190px]" aria-label="Filter by status">
@@ -412,7 +378,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={originFilter}
             onValueChange={(v) => {
-              updateFilters({ source: v, page: null });
+              setOriginFilter(v);
+              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by source">
@@ -428,7 +395,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={recipientFilter}
             onValueChange={(v) => {
-              updateFilters({ recipient: v, page: null });
+              setRecipientFilter(v);
+              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by recipient type">
@@ -445,7 +413,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={userFilter}
             onValueChange={(v) => {
-              updateFilters({ sender: v, page: null });
+              setUserFilter(v);
+              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by sender">
@@ -461,7 +430,12 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={triggerRefresh} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={triggerRefresh}
+            disabled={loading}
+            className="col-span-2 sm:col-auto"
+          >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
             Refresh
           </Button>
@@ -484,15 +458,13 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
               size="sm"
               onClick={() => {
                 setSearchTerm('');
-                updateFilters({
-                  q: null,
-                  channel: null,
-                  recipient: null,
-                  sender: null,
-                  status: null,
-                  source: null,
-                  page: null,
-                });
+                setDebouncedSearch('');
+                setChannelFilter('all');
+                setRecipientFilter('all');
+                setUserFilter('all');
+                setStatusFilter('all');
+                setOriginFilter('all');
+                setCurrentPage(1);
               }}
             >
               Clear filters
@@ -500,156 +472,228 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           )}
         </div>
 
-        <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border">
-          <Table className="min-w-[920px]">
-            <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-              <TableRow className="hover:bg-transparent">
-                <TableHead scope="col">Date &amp; time</TableHead>
-                <TableHead scope="col">Status</TableHead>
-                <TableHead scope="col">Channel</TableHead>
-                <TableHead scope="col">Recipients</TableHead>
-                <TableHead scope="col">Subject / preview</TableHead>
-                <TableHead scope="col">Sent by</TableHead>
-                <TableHead scope="col">Attachments</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" aria-hidden />
-                    Loading history…
-                  </TableCell>
-                </TableRow>
-              ) : logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {error ? (
-                      <ErrorState
-                        title="Couldn't load the history"
-                        description="Something went wrong while loading. Nothing has changed."
-                        onRetry={triggerRefresh}
-                      />
-                    ) : (
-                      'No communications match your filters.'
-                    )}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                logs.map((log) => (
-                  <TableRow
-                    key={log.id}
-                    className="cursor-pointer hover:bg-muted/50 focus-within:bg-muted/50"
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Open details: ${log.subject || 'Communication'}`}
+        {/* Phone: one card per message. The table needs ~920px to be readable.
+            Rendered instead of the table (not alongside it) so each message
+            appears once for screen readers. */}
+        {isMobile ? (
+          <ul className="divide-y rounded-lg border" aria-label="Communications">
+            {loading ? (
+              <li className="py-10 text-center text-sm text-muted-foreground">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" aria-hidden />
+                Loading history…
+              </li>
+            ) : logs.length === 0 ? (
+              <li className="px-4 py-8 text-center text-sm text-muted-foreground">
+                {error ? (
+                  <ErrorState
+                    title="Couldn't load the history"
+                    description="Something went wrong while loading. Nothing has changed."
+                    onRetry={triggerRefresh}
+                  />
+                ) : (
+                  'No communications found'
+                )}
+              </li>
+            ) : (
+              logs.map((log) => (
+                <li key={log.id}>
+                  <button
+                    type="button"
                     onClick={() => openRow(log)}
-                    onKeyDown={(e) => onRowKeyDown(e, log)}
+                    className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
                   >
-                    <TableCell className="text-sm align-top">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <Calendar className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                        <span className="tabular-nums">{formatTimestamp(log.timestamp)}</span>
-                      </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {formatTimestamp(log.timestamp)}
+                      </span>
+                      {getStatusBadge(log.status)}
+                    </div>
+                    <span className="line-clamp-2 text-sm font-medium leading-snug">
+                      {log.subject || (
+                        <span className="italic text-muted-foreground">No subject</span>
+                      )}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        {getChannelIcon(log.channel)}
+                        {CHANNEL_LABEL[log.channel] ?? log.channel}
+                      </span>
+                      <span aria-hidden>·</span>
+                      <span>{formatRecipientLine(log)}</span>
+                      {log.attachmentCount > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <Paperclip className="h-3 w-3" aria-hidden />
+                          {log.attachmentCount}
+                        </span>
+                      )}
+                    </span>
+                    {formatDeliveryLine(log) && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {formatDeliveryLine(log)}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : (
+          <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border">
+            <Table className="min-w-[920px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead scope="col">Date &amp; time</TableHead>
+                  <TableHead scope="col">Status</TableHead>
+                  <TableHead scope="col">Channel</TableHead>
+                  <TableHead scope="col">Recipients</TableHead>
+                  <TableHead scope="col">Subject / preview</TableHead>
+                  <TableHead scope="col">Sent by</TableHead>
+                  <TableHead scope="col">Attachments</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" aria-hidden />
+                      Loading history…
                     </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex flex-col gap-1">
-                        {getStatusBadge(log.status)}
-                        {formatDeliveryLine(log) && (
-                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                            {formatDeliveryLine(log)}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex flex-col items-start gap-1">
-                        <div className="flex items-center gap-2">
-                          {getChannelIcon(log.channel)}
-                          <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
-                            {CHANNEL_LABEL[log.channel] ?? log.channel}
-                          </Badge>
-                        </div>
-                        {log.origin === 'direct' && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] py-0 h-5 text-purple-700 border-purple-300"
-                          >
-                            Individual
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex items-start gap-2 min-w-[8rem]">
-                        {getRecipientIcon(log.recipientType)}
-                        <span className="text-sm leading-snug">{formatRecipientLine(log)}</span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="min-w-[280px] max-w-md align-top">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-start justify-between gap-2">
-                          {log.subject ? (
-                            <div className="font-medium text-sm leading-snug line-clamp-2 min-w-0 flex-1">
-                              {log.subject}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground italic">No subject</span>
-                          )}
-                          {log.templateUsed ? (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] shrink-0 py-0 h-6 gap-1"
-                            >
-                              <FileText className="h-3 w-3" aria-hidden />
-                              {log.templateUsed}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <div>
-                          <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                            Preview
-                          </div>
-                          <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
-                            {log.messagePreview || '—'}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <span className="font-medium text-sm">{displaySenderName(log)}</span>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      {log.attachmentCount > 0 ? (
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
-                          <span>
-                            {log.attachmentCount} {log.attachmentCount === 1 ? 'file' : 'files'}
-                          </span>
-                        </div>
+                  </TableRow>
+                ) : logs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {error ? (
+                        <ErrorState
+                          title="Couldn't load the history"
+                          description="Something went wrong while loading. Nothing has changed."
+                          onRetry={triggerRefresh}
+                        />
                       ) : (
-                        <span className="text-sm text-muted-foreground/80">None</span>
+                        'No communications match your filters.'
                       )}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : (
+                  logs.map((log) => (
+                    <TableRow
+                      key={log.id}
+                      className="cursor-pointer hover:bg-muted/50 focus-within:bg-muted/50"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Open details: ${log.subject || 'Communication'}`}
+                      onClick={() => openRow(log)}
+                      onKeyDown={(e) => onRowKeyDown(e, log)}
+                    >
+                      <TableCell className="text-sm align-top">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <Calendar
+                            className="h-4 w-4 text-muted-foreground shrink-0"
+                            aria-hidden
+                          />
+                          <span className="tabular-nums">{formatTimestamp(log.timestamp)}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(log.status)}
+                          {formatDeliveryLine(log) && (
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              {formatDeliveryLine(log)}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <div className="flex flex-col items-start gap-1">
+                          <div className="flex items-center gap-2">
+                            {getChannelIcon(log.channel)}
+                            <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
+                              {CHANNEL_LABEL[log.channel] ?? log.channel}
+                            </Badge>
+                          </div>
+                          {log.origin === 'direct' && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-5 text-purple-700 border-purple-300"
+                            >
+                              Individual
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <div className="flex items-start gap-2 min-w-[8rem]">
+                          {getRecipientIcon(log.recipientType)}
+                          <span className="text-sm leading-snug">{formatRecipientLine(log)}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="min-w-[280px] max-w-md align-top">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-2">
+                            {log.subject ? (
+                              <div className="font-medium text-sm leading-snug line-clamp-2 min-w-0 flex-1">
+                                {log.subject}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground italic">
+                                No subject
+                              </span>
+                            )}
+                            {log.templateUsed ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] shrink-0 py-0 h-6 gap-1"
+                              >
+                                <FileText className="h-3 w-3" aria-hidden />
+                                {log.templateUsed}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                              Preview
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
+                              {log.messagePreview || '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <span className="font-medium text-sm">{displaySenderName(log)}</span>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        {log.attachmentCount > 0 ? (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
+                            <span>
+                              {log.attachmentCount} {log.attachmentCount === 1 ? 'file' : 'files'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground/80">None</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
         {total > 0 && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => updateFilters({ page: currentPage - 1 })}
+              onClick={() => setCurrentPage((p) => p - 1)}
               disabled={currentPage <= 1 || loading}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -664,7 +708,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => updateFilters({ page: currentPage + 1 })}
+              onClick={() => setCurrentPage((p) => p + 1)}
               disabled={currentPage >= totalPages || loading}
             >
               Next

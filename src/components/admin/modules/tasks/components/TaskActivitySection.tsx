@@ -94,7 +94,7 @@ export function TaskActivitySection({
                   </span>
                 </div>
                 <div className="text-gray-800 leading-relaxed">{comment.text}</div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity pt-1">
+                <div className="flex gap-2 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity pt-1">
                   <button
                     onClick={() => handleDeleteComment(comment.id)}
                     className="text-xs text-gray-500 hover:text-red-600 hover:underline"

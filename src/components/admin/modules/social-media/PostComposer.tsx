@@ -330,7 +330,7 @@ export function PostComposer({
               onChange={(e) => setLinkTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             <Input
               aria-label="UTM source"
               placeholder="UTM source"

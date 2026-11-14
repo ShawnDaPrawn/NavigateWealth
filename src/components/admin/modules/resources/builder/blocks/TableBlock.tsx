@@ -217,7 +217,7 @@ export const TableBlock: BlockDefinition = {
 
     return (
       <Tabs defaultValue="structure" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 bg-gray-100 p-1 rounded-md">
+        <TabsList className="w-full bg-gray-100 p-1 rounded-md">
           <TabsTrigger
             value="structure"
             className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"

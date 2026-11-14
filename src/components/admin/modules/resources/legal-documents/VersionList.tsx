@@ -43,7 +43,7 @@ export function VersionList({
         <div key={version.id} className="rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-gray-900">v{version.versionNumber}</span>
                 <StatusBadge value={version.status} />
                 <Badge variant="outline">
@@ -70,7 +70,7 @@ export function VersionList({
             </div>
           </div>
           <Separator className="my-3" />
-          <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-2">
             <div>Created by: {version.createdBy || 'Unknown'}</div>
             <div>Published by: {version.publishedBy || 'Not published'}</div>
             <div className="md:col-span-2">

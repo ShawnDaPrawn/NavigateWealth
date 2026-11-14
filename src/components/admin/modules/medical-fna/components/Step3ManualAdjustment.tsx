@@ -74,7 +74,7 @@ export function Step3ManualAdjustment({
           <CardTitle className="text-base font-semibold">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-4">
+      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1 block">
             System Calculation

@@ -228,7 +228,7 @@ export function ComplianceResultViewer({
             <Shield className="h-3 w-3" />
             <span>Confidential — Navigate Wealth Admin</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={onClose}>
               Close
             </Button>

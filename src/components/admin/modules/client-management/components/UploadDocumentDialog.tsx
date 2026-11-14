@@ -745,7 +745,7 @@ export function UploadDocumentDialog({
           </div>
         </Tabs>
 
-        <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-slate-100 bg-slate-50/50 flex-none">
+        <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-slate-100 bg-slate-50/50 flex-none flex-wrap">
           <Button
             variant="outline"
             onClick={() => {

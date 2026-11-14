@@ -248,7 +248,7 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <p className="text-xs text-muted-foreground mb-1">Liquid Assets</p>
               <p className="text-xl font-bold text-green-600">

@@ -430,7 +430,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       >
         <div className="space-y-3">
           {/* Row 1: Title, First, Middle, Last */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div>
               <FieldLabel>Title</FieldLabel>
               <Select value={formData.title} onValueChange={(v) => update('title', v)}>
@@ -481,7 +481,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           </div>
 
           {/* Row 2: DOB, Gender, Nationality */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div>
               <FieldLabel>Date of birth</FieldLabel>
               <Input
@@ -535,7 +535,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           <div className="h-px bg-gray-100 my-1" />
 
           {/* Row 3: ID Type, ID Number, Tax Number */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <FieldLabel>ID type</FieldLabel>
               <Select
@@ -594,7 +594,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           </div>
 
           {/* Row 4: Marital Status, Regime */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <FieldLabel>Marital status</FieldLabel>
               <Select
@@ -670,7 +670,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         }
       >
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <FieldLabel required>Email address</FieldLabel>
               <Input
@@ -815,7 +815,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
 
           <div className="h-px bg-gray-100 my-1" />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <FieldLabel>Address line 1</FieldLabel>
               <Input
@@ -835,7 +835,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               />
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div>
               <FieldLabel>City</FieldLabel>
               <Input
@@ -888,7 +888,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       {/* EMPLOYMENT                                                       */}
       {/* ================================================================ */}
       <FormSection icon={Briefcase} title="Employment" description="Current employment details">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <FieldLabel>Employment status</FieldLabel>
             <Select
@@ -1012,13 +1012,13 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       {/* ================================================================ */}
       {/* ACTIONS                                                          */}
       {/* ================================================================ */}
-      <div className="flex items-center justify-between pt-2 pb-1">
+      <div className="flex items-center justify-between pt-2 pb-1 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <p className="text-xs text-nw-text-3">
             Fields marked <span className="text-red-500">*</span> are required
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="px-5">
             Cancel
           </Button>

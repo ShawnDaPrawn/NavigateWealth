@@ -683,7 +683,7 @@ export function PolicyFormDialog({
                     </p>
                   </div>
                 ) : (
-                  <div className="grid gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     {providers.map((provider) => (
                       <button
                         key={provider.id}

@@ -37,7 +37,10 @@ export interface Column<T = Record<string, unknown>> {
   sortable?: boolean;
   filterable?: boolean;
   render?: (value: unknown, row: T) => React.ReactNode;
+  /** Applied from the `sm` breakpoint up; on a phone columns size to their content. */
   width?: string;
+  /** Hide this column on a phone (below `sm`); fold what matters into a visible column. */
+  hideOnMobile?: boolean;
 }
 
 export interface DataTableProps<T = Record<string, unknown>> {
@@ -226,8 +229,14 @@ export function DataTable<T extends Record<string, unknown>>({
                 .map((column) => (
                   <TableHead
                     key={column.key}
-                    style={{ width: column.width }}
+                    style={
+                      column.width
+                        ? ({ '--col-w': column.width } as React.CSSProperties)
+                        : undefined
+                    }
                     className={cn(
+                      column.width && 'sm:w-[var(--col-w)]',
+                      column.hideOnMobile && 'hidden sm:table-cell',
                       column.sortable && 'cursor-pointer hover:bg-muted/50',
                       'select-none',
                     )}
@@ -296,7 +305,10 @@ export function DataTable<T extends Record<string, unknown>>({
                   {columns
                     .filter((col) => visibleColumns.includes(col.key))
                     .map((column) => (
-                      <TableCell key={column.key}>
+                      <TableCell
+                        key={column.key}
+                        className={cn(column.hideOnMobile && 'hidden sm:table-cell')}
+                      >
                         {column.render
                           ? column.render(row[column.key], row)
                           : String(row[column.key] || '')}
@@ -312,7 +324,7 @@ export function DataTable<T extends Record<string, unknown>>({
       {/* Pagination */}
       {!loading && sortedData.length > 0 && paginate && (
         <nav
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
           aria-label="Table pagination"
         >
           <div className="text-sm text-muted-foreground" aria-live="polite">
@@ -350,7 +362,7 @@ export function DataTable<T extends Record<string, unknown>>({
             ) : null}
 
             {totalPages > 1 ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"

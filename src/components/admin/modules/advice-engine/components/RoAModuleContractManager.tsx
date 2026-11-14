@@ -278,7 +278,7 @@ export function RoAModuleContractManager() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardContent className="h-96 animate-pulse bg-muted/30" />
         </Card>
@@ -325,7 +325,7 @@ export function RoAModuleContractManager() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </div>
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <Select

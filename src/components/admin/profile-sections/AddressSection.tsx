@@ -168,7 +168,7 @@ export function AddressSection({
 
               {profileData.proofOfResidenceUploaded && !proofOfResidenceInEditMode ? (
                 <div className="p-4 rounded-lg border-2 border-green-200 bg-green-50">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
                         <CheckCircle className="h-6 w-6 text-green-600" />
@@ -180,7 +180,7 @@ export function AddressSection({
                         <p className="text-xs text-gray-600">Document uploaded successfully</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"

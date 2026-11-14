@@ -163,9 +163,9 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       {/* Guidelines PDF */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
             <CardTitle className="text-sm">Guidelines Document</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {pdfUrl && (
                 <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
                   <Button size="sm" variant="outline">
@@ -214,7 +214,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       {/* Brand Rules */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-sm">Quick Reference Rules</CardTitle>
               <CardDescription className="text-xs">
@@ -249,7 +249,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 flex-shrink-0"
+                    className="h-6 w-6 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 text-red-400 hover:text-red-600 flex-shrink-0"
                     onClick={() => handleDeleteRule(rule.id)}
                   >
                     <Trash2 className="h-3 w-3" />
@@ -264,7 +264,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       {/* Brand Voice */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-sm">Brand Voice</CardTitle>
               <CardDescription className="text-xs">
@@ -284,7 +284,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 Edit
               </Button>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button size="sm" variant="outline" onClick={() => setVoiceEditing(false)}>
                   Cancel
                 </Button>

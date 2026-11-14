@@ -165,7 +165,7 @@ export function UniversalKeyManager() {
         <TabsContent value="client-keys">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Client Profile Keys</CardTitle>
                   <CardDescription className="mt-1">
@@ -201,7 +201,7 @@ export function UniversalKeyManager() {
         <TabsContent value="product-keys">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Individual Product Keys</CardTitle>
                   <CardDescription className="mt-1">
@@ -237,7 +237,7 @@ export function UniversalKeyManager() {
         <TabsContent value="calculated-keys">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Calculated Total Keys</CardTitle>
                   <CardDescription className="mt-1">
@@ -289,7 +289,7 @@ export function UniversalKeyManager() {
         <TabsContent value="fna-recommendations">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>FNA Recommendations</CardTitle>
                   <CardDescription className="mt-1">

@@ -57,7 +57,7 @@ const BlockActionToolbar = ({
   onDelete?: (id: string) => void;
 }) => (
   <div
-    className="absolute -right-1 top-0 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+    className="absolute -right-1 top-0 flex flex-col gap-0.5 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity z-20"
     onClick={(e) => e.stopPropagation()}
   >
     <button
@@ -319,7 +319,7 @@ const DraggableBlock = ({
       >
         {/* Drag Handle — visible on hover, left side */}
         <div
-          className="absolute -left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-grab active:cursor-grabbing"
+          className="absolute -left-1 top-1/2 -translate-y-1/2 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity z-20 cursor-grab active:cursor-grabbing"
           onMouseDown={(e) => e.stopPropagation()}
           title="Drag to reorder"
         >

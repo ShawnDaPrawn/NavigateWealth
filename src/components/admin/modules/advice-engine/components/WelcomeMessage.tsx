@@ -77,7 +77,7 @@ export function WelcomeMessage({ content, features }: WelcomeMessageProps = {}) 
           </div>
 
           {/* Feature Grid */}
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {displayFeatures.map((feature, index) => (
               <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                 {typeof feature === 'string' ? (

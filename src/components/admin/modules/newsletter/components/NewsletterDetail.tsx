@@ -269,7 +269,7 @@ function DraftEditor({ campaign, caps }: { campaign: NewsletterCampaign; caps: N
         </div>
 
         {caps.create ? (
-          <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4 flex-wrap">
             {dirty ? (
               <Button
                 variant="ghost"

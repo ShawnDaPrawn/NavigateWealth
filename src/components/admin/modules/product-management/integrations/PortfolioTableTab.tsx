@@ -422,7 +422,7 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
         </div>
 
         {hasRows && (
-          <dl className="mx-6 mt-5 grid grid-cols-2 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/70 sm:grid-cols-4">
+          <dl className="mx-6 mt-5 grid grid-cols-2 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/70 sm:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
             {stats.map((stat, index) => (
               <div
                 key={stat.label}

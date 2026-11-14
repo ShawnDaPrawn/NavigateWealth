@@ -342,7 +342,7 @@ export function TeamManager() {
         <div className="max-w-3xl rounded-xl border border-nw-line bg-white p-6">
           <div className="space-y-4 py-2">
             {/* Name & Title */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="tm-name">
                   Name <span className="text-red-500">*</span>
@@ -466,7 +466,7 @@ export function TeamManager() {
             </div>
 
             {/* LinkedIn & Email */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="tm-linkedin">LinkedIn URL</Label>
                 <Input
@@ -488,7 +488,7 @@ export function TeamManager() {
             </div>
 
             {/* Sort order & Active */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="tm-sort">Display Order</Label>
                 <NumberInputField

@@ -12,6 +12,20 @@ import type { CalendarEvent, CalendarView } from '../../types';
 import { EVENT_TYPE_COLORS } from '../../constants';
 import { useCalendarEvents } from '../../hooks/useCalendarEvents';
 
+/** Solid dot colours for the phone month grid (literal classes so Tailwind keeps them). */
+const EVENT_DOT_COLORS: Record<string, string> = {
+  meeting: 'bg-blue-600',
+  review: 'bg-purple-600',
+  call: 'bg-green-600',
+  webinar: 'bg-indigo-600',
+  internal: 'bg-gray-500',
+  consultation: 'bg-teal-600',
+  deadline: 'bg-rose-600',
+  birthday: 'bg-pink-500',
+  renewal: 'bg-amber-500',
+  other: 'bg-slate-500',
+};
+
 interface MonthViewProps {
   events: CalendarEvent[];
   currentDate: Date;
@@ -59,9 +73,10 @@ export function MonthView({
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <div
             key={day}
-            className="py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            className="py-2 text-center text-[11px] font-semibold tracking-wider text-gray-500 uppercase sm:py-3 sm:text-xs"
           >
-            {day}
+            <span className="sm:hidden">{day.charAt(0)}</span>
+            <span className="hidden sm:inline">{day}</span>
           </div>
         ))}
       </div>
@@ -86,7 +101,7 @@ export function MonthView({
           return (
             <div
               key={day.toISOString()}
-              className={`min-h-[120px] p-2 bg-white transition-colors relative group hover:bg-gray-50 cursor-pointer ${
+              className={`relative group min-h-[64px] cursor-pointer bg-white p-1 transition-colors hover:bg-gray-50 sm:min-h-[120px] sm:p-2 ${
                 !isCurrentMonth ? 'bg-gray-50/50' : ''
               }`}
               onClick={() => {
@@ -94,9 +109,9 @@ export function MonthView({
                 onViewChange('day');
               }}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="mb-1 flex items-center justify-center sm:mb-2 sm:justify-between">
                 <span
-                  className={`h-7 w-7 flex items-center justify-center rounded-full text-sm font-medium ${
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
                     isTodayDate
                       ? 'bg-purple-600 text-white shadow-sm'
                       : !isCurrentMonth
@@ -113,7 +128,30 @@ export function MonthView({
                 )}
               </div>
 
-              <div className="space-y-1">
+              {/* On a phone a day cell is ~50px wide: show a dot per event and
+                  open the day's agenda on tap, instead of unreadable chips. */}
+              {dayItems.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-0.5 sm:hidden" aria-hidden="true">
+                  {dayItems.slice(0, 3).map((event) => (
+                    <span
+                      key={`dot-${event.id}`}
+                      className={`h-1.5 w-1.5 rounded-full ${EVENT_DOT_COLORS[event.event_type] ?? 'bg-blue-600'}`}
+                    />
+                  ))}
+                  {dayItems.length > 3 && (
+                    <span className="text-[9px] leading-none font-medium text-gray-500">
+                      +{dayItems.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
+              {dayItems.length > 0 && (
+                <span className="sr-only sm:hidden">
+                  {dayItems.length} {dayItems.length === 1 ? 'event' : 'events'}
+                </span>
+              )}
+
+              <div className="hidden space-y-1 sm:block">
                 {visibleItems.map((event, _i) => {
                   return (
                     <div

@@ -38,7 +38,7 @@ export function RecentNotesWidget({ onModuleChange, maxNotes = 5 }: RecentNotesW
 
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-wrap gap-x-4 gap-y-2">
         <div>
           <CardTitle className="text-lg font-semibold flex items-center">
             <StickyNote className="h-5 w-5 mr-2 text-purple-600" />
@@ -120,7 +120,7 @@ function NoteRow({ note, onClick }: { note: Note; onClick: () => void }) {
           <p className="text-sm font-medium text-gray-900 truncate">{note.title}</p>
         </div>
         {snippet && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{snippet}</p>}
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex flex-wrap items-center gap-2 mt-1">
           {note.clientName && (
             <Badge
               variant="secondary"

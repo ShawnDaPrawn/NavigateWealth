@@ -303,7 +303,7 @@ export function RecipientAddForm({
 
         {/* Manual Entry */}
         {addMode === 'manual' && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Full Name *</Label>
               <Input
@@ -382,7 +382,7 @@ export function RecipientAddForm({
             {errors.role && <p className="text-xs text-red-500">{errors.role}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Access Code (Optional)</Label>
               <div className="relative">
@@ -418,7 +418,7 @@ export function RecipientAddForm({
                     present the sender can tick SMS opt-in so OTP + invite
                     are mirrored to SMS alongside email. */}
           {signerKind !== 'cc' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Mobile Number (Optional)</Label>
                 <Input
@@ -461,7 +461,7 @@ export function RecipientAddForm({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 pt-2 flex-wrap">
           <Button variant="outline" onClick={resetAddForm}>
             Cancel
           </Button>

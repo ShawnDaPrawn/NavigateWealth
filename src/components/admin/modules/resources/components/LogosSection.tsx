@@ -236,7 +236,7 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Logo Library</h3>
           <p className="text-sm text-muted-foreground">
@@ -277,7 +277,7 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
                               <p className="text-sm font-medium">{variant.label}</p>
                               <p className="text-xs text-muted-foreground">{variant.description}</p>
                             </div>
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <div className="flex items-center gap-0.5 flex-shrink-0 flex-wrap">
                               {logo && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>

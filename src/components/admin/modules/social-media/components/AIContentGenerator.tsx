@@ -631,7 +631,7 @@ function PlatformPostPreview({
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
           <Button
             variant="outline"
             size="sm"
