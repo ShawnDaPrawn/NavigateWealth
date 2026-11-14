@@ -8,7 +8,6 @@ import {
   SelectGroup,
   SelectLabel,
 } from '../../../ui/select';
-import { Label } from '../../../ui/label';
 import { PRODUCT_CATEGORIES, ProductCategoryId } from './types';
 import { useProductSchema } from './hooks/useProductSchema';
 import { SchemaEditor } from './components/SchemaEditor';
@@ -39,20 +38,19 @@ export function ProductManagementTab() {
   );
 
   return (
-    <div className="space-y-8">
-      {/* Category Selection */}
-      <div className="bg-white p-6 rounded-lg border shadow-sm space-y-4">
-        <div>
-          <Label className="text-base font-semibold text-gray-900">Select Product Category</Label>
-          <p className="text-sm text-gray-500 mb-3">
-            Choose a category to configure its data fields and table structure.
-          </p>
+    <div className="space-y-5">
+      {/* PM-Structure: an inline "Category" picker above the editor */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="ds-lbl" id="pm-category-label">
+          Category
+        </span>
+        <div className="w-full sm:w-[280px]">
           <Select
             value={selectedCategory}
             onValueChange={(val) => setSelectedCategory(val as ProductCategoryId)}
           >
-            <SelectTrigger className="w-full sm:w-[300px] bg-gray-50 border-gray-200">
-              <SelectValue placeholder="Select category..." />
+            <SelectTrigger className="w-full bg-white" aria-labelledby="pm-category-label">
+              <SelectValue placeholder="Choose a category" />
             </SelectTrigger>
             <SelectContent>
               {/* Standalone Categories */}
@@ -115,7 +113,7 @@ export function ProductManagementTab() {
       )}
 
       {selectedCategory && !error && (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
           {/* Schema Builder */}
           <SchemaEditor
             currentFields={currentFields}

@@ -1,7 +1,6 @@
-import { Eye, Table as TableIcon, FileText } from 'lucide-react';
-import { Badge } from '../../../../ui/badge';
+import { FileText } from 'lucide-react';
+
 import { Button } from '../../../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import {
   Dialog,
   DialogContent,
@@ -87,97 +86,59 @@ export function SchemaLivePreview({ currentFields, selectedCategoryName }: Schem
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 px-1">
-        <div className="p-1.5 bg-blue-100 rounded text-blue-600">
-          <Eye className="w-4 h-4" />
-        </div>
-        <h3 className="text-sm font-semibold text-gray-900">Live User Preview</h3>
-        <span className="text-xs text-gray-500">
-          - This is how the table will appear in the user profile
-        </span>
-      </div>
+  const rows = [
+    { provider: 'Discovery', index: 0 },
+    { provider: 'Old Mutual', index: 1 },
+  ];
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TableIcon className="h-5 w-5 text-[#6d28d9]" />
-                {selectedCategoryName} Policies
-              </CardTitle>
-              <CardDescription className="mt-1 text-xs">
-                Your active {selectedCategoryName?.toLowerCase()} policies
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="text-[#6d28d9] border-[#6d28d9]">
-              2 Policies
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  {/* Provider is standard */}
-                  <th className="px-4 py-3 text-left text-[12px] font-medium text-gray-600 whitespace-nowrap">
-                    Provider
-                  </th>
-                  {/* Dynamic Columns */}
-                  {currentFields.map((field) => (
-                    <th
-                      key={field.id}
-                      className="px-4 py-3 text-left text-[12px] font-medium text-gray-600 whitespace-nowrap"
-                    >
-                      {field.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {/* Mock Row 1 */}
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 py-4 text-[11px] text-gray-900 whitespace-nowrap">
-                    Discovery
+  return (
+    // PM-Structure: a "Live preview" card beside the structure editor
+    <aside
+      className="ds-card min-w-0"
+      aria-label={`${selectedCategoryName ?? 'Product'} live preview`}
+    >
+      <div className="ds-card-h">
+        <h3>Live preview</h3>
+        <span className="ds-meta">As it appears on a client profile</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[13px]">
+          <thead>
+            <tr className="border-b border-nw-line bg-[#fafafb]">
+              <th className="whitespace-nowrap px-3.5 py-2.5 text-left text-[12px] font-medium text-nw-text-3">
+                Provider
+              </th>
+              {currentFields.map((field) => (
+                <th
+                  key={field.id}
+                  className="whitespace-nowrap px-3.5 py-2.5 text-left text-[12px] font-medium text-nw-text-3"
+                >
+                  {field.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-nw-line">
+            {rows.map((row) => (
+              <tr key={row.provider}>
+                <td className="whitespace-nowrap px-3.5 py-2.5 text-nw-ink">{row.provider}</td>
+                {currentFields.map((field) => (
+                  <td key={field.id} className="whitespace-nowrap px-3.5 py-2.5 text-nw-ink">
+                    {field.type === 'long_text' ? (
+                      <PreviewNoteModal
+                        title={field.name}
+                        content={getMockValue(field, row.index)}
+                      />
+                    ) : (
+                      getMockValue(field, row.index)
+                    )}
                   </td>
-                  {currentFields.map((field) => (
-                    <td
-                      key={field.id}
-                      className="px-4 py-4 text-[11px] text-gray-900 whitespace-nowrap"
-                    >
-                      {field.type === 'long_text' ? (
-                        <PreviewNoteModal title={field.name} content={getMockValue(field, 0)} />
-                      ) : (
-                        getMockValue(field, 0)
-                      )}
-                    </td>
-                  ))}
-                </tr>
-                {/* Mock Row 2 */}
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 py-4 text-[11px] text-gray-900 whitespace-nowrap">
-                    Old Mutual
-                  </td>
-                  {currentFields.map((field) => (
-                    <td
-                      key={field.id}
-                      className="px-4 py-4 text-[11px] text-gray-900 whitespace-nowrap"
-                    >
-                      {field.type === 'long_text' ? (
-                        <PreviewNoteModal title={field.name} content={getMockValue(field, 1)} />
-                      ) : (
-                        getMockValue(field, 1)
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </aside>
   );
 }
