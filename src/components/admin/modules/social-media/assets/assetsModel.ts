@@ -408,3 +408,14 @@ export function formToPatch(form: SettingsFormState): {
     },
   };
 }
+
+/** The board pill tone for one of the status displays above. */
+export function pillTone(display: StatusDisplay): string {
+  const c = display.className;
+  if (c.includes('green')) return 'ok';
+  if (c.includes('red')) return 'bad';
+  if (c.includes('amber')) return 'warn';
+  if (c.includes('blue')) return 'info';
+  if (c.includes('purple')) return 'brand';
+  return '';
+}

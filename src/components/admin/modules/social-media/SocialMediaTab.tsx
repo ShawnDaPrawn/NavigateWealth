@@ -20,12 +20,13 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PlusCircle } from 'lucide-react';
+
 import { useSearchParams } from 'react-router';
 import { Skeleton } from '../../../ui/skeleton';
-import { Button } from '../../../ui/button';
+
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import {
+  DsButton,
   NavTabsList,
   NavTabsTrigger,
   PageHeader,
@@ -354,15 +355,15 @@ export function SocialMediaTab() {
         title="Social & Marketing"
         description="Social posts through Buffer, AI content and your link-in-bio page."
         actions={
-          <Button
+          <DsButton
+            variant="primary"
             onClick={() => {
               clearComposerInitials();
               setActiveTab('composer');
             }}
           >
-            <PlusCircle className="h-4 w-4" aria-hidden="true" />
             Compose post
-          </Button>
+          </DsButton>
         }
       />
 

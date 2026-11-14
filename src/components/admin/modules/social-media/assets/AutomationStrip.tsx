@@ -7,14 +7,12 @@
  * the operator sees them working — or not.
  */
 
-import { Image as ImageIcon, RefreshCw, Settings2 } from 'lucide-react';
-import { Badge } from '../../../../ui/badge';
-import { Button } from '../../../../ui/button';
-import { Card, CardContent } from '../../../../ui/card';
+import { DsButton } from '../../../layout/page';
 import { Switch } from '../../../../ui/switch';
 import type { SocialAutomationSettings, SocialBatchSummary, SocialJobName } from './assetsTypes';
 import {
   BATCH_STATUS_DISPLAY,
+  pillTone,
   formatSlot,
   formatWeekLabel,
   summarizeRunReport,
@@ -49,93 +47,71 @@ export function AutomationStrip({
   const reportLines = summarizeRunReport(latestBatch?.run_report).slice(0, 3);
   const lastActivity = latestBatch?.selected_at ?? latestBatch?.generated_at ?? null;
 
+  const assetCount = postingBatch
+    ? Object.values(postingBatch.asset_counts ?? {}).reduce((sum, n) => sum + n, 0)
+    : undefined;
+  const metaParts = [
+    `Posting ${formatWeekLabel(postingWeek).replace(/^Week \d+ · /, 'week ')}`,
+    typeof assetCount === 'number' ? `${assetCount} assets` : null,
+    lastActivity
+      ? `last activity ${formatSlot(lastActivity, timeZone)}${
+          latestBatch?.selected_by || latestBatch?.generated_by
+            ? ` by ${latestBatch.selected_by ?? latestBatch.generated_by}`
+            : ''
+        }`
+      : null,
+  ].filter(Boolean);
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-3">
-            <Switch
-              id="social-automation-enabled"
-              checked={enabled}
-              disabled={!settings || toggling}
-              onCheckedChange={onToggleEnabled}
-              aria-label="Weekly automation"
-            />
-            <div>
-              <label htmlFor="social-automation-enabled" className="font-medium">
-                Weekly automation {settings ? (enabled ? 'on' : 'off') : ''}
-              </label>
-              <p className="text-sm text-muted-foreground">
-                Saturday: the routine generates candidates · hourly: images render · Sunday: the
-                routine selects and schedules in Buffer · hourly: Buffer status syncs back.
-                {!enabled && settings && ' Nothing runs while this is off.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="text-sm lg:text-right">
-            <div className="flex items-center gap-2 lg:justify-end">
-              <span className="text-muted-foreground">Posting week</span>
-              <span className="font-medium">{formatWeekLabel(postingWeek)}</span>
-              {batchStatus ? (
-                <Badge
-                  variant="outline"
-                  className={batchStatus.className}
-                  title={batchStatus.description}
-                >
-                  {batchStatus.label}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
-                  No batch yet
-                </Badge>
-              )}
-            </div>
-            {lastActivity && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Last activity {formatSlot(lastActivity, timeZone)}
-                {latestBatch?.selected_by || latestBatch?.generated_by
-                  ? ` by ${latestBatch.selected_by ?? latestBatch.generated_by}`
-                  : ''}
-              </p>
-            )}
-            {reportLines.length > 0 && (
-              <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                {reportLines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
+    // SM-Weekly: one strip — the switch and its state, the posting week, the actions
+    <section className="ds-card ds-card-b flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="flex grow items-start gap-3">
+        <Switch
+          id="social-automation-enabled"
+          checked={enabled}
+          disabled={!settings || toggling}
+          onCheckedChange={onToggleEnabled}
+          aria-label="Weekly automation"
+          className="mt-0.5"
+        />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="social-automation-enabled" className="font-semibold text-nw-ink">
+              Weekly automation {settings ? (enabled ? 'on' : 'off') : ''}
+            </label>
+            {batchStatus ? (
+              <span className={`ds-pill ${pillTone(batchStatus)}`} title={batchStatus.description}>
+                {batchStatus.label}
+              </span>
+            ) : (
+              <span className="ds-pill">No batch yet</span>
             )}
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={Boolean(runningJob)}
-              onClick={() => onRunJob('render-images')}
-            >
-              <ImageIcon className="h-4 w-4 mr-1.5" />
-              {runningJob === 'render-images' ? 'Rendering…' : 'Render images now'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={Boolean(runningJob)}
-              onClick={() => onRunJob('sync-buffer')}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-1.5 ${runningJob === 'sync-buffer' ? 'animate-spin' : ''}`}
-              />
-              Sync Buffer now
-            </Button>
-            <Button variant="outline" size="sm" onClick={onOpenSettings}>
-              <Settings2 className="h-4 w-4 mr-1.5" />
-              Settings &amp; playbooks
-            </Button>
-          </div>
+          <span className="ds-meta">{metaParts.join(' · ')}</span>
+          {reportLines.length > 0 && (
+            <ul className="ds-meta mt-0.5">
+              {reportLines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <DsButton
+          size="sm"
+          disabled={Boolean(runningJob)}
+          onClick={() => onRunJob('render-images')}
+        >
+          {runningJob === 'render-images' ? 'Rendering…' : 'Render images now'}
+        </DsButton>
+        <DsButton size="sm" disabled={Boolean(runningJob)} onClick={() => onRunJob('sync-buffer')}>
+          {runningJob === 'sync-buffer' ? 'Syncing…' : 'Sync Buffer now'}
+        </DsButton>
+        <DsButton size="sm" variant="ghost" onClick={onOpenSettings}>
+          Settings &amp; playbooks
+        </DsButton>
+      </div>
+    </section>
   );
 }
