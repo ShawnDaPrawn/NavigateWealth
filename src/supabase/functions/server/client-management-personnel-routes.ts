@@ -14,6 +14,8 @@ import type {
   UserRole,
 } from './client-management-personnel-types.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { AdminAuditService } from './admin-audit-service.ts';
+import { MAX_REASSIGN_BATCH, reassignClients } from './personnel-client-reassign-service.ts';
 import { z } from 'npm:zod@4.6.5';
 
 const app = new Hono();
@@ -257,6 +259,52 @@ app.get('/:id/clients', async (c) => {
     log.info('Fetching assigned clients', { userId: ctx.userId, targetId });
     const clients = await PersonnelService.getAssignedClients(asPersonnelRole(ctx.role), targetId);
     return c.json({ data: clients });
+  } catch (e) {
+    return handleError(c, e);
+  }
+});
+
+/**
+ * POST /:id/clients/reassign — move clients from this staff member to another.
+ * Super admin only. Only clients currently assigned to `:id` move; the rest
+ * come back as skipped.
+ */
+const ReassignClientsSchema = z.object({
+  toPersonnelId: z.string().trim().min(1).max(128),
+  clientIds: z.array(z.string().trim().min(1).max(128)).min(1).max(MAX_REASSIGN_BATCH),
+});
+
+app.post('/:id/clients/reassign', async (c) => {
+  try {
+    const ctx = await getAuthContext(c);
+    requireRole(ctx, ['super_admin']);
+
+    const fromId = c.req.param('id')!;
+    const parsed = ReassignClientsSchema.safeParse(await c.req.json());
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+    const { toPersonnelId, clientIds } = parsed.data;
+
+    const result = await reassignClients(fromId, toPersonnelId, clientIds);
+
+    await AdminAuditService.record({
+      actorId: ctx.userId,
+      actorRole: ctx.role,
+      category: 'bulk_operation',
+      action: 'clients_reassigned',
+      summary: `Reassigned ${result.reassigned.length} client(s) to another adviser`,
+      severity: 'warning',
+      entityType: 'personnel',
+      entityId: fromId,
+      metadata: {
+        toPersonnelId,
+        reassigned: result.reassigned.length,
+        skipped: result.skipped.length,
+      },
+    });
+
+    return c.json({ data: result });
   } catch (e) {
     return handleError(c, e);
   }

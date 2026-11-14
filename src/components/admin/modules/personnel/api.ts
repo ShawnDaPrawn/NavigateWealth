@@ -261,6 +261,32 @@ export async function sendPersonnelPasswordReset(id: string): Promise<void> {
 // PERSONNEL CLIENTS OPERATIONS
 // ============================================================================
 
+export interface ReassignClientsResult {
+  reassigned: string[];
+  skipped: Array<{ clientId: string; reason: 'not_found' | 'not_assigned' }>;
+}
+
+/**
+ * Move clients from one staff member to another (super admin). Only clients
+ * still assigned to `fromId` move; the rest come back as skipped.
+ */
+export async function reassignPersonnelClients(
+  fromId: string,
+  toPersonnelId: string,
+  clientIds: string[],
+): Promise<ReassignClientsResult> {
+  try {
+    const response = await api.post<{ data: ReassignClientsResult }>(
+      `personnel/${fromId}/clients/reassign`,
+      { toPersonnelId, clientIds },
+    );
+    return response.data;
+  } catch (error) {
+    logger.error('[API] Failed to reassign clients', error, { fromId, toPersonnelId });
+    throw error;
+  }
+}
+
 /**
  * Fetch clients assigned to a personnel member
  */
@@ -530,6 +556,7 @@ export const personnelApi = {
   suspendAccess: suspendPersonnelAccess,
   restoreAccess: restorePersonnelAccess,
   sendPasswordReset: sendPersonnelPasswordReset,
+  reassignClients: reassignPersonnelClients,
 
   // Personnel clients
   fetchClients: fetchPersonnelClients,

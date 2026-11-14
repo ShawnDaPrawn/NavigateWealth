@@ -169,7 +169,11 @@ export function PersonnelDrawer({
         </TabsContent>
 
         <TabsContent value="clients">
-          <TabClientBook clients={clients} loading={clientsLoading} />
+          <TabClientBook
+            personnelId={selectedPersonnel.id}
+            clients={clients}
+            loading={clientsLoading}
+          />
         </TabsContent>
       </Tabs>
     </div>

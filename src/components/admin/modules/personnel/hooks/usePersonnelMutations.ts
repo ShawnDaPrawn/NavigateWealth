@@ -337,6 +337,38 @@ export function useSendPersonnelPasswordReset() {
   });
 }
 
+/** Move clients between staff members (Client book › Bulk reassign). */
+export function useReassignPersonnelClients() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      fromId,
+      toId,
+      clientIds,
+    }: {
+      fromId: string;
+      toId: string;
+      clientIds: string[];
+    }) => personnelApi.reassignClients(fromId, toId, clientIds),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.fromId) });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.toId) });
+      const moved = result.reassigned.length;
+      const skipped = result.skipped.length;
+      toast.success(`Reassigned ${moved} ${moved === 1 ? 'client' : 'clients'}`, {
+        description:
+          skipped > 0
+            ? `${skipped} ${skipped === 1 ? 'was' : 'were'} not moved: no longer assigned here.`
+            : undefined,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not reassign clients: ${error.message}`);
+    },
+  });
+}
+
 /**
  * Hook to update super admin profile
  *
