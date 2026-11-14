@@ -231,3 +231,37 @@ describe('reset returns the form to its defaults', () => {
     expect(container.querySelectorAll('table')).toHaveLength(0);
   });
 });
+
+describe('a saved format can be applied again', () => {
+  it('re-applies the same saved format after Reset', () => {
+    localStorage.setItem(
+      'navigate_wealth_signature_formats',
+      JSON.stringify([
+        {
+          id: 'f1',
+          name: 'Bold house style',
+          createdAt: '2026-11-01T00:00:00.000Z',
+          template: 'bold',
+          fields: { disclaimerText: 'Saved disclaimer text' },
+        },
+      ]),
+    );
+    const { container } = renderReady();
+
+    const pick = () => {
+      fireEvent.click(screen.getByLabelText('Saved format'));
+      fireEvent.click(screen.getByRole('option', { name: 'Bold house style' }));
+    };
+
+    pick();
+    expect(container.textContent).toContain('Bold');
+    fireEvent.click(screen.getAllByText(/Reset/i)[0]);
+    // Reset lets go of the format, so choosing it again loads it again.
+    fireEvent.change(fieldByPlaceholder(container, NAME_FIELD), {
+      target: { value: 'Zora Mkhize' },
+    });
+    pick();
+    fireEvent.click(screen.getAllByText(/Copy signature/i)[0]);
+    expect(writeText.mock.calls.at(-1)![0] as string).toContain('Saved disclaimer text');
+  });
+});
