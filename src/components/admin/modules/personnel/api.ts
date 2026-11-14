@@ -336,6 +336,7 @@ export async function reassignPersonnelClients(
       const reason = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(
         `Moved ${merged.reassigned.length} of ${clientIds.length} clients, then the rest failed: ${reason}`,
+        { cause: error },
       );
     }
   }
