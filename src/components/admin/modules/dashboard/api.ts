@@ -310,8 +310,10 @@ export const adminAuditApi = {
       const response = await api.get<{ success: boolean; entries: AdminAuditEntry[] }>(url);
       return response.entries ?? [];
     } catch (error) {
+      // Rethrown so the audit trail can show an error with Try again rather
+      // than an empty log that looks like nothing happened.
       logger.error('Failed to fetch admin audit log', error);
-      return [];
+      throw error;
     }
   },
 

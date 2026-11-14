@@ -303,10 +303,9 @@ describe('adminAuditApi.getLog', () => {
     expect(result).toEqual([]);
   });
 
-  it('returns empty array on API failure', async () => {
+  it('throws on API failure so the audit trail can offer Try again', async () => {
     mockApiGet.mockRejectedValue(new Error('Network fail'));
-    const result = await adminAuditApi.getLog();
-    expect(result).toEqual([]);
+    await expect(adminAuditApi.getLog()).rejects.toThrow('Network fail');
   });
 });
 

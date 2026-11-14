@@ -97,15 +97,20 @@ export function AuditLogWidget({ maxEntries = 8, onViewAll }: AuditLogWidgetProp
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
-    const [data, summaryData] = await Promise.all([
-      adminAuditApi.getLog({ limit: maxEntries }),
-      adminAuditApi.getSummary(summaryDays),
-    ]);
-    setEntries(data);
-    if (summaryData) {
-      setSummary(summaryData.summary);
+    try {
+      const [data, summaryData] = await Promise.all([
+        adminAuditApi.getLog({ limit: maxEntries }),
+        adminAuditApi.getSummary(summaryDays),
+      ]);
+      setEntries(data);
+      if (summaryData) {
+        setSummary(summaryData.summary);
+      }
+    } catch {
+      // The widget keeps what it had; the full audit trail page reports errors.
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [maxEntries, summaryDays]);
 
   useEffect(() => {
