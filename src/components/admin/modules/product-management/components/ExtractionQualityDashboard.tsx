@@ -10,25 +10,13 @@
  * @module ExtractionQualityDashboard
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent } from '../../../../ui/card';
-import { Badge } from '../../../../ui/badge';
-import { ErrorState } from '../../../layout/page';
-import { Button } from '../../../../ui/button';
-import {
-  BarChart3,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  FileText,
-  Lock,
-  Loader2,
-  RefreshCw,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
-import { SVGBarChart } from '../../../../ui/svg-charts';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { cn } from '../../../../ui/utils';
+
+import { DsButton, DsStat, DsStats, ErrorState } from '../../../layout/page';
+
+import { Loader2 } from 'lucide-react';
+
 import { api } from '../../../../../utils/api';
 
 interface OverviewStats {
@@ -72,42 +60,12 @@ interface QualityData {
   lowConfidenceFields: LowConfidenceField[];
 }
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  iconBgClass,
-  iconColorClass,
-  subtext,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  iconBgClass: string;
-  iconColorClass: string;
-  subtext?: string;
-}) {
-  return (
-    <Card className="bg-white border border-gray-200 shadow-none">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div
-            className={`h-10 w-10 rounded-lg ${iconBgClass} flex items-center justify-center flex-shrink-0`}
-          >
-            <Icon className={`h-5 w-5 ${iconColorClass}`} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-bold text-gray-900 leading-tight">{value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-            {subtext && <p className="text-[10px] text-gray-400">{subtext}</p>}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function ExtractionQualityDashboard() {
+/**
+ * PM-DocAI layout: the four figures across the top, then a split with the
+ * caller's terminology card (children) on the left and "Confidence by provider"
+ * on the right.
+ */
+export function ExtractionQualityDashboard({ children }: { children?: ReactNode }) {
   const [data, setData] = useState<QualityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -137,229 +95,133 @@ export function ExtractionQualityDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+      <div className="space-y-4">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-nw-violet" aria-label="Loading" />
+        </div>
+        {children}
       </div>
     );
   }
 
   if (!data) {
     return (
-      <ErrorState
-        title="Unable to load extraction quality"
-        onRetry={() => void fetchStats()}
-        details={loadError ?? undefined}
-      />
+      <div className="space-y-4">
+        <ErrorState
+          title="Unable to load extraction quality"
+          onRetry={() => void fetchStats()}
+          details={loadError ?? undefined}
+        />
+        {children}
+      </div>
     );
   }
 
   const { overview, providerStats, lowConfidenceFields } = data;
 
-  // Prepare chart data
-  const providerChartData = providerStats
-    .filter((p) => p.completedExtractions > 0)
-    .map((p) => ({
-      name: p.providerName.length > 12 ? p.providerName.slice(0, 12) + '...' : p.providerName,
-      fullName: p.providerName,
-      confidence: Math.round(p.avgConfidence * 100),
-      extractions: p.completedExtractions,
-      successRate: p.successRate,
-    }));
+  const confidenceTone = (c: number) => (c >= 0.85 ? 'ok' : c >= 0.5 ? 'warn' : 'bad');
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-purple-600" />
-          <h3 className="text-sm font-semibold text-gray-800">Extraction quality</h3>
-        </div>
-        <Button variant="ghost" size="sm" onClick={fetchStats} className="text-xs h-7">
-          <RefreshCw className="h-3 w-3 mr-1" /> Refresh
-        </Button>
-      </div>
-
-      {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
-        <StatCard
-          label="Total Extractions"
+      <DsStats>
+        <DsStat
+          label="Total extractions"
           value={overview.completedExtractions}
-          icon={Sparkles}
-          iconBgClass="bg-purple-50"
-          iconColorClass="text-purple-600"
-          subtext={`${overview.failedExtractions} failed`}
+          meta={`${overview.failedExtractions} failed`}
         />
-        <StatCard
-          label="Avg Confidence"
-          value={`${Math.round(overview.avgConfidence * 100)}%`}
-          icon={TrendingUp}
-          iconBgClass={overview.avgConfidence >= 0.75 ? 'bg-green-50' : 'bg-amber-50'}
-          iconColorClass={overview.avgConfidence >= 0.75 ? 'text-green-600' : 'text-amber-600'}
-        />
-        <StatCard
-          label="Success Rate"
+        <DsStat label="Avg confidence" value={`${Math.round(overview.avgConfidence * 100)}%`} />
+        <DsStat
+          label="Success rate"
           value={`${overview.successRate}%`}
-          icon={CheckCircle2}
-          iconBgClass="bg-green-50"
-          iconColorClass="text-green-600"
-          subtext={`${overview.totalWithDocuments} documents`}
+          meta={`${overview.totalWithDocuments} documents`}
         />
-        <StatCard
-          label="Locked Fields"
+        <DsStat
+          label="Locked fields"
           value={overview.totalLockedFields}
-          icon={Lock}
-          iconBgClass="bg-amber-50"
-          iconColorClass="text-amber-600"
-          subtext="Protected from overwrite"
+          meta="Protected from overwrite"
         />
-      </div>
+      </DsStats>
 
-      {/* Provider Confidence Chart */}
-      {providerChartData.length > 0 && (
-        <Card className="bg-white border border-gray-200 shadow-none">
-          <CardContent className="p-4">
-            <h4 className="text-xs font-semibold text-gray-600 uppercase mb-3">
-              Average Confidence by Provider
-            </h4>
-            <div className="h-48">
-              <SVGBarChart
-                data={providerChartData}
-                categoryKey="name"
-                series={[{ key: 'confidence', label: 'Confidence', color: '#6366f1' }]}
-                height={192}
-                showLegend={false}
-                yAxisFormatter={(v) => `${v}%`}
-                tooltipFormatter={(v) => `${v}%`}
-                barColorFn={(entry) => {
-                  const conf = Number(entry.confidence) || 0;
-                  return conf >= 85 ? '#22c55e' : conf >= 60 ? '#f59e0b' : '#ef4444';
-                }}
-                margin={{ top: 5, right: 10, bottom: 5, left: 40 }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+        <div className="min-w-0">{children}</div>
 
-      {/* Provider Detail Table */}
-      {providerStats.length > 0 && (
-        <Card className="bg-white border border-gray-200 shadow-none overflow-hidden">
-          <CardContent className="p-0">
-            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-600 uppercase">
-                Confidence by provider
-              </h4>
+        <aside className="ds-card overflow-hidden" aria-label="Confidence by provider">
+          <div className="ds-card-h">
+            <h3>Confidence by provider</h3>
+            <DsButton size="sm" onClick={() => void fetchStats()}>
+              Refresh
+            </DsButton>
+          </div>
+          {providerStats.length === 0 ? (
+            <div className="ds-card-b">
+              <span className="ds-meta">No extractions yet</span>
             </div>
-            <div className="divide-y divide-gray-100">
-              {providerStats.map((ps) => (
-                <div key={ps.providerId} className="px-4 py-2.5 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-gray-800">{ps.providerName}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>{ps.withDocuments} docs</span>
-                    <span className="text-gray-300">|</span>
-                    <span>{ps.completedExtractions} extracted</span>
-                    {ps.failedExtractions > 0 && (
-                      <span className="text-red-500">{ps.failedExtractions} failed</span>
-                    )}
-                    <span className="text-gray-300">|</span>
-                    <Badge
-                      className={`text-[10px] px-1.5 py-0 ${
-                        ps.avgConfidence >= 0.85
-                          ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                          : ps.avgConfidence >= 0.5
-                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
-                            : 'bg-red-100 text-red-700 hover:bg-red-100'
-                      }`}
+          ) : (
+            <ul className="divide-y divide-nw-line">
+              {providerStats.map((ps) => {
+                const pct = Math.round(ps.avgConfidence * 100);
+                const tone = confidenceTone(ps.avgConfidence);
+                return (
+                  <li key={ps.providerId} className="flex flex-col gap-2 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13.5px] text-nw-ink">{ps.providerName}</span>
+                      <b className="tabular-nums">{pct}%</b>
+                    </div>
+                    <div
+                      className={cn('ds-meter', tone)}
+                      role="meter"
+                      aria-label={`${ps.providerName} average confidence`}
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
                     >
-                      {Math.round(ps.avgConfidence * 100)}% avg
-                    </Badge>
-                    {ps.totalWarnings > 0 && (
-                      <Badge className="bg-amber-50 text-amber-600 hover:bg-amber-50 text-[10px] px-1.5 py-0">
-                        {ps.totalWarnings} warnings
-                      </Badge>
-                    )}
-                    {ps.lockedFieldCount > 0 && (
-                      <span className="flex items-center gap-0.5 text-amber-600">
-                        <Lock className="h-3 w-3" />
-                        {ps.lockedFieldCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                      <i style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="ds-meta">
+                      {ps.withDocuments} docs · {ps.completedExtractions} extracted
+                      {ps.failedExtractions > 0 && ` · ${ps.failedExtractions} failed`}
+                      {ps.totalWarnings > 0 && ` · ${ps.totalWarnings} warnings`}
+                      {ps.lockedFieldCount > 0 && ` · ${ps.lockedFieldCount} locked`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-      {/* Low Confidence Fields */}
-      {lowConfidenceFields.length > 0 && (
-        <Card className="bg-white border border-gray-200 shadow-none overflow-hidden">
-          <CardContent className="p-0">
-            <button
-              onClick={() => setShowLowConfidence(!showLowConfidence)}
-              className="w-full px-4 py-2.5 flex items-center justify-between bg-amber-50/50 hover:bg-amber-50 transition-colors border-b border-gray-200"
-            >
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                <h4 className="text-xs font-semibold text-amber-800">
-                  Low Confidence Fields ({lowConfidenceFields.length})
-                </h4>
-              </div>
-              {showLowConfidence ? (
-                <ChevronUp className="h-3.5 w-3.5 text-amber-600" />
-              ) : (
-                <ChevronDown className="h-3.5 w-3.5 text-amber-600" />
+          {lowConfidenceFields.length > 0 && (
+            <div className="border-t border-nw-line">
+              <button
+                type="button"
+                onClick={() => setShowLowConfidence(!showLowConfidence)}
+                aria-expanded={showLowConfidence}
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-[13px] font-medium text-nw-ink hover:bg-[#fafafb]"
+              >
+                Low-confidence fields
+                <span className="ds-count">{lowConfidenceFields.length}</span>
+              </button>
+              {showLowConfidence && (
+                <ul className="divide-y divide-nw-line border-t border-nw-line">
+                  {lowConfidenceFields.map((f) => (
+                    <li
+                      key={f.fieldId}
+                      className="flex items-center justify-between gap-3 px-4 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-[13px] text-nw-ink">{f.fieldName}</div>
+                        <span className="ds-meta">{f.occurrences} occurrences</span>
+                      </div>
+                      <span className={cn('ds-pill', confidenceTone(f.avgConfidence))}>
+                        {Math.round(f.avgConfidence * 100)}% · {f.lowConfidenceRate}% low
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </button>
-            {showLowConfidence && (
-              <div className="divide-y divide-gray-100">
-                {lowConfidenceFields.map((f) => (
-                  <div key={f.fieldId} className="px-4 py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-medium text-gray-700">{f.fieldName}</span>
-                      <span className="text-[10px] text-gray-400">
-                        ({f.occurrences} occurrences)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        className={`text-[10px] px-1.5 py-0 ${
-                          f.avgConfidence >= 0.5
-                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
-                            : 'bg-red-100 text-red-700 hover:bg-red-100'
-                        }`}
-                      >
-                        {Math.round(f.avgConfidence * 100)}% avg
-                      </Badge>
-                      <span className="text-[10px] text-red-500 font-medium">
-                        {f.lowConfidenceRate}% low
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                <div className="px-4 py-2 bg-gray-50 text-[10px] text-gray-500">
-                  Fields with confidence &lt; 50% may need prompt template refinement for the
-                  relevant providers.
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty state */}
-      {overview.totalExtractions === 0 && (
-        <div className="text-center py-8">
-          <FileText className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-          <p className="text-sm text-gray-500">No extractions yet</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Upload policy documents and run extractions to see quality metrics here.
-          </p>
-        </div>
-      )}
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

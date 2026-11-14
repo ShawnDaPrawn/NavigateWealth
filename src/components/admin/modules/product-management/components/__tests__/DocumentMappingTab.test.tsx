@@ -20,7 +20,7 @@ vi.mock('@/components/admin/modules/product-management/hooks/useProviders', () =
 vi.mock(
   '@/components/admin/modules/product-management/components/ExtractionQualityDashboard',
   () => ({
-    ExtractionQualityDashboard: () => null,
+    ExtractionQualityDashboard: ({ children }: { children?: React.ReactNode }) => children,
   }),
 );
 

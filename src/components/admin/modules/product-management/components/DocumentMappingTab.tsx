@@ -14,11 +14,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
+
 import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
-import { Badge } from '../../../../ui/badge';
+
+
 import {
   Select,
   SelectContent,
@@ -26,20 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import {
-  Sparkles,
-  Building2,
-  Plus,
-  Trash2,
-  Save,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  FileText,
-  ArrowRight,
-  RefreshCw,
-} from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';
@@ -48,6 +34,7 @@ import { ExtractionQualityDashboard } from './ExtractionQualityDashboard';
 import { RenewalAlertScanner } from './RenewalAlertScanner';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import {
+  DsButton,
   ErrorState,
   SegmentedList,
   SegmentedTrigger,
@@ -438,10 +425,7 @@ export function DocumentMappingTab() {
         <RenewalAlertScanner />
       </TabsContent>
       <TabsContent value="extraction" className="m-0 focus-visible:outline-none">
-        <div className="space-y-6">
-          {/* Extraction Quality Dashboard */}
-          <ExtractionQualityDashboard />
-
+        <ExtractionQualityDashboard>
           {loadError || providersError ? (
             <ErrorState
               title="Unable to load terminology mappings"
@@ -453,355 +437,171 @@ export function DocumentMappingTab() {
             />
           ) : (
             <>
-              {/* Header */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Terminology mappings</CardTitle>
-                      <CardDescription>
-                        Configure provider-specific terminology mappings to improve AI extraction
-                        accuracy. When a provider's benefit term is mapped, the AI will use the
-                        mapping instead of guessing.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
+              {/* PM-DocAI: one "Terminology mappings" card, search in its header */}
+              <section className="ds-card overflow-hidden">
+                <div className="ds-card-h flex-wrap">
+                  <h3>Terminology mappings</h3>
+                  <input
+                    className="ds-input w-full sm:w-auto sm:min-w-[220px]"
+                    placeholder="Search providers…"
+                    aria-label="Search providers"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <p className="ds-card-b ds-meta border-b border-nw-line">
+                  Map a provider&apos;s own benefit or product names (e.g. &quot;Lifestyle
+                  Protector&quot;) to our fields, so AI extraction uses the mapping instead of
+                  guessing.
+                </p>
 
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search providers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Provider List */}
-              <div className="space-y-3">
                 {filteredProviders.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Building2 className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                    <p className="text-sm">
-                      No providers found. Add providers in the Provider Management tab first.
-                    </p>
+                  <div className="ds-card-b">
+                    <span className="ds-meta">
+                      {searchQuery ? 'No providers match your search.' : 'No providers yet.'}
+                    </span>
                   </div>
                 ) : (
-                  filteredProviders.map((provider) => {
-                    const existingMap = terminologies.find((t) => t.providerId === provider.id);
-                    const benefitCount = existingMap
-                      ? Object.keys(existingMap.benefitMappings || {}).length
-                      : 0;
-                    const productCount = existingMap
-                      ? Object.keys(existingMap.productMappings || {}).length
-                      : 0;
-                    const isExpanded = expandedProvider === provider.id;
+                  <ul className="divide-y divide-nw-line">
+                    {filteredProviders.map((provider) => {
+                      const existingMap = terminologies.find((t) => t.providerId === provider.id);
+                      const benefitCount = existingMap
+                        ? Object.keys(existingMap.benefitMappings || {}).length
+                        : 0;
+                      const productCount = existingMap
+                        ? Object.keys(existingMap.productMappings || {}).length
+                        : 0;
+                      const isExpanded = expandedProvider === provider.id;
+                      const countLine =
+                        benefitCount === 0 && productCount === 0
+                          ? 'No mappings'
+                          : [
+                              benefitCount > 0 &&
+                                `${benefitCount} benefit mapping${benefitCount > 1 ? 's' : ''}`,
+                              productCount > 0 &&
+                                `${productCount} product mapping${productCount > 1 ? 's' : ''}`,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ');
 
-                    return (
-                      <Card key={provider.id} className={isExpanded ? 'border-purple-300' : ''}>
-                        {/* Provider Header */}
-                        <div
-                          className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50/50"
-                          onClick={() => handleExpandProvider(provider.id)}
-                        >
-                          <div className="flex items-center gap-3">
-                            {provider.logo ? (
-                              <img
-                                src={provider.logo}
-                                alt={provider.name}
-                                className="h-8 w-8 object-contain"
+                      return (
+                        <li key={provider.id}>
+                          <button
+                            type="button"
+                            className="ds-todo-row w-full text-left hover:bg-[#fafafb]"
+                            aria-expanded={isExpanded}
+                            onClick={() => handleExpandProvider(provider.id)}
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-nw-violet-50 text-[11.5px] font-semibold text-nw-violet">
+                              {provider.logo ? (
+                                <img
+                                  src={provider.logo}
+                                  alt=""
+                                  className="h-full w-full bg-white object-contain p-0.5"
+                                />
+                              ) : (
+                                provider.name.slice(0, 2).toUpperCase()
+                              )}
+                            </span>
+                            <span className="grow min-w-0">
+                              <b className="block text-[13.5px] font-medium text-nw-ink">
+                                {provider.name}
+                              </b>
+                              <span className="ds-meta">{countLine}</span>
+                            </span>
+                            <ChevronDown
+                              className={`h-4 w-4 text-nw-text-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                              aria-hidden="true"
+                            />
+                          </button>
+
+                          {isExpanded && (
+                            <div className="space-y-5 border-t border-nw-line bg-[#fafafb] px-4 py-4">
+                              <MappingTable
+                                title="Benefit terms"
+                                termHeading="Provider term"
+                                targetHeading="Maps to"
+                                rows={Object.entries(editingBenefitMappings).map(([term, key]) => ({
+                                  term,
+                                  target:
+                                    CANONICAL_BENEFIT_KEYS.find((k) => k.value === key)?.label ||
+                                    key,
+                                }))}
+                                onRemove={handleRemoveBenefitMapping}
+                                newTerm={newBenefitRow.term}
+                                onNewTerm={(term) =>
+                                  setNewBenefitRow((prev) => ({ ...prev, term }))
+                                }
+                                newTarget={newBenefitRow.canonicalKey}
+                                onNewTarget={(canonicalKey) =>
+                                  setNewBenefitRow((prev) => ({ ...prev, canonicalKey }))
+                                }
+                                options={CANONICAL_BENEFIT_KEYS}
+                                onAdd={handleAddBenefitMapping}
                               />
-                            ) : (
-                              <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center">
-                                <Building2 className="h-4 w-4 text-gray-400" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{provider.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                {benefitCount > 0 && (
-                                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[10px] px-1.5 py-0">
-                                    {benefitCount} benefit mapping{benefitCount > 1 ? 's' : ''}
-                                  </Badge>
+                              <MappingTable
+                                title="Product names"
+                                termHeading="Product name"
+                                targetHeading="Category"
+                                rows={Object.entries(editingProductMappings).map(
+                                  ([term, catId]) => ({
+                                    term,
+                                    target:
+                                      PRODUCT_CATEGORIES.find((c) => c.value === catId)?.label ||
+                                      catId,
+                                  }),
                                 )}
-                                {productCount > 0 && (
-                                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] px-1.5 py-0">
-                                    {productCount} product mapping{productCount > 1 ? 's' : ''}
-                                  </Badge>
-                                )}
-                                {benefitCount === 0 && productCount === 0 && (
-                                  <span className="text-[10px] text-gray-400">
-                                    No mappings configured
+                                onRemove={handleRemoveProductMapping}
+                                newTerm={newProductRow.term}
+                                onNewTerm={(term) =>
+                                  setNewProductRow((prev) => ({ ...prev, term }))
+                                }
+                                newTarget={newProductRow.canonicalKey}
+                                onNewTarget={(canonicalKey) =>
+                                  setNewProductRow((prev) => ({ ...prev, canonicalKey }))
+                                }
+                                options={PRODUCT_CATEGORIES}
+                                onAdd={handleAddProductMapping}
+                              />
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                {existingMap?.updatedAt && (
+                                  <span className="ds-meta">
+                                    Updated{' '}
+                                    {new Date(existingMap.updatedAt).toLocaleDateString('en-ZA')}
                                   </span>
                                 )}
-                              </div>
-                            </div>
-                          </div>
-                          {isExpanded ? (
-                            <ChevronUp className="h-5 w-5 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-400" />
-                          )}
-                        </div>
-
-                        {/* Expanded Content */}
-                        {isExpanded && (
-                          <CardContent className="border-t pt-4 space-y-6">
-                            {/* Benefit Mappings */}
-                            <div>
-                              <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                                <FileText className="h-4 w-4 text-purple-600" />
-                                Benefit Term Mappings
-                              </Label>
-                              <p className="text-xs text-gray-500 mb-3">
-                                Map provider-specific benefit names to canonical Navigate Wealth
-                                keys. These override the AI's best guess during extraction.
-                              </p>
-
-                              {/* Existing benefit mappings */}
-                              {Object.keys(editingBenefitMappings).length > 0 && (
-                                <div className="space-y-2 mb-3">
-                                  {Object.entries(editingBenefitMappings).map(([term, key]) => {
-                                    const keyLabel =
-                                      CANONICAL_BENEFIT_KEYS.find((k) => k.value === key)?.label ||
-                                      key;
-                                    return (
-                                      <div
-                                        key={term}
-                                        className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2"
-                                      >
-                                        <span className="text-xs font-medium text-gray-700 flex-1 truncate">
-                                          {term}
-                                        </span>
-                                        <ArrowRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                                        <span className="text-xs text-purple-700 font-medium flex-1 truncate">
-                                          {keyLabel}
-                                        </span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleRemoveBenefitMapping(term)}
-                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {/* Add new benefit mapping */}
-                              <div className="flex items-end gap-2">
-                                <div className="flex-1 space-y-1">
-                                  <Label className="text-[10px] text-gray-500">Provider term</Label>
-                                  <Input
-                                    placeholder="e.g. Lifestyle Protector"
-                                    value={newBenefitRow.term}
-                                    onChange={(e) =>
-                                      setNewBenefitRow((prev) => ({
-                                        ...prev,
-                                        term: e.target.value,
-                                      }))
-                                    }
-                                    className="h-8 text-xs"
-                                  />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                  <Label className="text-[10px] text-gray-500">Maps to</Label>
-                                  <Select
-                                    value={newBenefitRow.canonicalKey}
-                                    onValueChange={(v) =>
-                                      setNewBenefitRow((prev) => ({ ...prev, canonicalKey: v }))
-                                    }
-                                  >
-                                    <SelectTrigger className="h-8 text-xs">
-                                      <SelectValue placeholder="Select..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {CANONICAL_BENEFIT_KEYS.map((k) => (
-                                        <SelectItem
-                                          key={k.value}
-                                          value={k.value}
-                                          className="text-xs"
-                                        >
-                                          {k.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Button
-                                  onClick={handleAddBenefitMapping}
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8"
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Product Mappings */}
-                            <div>
-                              <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                                <Building2 className="h-4 w-4 text-blue-600" />
-                                Product Name Mappings
-                              </Label>
-                              <p className="text-xs text-gray-500 mb-3">
-                                Map provider product names to internal product categories.
-                              </p>
-
-                              {/* Existing product mappings */}
-                              {Object.keys(editingProductMappings).length > 0 && (
-                                <div className="space-y-2 mb-3">
-                                  {Object.entries(editingProductMappings).map(([term, catId]) => {
-                                    const catLabel =
-                                      PRODUCT_CATEGORIES.find((c) => c.value === catId)?.label ||
-                                      catId;
-                                    return (
-                                      <div
-                                        key={term}
-                                        className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2"
-                                      >
-                                        <span className="text-xs font-medium text-gray-700 flex-1 truncate">
-                                          {term}
-                                        </span>
-                                        <ArrowRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                                        <span className="text-xs text-blue-700 font-medium flex-1 truncate">
-                                          {catLabel}
-                                        </span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleRemoveProductMapping(term)}
-                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {/* Add new product mapping */}
-                              <div className="flex items-end gap-2">
-                                <div className="flex-1 space-y-1">
-                                  <Label className="text-[10px] text-gray-500">Product name</Label>
-                                  <Input
-                                    placeholder="e.g. Glacier Investment"
-                                    value={newProductRow.term}
-                                    onChange={(e) =>
-                                      setNewProductRow((prev) => ({
-                                        ...prev,
-                                        term: e.target.value,
-                                      }))
-                                    }
-                                    className="h-8 text-xs"
-                                  />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                  <Label className="text-[10px] text-gray-500">Category</Label>
-                                  <Select
-                                    value={newProductRow.canonicalKey}
-                                    onValueChange={(v) =>
-                                      setNewProductRow((prev) => ({ ...prev, canonicalKey: v }))
-                                    }
-                                  >
-                                    <SelectTrigger className="h-8 text-xs">
-                                      <SelectValue placeholder="Select..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {PRODUCT_CATEGORIES.map((c) => (
-                                        <SelectItem
-                                          key={c.value}
-                                          value={c.value}
-                                          className="text-xs"
-                                        >
-                                          {c.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Button
-                                  onClick={handleAddProductMapping}
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8"
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Save Button */}
-                            <div className="flex items-center justify-between pt-2 border-t">
-                              {existingMap?.updatedAt && (
-                                <span className="text-[10px] text-gray-400">
-                                  Last updated:{' '}
-                                  {new Date(existingMap.updatedAt).toLocaleDateString('en-ZA')}
-                                </span>
-                              )}
-                              <div className="flex items-center gap-2">
+                                <span className="grow" />
                                 {(benefitCount > 0 || productCount > 0) && (
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleBulkReextractPreview(provider.id, provider.name);
-                                    }}
-                                    variant="outline"
+                                  <DsButton
                                     size="sm"
                                     disabled={isBulkExtracting}
-                                    className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                                    onClick={() =>
+                                      handleBulkReextractPreview(provider.id, provider.name)
+                                    }
                                   >
-                                    {isBulkExtracting &&
-                                    bulkReextractProvider?.id === provider.id ? (
-                                      <div className="contents">
-                                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                        Scanning...
-                                      </div>
-                                    ) : (
-                                      <div className="contents">
-                                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                                        Bulk re-extract
-                                      </div>
-                                    )}
-                                  </Button>
+                                    {isBulkExtracting && bulkReextractProvider?.id === provider.id
+                                      ? 'Scanning…'
+                                      : 'Bulk re-extract'}
+                                  </DsButton>
                                 )}
-                                <Button
-                                  onClick={() => handleSave(provider.id, provider.name)}
+                                <DsButton
+                                  size="sm"
+                                  variant="primary"
                                   disabled={isSaving}
-                                  className="bg-purple-600 hover:bg-purple-700"
+                                  onClick={() => handleSave(provider.id, provider.name)}
                                 >
-                                  {isSaving ? (
-                                    <div className="contents">
-                                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                                      Saving...
-                                    </div>
-                                  ) : (
-                                    <div className="contents">
-                                      <Save className="h-4 w-4 mr-1.5" />
-                                      Save Mappings
-                                    </div>
-                                  )}
-                                </Button>
+                                  {isSaving ? 'Saving…' : 'Save mappings'}
+                                </DsButton>
                               </div>
                             </div>
-                          </CardContent>
-                        )}
-                      </Card>
-                    );
-                  })
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
-              </div>
+              </section>
               <BulkReextractDialog
                 bulkReextractProvider={bulkReextractProvider}
                 setBulkReextractProvider={setBulkReextractProvider}
@@ -818,8 +618,101 @@ export function DocumentMappingTab() {
               />
             </>
           )}
-        </div>
+        </ExtractionQualityDashboard>
       </TabsContent>
     </Tabs>
+  );
+}
+
+/** One block of term → target mappings, with an add row, in the board's table style. */
+function MappingTable({
+  title,
+  termHeading,
+  targetHeading,
+  rows,
+  onRemove,
+  newTerm,
+  onNewTerm,
+  newTarget,
+  onNewTarget,
+  options,
+  onAdd,
+}: {
+  title: string;
+  termHeading: string;
+  targetHeading: string;
+  rows: { term: string; target: string }[];
+  onRemove: (term: string) => void;
+  newTerm: string;
+  onNewTerm: (term: string) => void;
+  newTarget: string;
+  onNewTarget: (value: string) => void;
+  options: readonly { value: string; label: string }[];
+  onAdd: () => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-nw-line bg-white">
+      <div className="border-b border-nw-line px-3.5 py-2.5 text-[13px] font-medium text-nw-ink">
+        {title}
+      </div>
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-nw-line bg-[#fafafb] text-left text-[12px] text-nw-text-3">
+            <th className="px-3.5 py-2 font-medium">{termHeading}</th>
+            <th className="px-3.5 py-2 font-medium">{targetHeading}</th>
+            <th className="w-[90px] px-3.5 py-2">
+              <span className="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-nw-line">
+          {rows.map((row) => (
+            <tr key={row.term}>
+              <td className="px-3.5 py-2 text-nw-ink">{row.term}</td>
+              <td className="px-3.5 py-2 text-nw-text-2">{row.target}</td>
+              <td className="px-3.5 py-1.5 text-right">
+                <DsButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Remove ${row.term}`}
+                  onClick={() => onRemove(row.term)}
+                >
+                  Remove
+                </DsButton>
+              </td>
+            </tr>
+          ))}
+          <tr>
+            <td className="px-3.5 py-2">
+              <Input
+                aria-label={termHeading}
+                value={newTerm}
+                onChange={(e) => onNewTerm(e.target.value)}
+                className="h-8 text-[13px]"
+              />
+            </td>
+            <td className="px-3.5 py-2">
+              <Select value={newTarget} onValueChange={onNewTarget}>
+                <SelectTrigger className="h-8 text-[13px]" aria-label={targetHeading}>
+                  <SelectValue placeholder="Choose" />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </td>
+            <td className="px-3.5 py-1.5 text-right">
+              <DsButton size="sm" onClick={onAdd}>
+                Add
+              </DsButton>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -886,6 +886,15 @@
     background: var(--nw-violet);
     border-radius: 3px;
   }
+  .ds-meter.ok > i {
+    background: #16a34a;
+  }
+  .ds-meter.warn > i {
+    background: #d97706;
+  }
+  .ds-meter.bad > i {
+    background: #dc2626;
+  }
 
   /* ---------- phone ---------- */
   @media (max-width: 639px) {

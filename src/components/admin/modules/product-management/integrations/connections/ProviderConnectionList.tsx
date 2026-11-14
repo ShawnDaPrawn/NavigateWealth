@@ -11,9 +11,8 @@
  * What replaces it answers one question — can we get in? — and puts the one
  * action that would change the answer next to it.
  */
-import { Badge } from '../../../../../ui/badge';
-import { Button } from '../../../../../ui/button';
-import { AlertCircle, CheckCircle2, Loader2, Plug, Trash2 } from 'lucide-react';
+
+import { Trash2 } from 'lucide-react';
 import { cn } from '../../../../../ui/utils';
 import {
   IntegrationProvider,
@@ -26,7 +25,7 @@ import {
   connectionDetailLine,
   describeConnection,
 } from './connectionPresentation';
-import { useConfirm } from '../../../../layout/page';
+import { DsButton, useConfirm } from '../../../../layout/page';
 
 interface ProviderConnectionListProps {
   providers: IntegrationProvider[];
@@ -37,12 +36,12 @@ interface ProviderConnectionListProps {
   onDelete?: (id: string) => void;
 }
 
-const TONE_CLASS = {
-  good: 'bg-green-50 text-green-700 border-green-200',
-  bad: 'bg-red-50 text-red-700 border-red-200',
-  warn: 'bg-amber-50 text-amber-800 border-amber-200',
-  busy: 'bg-blue-50 text-blue-700 border-blue-200',
-  neutral: 'text-gray-500 border-gray-200',
+const PILL_TONE = {
+  good: 'ok',
+  bad: 'bad',
+  warn: 'warn',
+  busy: 'info',
+  neutral: '',
 } as const;
 
 export function ProviderConnectionList({
@@ -69,88 +68,64 @@ export function ProviderConnectionList({
   });
 
   return (
-    <section className="overflow-hidden rounded-xl border border-nw-line bg-white">
-      <div className="border-b border-nw-line px-5 py-4">
-        <h2 className="text-base font-semibold text-nw-ink">Connections</h2>
-        <p className="mt-0.5 text-sm text-nw-text-3">
-          Which providers we can sign in to, and which need attention.
-        </p>
+    // PM-Integrations: a "Connections" card of to-do style rows
+    <section className="ds-card overflow-hidden">
+      <div className="ds-card-h">
+        <div>
+          <h3>Connections</h3>
+          <p className="ds-meta">Which providers we can sign in to, and which need attention.</p>
+        </div>
       </div>
-      <ul className="divide-y divide-nw-line">
+      <ul>
         {ordered.map((provider) => {
           const connection = connectionByProvider.get(provider.id);
           const presentation = connection ? describeConnection(connection.state) : null;
           const automationCategories = getPortalAutomationCategoryOptions(provider.categoryIds);
+          const categoryLine = automationCategories.map(getProductCategoryLabel).join(' · ');
 
           return (
-            <li
-              key={provider.id}
-              className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"
-            >
+            <li key={provider.id} className="ds-todo-row flex-wrap sm:flex-nowrap">
               <span
                 aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-semibold text-nw-text-2"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-nw-violet-50 text-[11.5px] font-semibold text-nw-violet"
               >
                 {(provider.name || '?').slice(0, 2).toUpperCase()}
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-medium text-nw-ink">{provider.name}</h3>
-                  {automationCategories.slice(0, 3).map((cat) => (
-                    <span
-                      key={cat}
-                      className="rounded-full border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600"
-                    >
-                      {getProductCategoryLabel(cat)}
-                    </span>
-                  ))}
-                  {automationCategories.length > 3 && (
-                    <span className="text-[10px] text-gray-500">
-                      + {automationCategories.length - 3} more
-                    </span>
-                  )}
-                </div>
-                {connection ? (
-                  <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">
-                    {connectionDetailLine(connection)}
-                  </p>
-                ) : (
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {automationCategories.length === 0
-                      ? 'No automation category on this provider, so there is no portal to connect to.'
-                      : 'Spreadsheet sync only.'}
-                  </p>
-                )}
+              <div className="grow min-w-0">
+                <h3 className="text-[13.5px] font-medium text-nw-ink">{provider.name}</h3>
+                <span className="ds-meta line-clamp-2">
+                  {connection ? connectionDetailLine(connection) : categoryLine || 'No categories'}
+                </span>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {presentation && (
-                  <Badge variant="outline" className={cn('gap-1', TONE_CLASS[presentation.tone])}>
-                    {presentation.tone === 'good' && <CheckCircle2 className="h-3 w-3" />}
-                    {presentation.tone === 'bad' && <AlertCircle className="h-3 w-3" />}
-                    {presentation.tone === 'busy' && <Loader2 className="h-3 w-3 animate-spin" />}
+              <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                {presentation ? (
+                  <span className={cn('ds-pill', PILL_TONE[presentation.tone])}>
                     {presentation.label}
-                  </Badge>
+                  </span>
+                ) : (
+                  <span className="ds-pill">
+                    {automationCategories.length === 0
+                      ? 'No portal to connect to'
+                      : 'Spreadsheet sync only'}
+                  </span>
                 )}
                 {connection && presentation?.action && (
-                  <Button variant="outline" size="sm" onClick={() => onConnect(connection)}>
-                    <Plug className="mr-1.5 h-3 w-3" />
+                  <DsButton size="sm" onClick={() => onConnect(connection)}>
                     {presentation.action}
-                  </Button>
+                  </DsButton>
                 )}
-                <Button
+                <DsButton
                   size="sm"
-                  variant="outline"
                   aria-label={`Open ${provider.name} integration`}
                   onClick={() => onSelect(provider.id)}
                 >
                   Open
-                </Button>
+                </DsButton>
                 {onDelete && (
-                  <Button
+                  <DsButton
+                    size="sm"
                     variant="ghost"
-                    size="icon"
                     aria-label={`Delete provider ${provider.name}`}
-                    className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
                     onClick={async () => {
                       const ok = await askConfirm({
                         title: `Delete ${provider.name}?`,
@@ -161,8 +136,8 @@ export function ProviderConnectionList({
                       if (ok) onDelete(provider.id);
                     }}
                   >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </DsButton>
                 )}
               </div>
             </li>
