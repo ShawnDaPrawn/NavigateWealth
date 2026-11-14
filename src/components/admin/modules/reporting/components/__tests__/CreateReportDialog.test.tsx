@@ -4,7 +4,7 @@ import { CreateReportDialog } from '../CreateReportDialog';
 
 afterEach(cleanup);
 
-describe('CreateReportDialog (built; New report stays Soon until there is an endpoint)', () => {
+describe('CreateReportDialog', () => {
   it('asks for a name before creating, with the form error banner', () => {
     const onCreate = vi.fn();
     render(<CreateReportDialog open onOpenChange={vi.fn()} onCreate={onCreate} />);
@@ -19,13 +19,13 @@ describe('CreateReportDialog (built; New report stays Soon until there is an end
     const onCreate = vi.fn();
     render(<CreateReportDialog open onOpenChange={vi.fn()} onCreate={onCreate} />);
     fireEvent.change(screen.getByLabelText('Report name'), { target: { value: ' Book ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Joined' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Middle Name' }));
     fireEvent.click(screen.getByRole('button', { name: 'Create report' }));
     expect(onCreate).toHaveBeenCalledWith({
       name: 'Book',
       category: 'clients',
       dataSource: 'personal-clients',
-      columns: ['Name', 'Email', 'Adviser'],
+      columns: ['User ID', 'Title', 'First Name'],
       format: 'xlsx',
     });
     expect(screen.getByText('Currently only Excel format is supported.')).toBeDefined();

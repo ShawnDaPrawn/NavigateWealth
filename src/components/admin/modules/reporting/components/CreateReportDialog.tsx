@@ -1,8 +1,7 @@
 /**
  * Create report (design RP 6): name, category, data source, columns and
- * export format. "New report" stays switched off until the server can store
- * a report definition (there is no create endpoint; the five reports are
- * built in), so this dialog only needs wiring.
+ * export format. The data sources are the built-in exports, so every saved
+ * report can be run through the same export path.
  */
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
@@ -26,11 +25,12 @@ import {
 } from '../../../../ui/select';
 import { FormErrorBanner } from '../../../layout/page';
 import type { ReportCategory } from '../types';
+import { REPORT_DATA_SOURCES, REPORT_SOURCES, type ReportDataSource } from '../reportSources';
 
 export interface NewReportDefinition {
   name: string;
   category: ReportCategory;
-  dataSource: string;
+  dataSource: ReportDataSource;
   columns: string[];
   format: 'xlsx';
 }
@@ -43,25 +43,8 @@ const CATEGORIES: { value: ReportCategory; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
-const DATA_SOURCES: { value: string; label: string; columns: string[] }[] = [
-  {
-    value: 'personal-clients',
-    label: 'Personal clients',
-    columns: ['Name', 'Email', 'Phone', 'Adviser', 'Status', 'Joined'],
-  },
-  {
-    value: 'applications',
-    label: 'Applications',
-    columns: ['Applicant', 'Status', 'Adviser', 'Submitted', 'Processing time'],
-  },
-  {
-    value: 'fna',
-    label: 'Financial needs analyses',
-    columns: ['Client', 'Type', 'Status', 'Adviser', 'Completed'],
-  },
-];
-
-const DEFAULT_COLUMNS = ['Name', 'Email', 'Adviser', 'Joined'];
+/** A new report starts with the source's first few columns. */
+const defaultColumns = (source: ReportDataSource) => REPORT_SOURCES[source].columns.slice(0, 4);
 
 interface CreateReportDialogProps {
   open: boolean;
@@ -78,12 +61,11 @@ export function CreateReportDialog({
 }: CreateReportDialogProps) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ReportCategory>('clients');
-  const [dataSource, setDataSource] = useState(DATA_SOURCES[0].value);
-  const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
+  const [dataSource, setDataSource] = useState<ReportDataSource>('personal-clients');
+  const [columns, setColumns] = useState<string[]>(() => defaultColumns('personal-clients'));
   const [errors, setErrors] = useState<{ name?: string; columns?: string }>({});
 
-  const source = DATA_SOURCES.find((s) => s.value === dataSource) ?? DATA_SOURCES[0];
-  const addable = source.columns.filter((c) => !columns.includes(c));
+  const addable = REPORT_SOURCES[dataSource].columns.filter((c) => !columns.includes(c));
 
   const submit = () => {
     const found: { name?: string; columns?: string } = {};
@@ -162,18 +144,18 @@ export function CreateReportDialog({
               <Select
                 value={dataSource}
                 onValueChange={(v) => {
-                  setDataSource(v);
-                  const next = DATA_SOURCES.find((s) => s.value === v);
-                  setColumns(next ? next.columns.slice(0, 4) : []);
+                  const next = v as ReportDataSource;
+                  setDataSource(next);
+                  setColumns(defaultColumns(next));
                 }}
               >
                 <SelectTrigger id="create-report-source">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {DATA_SOURCES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
+                  {REPORT_DATA_SOURCES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {REPORT_SOURCES[value].label}
                     </SelectItem>
                   ))}
                 </SelectContent>
