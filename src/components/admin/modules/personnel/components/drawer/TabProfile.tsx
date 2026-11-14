@@ -114,15 +114,18 @@ export function TabProfile({
     },
   });
 
-  // Reset form when selected person changes
+  // Reset the form when a different person opens or their saved profile
+  // fields change — not on every refetch of the same record (a status change
+  // after suspending must not wipe unsaved edits).
+  const { id: personId, role, phone, jobTitle, managerId } = selectedPersonnel;
   useEffect(() => {
     reset({
-      role: toValidRole(selectedPersonnel.role),
-      phone: selectedPersonnel.phone || '',
-      jobTitle: selectedPersonnel.jobTitle || '',
-      managerId: selectedPersonnel.managerId || 'none',
+      role: toValidRole(role),
+      phone: phone || '',
+      jobTitle: jobTitle || '',
+      managerId: managerId || 'none',
     });
-  }, [selectedPersonnel, reset]);
+  }, [personId, role, phone, jobTitle, managerId, reset]);
 
   useEffect(() => {
     onFormStateChange?.({ dirty: isDirty, saving: isSubmitting });
