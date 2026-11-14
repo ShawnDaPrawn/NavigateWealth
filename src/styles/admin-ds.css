@@ -746,7 +746,6 @@
     }
   }
 
-
   /* ---------- wizard steps (.steps) ---------- */
   .ds-steps {
     display: flex;
@@ -822,7 +821,6 @@
     }
   }
 
-
   /* ---------- notice (.notice) ---------- */
   .ds-notice {
     display: flex;
@@ -847,7 +845,6 @@
     border-color: var(--nw-ink);
     color: #fff;
   }
-
 
   /* ---------- timeline (.tl) ---------- */
   .ds-tl {

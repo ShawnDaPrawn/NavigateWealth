@@ -368,7 +368,11 @@ export function EnvelopeInspector({
     <div className="contents">
       {open && (
         <div className="ds-page">
-          <BackLink label="Envelopes" onClick={() => onOpenChange(false)} />
+          <BackLink
+            label="Envelopes"
+            ariaLabel="Back to envelopes"
+            onClick={() => onOpenChange(false)}
+          />
           <PageHeader
             title={envelope.title}
             description={

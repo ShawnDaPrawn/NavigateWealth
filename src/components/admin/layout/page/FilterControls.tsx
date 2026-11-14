@@ -139,11 +139,20 @@ export function FilterStatCard({
 }
 
 /** "‹ Back to …" at the top of a record page. */
-export function BackLink({ label, onClick }: { label: string; onClick: () => void }) {
+export function BackLink({
+  label,
+  onClick,
+  ariaLabel,
+}: {
+  label: string;
+  onClick: () => void;
+  ariaLabel?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={ariaLabel}
       className="inline-flex w-fit items-center gap-1 rounded text-[12.5px] text-nw-text-3 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
     >
       <span aria-hidden="true">‹</span>
