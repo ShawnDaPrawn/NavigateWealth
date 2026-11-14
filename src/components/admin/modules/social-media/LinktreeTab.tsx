@@ -327,7 +327,7 @@ export function LinktreeTab() {
     return (
       <div aria-busy="true" aria-label="Loading link in bio" className="space-y-3">
         <Skeleton className="h-9 w-full rounded-lg" />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="ds-stats">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
@@ -407,7 +407,7 @@ export function LinktreeTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         <StatCard label="Total links" value={links.length} />
         <StatCard label="Active links" value={links.filter((l) => l.enabled).length} />
         <StatCard label="Total clicks" value={totalClicks} />

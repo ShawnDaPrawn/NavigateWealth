@@ -107,7 +107,7 @@ export function CorporateIdentityTab() {
   return (
     <div className="space-y-6">
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
           const cfg = STAT_CONFIG[key];
           // A failed summary shows "—", never a misleading 0.

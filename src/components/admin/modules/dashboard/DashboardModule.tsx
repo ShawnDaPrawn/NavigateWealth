@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../../auth/AuthContext';
-import { Tabs } from '../../../ui/tabs';
 import {
+  DsPage,
+  DsSection,
+  DsSegmented,
   NoAccess,
-  SegmentedList,
-  SegmentedTrigger,
   useBreadcrumbTrail,
   useUrlState,
 } from '../../layout/page';
@@ -76,7 +76,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+    <DsPage>
       <DashboardHeader userName={user?.firstName} onOpenAuditTrail={() => setView('audit')} />
 
       {/* ── Needs your attention: the sidebar's waiting counts ─────────── */}
@@ -87,44 +87,41 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       />
 
       {/* ── Practice at a glance ──────────────────────────────────────── */}
-      <section aria-labelledby="practice-at-a-glance" className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="practice-at-a-glance" className="text-base font-semibold text-nw-ink">
-            Practice at a glance
-          </h2>
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-            <SegmentedList aria-label="Period">
-              <SegmentedTrigger value="month">This month</SegmentedTrigger>
-              <SegmentedTrigger value="30d">Last 30 days</SegmentedTrigger>
-              <SegmentedTrigger value="year">This year</SegmentedTrigger>
-            </SegmentedList>
-          </Tabs>
-        </div>
+      <DsSection
+        title="Practice at a glance"
+        titleId="practice-at-a-glance"
+        actions={
+          <DsSegmented
+            label="Period"
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { value: 'month', label: 'This month' },
+              { value: '30d', label: 'Last 30 days' },
+              { value: 'year', label: 'This year' },
+            ]}
+          />
+        }
+      >
         {errors.stats ? (
           <CardError title="Couldn't load the practice figures" onRetry={refetchStats} />
         ) : (
           <KPIGrid kpis={kpis} loading={kpisLoading} columns={4} />
         )}
-      </section>
+      </DsSection>
 
       {/* ── Due today + Quick actions ────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="ds-split">
         <TasksWidget onModuleChange={onModuleChange} onViewTask={onViewTask} maxTasks={5} />
         <QuickActionsCard onModuleChange={onModuleChange} />
       </div>
 
-      {/* ── Recent notes ─────────────────────────────────────────────── */}
-      <RecentNotesWidget onModuleChange={onModuleChange} maxNotes={5} />
-
-      {/* ── Publications | Newsletter ────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <PublicationsCard onModuleChange={onModuleChange} maxArticles={5} />
-        </div>
-        <div className="lg:col-span-2">
-          <NewsletterKPICard onModuleChange={onModuleChange} />
-        </div>
+      {/* ── Recent notes | Publications | Newsletter ─────────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <RecentNotesWidget onModuleChange={onModuleChange} maxNotes={4} />
+        <PublicationsCard onModuleChange={onModuleChange} maxArticles={3} />
+        <NewsletterKPICard onModuleChange={onModuleChange} />
       </div>
-    </div>
+    </DsPage>
   );
 }

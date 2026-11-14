@@ -447,7 +447,7 @@ export function PersonnelModule() {
       )}
 
       {/* ── Figures ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         {statusTile('all', 'Total personnel', stats.total)}
         {statusTile('active', 'Active', stats.active)}
         {statusTile('suspended', 'Suspended', stats.suspended)}

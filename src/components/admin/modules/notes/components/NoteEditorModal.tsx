@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { Label } from '../../../../ui/label';
-import { FormErrorBanner, useConfirm } from '../../../layout/page';
+import { DsButton, FormErrorBanner, useConfirm } from '../../../layout/page';
 import { BackLink } from '../../../layout/page/FilterControls';
 import { cn } from '../../../../ui/utils';
 import {
@@ -658,14 +658,14 @@ export function NoteEditorModal({
     const isArchived = !!note?.isArchived;
     const showMenu = isEditing && !!(onTogglePin || onToggleArchive || onDelete);
     return (
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+      <div className="ds-page">
         <BackLink label={`Back to ${backLabel}`} onClick={() => void handleClose()} />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="ds-ph">
           <div className="min-w-0">
-            <h1 className="text-[26px] leading-tight font-semibold tracking-tight break-words text-nw-ink">
+            <h1 className="break-words">
               {isEditing ? note?.title || 'Untitled note' : 'New note'}
             </h1>
-            <div className="mt-1 flex items-center gap-3 text-sm text-nw-text-3">
+            <div className="ds-meta mt-1 flex items-center gap-3">
               <span>
                 Note{isPinned ? ' · Pinned' : ''}
                 {isArchived ? ' · Archived' : ''}
@@ -673,11 +673,9 @@ export function NoteEditorModal({
               <AutoSaveIndicator status={autoSave.status} />
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="ds-ph-actions">
             {isEditing && !isConverted && onConvertToTask && (
-              <Button
-                type="button"
-                variant="outline"
+              <DsButton
                 onClick={() => {
                   onConvertToTask(note!.id);
                   onClose();
@@ -688,19 +686,16 @@ export function NoteEditorModal({
                     : 'Task description will use the note content'
                 }
               >
-                <ListTodo className="h-4 w-4" aria-hidden="true" />
                 Convert to task
-              </Button>
+              </DsButton>
             )}
-            <Button type="button" variant="outline" onClick={() => void handleClose()}>
-              Cancel
-            </Button>
+            <DsButton onClick={() => void handleClose()}>Cancel</DsButton>
             {showMenu && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="More note actions">
-                    <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                  </Button>
+                  <DsButton variant="ghost" aria-label="More note actions">
+                    <MoreHorizontal aria-hidden="true" />
+                  </DsButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   {onTogglePin && (
@@ -732,27 +727,21 @@ export function NoteEditorModal({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Button type="button" onClick={() => void handleSave()} disabled={isSaving}>
+            <DsButton variant="primary" onClick={() => void handleSave()} disabled={isSaving}>
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Saving…
+                  <Loader2 className="animate-spin" aria-hidden="true" /> Saving…
                 </>
               ) : isEditing ? (
                 'Save changes'
               ) : (
                 'Create note'
               )}
-            </Button>
+            </DsButton>
           </div>
         </div>
 
-        <div
-          className={cn(
-            'flex max-w-[880px] flex-col gap-6 rounded-xl border p-6',
-            colorCfg.bg,
-            colorCfg.border,
-          )}
-        >
+        <div className="ds-card ds-card-b flex max-w-[880px] flex-col gap-4">
           {titleError && (
             <FormErrorBanner count={1} action={isEditing ? 'save the note' : 'create the note'} />
           )}
@@ -818,7 +807,7 @@ export function NoteEditorModal({
           {metadataBlock}
 
           {isEditing && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-nw-line bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ddd6fe] bg-[#f5f3ff] px-4 py-3">
               <p className="text-sm text-nw-text-2">
                 <span className="font-medium text-nw-ink">AI summary</span> ·{' '}
                 {localSummary ? 'generated' : 'not generated yet'}

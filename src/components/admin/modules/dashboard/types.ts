@@ -14,6 +14,8 @@ export interface DashboardKPI {
   trend?: 'up' | 'down' | 'neutral';
   /** No percentage change for this figure (e.g. Tasks: open · completed). */
   hideChange?: boolean;
+  /** A word after the number, in smaller type (Tasks: "203 open"). */
+  valueSuffix?: string;
   /** When true, the card renders its own skeleton state regardless of grid-level loading */
   loading?: boolean;
 }
@@ -96,6 +98,7 @@ export interface KPICardProps {
   subtitle?: string;
   onClick?: () => void;
   hideChange?: boolean;
+  valueSuffix?: string;
   loading?: boolean;
 }
 

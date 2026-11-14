@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
-import { Plus, Download, X, Search, FileText } from 'lucide-react';
+import { Download, X, FileText } from 'lucide-react';
 import { EventsCalendar } from './components/EventsCalendar';
 import { EventPage } from './components/EventPage';
 import { CalendarPDFExportModal } from './components/CalendarPDFExportModal';
@@ -36,6 +34,8 @@ import {
 } from '../../../ui/dropdown-menu';
 import { useCurrentUserPermissions } from '../personnel';
 import {
+  DsButton,
+  DsPage,
   ErrorState,
   PageHeader,
   useBreadcrumbTrail,
@@ -544,18 +544,15 @@ export function CalendarModule() {
   }
 
   const toolbar = (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative w-full sm:w-72">
-        <Search
-          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
-          aria-hidden="true"
-        />
-        <Input
+    <div className="ds-toolbar">
+      <div className="relative w-full sm:w-auto">
+        <input
+          type="search"
           aria-label="Search events"
           placeholder="Search events…"
           value={searchText}
           onChange={handleSearchChange}
-          className="h-9 bg-white pl-9"
+          className="ds-input"
         />
         {searchText && (
           <button
@@ -604,12 +601,26 @@ export function CalendarModule() {
         options={clientOptions}
       />
       {filtersActive && <ClearFiltersButton onClick={clearFilters} />}
+      <span className="grow" />
+      <ul className="ds-key" aria-label="Colour key">
+        {[
+          ['#ede9fe', 'Event'],
+          ['#eff6ff', 'Task due'],
+          ['#fef3c7', 'Birthday'],
+          ['#ecfdf5', 'Policy renewal'],
+        ].map(([bg, label]) => (
+          <li key={label} className="inline-flex items-center gap-1.5">
+            <i style={{ background: bg }} aria-hidden="true" />
+            {label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50/30">
-      <div className="mx-auto max-w-[1600px] space-y-5 p-6 lg:p-8">
+    <>
+      <DsPage>
         <PageHeader
           title="Calendar"
           description="Your schedule: events, reminders, task due dates, client birthdays and policy renewals."
@@ -617,10 +628,7 @@ export function CalendarModule() {
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" disabled={!canExport}>
-                    <Download className="h-4 w-4" aria-hidden="true" />
-                    Export
-                  </Button>
+                  <DsButton disabled={!canExport}>Export</DsButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel>Export</DropdownMenuLabel>
@@ -636,10 +644,9 @@ export function CalendarModule() {
                 </DropdownMenuContent>
               </DropdownMenu>
               {canCreateEvent && (
-                <Button onClick={() => openEventPage(null)}>
-                  <Plus className="h-4 w-4" aria-hidden="true" />
+                <DsButton variant="primary" onClick={() => openEventPage(null)}>
                   Add event
-                </Button>
+                </DsButton>
               )}
             </>
           }
@@ -653,7 +660,7 @@ export function CalendarModule() {
             details={eventsError instanceof Error ? eventsError.message : undefined}
           />
         ) : (
-          <div className="h-[calc(100vh-220px)] min-h-[640px]">
+          <div>
             <EventsCalendar
               events={allEvents}
               isLoading={isLoadingEvents}
@@ -678,7 +685,7 @@ export function CalendarModule() {
             />
           </div>
         )}
-      </div>
+      </DsPage>
 
       <CalendarPDFExportModal
         open={showPDFModal}
@@ -686,6 +693,6 @@ export function CalendarModule() {
         events={allEvents}
       />
       {confirmDialog}
-    </div>
+    </>
   );
 }

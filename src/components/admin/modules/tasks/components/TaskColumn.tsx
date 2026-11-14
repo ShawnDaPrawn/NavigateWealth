@@ -82,35 +82,23 @@ export function TaskColumn({
   const config = STATUS_CONFIG[status];
 
   return (
-    <div className="flex h-full min-w-[calc(100vw-4.5rem)] flex-1 snap-start flex-col rounded-xl border border-gray-200 bg-gray-100/50 sm:min-w-[350px]">
-      {/* Column Header */}
-      <div className="p-3 rounded-t-xl border-b bg-white flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${config.badge.split(' ')[0]}`}></div>
-          <h3 className="font-semibold text-gray-900 text-sm">{config.label}</h3>
-        </div>
-        <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
-          {tasks.length}
-        </span>
+    <div className="ds-col">
+      <div className="ds-col-h">
+        <span>{config.label}</span>
+        <span className="ds-count">{tasks.length}</span>
       </div>
 
-      {/* Droppable Area */}
       <Droppable droppableId={status}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`
-              flex-1 overflow-y-auto p-3 flex flex-col gap-3
-              ${snapshot.isDraggingOver ? 'bg-purple-50/50' : ''}
-              scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent
-            `}
+            className={`flex min-h-[80px] flex-col gap-2 rounded-lg ${
+              snapshot.isDraggingOver ? 'bg-nw-violet-50' : ''
+            }`}
           >
             {tasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg m-1">
-                <p className="font-medium">No tasks</p>
-                <p className="text-xs mt-1">Drag tasks here</p>
-              </div>
+              <p className="ds-meta px-1 py-6 text-center">No tasks here. Drag one in.</p>
             ) : (
               tasks.map((task, index) => (
                 <TaskCard

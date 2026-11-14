@@ -591,7 +591,7 @@ function StatsCard({ campaign }: { campaign: NewsletterCampaign }) {
   const failed = stats.data?.failedCount ?? campaign.failedCount;
   const read = stats.data?.readCount ?? campaign.readCount;
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="ds-stats">
       <StatTile icon={MailCheck} label="Delivered" value={formatNumber(sent)} tone="emerald" />
       <StatTile
         icon={MailX}

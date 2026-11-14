@@ -1,7 +1,6 @@
-import { ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { usePendingCounts } from '../../../hooks/usePendingCounts';
 import type { AdminModule } from '../../../layout/types';
+import { DsSection } from '../../../layout/page';
 
 interface NeedsAttentionCardProps {
   onModuleChange?: (module: string) => void;
@@ -11,7 +10,7 @@ interface NeedsAttentionCardProps {
   tasksDueTodayFailed?: boolean;
 }
 
-interface AttentionRow {
+interface AttentionTile {
   module: AdminModule;
   count: number;
   /** The count could not be loaded: show "—", not a misleading 0. */
@@ -19,11 +18,14 @@ interface AttentionRow {
   label: (n: number) => string;
   caption: string;
   destination: string;
+  /** Shown in red when there is anything waiting (open issues). */
+  urgent?: boolean;
 }
 
 /**
- * The sidebar's waiting counts in one place, each one click from its list
- * (design DB 1). Shares the sidebar's query, so it costs no extra request.
+ * Needs your attention (DB-Main board): the sidebar's waiting counts as four
+ * tiles, each one click from its list. Shares the sidebar's query, so it costs
+ * no extra request.
  */
 export function NeedsAttentionCard({
   onModuleChange,
@@ -32,7 +34,7 @@ export function NeedsAttentionCard({
 }: NeedsAttentionCardProps) {
   const counts = usePendingCounts();
 
-  const rows: AttentionRow[] = [
+  const tiles: AttentionTile[] = [
     {
       module: 'applications',
       count: counts.applications?.count ?? 0,
@@ -64,50 +66,35 @@ export function NeedsAttentionCard({
       label: (n) => (n === 1 ? 'Open issue' : 'Open issues'),
       caption: 'Unresolved',
       destination: 'Issue Manager',
+      urgent: true,
     },
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Needs your attention</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {rows.map((row) => (
-            <li key={row.module}>
-              <button
-                type="button"
-                onClick={() => onModuleChange?.(row.module)}
-                className="flex w-full items-center gap-3 rounded-lg border border-nw-line bg-white px-3 py-3 text-left transition-colors hover:bg-nw-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
-              >
-                <span
-                  className={
-                    row.count > 0 && !row.failed
-                      ? 'text-2xl font-semibold text-nw-ink'
-                      : 'text-2xl font-semibold text-nw-text-3'
-                  }
-                >
-                  {row.failed ? '—' : row.count.toLocaleString()}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-nw-ink">
-                    {row.label(row.count)}
-                  </span>
-                  <span className="block truncate text-xs text-nw-text-3">
-                    {row.failed ? "Couldn't load" : row.caption}
-                  </span>
-                </span>
-                <span className="flex shrink-0 items-center gap-1 text-xs text-nw-text-2">
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="sr-only">Open </span>
-                  {row.destination}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <DsSection title="Needs your attention" titleId="needs-your-attention">
+      <div className="ds-stats">
+        {tiles.map((tile) => (
+          <button
+            key={tile.module}
+            type="button"
+            onClick={() => onModuleChange?.(tile.module)}
+            className="ds-att"
+          >
+            <span
+              className="v"
+              style={
+                tile.urgent && tile.count > 0 && !tile.failed ? { color: '#b91c1c' } : undefined
+              }
+            >
+              {tile.failed ? '—' : tile.count.toLocaleString()}
+            </span>
+            <span className="k">{tile.label(tile.count)}</span>
+            <span className="m">
+              {tile.failed ? "Couldn't load" : tile.caption} → {tile.destination}
+            </span>
+          </button>
+        ))}
+      </div>
+    </DsSection>
   );
 }

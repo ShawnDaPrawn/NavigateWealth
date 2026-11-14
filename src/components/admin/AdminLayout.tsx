@@ -164,7 +164,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
           </div>
         )}
 
-        <main id="main-content" className="flex-1 overflow-auto">
+        <main id="main-content" className="nw-admin flex-1 overflow-auto">
           <div
             className={cn(
               'min-w-0',

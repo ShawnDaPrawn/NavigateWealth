@@ -17,7 +17,10 @@ import { cn } from '../../../../ui/utils';
 export function FilterStatCard({
   active,
   onClick,
-  ...card
+  label,
+  value,
+  meta,
+  tone,
 }: React.ComponentProps<typeof StatCard> & { active: boolean; onClick: () => void }) {
   return (
     <button
@@ -25,12 +28,17 @@ export function FilterStatCard({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'rounded-xl text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
-        '[&>div]:h-full [&>div]:transition-colors hover:[&>div]:border-violet-300',
-        active && '[&>div]:border-nw-violet shadow-[0_0_0_3px_var(--nw-violet-50)]',
+        'ds-stat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+        active && 'on',
       )}
     >
-      <StatCard {...card} />
+      <span className="k">{label}</span>
+      <span className="v">{value}</span>
+      {meta && (
+        <span className="m" style={tone === 'attention' ? { color: '#92400e' } : undefined}>
+          {meta}
+        </span>
+      )}
     </button>
   );
 }

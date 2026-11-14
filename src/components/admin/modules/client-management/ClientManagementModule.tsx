@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, Suspense } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
-import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import { Card, CardContent } from '../../../ui/card';
 import {
@@ -347,7 +346,7 @@ export function ClientManagementModule() {
             <div className="relative">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={`/api/placeholder/32/32`} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-nw-violet-100 text-xs font-semibold text-nw-violet-600">
                   {client.firstName[0]}
                   {client.lastName[0]}
                 </AvatarFallback>
@@ -364,9 +363,9 @@ export function ClientManagementModule() {
               <div className="font-medium flex items-center gap-2">
                 {client.firstName} {client.lastName}
                 {client.email?.toLowerCase() === CONFIG.SUPER_ADMIN_EMAIL.toLowerCase() && (
-                  <Badge variant="outline" className="text-xs font-normal">
+                  <span className="ds-pill" style={{ height: 20 }}>
                     Staff test profile
-                  </Badge>
+                  </span>
                 )}
               </div>
               <div className="max-w-[calc(100vw-9rem)] truncate text-sm text-muted-foreground sm:max-w-none">
@@ -374,7 +373,7 @@ export function ClientManagementModule() {
               </div>
               {/* On a phone the other columns are hidden; the account status shows here. */}
               <div className="mt-1 sm:hidden">
-                <Badge className={cfg.badgeClass}>{cfg.label}</Badge>
+                <span className={cfg.badgeClass}>{cfg.label}</span>
               </div>
             </div>
           </div>
@@ -414,7 +413,7 @@ export function ClientManagementModule() {
       render: (_, client) => {
         const status = deriveAccountStatus(client);
         const cfg = ACCOUNT_STATUS_CONFIG[status];
-        return <Badge className={cfg.badgeClass}>{cfg.label}</Badge>;
+        return <span className={cfg.badgeClass}>{cfg.label}</span>;
       },
       width: '120px',
     },
@@ -425,12 +424,9 @@ export function ClientManagementModule() {
       render: (_, client) => {
         const isActive = client.applicationStatus === 'approved';
         return (
-          <Badge
-            variant={isActive ? 'default' : 'secondary'}
-            className={isActive ? 'bg-green-600 text-white hover:bg-green-700' : ''}
-          >
+          <span className={isActive ? 'ds-pill ok' : 'ds-pill'}>
             {isActive ? 'Active' : 'Application'}
-          </Badge>
+          </span>
         );
       },
       width: '120px',
@@ -636,11 +632,7 @@ export function ClientManagementModule() {
             <>
               {/* The four figures filter the table (synced with the Account chip). */}
               {loading ? (
-                <div
-                  className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-                  aria-busy="true"
-                  aria-label="Loading figures"
-                >
+                <div className="ds-stats" aria-busy="true" aria-label="Loading figures">
                   {[0, 1, 2, 3].map((i) => (
                     <div
                       key={i}
@@ -649,10 +641,7 @@ export function ClientManagementModule() {
                   ))}
                 </div>
               ) : (
-                <div
-                  className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-                  aria-label="Filter by account"
-                >
+                <div className="ds-stats" aria-label="Filter by account">
                   <FilterStatCard
                     label="All clients"
                     value={baseClients.length}

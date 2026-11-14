@@ -3,8 +3,7 @@
  * unpinned note grid/list, the stat card, and the empty state. Moved
  * verbatim from NotesModule.tsx.
  */
-import { Button } from '../../../ui/button';
-import { Plus, StickyNote } from 'lucide-react';
+import { DsButton, DsState } from '../../layout/page';
 import type { Note, NoteViewMode } from './types';
 import { NoteCard } from './components/NoteCard';
 
@@ -35,7 +34,7 @@ export function NoteGrid({
 }) {
   if (viewMode === 'list') {
     return (
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         {notes.map((note) => (
           <NoteCard
             key={note.id}
@@ -56,7 +55,7 @@ export function NoteGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="ds-ngrid">
       {notes.map((note) => (
         <NoteCard
           key={note.id}
@@ -88,39 +87,35 @@ export function EmptyState({
   onClearFilters?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white px-6 py-14 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-        <StickyNote className="h-6 w-6 text-gray-400" aria-hidden="true" />
-      </div>
+    <div className="ds-card">
       {isSearch ? (
-        <>
-          <h3 className="text-base font-semibold text-nw-ink">No notes match your filters</h3>
-          <p className="mt-1 max-w-sm text-sm text-nw-text-3">
-            Try a different search, or clear the filters.
-          </p>
-          {onClearFilters && (
-            <Button variant="outline" size="sm" className="mt-4" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          )}
-        </>
+        <DsState
+          title="No notes match your filters"
+          action={
+            onClearFilters && (
+              <DsButton size="sm" onClick={onClearFilters}>
+                Clear filters
+              </DsButton>
+            )
+          }
+        >
+          Try a different search, or clear the filters.
+        </DsState>
       ) : isArchived ? (
-        <>
-          <h3 className="text-base font-semibold text-nw-ink">No archived notes</h3>
-          <p className="mt-1 max-w-sm text-sm text-nw-text-3">
-            Notes you archive are kept here, out of the way.
-          </p>
-        </>
+        <DsState title="No archived notes">
+          Notes you archive are kept here, out of the way.
+        </DsState>
       ) : (
-        <>
-          <h3 className="text-base font-semibold text-nw-ink">No notes yet</h3>
-          <p className="mt-1 max-w-sm text-sm text-nw-text-3">
-            Create your first note to start capturing ideas, meeting notes, and client information.
-          </p>
-          <Button onClick={onNewNote} size="sm" className="mt-4">
-            <Plus className="h-4 w-4" aria-hidden="true" /> Create first note
-          </Button>
-        </>
+        <DsState
+          title="No notes yet"
+          action={
+            <DsButton size="sm" variant="primary" onClick={onNewNote}>
+              New note
+            </DsButton>
+          }
+        >
+          Create your first note to start capturing ideas, meeting notes and client information.
+        </DsState>
       )}
     </div>
   );

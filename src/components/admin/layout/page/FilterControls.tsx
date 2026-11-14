@@ -46,11 +46,8 @@ export function FilterChip<T extends string>({
             active ? `${label}: ${current?.label ?? value}` : `Filter by ${label.toLowerCase()}`
           }
           className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
-            active
-              ? 'border-nw-violet bg-nw-violet text-white hover:bg-nw-violet-hover'
-              : 'border-dashed border-gray-400 bg-white text-nw-text-2 hover:text-nw-ink',
+            'ds-chip whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+            active && 'on',
           )}
         >
           {active ? (
@@ -126,20 +123,14 @@ export function FilterStatCard({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-xl border bg-white px-4 py-4 text-left transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
-        active ? 'border-nw-violet ring-1 ring-nw-violet' : 'border-nw-line hover:border-gray-300',
+        'ds-stat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+        active && 'on',
       )}
     >
-      <span className="block text-[13px] text-nw-text-2">{label}</span>
-      <span className="mt-1 block text-2xl font-semibold tabular-nums text-nw-ink">{value}</span>
+      <span className="k">{label}</span>
+      <span className="v">{value}</span>
       {meta && (
-        <span
-          className={cn(
-            'mt-1 block text-xs',
-            tone === 'attention' ? 'text-nw-amber-700' : 'text-nw-text-3',
-          )}
-        >
+        <span className="m" style={tone === 'attention' ? { color: '#92400e' } : undefined}>
           {meta}
         </span>
       )}
@@ -153,7 +144,7 @@ export function BackLink({ label, onClick }: { label: string; onClick: () => voi
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      className="inline-flex w-fit items-center gap-1 rounded text-[12.5px] text-nw-text-3 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
     >
       <span aria-hidden="true">‹</span>
       {label}

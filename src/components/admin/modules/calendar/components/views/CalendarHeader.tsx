@@ -127,9 +127,9 @@ export function CalendarHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onToday} className="h-8">
+        <button type="button" className="ds-btn ds-btn-sm" onClick={onToday}>
           Today
-        </Button>
+        </button>
         <Button
           variant="ghost"
           size="icon"
@@ -144,7 +144,7 @@ export function CalendarHeader({
             <Select value={getMonth(currentDate).toString()} onValueChange={handleMonthChange}>
               <SelectTrigger
                 aria-label="Month"
-                className="h-8 w-[130px] border-0 bg-transparent text-base font-semibold text-nw-ink shadow-none hover:bg-gray-100 focus:ring-0"
+                className="h-8 w-[130px] border-0 bg-transparent text-[18px] font-semibold text-nw-ink shadow-none hover:bg-gray-100 focus:ring-0"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -159,7 +159,7 @@ export function CalendarHeader({
             <Select value={getYear(currentDate).toString()} onValueChange={handleYearChange}>
               <SelectTrigger
                 aria-label="Year"
-                className="h-8 w-[88px] border-0 bg-transparent text-base font-semibold text-nw-ink shadow-none hover:bg-gray-100 focus:ring-0"
+                className="h-8 w-[88px] border-0 bg-transparent text-[18px] font-semibold text-nw-ink shadow-none hover:bg-gray-100 focus:ring-0"
               >
                 <SelectValue />
               </SelectTrigger>

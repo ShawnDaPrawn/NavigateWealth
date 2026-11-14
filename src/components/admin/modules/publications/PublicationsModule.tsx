@@ -628,7 +628,7 @@ export function PublicationsModule() {
 function LoadingPlaceholder({ message }: { message: string }) {
   return (
     <div aria-busy="true" aria-label={message} className="space-y-3" data-testid="tab-skeleton">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-20 rounded-xl" />
         ))}

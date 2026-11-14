@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { cn } from '../../../ui/utils';
 
 interface StatCardProps {
   label: string;
@@ -13,18 +12,13 @@ interface StatCardProps {
 /** One figure in the row of cards under a page header (design system: StatCard). */
 export function StatCard({ label, value, meta, tone = 'default' }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-nw-line bg-white px-4 py-4">
-      <p className="text-[13px] text-nw-text-2">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-nw-ink">{value}</p>
+    <div className="ds-stat">
+      <span className="k">{label}</span>
+      <span className="v">{value}</span>
       {meta && (
-        <p
-          className={cn(
-            'mt-1 text-xs',
-            tone === 'attention' ? 'text-nw-amber-700' : 'text-nw-text-3',
-          )}
-        >
+        <span className="m" style={tone === 'attention' ? { color: '#92400e' } : undefined}>
           {meta}
-        </p>
+        </span>
       )}
     </div>
   );

@@ -28,13 +28,6 @@ interface EventsCalendarProps {
   onClearFilters?: () => void;
 }
 
-const KEY = [
-  { label: 'Event', dot: 'bg-blue-500' },
-  { label: 'Task due', dot: 'bg-rose-500' },
-  { label: 'Birthday', dot: 'bg-pink-500' },
-  { label: 'Policy renewal', dot: 'bg-amber-500' },
-];
-
 export function EventsCalendar({
   events,
   isLoading,
@@ -52,7 +45,7 @@ export function EventsCalendar({
   onClearFilters,
 }: EventsCalendarProps) {
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <CalendarHeader
         view={view}
         currentDate={currentDate}
@@ -62,20 +55,6 @@ export function EventsCalendar({
       />
 
       {toolbar}
-
-      {view === 'month' && (
-        <ul
-          className="flex flex-wrap items-center gap-4 text-xs text-nw-text-2"
-          aria-label="Colour key"
-        >
-          {KEY.map((k) => (
-            <li key={k.label} className="flex items-center gap-1.5">
-              <span className={`h-2 w-2 rounded-full ${k.dot}`} aria-hidden="true" />
-              {k.label}
-            </li>
-          ))}
-        </ul>
-      )}
 
       <div className="relative min-h-0 flex-1">
         {isLoading ? (

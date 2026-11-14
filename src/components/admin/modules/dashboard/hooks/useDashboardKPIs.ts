@@ -98,7 +98,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
 
     // KPI 3: Tasks — open, with completed as the second line (this used to
     // be a separate System Activity tile).
-    const completedLine = taskTotals ? `open · ${taskTotals.completed} completed` : 'open';
+    const completedLine = taskTotals ? `${taskTotals.completed} completed` : '';
     const pendingTasksKpi: DashboardKPI = stats
       ? {
           title: 'Tasks',
@@ -107,6 +107,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           icon: CheckSquare,
           format: 'number',
           subtitle: completedLine,
+          valueSuffix: 'open',
           hideChange: true,
         }
       : {
@@ -116,6 +117,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           icon: CheckSquare,
           format: 'number',
           subtitle: completedLine,
+          valueSuffix: 'open',
           hideChange: true,
           loading: statsLoading,
         };
@@ -134,6 +136,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           icon: TrendingUp,
           format: 'number',
           subtitle: `${newPolicies} new ${periodLabel}`,
+          hideChange: true,
           trend: policiesGrowth > 0 ? 'up' : policiesGrowth < 0 ? 'down' : 'neutral',
         }
       : {
