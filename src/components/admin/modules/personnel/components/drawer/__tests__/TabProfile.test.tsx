@@ -90,6 +90,11 @@ describe('TabProfile — access actions', () => {
     await waitFor(() => expect(restore).toHaveBeenCalledWith('p-naledi'));
   });
 
+  it('does not offer the admin password reset on your own profile', () => {
+    render(<TabProfile selectedPersonnel={person({ id: 'me' })} onUpdate={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Reset password' })).toBeNull();
+  });
+
   it('hides suspend and reset without the capabilities, and for a super admin target', () => {
     perms.canDo = () => false;
     render(<TabProfile selectedPersonnel={person()} onUpdate={vi.fn()} />);

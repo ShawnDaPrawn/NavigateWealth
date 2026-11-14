@@ -92,7 +92,10 @@ export function TabProfile({
   const isPending = selectedPersonnel.status === 'pending';
   const isSuspended = selectedPersonnel.status === 'suspended';
   const canSuspend = canDo('personnel', 'delete') && !isSelf && !targetProtected && !isPending;
-  const canReset = canDo('personnel', 'edit') && !targetProtected && !isPending && !isSuspended;
+  // Not for your own account: the server checks your current password for a
+  // self-reset, so this admin action would fail. Security settings covers it.
+  const canReset =
+    canDo('personnel', 'edit') && !isSelf && !targetProtected && !isPending && !isSuspended;
 
   const {
     register,

@@ -173,9 +173,16 @@ export function NoteEditorModal({
   // object's identity changes every render, which re-ran this effect on each
   // keystroke and wiped the form.
   const resetAutoSaveStatus = autoSave.reset;
+  // Load the form when a different note opens, not every time the same note
+  // is refreshed (pin, archive, a list refetch): that would replace an
+  // unsaved draft with the older server copy.
+  const latestNote = useRef(note);
+  latestNote.current = note;
+  const noteId = note?.id ?? null;
   useEffect(() => {
     if (!isOpen) return;
 
+    const note = latestNote.current;
     if (note) {
       setTitle(note.title);
       setContent(note.content);
@@ -198,7 +205,7 @@ export function NoteEditorModal({
     setEditorMode('write');
     setTitleError(null);
     resetAutoSaveStatus();
-  }, [note, isOpen, defaultClientId, defaultClientName, resetAutoSaveStatus]);
+  }, [noteId, isOpen, defaultClientId, defaultClientName, resetAutoSaveStatus]);
 
   // ── Summarise handler ──────────────────────────────────────────────────
   const handleSummarise = useCallback(async () => {
